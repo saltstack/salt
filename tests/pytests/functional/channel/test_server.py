@@ -1,3 +1,4 @@
+import asyncio
 import ctypes
 import logging
 import multiprocessing
@@ -14,8 +15,7 @@ from saltfactories.utils import random_string
 import salt.channel.client
 import salt.channel.server
 import salt.config
-import salt.ext.tornado.gen
-import salt.ext.tornado.ioloop
+import salt.crypt
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -43,25 +43,33 @@ def root_dir(tmp_path):
     if salt.utils.platform.is_darwin():
         # To avoid 'OSError: AF_UNIX path too long'
         _root_dir = pathlib.Path("/tmp").resolve() / tmp_path.name
-        try:
-            yield _root_dir
-        finally:
-            shutil.rmtree(str(_root_dir), ignore_errors=True)
     else:
-        yield tmp_path
+        _root_dir = tmp_path
+    try:
+        yield _root_dir
+    finally:
+        shutil.rmtree(str(_root_dir), ignore_errors=True)
 
 
 def transport_ids(value):
     return f"transport({value})"
 
 
-@pytest.fixture(params=["tcp", "zeromq"], ids=transport_ids)
+# @pytest.fixture(params=["ws", "tcp", "zeromq"], ids=transport_ids)
+@pytest.fixture(
+    params=[
+        "ws",
+        "tcp",
+        "zeromq",
+    ],
+    ids=transport_ids,
+)
 def transport(request):
     return request.param
 
 
 @pytest.fixture
-def master_config(master_opts, transport):
+def master_config(master_opts, transport, root_dir):
     master_opts.update(
         transport=transport,
         id="master",
@@ -70,8 +78,13 @@ def master_config(master_opts, transport):
         publish_signing_algorithm=(
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        root_dir=str(root_dir),
+        worker_pools_enabled=False,
     )
-    salt.crypt.gen_keys(master_opts["pki_dir"], "master", 4096)
+    priv, pub = salt.crypt.gen_keys(4096)
+    path = pathlib.Path(master_opts["pki_dir"], "master")
+    path.with_suffix(".pem").write_text(priv, encoding="utf-8")
+    path.with_suffix(".pub").write_text(pub, encoding="utf-8")
     yield master_opts
 
 
@@ -93,9 +106,8 @@ def minion_config(minion_opts, master_config, channel_minion_id):
         encryption_algorithm="OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         signing_algorithm="PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     )
-    pathlib.Path(minion_opts["pki_dir"]).mkdir(exist_ok=True)
-    pathlib.Path(master_config["pki_dir"]).mkdir(exist_ok=True)
-    salt.crypt.gen_keys(minion_opts["pki_dir"], "minion", 4096)
+    os.makedirs(minion_opts["pki_dir"], exist_ok=True)
+    salt.crypt.AsyncAuth(minion_opts).get_keys()  # generate minion.pem/pub
     minion_pub = os.path.join(minion_opts["pki_dir"], "minion.pub")
     pub_on_master = os.path.join(master_config["pki_dir"], "minions", channel_minion_id)
     shutil.copyfile(minion_pub, pub_on_master)
@@ -126,25 +138,46 @@ def master_secrets():
     salt.master.SMaster.secrets.pop("aes")
 
 
-@salt.ext.tornado.gen.coroutine
-def _connect_and_publish(
-    io_loop, channel_minion_id, channel, server, received, timeout=60
+async def _connect_and_publish(
+    io_loop, channel_minion_id, channel, server, received, timeout=5
 ):
-    log.info("TEST - BEFORE CHANNEL CONNECT")
-    yield channel.connect()
-    log.info("TEST - AFTER CHANNEL CONNECT")
+    await channel.connect()
 
-    def cb(payload):
-        log.info("TEST - PUB SERVER MSG %r", payload)
+    async def cb(payload):
         received.append(payload)
         io_loop.stop()
 
     channel.on_recv(cb)
-    server.publish({"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"})
+    await asyncio.sleep(1)  # Wait for SUB socket to connect
+    io_loop.spawn_callback(
+        server.publish, {"tgt_type": "glob", "tgt": [channel_minion_id], "WTF": "SON"}
+    )
     start = time.time()
     while time.time() - start < timeout:
-        yield salt.ext.tornado.gen.sleep(1)
+        await asyncio.sleep(1)
     io_loop.stop()
+
+
+@pytest.fixture
+def server_channel(master_config, process_manager):
+    server_channel = salt.channel.server.PubServerChannel.factory(
+        master_config,
+    )
+    server_channel.pre_fork(process_manager)
+    try:
+        yield server_channel
+    finally:
+        server_channel.close()
+
+
+@pytest.fixture
+def req_server_channel(master_config, process_manager):
+    channel = salt.channel.server.ReqServerChannel.factory(master_config)
+    channel.pre_fork(process_manager)
+    try:
+        yield channel
+    finally:
+        channel.close()
 
 
 def test_pub_server_channel(
@@ -154,37 +187,36 @@ def test_pub_server_channel(
     minion_config,
     process_manager,
     master_secrets,
+    server_channel,
+    req_server_channel,
 ):
-    server_channel = salt.channel.server.PubServerChannel.factory(
-        master_config,
-    )
-    server_channel.pre_fork(process_manager)
-    req_server_channel = salt.channel.server.ReqServerChannel.factory(master_config)
-    req_server_channel.pre_fork(process_manager)
+    if not server_channel.transport.started.wait(30):
+        pytest.fail("Server channel did not start within 30 seconds.")
 
-    def handle_payload(payload):
-        log.info("TEST - Req Server handle payload %r", payload)
+    async def handle_payload(payload):
+        log.debug("Payload handler got %r", payload)
 
     req_server_channel.post_fork(handle_payload, io_loop=io_loop)
 
     if master_config["transport"] == "zeromq":
-        time.sleep(1)
-        attempts = 5
-        while True:
-            try:
-                p = Path(str(master_config["sock_dir"])) / "workers.ipc"
-                mode = os.lstat(p).st_mode
-                assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
-                assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
-                assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
-                break
-            except FileNotFoundError as exc:
-                if not attempts:
-                    raise exc from None
-                attempts -= 1
-                time.sleep(2.5)
+        p = Path(str(master_config["sock_dir"])) / "workers.ipc"
+        print(f"Checking for {p}")
+        print(f"Directory contents: {os.listdir(master_config['sock_dir'])}")
+        start = time.time()
+        while not p.exists():
+            time.sleep(0.3)
+            if time.time() - start > 20:
+                raise Exception(
+                    f"IPC socket not created. Dir contents: {os.listdir(master_config['sock_dir'])}"
+                )
+        mode = os.lstat(p).st_mode
+        assert bool(os.lstat(p).st_mode & stat.S_IRUSR)
+        assert not bool(os.lstat(p).st_mode & stat.S_IRGRP)
+        assert not bool(os.lstat(p).st_mode & stat.S_IROTH)
 
-    pub_channel = salt.channel.client.AsyncPubChannel.factory(minion_config)
+    pub_channel = salt.channel.client.AsyncPubChannel.factory(
+        minion_config, io_loop=io_loop
+    )
     received = []
 
     try:

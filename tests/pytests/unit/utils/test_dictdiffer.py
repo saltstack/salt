@@ -8,12 +8,19 @@ IGNORE_MISSING = True
 
 @pytest.fixture
 def differ(request):
-    old, new, *ignore_missing = request.param
+    old, new, *extra = request.param
+
     try:
-        ignore_missing = bool(ignore_missing.pop(0))
+        ignore_missing = bool(extra.pop(0))
     except IndexError:
         ignore_missing = False
-    return dictdiffer.RecursiveDictDiffer(old, new, ignore_missing)
+
+    try:
+        list_dict_matchers = list(extra.pop(0))
+    except IndexError:
+        list_dict_matchers = []
+
+    return dictdiffer.RecursiveDictDiffer(old, new, ignore_missing, list_dict_matchers)
 
 
 @pytest.mark.parametrize("separator", [None, ":"])
@@ -219,6 +226,140 @@ def test_unchanged(differ, expected, separator):
             {"b": {"old": {"c": "c"}, "new": NONE}},
         ),
         (({"a": "a", "b": {"c": "c"}}, {"a": "a"}, IGNORE_MISSING), {}),
+        (
+            # list of dicts with single matcher key, expect deep diff
+            (
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "baz"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                False,
+                ["name"],
+            ),
+            {"a": {"b": {"sub1": {"foo": {"old": "bar", "new": "baz"}}}}},
+        ),
+        (
+            # list of dicts with multiple matcher keys, expect deep diff
+            (
+                {
+                    "a": {
+                        "b": [{"name": "sub1", "foo": "bar"}],
+                        "c": [{"type": "sub2", "x": "y"}],
+                    }
+                },
+                {
+                    "a": {
+                        "b": [{"name": "sub1", "foo": "baz"}],
+                        "c": [{"type": "sub2", "x": "z"}],
+                    }
+                },
+                False,
+                ["name", "type"],
+            ),
+            {
+                "a": {
+                    "b": {"sub1": {"foo": {"old": "bar", "new": "baz"}}},
+                    "c": {"sub2": {"x": {"old": "y", "new": "z"}}},
+                }
+            },
+        ),
+        (
+            # identical list of dicts, with matcher key, expect no changes
+            (
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                False,
+                ["name"],
+            ),
+            {},
+        ),
+        (
+            # identical list of dicts, without matcher key, expect no changes
+            (
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                False,
+                [],
+            ),
+            {},
+        ),
+        (
+            # matcher key "name" does not exist in second list of dicts, expect fallback to simple list diff
+            (
+                {
+                    "a": {
+                        "b": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "y"},
+                        ]
+                    }
+                },
+                {
+                    "a": {
+                        "b": [
+                            {"noname": "sub1", "foo": "baz"},
+                            {"noname": "sub2", "x": "x"},
+                        ]
+                    }
+                },
+                False,
+                ["name"],
+            ),
+            {
+                "a": {
+                    "b": {
+                        "old": [
+                            {"name": "sub1", "foo": "bar"},
+                            {"name": "sub2", "x": "y"},
+                        ],
+                        "new": [
+                            {"noname": "sub1", "foo": "baz"},
+                            {"noname": "sub2", "x": "x"},
+                        ],
+                    }
+                }
+            },
+        ),
     ],
     indirect=["differ"],
 )

@@ -15,7 +15,7 @@ import subprocess
 import threading
 import time
 
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, TimedProcTimeoutError
 
 try:
     import msvcrt
@@ -28,6 +28,7 @@ try:
     import win32process
     import win32profile
     import win32security
+    import winerror
 
     import salt.platform.win
 
@@ -71,6 +72,18 @@ def __virtual__():
         return False, "This utility requires pywin32"
 
     return "win_runas"
+
+
+def close_handle(handle):
+    """
+    Tries to close an object handle
+    """
+    if handle is not None:
+        try:
+            win32api.CloseHandle(handle)
+        except pywintypes.error as exc:
+            if exc.winerror != winerror.ERROR_INVALID_HANDLE:
+                raise
 
 
 def split_username(username):
@@ -159,7 +172,63 @@ def create_env(user_token, inherit=False, timeout=1):
         raise exc
 
 
-def runas(cmd, username, password=None, cwd=None):
+def create_default_env(username):
+    """
+    Creates an environment with default values.
+    """
+    result = {}
+
+    systemdrive = os.environ.get("SystemDrive", r"C:")
+    defaults = {
+        "ALLUSERSPROFILE": r"C:\ProgramData",
+        "CommonProgramFiles": r"C:\Program Files\Common Files",
+        "CommonProgramFiles(x86)": r"C:\Program Files (x86)\Common Files",
+        "CommonProgramW6432": r"C:\Program Files\Common Files",
+        "ComputerName": None,
+        "ComSpec": r"C:\Windows\system32\cmd.exe",
+        "DriverData": r"C:\Windows\System32\Drivers\DriverData",
+        "NUMBER_OF_PROCESSORS": None,
+        "OS": None,
+        "Path": r"C:\Windows\System32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0"
+        "\\",
+        "PATHEXT": r".COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC",
+        "PROCESSOR_ARCHITECTURE": None,
+        "PROCESSOR_IDENTIFIER": None,
+        "PROCESSOR_LEVEL": None,
+        "PROCESSOR_REVISION": None,
+        "ProgramData": r"C:\ProgramData",
+        "ProgramFiles": r"C:\Program Files",
+        "ProgramFiles(x86)": r"C:\Program Files (x86)",
+        "ProgramW6432": r"C:\Program Files",
+        "PROMPT": r"$P$G",
+        "PSModulePath": r"%ProgramFiles%\WindowsPowerShell\Modules;%SystemRoot%\system32\WindowsPowerShell\v1.0\Modules",
+        "PUBLIC": r"C:\Users\Public",
+        "SystemDrive": systemdrive,
+        "SystemRoot": r"C:\Windows",
+        "USERDOMAIN": None,
+        "windir": r"C:\Windows",
+    }
+    user_specific = {
+        "APPDATA": rf"{systemdrive}\Users\{username}\AppData\Roaming",
+        "HOMEDRIVE": systemdrive,
+        "HOMEPATH": rf"\Users\{username}",
+        "LOCALAPPDATA": rf"{systemdrive}\Users\{username}\AppData\Local",
+        "TEMP": rf"{systemdrive}\Users\{username}\AppData\Local\Temp",
+        "TMP": rf"{systemdrive}\Users\{username}\AppData\Local\Temp",
+        "USERNAME": rf"{username}",
+        "USERPROFILE": rf"{systemdrive}\Users\{username}",
+    }
+    # set default variables based on the current user
+    for key, val in defaults.items():
+        item = os.environ.get(key, val)
+        if key is not None:
+            result.update({key: item})
+    # set user specific variables
+    result.update(user_specific)
+    return result
+
+
+def runas(cmd, username, password=None, **kwargs):
     """
     Run ``cmd`` as ``username`` using a logon token and
     ``CreateProcessWithTokenW``.
@@ -235,7 +304,7 @@ def runas(cmd, username, password=None, cwd=None):
         "win_runas.runas: user=%r domain=%r cwd=%r cmdline=%s",
         username,
         domain,
-        cwd,
+        kwargs.get("cwd"),
         _preview_cmd(cmd),
     )
 
@@ -243,7 +312,7 @@ def runas(cmd, username, password=None, cwd=None):
     # runas.
     if not impersonation_token:
         log.debug("No impersonation token, using unprivileged runas")
-        return runas_unpriv(cmd, username, password, cwd)
+        return runas_unpriv(cmd, username, password, **kwargs)
 
     if domain == "NT AUTHORITY":
         # Logon as a system level account, SYSTEM, LOCAL SERVICE, or NETWORK
@@ -299,37 +368,54 @@ def runas(cmd, username, password=None, cwd=None):
     # Run the process without showing a window.
     creationflags = (
         win32process.CREATE_NO_WINDOW
-        | win32process.CREATE_NEW_CONSOLE
         | win32process.CREATE_SUSPENDED
+        | win32process.CREATE_UNICODE_ENVIRONMENT
     )
 
-    flags = win32con.STARTF_USESTDHANDLES
-    flags |= win32con.STARTF_USESHOWWINDOW
-    startup_info = salt.platform.win.STARTUPINFO(
-        dwFlags=flags,
-        hStdInput=stdin_read.handle,
-        hStdOutput=stdout_write.handle,
-        hStdError=stderr_write.handle,
-    )
+    flags = win32con.STARTF_USESHOWWINDOW | win32con.STARTF_USESTDHANDLES
+    startup_args = {
+        "dwFlags": flags,
+        "hStdInput": stdin_read.handle,
+        "hStdOutput": stdout_write.handle,
+    }
+    if kwargs.get("redirect_stderr", False):
+        startup_args.update({"hStdError": stdout_write.handle})
+    else:
+        startup_args.update({"hStdError": stderr_write.handle})
+    startup_info = salt.platform.win.STARTUPINFO(**startup_args)
 
     # Create the environment for the user
     log.debug("win_runas.runas: building environment block for user token")
     env = create_env(user_token, inherit=False)
+    if kwargs.get("env", {}):
+        env.update(kwargs["env"])
+
+    # Set an optional timeout
+    timeout = kwargs.get("timeout", None)
+    if timeout:
+        timeout = timeout * 1000
+    else:
+        timeout = win32event.INFINITE
+
+    wait = not kwargs.get("bg", False)
 
     hProcess = None
+    hThread = None
+    result = None
+    ret = {}
     try:
         # Start the process in a suspended state.
         log.debug("win_runas.runas: calling CreateProcessWithTokenW (suspended)")
         t0 = time.monotonic()
         process_info = salt.platform.win.CreateProcessWithTokenW(
             int(user_token),
-            logonflags=1,
+            logonflags=salt.platform.win.LOGON_WITH_PROFILE,
             applicationname=None,
             commandline=cmd,
-            currentdirectory=cwd,
             creationflags=creationflags,
-            startupinfo=startup_info,
             environment=env,
+            currentdirectory=kwargs.get("cwd"),
+            startupinfo=startup_info,
         )
         log.debug(
             "win_runas.runas: CreateProcessWithTokenW returned in %.3fs",
@@ -352,9 +438,10 @@ def runas(cmd, username, password=None, cwd=None):
         salt.platform.win.kernel32.CloseHandle(stderr_write.handle)
 
         ret = {"pid": dwProcessId}
-        # CREATE_SUSPENDED: the primary thread must be resumed. psutil's
-        # process resume is not as reliable as ResumeThread on the handle
-        # returned in PROCESS_INFORMATION.
+
+        # CREATE_SUSPENDED: the primary thread must be resumed. ResumeThread on
+        # the PROCESS_INFORMATION handle is more reliable than psutil.Process
+        # for the suspended thread Windows hands back.
         if hThread:
             resume_count = win32process.ResumeThread(hThread)
             log.debug(
@@ -366,79 +453,89 @@ def runas(cmd, username, password=None, cwd=None):
                     "win_runas.runas: ResumeThread failed; process may never run; "
                     "if the next line logs an infinite wait, the child is likely still suspended"
                 )
-            win32api.CloseHandle(hThread)
+            close_handle(hThread)
+            hThread = None
 
-        # Read stdout/stderr in background threads *before* waiting on the
-        # process. If we WaitForSingleObject first then read, the child can
-        # fill the 64k pipe and block in WriteFile (e.g. huge ``dir`` output
-        # when ``cd`` failed) while the parent is stuck in Wait -- deadlock.
-        stdout_buf = []
-        stderr_buf = []
+        if wait:
+            # Drain stdout/stderr on helper threads *before* waiting. If we
+            # WaitForSingleObject first then read, the child can fill the 64k
+            # pipe and block in WriteFile (e.g. huge ``dir`` output when ``cd``
+            # failed) while the parent is stuck in Wait — deadlock.
+            stdout_buf = []
+            stderr_buf = []
 
-        def _pump_pipecopy(handle, bucket, name):
-            """Read one inherited pipe end into *bucket* (list with one string)."""
-            try:
-                fd = msvcrt.open_osfhandle(int(handle), os.O_RDONLY | os.O_TEXT)
-                with os.fdopen(fd, "r") as fh:
-                    bucket.append(fh.read())
-            except OSError as exc:
-                log.debug("win_runas.runas: reading %s pipe: %s", name, exc)
-                bucket.append("")
+            def _pump_pipecopy(handle, bucket, name):
+                """Read one inherited pipe end into *bucket* (list with one bytes)."""
+                try:
+                    fd = msvcrt.open_osfhandle(int(handle), os.O_RDONLY | os.O_TEXT)
+                    with os.fdopen(fd, "rb") as fh:
+                        bucket.append(fh.read())
+                except OSError as exc:
+                    log.debug("win_runas.runas: reading %s pipe: %s", name, exc)
+                    bucket.append(b"")
 
-        t_out = threading.Thread(
-            target=_pump_pipecopy,
-            args=(stdout_read.handle, stdout_buf, "stdout"),
-        )
-        t_err = threading.Thread(
-            target=_pump_pipecopy,
-            args=(stderr_read.handle, stderr_buf, "stderr"),
-        )
-        t_out.start()
-        t_err.start()
-        log.debug("win_runas.runas: started pipe-drain threads for pid=%s", dwProcessId)
-
-        # Wait for the process to exit and get its return code.
-        log.debug(
-            "win_runas.runas: waiting for pid=%s to exit (infinite wait)",
-            dwProcessId,
-        )
-        t_wait = time.monotonic()
-        if (
-            win32event.WaitForSingleObject(hProcess, win32event.INFINITE)
-            == win32con.WAIT_OBJECT_0
-        ):
+            t_out = threading.Thread(
+                target=_pump_pipecopy,
+                args=(stdout_read.handle, stdout_buf, "stdout"),
+            )
+            t_err = threading.Thread(
+                target=_pump_pipecopy,
+                args=(stderr_read.handle, stderr_buf, "stderr"),
+            )
+            t_out.start()
+            t_err.start()
             log.debug(
-                "win_runas.runas: WaitForSingleObject signalled after %.3fs for pid=%s",
-                time.monotonic() - t_wait,
-                dwProcessId,
-            )
-            exitcode = win32process.GetExitCodeProcess(hProcess)
-            log.debug("win_runas.runas: pid=%s exit code=%s", dwProcessId, exitcode)
-            ret["retcode"] = exitcode
-        else:
-            log.error(
-                "win_runas.runas: unexpected WaitForSingleObject result for pid=%s",
-                dwProcessId,
+                "win_runas.runas: started pipe-drain threads for pid=%s", dwProcessId
             )
 
-        t_out.join()
-        t_err.join()
-        log.debug("win_runas.runas: pipe-drain threads joined for pid=%s", dwProcessId)
-        ret["stdout"] = (stdout_buf[0] if stdout_buf else "").strip()
-        ret["stderr"] = stderr_buf[0] if stderr_buf else ""
+            # Wait for the process to exit and get its return code.
+            t_wait = time.monotonic()
+            result = win32event.WaitForSingleObject(hProcess, timeout)
+            if result == win32con.WAIT_TIMEOUT:
+                log.warning(
+                    "win_runas.runas: pid=%s timed out after %sms, terminating",
+                    dwProcessId,
+                    timeout,
+                )
+                win32process.TerminateProcess(hProcess, 1)
+            elif result == win32con.WAIT_OBJECT_0:
+                log.debug(
+                    "win_runas.runas: WaitForSingleObject signalled after %.3fs for pid=%s",
+                    time.monotonic() - t_wait,
+                    dwProcessId,
+                )
+                exitcode = win32process.GetExitCodeProcess(hProcess)
+                log.debug("win_runas.runas: pid=%s exit code=%s", dwProcessId, exitcode)
+                ret["retcode"] = exitcode
+
+            t_out.join()
+            t_err.join()
+            log.debug(
+                "win_runas.runas: pipe-drain threads joined for pid=%s", dwProcessId
+            )
+            ret["stdout"] = stdout_buf[0] if stdout_buf else b""
+            ret["stderr"] = stderr_buf[0] if stderr_buf else b""
     finally:
-        if hProcess is not None:
-            salt.platform.win.kernel32.CloseHandle(hProcess)
-        win32api.CloseHandle(th)
-        win32api.CloseHandle(user_token)
-        if impersonation_token:
+        close_handle(hProcess)
+        close_handle(hThread)
+        close_handle(th)
+        close_handle(user_token)
+        if impersonation_token is not None:
             win32security.RevertToSelf()
-            win32api.CloseHandle(impersonation_token)
+        close_handle(impersonation_token)
+        close_handle(stdin_read.handle)
+        close_handle(stdout_read.handle)
+        close_handle(stderr_read.handle)
+
+    if result == win32con.WAIT_TIMEOUT:
+        raise TimedProcTimeoutError(
+            "{} : Timed out after {} seconds".format(cmd, kwargs["timeout"])
+        )
 
     return ret
 
 
-def runas_unpriv(cmd, username, password, cwd=None):
+def runas_unpriv(cmd, username, password, **kwargs):
     """
     Run ``cmd`` as ``username`` using ``CreateProcessWithLogonW`` (with profile).
 
@@ -482,37 +579,70 @@ def runas_unpriv(cmd, username, password, cwd=None):
         "win_runas.runas_unpriv: user=%r domain=%r cwd=%r cmdline=%s",
         username,
         domain,
-        cwd,
+        kwargs.get("cwd"),
         _preview_cmd(cmd),
-    )
-
-    # Create a pipe to set as stdout in the child. The write handle needs to be
-    # inheritable.
-    c2pread, c2pwrite = salt.platform.win.CreatePipe(
-        inherit_read=False,
-        inherit_write=True,
-    )
-    errread, errwrite = salt.platform.win.CreatePipe(
-        inherit_read=False,
-        inherit_write=True,
     )
 
     # Create inheritable copy of the stdin
     stdin = salt.platform.win.kernel32.GetStdHandle(
         salt.platform.win.STD_INPUT_HANDLE,
     )
-    dupin = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
+    stdin_read_handle = salt.platform.win.DuplicateHandle(srchandle=stdin, inherit=True)
 
-    # Get startup info structure
-    flags = win32con.STARTF_USESTDHANDLES
-    flags |= win32con.STARTF_USESHOWWINDOW
-    startup_info = salt.platform.win.STARTUPINFO(
-        dwFlags=flags,
-        hStdInput=dupin,
-        hStdOutput=c2pwrite,
-        hStdError=errwrite,
+    # Create a pipe to set as stdout in the child. The write handle needs to be
+    # inheritable.
+    stdout_read_handle, stdout_write_handle = salt.platform.win.CreatePipe(
+        inherit_read=False,
+        inherit_write=True,
+    )
+    stderr_read_handle, stderr_write_handle = salt.platform.win.CreatePipe(
+        inherit_read=False,
+        inherit_write=True,
     )
 
+    # Run the process without showing a window.
+    creationflags = (
+        salt.platform.win.CREATE_NO_WINDOW
+        | salt.platform.win.CREATE_UNICODE_ENVIRONMENT
+    )
+
+    # Get startup info structure
+    flags = (
+        salt.platform.win.STARTF_USESHOWWINDOW | salt.platform.win.STARTF_USESTDHANDLES
+    )
+    startup_args = {
+        "dwFlags": flags,
+        "hStdInput": stdin_read_handle,
+        "hStdOutput": stdout_write_handle,
+    }
+    if kwargs.get("redirect_stderr", False):
+        startup_args.update({"hStdError": stdout_write_handle})
+    else:
+        startup_args.update({"hStdError": stderr_write_handle})
+    startup_info = salt.platform.win.STARTUPINFO(**startup_args)
+
+    # Create the environment for the user
+    env = kwargs.get("env", None)
+    if env:
+        # Unprivileged users won't be able to call CreateEnvironmentBlock.
+        # Create an environment block with sane defaults instead
+        env = create_default_env(username)
+        env.update(kwargs["env"])
+        env = salt.platform.win.environment_string(env)
+
+    # Set an optional timeout
+    timeout = kwargs.get("timeout", None)
+    if timeout:
+        timeout = timeout * 1000
+    else:
+        timeout = win32event.INFINITE
+
+    wait = not kwargs.get("bg", False)
+
+    hProcess = None
+    hThread = None
+    result = None
+    ret = {}
     try:
         # Run command and return process info structure
         log.debug("win_runas.runas_unpriv: CreateProcessWithLogonW")
@@ -522,63 +652,74 @@ def runas_unpriv(cmd, username, password, cwd=None):
             domain=domain,
             password=password,
             logonflags=salt.platform.win.LOGON_WITH_PROFILE,
+            applicationname=None,
             commandline=cmd,
+            creationflags=creationflags,
+            environment=env,
+            currentdirectory=kwargs.get("cwd"),
             startupinfo=startup_info,
-            currentdirectory=cwd,
         )
         log.debug(
             "win_runas.runas_unpriv: process started pid=%s in %.3fs",
             process_info.dwProcessId,
             time.monotonic() - t0,
         )
-        salt.platform.win.kernel32.CloseHandle(process_info.hThread)
+        hProcess = process_info.hProcess
+        hThread = process_info.hThread
+        dwProcessId = process_info.dwProcessId
+
+        # We don't use these so let's close the handle
+        salt.platform.win.kernel32.CloseHandle(stdin_read_handle)
+        salt.platform.win.kernel32.CloseHandle(stdout_write_handle)
+        salt.platform.win.kernel32.CloseHandle(stderr_write_handle)
+
+        ret = {"pid": dwProcessId}
+
+        if wait:
+            # Wait for the process to exit and get its return code
+            result = salt.platform.win.kernel32.WaitForSingleObject(hProcess, timeout)
+            if result == win32con.WAIT_TIMEOUT:
+                log.warning(
+                    "win_runas.runas_unpriv: pid=%s timed out after %sms, terminating",
+                    dwProcessId,
+                    timeout,
+                )
+                salt.platform.win.kernel32.TerminateProcess(hProcess, 1)
+            elif result == win32con.WAIT_OBJECT_0:
+                exitcode = salt.platform.win.wintypes.DWORD()
+                salt.platform.win.kernel32.GetExitCodeProcess(
+                    hProcess, ctypes.byref(exitcode)
+                )
+                log.debug(
+                    "win_runas.runas_unpriv: pid=%s exit code=%s",
+                    dwProcessId,
+                    exitcode.value,
+                )
+                ret["retcode"] = exitcode.value
+
+            # Read Standard out
+            fd_out = msvcrt.open_osfhandle(stdout_read_handle, os.O_RDONLY | os.O_TEXT)
+            with os.fdopen(fd_out, "rb") as f_out:
+                stdout = f_out.read()
+                ret["stdout"] = stdout
+
+            # Read Standard error
+            fd_err = msvcrt.open_osfhandle(stderr_read_handle, os.O_RDONLY | os.O_TEXT)
+            with os.fdopen(fd_err, "rb") as f_err:
+                stderr = f_err.read()
+                ret["stderr"] = stderr
     finally:
-        salt.platform.win.kernel32.CloseHandle(dupin)
-        salt.platform.win.kernel32.CloseHandle(c2pwrite)
-        salt.platform.win.kernel32.CloseHandle(errwrite)
+        if hProcess is not None:
+            salt.platform.win.kernel32.CloseHandle(hProcess)
+        if hThread is not None:
+            salt.platform.win.kernel32.CloseHandle(hThread)
+        if not wait:
+            salt.platform.win.kernel32.CloseHandle(stdout_read_handle)
+            salt.platform.win.kernel32.CloseHandle(stderr_read_handle)
 
-    # Initialize ret and set first element
-    ret = {"pid": process_info.dwProcessId}
-
-    # Get Standard Out
-    fd_out = msvcrt.open_osfhandle(c2pread, os.O_RDONLY | os.O_TEXT)
-    with os.fdopen(fd_out, "r") as f_out:
-        ret["stdout"] = f_out.read()
-
-    # Get Standard Error
-    fd_err = msvcrt.open_osfhandle(errread, os.O_RDONLY | os.O_TEXT)
-    with os.fdopen(fd_err, "r") as f_err:
-        ret["stderr"] = f_err.read()
-
-    # Get Return Code
-    log.debug(
-        "win_runas.runas_unpriv: waiting for pid=%s to exit (infinite wait)",
-        process_info.dwProcessId,
-    )
-    t_wait = time.monotonic()
-    if (
-        salt.platform.win.kernel32.WaitForSingleObject(
-            process_info.hProcess, win32event.INFINITE
+    if result == win32con.WAIT_TIMEOUT:
+        raise TimedProcTimeoutError(
+            "{} : Timed out after {} seconds".format(cmd, kwargs["timeout"])
         )
-        == win32con.WAIT_OBJECT_0
-    ):
-        log.debug(
-            "win_runas.runas_unpriv: WaitForSingleObject done after %.3fs for pid=%s",
-            time.monotonic() - t_wait,
-            process_info.dwProcessId,
-        )
-        exitcode = salt.platform.win.wintypes.DWORD()
-        salt.platform.win.kernel32.GetExitCodeProcess(
-            process_info.hProcess, ctypes.byref(exitcode)
-        )
-        log.debug(
-            "win_runas.runas_unpriv: pid=%s exit code=%s",
-            process_info.dwProcessId,
-            exitcode.value,
-        )
-        ret["retcode"] = exitcode.value
-
-    # Close handle to process
-    salt.platform.win.kernel32.CloseHandle(process_info.hProcess)
 
     return ret

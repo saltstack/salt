@@ -1,6 +1,8 @@
 """
-Allow for flow based timers. These timers allow for a sleep to exist across
-multiple runs of the flow
+Allow flow-based timers inside Thorium formulas.
+
+These timers keep state across multiple Thorium evaluation cycles, which makes
+them useful for cooldowns, delayed reactions, and rate limiting.
 """
 
 import time
@@ -10,7 +12,11 @@ def hold(name, seconds):
     """
     Wait for a given period of time, then fire a result of True, requiring
     this state allows for an action to be blocked for evaluation based on
-    time
+    time.
+
+    A common pattern is to require a ``check.*`` state first and then require
+    this timer from the action state so the action only runs after the hold
+    period has elapsed.
 
     USAGE:
 
@@ -19,6 +25,12 @@ def hold(name, seconds):
         hold_on_a_moment:
           timer.hold:
             - seconds: 30
+
+        cooldown:
+          timer.hold:
+            - seconds: 900
+            - require:
+              - check: repeated_failures
     """
     ret = {"name": name, "result": False, "comment": "", "changes": {}}
     start = time.time()

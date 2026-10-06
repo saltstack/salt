@@ -9,7 +9,7 @@ import logging
 
 import salt.modules.cmdmod
 import salt.utils.path
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 __salt__ = {
     "cmd.run_all": salt.modules.cmdmod.run_all,
@@ -162,16 +162,36 @@ def links(dev):
     return info(dev).get("S", None)
 
 
-def exportdb():
-    """
-    Return all the udev database
+def _filter_subsystems(udevadm_info, subsystems):
+    """Filter udevadm_info, keep entries that match any of the passed subsystems."""
+
+    ret = []
+    for entry in udevadm_info:
+        if entry["E"]["SUBSYSTEM"] in subsystems:
+            ret.append(entry)
+    return ret
+
+
+def exportdb(subsystems=None):
+    """Return the complete udev database.
+
+    :param list subsystems: This parameter limits the returned data to specified
+        subsystems such as "pci", "usb", "block", etc.
+
+        .. versionadded :: 3008.0
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' udev.exportdb
+        salt '*' udev.exportdb subsystems='[usb, block]'
+
     """
+
+    if subsystems is not None:
+        if not isinstance(subsystems, list):
+            raise SaltInvocationError("subsystems must be a list")
 
     cmd = "udevadm info --export-db"
     udev_result = __salt__["cmd.run_all"](cmd, output_loglevel="quiet")
@@ -179,4 +199,8 @@ def exportdb():
     if udev_result["retcode"]:
         raise CommandExecutionError(udev_result["stderr"])
 
-    return _parse_udevadm_info(udev_result["stdout"])
+    ret = _parse_udevadm_info(udev_result["stdout"])
+    if subsystems is not None:
+        ret = _filter_subsystems(ret, subsystems)
+
+    return ret

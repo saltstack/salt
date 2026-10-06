@@ -1,5 +1,8 @@
 """
-The key Thorium State is used to apply changes to the accepted/rejected/pending keys
+Apply Thorium decisions to accepted, rejected, and pending minion keys.
+
+This module is intended for workflows where Thorium tracks minion health and
+then removes or rejects keys for minions that have stopped reporting.
 
 .. versionadded:: 2016.11.0
 """
@@ -22,7 +25,11 @@ def timeout(name, delete=0, reject=0):
     """
     If any minion's status is older than the timeout value then apply the
     given action to the timed out key. This example will remove keys to
-    minions that have not checked in for 300 seconds (5 minutes)
+    minions that have not checked in for 300 seconds (5 minutes).
+
+    This state depends on the ``status`` register created by ``status.reg``.
+    ``delete`` removes keys entirely, while ``reject`` leaves them visible in a
+    rejected state.
 
     USAGE:
 
@@ -36,6 +43,12 @@ def timeout(name, delete=0, reject=0):
             - require:
               - status: statreg
             - delete: 300
+
+        reject_keys:
+          key.timeout:
+            - require:
+              - status: statreg
+            - reject: 300
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": True}
     now = time.time()

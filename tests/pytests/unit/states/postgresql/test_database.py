@@ -80,3 +80,24 @@ def test_absent():
             comt = f"Database {name} is not present, so it cannot be removed"
             ret.update({"comment": comt, "result": True, "changes": {}})
             assert postgres_database.absent(name) == ret
+
+
+def test_absent_removal_failure():
+    """
+    Test that a database which exists but cannot be removed (e.g. it is
+    still in use) is reported as a failure rather than as "not present".
+    """
+    name = "frank"
+
+    ret = {"name": name, "changes": {}, "result": False, "comment": ""}
+
+    mock_exists = MagicMock(return_value=True)
+    mock_remove = MagicMock(return_value=False)
+    with patch.dict(
+        postgres_database.__salt__,
+        {"postgres.db_exists": mock_exists, "postgres.db_remove": mock_remove},
+    ):
+        with patch.dict(postgres_database.__opts__, {"test": False}):
+            comt = f"Database {name} failed to be removed"
+            ret.update({"comment": comt, "result": False, "changes": {}})
+            assert postgres_database.absent(name) == ret

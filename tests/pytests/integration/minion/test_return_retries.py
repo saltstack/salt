@@ -18,6 +18,7 @@ def salt_minion_retry(salt_master, salt_minion_id):
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "zmq_monitor": False,
     }
     factory = salt_master.salt_minion_daemon(
         random_string("retry-minion-"),
@@ -35,14 +36,14 @@ def salt_minion_retry(salt_master, salt_minion_id):
 @pytest.mark.slow_test
 def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     # run job that takes some time for warmup
-    rtn = salt_cli.run("test.sleep", "3.5", "--async", minion_tgt=salt_minion_retry.id)
+    rtn = salt_cli.run("test.sleep", "10", "--async", minion_tgt=salt_minion_retry.id)
     # obtain JID
     jid = rtn.stdout.strip().split(" ")[-1]
-
+    time.sleep(1)
     # stop the salt master for some time
     with salt_master.stopped():
         # verify we don't yet have the result and sleep
-        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=60).data == {}
+        assert salt_run_cli.run("jobs.lookup_jid", jid, _timeout=10).data == {}
 
         # the 5s sleep (and 60s timeout value) is to reduce flakiness due to slower test runs
         # and should be addresses when number of tries is configurable through minion opts
@@ -60,6 +61,19 @@ def test_publish_retry(salt_master, salt_minion_retry, salt_cli, salt_run_cli):
     assert data[salt_minion_retry.id] is True
 
 
+# Spawns 1 master + 4 minions + a ``salt-cli`` invocation that targets
+# all minions through a slow ``ext_pillar`` (sleep 6 s).  Each child
+# subprocess pays ``coverage.process_startup()`` cost on the onedir,
+# and salt-factories' internal subprocess timeout (~25 s for
+# ``timeout=5``) fires before all 4 minions can return their "Pillar
+# timed out" responses.  Skip subprocess coverage so the subprocesses
+# start fast enough to finish inside the factory timeout window; the
+# parent pytest process is still traced for ``test_return_retries``
+# unit-level coverage.  Debian 11 was the only distro that tripped this
+# on PR 69213 run 26353954732 — other distros' integration zeromq 4
+# passed, confirming runner-load variance + per-subprocess coverage
+# init together pushed it over the edge.
+@pytest.mark.no_subprocess_coverage
 @pytest.mark.slow_test
 @pytest.mark.timeout_unless_on_windows(180)
 def test_pillar_timeout(salt_master_factory, tmp_path):

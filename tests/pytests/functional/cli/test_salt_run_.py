@@ -1,5 +1,7 @@
 import logging
 import os
+import subprocess
+import sys
 
 import salt.version
 
@@ -80,6 +82,19 @@ def test_versions_report(salt_run_cli):
 
 
 def test_salt_run_version(salt_run_cli):
-    expected = salt.version.__saltstack_version__.formatted_version
+    # Compare the factory-invoked CLI to a bare subprocess of the same script;
+    # ``salt.version`` in the pytest process can disagree with the test env's
+    # ``sys.path`` (e.g. staged scripts vs workspace imports).
+    py_exe = salt_run_cli.python_executable or sys.executable
     ret = salt_run_cli.run("--version")
-    assert f"cli_salt_run.py {expected}\n" == ret.stdout
+    assert ret.returncode == 0
+    proc = subprocess.run(
+        [py_exe, salt_run_cli.get_script_path(), "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=str(salt_run_cli.cwd),
+        env=dict(salt_run_cli.environ),
+    )
+    assert proc.returncode == 0, proc.stderr
+    assert ret.stdout == proc.stdout

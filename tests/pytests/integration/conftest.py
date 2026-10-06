@@ -6,10 +6,42 @@
 """
 
 import logging
+import time
 
 import pytest
+from pytestshellutils.exceptions import FactoryTimeout
+
+import salt.utils.platform
 
 log = logging.getLogger(__name__)
+
+# Windows integration runs are slower (I/O, antivirus, ZMQ); allow long salt-call and sync_all.
+_SYNC_ALL_TIMEOUT = 300 if salt.utils.platform.is_windows() else 120
+_SYNC_ALL_ATTEMPTS = 2 if salt.utils.platform.is_windows() else 1
+
+
+def _sync_all_packages(salt_call_cli):
+    """Run saltutil.sync_all; retry on Windows when salt-call times out (ZMQ / auth flakes)."""
+    for attempt in range(1, _SYNC_ALL_ATTEMPTS + 1):
+        try:
+            # saltenv=base avoids slow top-file env discovery on Windows onedir CI only.
+            # On Linux, passing saltenv can leave saltutil.sync_all stuck for sub-minion fixtures.
+            kwargs = {"_timeout": _SYNC_ALL_TIMEOUT}
+            if salt.utils.platform.is_windows():
+                kwargs["saltenv"] = "base"
+            ret = salt_call_cli.run("saltutil.sync_all", **kwargs)
+            assert ret.returncode == 0, ret
+            return
+        except FactoryTimeout as exc:
+            if attempt >= _SYNC_ALL_ATTEMPTS:
+                raise
+            log.warning(
+                "saltutil.sync_all timed out (attempt %s/%s), retrying: %s",
+                attempt,
+                _SYNC_ALL_ATTEMPTS,
+                exc,
+            )
+            time.sleep(15)
 
 
 @pytest.fixture(scope="package")
@@ -28,10 +60,8 @@ def salt_minion(salt_master, salt_minion_factory):
     """
     assert salt_master.is_running()
     with salt_minion_factory.started():
-        # Sync All
         salt_call_cli = salt_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        assert ret.returncode == 0, ret
+        _sync_all_packages(salt_call_cli)
         yield salt_minion_factory
 
 
@@ -42,10 +72,8 @@ def salt_sub_minion(salt_master, salt_sub_minion_factory):
     """
     assert salt_master.is_running()
     with salt_sub_minion_factory.started():
-        # Sync All
         salt_call_cli = salt_sub_minion_factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        assert ret.returncode == 0, ret
+        _sync_all_packages(salt_call_cli)
         yield salt_sub_minion_factory
 
 
@@ -101,7 +129,7 @@ def salt_ssh_cli(salt_master, salt_ssh_roster_file, sshd_config_dir, known_hosts
     """
     assert salt_master.is_running()
     return salt_master.salt_ssh_cli(
-        timeout=180,
+        timeout=300,
         roster_file=salt_ssh_roster_file,
         target_host="localhost",
         client_key=str(sshd_config_dir / "client_key"),

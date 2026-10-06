@@ -71,7 +71,7 @@ def compile_template(
             log.debug("Template is an empty file: %s", template)
             return ret
 
-        with codecs.open(template, encoding=SLS_ENCODING) as ifile:
+        with salt.utils.files.fopen(template, encoding=SLS_ENCODING) as ifile:
             # data input to the first render function in the pipe
             input_data = ifile.read()
             if not input_data.strip():

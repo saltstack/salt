@@ -13,6 +13,26 @@ def master(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "127.0.0.1",
         "auto_accept": True,
         "gather_job_timeout": 60,
@@ -79,6 +99,13 @@ def syndic(master, salt_factories):
         minion_overrides=minion_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
+    # salt-factories starts the syndic's internal master/minion via
+    # before_start callbacks but never registers after_terminate callbacks to
+    # stop them.  Without this, the internal master's child processes
+    # (FileServerUpdate, Maintenance, …) survive the syndic's termination and
+    # keep the CI job alive until the hard timeout.
+    factory.after_terminate(factory.minion.terminate)
+    factory.after_terminate(factory.master.terminate)
     with factory.started(start_timeout=180):
         yield factory
 
@@ -91,6 +118,26 @@ def minion(syndic, salt_factories):
     port = syndic.master.config["ret_port"]
     addr = syndic.master.config["interface"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": f"{addr}:{port}",
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",

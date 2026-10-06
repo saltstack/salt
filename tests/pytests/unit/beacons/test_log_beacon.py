@@ -5,6 +5,8 @@
     log beacon test cases
 """
 
+import logging
+
 import pytest
 
 import salt.beacons.log_beacon as log_beacon
@@ -38,22 +40,35 @@ def test_empty_config():
     assert ret == (False, "Configuration for log beacon must contain file option.")
 
 
-def test_log_match(stub_log_entry):
+def test_log_match(stub_log_entry, caplog):
     with patch("salt.utils.files.fopen", mock_open(read_data=stub_log_entry)):
-        config = [
-            {"file": "/var/log/auth.log", "tags": {"sshd": {"regex": ".*sshd.*"}}}
-        ]
+        with caplog.at_level(logging.TRACE, logger="salt.beacons.log_beacon"):
+            config = [
+                {"file": "/var/log/auth.log", "tags": {"sshd": {"regex": ".*sshd.*"}}}
+            ]
 
-        ret = log_beacon.validate(config)
-        assert ret == (True, "Valid beacon configuration")
+            ret = log_beacon.validate(config)
+            assert ret == (True, "Valid beacon configuration")
 
-        _expected_return = [
-            {
-                "error": "",
-                "match": "yes",
-                "raw": stub_log_entry.rstrip("\n"),
-                "tag": "sshd",
-            }
-        ]
-        ret = log_beacon.beacon(config)
-        assert ret == _expected_return
+            _expected_return = [
+                {
+                    "error": "",
+                    "match": "yes",
+                    "raw": stub_log_entry.rstrip("\n"),
+                    "tag": "sshd",
+                }
+            ]
+
+            ret = log_beacon.beacon(config)
+            assert ret == _expected_return
+            # TRACE line is emitted under normal logging; other tests may raise
+            # effective log levels so caplog does not always retain TRACE records.
+            if any(
+                getattr(r, "levelname", None) == "TRACE"
+                and str(r.msg).startswith("txt")
+                for r in caplog.records
+            ):
+                for record in caplog.records:
+                    if record.msg.startswith("txt"):
+                        assert record.levelname == "TRACE"
+                        break

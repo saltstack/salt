@@ -1,5 +1,7 @@
 import logging
+import os
 import pathlib
+import subprocess
 import sys
 import time
 
@@ -8,6 +10,7 @@ import psutil
 import pytest
 from pytestskipmarkers.utils import platform
 
+import salt.utils.path
 from tests.support.pkg import pep440_public_equal
 
 log = logging.getLogger(__name__)
@@ -78,7 +81,7 @@ def salt_test_upgrade(
     if platform.is_windows():
         # Terminate master and minion so they don't lock files during the upgrade.
         log.info("Terminating salt-master and salt-minion before upgrade")
-        salt_master.terminate()
+
         salt_minion.terminate()
 
     # Windows MSI: plant a sentinel file in ROOTDIR\var\cache and inject
@@ -120,7 +123,11 @@ def salt_test_upgrade(
         log.info("MSI upgrade test: injected REMOVE_CONFIG=1 into registry")
 
     # Upgrade Salt (inc. minion, master, etc.) from previous version and test
-    install_salt.install(upgrade=True)
+    if sys.platform == "win32" and salt_master:
+        with salt_master.stopped():
+            install_salt.install(upgrade=True)
+    else:
+        install_salt.install(upgrade=True)
 
     if platform.is_windows():
         # Give the system a moment to fully release all file locks after the installer finishes
@@ -172,19 +179,17 @@ def salt_test_upgrade(
 
     # Verify there is a new running minion and master by getting their PID and comparing them
     # with previous PIDs from before the upgrade
-
     new_minion_pids = _get_running_named_salt_pid(process_minion_name)
     new_master_pids = _get_running_named_salt_pid(process_master_name)
 
     if sys.platform == "linux" and not new_minion_pids:
-        # services are not always restarted after upgrade
         for service in ("salt-minion", "salt-master"):
             install_salt.proc.run("systemctl", "restart", service)
         time.sleep(5)
         new_minion_pids = _get_running_named_salt_pid(process_minion_name)
         new_master_pids = _get_running_named_salt_pid(process_master_name)
 
-    if sys.platform == "linux" and install_salt.distro_id not in ("ubuntu", "debian"):
+    if sys.platform == "linux":
         assert new_minion_pids
         assert new_master_pids
         if start_version < packaging.version.parse(install_salt.artifact_version):
@@ -197,23 +202,33 @@ def salt_test_upgrade(
 
 
 def _get_running_named_salt_pid(process_name):
-
-    # need to check all of command line for salt-minion, salt-master, for example: salt-minion
-    #
-    # Linux: psutil process name only returning first part of the command '/opt/saltstack/'
-    # Linux: ['/opt/saltstack/salt/bin/python3.10 /usr/bin/salt-minion MultiMinionProcessManager MinionProcessManager']
-    #
-    # MacOS: psutil process name only returning last part of the command '/opt/salt/bin/python3.10', that is 'python3.10'
-    # MacOS: ['/opt/salt/bin/python3.10 /opt/salt/salt-minion', '']
-
     pids = []
-    for proc in psutil.process_iter():
+    if not platform.is_windows():
+        import subprocess
+
         try:
-            cmdl_strg = " ".join(str(element) for element in proc.cmdline())
-        except (psutil.NoSuchProcess, psutil.ZombieProcess, psutil.AccessDenied):
-            continue
-        if process_name in cmdl_strg:
-            pids.append(proc.pid)
+            output = subprocess.check_output(["ps", "-eo", "pid,command"], text=True)
+            for line in output.splitlines()[1:]:
+                parts = line.strip().split(maxsplit=1)
+                if len(parts) == 2:
+                    pid_str, cmdline = parts
+                    if process_name in cmdline:
+                        try:
+                            pids.append(int(pid_str))
+                        except ValueError:
+                            pass
+        except subprocess.CalledProcessError:
+            pass
+    else:
+        for proc in psutil.process_iter():
+            try:
+                name = proc.name()
+                if "salt" in name or "python" in name or process_name in name:
+                    cmdl_strg = " ".join(str(element) for element in proc.cmdline())
+                    if process_name in cmdl_strg:
+                        pids.append(proc.pid)
+            except (psutil.ZombieProcess, psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
 
     return pids
 
@@ -254,6 +269,50 @@ def _get_installed_salt_packages():
     return packages
 
 
+def test_salt_sysv_service_files(install_salt):
+    """
+    Test that init.d service scripts are present in Debian packages.
+
+    RPM packages ship systemd units only; init.d scripts are not part of the
+    RPM payload, so this check only applies to .deb packages.
+    """
+    if not install_salt.upgrade:
+        pytest.skip("Not testing an upgrade, do not run")
+
+    if sys.platform != "linux":
+        pytest.skip("Not testing on a Linux platform, do not run")
+
+    if not salt.utils.path.which("dpkg"):
+        pytest.skip("Not testing on a Debian family platform, do not run")
+
+    test_pkgs = install_salt.pkgs
+    for test_pkg_name in test_pkgs:
+        test_pkg_basename = os.path.basename(test_pkg_name)
+        # Debian/Ubuntu name typically salt-minion_300xxxxxx
+        test_pkg_basename_dash_underscore = test_pkg_basename.split("300")[0]
+        test_pkg_basename_adj = test_pkg_basename_dash_underscore[:-1]
+        if test_pkg_basename_adj in (
+            "salt-minion",
+            "salt-master",
+            "salt-syndic",
+            "salt-api",
+        ):
+            test_initd_name = f"/etc/init.d/{test_pkg_basename_adj}"
+            proc = subprocess.run(
+                ["dpkg", "-c", f"{test_pkg_name}"],
+                capture_output=True,
+                check=True,
+            )
+            found_line = False
+            for line in proc.stdout.decode().splitlines():
+                # If test_initd_name not present we should fail.
+                if test_initd_name in line:
+                    found_line = True
+                    break
+
+            assert found_line, f"{test_initd_name} not found in {test_pkg_basename}"
+
+
 def test_salt_upgrade(
     salt_call_cli, install_salt, debian_disable_policy_rcd, salt_master, salt_minion
 ):
@@ -266,22 +325,29 @@ def test_salt_upgrade(
     original_py_version = install_salt.package_python_version()
     repo = "https://github.com/saltstack/salt.git"
 
-    # Test pip install before an upgrade. A failure here must not skip the
-    # actual package upgrade — that upgrade is what the no-install integration
-    # pass depends on.
+    # Test pip integration before the upgrade: install a package via salt-pip
+    # and verify it shows up in `salt-call pip.list`. The previous incarnation
+    # of this test invoked `github.get_repo_info`, but the github execution
+    # module was moved to an external extension, so it always returns
+    # 'is not available'. `pip.list` lives in core and exercises the same
+    # underlying salt-pip integration.
+    dep_name = "PyGithub"
+    dep = f"{dep_name}==1.56.0"
+    install = salt_call_cli.run("--local", "pip.install", dep)
     try:
-        dep = "PyGithub==1.56.0"
-        install = salt_call_cli.run("--local", "pip.install", dep)
-        assert install.returncode == 0
-
-        # Verify we can use the module dependent on the installed package
-        use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-        assert "Authentication information could" in use_lib.stderr
-    except AssertionError as e:
-        log.warning("Pre-upgrade pip/github check failed: %s", e)
-
-    # perform Salt package upgrade test
-    salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
+        assert (
+            install.returncode == 0
+        ), f"pip.install of {dep} failed before upgrade: {install.stderr}"
+        listing = salt_call_cli.run("--local", "pip.list", dep_name)
+        assert listing.returncode == 0, f"pip.list failed: {listing.stderr}"
+        assert dep_name.lower() in {
+            k.lower() for k in (listing.data or {})
+        }, f"{dep_name} missing from pip.list before upgrade: {listing.data!r}"
+    finally:
+        # The upgrade must run even if the pre-upgrade pip assertions fail,
+        # so downstream integration tests (which run with --no-install) see
+        # the upgraded salt version on disk.
+        salt_test_upgrade(salt_call_cli, install_salt, salt_master, salt_minion)
 
     # Verify only one Salt package is installed after upgrade (Windows)
     if platform.is_windows():
@@ -298,13 +364,15 @@ def test_salt_upgrade(
 
     new_py_version = install_salt.package_python_version()
     if new_py_version == original_py_version:
-        try:
-            # test pip install after an upgrade
-            use_lib = salt_call_cli.run("--local", "github.get_repo_info", repo)
-            assert "Authentication information could" in use_lib.stderr
-        except AssertionError as e:
-            # Skip if pip operations fail due to environment issues
-            pytest.skip(f"Post-upgrade pip test failed: {e}")
+        # The pip-installed dep should survive an upgrade that keeps the same
+        # bundled python version.
+        listing = salt_call_cli.run("--local", "pip.list", dep_name)
+        assert (
+            listing.returncode == 0
+        ), f"pip.list failed after upgrade: {listing.stderr}"
+        assert dep_name.lower() in {
+            k.lower() for k in (listing.data or {})
+        }, f"{dep_name} missing from pip.list after upgrade: {listing.data!r}"
 
 
 @pytest.mark.skipif(not platform.is_windows(), reason="Windows MSI installer only")

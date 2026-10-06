@@ -71,6 +71,27 @@ def is_admin(name):
     return False
 
 
+def is_elevated():
+    """
+    Check if the current process is running with elevated privileges (admin)
+
+    Returns:
+        bool: True if elevated, False otherwise
+    """
+    if not HAS_WIN32:
+        return False
+
+    try:
+        h_token = win32security.OpenProcessToken(
+            win32api.GetCurrentProcess(), win32security.TOKEN_QUERY
+        )
+        return bool(
+            win32security.GetTokenInformation(h_token, win32security.TokenElevation)
+        )
+    except pywintypes.error:
+        return False
+
+
 def is_domain_controller():
     """
     Detect whether the current machine is a Windows Domain Controller.

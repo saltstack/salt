@@ -20,6 +20,7 @@ import salt.utils.files
 import salt.utils.hashutils
 import salt.utils.path
 import salt.utils.platform
+import salt.utils.tarfileutil
 import salt.utils.url
 from salt.exceptions import CommandExecutionError, CommandNotFoundError
 
@@ -165,6 +166,73 @@ def _cleanup_destdir(name):
         pass
 
 
+def _check_sig(
+    on_file,
+    signature,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    sig_backend="gpg",
+):
+    try:
+        verify = __salt__[f"{sig_backend}.verify"]
+    except KeyError:
+        raise CommandExecutionError(
+            f"Signature verification requires the {sig_backend} module, "
+            "which could not be found. Make sure you have the "
+            "necessary tools and libraries intalled"
+        )
+    # The GPG module does not understand URLs as signatures currently.
+    # Also, we want to ensure that, when verification fails, we get rid
+    # of the cached signatures.
+    final_sigs = None
+    if signature is not None:
+        sigs = [signature] if isinstance(signature, str) else signature
+        sigs_cached = []
+        final_sigs = []
+        for sig in sigs:
+            cached_sig = None
+            try:
+                urlparse(sig)
+            except (TypeError, ValueError):
+                pass
+            else:
+                cached_sig = __salt__["cp.cache_file"](sig, __env__)
+            if not cached_sig:
+                # The GPG module expects signatures as a single file path currently
+                if sig_backend == "gpg":
+                    raise CommandExecutionError(
+                        f"Detached signature file {sig} not found"
+                    )
+            else:
+                sigs_cached.append(cached_sig)
+            final_sigs.append(cached_sig or sig)
+        if isinstance(signature, str):
+            final_sigs = final_sigs[0]
+
+    res = verify(
+        filename=on_file,
+        signature=final_sigs,
+        keyring=keyring,
+        gnupghome=gnupghome,
+        signed_by_any=signed_by_any,
+        signed_by_all=signed_by_all,
+    )
+
+    if res["res"] is True:
+        return
+    # Ensure detached signature and file are deleted from cache
+    # on signature verification failure.
+    if signature is not None:
+        for sig in sigs_cached:
+            salt.utils.files.safe_rm(sig)
+    salt.utils.files.safe_rm(on_file)
+    raise CommandExecutionError(
+        f"The file's signature could not be verified: {res['message']}"
+    )
+
+
 def extracted(
     name,
     source,
@@ -190,6 +258,13 @@ def extracted(
     enforce_ownership_on=None,
     archive_format=None,
     use_etag=False,
+    signature=None,
+    source_hash_sig=None,
+    signed_by_any=None,
+    signed_by_all=None,
+    keyring=None,
+    gnupghome=None,
+    sig_backend="gpg",
     **kwargs,
 ):
     """
@@ -671,6 +746,71 @@ def extracted(
 
         .. versionadded:: 3005
 
+    signature
+        Ensure a valid GPG signature exists on the selected ``source`` file.
+        This needs to be a file URI retrievable by
+        `:py:func:`cp.cache_file <salt.modules.cp.cache_file>` which
+        identifies a detached signature.
+
+        .. note::
+
+            A signature is only enforced directly after caching the file,
+            before it is extracted to its final destination. Existing files
+            at the target will never be modified.
+
+            It will be enforced regardless of source type.
+
+        .. versionadded:: 3007.0
+
+    source_hash_sig
+        When ``source`` is a remote file source, ``source_hash`` is a file,
+        ``skip_verify`` is not true and ``use_etag`` is not true, ensure a
+        valid GPG signature exists on the source hash file.
+        Set this to ``true`` for an inline (clearsigned) signature, or to a
+        file URI retrievable by `:py:func:`cp.cache_file <salt.modules.cp.cache_file>`
+        for a detached one.
+
+        .. note::
+
+            A signature on the ``source_hash`` file is enforced regardless of
+            changes since its contents are used to check if an existing file
+            is in the correct state - but only for remote sources!
+            As for ``signature``, existing target files will not be modified,
+            only the cached source_hash and source_hash_sig files will be removed.
+
+        .. versionadded:: 3007.0
+
+    signed_by_any
+        When verifying signatures either on the managed file or its source hash file,
+        require at least one valid signature from one of a list of key fingerprints.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    signed_by_all
+        When verifying signatures either on the managed file or its source hash file,
+        require a valid signature from each of the key fingerprints in this list.
+        This is passed to :py:func:`gpg.verify <salt.modules.gpg.verify>`.
+
+        .. versionadded:: 3007.0
+
+    keyring
+        When verifying signatures, use this keyring.
+
+        .. versionadded:: 3007.0
+
+    gnupghome
+        When verifying signatures, use this GnuPG home.
+
+        .. versionadded:: 3007.0
+
+    sig_backend
+        When verifying signatures, use this execution module as a backend.
+        It must be compatible with the :py:func:`gpg.verify <salt.modules.gpg.verify>` API.
+        Defaults to ``gpg``. All signature-related parameters are passed through.
+
+        .. versionadded:: 3008.0
+
     **Examples**
 
     1. tar with lmza (i.e. xz) compression:
@@ -823,6 +963,16 @@ def extracted(
             "The 'source_hash_update' argument is ignored when "
             "'source_hash' is not also specified."
         )
+
+    if signature or source_hash_sig:
+        # Fail early in case the signature verification backend is not present
+        try:
+            __salt__[f"{sig_backend}.verify"]
+        except KeyError:
+            ret["comment"] = (
+                f"Cannot verify signatures because the {sig_backend} module was not loaded"
+            )
+            return ret
 
     try:
         source_match = __salt__["file.source_list"](source, source_hash, __env__)[0]
@@ -983,6 +1133,12 @@ def extracted(
                 source_hash=source_hash,
                 source_hash_name=source_hash_name,
                 saltenv=__env__,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except CommandExecutionError as exc:
             ret["comment"] = exc.strerror
@@ -1063,6 +1219,12 @@ def extracted(
                 skip_verify=skip_verify,
                 saltenv=__env__,
                 use_etag=use_etag,
+                source_hash_sig=source_hash_sig,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
             )
         except Exception as exc:  # pylint: disable=broad-except
             msg = "Failed to cache {}: {}".format(
@@ -1083,6 +1245,21 @@ def extracted(
                 salt.utils.url.redact_http_basic_auth(source_match),
             )
             return result
+
+    if signature:
+        try:
+            _check_sig(
+                cached,
+                signature,
+                signed_by_any=signed_by_any,
+                signed_by_all=signed_by_all,
+                keyring=keyring,
+                gnupghome=gnupghome,
+                sig_backend=sig_backend,
+            )
+        except CommandExecutionError as err:
+            ret["comment"] = f"Failed verifying the source file's signature: {err}"
+            return ret
 
     existing_cached_source_sum = _read_cached_checksum(cached)
 
@@ -1421,7 +1598,9 @@ def extracted(
                 if options is None:
                     try:
                         with closing(tarfile.open(cached, "r")) as tar:
-                            tar.extractall(salt.utils.stringutils.to_str(name))  # nosec
+                            salt.utils.tarfileutil.extractall(  # nosec B202
+                                tar, salt.utils.stringutils.to_str(name)
+                            )
                             files = tar.getnames()
                             if trim_output:
                                 files = files[:trim_output]
@@ -1646,9 +1825,9 @@ def extracted(
                 name,
             )
             _add_explanation(ret, source_hash_trigger, contents_missing)
-            ret["comment"] += ". Output was trimmed to {} number of lines".format(
-                trim_output
-            )
+            if trim_output:
+                trim_msg = f". Output was trimmed to {trim_output} number of lines"
+                ret["comment"] += trim_msg
             ret["result"] = True
 
         else:

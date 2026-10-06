@@ -4,9 +4,15 @@ Verify salt-ssh states support ``parallel``.
 
 import pytest
 
+from tests.support.helpers import system_python_version
+
 pytestmark = [
     pytest.mark.skip_on_windows(reason="salt-ssh not available on Windows"),
     pytest.mark.slow_test,
+    pytest.mark.skipif(
+        system_python_version() < (3, 10),
+        reason="System python too old for these tests",
+    ),
 ]
 
 
@@ -45,13 +51,13 @@ def state_tree_parallel(base_env_state_tree_root_dir):
         pytest.param(("state.top", "top.sls"), id="top"),
     ),
 )
-def test_it(salt_ssh_cli, args):
+def test_it(salt_ssh_cli_parameterized, args):
     """
     Ensure states with ``parallel: true`` do not cause a crash.
     This does not check that they were actually run in parallel
     since that would result either in a long-running or flaky test.
     """
-    ret = salt_ssh_cli.run(*args)
+    ret = salt_ssh_cli_parameterized.run(*args)
     assert ret.returncode == 0
     assert isinstance(ret.data, dict)
     for i in range(5):

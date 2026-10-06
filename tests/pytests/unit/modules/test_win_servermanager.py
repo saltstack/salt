@@ -46,9 +46,9 @@ def test_install():
     }
 
     mock_reboot = MagicMock(return_value=True)
-    with patch.object(
-        win_servermanager, "_pshell_json", return_value=mock_out
-    ), patch.dict(win_servermanager.__salt__, {"system.reboot": mock_reboot}):
+    with patch("salt.utils.win_pwsh.run_dict", return_value=mock_out), patch.dict(
+        win_servermanager.__salt__, {"system.reboot": mock_reboot}
+    ):
         result = win_servermanager.install("XPS-Viewer")
         assert result == expected
 
@@ -90,9 +90,9 @@ def test_install_restart():
     }
 
     mock_reboot = MagicMock(return_value=True)
-    with patch.object(
-        win_servermanager, "_pshell_json", return_value=mock_out
-    ), patch.dict(win_servermanager.__salt__, {"system.reboot": mock_reboot}):
+    with patch("salt.utils.win_pwsh.run_dict", return_value=mock_out), patch.dict(
+        win_servermanager.__salt__, {"system.reboot": mock_reboot}
+    ):
         result = win_servermanager.install("XPS-Viewer", restart=True)
         mock_reboot.assert_called_once()
         assert result == expected

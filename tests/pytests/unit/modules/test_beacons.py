@@ -1,5 +1,5 @@
 """
-    :codeauthor: :email:`Gareth J. Greenaway <ggreenaway@vmware.com>`
+    :codeauthor: Gareth J. Greenaway
 """
 
 import logging
@@ -12,6 +12,10 @@ from salt.utils.event import SaltEvent
 from tests.support.mock import MagicMock, call, mock_open, patch
 
 log = logging.getLogger(__name__)
+
+pytestmark = [
+    pytest.mark.usefixtures("mocked_tcp_pub_client"),
+]
 
 
 @pytest.fixture

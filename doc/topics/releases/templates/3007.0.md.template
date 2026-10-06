@@ -1,0 +1,79 @@
+(release-3007.0)=
+# Salt 3007.0 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## Salt's ``setup.py`` customizations
+> :warning: **Deprecation Notice**: <br>
+In Salt 3009, the ``setup.py`` file will be stripped of it's custom additions and migrated to a plain ``pyproject.toml`` python package
+or whatever is found best during the process of removing the customizations. <br>
+**If you're relying on these customizations please stop as your workflow will break in the future**.
+
+## Python 3.7 Support Dropped
+Support for python 3.7 has been dropped since it reached end-of-line in 27 Jun 2023.
+
+## Azure Salt Extension
+
+Starting from Salt version 3007.0, the Azure functionality previously available in the Salt code base is fully removed. To continue using Salt's features for interacting with Azure resources, users are required to utilize the Azure Salt extension. For more information, refer to the [Azure Salt Extension GitHub repository](https://github.com/salt-extensions/saltext-azurerm).
+
+## New Package Grain
+A new ``package`` grain was added in 3007.0 This detects how Salt was installed using the ``_pkg.txt`` in the root of
+the directory. If you are building packages of Salt you need to ensure this file is set to the correct package type
+that you are building. The options are ``pip``, ``onedir``, or ``system``. By default this file is already set to ``pip``.
+
+## Improved Vault integration
+This release features a much deeper integration with HashiCorp Vault, for which
+many parts of the implementation core were improved. Among other things, the Salt
+daemons now attempt to renew/revoke their access tokens and can manage long-lived leases,
+while the Salt master now distributes authentication secrets using response wrapping.
+An important new feature concerns the way Vault policies can be managed.
+
+In versions before 3006, the Salt master only issued tokens to minions, whose policies
+could be templated with the minion ID and (insecure) grain values.
+3006 introduced secure templating of those policies with pillar values, as well as
+templating of Vault external pillar paths with pillar values. These improvements reduced the
+overhead of managing Vault policies securely.
+
+In addition, the Salt master can now be configured to issue AppRoles
+to minions and manage their metadata using a similar templating approach.
+Since this metadata can be taken advantage of in templated policies on the Vault side,
+the need for many boilerplate policies is reduced even further:
+{%- raw %}
+
+```vaultpolicy
+  path "salt/data/minions/{{identity.entity.metadata.minion-id}}" {
+      capabilities = ["create", "read", "write", "delete", "patch"]
+  }
+
+  path "salt/data/roles/{{identity.entity.metadata.role}}" {
+      capabilities = ["read"]
+  }
+```
+{%- endraw %}
+
+Although existing configurations will keep working without intervention after upgrading
+the Salt master, it is strongly recommended to adjust the `peer_run` configuration to
+include the new issuance endpoints in order to avoid unnecessary overhead:
+
+```yaml
+peer_run:
+  .*:
+    - vault.get_config
+    - vault.generate_new_token
+```
+
+Please see the [Vault execution module docs](https://docs.saltproject.io/en/3007.0/ref/modules/all/salt.modules.vault.html) for
+details and setup instructions regarding AppRole issuance.
+
+Note: The Vault modules are being moved to a [Salt extension](https://github.com/salt-extensions/saltext-vault),
+but this improvement has still been merged into core for a smoother transition.
+
+<!--
+Do not edit the changelog below.
+This is auto generated
+-->
+## Changelog
+{{ changelog }}

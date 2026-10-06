@@ -24,23 +24,27 @@ be called from a Python interpreter.
 
 The wheel key functions can also be called via a ``salt`` command at the CLI
 using the :mod:`saltutil execution module <salt.modules.saltutil>`.
+
+.. note::
+
+    This module defines ``__func_alias__`` to expose some functions under
+    different public names. The Python function ``list_`` is published as
+    ``key.list`` and ``key_str`` is published as ``key.print``. Always
+    call the aliased name (``key.list`` / ``key.print``) when invoking
+    these functions through salt-api, salt-call or the wheel client.
 """
 
-import hashlib
 import logging
 import os
 
+import salt.cache
 import salt.crypt
 import salt.key
 import salt.utils.crypt
-import salt.utils.files
-import salt.utils.platform
+import salt.utils.versions
 from salt.utils.sanitizers import clean
 
-__func_alias__ = {
-    "list_": "list",
-    "key_str": "print",
-}
+__func_alias__ = {"list_": "list", "key_str": "print"}
 
 log = logging.getLogger(__name__)
 
@@ -83,10 +87,22 @@ def list_all():
 
 def name_match(match):
     """
+    Alias to glob_match
+    """
+    salt.utils.versions.warn_until(
+        3010,
+        "'wheel.key.name_match' has been renamed to 'wheel.key.glob_match', and will be removed in the Calcium release."
+        "Please update your workflows to use glob_match instead.",
+    )
+    return glob_match(match)
+
+
+def glob_match(match):
+    """
     List all the keys based on a glob match
     """
     with salt.key.get_key(__opts__) as skey:
-        return skey.name_match(match)
+        return skey.glob_match(match)
 
 
 def accept(match, include_rejected=False, include_denied=False):
@@ -175,10 +191,29 @@ def delete(match):
 
 def delete_dict(match):
     """
-    Delete keys based on a dict of keys. Returns a dictionary.
+    Delete keys based on a dict of keys grouped by key status. Returns a
+    dictionary describing the keys that remain after the deletion.
 
     match
-        The dictionary of keys to delete.
+        A dictionary keyed by key status. Recognized statuses are:
+
+        * ``minions`` (accepted)
+        * ``minions_pre`` (unaccepted / pending)
+        * ``minions_rejected``
+        * ``minions_denied``
+
+        Each value is a list of minion key names under that status. The
+        wheel will iterate the dictionary as-is and attempt to remove each
+        listed key from the directory named by the status. Keys that do
+        not exist on disk under the requested status are silently
+        skipped: ``delete_dict`` does **not** look the key up by name, so
+        passing an unaccepted minion under ``minions`` will simply do
+        nothing for that key (and the minion's pending key will remain
+        in place).
+
+        If you want to delete keys regardless of their current status,
+        either gather the dictionary with :func:`list_match` first, or use
+        :func:`delete` with a glob match instead.
 
     .. code-block:: python
 
@@ -191,6 +226,18 @@ def delete_dict(match):
             ],
         }})
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    Example using more than one status to delete a mix of accepted and
+    pending keys in one call:
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.delete_dict', [
+        ...     {
+        ...         'minions': ['accepted-1'],
+        ...         'minions_pre': ['pending-1', 'pending-2'],
+        ...     }
+        ... ])
     """
     with salt.key.get_key(__opts__) as skey:
         return skey.delete_key(match_dict=match)
@@ -270,7 +317,7 @@ def key_str(match):
 
     .. code-block:: python
 
-        >>> wheel.cmd('key.key_str', ['minion1'])
+        >>> wheel.cmd('key.print', ['minion1'])
         {'minions': {'minion1': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0B
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
@@ -290,11 +337,8 @@ def master_key_str():
         ...
         TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
     """
-    keyname = "master.pub"
-    path_to_pubkey = os.path.join(__opts__["pki_dir"], keyname)
-    with salt.utils.files.fopen(path_to_pubkey, "r") as fp_:
-        keyvalue = salt.utils.stringutils.to_unicode(fp_.read())
-    return {"local": {keyname: keyvalue}}
+    master_key = salt.crypt.MasterKeys(__opts__, autocreate=False)
+    return {"local": {f"{master_key.master_id}.pub": master_key.get_pub_str()}}
 
 
 def finger(match, hash_type=None):
@@ -370,26 +414,8 @@ def gen(id_=None, keysize=2048):
         -----END RSA PRIVATE KEY-----'}
 
     """
-    if id_ is None:
-        id_ = hashlib.sha512(os.urandom(32)).hexdigest()
-    else:
-        id_ = clean.filename(id_)
-    ret = {"priv": "", "pub": ""}
-    priv = salt.crypt.gen_keys(__opts__["pki_dir"], id_, keysize)
-    pub = "{}.pub".format(priv[: priv.rindex(".")])
-    with salt.utils.files.fopen(priv) as fp_:
-        ret["priv"] = salt.utils.stringutils.to_unicode(fp_.read())
-    with salt.utils.files.fopen(pub) as fp_:
-        ret["pub"] = salt.utils.stringutils.to_unicode(fp_.read())
-
-    # The priv key is given the Read-Only attribute. The causes `os.remove` to
-    # fail in Windows.
-    if salt.utils.platform.is_windows():
-        os.chmod(priv, 128)
-
-    os.remove(priv)
-    os.remove(pub)
-    return ret
+    priv, pub = salt.crypt.gen_keys(keysize)
+    return {"priv": priv, "pub": pub}
 
 
 def gen_accept(id_, keysize=2048, force=False):
@@ -434,11 +460,14 @@ def gen_accept(id_, keysize=2048, force=False):
     """
     id_ = clean.id(id_)
     ret = gen(id_, keysize)
-    acc_path = os.path.join(__opts__["pki_dir"], "minions", id_)
-    if os.path.isfile(acc_path) and not force:
+
+    cache = salt.cache.Cache(__opts__, driver=__opts__["keys.cache_driver"])
+    key = cache.fetch("keys", id_)
+
+    if key and not force:
         return {}
-    with salt.utils.files.fopen(acc_path, "w+") as fp_:
-        fp_.write(salt.utils.stringutils.to_str(ret["pub"]))
+
+    cache.store("keys", id_, {"pub": ret["pub"], "state": "accepted"})
     return ret
 
 

@@ -15,11 +15,13 @@ import salt.fileclient
 import salt.minion
 import salt.utils.data
 import salt.utils.files
+import salt.utils.functools
 import salt.utils.gzip_util
 import salt.utils.path
 import salt.utils.templates
 import salt.utils.url
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, LoaderError
+from salt.loader.context import NamedLoaderContext
 from salt.loader.dunder import (
     __context__,
     __file_client__,
@@ -38,7 +40,7 @@ def _auth():
     Return the auth object
     """
     if "auth" not in __context__:
-        __context__["auth"] = salt.crypt.SAuth(__opts__)
+        __context__["auth"] = salt.crypt.SAuth(__opts__.value())
     return __context__["auth"]
 
 
@@ -47,7 +49,7 @@ def _gather_pillar(pillarenv, pillar_override):
     Whenever a state run starts, gather the pillar data fresh
     """
     pillar = salt.pillar.get_pillar(
-        __opts__,
+        __opts__.value(),
         __grains__.value(),
         __opts__["id"],
         __opts__["saltenv"],
@@ -154,7 +156,7 @@ def recv_chunked(dest, chunk, append=False, compressed=True, mode=None):
             log.debug("Setting mode for %s to %s", dest, mode)
             try:
                 os.chmod(dest, mode)
-            except OSError:
+            except OSError as exc:
                 return _error(str(exc))
         return True
     finally:
@@ -171,8 +173,20 @@ def _client():
     If the __file_client__ context is set return it, otherwize create a new
     file client using __opts__.
     """
-    if __file_client__:
-        return __file_client__.value()
+    # ``__file_client__`` is a NamedLoaderContext. When the loader executing
+    # this module has not packed a file client (e.g. loaders other than
+    # minion_mods, such as the resource module loader), evaluating the context
+    # raises ``LoaderError`` instead of yielding a falsey value -- so the
+    # ``__opts__`` fallback below was never reached and callers such as
+    # ``cp.cache_file`` (and therefore every ``salt://`` fetch) failed with
+    # ``KeyError: '__file_client__'``. Guard the lookup so a missing/None
+    # context falls back to building a client from ``__opts__``.
+    try:
+        file_client = __file_client__.value()
+    except LoaderError:
+        file_client = None
+    if file_client:
+        return file_client
     return salt.fileclient.get_file_client(__opts__.value())
 
 
@@ -571,6 +585,9 @@ def cache_file(path, saltenv=None, source_hash=None, verify_ssl=True, use_etag=F
     return result
 
 
+cache_file_ssh = salt.utils.functools.alias_function(cache_file, "cache_file_ssh")
+
+
 def cache_dest(url, saltenv=None):
     """
     .. versionadded:: 3000
@@ -739,7 +756,7 @@ def list_states(saltenv=None):
     .. versionchanged:: 3005
         ``saltenv`` will use value from config if not explicitly set
 
-    List all of the available state modules in an environment
+    List all of the available state files in an environment
 
     CLI Example:
 
@@ -880,6 +897,9 @@ def hash_file(path, saltenv=None):
         return client.hash_file(path, saltenv)
 
 
+hash_file_ssh = salt.utils.functools.alias_function(hash_file, "hash_file_ssh")
+
+
 def stat_file(path, saltenv=None, octal=True):
     """
     .. versionchanged:: 3005
@@ -978,7 +998,12 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
         "size": os.path.getsize(path),
     }
 
-    with salt.channel.client.ReqChannel.factory(__opts__.value()) as channel:
+    if isinstance(__opts__, NamedLoaderContext):
+        opts = __opts__.value()
+    else:
+        opts = __opts__
+
+    with salt.channel.client.ReqChannel.factory(opts) as channel:
         with salt.utils.files.fopen(path, "rb") as fp_:
             init_send = False
             while True:
@@ -998,7 +1023,7 @@ def push(path, keep_symlinks=False, upload_path=None, remove_source=False):
                     log.error(
                         "cp.push Failed transfer failed. Ensure master has "
                         "'file_recv' set to 'True' and that the file "
-                        "is not larger than the 'file_recv_size_max' "
+                        "is not larger than the 'file_recv_max_size' "
                         "setting on the master."
                     )
                     return ret

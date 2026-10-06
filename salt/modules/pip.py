@@ -1,6 +1,21 @@
 r"""
 Install Python packages with pip to either the system or a virtualenv
 
+Onedir / bundled minions
+========================
+
+On a onedir (bundled) minion, omitting ``bin_env``/``pip_bin`` does not
+touch the system Python. This module shells out to ``salt-pip`` instead, so
+packages land in the onedir's isolated ``extras-<major>.<minor>``
+directory. See :ref:`salt-pip-onedir` for details.
+
+To manage system Python packages from a onedir minion, pass ``bin_env``
+with the system's pip or python path, for example
+``bin_env: /usr/bin/pip3``.
+
+On a non-bundled minion, there's no extras directory. Omitting ``bin_env``
+falls back to the Python the minion itself runs under, as described below.
+
 Windows Support
 ===============
 
@@ -88,6 +103,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.locales
+import salt.utils.package
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.url
@@ -142,7 +158,7 @@ def _check_bundled():
     """
     Gather run-time information to indicate if we are running from source or bundled.
     """
-    if hasattr(sys, "RELENV"):
+    if salt.utils.package.bundled():
         return True
     return False
 
@@ -186,6 +202,27 @@ def _get_pip_bin(bin_env):
                         "pip: Found python binary by name but it is not executable: %s",
                         bin_path,
                     )
+        if not salt.utils.platform.is_windows():
+            bindir = os.path.join(bin_env, "bin")
+            if os.path.isdir(bindir):
+                py_exe = re.compile(r"^python(\d+(\.\d+)?)?$")
+                ranked = []
+                for entry in sorted(os.listdir(bindir)):
+                    if not py_exe.match(entry):
+                        continue
+                    full = os.path.join(bindir, entry)
+                    if os.path.isfile(full) and os.access(full, os.X_OK):
+                        if entry == "python":
+                            rank = 0
+                        elif entry == "python3":
+                            rank = 1
+                        else:
+                            rank = 2
+                        ranked.append((rank, entry, full))
+                ranked.sort(key=lambda t: (t[0], t[1]))
+                for _, _, full in ranked:
+                    logger.debug("pip: Found python binary: %s", full)
+                    return [os.path.normpath(full), "-m", "pip"]
         raise CommandNotFoundError(
             f"Could not find a pip binary in virtualenv {bin_env}"
         )
@@ -250,7 +287,6 @@ def _get_env_activate(bin_env):
 
 
 def _find_req(link):
-
     logger.info("_find_req -- link = %s", link)
 
     with salt.utils.files.fopen(link) as fh_link:
@@ -412,6 +448,19 @@ def _format_env_vars(env_vars):
     return ret
 
 
+def normalize(name):
+    """Normalize a package name according to the recommendations in PEP 503.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pip.normalize requests_ntlm
+
+    """
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
 def install(
     pkgs=None,  # pylint: disable=R0912,R0913,R0914
     requirements=None,
@@ -477,6 +526,11 @@ def install(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir minion, omitting ``bin_env`` installs into the isolated
+        extras directory via ``salt-pip``, not the system Python. Pass
+        ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system Python
+        instead. See `Onedir / bundled minions`_ above.
 
         .. note::
 
@@ -846,9 +900,11 @@ def install(
         cmd.extend(["--build", build])
 
     # Use VENV_PIP_TARGET environment variable value as target
-    # if set and no target specified on the function call
+    # if set and no target specified on the function call.
+    # Do not set target if bin_env specified, use default
+    # for specified binary environment or expect explicit target specification.
     target_env = os.environ.get("VENV_PIP_TARGET", None)
-    if target is None and target_env is not None:
+    if target is None and target_env is not None and bin_env is None:
         target = target_env
 
     if target:
@@ -1305,7 +1361,9 @@ def list_freeze_parse(
     cwd = _pip_bin_env(cwd, bin_env)
     packages = {}
 
-    if prefix is None or "pip".startswith(prefix):
+    normal_prefix = normalize(prefix) if prefix else None
+
+    if normal_prefix is None or "pip".startswith(normal_prefix):
         packages["pip"] = version(bin_env, cwd)
 
     for line in freeze(
@@ -1339,11 +1397,12 @@ def list_freeze_parse(
             logger.error("Can't parse line '%s'", line)
             continue
 
-        if prefix:
-            if name.lower().startswith(prefix.lower()):
-                packages[name] = version_
+        normal_name = normalize(name)
+        if normal_prefix:
+            if normal_name.startswith(normal_prefix):
+                packages[normal_name] = version_
         else:
-            packages[name] = version_
+            packages[normal_name] = version_
 
     return packages
 
@@ -1409,12 +1468,14 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
     except ValueError:
         raise CommandExecutionError("Invalid JSON", info=result)
 
+    normal_prefix = normalize(prefix) if prefix else None
     for pkg in pkgs:
+        normal_pkg_name = normalize(pkg["name"])
         if prefix:
-            if pkg["name"].lower().startswith(prefix.lower()):
-                packages[pkg["name"]] = pkg["version"]
+            if normal_pkg_name.startswith(normal_prefix):
+                packages[normal_pkg_name] = pkg["version"]
         else:
-            packages[pkg["name"]] = pkg["version"]
+            packages[normal_pkg_name] = pkg["version"]
 
     return packages
 

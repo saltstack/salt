@@ -1,5 +1,5 @@
 """
-    :codeauthor: Anthony Shaw <anthonyshaw@apache.org>
+:codeauthor: Anthony Shaw <anthonyshaw@apache.org>
 """
 
 import pytest
@@ -20,6 +20,7 @@ def configure_loader_modules():
             "file.join": napalm_test_support.join,
             "file.get_managed": napalm_test_support.get_managed_file,
             "random.hash": napalm_test_support.random_hash,
+            "file.apply_template_on_contents": MagicMock(),
         }
     }
 
@@ -181,8 +182,50 @@ def test_load_template():
         "salt.utils.napalm.get_device",
         MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
     ):
+        # template_name
         ret = napalm_network.load_template("set_ntp_peers", peers=["192.168.0.1"])
         assert ret["out"] is None
+
+        # template_source
+        ret = napalm_network.load_template(template_source="ntp server 192.168.0.1")
+        assert ret["out"] is None
+
+
+def test_load_template_inline_source():
+    # Rendering an inline ``template_source`` passes template_name=None; the
+    # salt:// precheck used to call ``None.startswith`` and crash.
+    with patch(
+        "salt.utils.napalm.get_device",
+        MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
+    ), patch.dict(
+        napalm_network.__salt__,
+        {"file.apply_template_on_contents": MagicMock(return_value="new config")},
+    ):
+        ret = napalm_network.load_template(template_source="system { host-name r1; }")
+    assert ret["result"]
+
+
+def test_load_config_commit_at_uses_absolute_time():
+    # Regression: commit_at was passed to get_time_at as ``time_at=commit_in``,
+    # so scheduling a commit at an absolute time was silently ignored.
+    get_time_at = MagicMock(return_value="2026-07-11T02:00:00")
+    with patch(
+        "salt.utils.napalm.get_device",
+        MagicMock(return_value=napalm_test_support.MockNapalmDevice()),
+    ), patch.dict(napalm_network.__opts__, {"id": "test-minion"}), patch.dict(
+        napalm_network.__utils__, {"timeutil.get_time_at": get_time_at}
+    ), patch.dict(
+        napalm_network.__salt__,
+        {
+            "schedule.add": MagicMock(return_value={"result": True, "comment": ""}),
+            "schedule.save": MagicMock(return_value={"result": True, "comment": ""}),
+        },
+    ):
+        napalm_network.load_config(text="new config", commit_at="2026-07-11T02:00:00")
+    get_time_at.assert_called_once()
+    _, kwargs = get_time_at.call_args
+    assert kwargs["time_at"] == "2026-07-11T02:00:00"
+    assert kwargs["time_in"] is None
 
 
 def test_commit():

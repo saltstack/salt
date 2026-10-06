@@ -6,6 +6,7 @@ pkg/arch/*.tar.xz
 *.sw[a-p]
 doc/_build
 doc/doc-archive.tar.gz
+doc/man-archive.tar.xz
 dist
 MANIFEST
 *~
@@ -16,6 +17,7 @@ MANIFEST
 .pytest_cache
 Pipfile.lock
 .mypy_cache/*
+.tools-venvs/
 .cursor
 
 # virtualenv
@@ -23,9 +25,13 @@ Pipfile.lock
 #   top of salt such as
 # - /some/path$ git clone https://github.com/thatch45/salt.git
 # - /some/path$ virtualenv --python=/usr/bin/python2.6 salt
-/env/
+/.?env/
 /bin/
 /etc/
+# Allow repo-local Salt dev configs (parent must be un-ignored first).
+!/etc/
+!/etc/salt/
+!/etc/salt/**
 /include/
 /lib/
 /lib64/
@@ -36,6 +42,7 @@ Pipfile.lock
 /tests/cachedir/
 /tests/unit/templates/roots/
 /var/
+/.?venv/
 /venv/
 /doc/man/*
 
@@ -93,6 +100,7 @@ tests/unit/templates/roots
 # Pycharm
 .idea
 venv/
+venv311/
 .venv/
 
 # VS Code
@@ -157,3 +165,5 @@ nox.*.tar.xz
 /.aiderignore
 /aider.conf.yml
 /.gemini
+venv311/
+venv312/

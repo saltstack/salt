@@ -1,4 +1,3 @@
-import codecs
 import glob
 import logging
 import os
@@ -441,7 +440,9 @@ def test_reactor_reactions(schema, rtype, test_reactor, render_pipe):
                 salt.utils.files, "is_empty", MagicMock(return_value=False)
             ):
                 with patch.object(
-                    codecs, "open", mock_open(read_data=SLS[reactors_list[0]])
+                    salt.utils.files,
+                    "fopen",
+                    mock_open(read_data=SLS[reactors_list[0]]),
                 ):
                     with patch.object(
                         salt.template,

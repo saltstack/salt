@@ -159,7 +159,9 @@ def test_version_report_lines():
     line_lengths = {
         len(line.split(":")[0])
         for line in versions_report_ret[start_looking_index:]
-        if line != " " and line not in ("System Versions:", "Salt Extensions:")
+        if line != " "
+        and line
+        not in ("System Versions:", "Salt Extensions:", "Salt Package Information:")
     }
     # Check that they are all the same size (only one element in the set)
     assert len(line_lengths) == 1
@@ -431,17 +433,22 @@ def test_current_release_matches_maintenance_branch_67061():
     """
     Regression for #67061.
 
-    On a maintenance branch (e.g. 3006.x), the bookkeeping in
-    ``SaltVersionsInfo`` marks ``Sulfur`` (3006) as released and leaves
-    every subsequent codename at ``released=False``.  The pre-fix
-    ``current_release()`` walked the table and returned the *first*
-    un-released codename, which is the next major (Chlorine, 3007) on
-    this branch.  When a checkout has neither ``salt/_version.txt`` nor a
-    usable ``.git`` directory, that wrong codename leaked into
-    ``__saltstack_version__`` and was baked into the built distribution
-    (e.g. ``setup.py`` would write ``Version: 3007.0`` for a source build
-    of 3006.x).  Pin ``current_release()`` to the branch's own codename
-    so the default version always matches the branch's calver series.
+    On a maintenance branch, the bookkeeping in ``SaltVersionsInfo`` marks
+    only the branch's own codename as released and leaves every subsequent
+    codename at ``released=False``.  The pre-fix ``current_release()``
+    walked the table and returned the *first* un-released codename, which
+    is the next major (e.g. Argon on 3007.x).  When a checkout has neither
+    ``salt/_version.txt`` nor a usable ``.git`` directory, that wrong
+    codename leaked into ``__saltstack_version__`` and was baked into the
+    built distribution.  Pin ``current_release()`` to the branch's own
+    codename so the default version always matches the branch's calver
+    series.
+
+    This asserts the *contract* -- current_release() returns the last
+    codename with released=True -- rather than a hardcoded codename.
+    That way the assertion tracks the released-flag state automatically
+    on every branch and doesn't need editing when new codenames flip
+    to released=True.
     """
     # Reset any cached _current_release that an earlier import set so we
     # exercise the real lookup path.
@@ -451,12 +458,15 @@ def test_current_release_matches_maintenance_branch_67061():
         _next_release=None,
         _current_release=None,
     ):
+        released = [v for v in SaltVersionsInfo.versions() if v.released]
+        assert released, "SaltVersionsInfo table has no released codenames"
+        expected = released[-1]
         current = SaltVersionsInfo.current_release()
-        assert current == SaltVersionsInfo.SULFUR, (
-            f"On the 3006.x branch current_release() must be Sulfur (3006), "
-            f"not {current.name} ({current.info[0]})."
+        assert current == expected, (
+            f"current_release() must return the last codename with "
+            f"released=True (expected {expected.name} / {expected.info[0]}), "
+            f"got {current.name} / {current.info[0]}."
         )
-        assert current.info[0] == 3006
 
 
 @pytest.mark.skip_unless_on_linux
@@ -589,3 +599,32 @@ def test_parsed_version_name(version_str, expected_str, expected_name):
         assert ver.name == expected_name
     else:
         assert ver.name is None
+
+
+@pytest.mark.parametrize(
+    "version_string,patch,version_str,codename",
+    [
+        ("v3008.1-1", 1, "3008.1-1", "Argon"),
+        ("v3008.1-2", 2, "3008.1-2", "Argon"),
+        ("3008.1-1", 1, "3008.1-1", "Argon"),
+    ],
+)
+def test_patch_version_parsing(version_string, patch, version_str, codename):
+    v = SaltStackVersion.parse(version_string)
+    assert v.patch == patch
+    assert v.string == version_str
+    assert v.name == codename
+
+
+@pytest.mark.parametrize(
+    "higher,lower",
+    [
+        ("v3008.1-2", "v3008.1-1"),
+        ("v3008.1-1", "v3008.1"),
+        ("v3008.2", "v3008.1-99"),
+        ("v3008.1", "v3008.1rc1"),
+    ],
+)
+def test_patch_version_ordering(higher, lower):
+    assert SaltStackVersion.parse(higher) > SaltStackVersion.parse(lower)
+    assert SaltStackVersion.parse(lower) < SaltStackVersion.parse(higher)

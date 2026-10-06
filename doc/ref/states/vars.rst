@@ -119,6 +119,41 @@ will return ""
 
     {{ slspath }}
 
+When ``slspath`` and ``tpldir`` are populated
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``slspath`` and ``tpldir`` are template render-time variables. They are
+injected by Salt's state compiler when the SLS template is rendered as a
+state file. As a result:
+
+* They are populated inside any SLS file that is being rendered as state
+  data (top files, included SLS files, and the SLS being applied).
+* They are **not** populated inside templates that are rendered through
+  ``file.managed`` or ``template: jinja`` for non-state files. In those
+  contexts the template is rendered by the renderer subsystem, not by
+  the state compiler, and the state-only template variables are not in
+  scope. To get the SLS path inside a non-state template, pass it
+  explicitly via ``defaults`` or ``context``:
+
+  .. code-block:: yaml
+
+      configure-app:
+        file.managed:
+          - name: /etc/app.conf
+          - source: salt://app/files/app.conf.j2
+          - template: jinja
+          - defaults:
+              sls_dir: {{ slspath }}
+
+  Inside ``app.conf.j2`` the template can then use ``{{ sls_dir }}``.
+
+* When using a Jinja ``{% include %}`` from within an SLS file, the
+  included template inherits the current SLS render context, so
+  ``slspath`` and ``tpldir`` continue to refer to the *including* SLS.
+  When using Salt's ``include:`` directive at the top of an SLS file to
+  pull in another SLS, each SLS sees its own ``slspath`` while it is
+  being rendered.
+
 
 sls_path
 --------

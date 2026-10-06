@@ -14,8 +14,12 @@ Support for YUM/DNF
 
 .. versionadded:: 3003
     Support for ``tdnf`` on Photon OS.
+
 .. versionadded:: 3006.10
     Support for ``dnf5``` on Fedora 41
+
+.. versionadded:: 3007.0
+    Support for ``dnf5``` on Fedora 39
 """
 
 import configparser
@@ -78,6 +82,7 @@ def __virtual__():
         "virtuozzo",
         "issabel pbx",
         "openeuler",
+        "vmware photon os",
     )
 
     if os_family == "redhat" or os_grain in enabled:
@@ -246,6 +251,7 @@ def _versionlock_pkg(grains=None):
     """
     if grains is None:
         grains = __grains__
+
     if _yum() in ("dnf", "dnf5"):
         if grains["os"].lower() == "fedora":
             return (
@@ -259,11 +265,7 @@ def _versionlock_pkg(grains=None):
     elif _yum() == "tdnf":
         raise SaltInvocationError("Cannot proceed, no versionlock for tdnf")
     else:
-        return (
-            "yum-versionlock"
-            if int(grains.get("osmajorrelease")) == 5
-            else "yum-plugin-versionlock"
-        )
+        return "yum-plugin-versionlock"
 
 
 def _check_versionlock():
@@ -737,7 +739,8 @@ def list_pkgs(versions_as_list=False, **kwargs):
     for line in output.splitlines():
         pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
         if pkginfo is not None:
-            # see rpm version string rules available at https://goo.gl/UGKPNd
+            # see rpm version string rules available at
+            # https://blog.jasonantman.com/2014/07/how-yum-and-rpm-compare-versions/#package-naming-and-parsing
             pkgver = pkginfo.version
             epoch = None
             release = None
@@ -1704,7 +1707,8 @@ def install(
         if skip_verify:
             cmd.append("--nogpgcheck")
         if downloadonly:
-            cmd.append("--downloadonly")
+            if _yum() != "dnf5":
+                cmd.append("--downloadonly")
 
     try:
         holds = list_holds(full=False)
@@ -2141,22 +2145,7 @@ def remove(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     old = list_pkgs()
     targets = []
 
-    # Loop through pkg_params looking for any
-    # which contains a wildcard and get the
-    # real package names from the packages
-    # which are currently installed.
-    pkg_matches = {}
-    for pkg_param in list(pkg_params):
-        if "*" in pkg_param:
-            pkg_matches = {
-                x: pkg_params[pkg_param] for x in old if fnmatch.fnmatch(x, pkg_param)
-            }
-
-            # Remove previous pkg_param
-            pkg_params.pop(pkg_param)
-
-    # Update pkg_params with the matches
-    pkg_params.update(pkg_matches)
+    pkg_params = salt.utils.pkg.match_wildcard(old, pkg_params)
 
     for target in pkg_params:
         if target not in old:
@@ -2497,25 +2486,45 @@ def _list_holds_dnf5(full=True):
 
     dnf5's ``versionlock list`` writes a structured human-readable format
     rather than the legacy ``name-epoch:ver-rel.arch.*`` token that
-    ``_get_hold`` expects, so we read the on-disk configuration directly
-    via the salt TOML serializer (already a dependency of salt's RPM
-    tooling).
+    ``_get_hold`` expects, so we read the on-disk configuration directly.
+
+    .. note::
+        Parsing prefers the standard-library :py:mod:`tomllib`, which exists
+        only on Python 3.11+. The Salt onedir packages ship Python 3.10 through
+        3006.26 and do **not** bundle the third-party ``toml`` library (it is a
+        CI-only dependency), so on those builds neither parser is available and
+        this returns an empty list. Reliable dnf5 hold reporting therefore
+        depends on the Python 3.11 bump landing in 3006.27 (see #69526); where
+        the optional ``toml`` library happens to be installed it is used as a
+        fallback on older interpreters.
     """
-    # Import inside the function so the top-level import graph stays
-    # unchanged for systems without a TOML library.
-    import salt.serializers as serializers
-    import salt.serializers.tomlmod as tomlmod
+    # Prefer the standard-library tomllib (Python 3.11+). Fall back to the
+    # optional third-party ``toml`` library via the salt serializer on older
+    # interpreters that have it installed. Imported inside the function so the
+    # top-level import graph stays unchanged.
+    try:
+        import tomllib
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH, "rb") as fp_:
+                return tomllib.load(fp_)
+
+    except ImportError:
+        import salt.serializers.tomlmod as tomlmod
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
+                return tomlmod.deserialize(fp_)
 
     try:
-        with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
-            data = tomlmod.deserialize(fp_)
+        data = _read_versionlock()
     except OSError:
         log.debug(
             "dnf5 versionlock file %s is missing; no holds to report",
             _DNF5_VERSIONLOCK_PATH,
         )
         return []
-    except serializers.DeserializationError as exc:
+    except Exception as exc:  # pylint: disable=broad-except
         log.warning(
             "Failed to parse dnf5 versionlock file %s: %s",
             _DNF5_VERSIONLOCK_PATH,
@@ -2613,6 +2622,37 @@ def group_list():
         "available environment groups:": "available environments",
         "available language groups:": "available languages",
     }
+
+    if _yum() == "dnf5":
+        # dnf5 lists environment groups and language groups under separate
+        # subcommands ("dnf5 environment list"), not under "group list", so the
+        # "installed/available environments" and "available languages" keys
+        # stay empty on dnf5 (the dnf/yum path below still fills them).
+        out = __salt__["cmd.run_stdout"](
+            [_yum(), "group", "list", "--hidden"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+        for line in salt.utils.itertools.split(out, "\n"):
+            # dnf5 'group list' is a whitespace-aligned table:
+            #   ID   Name (may contain spaces)   Installed (yes|no)
+            # Tokenize the row rather than matching the name with a regex, so a
+            # group name that happens to contain the word "yes" or "no" cannot
+            # be mistaken for the trailing Installed column. The header row and
+            # any blank/administrative lines have no yes/no last column and are
+            # skipped here.
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            installed = parts[-1].lower()
+            if installed not in ("yes", "no"):
+                continue
+            group_id = parts[0]
+            if installed == "yes":
+                ret["installed"].append(group_id)
+            else:
+                ret["available"].append(group_id)
+        return ret
 
     out = __salt__["cmd.run_stdout"](
         [_yum(), "grouplist", "hidden"], output_loglevel="trace", python_shell=False
@@ -2717,7 +2757,10 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
+    if _yum() == "dnf5":
+        cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
+    else:
+        cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2732,9 +2775,17 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         ret["type"] = "environment group"
     elif "group" in g_info:
         ret["type"] = "package group"
+    elif "name" in g_info:
+        # dnf5 'group info' labels a package group with "Name"/"Id" rather than
+        # the "Group"/"Group-Id" that dnf uses.
+        ret["type"] = "package group"
 
-    ret["group"] = g_info.get("environment group") or g_info.get("group")
-    ret["id"] = g_info.get("environment-id") or g_info.get("group-id")
+    ret["group"] = (
+        g_info.get("environment group") or g_info.get("group") or g_info.get("name")
+    )
+    ret["id"] = (
+        g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
+    )
     if not ret["group"] and not ret["id"]:
         raise CommandExecutionError(f"Group '{name}' not found")
 
@@ -2745,7 +2796,14 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     for pkgtype in pkgtypes:
         target_found = False
         for line in salt.utils.itertools.split(out, "\n"):
-            line = line.strip().lstrip(string.punctuation)
+            line = line.strip().lstrip(string.punctuation).strip()
+            # ``member`` is the group member (a package or, for environment
+            # groups, a subgroup) this line contributes. For an ordinary member
+            # line it is the line itself; a dnf5 section header (below) carries
+            # its section's first member inline and overrides it.
+            member = line
+            # dnf (yum): the section header sits on its own line, e.g.
+            # "Mandatory Packages:", with members on the lines that follow.
             match = re.match(
                 pkgtypes_capturegroup + r" (?:groups|packages):\s*$", line.lower()
             )
@@ -2758,16 +2816,38 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         # We've reached the targeted section
                         target_found = True
                     continue
+            # dnf5: the section header carries this section's first member
+            # inline, e.g. "Mandatory packages   : gettext".
+            match_dnf5 = re.match(
+                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$",
+                line.lower(),
+            )
+            if match_dnf5:
+                if target_found:
+                    # We've reached a new section, break from loop
+                    break
+                if match_dnf5.group(1) != pkgtype:
+                    continue
+                # We've reached the targeted section
+                target_found = True
+                # Pull the inline first member into its own variable (keeping
+                # the original case) rather than overwriting ``line``: a header
+                # with trailing spaces or localized text could otherwise leave
+                # an empty string and silently drop the member.
+                first_member = re.match(r"^[^:]+:\s*(.+)$", line)
+                if first_member is None:
+                    continue
+                member = first_member.group(1).strip()
             if target_found:
                 if expand and ret["type"] == "environment group":
-                    if not line or line in completed_groups:
+                    if not member or member in completed_groups:
                         continue
                     log.trace(
                         'Adding group "%s" to completed list: %s',
-                        line,
+                        member,
                         completed_groups,
                     )
-                    completed_groups.append(line)
+                    completed_groups.append(member)
                     # The @ prefix disambiguates single-token group ids (e.g.
                     # gnome-desktop) that would otherwise match multiple
                     # groups, but dnf cannot resolve "@" + a multi-word group
@@ -2777,17 +2857,20 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                     # name so multi-word member groups still expand (#60276).
                     try:
                         expanded = group_info(
-                            "@" + line, expand=True, ignore_groups=completed_groups
+                            "@" + member, expand=True, ignore_groups=completed_groups
                         )
                     except CommandExecutionError:
                         expanded = group_info(
-                            line, expand=True, ignore_groups=completed_groups
+                            member, expand=True, ignore_groups=completed_groups
                         )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
-                else:
-                    ret[pkgtype].add(line)
+                elif member:
+                    # Skip blank lines that fall inside the section (e.g. a
+                    # trailing/blank line before the next header) rather than
+                    # recording an empty package name.
+                    ret[pkgtype].add(member)
 
     for pkgtype in pkgtypes:
         ret[pkgtype] = sorted(ret[pkgtype])
@@ -3106,10 +3189,13 @@ def mod_repo(repo, basedir=None, **kwargs):
         the URL for yum to reference
     mirrorlist
         the URL for yum to reference
+    metalink
+        the URL for yum to reference
+        .. versionadded:: 3008.0
 
     Key/Value pairs may also be removed from a repo's configuration by setting
-    a key to a blank value. Bear in mind that a name cannot be deleted, and a
-    baseurl can only be deleted if a mirrorlist is specified (or vice versa).
+    a key to a blank value. Bear in mind that a name cannot be deleted, and one
+    of baseurl, mirrorlist, or metalink is required.
 
     Strict parsing of configuration files is the default, this can be disabled
     using the  ``strict_config`` keyword argument set to False
@@ -3120,16 +3206,20 @@ def mod_repo(repo, basedir=None, **kwargs):
 
         salt '*' pkg.mod_repo reponame enabled=1 gpgcheck=1
         salt '*' pkg.mod_repo reponame basedir=/path/to/dir enabled=1 strict_config=False
-        salt '*' pkg.mod_repo reponame baseurl= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= mirrorlist=http://host.com/
+        salt '*' pkg.mod_repo reponame basedir= metalink=http://host.com
     """
+    # set link types
+    link_types = ("baseurl", "mirrorlist", "metalink")
+
     # Filter out '__pub' arguments, as well as saltenv
     repo_opts = {
         x: kwargs[x] for x in kwargs if not x.startswith("__") and x not in ("saltenv",)
     }
 
-    if all(x in repo_opts for x in ("mirrorlist", "baseurl")):
+    if [x in repo_opts for x in link_types].count(True) >= 2:
         raise SaltInvocationError(
-            "Only one of 'mirrorlist' and 'baseurl' can be specified"
+            f"One and only one of {', '.join(link_types)} can be used"
         )
 
     use_copr = False
@@ -3146,12 +3236,11 @@ def mod_repo(repo, basedir=None, **kwargs):
             del repo_opts[key]
             todelete.append(key)
 
-    # Add baseurl or mirrorlist to the 'todelete' list if the other was
-    # specified in the repo_opts
-    if "mirrorlist" in repo_opts:
-        todelete.append("baseurl")
-    elif "baseurl" in repo_opts:
-        todelete.append("mirrorlist")
+    # Add what ever items in link_types is not in repo_opts to 'todelete' list
+    linkdict = {x: set(link_types) - {x} for x in link_types}
+    todelete.extend(
+        next(iter([y for x, y in linkdict.items() if x in repo_opts.keys()]), [])
+    )
 
     # Fail if the user tried to delete the name
     if "name" in todelete:
@@ -3214,10 +3303,10 @@ def mod_repo(repo, basedir=None, **kwargs):
                     "was not given"
                 )
 
-            if "baseurl" not in repo_opts and "mirrorlist" not in repo_opts:
+            if all(x not in repo_opts.keys() for x in link_types):
                 raise SaltInvocationError(
-                    "The repo does not exist and needs to be created, but either "
-                    "a baseurl or a mirrorlist needs to be given"
+                    "The repo does not exist and needs to be created, but none of "
+                    f"{', '.join(link_types)} was given"
                 )
             filerepos[repo] = {}
     else:
@@ -3225,16 +3314,15 @@ def mod_repo(repo, basedir=None, **kwargs):
         repofile = repos[repo]["file"]
         header, filerepos = _parse_repo_file(repofile, strict_parser)
 
-    # Error out if they tried to delete baseurl or mirrorlist improperly
-    if "baseurl" in todelete:
-        if "mirrorlist" not in repo_opts and "mirrorlist" not in filerepos[repo]:
+    # Error out if they tried to delete all linktypes
+    for link_type in link_types:
+        linklist = set(link_types) - {link_type}
+        if all(
+            x not in repo_opts and x not in filerepos[repo] and link_type in todelete
+            for x in linklist
+        ):
             raise SaltInvocationError(
-                "Cannot delete baseurl without specifying mirrorlist"
-            )
-    if "mirrorlist" in todelete:
-        if "baseurl" not in repo_opts and "baseurl" not in filerepos[repo]:
-            raise SaltInvocationError(
-                "Cannot delete mirrorlist without specifying baseurl"
+                f"Cannot delete {link_type} without specifying {' or '.join(linklist)}"
             )
 
     # Delete anything in the todelete list

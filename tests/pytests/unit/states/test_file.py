@@ -81,11 +81,10 @@ def test_file_recurse_directory_test():
         ret = file.recurse("/tmp/test", "salt://does_not_exist", saltenv="base")
         assert ret == {
             "changes": {},
-            "comment": "The directory 'does_not_exist' does not exist on the salt fileserver in saltenv 'base'",
+            "comment": "Recurse failed: none of the specified sources were found",
             "name": "/tmp/test",
             "result": False,
         }
         salt_dunder["cp.list_master_dirs"].assert_called_once_with(
             saltenv="base",
-            prefix="does_not_exist/",
         )

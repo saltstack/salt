@@ -197,11 +197,11 @@ nox -e coverage-report
 If you have a local venv setup:
 
 ```bash
-# Run tests directly with pytest
-./venv310/bin/pytest tests/pytests/unit/test_foo.py::test_bar -v
+# Run tests directly with pytest (master branch: use venv312)
+./venv312/bin/pytest tests/pytests/unit/test_foo.py::test_bar -v
 
 # Run pre-commit checks on specific files
-./venv310/bin/pre-commit run --files salt/loader/lazy.py
+./venv312/bin/pre-commit run --files salt/loader/lazy.py
 ```
 
 ## Container Testing (Reproduce CI Failures)

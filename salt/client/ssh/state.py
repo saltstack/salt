@@ -58,6 +58,16 @@ class SSHState(salt.state.State):
         Load up the modules for remote compilation via ssh
         """
         self.functions = self.wrapper
+        # Salt-SSH runs execution modules on the target via ``self.wrapper``
+        # (a :class:`salt.client.ssh.FunctionWrapper`), which has no
+        # two-loader model -- there is no ``_dunder_salt`` inner loader to
+        # fall back to.  ``State`` machinery (global state conditions,
+        # requisite/aggregate composition, ``saltutil.refresh_modules``,
+        # ``event.fire_master``, ``test.sleep`` in the retry loop) reads
+        # from ``self._trusted_functions``; mirror the wrapper so those
+        # trusted internal call sites keep working.  Matches
+        # :meth:`MasterState.load_modules`.
+        self._trusted_functions = self.functions
         self.utils = salt.loader.utils(self.opts)
         self.serializers = salt.loader.serializers(self.opts)
         locals_ = salt.loader.minion_mods(self.opts, utils=self.utils)
@@ -136,7 +146,6 @@ class SSHHighState(salt.state.BaseHighState):
             initial_pillar=initial_pillar,
         )
         self.matchers = salt.loader.matchers(self.opts)
-        self.tops = salt.loader.tops(self.opts)
 
         self._pydsl_all_decls = {}
         self._pydsl_render_stack = []
@@ -154,32 +163,7 @@ class SSHHighState(salt.state.BaseHighState):
         """
         Evaluate master_tops locally
         """
-        if "id" not in self.opts:
-            log.error("Received call for external nodes without an id")
-            return {}
-        if not salt.utils.verify.valid_id(self.opts, self.opts["id"]):
-            return {}
-        # Evaluate all configured master_tops interfaces
-
-        grains = {}
-        ret = {}
-
-        if "grains" in self.opts:
-            grains = self.opts["grains"]
-        for fun in self.tops:
-            if fun not in self.opts.get("master_tops", {}):
-                continue
-            try:
-                ret.update(self.tops[fun](opts=self.opts, grains=grains))
-            except Exception as exc:  # pylint: disable=broad-except
-                # If anything happens in the top generation, log it and move on
-                log.error(
-                    "Top function %s failed with error %s for minion %s",
-                    fun,
-                    exc,
-                    self.opts["id"],
-                )
-        return ret
+        return self._local_master_tops()
 
     def destroy(self):
         if self.client:

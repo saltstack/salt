@@ -135,7 +135,10 @@ def parse_pkginfo(line, osarch=None):
 
     if install_time not in ("(none)", "0"):
         install_date = (
-            datetime.datetime.utcfromtimestamp(int(install_time)).isoformat() + "Z"
+            datetime.datetime.fromtimestamp(
+                int(install_time), datetime.timezone.utc
+            ).isoformat()
+            + "Z"
         )
         install_date_time_t = int(install_time)
     else:
@@ -171,7 +174,7 @@ def evr_compare(
     """
     Compare two RPM package identifiers using full epoch–version–release semantics.
 
-    This is a pure‑Python equivalent of ``rpm.labelCompare()``, returning the same
+    This is a pure-Python equivalent of ``rpm.labelCompare()``, returning the same
     ordering as the system RPM library without requiring the ``python3-rpm`` bindings.
 
     The comparison is performed in three stages:

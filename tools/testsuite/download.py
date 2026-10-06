@@ -61,7 +61,7 @@ def default_arch():
         "platform": {
             "help": "The onedir platform artifact to download",
             "choices": ("linux", "macos", "windows"),
-            "required": True,
+            "default": default_platform(),
         },
         "arch": {
             "help": "The onedir artifact architecture",
@@ -244,6 +244,8 @@ def download_artifact(
         repository=repository,
         artifact_name=str(artifact_name),
     )
+    if TYPE_CHECKING:
+        assert succeeded is not None
     ctx.info(succeeded)
     if succeeded:
         ctx.info(f"Downloaded {artifact_name} to {dest}")
@@ -284,6 +286,19 @@ def test_artifacts(
                 platdef = _
                 break
 
+    # Package-only slugs (e.g. ``amazonlinux-2023-pkg``) live under
+    # ``test-salt-pkg-listing`` but not ``test-salt-listing``. Re-use the pkg
+    # row for onedir/nox artifact globs (platform + arch).
+    if not platdef:
+        for platform in PLATFORMS:
+            for _ in TEST_SALT_PKG_LISTING[platform]:
+                if _.slug == slug:
+                    ctx.info(f"Found package-matrix definition {slug}")
+                    platdef = _
+                    break
+            if platdef:
+                break
+
     if not platdef:
         ctx.error(f"No platform definition found for {slug}")
         ctx.exit(1)
@@ -315,7 +330,8 @@ def test_artifacts(
     ]
     if pkgdef:
         for _ in pkgdef:
-            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}"))
+            # CI artifact names may add a suffix (e.g. ``-from-src``) after the type.
+            artifacts.append(("artifacts/pkg/", f"salt-*-{_.arch}-{_.pkg_type}*"))
     for dest, artifact_name in artifacts:
         succeeded = tools.utils.gh.download_artifact(
             ctx,

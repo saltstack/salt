@@ -243,7 +243,7 @@ def _config_logic(
             # and there are changes to commit
             if commit_in or commit_at:
                 commit_time = __utils__["timeutil.get_time_at"](
-                    time_in=commit_in, time_at=commit_in
+                    time_in=commit_in, time_at=commit_at
                 )
                 # schedule job
                 scheduled_job_name = f"__napalm_commit_{current_jid}"
@@ -1651,9 +1651,9 @@ def load_template(
 
             file_roots:
               base:
-                - /etc/salt/states
+                - /srv/salt
 
-        Placing the template under ``/etc/salt/states/templates/example.jinja``,
+        Placing the template under ``/srv/salt/templates/example.jinja``,
         it can be used as ``salt://templates/example.jinja``.
         Alternatively, for local files, the user can specify the absolute path.
         If remotely, the source can be retrieved via ``http``, ``https`` or ``ftp``.
@@ -1953,21 +1953,10 @@ def load_template(
         )
         return _loaded  # exit
 
-    # to check if will be rendered by salt or NAPALM
-    salt_render_prefixes = ("salt://", "http://", "https://", "ftp://")
-    salt_render = False
-    file_exists = False
-    if not isinstance(template_name, (tuple, list)):
-        for salt_render_prefix in salt_render_prefixes:
-            if not salt_render:
-                salt_render = salt_render or template_name.startswith(
-                    salt_render_prefix
-                )
-        file_exists = __salt__["file.file_exists"](template_name)
-
     if context is None:
         context = {}
     context.update(template_vars)
+
     # if needed to render the template send as inline arg
     if template_source:
         # render the content

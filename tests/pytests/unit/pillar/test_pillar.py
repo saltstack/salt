@@ -7,7 +7,7 @@ import pytest
 import salt.loader
 import salt.pillar
 import salt.utils.cache
-from tests.support.mock import MagicMock
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.mark.parametrize(
@@ -189,16 +189,15 @@ def test_pillar_envs_path_substitution(env, temp_salt_minion, tmp_path):
 def test_pillar_get_cache_disk(temp_salt_minion, caplog):
     # create faked path for cache
     with pytest.helpers.temp_directory() as temp_path:
-        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
-        tmp_cachedir.mkdir(parents=True)
-        assert tmp_cachedir.exists()
-        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
+        opts = temp_salt_minion.config.copy()
+        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile.parent.mkdir(parents=True)
         tmp_cachefile.touch()
         assert tmp_cachefile.exists()
 
-        opts = temp_salt_minion.config.copy()
         opts["pillarenv"] = None
         opts["pillar_cache"] = True
+        opts["minion_data_cache"] = False
         opts["cachedir"] = str(temp_path)
 
         caplog.at_level(logging.DEBUG)
@@ -208,25 +207,23 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
             minion_id=temp_salt_minion.id,
             saltenv="base",
         )
-        fresh_pillar = pillar.fetch_pillar()
-        assert not (
-            f"Error reading cache file at '{tmp_cachefile}': Unpack failed: incomplete input"
-            in caplog.messages
-        )
+        fresh_pillar = pillar.compile_pillar()
+        assert "Unpack failed: incomplete input" not in caplog.messages
         assert fresh_pillar == {}
 
 
 def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
     with pytest.helpers.temp_directory() as temp_path:
-        tmp_cachedir = Path(str(temp_path) + "/pillar_cache/")
-        tmp_cachedir.mkdir(parents=True)
-        assert tmp_cachedir.exists()
-        tmp_cachefile = Path(str(temp_path) + "/pillar_cache/" + temp_salt_minion.id)
-        assert tmp_cachefile.exists() is False
+        opts = temp_salt_minion.config.copy()
+        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile.parent.mkdir(parents=True)
+        tmp_cachefile.touch()
+        assert tmp_cachefile.exists()
 
         opts = temp_salt_minion.config.copy()
         opts["pillarenv"] = None
         opts["pillar_cache"] = True
+        opts["minion_data_cache"] = False
         opts["cachedir"] = str(temp_path)
 
         pillar_override = {"inline_pillar": True}
@@ -240,8 +237,11 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
             pillar_override=pillar_override,
         )
 
-        fresh_pillar = pillar.fetch_pillar()
-        assert fresh_pillar == {}
+        fresh_pillar = pillar.compile_pillar()
+        assert "inline_pillar" in fresh_pillar
+
+        pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
+        assert "inline_pillar" not in pillar_cache
 
 
 def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
@@ -260,3 +260,141 @@ def test_remote_pillar_timeout(temp_salt_minion, tmp_path):
     msg = r"^Pillar timed out after \d{1,4} seconds$"
     with pytest.raises(salt.exceptions.SaltClientError):
         pillar.compile_pillar()
+
+
+def test_ext_pillar_dunder_in_modules_in_pillar(temp_salt_minion):
+    """
+    Test that ext_pillar is available in __pillar__ inside execution modules
+    during pillar render when using ext_pillar_first=true
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ext_pillar_first"] = True
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+    # Pillar should be empty to start with
+    assert pillar.functions.pack["__pillar__"] == {}
+
+    ext_value = {"ext": "some ext value"}
+    pil_value = {"pillar": "some pillar value"}
+    with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
+        with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+            compiled = pillar.compile_pillar()
+            assert compiled == dict(**ext_value, **pil_value)
+
+    # Loader should pack the opts pillar dict from the ext_pillar() call
+    # and the rendered pillar data
+    assert pillar.functions.pack["__pillar__"] == dict(**ext_value, **pil_value)
+
+    # Ensure a module function can access the pillar data
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "some ext value"
+    assert pillar.functions["pillar.get"]("pillar", unmask=True) == "some pillar value"
+
+
+def test_pillar_opts_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that pillar_opts=True correctly includes master config in __pillar__
+    during the pillar rendering process.
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["pillar_opts"] = True
+    # Ensure some master config is present
+    opts["master_key"] = "master_secret"
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"pillar_key": "pillar_value"}
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        compiled = pillar.compile_pillar()
+        # Compiled pillar should include master opts nested under "master" when pillar_opts=True
+        assert "master" in compiled
+        assert compiled["master"]["master_key"] == "master_secret"
+        assert compiled["pillar_key"] == "pillar_value"
+
+    # The loader pack should also contain the master opts
+    assert "master" in pillar.functions.pack["__pillar__"]
+    assert (
+        pillar.functions.pack["__pillar__"]["master"]["master_key"] == "master_secret"
+    )
+    assert (
+        pillar.functions["pillar.get"]("master:master_key", unmask=True)
+        == "master_secret"
+    )
+
+
+def test_ssh_merge_pillar_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that ssh_merge_pillar correctly merges extra pillar data from opts["pillar"] into __pillar__
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ssh_merge_pillar"] = True
+    opts["pillar"] = {"ssh_key": "ssh_value"}
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"normal_key": "normal_value"}
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        compiled = pillar.compile_pillar()
+        assert compiled["ssh_key"] == "ssh_value"
+        assert compiled["normal_key"] == "normal_value"
+
+    # The loader pack should contain the merged SSH pillar
+    assert pillar.functions.pack["__pillar__"]["ssh_key"] == "ssh_value"
+    assert pillar.functions["pillar.get"]("ssh_key", unmask=True) == "ssh_value"
+
+
+def test_decrypt_pillar_in_dunder_pillar(temp_salt_minion):
+    """
+    Test that __pillar__ contains decrypted values if decryption is performed.
+    """
+    opts = temp_salt_minion.config.copy()
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    # Mock encrypted and decrypted data
+    encrypted_pil = {"secret": "encrypted_value"}
+    decrypted_pil = {"secret": "decrypted_value"}
+
+    with patch.object(pillar, "render_pillar", return_value=(encrypted_pil, [])):
+        # Mock the decrypt_pillar method of the Pillar class
+        with patch.object(
+            pillar,
+            "decrypt_pillar",
+            side_effect=lambda p: p.update(decrypted_pil) or [],
+        ):
+            compiled = pillar.compile_pillar()
+            assert compiled["secret"] == "decrypted_value"
+
+    # The loader pack should contain the decrypted pillar
+    assert pillar.functions.pack["__pillar__"]["secret"] == "decrypted_value"
+    assert pillar.functions["pillar.get"]("secret", unmask=True) == "decrypted_value"
+
+
+def test_ext_pillar_after_dunder_pillar(temp_salt_minion):
+    """
+    Test that ext_pillar is correctly merged into __pillar__ when ext_pillar_first=False
+    """
+    opts = temp_salt_minion.config.copy()
+    opts["ext_pillar_first"] = False
+
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(opts, grains, temp_salt_minion.id, "base")
+
+    pil_value = {"normal": "value"}
+    ext_value = {"ext": "value"}
+
+    with patch.object(pillar, "render_pillar", return_value=(pil_value, [])):
+        with patch.object(pillar, "ext_pillar", return_value=(ext_value, [])):
+            compiled = pillar.compile_pillar()
+            # Verify both are present in the final result
+            assert compiled["normal"] == "value"
+            assert compiled["ext"] == "value"
+
+    # Loader should have both
+    assert pillar.functions.pack["__pillar__"]["normal"] == "value"
+    assert pillar.functions.pack["__pillar__"]["ext"] == "value"
+    assert pillar.functions["pillar.get"]("ext", unmask=True) == "value"
+    assert pillar.functions["pillar.get"]("normal", unmask=True) == "value"

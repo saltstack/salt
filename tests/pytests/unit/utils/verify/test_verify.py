@@ -13,11 +13,6 @@ import salt.utils.files
 import salt.utils.verify
 from tests.support.mock import patch
 
-if sys.platform.startswith("win"):
-    import win32file
-else:
-    import resource
-
 log = logging.getLogger(__name__)
 
 
@@ -185,117 +180,26 @@ def test_verify_socket():
 
 
 def test_max_open_files(caplog):
+    """
+    Test that check_max_open_files only logs CRITICAL when > 80% FD usage.
+    With mmap index, key counts don't predict FD usage, so we only check actual FDs.
+    """
+    tempdir = tempfile.mkdtemp(prefix="fake-keys")
+    keys_dir = pathlib.Path(tempdir, "minions")
+    keys_dir.mkdir()
+
+    # Create some keys (doesn't matter how many with mmap)
+    for n in range(100):
+        kpath = pathlib.Path(keys_dir, str(n))
+        with salt.utils.files.fopen(kpath, "w") as fp_:
+            fp_.write(str(n))
+
+    opts = {"max_open_files": 100000, "pki_dir": tempdir}
+
     with caplog.at_level(logging.DEBUG):
-        recorded_logs = caplog.record_tuples
-        logmsg_dbg = "This salt-master instance has accepted {0} minion keys."
-        logmsg_chk = (
-            "The number of accepted minion keys({}) should be lower "
-            "than 1/4 of the max open files soft setting({}). According "
-            "to the system's hard limit, there's still a margin of {} "
-            "to raise the salt's max_open_files setting. Please consider "
-            "raising this value."
-        )
-        logmsg_crash = (
-            "The number of accepted minion keys({}) should be lower "
-            "than 1/4 of the max open files soft setting({}). "
-            "salt-master will crash pretty soon! According to the "
-            "system's hard limit, there's still a margin of {} to "
-            "raise the salt's max_open_files setting. Please consider "
-            "raising this value."
-        )
-        if sys.platform.startswith("win"):
-            logmsg_crash = (
-                "The number of accepted minion keys({}) should be lower "
-                "than 1/4 of the max open files soft setting({}). "
-                "salt-master will crash pretty soon! Please consider "
-                "raising this value."
-            )
+        salt.utils.verify.check_max_open_files(opts)
 
-        if sys.platform.startswith("win"):
-            # Check the Windows API for more detail on this
-            # http://msdn.microsoft.com/en-us/library/xt874334(v=vs.71).aspx
-            # and the python binding http://timgolden.me.uk/pywin32-docs/win32file.html
-            mof_s = mof_h = win32file._getmaxstdio()
-        else:
-            mof_s, mof_h = resource.getrlimit(resource.RLIMIT_NOFILE)
-        tempdir = tempfile.mkdtemp(prefix="fake-keys")
-        keys_dir = pathlib.Path(tempdir, "minions")
-        keys_dir.mkdir()
-
-        mof_test = 256
-
-        if sys.platform.startswith("win"):
-            win32file._setmaxstdio(mof_test)
-        else:
-            resource.setrlimit(resource.RLIMIT_NOFILE, (mof_test, mof_h))
-
-        try:
-            prev = 0
-            for newmax, level in (
-                (24, None),
-                (66, "INFO"),
-                (127, "WARNING"),
-                (196, "CRITICAL"),
-            ):
-
-                for n in range(prev, newmax):
-                    kpath = pathlib.Path(keys_dir, str(n))
-                    with salt.utils.files.fopen(kpath, "w") as fp_:
-                        fp_.write(str(n))
-
-                opts = {"max_open_files": newmax, "pki_dir": tempdir}
-
-                salt.utils.verify.check_max_open_files(opts)
-
-                if level is None:
-                    # No log message is triggered, only the DEBUG one which
-                    # tells us how many minion keys were accepted.
-                    assert [logmsg_dbg.format(newmax)] == caplog.messages
-                else:
-                    assert logmsg_dbg.format(newmax) in caplog.messages
-                    assert (
-                        logmsg_chk.format(
-                            newmax,
-                            mof_test,
-                            (
-                                mof_test - newmax
-                                if sys.platform.startswith("win")
-                                else mof_h - newmax
-                            ),
-                        )
-                        in caplog.messages
-                    )
-                prev = newmax
-
-            newmax = mof_test
-            for n in range(prev, newmax):
-                kpath = pathlib.Path(keys_dir, str(n))
-                with salt.utils.files.fopen(kpath, "w") as fp_:
-                    fp_.write(str(n))
-
-            opts = {"max_open_files": newmax, "pki_dir": tempdir}
-
-            salt.utils.verify.check_max_open_files(opts)
-            assert logmsg_dbg.format(newmax) in caplog.messages
-            assert (
-                logmsg_crash.format(
-                    newmax,
-                    mof_test,
-                    (
-                        mof_test - newmax
-                        if sys.platform.startswith("win")
-                        else mof_h - newmax
-                    ),
-                )
-                in caplog.messages
-            )
-        except OSError as err:
-            if err.errno == 24:
-                # Too many open files
-                pytest.skip("We've hit the max open files setting")
-            raise
-        finally:
-            if sys.platform.startswith("win"):
-                win32file._setmaxstdio(mof_h)
-            else:
-                resource.setrlimit(resource.RLIMIT_NOFILE, (mof_s, mof_h))
+        # Should only see debug log (FD usage is way below 80%)
+        assert "This salt-master instance has accepted 100 minion keys" in caplog.text
+        # Should NOT see CRITICAL (FD usage is < 80%)
+        assert "CRITICAL" not in caplog.text

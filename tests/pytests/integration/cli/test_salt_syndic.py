@@ -73,6 +73,8 @@ def test_exit_status_correct_usage(salt_master, syndic_id):
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         defaults={"transport": salt_master.config["transport"]},
     )
+    factory.after_terminate(factory.minion.terminate)
+    factory.after_terminate(factory.master.terminate)
     factory.start()
     assert factory.is_running()
     time.sleep(0.5)

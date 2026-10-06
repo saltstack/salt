@@ -71,6 +71,8 @@ from ctypes import (
 )
 from ctypes.util import find_library
 
+import salt.utils.package
+
 HAS_USER = True
 try:
     import salt.utils.user
@@ -339,12 +341,39 @@ def authenticate(username, password):
 
     ``password``: the password in plain text
     """
+
+    def __find_pyexe():
+        """
+        Provides the path to the Python interpreter to use.
+
+        Priority:
+
+        1. ``auth.pam.python`` config override, when set.
+        2. ``sys.executable`` when Salt is running from a relenv/onedir
+           bundle. The system ``/usr/bin/python3`` on such a host does not
+           have salt or ``python-pam`` available and will exit non-zero,
+           causing every PAM auth attempt to return 401 (see #69303).
+        3. ``/usr/bin/python3`` if it exists. This branch matters for
+           non-bundled installs (e.g. pip-installed Salt running in a venv
+           whose interpreter lacks the system PAM bindings) where the
+           historical behavior of shelling out to the system Python is
+           still the right call.
+        4. ``sys.executable`` as a last resort.
+        """
+        if __opts__.get("auth.pam.python"):
+            return __opts__.get("auth.pam.python")
+        if salt.utils.package.bundled():
+            return sys.executable
+        if os.path.exists("/usr/bin/python3"):
+            return "/usr/bin/python3"
+        return sys.executable
+
     env = os.environ.copy()
     env["SALT_PAM_USERNAME"] = username
     env["SALT_PAM_PASSWORD"] = password
     env["SALT_PAM_SERVICE"] = __opts__.get("auth.pam.service", "login")
     env["SALT_PAM_ENCODING"] = __salt_system_encoding__
-    pyexe = pathlib.Path(__opts__.get("auth.pam.python", "/usr/bin/python3")).resolve()
+    pyexe = pathlib.Path(__find_pyexe()).resolve()
     pyfile = pathlib.Path(__file__).resolve()
     if not pyexe.exists():
         log.error("Error 'auth.pam.python' config value does not exist: %s", pyexe)

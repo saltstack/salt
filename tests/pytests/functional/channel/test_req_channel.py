@@ -2,10 +2,10 @@ import ctypes
 import logging
 import multiprocessing
 import pathlib
-import shutil
 import time
 
 import pytest
+import tornado.gen
 from pytestshellutils.utils.processes import terminate_process
 
 import salt.channel.client
@@ -13,7 +13,6 @@ import salt.channel.server
 import salt.config
 import salt.crypt
 import salt.exceptions
-import salt.ext.tornado.gen
 import salt.master
 import salt.utils.platform
 import salt.utils.process
@@ -64,14 +63,16 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
             ),
         }
 
-        self.io_loop = salt.ext.tornado.ioloop.IOLoop()
+        self.io_loop = tornado.ioloop.IOLoop()
         self.io_loop.make_current()
         self.req_server_channel.post_fork(self._handle_payload, io_loop=self.io_loop)
         self.io_loop.add_callback(self.running.set)
         try:
             self.io_loop.start()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             pass
+        finally:
+            self.req_server_channel.close()
 
     def _handle_signals(self, signum, sigframe):
         self.close()
@@ -100,18 +101,30 @@ class ReqServerChannelProcess(salt.utils.process.SignalHandlingProcess):
                 terminate_process(pid=pid, kill_children=True, slow_stop=False)
             self.process_manager = None
 
-    @salt.ext.tornado.gen.coroutine
+    @tornado.gen.coroutine
     def _handle_payload(self, payload):
         if self.req_channel_crypt == "clear":
-            raise salt.ext.tornado.gen.Return((payload, {"fun": "send_clear"}))
-        raise salt.ext.tornado.gen.Return((payload, {"fun": "send"}))
+            raise tornado.gen.Return((payload, {"fun": "send_clear"}))
+        for key in (
+            "id",
+            "ts",
+            "tok",
+        ):
+            payload["load"].pop(key, None)
+        raise tornado.gen.Return((payload, {"fun": "send"}))
+
+
+@pytest.fixture(scope="module")
+def master_config(master_config):
+    master_config["worker_pools_enabled"] = False
+    return master_config
 
 
 @pytest.fixture
 def req_server_channel(salt_master, req_channel_crypt):
-    req_server_channel_process = ReqServerChannelProcess(
-        salt_master.config.copy(), req_channel_crypt
-    )
+    config = salt_master.config.copy()
+    config["worker_pools_enabled"] = False
+    req_server_channel_process = ReqServerChannelProcess(config, req_channel_crypt)
     try:
         with req_server_channel_process:
             yield
@@ -142,6 +155,13 @@ def req_server_opts(tmp_path):
         "zmq_monitor": False,
         "request_server_ttl": 60,
         "publish_session": 600,
+        "keys.cache_driver": "localfs_key",
+        "id": "master",
+        "optimization_order": [0, 1, 2],
+        "__role": "master",
+        "master_sign_key_name": "master_sign",
+        "permissive_pki_access": True,
+        "worker_pools_enabled": False,
     }
 
 
@@ -163,12 +183,12 @@ def minion1_id():
 def minion1_key(minion1_id, tmp_path, req_server_opts):
     minionpki = tmp_path / minion1_id
     minionpki.mkdir()
-    key1 = pathlib.Path(salt.crypt.gen_keys(minionpki, minion1_id, 2048))
+    priv, pub = salt.crypt.gen_keys(2048)
 
     pki = pathlib.Path(req_server_opts["pki_dir"])
     (pki / "minions").mkdir(exist_ok=True)
-    shutil.copy2(key1.with_suffix(".pub"), pki / "minions" / minion1_id)
-    yield salt.crypt.PrivateKey(key1)
+    (pki / "minions" / minion1_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
 
 
 @pytest.fixture
@@ -180,12 +200,12 @@ def minion2_id():
 def minion2_key(minion2_id, tmp_path, req_server_opts):
     minionpki = tmp_path / minion2_id
     minionpki.mkdir()
-    key2 = pathlib.Path(salt.crypt.gen_keys(minionpki, minion2_id, 2048))
+    priv, pub = salt.crypt.gen_keys(2048)
 
     pki = pathlib.Path(req_server_opts["pki_dir"])
     (pki / "minions").mkdir(exist_ok=True)
-    shutil.copy2(key2.with_suffix(".pub"), pki / "minions" / minion2_id)
-    yield salt.crypt.PrivateKey(key2)
+    (pki / "minions" / minion2_id).write_text(pub)
+    yield salt.crypt.PrivateKey.from_str(priv)
 
 
 def req_channel_crypt_ids(value):
@@ -220,7 +240,6 @@ def test_basic(push_channel):
         {"bar": "baz"},
         {"baz": "qux", "list": [1, 2, 3]},
     ]
-
     for msg in msgs:
         ret = push_channel.send(dict(msg), timeout=5, tries=1)
         assert ret["load"] == msg

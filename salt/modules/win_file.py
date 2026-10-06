@@ -12,6 +12,7 @@ import errno
 import logging
 import os
 import os.path
+import pathlib
 import stat
 import sys
 import tempfile
@@ -26,6 +27,7 @@ from salt.modules.file import (
     _add_flags,
     _assert_occurrence,
     _binary_replace,
+    _check_sig,
     _error,
     _get_bkroot,
     _get_eol,
@@ -125,6 +127,7 @@ if salt.utils.platform.is_windows():
         search = namespaced_function(search, globals())
         _get_flags = namespaced_function(_get_flags, globals())
         _binary_replace = namespaced_function(_binary_replace, globals())
+        _check_sig = namespaced_function(_check_sig, globals())
         _splitlines_preserving_trailing_newline = namespaced_function(
             _splitlines_preserving_trailing_newline, globals()
         )
@@ -1409,50 +1412,50 @@ def remove(path, force=False):
     # Symlinks. The shutil.rmtree function will remove the contents of
     # the Symlink source in windows.
 
-    path = os.path.expanduser(path)
+    path = pathlib.Path(os.path.expanduser(path))
 
-    if not os.path.isabs(path):
+    if not path.is_absolute():
         raise SaltInvocationError(f"File path must be absolute: {path}")
 
-    # Does the file/folder exists
-    if not os.path.exists(path) and not is_link(path):
+    # Use lstat so dangling symlinks are visible (exists()/is_symlink() alone can miss them).
+    try:
+        st = os.lstat(path)
+    except FileNotFoundError:
         raise CommandExecutionError(f"Path not found: {path}")
+    except OSError as exc:
+        raise CommandExecutionError(f"Could not stat '{path}': {exc}")
 
     # Remove ReadOnly Attribute
+    file_attributes = win32api.GetFileAttributes(str(path))
     if force:
         # Get current file attributes
-        file_attributes = win32api.GetFileAttributes(path)
-        win32api.SetFileAttributes(path, win32con.FILE_ATTRIBUTE_NORMAL)
+        win32api.SetFileAttributes(str(path), win32con.FILE_ATTRIBUTE_NORMAL)
 
     try:
-        if os.path.isfile(path):
-            # A file and a symlinked file are removed the same way
-            os.remove(path)
-        elif is_link(path):
-            # If it's a symlink directory, use the rmdir command
-            os.rmdir(path)
-        else:
-            # Twangboy: This is for troubleshooting
-            is_dir = os.path.isdir(path)
-            exists = os.path.exists(path)
+        if (
+            stat.S_ISLNK(st.st_mode)
+            or stat.S_ISREG(st.st_mode)
+            or stat.S_ISFIFO(st.st_mode)
+        ):
+            path.unlink()
+            return True
+        if stat.S_ISDIR(st.st_mode):
             # This is a directory, list its contents and remove them recursively
-            for name in os.listdir(path):
-                item = f"{path}\\{name}"
-                # If it's a normal directory, recurse to remove its contents
-                remove(item, force)
-
-            # rmdir will work now because the directory is empty
-            os.rmdir(path)
+            for child in path.iterdir():
+                remove(str(child), force)
+            path.rmdir()
+            return True
+        # Block/char device, etc.
+        path.unlink()
+        return True
     except OSError as exc:
         if force:
             # Reset attributes to the original if delete fails.
-            win32api.SetFileAttributes(path, file_attributes)
+            win32api.SetFileAttributes(str(path), file_attributes)
         raise CommandExecutionError(f"Could not remove '{path}': {exc}")
 
-    return True
 
-
-def symlink(src, link, force=False, atomic=False):
+def symlink(src, link, force=False, atomic=False, follow_symlinks=True):
     """
     Create a symbolic link to a file
 
@@ -1481,6 +1484,11 @@ def symlink(src, link, force=False, atomic=False):
 
             .. versionadded:: 3006.0
 
+        follow_symlinks (bool):
+            If set to ``False``, use ``os.path.lexists()`` for existence checks
+            instead of ``os.path.exists()``.
+            .. versionadded:: 3007.0
+
     Returns:
         bool: ``True`` if successful
 
@@ -1507,6 +1515,11 @@ def symlink(src, link, force=False, atomic=False):
     if not os.path.isabs(link):
         raise SaltInvocationError(f"Link path must be absolute: {link}")
 
+    if follow_symlinks:
+        exists = os.path.exists
+    else:
+        exists = os.path.lexists
+
     if os.path.islink(link):
         try:
             if os.path.normpath(salt.utils.path.readlink(link)) == os.path.normpath(
@@ -1521,7 +1534,7 @@ def symlink(src, link, force=False, atomic=False):
             msg = f"Found existing symlink: {link}"
             raise CommandExecutionError(msg)
 
-    if os.path.exists(link) and not force and not atomic:
+    if exists(link) and not force and not atomic:
         msg = f"Existing path is not a symlink: {link}"
         raise CommandExecutionError(msg)
 
@@ -1529,14 +1542,14 @@ def symlink(src, link, force=False, atomic=False):
     src = os.path.normpath(src)
     link = os.path.normpath(link)
 
-    is_dir = os.path.isdir(src)
+    is_dir = os.path.isdir(os.path.join(os.path.dirname(link), src))
 
     # Elevate the token from the current process
     desired_access = win32security.TOKEN_QUERY | win32security.TOKEN_ADJUST_PRIVILEGES
     th = win32security.OpenProcessToken(win32api.GetCurrentProcess(), desired_access)
     salt.platform.win.elevate_token(th)
 
-    if (os.path.islink(link) or os.path.exists(link)) and force and not atomic:
+    if (os.path.islink(link) or exists(link)) and force and not atomic:
         os.unlink(link)
     elif atomic:
         link_dir = os.path.dirname(link)

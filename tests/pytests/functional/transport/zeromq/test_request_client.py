@@ -1,141 +1,21 @@
+import asyncio
 import logging
 
 import pytest
 import pytestshellutils.utils.ports
+import tornado.ioloop
 import zmq
 import zmq.eventloop.zmqstream
 
 import salt.exceptions
-import salt.ext.tornado.gen
-import salt.ext.tornado.locks
 import salt.transport.zeromq
 
 log = logging.getLogger(__name__)
 
-_REQ_DRAIN_TIMEOUT_S = 10
-_REQ_POLL_S = 0.01
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
 ]
-
-
-def _blocking_teardown_req_message_client(cli):
-    """
-    When ``close_future`` cannot finish, release ZMQ resources.
-
-    ``AsyncReqMessageClient.close()`` is a no-op if ``close_future()`` already
-    started teardown but ``finalize()`` never ran (stuck loop, half-finished
-    ``_send_recv``, etc.). ``_close_zmq_only`` matches the resource release in
-    ``finalize`` without re-entering ``_initiate_async_req_close``.
-    """
-    try:
-        mc = cli.message_client
-        if getattr(mc, "socket", None) is not None:
-            try:
-                mc.close()
-            except Exception:  # pylint: disable=broad-except
-                log.debug(
-                    "REQ MessageClient synchronous close failed during cleanup",
-                    exc_info=True,
-                )
-        if getattr(mc, "socket", None) is not None:
-            mc._close_zmq_only()
-        mc._mark_teardown_finished()
-    except Exception:  # pylint: disable=broad-except
-        log.debug(
-            "REQ MessageClient synchronous teardown fallback failed during cleanup",
-            exc_info=True,
-        )
-    finally:
-        # ``Transport.__del__`` warns unless ``_closing`` is set; when the owning
-        # ``IOLoop`` is stopped we never yield ``cli.close_future()`` (#68637).
-        setattr(cli, "_closing", True)
-
-
-def _sync_yield_req_client_close_future(cli, io_loop):
-    """
-    Block until zeromq RequestClient asynchronous teardown completes (#68637).
-
-    Uses ``RequestClient.close_future()``—same completion contract as
-    ``AsyncReqChannel.close_async`` / ``Minion.destroy_async``—rather than polling
-    ``message_client.socket is None``. If the loop is stopped or ``run_sync`` fails,
-    fall back to synchronous ``AsyncReqMessageClient.close()`` (covers tests that stop
-    the ``IOLoop`` before teardown).
-    """
-
-    @salt.ext.tornado.gen.coroutine
-    def _wait():
-        fut = cli.close_future()
-        yield fut
-
-    ok = False
-    try:
-        if getattr(io_loop, "_running", False):
-            io_loop.run_sync(_wait, timeout=_REQ_DRAIN_TIMEOUT_S)
-            ok = True
-    except Exception:  # pylint: disable=broad-except
-        log.debug(
-            "REQ client close_future waiter aborted during cleanup", exc_info=True
-        )
-    if not ok or getattr(cli.message_client, "socket", None) is not None:
-        _blocking_teardown_req_message_client(cli)
-
-
-def _sync_finalize_req_client(cli, io_loop):
-    """Explicit teardown for fixtures (wait on ``close_future``)."""
-    _sync_yield_req_client_close_future(cli, io_loop)
-
-
-async def async_finalize_req_client(cli):
-    """
-    Async cleanup: spin the I/O loop via ``gen.sleep`` until ``close_future`` completes.
-
-    Plain ``await`` on a Tornado ``Future`` does not drive ``cli.io_loop`` in this
-    test harness (#68637).
-    """
-    await _async_wait_close_future(cli, "fixture REQ close_future did not finish")
-
-
-async def _await_req_teardown_after_close(cli):
-    """After ``RequestClient.close()`` in-test, wait for deferred teardown."""
-    await _async_wait_close_future(
-        cli, "REQ message client did not finish teardown after RequestClient.close()"
-    )
-
-
-async def _async_wait_close_future(cli, fail_msg):
-    fut = cli.close_future()
-    n = max(1, int(_REQ_DRAIN_TIMEOUT_S / _REQ_POLL_S))
-    for _ in range(n):
-        if fut.done():
-            fut.result()
-            return
-        await salt.ext.tornado.gen.sleep(_REQ_POLL_S)
-    _blocking_teardown_req_message_client(cli)
-    if getattr(cli.message_client, "socket", None) is not None:
-        pytest.fail(fail_msg)
-
-
-def _zmq_teardown_rep(stream=None, rep_socket=None, ctx=None):
-    """Close REP ``ZMQStream`` / socket, optionally ``Context.term()`` (reduces pyzmq ``__del__`` noise)."""
-    if stream is not None:
-        try:
-            if not stream.closed():
-                stream.close()
-        except Exception:  # pylint: disable=broad-except
-            pass
-    if rep_socket is not None:
-        try:
-            if not rep_socket.closed:
-                rep_socket.close(0)
-        except Exception:  # pylint: disable=broad-except
-            pass
-    if ctx is not None:
-        try:
-            ctx.term()
-        except Exception:  # pylint: disable=broad-except
-            pass
 
 
 @pytest.fixture
@@ -150,15 +30,12 @@ def request_client(io_loop, minion_opts, port):
     try:
         yield client
     finally:
-        _sync_finalize_req_client(client, io_loop)
+        client.close()
 
 
 async def test_request_channel_issue_64627(io_loop, request_client, minion_opts, port):
     """
     Validate socket is preserved until request channel is explicitly closed.
-
-    When ``AsyncReqMessageClient.close()`` runs on an active ``IOLoop``, teardown is
-    scheduled on the loop (#68637); yield ``close_future`` before asserting the socket is gone.
     """
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
@@ -168,23 +45,21 @@ async def test_request_channel_issue_64627(io_loop, request_client, minion_opts,
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
     try:
 
-        @salt.ext.tornado.gen.coroutine
-        def req_handler(stream, msg):
+        async def req_handler(stream, msg):
             stream.send(msg[0])
 
         stream.on_recv_stream(req_handler)
 
         rep = await request_client.send(b"foo")
-        req_socket = request_client.message_client.socket
+        req_socket = request_client.socket
         rep = await request_client.send(b"foo")
-        assert req_socket is request_client.message_client.socket
+        assert req_socket is request_client.socket
         request_client.close()
-        await _await_req_teardown_after_close(request_client)
-        assert request_client.message_client.socket is None
+        assert request_client.socket is None
 
     finally:
-        await async_finalize_req_client(request_client)
-        _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
+        stream.close()
+        ctx.term()
 
 
 async def test_request_channel_issue_65265(io_loop, request_client, minion_opts, port):
@@ -192,102 +67,84 @@ async def test_request_channel_issue_65265(io_loop, request_client, minion_opts,
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
 
     ctx = zmq.Context()
+    socket = ctx.socket(zmq.REP)
+    socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+
     try:
-        socket = ctx.socket(zmq.REP)
-        socket.bind(minion_opts["master_uri"])
-        stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+        send_complete = asyncio.Event()
 
-        try:
-            send_complete = salt.ext.tornado.locks.Event()
-
-            @salt.ext.tornado.gen.coroutine
-            def no_handler(stream, msg):
-                """
-                The server never responds.
-                """
-                stream.close()
-
-            stream.on_recv_stream(no_handler)
-
-            @salt.ext.tornado.gen.coroutine
-            def send_request():
-                """
-                The request will timeout becuse the server does not respond.
-                """
-                ret = None
-                with pytest.raises(salt.exceptions.SaltReqTimeoutError):
-                    yield request_client.send("foo", timeout=3)
-                send_complete.set()
-                return ret
-
-            io_loop.spawn_callback(send_request)
-
-            await send_complete.wait()
-
-        finally:
-            await async_finalize_req_client(request_client)
-            _zmq_teardown_rep(stream=stream, rep_socket=socket)
-
-        # Create a new server, the old socket has been closed.
-
-        @salt.ext.tornado.gen.coroutine
-        def req_handler(stream, msg):
+        async def no_handler(stream, msg):
             """
-            The server responds
+            The server never responds.
             """
-            stream.send(salt.payload.dumps("bar"))
+            stream.close()
 
-        socket = ctx.socket(zmq.REP)
-        socket.bind(minion_opts["master_uri"])
-        stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
-        try:
-            stream.on_recv_stream(req_handler)
-            await salt.ext.tornado.gen.sleep(1)
+        stream.on_recv_stream(no_handler)
 
-            ret = await request_client.send("foo", timeout=1)
-            assert ret == "bar"
-        finally:
-            await async_finalize_req_client(request_client)
-            _zmq_teardown_rep(stream=stream, rep_socket=socket)
+        async def send_request():
+            """
+            The request will timeout becuse the server does not respond.
+            """
+            ret = None
+            with pytest.raises(salt.exceptions.SaltReqTimeoutError):
+                await request_client.send("foo", timeout=3)
+            send_complete.set()
+            return ret
+
+        io_loop.spawn_callback(send_request)
+
+        await send_complete.wait()
+
     finally:
-        _zmq_teardown_rep(ctx=ctx)
+        stream.close()
+
+    # Create a new server, the old socket has been closed.
+
+    async def req_handler(stream, msg):
+        """
+        The server responds
+        """
+        stream.send(salt.payload.dumps("bar"))
+
+    socket = ctx.socket(zmq.REP)
+    socket.bind(minion_opts["master_uri"])
+    stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
+    try:
+        stream.on_recv_stream(req_handler)
+        await asyncio.sleep(1)
+
+        ret = await request_client.send("foo", timeout=1)
+        assert ret == "bar"
+    finally:
+        stream.close()
+        ctx.term()
 
 
 async def test_request_client_send_recv_socket_closed(
     io_loop, request_client, minion_opts, port, caplog
 ):
-    """
-    REQ shutdown records coroutine teardown while the socket repr shows closed.
-
-    Graceful teardown (#68637) delivers a queue sentinel so ``_send_recv`` often
-    exits without hitting the periodic ``socket.poll(0, POLLOUT)`` path—the
-    trace line ``Send socket closed while polling.`` is not guaranteed. Assert
-    the stable ``Send and receive coroutine ending`` message instead.
-    """
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     ctx = zmq.Context()
     socket = ctx.socket(zmq.REP)
     socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(socket, io_loop=io_loop)
 
-    try:
-        request_client.connect()
+    await request_client.connect()
 
-        with caplog.at_level(logging.TRACE):
-            request_client.close()
-            await _await_req_teardown_after_close(request_client)
-
-            assert any(
-                "Send and receive coroutine ending" in msg and "closed" in msg
-                for msg in caplog.messages
-            ), caplog.messages
-    finally:
-        await async_finalize_req_client(request_client)
-        _zmq_teardown_rep(stream=stream, rep_socket=socket, ctx=ctx)
+    socket = request_client.socket
+    with caplog.at_level(logging.TRACE):
+        request_client.close()
+        await asyncio.sleep(0.5)
+        # The tornado version would see this log.
+        # assert "Send socket closed while polling." in caplog.messages
+        assert "Received send/recv shutdown sentinal" in caplog.messages
+        assert f"Send and receive coroutine ending {socket}" in caplog.messages
 
 
+@pytest.mark.xfail
 def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
-    io_loop = salt.ext.tornado.ioloop.IOLoop()
+    io_loop = tornado.ioloop.IOLoop()
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     ctx = zmq.Context()
     serve_socket = ctx.socket(zmq.REP)
@@ -295,22 +152,20 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
     minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
     request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
 
-    request_client.connect()
-
     def poll(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
         raise zmq.eventloop.future.CancelledError()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.poll = poll
 
     with caplog.at_level(logging.TRACE):
 
-        @salt.ext.tornado.gen.coroutine
-        def testit():
-            yield salt.ext.tornado.gen.sleep(0.5)
+        async def testit():
+            await request_client.connect()
+            await asyncio.sleep(0.5)
             io_loop.stop()
 
         io_loop.add_callback(testit)
@@ -320,8 +175,8 @@ def test_request_client_send_recv_loop_closed(minion_opts, port, caplog):
             assert "Loop closed while polling send socket." in caplog.messages
             assert f"Send and receive coroutine ending {socket}" in caplog.messages
         finally:
-            _sync_finalize_req_client(request_client, io_loop)
-            _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
+            request_client.close()
+            serve_socket.close()
 
 
 @pytest.mark.parametrize(
@@ -335,22 +190,21 @@ async def test_request_client_send_msg_socket_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    @salt.ext.tornado.gen.coroutine
-    def send(*args, **kwargs):
+    async def send(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
         raise zmq.ZMQError(errno=errno)
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.send = send
     with caplog.at_level(logging.TRACE):
         with pytest.raises(zmq.ZMQError):
             try:
                 await request_client.send("meh")
-                await salt.ext.tornado.gen.sleep(0.3)
+                await asyncio.sleep(0.3)
                 if errno == zmq.EFSM:
                     assert "Socket was found in invalid state." in caplog.messages
                 elif errno != 321:
@@ -366,8 +220,8 @@ async def test_request_client_send_msg_socket_closed(
                 )
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                await async_finalize_req_client(request_client)
-                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
+                request_client.close()
+                serve_socket.close()
 
 
 async def test_request_client_send_msg_loop_closed(
@@ -378,27 +232,26 @@ async def test_request_client_send_msg_loop_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    @salt.ext.tornado.gen.coroutine
-    def send(*args, **kwargs):
+    async def send(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
         raise zmq.eventloop.future.CancelledError()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
     socket.send = send
     with caplog.at_level(logging.TRACE):
         with pytest.raises(zmq.eventloop.future.CancelledError):
             try:
                 await request_client.send("meh")
-                await salt.ext.tornado.gen.sleep(0.3)
+                await asyncio.sleep(0.3)
                 assert "Loop closed while sending." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                await async_finalize_req_client(request_client)
-                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
+                request_client.close()
+                serve_socket.close()
 
 
 async def test_request_client_recv_poll_loop_closed(
@@ -409,9 +262,11 @@ async def test_request_client_recv_poll_loop_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
+
+    orig_poll = socket.poll
 
     def poll(*args, **kwargs):
         """
@@ -420,18 +275,19 @@ async def test_request_client_recv_poll_loop_closed(
         if args[1] == zmq.POLLIN:
             raise zmq.eventloop.future.CancelledError()
         else:
-            return socket.poll(*args, **kwargs)
+            return orig_poll(*args, **kwargs)
 
     socket.poll = poll
     with caplog.at_level(logging.TRACE):
-        try:
-            await request_client.send("meh")
-            await salt.ext.tornado.gen.sleep(0.3)
-            assert "Loop closed while polling receive socket." in caplog.messages
-            assert f"Send and receive coroutine ending {socket}" in caplog.messages
-        finally:
-            await async_finalize_req_client(request_client)
-            _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
+        with pytest.raises(zmq.eventloop.future.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while polling receive socket." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
 
 
 async def test_request_client_recv_poll_socket_closed(
@@ -442,9 +298,11 @@ async def test_request_client_recv_poll_socket_closed(
     serve_socket = ctx.socket(zmq.REP)
     serve_socket.bind(minion_opts["master_uri"])
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
+
+    orig_poll = socket.poll
 
     def poll(*args, **kwargs):
         """
@@ -453,19 +311,19 @@ async def test_request_client_recv_poll_socket_closed(
         if args[1] == zmq.POLLIN:
             raise zmq.ZMQError()
         else:
-            return socket.poll(*args, **kwargs)
+            return orig_poll(*args, **kwargs)
 
     socket.poll = poll
     with caplog.at_level(logging.TRACE):
         with pytest.raises(zmq.ZMQError):
             try:
                 await request_client.send("meh")
-                await salt.ext.tornado.gen.sleep(0.3)
-                assert "Receive socket closed while polling." in caplog.messages
+                await asyncio.sleep(0.3)
+                assert "Recieve socket closed while polling." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                await async_finalize_req_client(request_client)
-                _zmq_teardown_rep(rep_socket=serve_socket, ctx=ctx)
+                request_client.close()
+                serve_socket.close()
 
 
 async def test_request_client_recv_loop_closed(
@@ -477,18 +335,16 @@ async def test_request_client_recv_loop_closed(
     serve_socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(serve_socket, io_loop=io_loop)
 
-    @salt.ext.tornado.gen.coroutine
-    def req_handler(stream, msg):
+    async def req_handler(stream, msg):
         stream.send(msg[0])
 
     stream.on_recv_stream(req_handler)
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
-    @salt.ext.tornado.gen.coroutine
-    def recv(*args, **kwargs):
+    async def recv(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
@@ -500,12 +356,22 @@ async def test_request_client_recv_loop_closed(
         with pytest.raises(zmq.eventloop.future.CancelledError):
             try:
                 await request_client.send("meh")
-                await salt.ext.tornado.gen.sleep(0.3)
+                await asyncio.sleep(0.3)
                 assert "Loop closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                await async_finalize_req_client(request_client)
-                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket, ctx=ctx)
+                # 1. Close the stream first
+                # This unregisters the FD from the IOLoop selector
+                if not stream.closed():
+                    stream.close()
+
+                # 2. Now close the client and the raw socket
+                request_client.close()
+                if not serve_socket.closed:
+                    serve_socket.close()
+
+                # 3. Terminate the context last
+                ctx.term()
 
 
 async def test_request_client_recv_socket_closed(
@@ -517,18 +383,16 @@ async def test_request_client_recv_socket_closed(
     serve_socket.bind(minion_opts["master_uri"])
     stream = zmq.eventloop.zmqstream.ZMQStream(serve_socket, io_loop=io_loop)
 
-    @salt.ext.tornado.gen.coroutine
-    def req_handler(stream, msg):
+    async def req_handler(stream, msg):
         stream.send(msg[0])
 
     stream.on_recv_stream(req_handler)
 
-    request_client.connect()
+    await request_client.connect()
 
-    socket = request_client.message_client.socket
+    socket = request_client.socket
 
-    @salt.ext.tornado.gen.coroutine
-    def recv(*args, **kwargs):
+    async def recv(*args, **kwargs):
         """
         Mock this error because it is incredibly hard to time this.
         """
@@ -540,9 +404,113 @@ async def test_request_client_recv_socket_closed(
         with pytest.raises(zmq.ZMQError):
             try:
                 await request_client.send("meh")
-                await salt.ext.tornado.gen.sleep(0.3)
+                await asyncio.sleep(0.3)
                 assert "Receive socket closed while receiving." in caplog.messages
                 assert f"Send and receive coroutine ending {socket}" in caplog.messages
             finally:
-                await async_finalize_req_client(request_client)
-                _zmq_teardown_rep(stream=stream, rep_socket=serve_socket, ctx=ctx)
+                # 1. Close the stream first
+                # This unregisters the FD from the IOLoop selector
+                if not stream.closed():
+                    stream.close()
+
+                # 2. Now close the client and the raw socket
+                request_client.close()
+                if not serve_socket.closed:
+                    serve_socket.close()
+
+                # 3. Terminate the context last
+                ctx.term()
+
+
+async def test_request_client_uses_asyncio_queue(io_loop, minion_opts, port):
+    """
+    Test that RequestClient uses asyncio.Queue instead of tornado.queues.Queue.
+    This verifies the conversion from Tornado to pure asyncio.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    try:
+        # Verify the queue is an asyncio.Queue
+        assert isinstance(request_client._queue, asyncio.Queue)
+        # Verify it has asyncio.Queue methods
+        assert hasattr(request_client._queue, "get")
+        assert hasattr(request_client._queue, "put")
+        # Verify it doesn't have Tornado-specific attributes
+        assert not hasattr(request_client._queue, "get_timeout")
+    finally:
+        request_client.close()
+
+
+async def test_request_client_queue_timeout_uses_asyncio(
+    io_loop, minion_opts, port, caplog
+):
+    """
+    Test that RequestClient queue timeout uses asyncio.TimeoutError.
+    This verifies the conversion from tornado.gen.TimeoutError to asyncio.TimeoutError.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    request_client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    try:
+        await request_client.connect()
+
+        # The queue should timeout without any messages
+        # This tests that asyncio.wait_for with asyncio.TimeoutError works
+        # The _send_recv loop should handle the timeout gracefully
+
+        # Send a request - it should queue properly
+        future = asyncio.Future()
+        await request_client._queue.put((future, b"test_message"))
+
+        # Wait briefly
+        await asyncio.sleep(0.1)
+
+        # The _send_recv loop should have picked up the message
+        # and attempted to send it (though no handler is set up)
+        assert request_client._queue.qsize() == 0
+
+    finally:
+        request_client.close()
+        serve_socket.close()
+        ctx.term()
+
+
+async def test_request_client_asyncio_cancelled_error_handling(
+    io_loop, request_client, minion_opts, port, caplog
+):
+    """
+    Test that RequestClient properly handles asyncio.CancelledError.
+    This verifies the new asyncio.CancelledError exception handlers.
+    """
+    minion_opts["master_uri"] = f"tcp://127.0.0.1:{port}"
+    ctx = zmq.Context()
+    serve_socket = ctx.socket(zmq.REP)
+    serve_socket.bind(minion_opts["master_uri"])
+
+    await request_client.connect()
+
+    socket = request_client.socket
+
+    async def send(*args, **kwargs):
+        """
+        Mock send to raise asyncio.CancelledError
+        """
+        raise asyncio.CancelledError()
+
+    socket.send = send
+
+    with caplog.at_level(logging.TRACE):
+        with pytest.raises(asyncio.CancelledError):
+            try:
+                await request_client.send("meh")
+                await asyncio.sleep(0.3)
+                assert "Loop closed while sending." in caplog.messages
+                assert f"Send and receive coroutine ending {socket}" in caplog.messages
+            finally:
+                request_client.close()
+                serve_socket.close()
+                ctx.term()

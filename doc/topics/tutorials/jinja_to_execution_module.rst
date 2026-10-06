@@ -52,7 +52,7 @@ Unfortunately, it can lead to code that looks like the following.
     {%   do storage.update({'server_ip': servers_list[server_index]}) %}
     {% endif %}
 
-    {% for network, _ in salt.pillar.get('inventory:networks', {}) | dictsort %}
+    {% for network, _ in salt['pillar.get']('inventory:networks', {}) | dictsort %}
     {%   do storage.ipsets.hash_net.foo_networks.append(network) %}
     {% endfor %}
 
@@ -88,7 +88,7 @@ Let's move that to an execution module.
 
     {% do storage.update({'server_ip': salt['storage.ip']()}) %}
 
-    {% for network, _ in salt.pillar.get('inventory:networks', {}) | dictsort %}
+    {% for network, _ in salt['pillar.get']('inventory:networks', {}) | dictsort %}
     {%   do storage.ipsets.hash_net.af_networks.append(network) %}
     {% endfor %}
 

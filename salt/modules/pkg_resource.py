@@ -11,7 +11,7 @@ import pprint
 import salt.utils.data
 import salt.utils.versions
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
 __SUFFIX_NOT_NEEDED = ("x86_64", "noarch")
@@ -155,7 +155,14 @@ def parse_targets(
             if __salt__["config.valid_fileproto"](pkg_src):
                 # Cache package from remote source (salt master, HTTP, FTP) and
                 # append the cached path.
-                srcinfo.append(__salt__["cp.cache_file"](pkg_src, saltenv))
+                cached_path = __salt__["cp.cache_file"](pkg_src, saltenv)
+                if not cached_path:
+                    raise CommandExecutionError(
+                        "Unable to cache source {} for package {}".format(
+                            pkg_src, pkg_name
+                        )
+                    )
+                srcinfo.append(cached_path)
             else:
                 # Package file local to the minion, just append the path to the
                 # package file.
@@ -321,8 +328,8 @@ def version_compare(ver1, oper, ver2, ignore_epoch=False):
 
     .. code-block:: jinja
 
-        {%- set postfix_version = salt.pkg.version('postfix') %}
-        {%- if postfix_version and salt.pkg_resource.version_compare(postfix_version, '>=', '3.3', ignore_epoch=True) %}
+        {%- set postfix_version = salt['pkg.version']('postfix') %}
+        {%- if postfix_version and salt['pkg_resource.version_compare'](postfix_version, '>=', '3.3', ignore_epoch=True) %}
           {#- do stuff #}
         {%- endif %}
 

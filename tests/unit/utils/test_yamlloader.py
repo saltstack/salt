@@ -135,6 +135,35 @@ class YamlLoaderTestCase(TestCase):
             {"foo": {"b": {"foo": "bar", "one": 1, "list": [1, "two", 3]}}},
         )
 
+    def test_yaml_binary_unpadded(self):
+        """
+        Test that !!binary values without base64 padding are accepted.
+        Regression test for https://github.com/saltstack/salt/issues/69207
+        """
+        # 'a1b2c3' is 6 chars; valid only after adding '==' padding
+        result = self.render_yaml("vdata: !!binary a1b2c3")
+        self.assertEqual(result, {"vdata": b"\x6b\x56\xf6\x73"})
+
+    def test_yaml_binary_padded(self):
+        """
+        Test that !!binary values with correct base64 padding still work.
+        """
+        result = self.render_yaml("vdata: !!binary a1b2c3==")
+        self.assertEqual(result, {"vdata": b"\x6b\x56\xf6\x73"})
+
+    def test_yaml_binary_invalid(self):
+        """
+        Test that invalid data in a !!binary value still raises ConstructorError.
+
+        Non-ASCII characters are used here because they reliably trigger the
+        UnicodeEncodeError path across all Python versions. Testing via the
+        binascii.Error path is not reliable: Python 3.10 silently discards
+        unrecognized ASCII characters in base64 data, while Python 3.14 is
+        stricter. The padding fix itself is covered by test_yaml_binary_unpadded.
+        """
+        with self.assertRaises(ConstructorError):
+            self.render_yaml("vdata: !!binary \xc3\xb1")
+
     def test_not_yaml_monkey_patching(self):
         if hasattr(yaml, "CSafeLoader"):
             assert yaml.SafeLoader != yaml.CSafeLoader

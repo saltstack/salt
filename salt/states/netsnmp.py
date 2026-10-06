@@ -17,6 +17,7 @@ Dependencies
 .. versionadded:: 2016.11.0
 """
 
+import copy
 import logging
 
 import salt.utils.json
@@ -72,8 +73,14 @@ def _expand_config(config, defaults):
     Completed the values of the expected config for the edge cases with the default values.
     """
 
-    defaults.update(config)
-    return defaults
+    # ``defaults`` (the state's optional ``defaults`` argument) is ``None`` when
+    # unset, and ``config`` may be too; treat either as an empty mapping rather
+    # than crashing on ``None.update()`` (the netusers twin of #62170). deepcopy
+    # so the nested community detail dicts are not aliased into the caller's
+    # data -- ``_clear_community_details`` mutates them in place downstream.
+    expected = copy.deepcopy(defaults) if defaults else {}
+    expected.update(copy.deepcopy(config) if config else {})
+    return expected
 
 
 def _valid_dict(dic):
@@ -108,7 +115,12 @@ def _clear_community_details(community_details):
     for key in ["acl", "mode"]:
         _str_elem(community_details, key)
 
-    _mode = community_details.get["mode"] = community_details.get("mode").lower()
+    # NB: ``community_details.get["mode"]`` was a typo for
+    # ``community_details["mode"]`` -- it subscripted the bound ``.get`` method
+    # and raised ``TypeError`` for every dict-form community. ``mode`` may also
+    # be absent (``_str_elem`` drops an invalid value), so default it.
+    _mode = (community_details.get("mode") or "ro").lower()
+    community_details["mode"] = _mode
 
     if _mode in _COMMUNITY_MODE_MAP:
         community_details["mode"] = _COMMUNITY_MODE_MAP.get(_mode)
@@ -203,9 +215,14 @@ def _create_diff(diff, fun, key, prev, curr):
 
     if not fun(prev):
         _create_diff_action(diff, "added", key, curr)
-    elif fun(prev) and not fun(curr):
-        _create_diff_action(diff, "removed", key, prev)
     elif not fun(curr):
+        _create_diff_action(diff, "removed", key, prev)
+    else:
+        # Both previous and current values are valid and -- since _compute_diff
+        # only calls this when they differ -- not equal: the value changed. The
+        # old ``elif not fun(curr)`` here was unreachable, so a valid->valid
+        # change (e.g. location "A" -> "B") was silently dropped from the diff
+        # and the state reported success without pushing it.
         _create_diff_action(diff, "updated", key, curr)
 
 
@@ -222,6 +239,11 @@ def _compute_diff(existing, expected):
 
     for key in ["community"]:  # for the moment only onen
         if existing.get(key) != expected.get(key):
+            # NOTE: the whole community mapping is diffed as one opaque value, so
+            # a change lands in "updated" and is applied via snmp.update_config
+            # (add/modify). Removing an individual community from a multi-entry
+            # set is not expressed here and is left for a follow-up that diffs
+            # communities individually.
             _create_diff(diff, _valid_dict, key, existing.get(key), expected.get(key))
 
     return diff

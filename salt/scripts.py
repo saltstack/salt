@@ -5,6 +5,7 @@ This module contains the function calls to execute command line scripts
 import contextlib
 import functools
 import logging
+import multiprocessing
 import os
 import signal
 import subprocess
@@ -15,9 +16,26 @@ import traceback
 from random import randint
 
 import salt.defaults.exitcodes
+from salt._process_role import mark_as_cli
 from salt.exceptions import SaltClientError, SaltReqTimeoutError, SaltSystemExit
 
 log = logging.getLogger(__name__)
+
+
+# PEP 741: Python 3.14 changed the multiprocessing default start method on
+# Linux from "fork" to "forkserver".  Salt's daemons spawn many short-lived
+# subprocesses (MWorker, RequestServer, EventReturn, PoolRouting, …); under
+# "forkserver" each spawn re-pickles its target and re-imports Salt in a
+# helper process, which both makes startup ~5× slower than 3.13 *and* leaks
+# worker processes that hold ports across daemon restarts.  Pin the start
+# method to "fork" for Linux Salt on 3.14+ so production and test behave
+# the same as on 3.13.  ``force=True`` overrides any prior choice (pytest,
+# for example, may have queried the default before this import ran, which
+# would otherwise cause the pin to be skipped).  Operators who specifically
+# want the PEP-741 safety property can call ``set_start_method`` again with
+# their preferred value after Salt is imported.
+if sys.version_info >= (3, 14) and sys.platform.startswith("linux"):
+    multiprocessing.set_start_method("fork", force=True)
 
 
 def _handle_signals(client, signum, sigframe):
@@ -70,10 +88,40 @@ def _install_signal_handlers(client):
         signal.signal(signal.SIGTERM, functools.partial(_handle_signals, client))
 
 
+def _pin_multiprocessing_fork():
+    """
+    Python 3.14 changed the Linux default ``multiprocessing`` start method
+    from ``fork`` to ``forkserver``. Forkserver pickles the target callable
+    across to a fresh interpreter, which breaks every salt daemon that
+    relies on dynamically loaded modules (e.g. proxy minions register
+    their callables under namespaces like
+    ``dummy_proxy_one.salt.loaded.int.metaproxy.deltaproxy`` that the
+    fresh child cannot import). It also makes the master spawn its
+    ``multiprocessing.resource_tracker`` before ``check_user()`` drops
+    privileges, leaving a root-owned child under the salt user's pid.
+
+    Pin every salt daemon entry point to ``fork`` to restore Py3.13 Linux
+    semantics. Strictly Linux-only: macOS and Windows have always defaulted
+    to spawn-based start methods and salt is written for that on those
+    platforms (Darwin's libdispatch makes fork after thread init unsafe and
+    silently corrupts worker processes -- the symptom is minions accepting
+    jobs but never responding because their fork-spawned workers die
+    invisibly). Idempotent on re-entry.
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    import multiprocessing
+
+    if multiprocessing.get_start_method(allow_none=True) is None:
+        multiprocessing.set_start_method("fork")
+
+
 def salt_master():
     """
     Start the salt master.
     """
+    _pin_multiprocessing_fork()
+
     import salt.cli.daemons
 
     # Fix for setuptools generated scripts, so that it will
@@ -160,6 +208,8 @@ def salt_minion():
     Start the salt minion in a subprocess.
     Auto restart minion on error.
     """
+    _pin_multiprocessing_fork()
+
     import signal
 
     import salt.utils.debug
@@ -343,6 +393,8 @@ def salt_proxy():
     """
     Start a proxy minion.
     """
+    _pin_multiprocessing_fork()
+
     import multiprocessing
 
     import salt.cli.daemons
@@ -411,6 +463,8 @@ def salt_syndic():
     """
     Start the salt syndic.
     """
+    _pin_multiprocessing_fork()
+
     import salt.utils.process
 
     salt.utils.process.notify_systemd()
@@ -429,6 +483,7 @@ def salt_key():
     """
     Manage the authentication keys with salt-key.
     """
+    mark_as_cli()
     import salt.cli.key
 
     try:
@@ -444,6 +499,7 @@ def salt_cp():
     Publish commands to the salt system from the command line on the
     master.
     """
+    mark_as_cli()
     import salt.cli.cp
 
     client = salt.cli.cp.SaltCPCli()
@@ -456,6 +512,9 @@ def salt_call():
     Directly call a salt command in the modules, does not require a running
     salt minion to run.
     """
+    mark_as_cli()
+    _pin_multiprocessing_fork()
+
     import salt.cli.call
 
     if "" in sys.path:
@@ -469,6 +528,7 @@ def salt_run():
     """
     Execute a salt convenience routine.
     """
+    mark_as_cli()
     import salt.cli.run
 
     if "" in sys.path:
@@ -505,6 +565,7 @@ def salt_cloud():
     """
     The main function for salt-cloud
     """
+    mark_as_cli()
     try:
         # Late-imports for CLI performance
         import salt.cloud
@@ -528,6 +589,8 @@ def salt_api():
     """
     The main function for salt-api
     """
+    _pin_multiprocessing_fork()
+
     import salt.utils.process
 
     salt.utils.process.notify_systemd()
@@ -543,6 +606,7 @@ def salt_main():
     Publish commands to the salt system from the command line on the
     master.
     """
+    mark_as_cli()
     import salt.cli.salt
 
     if "" in sys.path:
@@ -618,12 +682,84 @@ def _pip_args(args, target):
     return new_args
 
 
-def _pip_environment(env, extras):
+def _pip_environment(
+    env,
+    extras,
+    use_pythonpath=False,
+    no_deps=False,
+    no_index=False,
+    disable_version_check=False,
+    allow_find_links=True,
+):
+    """
+    Build the environment ``salt-pip`` runs pip in.
+
+    ``PYTHONPATH`` is set to *only* salt's own ``extras`` directory by
+    default, so pip (running under the onedir/relenv interpreter) can see
+    packages it has already installed there. Any ``PYTHONPATH`` inherited
+    from the parent process is dropped rather than merged in, unless
+    ``use_pythonpath`` (the ``saltpip_use_pythonpath`` minion config
+    option) is set.
+
+    Previously the inherited ``PYTHONPATH`` was always prepended onto
+    ``extras``, which meant that anything already leaked into the parent
+    environment's ``PYTHONPATH`` (e.g. by another, unrelated Python
+    installation) became visible to salt's pip subprocess too. Combined
+    with ``--force-reinstall``, pip will uninstall whatever "already
+    satisfies" a requirement, wherever on ``sys.path`` it finds it -- so a
+    leaked, unrelated ``PYTHONPATH`` entry could cause salt-pip to delete
+    packages belonging to a completely different, unrelated Python
+    environment. See #70151. ``use_pythonpath`` restores that old
+    behavior for sites that need it, opt-in instead of unconditional.
+
+    Extras packages remain importable by ``salt-call``/the minion at runtime
+    regardless of this, since that is handled independently via a ``.pth``
+    file baked into the onedir, not via ``PYTHONPATH``.
+
+    ``no_deps``, ``no_index``, and ``disable_version_check`` (the
+    ``saltpip_no_deps``, ``saltpip_no_index``, and
+    ``saltpip_disable_pip_version_check`` minion config options) let an
+    operator lock salt-pip down so it never reaches out to PyPI/an index.
+    They're implemented as ``PIP_NO_DEPS``/``PIP_NO_INDEX``/
+    ``PIP_DISABLE_PIP_VERSION_CHECK`` environment variables rather than CLI
+    flags: ``salt-pip`` proxies arbitrary pip subcommands (``list``,
+    ``show``, ``uninstall``, ...), and unlike CLI flags, these env vars are
+    silently ignored by subcommands that don't use them instead of
+    erroring out. When set, they're forced (not merely defaulted) so the
+    lockdown holds regardless of what the calling environment already had.
+
+    ``allow_find_links`` (the ``saltpip_allow_find_links`` minion config
+    option, default ``True``) controls whether an inherited
+    ``PIP_FIND_LINKS`` is left alone (``True``, current/default behavior)
+    or stripped from the subprocess environment (``False``). This is
+    intentionally independent of ``no_index``: ``--find-links`` is pip's
+    own documented mechanism for installing from a local/internal mirror
+    *instead of* an index, so it stays meaningful (and is left alone by
+    default) even when ``no_index`` is set -- forcibly stripping it
+    whenever ``no_index`` is on would break that legitimate, common
+    air-gapped-install pattern. Set ``allow_find_links=False`` to close
+    the leak explicitly and unconditionally instead.
+
+    Note: unlike ``PIP_FIND_LINKS``, an inherited ``PIP_INDEX_URL``/
+    ``PIP_EXTRA_INDEX_URL`` is deliberately left untouched by every option
+    here. pip already ignores both entirely whenever ``PIP_NO_INDEX=1``
+    is in effect, so stripping them in that case would have no effect;
+    outside of that mode, filtering them is a separate, currently
+    unimplemented gap.
+    """
     new_env = env.copy()
-    if "PYTHONPATH" in env:
+    if use_pythonpath and env.get("PYTHONPATH"):
         new_env["PYTHONPATH"] = f"{extras}{os.pathsep}{env['PYTHONPATH']}"
     else:
         new_env["PYTHONPATH"] = extras
+    if no_deps:
+        new_env["PIP_NO_DEPS"] = "1"
+    if no_index:
+        new_env["PIP_NO_INDEX"] = "1"
+    if disable_version_check:
+        new_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    if not allow_find_links:
+        new_env.pop("PIP_FIND_LINKS", None)
     return new_env
 
 
@@ -632,6 +768,30 @@ def _get_onedir_env_path():
     with contextlib.suppress(AttributeError):
         return sys.RELENV
     return None
+
+
+def _resolve_extras_dir(relenv_path):
+    """
+    Resolve the salt-pip extras target directory.
+
+    Honors the ``SALT_EXTRAS_DIR`` env var (set by the packaging
+    scriptlets, or manually by the operator) so ``salt-pip install``
+    writes to the same directory that the packaging chown targets.
+    Falls back to the historical ``<relenv_root>/extras-<py>``
+    computation when the env var is unset.
+
+    See issue #70198.
+    """
+    override = os.environ.get("SALT_EXTRAS_DIR")
+    if override:
+        return override
+    # Preserve the historical ``relenv_path / "extras-<py>"`` computation
+    # exactly -- ``relenv_path`` is a ``pathlib.Path`` in production but
+    # test fixtures may inject any object that supports ``__truediv__``
+    # and ``__str__`` (e.g. tests/pytests/integration/cli/test_salt_pip_user.py).
+    # Wrapping in ``pathlib.Path()`` here would demand ``__fspath__`` and
+    # break those fixtures for no operational benefit.
+    return str(relenv_path / "extras-{}.{}".format(*sys.version_info))
 
 
 def _supervisor_config_dir():
@@ -726,7 +886,10 @@ def salt_pip(config_dir=None):
         )
         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
     else:
-        extras = str(relenv_path / "extras-{}.{}".format(*sys.version_info))
+        # SALT_EXTRAS_DIR (set by the packaging postinst under
+        # SALT_ONEDIR_HARDEN) wins over the historical
+        # <relenv_root>/extras-<py> fallback. See issue #70198.
+        extras = _resolve_extras_dir(relenv_path)
 
     # Use provided config_dir, or SALT_CONFIG_DIR env var, or SALT_MINION_CONFIG env var, or fall back to default location
     if config_dir:
@@ -747,12 +910,20 @@ def salt_pip(config_dir=None):
     if user and user != "root" and user != current_user:
         salt.utils.verify.check_user(user)
 
-    env = _pip_environment(os.environ.copy(), extras)
+    env = _pip_environment(
+        os.environ.copy(),
+        extras,
+        use_pythonpath=opts.get("saltpip_use_pythonpath", False),
+        no_deps=opts.get("saltpip_no_deps", False),
+        no_index=opts.get("saltpip_no_index", False),
+        disable_version_check=opts.get("saltpip_disable_pip_version_check", False),
+        allow_find_links=opts.get("saltpip_allow_find_links", True),
+    )
     args = _pip_args(sys.argv[1:], extras)
     command = [
         sys.executable,
         "-m",
         "pip",
-    ] + _pip_args(sys.argv[1:], extras)
+    ] + args
     ret = subprocess.run(command, shell=False, check=False, env=env)
     sys.exit(ret.returncode)

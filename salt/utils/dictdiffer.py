@@ -79,7 +79,9 @@ def deep_diff(old, new, ignore=None):
     return res
 
 
-def recursive_diff(past_dict, current_dict, ignore_missing_keys=True):
+def recursive_diff(
+    past_dict, current_dict, ignore_missing_keys=True, list_dict_matchers=None
+):
     """
     Returns a RecursiveDictDiffer object that computes the recursive diffs
     between two dictionaries
@@ -95,8 +97,21 @@ def recursive_diff(past_dict, current_dict, ignore_missing_keys=True):
         current_dict, but exist in the past_dict. If true, the diff will
         not contain the missing keys.
         Default is True.
+
+    list_dict_matchers
+        List of keys to consider for deep comparison of dicts inside a list.
+        If not specified or if not all of the dicts contained in a list are
+        matchable with one of these keys, changes to dicts in such a list will
+        return the two differing lists as a whole instead of only the differing
+        dict elements.
+        Empty by default, meaning lists of dicts will not be diffed deeply.
+
     """
-    return RecursiveDictDiffer(past_dict, current_dict, ignore_missing_keys)
+    if list_dict_matchers is None:
+        list_dict_matchers = []
+    return RecursiveDictDiffer(
+        past_dict, current_dict, ignore_missing_keys, list_dict_matchers
+    )
 
 
 class RecursiveDictDiffer(DictDiffer):
@@ -142,7 +157,9 @@ class RecursiveDictDiffer(DictDiffer):
 
     NONE_VALUE = "<_null_>"
 
-    def __init__(self, past_dict, current_dict, ignore_missing_keys):
+    def __init__(
+        self, past_dict, current_dict, ignore_missing_keys, list_dict_matchers
+    ):
         """
         past_dict
             Past dictionary.
@@ -154,37 +171,94 @@ class RecursiveDictDiffer(DictDiffer):
             Flag specifying whether to ignore keys that no longer exist in the
             current_dict, but exist in the past_dict. If true, the diff will
             not contain the missing keys.
+
+        list_dict_matchers
+            List of keys to consider for deep comparison of dicts inside a list.
+            If not specified or if not all of the dicts contained in a list are
+            matchable with one of these keys, changes to dicts in such a list will
+            return the two differing lists as a whole instead of only the differing
+            dict elements.
         """
         super().__init__(current_dict, past_dict)
         self._diffs = self._get_diffs(
-            self.current_dict, self.past_dict, ignore_missing_keys
+            self.current_dict, self.past_dict, ignore_missing_keys, list_dict_matchers
         )
         # Ignores unet values when assessing the changes
         self.ignore_unset_values = True
 
     @classmethod
-    def _get_diffs(cls, dict1, dict2, ignore_missing_keys):
+    def _get_diffs(cls, dict1, dict2, ignore_missing_keys, list_dict_matchers):
         """
         Returns a dict with the differences between dict1 and dict2
 
         Notes:
-            Keys that only exist in dict2 are not included in the diff if
-            ignore_missing_keys is True, otherwise they are
-            Simple compares are done on lists
+            - Keys that only exist in dict2 are not included in the diff if
+              ignore_missing_keys is True, otherwise they are
+            - Simple compares are done on lists, unless the list contains dicts
+              and all contained dicts are matchable with a key listed in list_dict_matchers
         """
         ret_dict = {}
+
         for p in dict1:
             if p not in dict2:
                 ret_dict.update({p: {"new": dict1[p], "old": cls.NONE_VALUE}})
             elif dict1[p] != dict2[p]:
                 if isinstance(dict1[p], dict) and isinstance(dict2[p], dict):
                     sub_diff_dict = cls._get_diffs(
-                        dict1[p], dict2[p], ignore_missing_keys
+                        dict1[p], dict2[p], ignore_missing_keys, list_dict_matchers
                     )
                     if sub_diff_dict:
                         ret_dict.update({p: sub_diff_dict})
-                else:
-                    ret_dict.update({p: {"new": dict1[p], "old": dict2[p]}})
+
+                    continue
+
+                elif (
+                    list_dict_matchers
+                    and isinstance(dict1[p], list)
+                    and isinstance(dict2[p], list)
+                    and isinstance(dict1[p][0], dict)
+                    and isinstance(dict2[p][0], dict)
+                ):
+
+                    match_key = None
+                    match_results = {}
+
+                    for d1 in dict1[p]:
+                        if match_key is None:
+                            for matcher in list_dict_matchers:
+                                if matcher in d1:
+                                    match_key = matcher
+
+                        for d2 in dict2[p]:
+                            if match_key not in d2:
+                                match_key = None
+                                break
+
+                            if d1[match_key] == d2[match_key]:
+                                sub_diff_dict = cls._get_diffs(
+                                    d1, d2, ignore_missing_keys, list_dict_matchers
+                                )
+                                if sub_diff_dict:
+                                    match_results.update(
+                                        {p: {d1[match_key]: sub_diff_dict}}
+                                    )
+
+                                break
+                        else:
+                            if match_key is not None:
+                                continue
+
+                        if match_key is None:
+                            break
+
+                    if match_results:
+                        ret_dict.update(match_results)
+
+                    if match_key is not None:
+                        continue
+
+                ret_dict.update({p: {"new": dict1[p], "old": dict2[p]}})
+
         if not ignore_missing_keys:
             for p in dict2:
                 if p not in dict1:

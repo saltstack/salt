@@ -5,13 +5,14 @@ Template render systems
 import codecs
 import importlib.machinery
 import importlib.util
+import json
 import logging
 import os
+import pathlib
 import sys
 import tempfile
 import traceback
 from collections import OrderedDict
-from pathlib import Path
 
 import jinja2
 import jinja2.ext
@@ -26,12 +27,12 @@ import salt.utils.http
 import salt.utils.jinja
 import salt.utils.network
 import salt.utils.platform
+import salt.utils.secret
 import salt.utils.stringutils
 import salt.utils.yamlencoding
 from salt import __path__ as saltpath
 from salt.exceptions import CommandExecutionError, SaltInvocationError, SaltRenderError
 from salt.loader.context import NamedLoaderContext
-from salt.loader.dunder import __file_client__
 from salt.utils.decorators.jinja import JinjaFilter, JinjaGlobal, JinjaTest
 from salt.utils.versions import Version
 
@@ -64,7 +65,37 @@ class AliasedLoader:
         return self.wrapped[name]
 
     def __getattr__(self, name):
-        return getattr(self.wrapped, name)
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``getattr(self.wrapped, name)`` used to bypass ``whitelist_modules``
+        # -- ``LazyLoader.__getitem__`` gates via ``_load`` but
+        # ``LazyLoader.__getattr__`` did not, so a Jinja template using
+        # ``{{ salt.cmd.run('id') }}`` could escape the wire filter even
+        # when the equivalent ``{{ salt['cmd.run']('id') }}`` was rejected.
+        # ``LazyLoader.__getattr__`` now enforces the same gate; keep an
+        # AliasedLoader-level check too for wrappers that might expose a
+        # loader whose whitelist we can consult directly.
+        #
+        # Only respect ``whitelist`` if the wrapped loader exposes it as a
+        # real container. Wrappers like salt-ssh's ``FunctionWrapper``
+        # synthesise a module lookup for every attribute access, so
+        # ``getattr(wrapped, "whitelist", None)`` would return a
+        # ``LoadedMod`` instead of a list/tuple; using that with ``in``
+        # would raise ``TypeError``. Treat non-container ``whitelist``
+        # values as "no whitelist" and fall through to the wrapper's own
+        # module-load gate.
+        wrapped = object.__getattribute__(self, "wrapped")
+        _wl = getattr(wrapped, "whitelist", None)
+        whitelist = (
+            _wl if isinstance(_wl, (list, tuple, set, frozenset, dict)) else None
+        )
+        if (
+            whitelist
+            and not name.startswith("_")
+            and name not in whitelist
+            and not hasattr(type(wrapped), name)
+        ):
+            raise AttributeError(name)
+        return getattr(wrapped, name)
 
     def __contains__(self, name):
         return name in self.wrapped
@@ -106,12 +137,13 @@ def generate_sls_context(tmplpath, sls):
 
     sls_context = {}
 
-    # Normalize SLS as path.
-    slspath = sls.replace(".", "/")
+    # Normalize SLS as path and remove possible trailing slashes
+    # to prevent matching issues and wrong vars calculation
+    slspath = sls.replace(".", "/").rstrip("/")
 
     if tmplpath:
         # Normalize template path
-        template = str(Path(tmplpath).as_posix())
+        template = str(pathlib.Path(tmplpath).as_posix())
 
         # Determine proper template name without root
         if not sls:
@@ -121,8 +153,16 @@ def generate_sls_context(tmplpath, sls):
         elif template.endswith(f"{slspath}/init.sls"):
             template = template[-(9 + len(slspath)) :]
         else:
-            # Something went wrong
-            log.warning("Failed to determine proper template path")
+            # It is not an SLS file being processed
+            template = sls
+            sls_context.update(
+                dict(
+                    tplpath=tmplpath,
+                    tplfile=template,
+                    tpldir=str(pathlib.Path(sls).parents[0].as_posix()),
+                )
+            )
+            return sls_context
 
         slspath = template.rsplit("/", 1)[0] if "/" in template else ""
 
@@ -195,7 +235,9 @@ def wrap_tmpl_func(render_str):
                 try:
                     if tmplpath is not None:
                         tmplsrc = os.path.join(tmplpath, tmplsrc)
-                    with codecs.open(tmplsrc, "r", SLS_ENCODING) as _tmplsrc:
+                    with salt.utils.files.fopen(
+                        tmplsrc, encoding=SLS_ENCODING
+                    ) as _tmplsrc:
                         tmplstr = _tmplsrc.read()
                 except (UnicodeDecodeError, ValueError, OSError) as exc:
                     if salt.utils.files.is_binary(tmplsrc):
@@ -211,6 +253,7 @@ def wrap_tmpl_func(render_str):
         else:  # assume tmplsrc is file-like.
             tmplstr = tmplsrc.read()
             tmplsrc.close()
+        _token = salt.utils.secret.mask_pillar.set(False)
         try:
             output = render_str(tmplstr, context, tmplpath)
             if salt.utils.platform.is_windows():
@@ -243,6 +286,8 @@ def wrap_tmpl_func(render_str):
                 #       function, then the contents of the output file will
                 #       be exactly the same as the input.
             return dict(result=True, data=outf.name)
+        finally:
+            salt.utils.secret.mask_pillar.reset(_token)
 
     render_tmpl.render_str = render_str
     return render_tmpl
@@ -371,6 +416,8 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             if tmplpath:
                 loader = jinja2.FileSystemLoader(os.path.dirname(tmplpath))
         else:
+            from salt.loader.dunder import __file_client__
+
             loader = salt.utils.jinja.SaltCacheLoader(
                 opts,
                 saltenv,
@@ -428,10 +475,65 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 else:
                     log.warning("Jinja2 environment %s is not recognized", k)
 
+        def parse_jinja_file_opts(tmplstr):
+            # Honor a per-file "#jinja2:" header so an individual template
+            # (notably a third-party formula) can override jinja environment
+            # options for itself, without the global jinja_env/jinja_sls_env
+            # settings forcing the same options onto every template. The
+            # header value is a JSON object, e.g.:
+            #     #jinja2: {"trim_blocks": true, "lstrip_blocks": true}
+            # It is recognized on the first line, or on the line immediately
+            # following a renderer shebang (e.g. "#!jinja|yaml"): the shebang
+            # is not stripped before this renderer runs, so it occupies line
+            # one. This mirrors how a PEP 263 coding cookie may sit on line
+            # two below a "#!" line. The header line is removed from the
+            # template before rendering.
+            jinja2_override = "#jinja2:"
+            # keepends=True keeps the line terminators, so detection and
+            # removal share one consistent notion of a line across "\n",
+            # "\r\n" and lone "\r"; rejoining the remaining lines splices out
+            # exactly the header line and preserves every other byte.
+            lines = tmplstr.splitlines(keepends=True)
+            if not lines:
+                return tmplstr
+            idx = 0
+            # A renderer shebang ("#!jinja|yaml"), but not an interpreter
+            # path ("#!/bin/sh"), may legitimately occupy the first line.
+            if lines[0].startswith("#!") and not lines[0].startswith("#!/"):
+                idx = 1
+            if idx >= len(lines) or not lines[idx].startswith(jinja2_override):
+                return tmplstr
+            payload = lines[idx][len(jinja2_override) :]
+            if not payload.strip():
+                # A bare "#jinja2:" with no options is not an override.
+                return tmplstr
+            try:
+                jdata = json.loads(payload)
+            except ValueError:
+                log.warning(
+                    "Ignoring malformed '#jinja2:' header in template: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            if not isinstance(jdata, dict):
+                log.warning(
+                    "Ignoring '#jinja2:' header that is not a JSON object: %s",
+                    lines[idx].rstrip("\r\n"),
+                )
+                return tmplstr
+            opt_jinja_env_helper(jdata, "jinja_fileopts")
+            del lines[idx]
+            return "".join(lines)
+
         if "sls" in context and context["sls"] != "":
             opt_jinja_env_helper(opt_jinja_sls_env, "jinja_sls_env")
         else:
             opt_jinja_env_helper(opt_jinja_env, "jinja_env")
+
+        # Per-file "#jinja2:" header overrides the global jinja_env /
+        # jinja_sls_env options for this template only (see salt.utils.jinja
+        # for the documented header format).
+        tmplstr = parse_jinja_file_opts(tmplstr)
 
         if opts.get("allow_undefined", False):
             jinja_env = jinja2.sandbox.SandboxedEnvironment(**env_args)

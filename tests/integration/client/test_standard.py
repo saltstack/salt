@@ -55,11 +55,23 @@ class StdTest(ModuleCase):
                 "test.ping",
                 timeout=20,
             )
-            num_ret = 0
             for ret in cmd_iter:
-                num_ret += 1
-                self.assertTrue(ret["minion"])
-            assert num_ret == 0
+                # If no minions match, ``cmd_cli`` yields a falsy pub payload (typically
+                # ``{}``) once — do not treat that as a minion return (and do not index
+                # ``ret["minion"]``: the minion id is ``footest``, not ``minion``).
+                if not ret:
+                    continue
+                for minion_id, data in ret.items():
+                    self.assertEqual(
+                        minion_id,
+                        "footest",
+                        msg="cmd_cli iterator should only carry footest for this target",
+                    )
+                    self.assertNotEqual(
+                        data.get("ret"),
+                        True,
+                        msg="minion without a daemon must not return a successful ping",
+                    )
         finally:
             os.unlink(key_file)
 

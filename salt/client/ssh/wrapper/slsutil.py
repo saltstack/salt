@@ -7,6 +7,7 @@ import salt.template
 import salt.utils.args
 import salt.utils.dictupdate
 import salt.utils.stringio
+from salt.client.ssh.wrapper.state import _merge_extra_filerefs
 
 CONTEXT_BASE = "slsutil"
 
@@ -121,7 +122,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     .. code-block:: jinja
 
         #!jinja|yaml
-        {% set apache = salt.grains.filter_by({
+        {% set apache = salt['grains.filter_by']({
             ...normal jinja map file here...
         }, merge=salt.pillar.get('apache:lookup')) %}
         {{ apache | yaml() }}
@@ -141,7 +142,7 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
 
     .. code-block:: jinja
 
-        {% set apache = salt.slsutil.renderer('map.sls') %}
+        {% set apache = salt['slsutil.renderer']('map.sls') %}
 
     CLI Example:
 
@@ -157,23 +158,46 @@ def renderer(path=None, string=None, default_renderer="jinja|yaml", **kwargs):
     if not path and not string:
         raise salt.exceptions.SaltInvocationError("Must pass either path or string")
 
-    renderers = salt.loader.render(__opts__, __salt__)
+    # Use the same FSClient as cp/get_url so Jinja SaltCacheLoader reads the
+    # cache paths ssh cp.cache_file populates (loader.render defaults to no client).
+    renderers = salt.loader.render(
+        __opts__, __salt__, file_client=__context__.get("fileclient")
+    )
+    # Falsy saltenv (e.g. None injected on salt-ssh) makes Jinja use
+    # FileSystemLoader on the temp copy only, so imports like map.jinja fail.
+    saltenv = kwargs.get("saltenv") or "base"
 
     if path:
-        path_or_string = __context__["fileclient"].get_url(
-            path, "", saltenv=kwargs.get("saltenv", "base")
+        # salt-ssh does not ship the whole fileserver tree; Jinja ``import`` /
+        # ``from`` targets must be present on the target like ``state.*`` runs
+        # (``lowstate_file_refs`` + ``extra_filerefs``). Honor the same
+        # ``--extra-filerefs`` / ``__opts__`` / ``cp.cache_file`` context keys by
+        # caching each ref before rendering (see ssh ``state`` wrapper).
+        extra_filerefs = _merge_extra_filerefs(
+            kwargs.get("extra_filerefs") or "",
+            __opts__.get("extra_filerefs") or "",
+            __context__.get("_cp_extra_filerefs") or "",
         )
+        if extra_filerefs:
+            for ref in extra_filerefs.split(","):
+                ref = ref.strip()
+                if ref:
+                    __salt__["cp.cache_file"](ref, saltenv=saltenv)
+        path_or_string = __context__["fileclient"].get_url(path, "", saltenv=saltenv)
     elif string:
         path_or_string = ":string:"
         kwargs["input_data"] = string
 
+    compile_kwargs = dict(kwargs)
+    compile_kwargs.pop("extra_filerefs", None)
+    compile_kwargs["saltenv"] = saltenv
     ret = salt.template.compile_template(
         path_or_string,
         renderers,
         default_renderer,
         __opts__["renderer_blacklist"],
         __opts__["renderer_whitelist"],
-        **kwargs,
+        **compile_kwargs,
     )
     return ret.read() if salt.utils.stringio.is_readable(ret) else ret
 
@@ -211,7 +235,7 @@ def serialize(serializer, obj, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set json_string = salt.slsutil.serialize('json',
+        {% set json_string = salt['slsutil.serialize']('json',
             {'foo': 'Foo!'}) %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)
@@ -235,7 +259,7 @@ def deserialize(serializer, stream_or_string, **mod_kwargs):
 
     .. code-block:: jinja
 
-        {% set python_object = salt.slsutil.deserialize('json',
+        {% set python_object = salt['slsutil.deserialize']('json',
             '{"foo": "Foo!"}') %}
     """
     kwargs = salt.utils.args.clean_kwargs(**mod_kwargs)

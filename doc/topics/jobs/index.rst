@@ -129,7 +129,7 @@ arguments and provide a YAML dict of named arguments.
       job1:
         function: state.sls
         seconds: 3600
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -143,7 +143,7 @@ This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
       job1:
         function: state.sls
         seconds: 3600
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -158,7 +158,7 @@ This will schedule the command: ``state.sls httpd test=True`` every 3600 seconds
       job1:
         function: state.sls
         seconds: 3600
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -183,7 +183,7 @@ to be installed.
     schedule:
       job1:
         function: state.sls
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -197,7 +197,7 @@ localtime.
     schedule:
       job1:
         function: state.sls
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -216,7 +216,7 @@ Monday, Wednesday and Friday, and 3:00 PM on Tuesday and Thursday.
     schedule:
       job1:
         function: state.sls
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -239,7 +239,7 @@ grain values.
       job1:
         function: state.sls
         seconds: 3600
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -257,7 +257,7 @@ be a dictionary with the date strings using the ``dateutil`` format.
       job1:
         function: state.sls
         seconds: 3600
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -326,7 +326,7 @@ Cron-like Schedule
       job1:
         function: state.sls
         cron: '*/15 * * * *'
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -387,7 +387,7 @@ scheduler to skip this first run and wait until the next scheduled run:
         function: state.sls
         seconds: 3600
         run_on_start: False
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -404,7 +404,7 @@ Until and After
         function: state.sls
         seconds: 15
         until: '12/31/2015 11:59pm'
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -424,7 +424,7 @@ This requires the Python ``dateutil`` library to be installed.
         function: state.sls
         seconds: 15
         after: '12/31/2015 11:59pm'
-        args:
+        job_args:
           - httpd
         kwargs:
           test: True
@@ -444,7 +444,7 @@ Scheduling States
       log-loadavg:
         function: cmd.run
         seconds: 3660
-        args:
+        job_args:
           - 'logger -t salt < /proc/loadavg'
         kwargs:
           stateful: False
@@ -478,7 +478,7 @@ configuration file:
         function: state.orchestrate
         hours: 6
         splay: 600
-        args:
+        job_args:
           - orchestration.my_orch
 
 The above configuration is analogous to running

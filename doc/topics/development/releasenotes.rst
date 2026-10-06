@@ -39,7 +39,7 @@ Installing `tools`
 
 .. code-block: bash
 
-    python -m pip install -r requirements/static/ci/py3.10/tools.lock
+    python -m pip install -r requirements/static/ci/py3.10/tools.txt
 
 
 To view the output the release notes will produce before generating them

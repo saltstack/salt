@@ -281,8 +281,8 @@ deactivate
 
 **Verify setup:**
 ```bash
-./venv310/bin/python -c "import salt.version; print(salt.version.__version__)"
-./venv310/bin/pytest tests/pytests/unit/test_loader.py -v
+./venv314/bin/python -c "import salt.version; print(salt.version.__version__)"
+./venv314/bin/pytest tests/pytests/unit/test_loader.py -v
 ./venv310/bin/python -m tools --help
 ```
 

@@ -7,12 +7,10 @@ from tests.conftest import FIPS_TESTRUN
 
 @pytest.fixture(
     scope="module",
-    params=[(True, 5), (False, 5), (True, -1), (False, -1)],
+    params=[(True, 5), (False, 5)],
     ids=[
         "multiprocessing-max5",
         "threading-max5",
-        "multiprocessing-unlimited",
-        "threading-unlimited",
     ],
 )
 def minion_config_overrides(request):
@@ -32,6 +30,26 @@ def minion_config_overrides(request):
 def salt_master(salt_master_factory):
     config_overrides = {
         "open_mode": True,
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"

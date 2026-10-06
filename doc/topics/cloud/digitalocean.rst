@@ -49,7 +49,7 @@ Set up an initial profile at ``/etc/salt/cloud.profiles`` or in the
       image: 14.04 x64
       size: 512MB
       location: New York 1
-      private_networking: True
+      vpc_name: Optional
       backups_enabled: True
       ipv6: True
       create_dns_record: True

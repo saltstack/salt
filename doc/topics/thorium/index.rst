@@ -282,16 +282,15 @@ Putting data in a register is useless if you don't do anything with it. The
 ``check`` module is designed to examine register data and determine whether it
 matches the given parameters. For instance, the ``check.contains`` function
 will return ``True`` if the given ``value`` is contained in the specified
-register:
+register. This works especially well with ``reg.set``, which stores scalar
+values in a ``set()``:
 
 .. code-block:: yaml
 
     foo:
-      reg.list:
+      reg.set:
         - add: bar
         - match: my/custom/event
-        - stamp: True
-        - prune: 50
       check.contains:
         - value: somedata
 
@@ -322,6 +321,16 @@ different means of comparing values:
 * ``eq``: Check whether the register entry is equal to the given value
 * ``ne``: Check whether the register entry is not equal to the given value
 
+When you are working with a ``list`` register, the ``len_*`` functions are
+often more useful than the scalar comparisons:
+
+* ``len_gt``: Check whether the register contains more than the given number of entries
+* ``len_gte``: Check whether the register contains at least the given number of entries
+* ``len_lt``: Check whether the register contains fewer than the given number of entries
+* ``len_lte``: Check whether the register contains at most the given number of entries
+* ``len_eq``: Check whether the register contains exactly the given number of entries
+* ``len_ne``: Check whether the register contains anything other than the given number of entries
+
 There is also a function called ``check.event`` which does not examine the
 register. Instead, it looks directly at an event as it is coming in on the
 event bus, and returns ``True`` if that event's tag matches. For example:
@@ -348,3 +357,254 @@ It is possible to persist the register data to disk when a master is stopped
 gracefully, and reload it from disk when the master starts up again. This
 functionality is provided by the returner subsystem, and is enabled whenever
 any returner containing a ``load_reg`` and a ``save_reg`` function is used.
+
+The built-in ``local_cache`` returner implements these hooks, so a simple way
+to persist the register is:
+
+.. code-block:: yaml
+
+    register_returner: local_cache
+
+
+Concrete Thorium Patterns
+=========================
+The API reference explains each Thorium module in isolation, but Thorium
+becomes much easier to understand when you think in terms of small pipelines:
+
+#. collect interesting events into a register
+#. evaluate that register or the current event batch
+#. trigger a local, runner, or wheel action
+
+The examples below are designed to show those patterns directly.
+
+
+Trigger After Several Matching Events
+-------------------------------------
+One of Thorium's most useful patterns is reacting only after several related
+events have occurred. This avoids reacting to every transient event
+individually.
+
+The following example stores the most recent deployment failures in a register
+and only fires once at least three failures have been seen:
+
+.. code-block:: yaml
+
+    deploy_failures:
+      reg.list:
+        - add:
+          - id
+          - reason
+        - match: acme/deploy/failed
+        - stamp: True
+        - prune: 10
+
+    enough_failures:
+      check.len_gte:
+        - name: deploy_failures
+        - value: 3
+
+    notify_ops:
+      runner.cmd:
+        - func: manage.up
+        - require:
+          - check: enough_failures
+
+Thorium is doing three different jobs here:
+
+* ``reg.list`` collects the event payload fields you care about.
+* ``check.len_gte`` turns that historical context into a gate.
+* ``runner.cmd`` hands off to a master-side runner only when the gate is open.
+
+This is the general shape you want whenever you need "do something after N
+events", "act on bursts", or "only react if the issue keeps happening".
+
+
+Compute a Rolling Average Before Acting
+---------------------------------------
+Thorium is not limited to one-off event matching. The combination of
+``reg.list`` and ``calc.*`` can treat recent events as a sliding data set.
+
+The following example stores load samples from custom events and only triggers
+an orchestration run when the mean of the last five samples is at least ``4``:
+
+.. code-block:: yaml
+
+    load_samples:
+      reg.list:
+        - add:
+          - load
+          - minion
+        - match: acme/telemetry/load
+        - stamp: True
+        - prune: 20
+
+    sustained_high_load:
+      calc.mean:
+        - name: load_samples
+        - num: 5
+        - ref: load
+        - minimum: 4
+
+    scale_out:
+      runner.cmd:
+        - func: state.orchestrate
+        - mods: orch.scale_out
+        - require:
+          - calc: sustained_high_load
+
+This pattern is useful when you want to react to trends instead of single
+samples. The register keeps the recent window, and ``calc.mean`` computes the
+decision value at runtime.
+
+
+Throttle Reactions With ``timer.hold``
+--------------------------------------
+Once a check starts returning ``True``, it will continue to do so until the
+register changes. In practice you often want a cooldown so that the same action
+is not launched on every Thorium loop.
+
+``timer.hold`` provides that flow-control primitive:
+
+.. code-block:: yaml
+
+    service_failures:
+      reg.list:
+        - add:
+          - id
+          - service
+        - match: acme/service/down
+        - prune: 20
+
+    repeated_failures:
+      check.len_gte:
+        - name: service_failures
+        - value: 3
+
+    cooldown:
+      timer.hold:
+        - seconds: 900
+        - require:
+          - check: repeated_failures
+
+    restart_service:
+      local.cmd:
+        - tgt: 'G@roles:web'
+        - tgt_type: compound
+        - func: service.restart
+        - arg:
+          - nginx
+        - require:
+          - timer: cooldown
+
+The timer state remains ``False`` until the hold period has elapsed, and then
+briefly returns ``True`` so the dependent action can run. This makes it a good
+fit for rate limiting, cooldowns, and periodic rechecks.
+
+
+Choose The Right Action Wrapper
+-------------------------------
+Thorium can react in three different places, and the right choice depends on
+where the work needs to happen:
+
+* ``local.cmd`` runs an execution module on one or more minions.
+* ``runner.cmd`` launches a runner on the master.
+* ``wheel.cmd`` launches a wheel command for master maintenance tasks.
+
+These wrappers all fit naturally behind the same gate:
+
+.. code-block:: yaml
+
+    important_event:
+      check.event
+
+    verify_minions:
+      local.cmd:
+        - name: verify_minions
+        - tgt: '*'
+        - func: test.ping
+        - require:
+          - check: important_event
+
+    orchestrate_response:
+      runner.cmd:
+        - func: state.orchestrate
+        - mods: orch.respond
+        - require:
+          - check: important_event
+
+    reject_old_key:
+      wheel.cmd:
+        - fun: key.reject
+        - match: legacy-minion
+        - require:
+          - check: important_event
+
+If the reaction is "do something on minions", use ``local.cmd``. If the
+reaction is "start a master-side workflow", use ``runner.cmd``. If the
+reaction is "modify master metadata or PKI state", use ``wheel.cmd``.
+
+
+Inspect And Persist The Register
+--------------------------------
+Thorium is much easier to debug when you can inspect the register directly.
+This is especially helpful when you are first developing a formula.
+
+The following example saves a register snapshot to disk every time it changes:
+
+.. code-block:: yaml
+
+    tracked_ids:
+      reg.set:
+        - add: id
+        - match: acme/custom/event
+
+    tracked_ids_snapshot:
+      file.save:
+        - name: /tmp/tracked_ids.json
+        - filter: True
+        - require:
+          - reg: tracked_ids
+
+``filter: True`` is important when the register contains types such as
+``set()`` that are not JSON-serializable by default.
+
+This pattern is useful for:
+
+* confirming that your event tag glob is matching what you expect
+* inspecting the exact register shape before adding checks or calculations
+* keeping a lightweight audit trail during Thorium development
+
+
+Expanded Health Automation Example
+----------------------------------
+The built-in ``status`` and ``key`` modules are often the first place people
+encounter Thorium, but they are also a good example of multi-step automation.
+
+The following formula tracks status beacon events, snapshots the status
+register, and rejects keys for minions that have not checked in recently:
+
+.. code-block:: yaml
+
+    status_register:
+      status.reg
+
+    status_snapshot:
+      file.save:
+        - name: status_snapshot
+        - require:
+          - status: status_register
+
+    reject_stale_keys:
+      key.timeout:
+        - reject: 300
+        - require:
+          - status: status_register
+
+``status.reg`` listens for ``salt/beacon/*/status/*`` events and stores the
+latest payload and receive time for each minion. ``key.timeout`` then compares
+those timestamps to the current accepted key list and deletes or rejects keys
+that have gone silent.
+
+This pattern shows that Thorium is more than an event trigger. It can maintain
+state across many events, compare that state to master data, and then take a
+master-side action when the aggregate picture warrants it.

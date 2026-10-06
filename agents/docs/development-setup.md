@@ -114,13 +114,13 @@ deactivate
 ## Verify Installation
 
 ```bash
-# Test Salt import
-./venv310/bin/python -c "import salt.version; print(salt.version.__version__)"
+# Test Salt import (master / default dev)
+./venv314/bin/python -c "import salt.version; print(salt.version.__version__)"
 
 # Run a simple test
-./venv310/bin/pytest tests/pytests/unit/test_loader.py -v
+./venv314/bin/pytest tests/pytests/unit/test_loader.py -v
 
-# Test tools
+# Test tools (3006.x/3007.x workflow)
 ./venv310/bin/python -m tools --help
 ```
 
@@ -137,7 +137,7 @@ When running tests or tools, always use the full path to the venv executable or 
 
 **Alternatively, activate first:**
 ```bash
-source venv310/bin/activate
+source venv314/bin/activate
 pytest tests/pytests/unit/test_foo.py -v
 deactivate
 ```

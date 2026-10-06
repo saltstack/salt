@@ -1,11 +1,12 @@
 """
-    :codeauthor: Erik Johnson <erik@saltstack.com>
+:codeauthor: Erik Johnson <erik@saltstack.com>
 """
 
 import types
 
 import pytest
 
+import salt.utils.pycrypto
 from tests.support.mock import DEFAULT, MagicMock, mock_open, patch
 
 pytestmark = [
@@ -14,9 +15,6 @@ pytestmark = [
 
 shadow = pytest.importorskip(
     "salt.modules.linux_shadow", reason="shadow module is not available"
-)
-spwd = pytest.importorskip(
-    "spwd", reason="Standard library spwd module is not available"
 )
 
 
@@ -57,7 +55,11 @@ def password(request):
 
 @pytest.fixture(params=["crypto", "passlib"])
 def library(request):
-    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"):
+    if request.param == "crypto" and not salt.utils.pycrypto.HAS_CRYPT:
+        pytest.skip("Native crypt module not available on this Python")
+    with patch("salt.utils.pycrypto.HAS_CRYPT", request.param == "crypto"), patch(
+        "salt.utils.pycrypto.HAS_PASSLIB", request.param == "passlib"
+    ):
         yield request.param
 
 
@@ -72,16 +74,25 @@ def test_gen_password(password, library):
     """
     if library == "passlib":
         pw_hash = password.pw_hash_passlib
+        with patch("salt.utils.pycrypto._gen_hash_passlib", return_value=pw_hash):
+            assert (
+                shadow.gen_password(
+                    password.clear,
+                    crypt_salt=password.pw_salt,
+                    algorithm=password.algorithm,
+                )
+                == pw_hash
+            )
     else:
         pw_hash = password.pw_hash
-    assert (
-        shadow.gen_password(
-            password.clear,
-            crypt_salt=password.pw_salt,
-            algorithm=password.algorithm,
+        assert (
+            shadow.gen_password(
+                password.clear,
+                crypt_salt=password.pw_salt,
+                algorithm=password.algorithm,
+            )
+            == pw_hash
         )
-        == pw_hash
-    )
 
 
 def test_set_password():
@@ -175,6 +186,11 @@ def test_info(password):
     Test if info shows the correct user information
     """
 
+    data = {
+        "/etc/shadow": f"foo:{password.pw_hash}:31337:0:99999:7:::",
+        "*": Exception("Attempted to open something other than /etc/shadow"),
+    }
+
     # First test is with a succesful call
     expected_result = [
         ("expire", -1),
@@ -186,10 +202,10 @@ def test_info(password):
         ("passwd", password.pw_hash),
         ("warn", 7),
     ]
-    getspnam_return = spwd.struct_spwd(
-        ["foo", password.pw_hash, 31337, 0, 99999, 7, -1, -1, -1]
+    getspnam_return = shadow.struct_spwd(
+        "foo", password.pw_hash, 31337, 0, 99999, 7, -1, -1, -1
     )
-    with patch("spwd.getspnam", return_value=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", return_value=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
@@ -206,12 +222,12 @@ def test_info(password):
     ]
     # We get KeyError exception for non-existent users in glibc based systems
     getspnam_return = KeyError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", side_effect=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
     # And FileNotFoundError in musl based systems
     getspnam_return = FileNotFoundError
-    with patch("spwd.getspnam", side_effect=getspnam_return):
+    with patch("salt.modules.linux_shadow._getspnam", side_effect=getspnam_return):
         result = shadow.info("foo")
         assert expected_result == sorted(result.items(), key=lambda x: x[0])
 
@@ -323,3 +339,11 @@ def test_list_users():
     Test if it returns a list of all users
     """
     assert shadow.list_users()
+
+
+def test_module_import_does_not_reference_spwd():
+    """
+    Regression test for #64264: ``salt.modules.linux_shadow`` must not
+    import the removed-in-Python-3.13 ``spwd`` module.
+    """
+    assert not hasattr(shadow, "spwd")

@@ -7,6 +7,14 @@ echo "Starting aggressive stress test..."
 echo "Launching event flooder..."
 docker exec -d salt-master python3 /srv/salt/flood_events.py
 
+# 1b. Start the /proc RSS+FD exporter that feeds Grafana's per-daemon
+# panels.  Nothing else starts it -- docker-compose only launches the
+# aggregate salt_metrics_exporter -- so without this the
+# salt_master_process_rss_bytes series would stay empty and the
+# ``Per-Master-Daemon RSS`` panel would render blank.
+echo "Launching /proc fd_exporter..."
+docker exec -d salt-master python3 /srv/salt/fd_exporter.py
+
 # 2. Loop Highstates on all minions
 echo "Starting Highstate loop..."
 (

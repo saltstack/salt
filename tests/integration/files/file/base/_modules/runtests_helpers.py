@@ -17,6 +17,8 @@ try:
     from tests.support.runtests import RUNTIME_VARS
 except ImportError:
     # Salt SSH Tests
+    import re
+
     SYS_TMP_DIR = os.path.realpath(
         # Avoid ${TMPDIR} and gettempdir() on MacOS as they yield a base path too long
         # for unix sockets: ``error: AF_UNIX path too long``
@@ -25,8 +27,23 @@ except ImportError:
         if not salt.utils.platform.is_darwin()
         else "/tmp"
     )
-    # This tempdir path is defined on tests.integration.__init__
-    TMP = os.path.join(SYS_TMP_DIR, "salt-tests-tmpdir")
+    # Mirror the disambiguation done in tests/support/paths.py so the
+    # fallback path matches the test runner's RUNTIME_VARS.TMP.  Without
+    # this, a minion that cannot import ``tests.support.runtests`` would
+    # render SLS files referencing ``/tmp/salt-tests-tmpdir/...`` while
+    # the test runner created ``/tmp/salt-tests-tmpdir-<euid>/...``.
+    if salt.utils.platform.is_windows():
+        _tmp_disambig = re.sub(
+            r"[^A-Za-z0-9._-]+",
+            "_",
+            os.environ.get("USERNAME") or "tests",
+        )
+    else:
+        try:
+            _tmp_disambig = str(os.geteuid())
+        except AttributeError:
+            _tmp_disambig = "0"
+    TMP = os.path.join(SYS_TMP_DIR, f"salt-tests-tmpdir-{_tmp_disambig}")
 
     class RUNTIME_VARS:
         TMP = TMP

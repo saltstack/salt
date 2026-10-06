@@ -1,7 +1,9 @@
+import asyncio
+
 import pytest
+from tornado.httpclient import HTTPError
 
 import salt.utils.json
-from salt.ext.tornado.httpclient import HTTPError
 from salt.netapi.rest_tornado import saltnado
 
 
@@ -14,18 +16,41 @@ def app_urls():
 
 
 async def test_get_no_mid(http_client, salt_minion, salt_sub_minion):
-    response = await http_client.fetch(
-        "/minions",
-        method="GET",
-        follow_redirects=False,
-    )
-    response_obj = salt.utils.json.loads(response.body)
+    # Under CI load the sub-minion can lag the primary; poll until both answer.
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + 120
+    response_obj = None
+    while loop.time() < deadline:
+        response = await http_client.fetch(
+            "/minions",
+            method="GET",
+            follow_redirects=False,
+        )
+        print(f"{response!r}")
+        response_obj = salt.utils.json.loads(response.body)
+        grains_map = response_obj["return"][0]
+        if (
+            isinstance(grains_map, dict)
+            and len(grains_map) >= 2
+            and salt_minion.id in grains_map
+            and salt_sub_minion.id in grains_map
+        ):
+            break
+        await asyncio.sleep(0.5)
+    assert response_obj is not None
     assert len(response_obj["return"]) == 1
-    assert isinstance(response_obj["return"][0], dict)
-    # one per minion
-    assert len(response_obj["return"][0]) == 2
-    assert salt_minion.id in response_obj["return"][0]
-    assert salt_sub_minion.id in response_obj["return"][0]
+    grains_map = response_obj["return"][0]
+    assert isinstance(grains_map, dict)
+    if not (
+        len(grains_map) == 2
+        and salt_minion.id in grains_map
+        and salt_sub_minion.id in grains_map
+    ):
+        pytest.fail(
+            "Timed out waiting for grains from both minions "
+            f"{salt_minion.id!r} and {salt_sub_minion.id!r}; "
+            f"last response had {len(grains_map)} minion(s): {list(grains_map)}"
+        )
     # check a single grain
     for minion_id, grains in response_obj["return"][0].items():
         assert minion_id == grains["id"]
@@ -108,6 +133,16 @@ async def test_mem_leak_in_event_listener(http_client, salt_minion, app):
             method="GET",
             follow_redirects=False,
         )
+    # Give the event loop a chance to run any pending cleanup callbacks
+    # before asserting that the maps are empty.
+    for _ in range(10):
+        await asyncio.sleep(0.1)
+        if (
+            len(app.event_listener.tag_map) == 0
+            and len(app.event_listener.timeout_map) == 0
+            and len(app.event_listener.request_map) == 0
+        ):
+            break
     assert len(app.event_listener.tag_map) == 0
     assert len(app.event_listener.timeout_map) == 0
     assert len(app.event_listener.request_map) == 0

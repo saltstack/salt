@@ -1,15 +1,24 @@
 import json
 import logging
+import os
 
 import pytest
 
 from tests.support.helpers import SaltVirtualEnv
 from tests.support.pytest.helpers import FakeSaltExtension
+from tests.support.runtests import RUNTIME_VARS
+
+MISSING_SETUP_PY_FILE = not os.path.exists(
+    os.path.join(RUNTIME_VARS.CODE_DIR, "setup.py")
+)
 
 pytestmark = [
     # These are slow because they create a virtualenv and install salt in it
     pytest.mark.slow_test,
-    pytest.mark.timeout(120),
+    pytest.mark.timeout_unless_on_windows(240),
+    pytest.mark.skipif(
+        MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
 ]
 
 log = logging.getLogger(__name__)
@@ -30,6 +39,7 @@ def test_salt_extensions_in_versions_report(tmp_path, salt_extension):
         venv.install("pyyaml")
         venv.install("looseversion")
         venv.install("packaging")
+        venv.install("tornado")
         script_path = tmp_path / "get_versions_info.py"
         script_path.write_text(
             """
@@ -76,6 +86,7 @@ sys.stdout.flush()
 """
         )
         venv.install("distro")
+        venv.install("tornado")
         installed_packages = venv.get_installed_packages()
         assert "salt" in installed_packages
         assert salt_extension.name not in installed_packages

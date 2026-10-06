@@ -68,7 +68,10 @@ def _ordered_dict_to_dict(probes):
 def _expand_users(device_users, common_users):
     """Creates a longer list of accepted users on the device."""
 
-    expected_users = copy.deepcopy(common_users)
+    # ``common_users`` (the state's ``defaults`` argument) is optional, so it is
+    # ``None`` whenever the user does not declare any defaults. Treat that the
+    # same as an empty mapping rather than crashing on ``None.update()``.
+    expected_users = copy.deepcopy(common_users) if common_users else {}
     expected_users.update(device_users)
 
     return expected_users
@@ -319,6 +322,21 @@ def managed(name, users=None, defaults=None):
     defaults = _ordered_dict_to_dict(defaults)
 
     expected_users = _expand_users(users, defaults)
+
+    if not expected_users:
+        # Neither ``users`` nor ``defaults`` yielded anyone to manage. Because
+        # this is a declarative state, proceeding would remove *every* account
+        # configured on the device -- a likely lockout, e.g. when a pillar
+        # lookup renders to an empty mapping. Refuse rather than wipe. See
+        # #62170: previously an unset ``defaults`` crashed here, which happened
+        # to mask this case.
+        ret["comment"] = (
+            "No users were provided to manage. Refusing to proceed, as this"
+            " would remove every user configured on the device. Check the"
+            " state's 'users' and 'defaults' (and any pillar data behind them)."
+        )
+        return ret
+
     valid, message = _check_users(expected_users)
 
     if not valid:  # check and clean

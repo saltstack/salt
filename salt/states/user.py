@@ -65,6 +65,15 @@ def _group_changes(cur, wanted, remove=False):
     return bool(remain)
 
 
+def _get_root_args(local):
+    """
+    Retrieve args to use for user.info calls depending on platform and the local flag
+    """
+    if not local or salt.utils.platform.is_windows():
+        return {}
+    return {"root": "/"}
+
+
 def _changes(
     name,
     uid=None,
@@ -97,6 +106,7 @@ def _changes(
     allow_uid_change=False,
     allow_gid_change=False,
     password_lock=None,
+    local=False,
 ):
     """
     Return a dict of the changes required for a user if the user is present,
@@ -112,7 +122,7 @@ def _changes(
     if "shadow.info" in __salt__:
         lshad = __salt__["shadow.info"](name)
 
-    lusr = __salt__["user.info"](name)
+    lusr = __salt__["user.info"](name, **_get_root_args(local))
     if not lusr:
         return False
 
@@ -326,6 +336,7 @@ def present(
     allow_uid_change=False,
     allow_gid_change=False,
     password_lock=None,
+    local=False,
 ):
     """
     Ensure that the named user is present with the specified properties
@@ -337,18 +348,33 @@ def present(
         The user id to assign. If not specified, and the user does not exist,
         then the next available uid will be assigned.
 
+        .. note::
+            Not supported on Windows. On Windows the account SID is fixed by
+            the operating system at user creation time and cannot be chosen
+            or changed; ``uid`` and ``allow_uid_change`` have no effect there
+            and will surface as a permissions error if used.
+
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
+        .. note::
+            Not supported on Windows.
+
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
+
+        .. note::
+            Not supported on Windows -- see ``uid``.
 
         .. versionadded:: 2018.3.1
 
     allow_gid_change : False
         Set to ``True`` to allow the state to update the gid.
+
+        .. note::
+            Not supported on Windows.
 
         .. versionadded:: 2018.3.1
 
@@ -410,18 +436,17 @@ def present(
             Not supported on Windows.
 
     password
-        A password hash to set for the user. This field is only supported on
-        Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the ``empty_password``
-        argument is set to ``True`` then ``password`` is ignored.
-        For Windows this is the plain text password.
-        For Linux, the hash can be generated with ``mkpasswd -m sha-256``.
+        A password hash to set for the user. Updating a password on an existing
+        account is only supported on Linux, FreeBSD, NetBSD, OpenBSD, and Solaris.
+        If the ``empty_password`` argument is set to ``True`` then ``password``
+        is ignored. For Windows this is the plain text password. For Linux, the
+        hash can be generated with ``mkpasswd -m sha-256``.
 
     .. versionchanged:: 0.16.0
        BSD support added.
 
     hash_password
         Set to True to hash the clear text password. Default is ``False``.
-
 
     enforce_password
         Set to False to keep the password from being changed if it has already
@@ -504,6 +529,12 @@ def present(
     expire
         Date that account expires, represented in days since epoch (January 1,
         1970).
+
+    local (Only on systems with luseradd available):
+        Create the user account locally ignoring global account management
+        (default is False).
+
+        .. versionadded:: 3007.0
 
     The below parameters apply to windows only:
 
@@ -681,6 +712,7 @@ def present(
             allow_uid_change,
             allow_gid_change,
             password_lock=password_lock,
+            local=local,
         )
     except CommandExecutionError as exc:
         ret["result"] = False
@@ -707,7 +739,7 @@ def present(
             lshad = __salt__["shadow.info"](name)
         if __grains__["kernel"] in ("OpenBSD", "FreeBSD"):
             lcpre = __salt__["user.get_loginclass"](name)
-        pre = __salt__["user.info"](name)
+        pre = __salt__["user.info"](name, **_get_root_args(local))
 
         # Make changes
 
@@ -812,7 +844,7 @@ def present(
                 "Unhandled changes: {}".format(", ".join(changes))
             )
 
-        post = __salt__["user.info"](name)
+        post = __salt__["user.info"](name, **_get_root_args(local))
         spost = {}
         if "shadow.info" in __salt__ and lshad["passwd"] != password:
             spost = __salt__["shadow.info"](name)
@@ -869,6 +901,7 @@ def present(
             allow_uid_change=True,
             allow_gid_change=True,
             password_lock=password_lock,
+            local=local,
         )
         # allow_uid_change and allow_gid_change passed as True to avoid race
         # conditions where a uid/gid is modified outside of Salt. If an
@@ -915,6 +948,7 @@ def present(
                 "createhome": createhome,
                 "nologinit": nologinit,
                 "loginclass": loginclass,
+                "local": local,
                 "usergroup": usergroup,
             }
         else:
@@ -932,7 +966,7 @@ def present(
         result = __salt__["user.add"](**params)
         if result is True:
             ret["comment"] = f"New user {name} created"
-            ret["changes"] = __salt__["user.info"](name)
+            ret["changes"] = __salt__["user.info"](name, **_get_root_args(local))
             if not createhome:
                 # pwd incorrectly reports presence of home
                 ret["changes"]["home"] = ""
@@ -1070,7 +1104,7 @@ def present(
     return ret
 
 
-def absent(name, purge=False, force=False):
+def absent(name, purge=False, force=False, local=False):
     """
     Ensure that the named user is absent
 
@@ -1085,10 +1119,16 @@ def absent(name, purge=False, force=False):
         If the user is logged in, the absent state will fail. Set the force
         option to True to remove the user even if they are logged in. Not
         supported in FreeBSD and Solaris, Default is ``False``.
+
+    local (Only on systems with luserdel available):
+        Ensure the user account is removed locally ignoring global account management
+        (default is False).
+
+        .. versionadded:: 3007.0
     """
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
-    lusr = __salt__["user.info"](name)
+    lusr = __salt__["user.info"](name, **_get_root_args(local))
     if lusr:
         # The user is present, make it not present
         if __opts__["test"]:
@@ -1096,7 +1136,11 @@ def absent(name, purge=False, force=False):
             ret["comment"] = f"User {name} set for removal"
             return ret
         beforegroups = set(salt.utils.user.get_group_list(name))
-        ret["result"] = __salt__["user.delete"](name, purge, force)
+        if salt.utils.platform.is_windows():
+            del_args = {}
+        else:
+            del_args = {"local": local}
+        ret["result"] = __salt__["user.delete"](name, purge, force, **del_args)
         aftergroups = {g for g in beforegroups if __salt__["group.info"](g)}
         if ret["result"]:
             ret["changes"] = {}

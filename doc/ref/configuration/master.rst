@@ -46,7 +46,12 @@ The local interface to bind to, must be an IP address.
 Default: ``False``
 
 Whether the master should listen for IPv6 connections. If this is set to True,
-the interface option must be adjusted too (for example: ``interface: '::'``)
+the interface option must be adjusted too (for example: ``interface: '::'``).
+
+When enabled, Salt also uses the IPv6 loopback address (``::1``) for internal
+IPC connections between daemon processes instead of ``127.0.0.1``. On Windows,
+this is required because Windows does not permit binding an ``AF_INET6`` socket
+to an IPv4 address.
 
 .. code-block:: yaml
 
@@ -120,8 +125,13 @@ Tell the master to also use salt-ssh when running commands against minions.
 
 .. note::
 
-    Cross-minion communication is still not possible.  The Salt mine and
-    publish.publish do not work between minion types.
+    Enabling this does not influence the limitations on cross-minion communication.
+    The Salt mine and ``publish.publish`` do not work from regular minions
+    to SSH minions, the other way around is partly possible since 3007.0
+    (during state rendering on the master).
+    This means you can use the mentioned functions to call out to regular minions
+    in ``sls`` templates and wrapper modules, but state modules
+    (which are executed on the remote) relying on them still do not work.
 
 ``ret_port``
 ------------
@@ -200,6 +210,69 @@ following the Filesystem Hierarchy Standard (FHS) might set it to
 .. code-block:: yaml
 
     pki_dir: /etc/salt/pki/master
+
+
+.. conf_master:: cluster_id
+
+``cluster_id``
+--------------
+
+.. versionadded:: 3007
+
+When defined, the master will operate in cluster mode. The master will send the
+cluster key and id to minions instead of its own key and id. The master will
+also forward its local event bus to other masters defined by ``cluster_peers``
+
+.. code-block:: yaml
+
+    cluster_id: master_cluster
+
+.. conf_master:: cluster_peers
+
+``cluster_peers``
+-----------------
+
+.. versionadded:: 3007
+
+When ``cluster_peers`` is defined, this setting is a list of other master
+(hostnames or IPs) that will be in the cluster.
+
+.. code-block:: yaml
+
+    cluster_peers:
+       - master2
+       - master3
+
+.. conf_master:: cluster_pki_dir
+
+``cluster_pki_dir``
+-------------------
+
+.. versionadded:: 3007
+
+When ``cluster_pki_dir`` is defined, this sets the location of where this
+cluster will store its cluster public and private key as well as any minion
+keys. This setting will default to the value of ``pki_dir``, but should be
+changed to the filesystem location shared between peers in the cluster.
+
+.. code-block:: yaml
+
+    cluster_pki_dir: /my/gluster/share/pki
+
+
+.. conf_master:: cluster_pool_port
+
+``cluster_pool_port``
+---------------------
+
+.. versionadded:: 3007.2
+
+When ``cluster_pool_port`` is defined, it sets the TCP port number HAProxy
+listens on for incoming TCP connections. The default is ``4520``
+
+.. code-block:: yaml
+
+    cluster_pool_port: 4520
 
 .. conf_master:: extension_modules
 
@@ -2530,6 +2603,14 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
     The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
 
+.. note::
+
+    :conf_master:`jinja_env` and :conf_master:`jinja_sls_env` apply to **every**
+    template, so changing them can break unrelated states or third-party
+    formulas that were written for the defaults. To set Jinja environment
+    options for a single template instead, add a ``#jinja2:`` header to that
+    template (see :ref:`Jinja Environment Configuration Override <jinja-fileopts>`).
+
 The default options are:
 
 .. code-block:: yaml
@@ -2704,9 +2785,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_master:: state_output_diff
 
@@ -4152,29 +4243,6 @@ This option defines the update interval (in seconds) for :ref:`MinionFS
 
     minionfs_update_interval: 120
 
-azurefs: Azure File Server Backend
-----------------------------------
-
-.. versionadded:: 2015.8.0
-
-See the :mod:`azurefs documentation <salt.fileserver.azurefs>` for usage
-examples.
-
-.. conf_master:: azurefs_update_interval
-
-``azurefs_update_interval``
-***************************
-
-.. versionadded:: 2018.3.0
-
-Default: ``60``
-
-This option defines the update interval (in seconds) for azurefs.
-
-.. code-block:: yaml
-
-    azurefs_update_interval: 120
-
 s3fs: S3 File Server Backend
 ----------------------------
 
@@ -5057,6 +5125,33 @@ Recursively merge lists by aggregating them instead of replacing them.
 
     pillar_merge_lists: False
 
+.. conf_master:: pillar_mask_output
+
+``pillar_mask_output``
+**********************
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Changes the *default* behavior of :py:func:`pillar.items
+<salt.modules.pillar.items>` when a caller doesn't explicitly pass
+``unmask``. When ``True`` (the default), ``pillar.items`` returns masked
+values (``**********``) by default, matching :py:func:`pillar.get
+<salt.modules.pillar.get>` and friends. Set to ``False`` to make
+``pillar.items`` default to returning real, unmasked values instead —
+useful for sites relying on the pre-masking ``pillar.items`` behavior.
+
+This option does **not** disable pillar masking elsewhere: ``pillar.get``,
+``pillar.item``, ``pillar.raw``, ``pillar.ext``, ``no_log`` state output,
+and the general CLI output safety net are unaffected and keep redacting by
+default regardless of this setting. Callers of ``pillar.items`` can always
+override the default explicitly with ``unmask=True``/``unmask=False``.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_master:: pillar_includes_override_sls
 
 ``pillar_includes_override_sls``
@@ -5491,9 +5586,9 @@ and pkg modules.
 .. code-block:: yaml
 
     peer:
-      foo.example.com:
-          - test.*
-          - pkg.*
+      foo\.example\.com:
+          - test\..*
+          - pkg\..*
 
 This will allow all minions to execute all commands:
 
@@ -5506,16 +5601,25 @@ This will allow all minions to execute all commands:
 This is not recommended, since it would allow anyone who gets root on any
 single minion to instantly have root on all of the minions!
 
-By adding an additional layer you can limit the target hosts in addition to the
-accessible commands:
+It is also possible to limit target hosts with the :term:`Compound Matcher`.
+You can achieve this by adding another layer in between the source and the
+allowed functions:
 
 .. code-block:: yaml
 
     peer:
-      foo.example.com:
-        'db*':
-          - test.*
-          - pkg.*
+      '.*\.example\.com':
+        - 'G@role:db':
+          - test\..*
+          - pkg\..*
+
+.. note::
+
+    Notice that the source hosts are matched by a regular expression
+    on their minion ID, while target hosts can be matched by any of
+    the :ref:`available matchers <targeting-compound>`.
+
+    Note that globbing and regex matching on pillar values is not supported. You can only match exact values.
 
 .. conf_master:: peer_run
 

@@ -443,6 +443,24 @@ import salt.loader
 import salt.utils.network
 import salt.utils.platform
 
+
+def _diff_lines(value):
+    """
+    Normalize ``value`` into a sequence of strings for ``difflib.unified_diff``.
+
+    The ``ip.*`` execution modules return a list of lines for real
+    interfaces (``_read_temp`` calls ``readlines()``), while the unit-test
+    mocks return plain strings. Python 3.14's ``difflib`` rejects bare
+    strings -- *all* callers must pass a sequence of strings -- so this
+    helper splits strings on newlines and lets lists pass through.
+    """
+    if value is None or value is False:
+        return []
+    if isinstance(value, str):
+        return value.splitlines()
+    return value
+
+
 # Set up logging
 log = logging.getLogger(__name__)
 
@@ -515,7 +533,9 @@ def managed(name, enabled=True, **kwargs):
                 ret["result"] = None
                 ret["comment"] = f"Interface {name} is set to be added."
             elif old != new:
-                diff = difflib.unified_diff(old, new, lineterm="")
+                diff = difflib.unified_diff(
+                    _diff_lines(old), _diff_lines(new), lineterm=""
+                )
                 ret["result"] = None
                 ret["comment"] = "Interface {} is set to be updated:\n{}".format(
                     name, "\n".join(diff)
@@ -526,7 +546,9 @@ def managed(name, enabled=True, **kwargs):
                 ret["changes"]["interface"] = "Added network interface."
                 apply_ranged_setting = True
             elif old != new:
-                diff = difflib.unified_diff(old, new, lineterm="")
+                diff = difflib.unified_diff(
+                    _diff_lines(old), _diff_lines(new), lineterm=""
+                )
                 ret["comment"] = f"Interface {name} updated."
                 ret["changes"]["interface"] = "\n".join(diff)
                 apply_ranged_setting = True
@@ -552,7 +574,9 @@ def managed(name, enabled=True, **kwargs):
                         name
                     )
                 elif old != new:
-                    diff = difflib.unified_diff(old, new, lineterm="")
+                    diff = difflib.unified_diff(
+                        _diff_lines(old), _diff_lines(new), lineterm=""
+                    )
                     ret["result"] = None
                     ret["comment"] = (
                         "Bond interface {} is set to be updated:\n{}".format(
@@ -565,7 +589,9 @@ def managed(name, enabled=True, **kwargs):
                     ret["changes"]["bond"] = f"Added bond {name}."
                     apply_ranged_setting = True
                 elif old != new:
-                    diff = difflib.unified_diff(old, new, lineterm="")
+                    diff = difflib.unified_diff(
+                        _diff_lines(old), _diff_lines(new), lineterm=""
+                    )
                     ret["comment"] = f"Bond interface {name} updated."
                     ret["changes"]["bond"] = "\n".join(diff)
                     apply_ranged_setting = True
@@ -724,7 +750,9 @@ def routes(name, **kwargs):
                 ret["comment"] = f"Interface {name} routes are set to be added."
                 return ret
             elif old != new:
-                diff = difflib.unified_diff(old, new, lineterm="")
+                diff = difflib.unified_diff(
+                    _diff_lines(old), _diff_lines(new), lineterm=""
+                )
                 ret["result"] = None
                 ret["comment"] = (
                     "Interface {} routes are set to be updated:\n{}".format(
@@ -737,7 +765,7 @@ def routes(name, **kwargs):
             ret["comment"] = f"Interface {name} routes added."
             ret["changes"]["network_routes"] = f"Added interface {name} routes."
         elif old != new:
-            diff = difflib.unified_diff(old, new, lineterm="")
+            diff = difflib.unified_diff(_diff_lines(old), _diff_lines(new), lineterm="")
             apply_routes = True
             ret["comment"] = f"Interface {name} routes updated."
             ret["changes"]["network_routes"] = "\n".join(diff)
@@ -789,7 +817,9 @@ def system(name, **kwargs):
                 ret["comment"] = "Global network settings are set to be added."
                 return ret
             elif old != new:
-                diff = difflib.unified_diff(old, new, lineterm="")
+                diff = difflib.unified_diff(
+                    _diff_lines(old), _diff_lines(new), lineterm=""
+                )
                 ret["result"] = None
                 ret["comment"] = (
                     "Global network settings are set to be updated:\n{}".format(
@@ -801,7 +831,7 @@ def system(name, **kwargs):
             apply_net_settings = True
             ret["changes"]["network_settings"] = "Added global network settings."
         elif old != new:
-            diff = difflib.unified_diff(old, new, lineterm="")
+            diff = difflib.unified_diff(_diff_lines(old), _diff_lines(new), lineterm="")
             apply_net_settings = True
             ret["changes"]["network_settings"] = "\n".join(diff)
     except AttributeError as error:

@@ -14,6 +14,7 @@ from functools import total_ordering
 MAX_SIZE = sys.maxsize
 VERSION_LIMIT = MAX_SIZE - 200
 
+
 # ----- ATTENTION --------------------------------------------------------------------------------------------------->
 #
 # ALL major version bumps, new release codenames, MUST be defined in the SaltStackVersion.NAMES dictionary, i.e.:
@@ -80,8 +81,8 @@ class SaltVersionsInfo(type):
     SILICON       = SaltVersion("Silicon"      , info=3004,       released=True)
     PHOSPHORUS    = SaltVersion("Phosphorus"   , info=3005,       released=True)
     SULFUR        = SaltVersion("Sulfur"       , info=3006,       released=True)
-    CHLORINE      = SaltVersion("Chlorine"     , info=3007)
-    ARGON         = SaltVersion("Argon"        , info=3008)
+    CHLORINE      = SaltVersion("Chlorine"     , info=3007,       released=True)
+    ARGON         = SaltVersion("Argon"        , info=3008,       released=True)
     POTASSIUM     = SaltVersion("Potassium"    , info=3009)
     CALCIUM       = SaltVersion("Calcium"      , info=3010)
     SCANDIUM      = SaltVersion("Scandium"     , info=3011)
@@ -251,6 +252,7 @@ class SaltStackVersion:
         "minor",
         "bugfix",
         "mbugfix",
+        "patch",
         "pre_type",
         "pre_num",
         "noc",
@@ -264,6 +266,7 @@ class SaltStackVersion:
         r"(?:\.(?P<minor>[\d]{1,2}))?"
         r"(?:\.(?P<bugfix>[\d]{0,2}))?"
         r"(?:\.(?P<mbugfix>[\d]{0,2}))?"
+        r"(?:-(?P<patch>[\d]{1,2})\b(?!-g?[a-f0-9]))?"
         r"(?:(?P<pre_type>rc|a|b|alpha|beta|nb)(?P<pre_num>[\d]+))?"
         r"(?:(?:.*)(?:\+|-)(?P<noc>(?:0na|[\d]+|n/a))(?:-|\.)" + git_sha_regex + r")?"
     )
@@ -286,6 +289,8 @@ class SaltStackVersion:
         pre_num=None,
         noc=0,
         sha=None,
+        *,
+        patch=None,
     ):
         if isinstance(major, str):
             major = int(major)
@@ -312,6 +317,11 @@ class SaltStackVersion:
         elif isinstance(mbugfix, str):
             mbugfix = int(mbugfix)
 
+        if patch is None:
+            patch = 0
+        elif isinstance(patch, str):
+            patch = int(patch) if patch else 0
+
         if pre_type is None:
             pre_type = ""
         if pre_num is None:
@@ -330,6 +340,7 @@ class SaltStackVersion:
         self.minor = minor
         self.bugfix = bugfix
         self.mbugfix = mbugfix
+        self.patch = patch
         self.pre_type = pre_type
         self.pre_num = pre_num
         if self.new_version(major):
@@ -364,7 +375,18 @@ class SaltStackVersion:
         match = cls.git_describe_regex.match(vstr)
         if not match:
             raise ValueError(f"Unable to parse version string: '{version_string}'")
-        return cls(*match.groups())
+        g = match.groupdict()
+        return cls(
+            g["major"],
+            g["minor"],
+            g["bugfix"],
+            g["mbugfix"],
+            g["pre_type"],
+            g["pre_num"],
+            g["noc"],
+            g["sha"],
+            patch=g["patch"],
+        )
 
     @classmethod
     def from_name(cls, name):
@@ -461,6 +483,8 @@ class SaltStackVersion:
             version_string = f"{self.major}.{self.minor}.{self.bugfix}"
         if self.mbugfix:
             version_string += f".{self.mbugfix}"
+        if self.patch:
+            version_string += f"-{self.patch}"
         if self.pre_type:
             version_string += f"{self.pre_type}{self.pre_num}"
         if self.noc is not None and self.sha:
@@ -536,6 +560,8 @@ class SaltStackVersion:
             # The other side has pre-release information, we don't
             noc_info[pre_type] = "zzzzz"
 
+        if tuple(noc_info) == tuple(other_noc_info):
+            return method(self.patch or 0, other.patch or 0)
         return method(tuple(noc_info), tuple(other_noc_info))
 
     def __lt__(self, other):
@@ -582,9 +608,18 @@ class SaltStackVersion:
 
 # ----- Hardcoded Salt Codename Version Information ----------------------------------------------------------------->
 #
-#   There's no need to do anything here. The last released codename will be picked up
+#   On master we anchor the reported version on the NEXT (unreleased) codename
+#   from SaltVersionsInfo rather than the current release. Master is always
+#   ahead of the latest release cut, so `current_release()` reports the wrong
+#   line -- e.g. today it returns Argon (3008), which makes every master build
+#   look like `3008.<N>+...` when the truth is closer to `3009.0.dev0+...`.
+#   `next_release()` returns the first codename with released=False (Potassium
+#   / 3009 today), which is what a nightly built on master should carry. This
+#   line is master-only; release branches (3008.x, 3007.x, 3006.x) should keep
+#   `current_release()` because on a release branch the "current" codename is
+#   the correct anchor.
 # --------------------------------------------------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion.current_release()
+__saltstack_version__ = SaltStackVersion.next_release()
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
@@ -619,9 +654,34 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
+                # Constrain to master's own major (3009.x, currently
+                # unreleased -- Potassium in SaltVersionsInfo). No v3009.*
+                # tag exists yet on master, so `git describe` will fall
+                # through to `--always` and return just the sha, and the
+                # parse below will keep saltstack_version anchored on
+                # `next_release()` (see the __saltstack_version__ init
+                # further up). This is intentional: master needs no
+                # hand-cut dev-sentinel tag; the codename table is the
+                # single source of truth for the base version. Merged
+                # forward from 3007.x's v3007.* constraint (see git log
+                # for f3ffc8f9c9ea) and rebased forward for master.
                 "--match",
-                "v[0-9]*",
+                "v3009.*",
+                # Exclude nightly-shaped tags (anything containing `+` in
+                # the tag name, e.g. v3009.0+123.gabcdef) so that the
+                # nightly publish workflow's own release tags don't get
+                # picked up as version anchors on subsequent builds.
+                # Without this, every publish poisons the tag pool for
+                # the next build of the same or later commit. Concrete
+                # instance on 3008.x: a nightly published tag
+                # `v3008.2+588.g02ea048903` caused the following build at
+                # `80f8673901` to report `3008.2+3.g80f8673901` (measured
+                # from the poison tag) rather than the true distance
+                # (600+ commits) from `v3008.2`.
+                "--exclude",
+                "*+*",
                 "--always",
+                "--candidates=150",
             ],
             **kwargs,
         )
@@ -640,7 +700,33 @@ def __discover_version(saltstack_version):
             saltstack_version.noc = -1
             return saltstack_version
 
-        return SaltStackVersion.parse(out)
+        parsed = SaltStackVersion.parse(out)
+        # ``git describe`` walks back to the nearest ``v*`` tag.  On a new
+        # release branch (e.g. ``3008.x``) there is often no ``v3008*``
+        # tag yet, so describe still reports ``v3007.13-N-gSHA``.  That is
+        # anchored on the previous Salt calver ``major`` line and breaks
+        # CI ``prepare-release`` and any tooling keyed off ``python3
+        # salt/version.py``.  When both sides use the post-3000 calver
+        # scheme, lift the baseline to this tree's unreleased codename
+        # (``SaltVersionsInfo.current_release()``) while preserving the
+        # offset and SHA from ``git describe``.  Same-major cases (e.g.
+        # prerelease tags) are left to normal ``git describe`` parsing.
+        if (
+            saltstack_version.new_version(saltstack_version.major)
+            and parsed.new_version(parsed.major)
+            and parsed.major < saltstack_version.major
+        ):
+            return SaltStackVersion(
+                saltstack_version.major,
+                saltstack_version.minor,
+                saltstack_version.bugfix,
+                saltstack_version.mbugfix,
+                pre_type=saltstack_version.pre_type,
+                pre_num=saltstack_version.pre_num,
+                noc=parsed.noc,
+                sha=parsed.sha,
+            )
+        return parsed
 
     except OSError as os_err:
         if os_err.errno != 2:
@@ -656,6 +742,9 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     """
+    if "SALT_VERSION" in os.environ:
+        return SaltStackVersion.parse(os.environ["SALT_VERSION"])
+
     _hardcoded_version_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "_version.txt"
     )
@@ -691,6 +780,15 @@ def salt_information():
     Report version of salt.
     """
     yield "Salt", __version__
+
+
+def package_information():
+    """
+    Report package type
+    """
+    import salt.utils.package
+
+    yield "Package Type", salt.utils.package.pkg_type()
 
 
 def dependency_information(include_salt_cloud=False):
@@ -876,12 +974,14 @@ def versions_information(include_salt_cloud=False, include_extensions=True):
     salt_info = list(salt_information())
     lib_info = list(dependency_information(include_salt_cloud))
     sys_info = list(system_information())
+    package_info = list(package_information())
 
     info = {
         "Salt Version": dict(salt_info),
         "Python Version": dict(py_info),
         "Dependency Versions": dict(lib_info),
         "System Versions": dict(sys_info),
+        "Salt Package Information": dict(package_info),
     }
     if include_extensions:
         extensions_info = extensions_information()
@@ -914,6 +1014,7 @@ def versions_report(include_salt_cloud=False, include_extensions=True):
         "Python Version",
         "Dependency Versions",
         "Salt Extensions",
+        "Salt Package Information",
         "System Versions",
     ):
         if ver_type == "Salt Extensions" and ver_type not in ver_info:

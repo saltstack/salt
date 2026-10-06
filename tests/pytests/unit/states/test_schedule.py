@@ -1,6 +1,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
-    :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
+    :codeauthor: Gareth J. Greenaway
 """
 
 from collections import OrderedDict
@@ -221,7 +221,7 @@ def test_present():
         ret = {
             "name": "job1",
             "result": True,
-            "changes": {},
+            "changes": {"job1": "added"},
             "comment": "Job: test-schedule would be added to schedule.",
         }
         with patch.dict(schedule.__opts__, {"test": True}):

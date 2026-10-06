@@ -45,7 +45,7 @@ if ENV_FILE.exists():
     print("Deleting .ci-env file", flush=True)
     ENV_FILE.unlink()
 
-# Be verbose when runing under a CI context
+# Be verbose when running under a CI context
 CI_RUN = (
     os.environ.get("JENKINS_URL")
     or os.environ.get("CI")
@@ -85,7 +85,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.10", "3.11", "3.12", "3.13", "3.14")
+_PYTHON_VERSIONS = ("3", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -188,10 +188,8 @@ def _get_session_python_version_info(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 5):
-        session.error("Only Python >= 3.5 is supported")
-    if IS_WINDOWS and version_info < (3, 6):
-        session.error("Only Python >= 3.6 is supported on Windows")
+    if version_info < (3, 8):
+        session.error("Only Python >= 3.8 is supported")
     return "py{}.{}".format(*version_info)
 
 
@@ -253,6 +251,22 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
         session.error(f"Could not find a linux requirements file for {pydir}")
 
 
+def _get_lint_requirements_file(session):
+    pydir = _get_pydir(session)
+    if IS_WINDOWS:
+        lint_lock = "windows-lint.lock"
+    elif IS_DARWIN:
+        lint_lock = "darwin-lint.lock"
+    elif IS_FREEBSD:
+        lint_lock = "freebsd-lint.lock"
+    else:
+        lint_lock = "linux-lint.lock"
+    _requirements_file = os.path.join("requirements", "static", "ci", pydir, lint_lock)
+    if os.path.exists(_requirements_file):
+        return _requirements_file
+    session.error(f"Could not find a lint requirements file for {pydir} ({lint_lock})")
+
+
 def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
     if SKIP_REQUIREMENTS_INSTALL:
         session.log(
@@ -262,6 +276,11 @@ def _upgrade_pip_setuptools_and_wheel(session, upgrade=True):
 
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
     install_command = [
         "python",
         "-m",
@@ -293,6 +312,23 @@ def _install_requirements(
     # Install requirements
     env = os.environ.copy()
     env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+    # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+    # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+    # constraints file via PIP_BUILD_CONSTRAINT so entries like
+    # ``Cython < 3.3`` reach pyzmq's source build.
+    env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
+
+    if onedir and IS_LINUX:
+        # bcrypt's PyPI wheels are tagged manylinux_2_28+ on the cpXY-abi3
+        # variants pip prefers on a modern build host, but the resulting
+        # ``_bcrypt.abi3.so`` then fails to load on older-glibc test hosts
+        # (e.g. Amazon Linux 2 with GLIBC 2.26). Source-compile bcrypt
+        # against the relenv toolchain so the resulting binary is portable
+        # across every Linux test slug. ``RELENV_BUILDENV=1`` makes the
+        # source build use ppbt's portable GCC + low-GLIBC sysroot (no
+        # effect on packages still installed as wheels).
+        env["PIP_NO_BINARY"] = "bcrypt"
+        env["RELENV_BUILDENV"] = "1"
 
     requirements_file = _get_pip_requirements_file(
         session, requirements_type=requirements_type
@@ -324,9 +360,22 @@ def _install_coverage_requirement(session):
     if SKIP_REQUIREMENTS_INSTALL is False:
         env = os.environ.copy()
         env["PIP_CONSTRAINT"] = str(REPO_ROOT / "requirements" / "constraints.txt")
+        # PIP_CONSTRAINT stopped affecting PEP-517 build-isolation envs in
+        # pip 26.x (deprecated in 26.1, enforced in 26.2); mirror the same
+        # constraints file via PIP_BUILD_CONSTRAINT so entries like
+        # ``Cython < 3.3`` reach pyzmq's source build.
+        env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
         coverage_requirement = COVERAGE_REQUIREMENT
         if coverage_requirement is None:
-            coverage_requirement = "coverage==7.3.1"
+            # 7.14.0 is the first version where the Python 3.14 CTracer
+            # wheel is mature.  7.3.1 (the prior pin) ships no CTracer
+            # for 3.14 and falls back to the pure-Python PyTracer, which
+            # is so slow on Salt's onedir (PyTracer × relenv runtime
+            # wrappers around sysconfig) that the functional zeromq 4
+            # shard hits the 3-hour GHA step timeout.  Avoid 7.11.1
+            # through 7.11.3 — those have a known 2x performance
+            # regression on Python 3.14 (coveragepy issue #2082).
+            coverage_requirement = "coverage==7.14.0"
             if IS_LINUX:
                 distro_slug = os.environ.get("TOOLS_DISTRO_SLUG")
                 if distro_slug is not None and distro_slug in (
@@ -335,7 +384,7 @@ def _install_coverage_requirement(session):
                     "photonos-3",
                 ):
                     # Keep the old coverage requirement version since the new one, on these
-                    # plaforms turns the test suite quite slow.
+                    # Plaforms turns the test suite quite slow.
                     # Unit tests don't finish before the 5 hours timeout when they should
                     # finish within 1 to 2 hours.
                     coverage_requirement = "coverage==5.5"
@@ -345,6 +394,41 @@ def _install_coverage_requirement(session):
             silent=PIP_INSTALL_SILENT,
             env=env,
         )
+    # NOTE: this step runs unconditionally, including when
+    # ``SKIP_REQUIREMENTS_INSTALL`` is set — the CI test step re-uses a
+    # venv that was prepared in a *separate* nox step with installs
+    # enabled, so the install branch above is skipped here but the
+    # ``.pth`` file is already on disk and needs to be cleaned up.
+    #
+    # Coverage 7.14.0 ships an ``a1_coverage.pth`` that calls
+    # ``coverage.process_startup()`` during site init whenever
+    # ``COVERAGE_PROCESS_START`` is set in the environment.  On the
+    # Salt onedir that runs *before* relenv's bootstrap
+    # ``setup_openssl()`` can load the host's FIPS provider, which
+    # leaves OpenSSL with no registered cipher implementations.  The
+    # first call into ``ssl.create_default_context()`` (tornado
+    # imports it at module load) then raises::
+    #
+    #     ssl.SSLError: [SSL: LIBRARY_HAS_NO_CIPHERS] library has no
+    #         ciphers (_ssl.c:3188)
+    #
+    # failing pytest collection on every Photon FIPS shard.
+    # Saltfactories' sitecustomize already calls
+    # ``coverage.process_startup()`` after relenv has finished its
+    # bootstrap (it's wrapped via ``site.execsitecustomize``), so this
+    # ``.pth`` is duplicative — removing it just preserves the existing
+    # ordering.  Idempotent: a no-op once the file is gone.
+    session.run(
+        "python",
+        "-c",
+        (
+            "import pathlib, sysconfig;"
+            "p = pathlib.Path(sysconfig.get_paths()['purelib']) / 'a1_coverage.pth';"
+            "p.exists() and p.unlink();"
+            "print('removed' if not p.exists() else 'present', p)"
+        ),
+        silent=True,
+    )
 
 
 def _run_with_coverage(session, *test_cmd, env=None, on_rerun=False):
@@ -922,11 +1006,20 @@ def test_cloud(session, coverage):
         )
     # Install requirements
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", pydir, "linux.lock"
+        )
+        cloud_requirements_file = os.path.join(
             "requirements", "static", "ci", pydir, "cloud.lock"
         )
 
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "-r",
+            linux_requirements_file,
+            "-r",
+            cloud_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmd_args = [
@@ -1269,14 +1362,28 @@ def decompress_dependencies(session):
         nox_dependencies_tarball_path.unlink()
 
     session.log("Finding broken 'python' symlinks and configs under '.nox/' ...")
+    # ``compress-dependencies`` archives the whole ``.nox`` tree. That tree is not
+    # only per-session virtualenv folders (``ci-test-onedir``, etc.): it can also
+    # contain plain files written by tooling, for example:
+    #
+    #   - ``.nox/.gitignore`` — tells Git to ignore generated venv files
+    #   - ``.nox/CACHEDIR.TAG`` — cache-dir marker used by virtualenv and similar tools
+    #
+    # Those files are siblings of the venv directories. The code below must only
+    # treat *directories* as virtualenvs. Otherwise we build paths like
+    # ``.nox/.gitignore/Scripts`` and ``os.scandir`` raises FileNotFoundError.
     for entry in os.scandir(REPO_ROOT / ".nox"):
         if not entry.is_dir():
             continue
-        dirname = entry.path
-        scan_path = pathlib.Path(dirname) / scripts_dir_name
+
+        venv_dir = pathlib.Path(entry.path)
+        scan_path = venv_dir / scripts_dir_name
+        if not scan_path.is_dir():
+            # Unexpected layout; skip rather than failing the whole session.
+            continue
 
         # Fix the values of the directories in a pyvenv.cfg file.
-        config = pathlib.Path(dirname) / "pyvenv.cfg"
+        config = venv_dir / "pyvenv.cfg"
         values = {}
         if config.exists():
             session.log(f"Found venv config: {config}")
@@ -1419,6 +1526,8 @@ def pre_archive_cleanup(session, pkg):
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
 
     cmdline = [
+        "python",
+        "-m",
         "tools",
         "pkg",
         "pre-archive-cleanup",
@@ -1506,12 +1615,8 @@ class Tee:
 
 def _lint(session, rcfile, flags, paths, upgrade_setuptools_and_pip=True):
     if _upgrade_pip_setuptools_and_wheel(session, upgrade=upgrade_setuptools_and_pip):
-        base_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
-        )
-        lint_requirements_file = os.path.join(
-            "requirements", "static", "ci", _get_pydir(session), "lint.lock"
-        )
+        base_requirements_file = _get_pip_requirements_file(session)
+        lint_requirements_file = _get_lint_requirements_file(session)
         install_command = [
             "--progress-bar=off",
             "-r",
@@ -1648,10 +1753,25 @@ def docs_html(session, compress, clean):
     Build Salt's HTML Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
+        )
+        base_requirements_file = os.path.join("requirements", "base.in")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.lock"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:
@@ -1671,10 +1791,25 @@ def docs_man(session, compress, update, clean):
     Build Salt's Manpages Documentation
     """
     if _upgrade_pip_setuptools_and_wheel(session):
-        requirements_file = os.path.join(
+        linux_requirements_file = os.path.join(
+            "requirements", "static", "ci", _get_pydir(session), "linux.lock"
+        )
+        base_requirements_file = os.path.join("requirements", "base.in")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
+        docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.lock"
         )
-        install_command = ["--progress-bar=off", "-r", requirements_file]
+        install_command = [
+            "--progress-bar=off",
+            "--constraint",
+            linux_requirements_file,
+            "-r",
+            base_requirements_file,
+            "-r",
+            zeromq_requirements_file,
+            "-r",
+            docs_requirements_file,
+        ]
         session.install(*install_command, silent=PIP_INSTALL_SILENT)
     os.chdir("doc/")
     if clean:

@@ -7,15 +7,15 @@ The Windows features 'SMTP-Server' and 'Web-WMI' must be installed.
 """
 
 # IIS metabase configuration settings:
-#   https://goo.gl/XCt1uO
+#   https://learn.microsoft.com/en-us/previous-versions/iis/settings-schema/aa347565(v=vs.90)?redirectedfrom=MSDN
 # IIS logging options:
-#   https://goo.gl/RL8ki9
-#   https://goo.gl/iwnDow
+#   https://learn.microsoft.com/en-us/previous-versions/iis/6.0-sdk/ms524877(v=vs.90)?redirectedfrom=MSDN
+#   https://learn.microsoft.com/en-us/previous-versions/iis/6.0-sdk/ms524877(v=vs.90)?redirectedfrom=MSDN
 # MicrosoftIISv2 namespace in Windows 2008r2 and later:
-#   http://goo.gl/O4m48T
+#   https://learn.microsoft.com/en-us/answers/tags/828/developer-technologies
 # Connection and relay IPs in PowerShell:
-#   https://goo.gl/aBMZ9K
-#   http://goo.gl/MrybFq
+#   https://learn.microsoft.com/en-us/archive/msdn-technet-forums/aff78c7a-db4e-4039-babb-cb68dad9c21e
+#   https://asknicks.blogspot.com/2015/04/allow-ip-address-in-smtp-connection.html
 
 
 import logging

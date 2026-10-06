@@ -96,10 +96,12 @@ class ConfigTestCase(TestCase):
             "x-ordering": ["thirsty", "base", "hungry"],
             "additionalProperties": False,
         }
-        self.assertDictContainsSubset(
-            MergedConfigClass.serialize()["properties"], expected["properties"]
+        merged_props = MergedConfigClass.serialize()["properties"]
+        self.assertEqual(
+            dict(expected["properties"], **merged_props), expected["properties"]
         )
-        self.assertDictContainsSubset(expected, MergedConfigClass.serialize())
+        merged_serialized = MergedConfigClass.serialize()
+        self.assertEqual(dict(merged_serialized, **expected), merged_serialized)
 
     def test_configuration_items_order(self):
         class One(schema.Schema):
@@ -292,7 +294,8 @@ class ConfigTestCase(TestCase):
             ],
             "additionalProperties": False,
         }
-        self.assertDictContainsSubset(expected, Requirements2.serialize())
+        actual = Requirements2.serialize()
+        self.assertEqual(dict(actual, **expected), actual)
 
         class Requirements3(schema.Schema):
             title = "DigitalOcean"
@@ -347,7 +350,8 @@ class ConfigTestCase(TestCase):
             ],
             "additionalProperties": False,
         }
-        self.assertDictContainsSubset(expected, Requirements3.serialize())
+        actual = Requirements3.serialize()
+        self.assertEqual(dict(actual, **expected), actual)
 
         class Requirements4(schema.Schema):
             title = "DigitalOcean"
@@ -449,7 +453,8 @@ class ConfigTestCase(TestCase):
             ],
             "additionalProperties": False,
         }
-        self.assertDictContainsSubset(expected, Requirements4.serialize())
+        actual = Requirements4.serialize()
+        self.assertEqual(dict(actual, **expected), actual)
 
     @pytest.mark.skipif(
         HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
@@ -531,7 +536,9 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"personal_access_token": "foo"}, Requirements.serialize()
             )
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0") and JSONSCHEMA_VERSION < Version(
+            "4.8.0"
+        ):
             self.assertIn(
                 "'ssh_key_file' is a required property", excinfo.exception.message
             )
@@ -719,7 +726,11 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": "the item"}, TestConf.serialize())
-        self.assertIn("is too short", excinfo.exception.message)
+        _msg = excinfo.exception.message
+        self.assertTrue(
+            "is too short" in _msg or "non-empty" in _msg.lower(),
+            msg=_msg,
+        )
 
         class TestConf(schema.Schema):
             item = schema.StringItem(
@@ -899,13 +910,20 @@ class ConfigTestCase(TestCase):
         except jsonschema.exceptions.ValidationError as exc:
             self.fail(f"ValidationError raised: {exc}")
 
-        with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+        if JSONSCHEMA_VERSION < Version("4.0.0"):
+            with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
+                jsonschema.validate(
+                    {"item": "3"},
+                    TestConf.serialize(),
+                    format_checker=jsonschema.FormatChecker(),
+                )
+            self.assertIn("is not a", excinfo.exception.message)
+        else:
             jsonschema.validate(
                 {"item": "3"},
                 TestConf.serialize(),
                 format_checker=jsonschema.FormatChecker(),
             )
-        self.assertIn("is not a", excinfo.exception.message)
 
     def test_datetime_config(self):
         item = schema.DateTimeItem(title="Foo", description="Foo Item")
@@ -1539,7 +1557,11 @@ class ConfigTestCase(TestCase):
                 TestConf.serialize(),
                 format_checker=jsonschema.FormatChecker(),
             )
-        self.assertIn("is too short", excinfo.exception.message)
+        _msg = excinfo.exception.message
+        self.assertTrue(
+            "is too short" in _msg or "non-empty" in _msg.lower(),
+            msg=_msg,
+        )
 
         class TestConf(schema.Schema):
             item = schema.ArrayItem(
@@ -1761,27 +1783,26 @@ class ConfigTestCase(TestCase):
                 ),
             )
 
-        self.assertDictContainsSubset(
-            TestConf.serialize(),
-            {
-                "$schema": "http://json-schema.org/draft-04/schema#",
-                "type": "object",
-                "properties": {
-                    "item": {
-                        "title": "Poligon",
-                        "description": "Describe the Poligon",
-                        "type": "object",
-                        "properties": {"sides": {"type": "integer"}},
-                        "additionalProperties": {
-                            "oneOf": [{"type": "boolean"}, {"type": "string"}]
-                        },
-                        "required": ["sides"],
-                    }
-                },
-                "x-ordering": ["item"],
-                "additionalProperties": False,
+        expected = {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "type": "object",
+            "properties": {
+                "item": {
+                    "title": "Poligon",
+                    "description": "Describe the Poligon",
+                    "type": "object",
+                    "properties": {"sides": {"type": "integer"}},
+                    "additionalProperties": {
+                        "oneOf": [{"type": "boolean"}, {"type": "string"}]
+                    },
+                    "required": ["sides"],
+                }
             },
-        )
+            "x-ordering": ["item"],
+            "additionalProperties": False,
+        }
+        actual = TestConf.serialize()
+        self.assertEqual(dict(expected, **actual), expected)
 
     @pytest.mark.skipif(
         HAS_JSONSCHEMA is False, reason="The 'jsonschema' library is missing"
@@ -1878,7 +1899,9 @@ class ConfigTestCase(TestCase):
             jsonschema.validate(
                 {"item": {"sides": "4", "color": "blue"}}, TestConf.serialize()
             )
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0") and JSONSCHEMA_VERSION < Version(
+            "4.8.0"
+        ):
             self.assertIn("'4'", excinfo.exception.message)
             self.assertIn("is not of type", excinfo.exception.message)
             self.assertIn("'boolean'", excinfo.exception.message)
@@ -2003,7 +2026,9 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0") and JSONSCHEMA_VERSION < Version(
+            "4.8.0"
+        ):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2067,7 +2092,9 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": ["maybe"]}, TestConf.serialize())
-        if JSONSCHEMA_VERSION >= Version("3.0.0"):
+        if JSONSCHEMA_VERSION >= Version("3.0.0") and JSONSCHEMA_VERSION < Version(
+            "4.8.0"
+        ):
             self.assertIn("'maybe'", excinfo.exception.message)
             self.assertIn("is not one of", excinfo.exception.message)
             self.assertIn("'yes'", excinfo.exception.message)
@@ -2154,11 +2181,17 @@ class ConfigTestCase(TestCase):
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [True]}, TestConf.serialize())
-        self.assertIn("is not allowed for", excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            self.assertIn("should not be valid under", excinfo.exception.message)
+        else:
+            self.assertIn("is not allowed for", excinfo.exception.message)
 
         with self.assertRaises(jsonschema.exceptions.ValidationError) as excinfo:
             jsonschema.validate({"item": [False]}, TestConf.serialize())
-        self.assertIn("is not allowed for", excinfo.exception.message)
+        if JSONSCHEMA_VERSION >= Version("4.0.0"):
+            self.assertIn("should not be valid under", excinfo.exception.message)
+        else:
+            self.assertIn("is not allowed for", excinfo.exception.message)
 
     def test_item_name_override_class_attrname(self):
         class TestConf(schema.Schema):

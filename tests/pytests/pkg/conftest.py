@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 
+import packaging.version
 import pytest
 import yaml
 from pytestskipmarkers.utils import platform
@@ -19,6 +20,20 @@ log = logging.getLogger(__name__)
 
 # Variable defining a FIPS test run or not
 FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
+
+
+def pytest_configure(config):
+    if (
+        sys.platform == "darwin"
+        and os.getuid() != 0
+        and config.getoption("--pkg-system-service", default=False)
+    ):
+        # launchctl system-domain operations require root on macOS 13+.
+        # The whole pkg test suite must be run via ``sudo -E nox`` (as CI does).
+        raise pytest.UsageError(
+            "Package tests with --pkg-system-service require root on macOS. "
+            "Run the test suite via: sudo -E nox ..."
+        )
 
 
 @pytest.fixture(scope="session")
@@ -49,10 +64,6 @@ def _system_up_to_date(
             log.error("Salt gpg key is %s", fp.read())
     else:
         log.error("Salt gpg not present")
-    # download_file(
-    #    "https://packages.broadcom.com/artifactory/api/security/keypair/SaltProjectKey/public",
-    #    gpg_dest,
-    # )
     if grains["os_family"] == "Debian":
         ret = shell.run("apt", "update")
         assert ret.returncode == 0
@@ -80,6 +91,9 @@ def _system_up_to_date(
             "DPkg::Options::=--force-confdef",
             "-o",
             "DPkg::Options::=--force-confold",
+            # Downgrade jobs can leave ``salt-dbg`` newer than pinned mains; apt
+            # then proposes downgrading it and refuses without this flag.
+            "--allow-downgrades",
             env=env,
         )
         shell.run(
@@ -302,8 +316,8 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
     Start up a master
     """
     if platform.is_windows():
-        state_tree = "C:/salt/srv/salt"
-        pillar_tree = "C:/salt/srv/pillar"
+        state_tree = r"C:\salt\srv\salt"
+        pillar_tree = r"C:\salt\srv\pillar"
     elif platform.is_darwin():
         state_tree = "/opt/srv/salt"
         pillar_tree = "/opt/srv/pillar"
@@ -528,9 +542,17 @@ def salt_minion(salt_factories, salt_master, install_salt):
         if minion_pki.exists():
             salt.utils.files.rm_rf(minion_pki)
 
-        # Work around missing WMIC until 3008.10 has been released.
+        # Work around missing WMIC until 3008.10 has been released. Not sure
+        # why this doesn't work anymore on the master branch when it was enough
+        # on 3006.x and 3007.x. We had to add similar logic in
+        # tests/support/pkg.py to fix the upgrade/downgrade tests on master.
         grainsdir = pathlib.Path("c:/salt/etc/grains")
         grainsdir.mkdir(exist_ok=True)
+        shutil.copy(r"salt\grains\disks.py", grainsdir)
+
+        grainsdir = pathlib.Path(
+            r"C:\Program Files\Salt Project\Salt\Lib\site-packages\salt\grains"
+        )
         shutil.copy(r"salt\grains\disks.py", grainsdir)
 
     factory.after_terminate(
@@ -563,32 +585,18 @@ def pkg_tests_account():
 
 @pytest.fixture(scope="module")
 def extras_pypath(install_salt):
-    # Resolve the extras directory against the **installed** onedir's Python,
-    # not pytest's interpreter. When the install_salt fixture is mid-flight on
-    # an upgrade/downgrade scenario the bundled Python can differ from the one
-    # running pytest (e.g. a 3006.x package shipped with Python 3.10 currently
-    # being driven by a pytest session under the new 3.11 onedir).
-    onedir_python = None
-    python_bin = install_salt.binary_paths.get("python")
-    if python_bin:
-        try:
-            result = subprocess.run(
-                [str(python_bin[0]), "-c", "import sys; print(sys.version_info[:2])"],
-                check=True,
-                capture_output=True,
-                text=True,
-            )
-            major, minor = (
-                int(part)
-                for part in result.stdout.strip().strip("()").split(",")
-                if part.strip()
-            )
-            onedir_python = (major, minor)
-        except (subprocess.CalledProcessError, ValueError, OSError):
-            onedir_python = None
-    if onedir_python is None:
-        onedir_python = sys.version_info[:2]
-    extras_dir = "extras-{}.{}".format(*onedir_python)
+    # Use the packaged Salt's Python version, not the test runner's
+    python_path = install_salt.binary_paths["python"]
+    if len(python_path) == 1:
+        python_bin = str(python_path[0])
+    else:
+        python_bin = os.path.join(*python_path)
+    try:
+        ret = subprocess.run([python_bin, "--version"], check=True, capture_output=True)
+        v = packaging.version.Version(ret.stdout.decode().split()[1])
+        extras_dir = f"extras-{v.major}.{v.minor}"
+    except Exception:  # pylint: disable=broad-except
+        extras_dir = "extras-{}.{}".format(*sys.version_info)
     if platform.is_windows():
         return pathlib.Path(
             os.getenv("ProgramFiles"), "Salt Project", "Salt", extras_dir

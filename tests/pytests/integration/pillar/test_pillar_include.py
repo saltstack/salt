@@ -109,7 +109,7 @@ def test_pillar_include(pillar_include_tree, salt_call_cli):
     """
     Test pillar include
     """
-    ret = salt_call_cli.run("pillar.items")
+    ret = salt_call_cli.run("pillar.items", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     assert "element" in ret.data
@@ -123,7 +123,7 @@ def test_pillar_glob_include(pillar_include_tree, salt_call_cli):
     """
     Test pillar include via glob pattern
     """
-    ret = salt_call_cli.run("pillar.items")
+    ret = salt_call_cli.run("pillar.items", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     assert "glob-a" in ret.data
@@ -137,7 +137,7 @@ def test_pillar_include_already_included(pillar_include_tree, salt_call_cli):
     Test pillar include when a pillar file
     has already been included.
     """
-    ret = salt_call_cli.run("pillar.items")
+    ret = salt_call_cli.run("pillar.items", unmask=True)
     assert ret.returncode == 0
     assert ret.data
     assert "element" in ret.data

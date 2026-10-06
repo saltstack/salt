@@ -142,6 +142,26 @@ def salt_master(
         ),
         # Allow older minion versions to connect (they don't support auth protocol v3)
         "minimum_auth_version": 0,
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
     }
 
     # We need to copy the extension modules into the new master root_dir or

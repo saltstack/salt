@@ -304,15 +304,26 @@ def verify_env(
         # If acls are enabled, the pki_dir needs to remain readable, this
         # is still secure because the private keys are still only readable
         # by the user running the master
-        if dir_ == pki_dir:
-            smode = stat.S_IMODE(mode.st_mode)
-            if smode != 448 and smode != 488:
-                if os.access(dir_, os.W_OK):
-                    os.chmod(dir_, 448)
-                else:
-                    log.critical(
-                        'Unable to securely set the permissions of "%s".', dir_
-                    )
+        if isinstance(pki_dir, str):
+            if dir_ == pki_dir:
+                smode = stat.S_IMODE(mode.st_mode)
+                if smode != 448 and smode != 488:
+                    if os.access(dir_, os.W_OK):
+                        os.chmod(dir_, 448)
+                    else:
+                        log.critical(
+                            'Unable to securely set the permissions of "%s".', dir_
+                        )
+        else:
+            if dir_ in pki_dir:
+                smode = stat.S_IMODE(mode.st_mode)
+                if smode != 448 and smode != 488:
+                    if os.access(dir_, os.W_OK):
+                        os.chmod(dir_, 448)
+                    else:
+                        log.critical(
+                            'Unable to securely set the permissions of "%s".', dir_
+                        )
 
     if skip_extra is False:
         # Run the extra verification checks
@@ -565,6 +576,10 @@ def valid_id(opts, id_):
     try:
         if any(x in id_ for x in ("/", "\\", "\0")):
             return False
+        if opts.get("cluster_id", None) is not None:
+            pki_dir = opts["cluster_pki_dir"]
+        else:
+            pki_dir = opts["pki_dir"]
         return bool(clean_path(opts["pki_dir"], id_))
     except (AttributeError, KeyError, TypeError, UnicodeDecodeError):
         return False
@@ -634,7 +649,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
 
     current_user = salt.utils.win_functions.get_current_user()
     # Set permissions to the registry key
-    if salt.utils.win_functions.is_admin(current_user):
+    if salt.utils.win_functions.is_elevated():
         reg_path = "HKLM\\SOFTWARE\\Salt Project\\salt"
         if not salt.utils.win_reg.key_exists(
             hive="HKLM", key="SOFTWARE\\Salt Project\\salt"
@@ -685,7 +700,7 @@ def win_verify_env(path, dirs, permissive=False, pki_dir="", skip_extra=False):
             log.critical("Unable to securely set the permissions of '%s'.", reg_path)
 
     # Set permissions to the root path directory
-    if salt.utils.win_functions.is_admin(current_user):
+    if salt.utils.win_functions.is_elevated():
         try:
             # Make the Administrators group owner
             # Use the SID to be locale agnostic

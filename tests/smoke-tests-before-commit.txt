@@ -1,0 +1,20 @@
+# Commands to run locally before pushing Salt changes that touch integration tests
+# or master/minion behavior. From the repository root. Requires a working ZMQ
+# stack; integration tests start real master/minion processes.
+#
+# Always run your project's formatter/linter gate if you use it, e.g.:
+#   pre-commit run --all-files
+
+# --- Client LocalClient / cmd_cli (footest, minion targeting)
+python3 -m pytest tests/integration/client/test_standard.py -vv --run-slow
+
+# --- saltutil.wheel + minions.connected / grains cache warmup
+python3 -m pytest tests/pytests/integration/modules/saltutil/test_wheel.py -vv --run-slow
+
+# --- If you modify resource registry / minions / mmap cache (uncomment as needed)
+# python3 -m pytest tests/pytests/unit/utils/test_minions_resources.py -vv
+# python3 -m pytest tests/pytests/unit/utils/test_resource_registry.py -vv
+# python3 -m pytest tests/pytests/unit/utils/test_mmap_cache.py -vv
+
+# Windows and macOS: use the same pytest lines on those machines when validating
+# CI parity (paths and Python may differ; onedir CI uses nox — see noxfile).

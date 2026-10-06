@@ -112,6 +112,68 @@ def test_prep_pub_kwargs(local_client):
     assert result == expected
 
 
+def test_prep_pub_start_event_kwarg_propagates(local_client):
+    """
+    A caller passing start_event=True must see it bundled into
+    payload_kwargs["kwargs"] so the master sees it in clear_load and
+    can propagate it to the published load.
+    """
+    result = local_client._prep_pub(
+        tgt="*",
+        fun="test.ping",
+        arg="",
+        tgt_type="glob",
+        ret="",
+        jid="123",
+        timeout=7,
+        start_event=True,
+    )
+    assert result["kwargs"] == {"start_event": True}
+
+
+def test_prep_pub_start_event_kwarg_coexists_with_other_kwargs(local_client):
+    """
+    start_event must coexist with the other established passthrough
+    kwargs (metadata, ret_config, ret_kwargs, module_executors) — the
+    LocalClient does not give any of these special treatment beyond the
+    generic kwargs bundling.
+    """
+    result = local_client._prep_pub(
+        tgt="*",
+        fun="test.ping",
+        arg="",
+        tgt_type="glob",
+        ret="",
+        jid="123",
+        timeout=7,
+        start_event=True,
+        metadata={"ticket": "INC-1"},
+        ret_config="syslog",
+    )
+    assert result["kwargs"] == {
+        "start_event": True,
+        "metadata": {"ticket": "INC-1"},
+        "ret_config": "syslog",
+    }
+
+
+def test_prep_pub_omits_start_event_when_not_passed(local_client):
+    """
+    Without an explicit start_event kwarg, _prep_pub must not introduce
+    one (no kwargs key at all when no kwargs were passed).
+    """
+    result = local_client._prep_pub(
+        tgt="*",
+        fun="test.ping",
+        arg="",
+        tgt_type="glob",
+        ret="",
+        jid="123",
+        timeout=7,
+    )
+    assert "kwargs" not in result
+
+
 def test_prep_pub_order_masters(master_opts):
     master_opts["order_masters"] = True
     local_client = salt.client.get_local_client(mopts=master_opts)

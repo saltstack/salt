@@ -88,12 +88,12 @@ markers for specific list items:
 
 """
 
-import datetime
 import logging
 
 import salt.exceptions
 import salt.utils.beacons
 import salt.utils.platform
+import salt.utils.timeutil
 
 log = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ def beacon(config):
     Return status for requested information
     """
     log.debug(config)
-    ctime = datetime.datetime.utcnow().isoformat()
+    ctime = salt.utils.timeutil.utcnow().isoformat()
 
     whitelist = []
     config = salt.utils.beacons.remove_hidden_options(config, whitelist)

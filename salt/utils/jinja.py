@@ -23,7 +23,6 @@ from jinja2.environment import TemplateModule
 from jinja2.exceptions import TemplateRuntimeError
 from jinja2.ext import Extension
 
-import salt.fileclient
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -98,6 +97,8 @@ class SaltCacheLoader(BaseLoader):
             or not hasattr(self._file_client, "opts")
             or self._file_client.opts["file_roots"] != self.opts["file_roots"]
         ):
+            import salt.fileclient
+
             self._file_client = salt.fileclient.get_file_client(
                 self.opts, self.pillar_rend
             )
@@ -245,9 +246,17 @@ def _yaml_safe_repr(value):
         # safe_dump always emits a trailing newline; strip it. default_style='"'
         # forces a double-quoted scalar which encodes newlines as the YAML \n
         # escape sequence that the YAML parser will decode back to a real
-        # newline.
+        # newline. width=2**31-1 disables PyYAML's default line-folding at
+        # ~80 columns; folding would introduce real newlines inside the
+        # scalar, which breaks YAML block-scalar interpolation via Jinja
+        # (see issue #69658).
         return (
-            salt.utils.yaml.safe_dump(value, default_style='"', default_flow_style=True)
+            salt.utils.yaml.safe_dump(
+                value,
+                default_style='"',
+                default_flow_style=True,
+                width=2**31 - 1,
+            )
             .rstrip("\n")
             .rstrip("...")
             .rstrip("\n")
@@ -489,6 +498,9 @@ def regex_search(txt, rgx, ignorecase=False, multiline=False):
     obj = re.search(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 
@@ -516,6 +528,9 @@ def regex_match(txt, rgx, ignorecase=False, multiline=False):
     obj = re.match(rgx, txt, flag)
     if not obj:
         return
+    # Handle regular expressions which do not use grouping
+    if obj and not obj.groups():
+        return (obj.group(),)
     return obj.groups()
 
 
@@ -1021,7 +1036,62 @@ class SerializerExtension(Extension):
             - changes: true
             - warnings: OMG! Stuff is happening!
 
+    .. _jinja-fileopts:
+
+    **Jinja Environment Configuration Override**
+
+    .. versionadded:: 3006.28
+
+    A header can be added to a jinja (or jinja|yaml, etc.) template to override
+    the jinja environment configuration for that template only. This lets an
+    individual file -- notably a third-party formula -- opt in or out of
+    options such as ``trim_blocks`` and ``lstrip_blocks`` without changing the
+    global :conf_master:`jinja_env` / :conf_master:`jinja_sls_env` settings,
+    which would otherwise force the same options onto every template and can
+    break unrelated states or formulas.
+
+    The header is a single line beginning with ``#jinja2:`` followed by a JSON
+    object whose keys are `Jinja2 Environment`_ settings. It is honored on the
+    first line of the template, or on the line immediately following a renderer
+    shebang (e.g. ``#!jinja|yaml``), since the shebang is not stripped before
+    the jinja renderer runs. The recognized header line is removed before
+    rendering; a ``#jinja2:`` line anywhere else in the template is left
+    untouched.
+
+    For example:
+
+    .. code-block:: jinja
+
+        #jinja2: {"lstrip_blocks": true, "trim_blocks": true}
+        thing:
+        {% for n in range(1, 6) %}
+          - some thing {{ n }}
+        {% endfor %}
+
+    or, combined with a renderer shebang:
+
+    .. code-block:: jinja
+
+        #!jinja|yaml
+        #jinja2: {"lstrip_blocks": true, "trim_blocks": true}
+        thing:
+        {% for n in range(1, 6) %}
+          - some thing {{ n }}
+        {% endfor %}
+
+    both render as:
+
+    .. code-block:: yaml
+
+        thing:
+          - some thing 1
+          - some thing 2
+          - some thing 3
+          - some thing 4
+          - some thing 5
+
     .. _`import tag`: https://jinja.palletsprojects.com/en/2.11.x/templates/#import
+    .. _`Jinja2 Environment`: https://jinja.palletsprojects.com/en/stable/api/#jinja2.Environment
     '''
 
     tags = {
@@ -1186,10 +1256,17 @@ class SerializerExtension(Extension):
                 # to the stringified version of the exception.
                 msg += str(exc)
             else:
-                msg += f"{problem}\n"
-                msg += salt.utils.stringutils.get_context(
-                    buf, line, marker="    <======================"
-                )
+                if buf is None:
+                    # The libyaml (C) loader populates problem_mark but leaves
+                    # its buffer unset, so there is no source text to render
+                    # context from; fall back to the stringified exception
+                    # rather than crash in get_context.
+                    msg += str(exc)
+                else:
+                    msg += f"{problem}\n"
+                    msg += salt.utils.stringutils.get_context(
+                        buf, line, marker="    <======================"
+                    )
             raise TemplateRuntimeError(msg)
         except AttributeError:
             raise TemplateRuntimeError(f"Unable to load yaml from {value}")

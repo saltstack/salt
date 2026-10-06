@@ -31,7 +31,7 @@ for any OS with a Bourne shell:
 
 .. code-block:: bash
 
-    curl -L https://bootstrap.saltstack.com -o bootstrap_salt.sh
+    curl -L https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh -o bootstrap_salt.sh
     sudo sh bootstrap_salt.sh
 
 Before run the script, it is a good practice to verify the checksum of the downloaded
@@ -40,7 +40,7 @@ file. You can verify the checksum with SHA256 by running this command:
 .. code-block:: bash
 
     test $(sha256sum bootstrap_salt.sh | awk '{print $1}') \
-       = $(curl -sL https://bootstrap.saltproject.io/sha256 | cat -) \
+       = $(curl -sL https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh.sha256 | cat -) \
        && echo "OK" \
        || echo "File does not match checksum"
 
@@ -53,7 +53,7 @@ file. You can verify the checksum with SHA256 by running this command:
 
     .. code-block:: bash
 
-        curl -L https://bootstrap.saltproject.io | sudo sh -s --
+        curl -L https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh | sudo sh -s --
 
 See the `salt-bootstrap`_ documentation for other one liners. When using `Vagrant`_
 to test out salt, the `Vagrant salt provisioner`_ will provision the VM for you.

@@ -562,8 +562,9 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
     The IP address of the bridged adapter will typically be assigned by DHCP and unknown to you,
     but you should be able to determine what IP network the address will be chosen from.
     If you enter a CIDR network mask, Salt will attempt to find the VM's address for you.
-    The host machine will send an "ifconfig" command to the VM (using ssh to `ssh_host`:`ssh_port`)
-    and return the IP address of the first interface it can find which matches your mask.
+    The host machine will send an "ip link show" or "ifconfig" command to the VM
+    (using ssh to `ssh_host`:`ssh_port`) and return the IP address of the first interface it
+    can find which matches your mask.
     """
     vm_ = get_vm_info(name)
 
@@ -591,23 +592,32 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
             "-oStrictHostKeyChecking={StrictHostKeyChecking} "
             "-oUserKnownHostsFile={UserKnownHostsFile} "
             "-oControlPath=none "
-            "{User}@{HostName} ifconfig".format(**ssh_config)
+            "{User}@{HostName} ip link show".format(**ssh_config)
         )
 
-        log.info("Trying ssh -p %(Port)s %(User)s@%(HostName)s ifconfig", ssh_config)
+        log.info(
+            "Trying ssh -p %(Port)s %(User)s@%(HostName)s ip link show", ssh_config
+        )
         reply = __salt__["cmd.shell"](command)
         log.info("--->\n%s", reply)
         target_network_range = ipaddress.ip_network(network_mask, strict=False)
 
+        found_address = None
         for line in reply.split("\n"):
             try:  # try to find a bridged network address
                 # the lines we are looking for appear like:
+                # ip addr show
+                #    inet 192.168.0.107/24 brd 192.168.0.255 scope global dynamic noprefixroute enx3c18a040229d
+                #    inet 10.16.119.90/32 scope global gpd0
+                #    inet 127.0.0.1/8 scope host lo
+                #    inet 192.168.0.116/24 brd 192.168.0.255 scope global dynamic noprefixroute enp0s3
+                #    inet6 fe80::df56:869b:f0d5:f77c/64 scope link noprefixroute
+                # ifconfig
                 #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
                 # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
                 tokens = line.replace(
                     "addr:", "", 1
                 ).split()  # remove "addr:" if it exists, then split
-                found_address = None
                 if "inet" in tokens:
                     nxt = tokens.index("inet") + 1
                     found_address = ipaddress.ip_address(tokens[nxt])
@@ -623,8 +633,52 @@ def get_ssh_config(name, network_mask="", get_private_key=False):
         log.info(
             "Network IP address in %s detected as: %s",
             target_network_range,
-            ans.get("ip_address", "(not found)"),
+            ans.get("ip_address", "(not found using ip addr show)"),
         )
+
+        if found_address is None:
+            # attempt to get ip address using ifconfig
+            command = (
+                "ssh -i {IdentityFile} -p {Port} "
+                "-oStrictHostKeyChecking={StrictHostKeyChecking} "
+                "-oUserKnownHostsFile={UserKnownHostsFile} "
+                "-oControlPath=none "
+                "{User}@{HostName} ifconfig".format(**ssh_config)
+            )
+
+            log.info(
+                "Trying ssh -p %(Port)s %(User)s@%(HostName)s ifconfig", ssh_config
+            )
+            reply = __salt__["cmd.shell"](command)
+            log.info("ifconfig returned:\n%s", reply)
+            target_network_range = ipaddress.ip_network(network_mask, strict=False)
+
+            for line in reply.split("\n"):
+                try:  # try to find a bridged network address
+                    # the lines we are looking for appear like:
+                    #    "inet addr:10.124.31.185  Bcast:10.124.31.255  Mask:255.255.248.0"
+                    # or "inet6 addr: fe80::a00:27ff:fe04:7aac/64 Scope:Link"
+                    tokens = line.replace(
+                        "addr:", "", 1
+                    ).split()  # remove "addr:" if it exists, then split
+                    found_address = None
+                    if "inet" in tokens:
+                        nxt = tokens.index("inet") + 1
+                        found_address = ipaddress.ip_address(tokens[nxt])
+                    elif "inet6" in tokens:
+                        nxt = tokens.index("inet6") + 1
+                        found_address = ipaddress.ip_address(tokens[nxt].split("/")[0])
+                    if found_address in target_network_range:
+                        ans["ip_address"] = str(found_address)
+                        break  # we have located a good matching address
+                except (IndexError, AttributeError, TypeError):
+                    pass  # all syntax and type errors loop here
+                    # falling out if the loop leaves us remembering the last candidate
+            log.info(
+                "Network IP address in %s detected as: %s",
+                target_network_range,
+                ans.get("ip_address", "(not found using ifconfig)"),
+            )
 
     if get_private_key:
         # retrieve the Vagrant private key from the host

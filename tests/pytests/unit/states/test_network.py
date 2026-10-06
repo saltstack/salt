@@ -170,8 +170,7 @@ def test_routes():
                 {
                     "comment": (
                         "Interface salt routes are set to be"
-                        " updated:\n--- \n+++ \n@@ -1,4 +0,0 @@\n-T\n-r"
-                        "\n-u\n-e"
+                        " updated:\n--- \n+++ \n@@ -1 +0,0 @@\n-True"
                     )
                 }
             )
@@ -232,8 +231,7 @@ def test_system():
                     {
                         "comment": (
                             "Global network settings are set to"
-                            " be updated:\n--- \n+++ \n@@ -1,2 +0,0"
-                            " @@\n-A\n-s"
+                            " be updated:\n--- \n+++ \n@@ -1 +0,0 @@\n-As"
                         )
                     }
                 )

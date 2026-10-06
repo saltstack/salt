@@ -24,7 +24,7 @@ Each instruction file provides a quick reference and links to detailed documenta
 The `docs/` directory contains comprehensive guides that are referenced by all agent instruction files. This provides a single source of truth for detailed information:
 
 - **[development-setup.md](docs/development-setup.md)** - Complete virtual environment setup
-  - venv310 and venv311 setup instructions
+  - venv310 and venv312 setup instructions
   - Platform-specific dependencies
   - Installation verification steps
   - Common troubleshooting

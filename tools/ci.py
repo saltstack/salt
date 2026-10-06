@@ -11,11 +11,13 @@ import os
 import pathlib
 import pprint
 import random
+import re
 import shutil
 import sys
 import time
 from typing import TYPE_CHECKING, Any, Literal
 
+import yaml
 from ptscripts import Context, command_group
 from rich.markup import escape
 
@@ -52,7 +54,7 @@ def print_gh_event(ctx: Context):
     try:
         gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
     except Exception as exc:
-        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
         ctx.exit(1)
 
     ctx.info("GH Event Payload:")
@@ -158,7 +160,6 @@ def _build_matrix(os_kind, linux_arm_runner):
     if os_kind == "windows":
         _matrix = [
             {"arch": "amd64"},
-            {"arch": "x86"},
         ]
     elif os_kind == "macos":
         _matrix.append({"arch": "arm64"})
@@ -173,10 +174,10 @@ def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
     """
     if python_versions is None:
         python_versions = [
-            "3.10.20",
-            "3.11.15",
-            "3.12.13",
-            "3.13.14",
+            "3.10.21",
+            "3.11.16",
+            "3.12.14",
+            "3.13.15",
         ]
     _matrix = []
     if os_kind == "windows":
@@ -198,6 +199,86 @@ def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
         for version in python_versions:
             _matrix.append({"python": version, "arch": "arm64"})
     return _matrix
+
+
+@ci.command(
+    name="check-draft-releases",
+    arguments={
+        "salt_version": {
+            "help": "The salt version to check for duplicate draft releases.",
+            "metavar": "SALT_VERSION",
+        },
+        "repository": {
+            "help": "The repository to query for releases, e.g. saltstack/salt",
+        },
+    },
+)
+def check_draft_releases(
+    ctx: Context, salt_version: str, repository: str = "saltstack/salt"
+):
+    """
+    Fail if more than one draft release exists for the given salt version.
+
+    A duplicate draft release is almost always a human error during release
+    prep. Proceeding silently risks publishing the wrong artifact set.
+    """
+    tag = f"v{salt_version}" if not salt_version.startswith("v") else salt_version
+    ctx.info(
+        f"Checking for duplicate draft releases tagged {tag!r} in {repository!r} ..."
+    )
+
+    with ctx.web as web:
+        headers = {
+            "Accept": "application/vnd.github+json",
+        }
+        github_token = tools.utils.gh.get_github_token(ctx)
+        if github_token is not None:
+            headers["Authorization"] = f"Bearer {github_token}"
+        web.headers.update(headers)
+
+        page = 1
+        draft_releases = []
+        while True:
+            ret = web.get(
+                f"https://api.github.com/repos/{repository}/releases",
+                params={"per_page": 100, "page": page},
+            )
+            if ret.status_code != 200:
+                ctx.error(f"Failed to get releases for {repository!r}: {ret.reason}")
+                ctx.exit(1)
+            releases = ret.json()
+            if not releases:
+                break
+            for release in releases:
+                if release.get("draft", False) and release.get("tag_name") == tag:
+                    draft_releases.append(release)
+            if len(releases) < 100:
+                break
+            page += 1
+
+    if len(draft_releases) > 1:
+        ctx.error(
+            f"Found {len(draft_releases)} draft releases for {tag!r}. "
+            "There must be exactly one. Please delete the duplicate(s) before "
+            "re-running the release workflow. Duplicates found:"
+        )
+        for rel in draft_releases:
+            ctx.error(
+                f"  id={rel['id']}  name={rel['name']!r}  " f"url={rel['html_url']}"
+            )
+        ctx.exit(1)
+
+    if len(draft_releases) == 0:
+        ctx.warn(
+            f"No draft release found for {tag!r}. "
+            "The release workflow expects a draft release to exist at this point."
+        )
+    else:
+        ctx.info(
+            f"Found exactly one draft release for {tag!r}: "
+            f"id={draft_releases[0]['id']}  name={draft_releases[0]['name']!r}"
+        )
+    ctx.exit(0)
 
 
 @ci.command(
@@ -225,6 +306,79 @@ def get_releases(ctx: Context, repository: str = "saltstack/salt"):
             wfh.write(f"latest-release={latest}\n")
             wfh.write(f"releases={json.dumps(str_releases)}\n")
         ctx.exit(0)
+
+
+@ci.command(
+    name="get-release-changelog-target",
+    arguments={
+        "event_name": {
+            "help": "The name of the GitHub event being processed.",
+        },
+    },
+)
+def get_release_changelog_target(ctx: Context, event_name: str):
+    """
+    Define which kind of release notes should be generated, next minor or major.
+    """
+    gh_event_path = os.environ.get("GITHUB_EVENT_PATH") or None
+    if gh_event_path is None:
+        ctx.warn("The 'GITHUB_EVENT_PATH' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert gh_event_path is not None
+
+    try:
+        gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
+    except Exception as exc:
+        ctx.error(f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc)  # type: ignore[arg-type]
+        ctx.exit(1)
+
+    github_output = os.environ.get("GITHUB_OUTPUT")
+    if github_output is None:
+        ctx.warn("The 'GITHUB_OUTPUT' variable is not set.")
+        ctx.exit(1)
+
+    if TYPE_CHECKING:
+        assert github_output is not None
+
+    shared_context = yaml.safe_load(
+        tools.utils.SHARED_WORKFLOW_CONTEXT_FILEPATH.read_text()
+    )
+    release_branches = shared_context["release_branches"]
+
+    # Patch release branches look like "3008.1-1" or "3008.1-patch".  The
+    # major prefix (e.g. "3008") is enough to associate them with the correct
+    # release family; extract it once for the else-branch below.
+    _patch_branch_re = re.compile(r"refs/heads/(\d{4})\.\d")
+
+    release_changelog_target = "next-major-release"
+    if event_name == "pull_request":
+        if gh_event["pull_request"]["base"]["ref"] in release_branches:
+            release_changelog_target = "next-minor-release"
+    elif event_name == "schedule":
+        branch_name = gh_event["repository"]["default_branch"]
+        if branch_name in release_branches:
+            release_changelog_target = "next-minor-release"
+    else:
+        ref = gh_event.get("ref", "")
+        for branch_name in release_branches:
+            if branch_name in ref:
+                release_changelog_target = "next-minor-release"
+                break
+        else:
+            # Patch release branches (e.g. refs/heads/3008.1-1) share the
+            # major version with a release branch but differ in the minor part.
+            m = _patch_branch_re.match(ref)
+            if m:
+                major = m.group(1)
+                for branch_name in release_branches:
+                    if branch_name.startswith(major + "."):
+                        release_changelog_target = "next-minor-release"
+                        break
+    with open(github_output, "a", encoding="utf-8") as wfh:
+        wfh.write(f"release-changelog-target={release_changelog_target}\n")
+    ctx.exit(0)
 
 
 def _get_pr_test_labels_from_api(
@@ -377,7 +531,7 @@ def define_cache_seed(ctx: Context, static_cache_seed: str, randomize: bool = Fa
             gh_event = json.loads(open(gh_event_path, encoding="utf-8").read())
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
             ctx.exit(1)
 
@@ -431,7 +585,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
     if TYPE_CHECKING:
         assert commit_sha is not None
 
-    codecov_args = [
+    codecov_args: list[str] = [
         codecov,
         "--nonZero",
         "--sha",
@@ -450,7 +604,7 @@ def upload_coverage(ctx: Context, reports_path: pathlib.Path, commit_sha: str = 
                 codecov_args.extend(["--parent", pr_event_data["base"]["sha"]])
         except Exception as exc:
             ctx.error(
-                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc
+                f"Could not load the GH Event payload from {gh_event_path!r}:\n", exc  # type: ignore[arg-type]
             )
 
     sleep_time = 15
@@ -943,6 +1097,14 @@ def workflow_config(
             ]
         for version in str_releases:
             for platform in platforms:
+
+                if platform == "windows" and "3006" in version:
+                    # The salt_master_cli.py script used by the windows pakcage
+                    # tests doesn't play nice with trying to go from 3006.x to
+                    # >=3007.x.
+                    ctx.info("3006.x upgrade/downgrade tests do not work on windows")
+                    continue
+
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -963,7 +1125,7 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs
+                    if _.slug in requested_slugs and "photon" not in _.slug
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(escape(pprint.pformat(pkg_test_matrix)))

@@ -11,6 +11,7 @@ import salt.modules.config as config
 import salt.modules.cp as cp
 import salt.modules.file as file
 import salt.modules.gpg as gpg
+import salt.modules.pkg_resource as pkg_resource
 import salt.utils.files
 import salt.utils.stringutils
 from salt.loader.dunder import __opts__
@@ -20,6 +21,7 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("apt-cache", "grep"),
     pytest.mark.slow_test,
 ]
+
 
 KEY_FILES = (
     "salt-archive-keyring.gpg",
@@ -53,7 +55,9 @@ def get_key_file(request, state_tree, functional_files_dir):
 
 
 @pytest.fixture
-def configure_loader_modules(minion_opts):
+def configure_loader_modules(minion_opts, grains):
+    osarch = cmd.run("dpkg --print-architecture").strip()
+    grains.update({"osarch": osarch})
     return {
         aptpkg: {
             "__salt__": {
@@ -64,8 +68,15 @@ def configure_loader_modules(minion_opts):
                 "file.grep": file.grep,
                 "cp.cache_file": cp.cache_file,
                 "config.get": config.get,
+                "cmd.run_stdout": cmd.run_stdout,
+                "pkg_resource.add_pkg": pkg_resource.add_pkg,
+                "pkg_resource.format_pkg_list": pkg_resource.format_pkg_list,
+                "pkg_resource.parse_targets": pkg_resource.parse_targets,
+                "pkg_resource.sort_pkglist": pkg_resource.sort_pkglist,
+                "pkg_resource.stringify": pkg_resource.stringify,
             },
             "__opts__": minion_opts,
+            "__grains__": grains,
         },
         file: {
             "__salt__": {"cmd.run_all": cmd.run_all},
@@ -82,6 +93,9 @@ def configure_loader_modules(minion_opts):
         config: {
             "__opts__": minion_opts,
         },
+        pkg_resource: {
+            "__grains__": grains,
+        },
     }
 
 
@@ -90,6 +104,21 @@ def revert_repo_file(tmp_path):
     sources = pathlib.Path("/etc/apt/sources.list")
     if not sources.exists():
         sources.touch()
+    # aptpkg.mod_repo internally runs ``apt-get update`` which surfaces
+    # any 404 on unrelated 3rd-party sources.list.d entries (e.g. the
+    # CI image's hashicorp bullseye repo when Hashicorp drops bullseye
+    # upstream). Those repos are outside this test's scope; quarantine
+    # sources.list.d for the test and restore on teardown so a mirror
+    # change on someone else's package feed doesn't red our CI.
+    sources_d = pathlib.Path("/etc/apt/sources.list.d")
+    quarantine_root = tmp_path / "sources.list.d.quarantined"
+    quarantined_children = []
+    if sources_d.is_dir():
+        quarantine_root.mkdir()
+        for child in sorted(sources_d.iterdir()):
+            dest = quarantine_root / child.name
+            shutil.move(str(child), str(dest))
+            quarantined_children.append((child, dest))
     try:
         repo_file = pathlib.Path("/etc") / "apt" / "sources.list"
         backup = tmp_path / "repo_backup"
@@ -99,7 +128,22 @@ def revert_repo_file(tmp_path):
     finally:
         # revert repo file
         shutil.copy(str(backup), str(repo_file))
-        aptpkg.refresh_db()
+        # Run the post-test refresh_db WHILE the 3rd-party feeds are
+        # still quarantined -- once we restore them below, refresh_db
+        # would re-hit any dead upstream mirror (e.g. Hashicorp dropped
+        # bullseye from apt.releases.hashicorp.com) and raise
+        # CommandExecutionError during teardown, causing the job to
+        # exit non-zero even though the test itself passed.
+        try:
+            aptpkg.refresh_db()
+        except salt.exceptions.CommandExecutionError:
+            # Best-effort refresh; the 3rd-party feed churn we
+            # quarantined against can still surface here if the
+            # first-party feeds hiccup. Not the test's concern.
+            pass
+        # Restore any 3rd-party sources.list.d entries we quarantined.
+        for original, dest in quarantined_children:
+            shutil.move(str(dest), str(original))
 
 
 @pytest.fixture
@@ -356,15 +400,22 @@ def test_get_repo_keys_keydir_not_exist(key):
 
 @pytest.mark.parametrize("get_key_file", KEY_FILES, indirect=True)
 @pytest.mark.parametrize("aptkey", [False, True])
+@pytest.mark.skip_if_not_root
 def test_add_del_repo_key(get_key_file, aptkey):
     """
     Test both add_repo_key and del_repo_key when
     aptkey is both False and True
     and using both binary and armored gpg keys
     """
+    # Bind ``keyfile`` up front so the ``finally`` block's file-existence
+    # check can run even when ``add_repo_key`` fails and never reaches the
+    # in-``try`` binding.  Without this, an ``add_repo_key`` failure
+    # (e.g. missing ``/etc/apt/keyrings/`` on the runner, GPG dearmor
+    # failure) manifests as an ``UnboundLocalError`` in the ``finally``
+    # block that mask the real error message from the ``assert``.
+    keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
     try:
         assert aptpkg.add_repo_key(f"salt://{get_key_file}", aptkey=aptkey)
-        keyfile = pathlib.Path("/etc", "apt", "keyrings", get_key_file)
         if not aptkey:
             assert keyfile.is_file()
             assert oct(keyfile.stat().st_mode)[-3:] == "644"
@@ -380,3 +431,24 @@ def test_add_del_repo_key(get_key_file, aptkey):
             assert not keyfile.is_file()
         query_key = aptpkg.get_repo_keys(aptkey=aptkey)
         assert "0E08A149DE57BFBE" not in query_key
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_wildcard():
+    # refresh=True: rebuild the apt cache before installing so the
+    # test doesn't fall over "no installation candidate" when the CI
+    # container image has drifted (observed on Debian 12/13 and
+    # Ubuntu 24.04) and nginx-* is not in the cached indexes.
+    aptpkg.install(pkgs=["nginx-doc", "nginx-light"], refresh=True)
+    ret = aptpkg.remove(name="nginx-*")
+    assert not ret["nginx-light"]["new"]
+    assert ret["nginx-light"]["old"]
+    assert not ret["nginx-doc"]["new"]
+    assert ret["nginx-doc"]["old"]
+
+
+@pytest.mark.skip_if_not_root
+def test_aptpkg_remove_unknown_package():
+    ret = aptpkg.remove(name="thispackageistotallynotthere")
+    assert not ret

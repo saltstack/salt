@@ -3,6 +3,7 @@
     ~~~~~~~~~~~~~~~~~~~~~~
 """
 
+import asyncio
 import functools
 import inspect
 import logging
@@ -17,10 +18,10 @@ import types
 
 import attr
 import pytest
+import tornado.ioloop
 from pytestshellutils.utils import ports
 from saltfactories.utils import random_string
 
-import salt.ext.tornado.ioloop
 import salt.utils.files
 import salt.utils.platform
 from salt.serializers import yaml
@@ -69,11 +70,6 @@ def salt_sub_minion_id():
 
 @pytest.fixture(scope="session")
 def sdb_etcd_port():
-    return ports.get_unused_localhost_port()
-
-
-@pytest.fixture(scope="session")
-def vault_port():
     return ports.get_unused_localhost_port()
 
 
@@ -127,7 +123,6 @@ def salt_master_factory(
     prod_env_pillar_tree_root_dir,
     ext_pillar_file_tree_root_dir,
     sdb_etcd_port,
-    vault_port,
     reactor_event,
     master_id,
     salt_auth_account_1_factory,
@@ -176,11 +171,6 @@ def salt_master_factory(
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
     }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
-    }
 
     # Config settings to test `event_return`
     config_defaults["returner_dirs"] = []
@@ -194,6 +184,25 @@ def salt_master_factory(
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        # Use optimized worker pools for integration/scenario tests
+        # This demonstrates the worker pool feature and provides better performance
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "ping",
+                    "get_token",
+                    "mk_token",
+                    "verify_minion",
+                    "_master_opts",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],  # Catchall for everything else
+            },
+        },
     }
     ext_pillar = []
     if salt.utils.platform.is_windows():
@@ -293,17 +302,23 @@ def salt_master_factory(
         else:
             shutil.copyfile(source, dest)
 
+    factory_kwargs = {}
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_factories.salt_master_daemon(
         master_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        **factory_kwargs,
     )
     return factory
 
 
 @pytest.fixture(scope="session")
-def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vault_port):
+def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port):
     with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "minion")) as rfh:
         config_defaults = yaml.deserialize(rfh.read())
     config_defaults["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
@@ -313,11 +328,6 @@ def salt_minion_factory(salt_master_factory, salt_minion_id, sdb_etcd_port, vaul
         "driver": "etcd",
         "etcd.host": "127.0.0.1",
         "etcd.port": sdb_etcd_port,
-    }
-    config_defaults["vault"] = {
-        "url": f"http://127.0.0.1:{vault_port}",
-        "auth": {"method": "token", "token": "testsecret", "uses": 0},
-        "policies": ["testpolicy"],
     }
 
     config_overrides = {
@@ -379,7 +389,7 @@ def salt_sub_minion_factory(salt_master_factory, salt_sub_minion_id):
 
 
 @pytest.fixture(scope="session")
-def salt_proxy_factory(salt_master_factory):
+def salt_proxy_factory(salt_factories, salt_master_factory):
     proxy_minion_id = random_string("proxytest-")
 
     config_overrides = {
@@ -391,11 +401,18 @@ def salt_proxy_factory(salt_master_factory):
         "lazy_loader_strict_matching": True,
     }
 
+    factory_kwargs = {
+        "start_timeout": 240,
+    }
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-        start_timeout=240,
+        **factory_kwargs,
     )
     factory.before_start(pytest.helpers.remove_stale_proxy_minion_cache_file, factory)
     factory.after_terminate(
@@ -409,8 +426,15 @@ def salt_proxy_factory(salt_master_factory):
 
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_factories, salt_master_factory):
+    try:
+        from saltfactories.daemons.proxy import SaltProxyMinion
+    except ImportError:  # pragma: no cover
+        from saltfactories.daemons.minion import SaltProxyMinion
+
     proxy_minion_id = random_string("delta-proxy-test-")
-    root_dir = salt_factories.get_root_dir_for_daemon(proxy_minion_id)
+    root_dir = salt_factories.get_root_dir_for_daemon(
+        proxy_minion_id, factory_class=SaltProxyMinion
+    )
     conf_dir = root_dir / "conf"
     conf_dir.mkdir(parents=True, exist_ok=True)
 
@@ -432,12 +456,20 @@ def salt_delta_proxy_factory(salt_factories, salt_master_factory):
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     }
+
+    factory_kwargs = {
+        "start_timeout": 240,
+    }
+    if salt_factories.system_service is False:
+        factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
+            "--log-level=info"
+        ]
+
     factory = salt_master_factory.salt_proxy_minion_daemon(
         proxy_minion_id,
         defaults=config_defaults,
         overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-        start_timeout=240,
+        **factory_kwargs,
     )
 
     for minion_id in [factory.id] + pytest.helpers.proxy.delta_proxy_minion_ids():
@@ -650,12 +682,15 @@ def pytest_pyfunc_call(pyfuncitem):
     try:
         loop = funcargs["io_loop"]
     except KeyError:
-        loop = salt.ext.tornado.ioloop.IOLoop.current()
+        loop = tornado.ioloop.IOLoop.current()
 
     __tracebackhide__ = True
 
-    loop.run_sync(
-        CoroTestFunction(pyfuncitem.obj, testargs), timeout=get_test_timeout(pyfuncitem)
+    loop.asyncio_loop.run_until_complete(
+        asyncio.wait_for(
+            CoroTestFunction(pyfuncitem.obj, testargs)(),
+            timeout=get_test_timeout(pyfuncitem),
+        )
     )
     return True
 
@@ -665,13 +700,14 @@ def io_loop():
     """
     Create new io loop for each test, and tear it down after.
     """
-    loop = salt.ext.tornado.ioloop.IOLoop()
-    loop.make_current()
+    asyncio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(asyncio_loop)
+    loop = tornado.ioloop.IOLoop.current()
     try:
         yield loop
     finally:
-        loop.clear_current()
-        loop.close(all_fds=True)
+        loop.close(all_fds=True)  # Also closes asyncio_loop
+        asyncio.set_event_loop(None)
 
 
 # <---- Async Test Fixtures ------------------------------------------------------------------------------------------

@@ -11,13 +11,8 @@ auth modules
     :template: autosummary.rst.tmpl
 
     auto
-    django
     file
-    keystone
     ldap
-    mysql
     pam
-    pki
     rest
     sharedsecret
-    yubico

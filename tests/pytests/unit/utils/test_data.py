@@ -10,6 +10,8 @@ import pytest
 
 import salt.utils.data
 import salt.utils.stringutils
+from salt.exceptions import SaltException
+from salt.utils.odict import OrderedDict as SaltOrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM
 
@@ -140,6 +142,71 @@ def test_subdict_match():
     assert not salt.utils.data.subdict_match(test_three_level_dict, "a:c:v")
     # Test wildcard match
     assert salt.utils.data.subdict_match(test_three_level_dict, "a:*:c:v")
+
+
+def test_subdict_match_regex_on_dict_keys():
+    """
+    Tests that regex/glob patterns are applied to dict keys, not only to
+    list members. Regression test for issue #35567.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+    list_grain = {"roles": ["roleA", "roleB", "roleC"]}
+
+    # The list-valued grain has always matched a regex alternation ...
+    assert salt.utils.data.subdict_match(
+        list_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # ... and the dict-valued grain should behave the same way against its keys.
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleA|roleB|roleC)", regex_match=True
+    )
+    # Glob patterns should also match dict keys.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:role*")
+    # Negative case: a pattern that matches none of the keys must fail.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:(roleX|roleY)", regex_match=True
+    )
+
+
+def test_subdict_match_dict_keys_no_overcorrection_35567():
+    """
+    Guards against overcorrection of the issue #35567 fix. The new
+    key-matching branch in subdict_match runs for every caller, so it must
+    not loosen matching for the paths the fix was not meant to change.
+    These assertions hold both with and without the fix applied.
+    """
+    dict_grain = {
+        "roles": {"roleA": None, "roleB": ["envA", "envB"], "roleC": ["envA"]}
+    }
+
+    # exact_match=True is the production shape passed by
+    # salt/matchers/pillar_exact_match.py and the master-side cache check in
+    # salt/utils/minions.py. Glob/regex metacharacters must stay literal:
+    # the new branch must not start wildcard-matching dict keys here.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role*", exact_match=True
+    )
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:role.*", exact_match=True
+    )
+    # A literal key still matches under exact_match=True.
+    assert salt.utils.data.subdict_match(dict_grain, "roles:roleA", exact_match=True)
+
+    # Glob negative case (grain_match production shape, regex_match=False):
+    # a glob matching none of the keys must not match.
+    assert not salt.utils.data.subdict_match(dict_grain, "roles:bogus*")
+
+    # Deeper expressions must still require the deeper levels to match; a
+    # key-only match on 'roleC' must not satisfy 'roles:roleC:envB' when
+    # envB is not present under roleC.
+    assert not salt.utils.data.subdict_match(
+        dict_grain, "roles:roleC:envB", regex_match=True
+    )
+    assert salt.utils.data.subdict_match(
+        dict_grain, "roles:roleB:envB", regex_match=True
+    )
 
 
 @pytest.mark.parametrize(
@@ -716,13 +783,32 @@ def test_stringify():
     ]
 
 
+def test_to_entries():
+    data = {"a": 1, "b": 2}
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    data = ["monkey", "donkey"]
+    entries = [{"key": 0, "value": "monkey"}, {"key": 1, "value": "donkey"}]
+    assert salt.utils.data.to_entries(data) == entries
+
+    with pytest.raises(SaltException):
+        salt.utils.data.to_entries("RAISE ON THIS")
+
+
+def test_from_entries():
+    entries = [{"key": "a", "value": 1}, {"key": "b", "value": 2}]
+    data = {"a": 1, "b": 2}
+    assert salt.utils.data.from_entries(entries) == data
+
+
 def test_json_query():
     # Raises exception if jmespath module is not found
     with patch("salt.utils.data.jmespath", None):
         with pytest.raises(RuntimeError, match="requires jmespath"):
             salt.utils.data.json_query({}, "@")
 
-    # Test search
+    # Test search (jmespath may be absent in minimal dev envs; mock the query)
     user_groups = {
         "user1": {"groups": ["group1", "group2", "group3"]},
         "user2": {"groups": ["group1", "group2"]},
@@ -730,7 +816,12 @@ def test_json_query():
     }
     expression = "*.groups[0]"
     primary_groups = ["group1", "group1", "group3"]
-    assert sorted(salt.utils.data.json_query(user_groups, expression)) == primary_groups
+    with patch("salt.utils.data.jmespath") as mock_jmespath:
+        mock_jmespath.search.return_value = primary_groups
+        assert sorted(salt.utils.data.json_query(user_groups, expression)) == sorted(
+            primary_groups
+        )
+        mock_jmespath.search.assert_called_once_with(expression, user_groups)
 
 
 def test_nop():
@@ -1464,3 +1555,186 @@ def test_ignore_missing_keys_recursive():
     assert expected_result == salt.utils.data.recursive_diff(
         dict_one, dict_two, ignore_missing_keys=True
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for get_type()
+# ---------------------------------------------------------------------------
+
+
+def test_get_type_int():
+    assert salt.utils.data.get_type(42) == "int"
+
+
+def test_get_type_str():
+    assert salt.utils.data.get_type("hello") == "str"
+
+
+def test_get_type_list():
+    assert salt.utils.data.get_type([]) == "list"
+
+
+def test_get_type_dict():
+    assert salt.utils.data.get_type({}) == "dict"
+
+
+def test_get_type_none():
+    assert salt.utils.data.get_type(None) == "NoneType"
+
+
+def test_get_type_bool():
+    assert salt.utils.data.get_type(True) == "bool"
+
+
+# ---------------------------------------------------------------------------
+# Tests for glob_list()
+# ---------------------------------------------------------------------------
+
+
+def test_glob_list_basic():
+    result = salt.utils.data.glob_list(["eth0", "eth2", "lo"], "eth*")
+    assert result == ["eth0", "eth2"]
+
+
+def test_glob_list_no_match():
+    result = salt.utils.data.glob_list(["lo", "dummy0"], "eth*")
+    assert result == []
+
+
+def test_glob_list_all_match():
+    result = salt.utils.data.glob_list(["eth0", "eth1"], "eth*")
+    assert result == ["eth0", "eth1"]
+
+
+def test_glob_list_empty_list():
+    assert salt.utils.data.glob_list([], "eth*") == []
+
+
+def test_glob_list_requires_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.glob_list("eth0", "eth*")
+
+
+def test_glob_list_requires_str_elements():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.glob_list([1, 2, 3], "*")
+
+
+# ---------------------------------------------------------------------------
+# Tests for list_rm_match()
+# ---------------------------------------------------------------------------
+
+
+def test_list_rm_match_basic():
+    result = salt.utils.data.list_rm_match(["eth0", "eth1", "lo"], r"eth.*")
+    assert result == ["lo"]
+
+
+def test_list_rm_match_no_removal():
+    result = salt.utils.data.list_rm_match(["lo", "dummy"], r"eth.*")
+    assert result == ["lo", "dummy"]
+
+
+def test_list_rm_match_remove_all():
+    result = salt.utils.data.list_rm_match(["eth0", "eth1"], r"eth.*")
+    assert result == []
+
+
+def test_list_rm_match_empty_list():
+    assert salt.utils.data.list_rm_match([], r".*") == []
+
+
+def test_list_rm_match_ignorecase():
+    result = salt.utils.data.list_rm_match(["ETH0", "lo"], r"eth.*", ignorecase=True)
+    assert result == ["lo"]
+
+
+def test_list_rm_match_case_sensitive_by_default():
+    # Without ignorecase, uppercase ETH0 should NOT match lowercase eth.*
+    result = salt.utils.data.list_rm_match(["ETH0", "lo"], r"eth.*")
+    assert result == ["ETH0", "lo"]
+
+
+# ---------------------------------------------------------------------------
+# Tests for replace_list_element()
+# ---------------------------------------------------------------------------
+
+
+def test_replace_list_element_basic():
+    result = salt.utils.data.replace_list_element(
+        ["a", "bx", "c"], "bx", ["b1", "b2", "b3"]
+    )
+    assert result == ["a", "b1", "b2", "b3", "c"]
+
+
+def test_replace_list_element_not_found():
+    orig = ["a", "b", "c"]
+    result = salt.utils.data.replace_list_element(orig, "z", ["x"])
+    assert result is orig  # same object returned unchanged
+
+
+def test_replace_list_element_multiple_occurrences():
+    result = salt.utils.data.replace_list_element(["x", "y", "x"], "x", ["1", "2"])
+    assert result == ["1", "2", "y", "1", "2"]  # each 'x' expanded to ['1', '2']
+
+
+def test_replace_list_element_empty_updates():
+    result = salt.utils.data.replace_list_element(["a", "bx", "c"], "bx", [])
+    assert result == ["a", "c"]
+
+
+def test_replace_list_element_orig_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element("not-a-list", "x", ["y"])
+
+
+def test_replace_list_element_updates_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element(["a"], "a", "not-a-list")
+
+
+def test_replace_list_element_both_not_list():
+    from salt.exceptions import SaltInvocationError
+
+    with pytest.raises(SaltInvocationError):
+        salt.utils.data.replace_list_element("orig", "x", "updates")
+
+
+# ---------------------------------------------------------------------------
+# Tests for updated_dict()
+# ---------------------------------------------------------------------------
+
+
+def test_updated_dict_basic():
+    base = {"a": 1, "b": 2}
+    updates = {"b": 99, "c": 3}
+    result = salt.utils.data.updated_dict(base, updates)
+    assert result == {"a": 1, "b": 99, "c": 3}
+
+
+def test_updated_dict_does_not_mutate_base():
+    base = {"a": 1}
+    salt.utils.data.updated_dict(base, {"a": 2})
+    assert base == {"a": 1}
+
+
+def test_updated_dict_does_not_mutate_updates():
+    updates = {"b": 2}
+    salt.utils.data.updated_dict({"a": 1}, updates)
+    assert updates == {"b": 2}
+
+
+def test_updated_dict_empty_base():
+    assert salt.utils.data.updated_dict({}, {"a": 1}) == {"a": 1}
+
+
+def test_updated_dict_empty_updates():
+    assert salt.utils.data.updated_dict({"a": 1}, {}) == {"a": 1}

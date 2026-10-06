@@ -1,0 +1,1 @@
+Added a required `branch` input to `3006.x`'s `nightly-stress-test.yml` workflow, along with `enable_metrics` and `worker_threads` inputs that let a run toggle OpenTelemetry metrics and override the salt-master worker pool size before the stress test starts. Lets this workflow be dispatched against any branch, not just `3006.x`.

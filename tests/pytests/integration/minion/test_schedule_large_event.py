@@ -97,9 +97,7 @@ def test_schedule_large_event(salt_master_1, salt_minion_1, script):
     with salt.utils.event.get_event(
         "master",
         salt_master_1.config["sock_dir"],
-        salt_master_1.config["transport"],
         salt_master_1.config,
-        listen=True,
     ) as event:
         event = event.get_event(tag="bigevent", wait=15)
         assert event

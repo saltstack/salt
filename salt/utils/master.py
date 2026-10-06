@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 def get_running_jobs(opts):
     """
-    Return the running jobs on this minion
+    Return the running jobs on this master
     """
 
     ret = []
@@ -53,6 +53,47 @@ def get_running_jobs(opts):
     return ret
 
 
+def clean_proc_dir(opts):
+    """
+    Clean out old tracked jobs running on the master
+    Generally, anything tracking a job should remove the job
+    once the job has finished. However, this will remove any
+    jobs that for some reason were not properly removed
+    when finished or errored.
+    """
+    proc_dir = os.path.join(opts["cachedir"], "proc")
+    for fn_ in os.listdir(proc_dir):
+        proc_file = os.path.join(proc_dir, fn_)
+        try:
+            data = _read_proc_file(proc_file, opts)
+        except OSError:
+            # proc files may be removed at any time during this process by
+            # the master process that is executing the JID in question, so
+            # we must ignore ENOENT during this process
+            log.trace("%s removed during processing by master process", proc_file)
+            continue
+        if not data:
+            try:
+                log.warning(
+                    "Found proc file %s without proper data. Removing from tracked proc files.",
+                    proc_file,
+                )
+                os.remove(proc_file)
+            except OSError as err:
+                log.error("Unable to remove proc file: %s.", err)
+            continue
+        if not _check_cmdline(data):
+            try:
+                log.warning(
+                    "PID %s not owned by salt or no longer running. Removing tracked proc file %s",
+                    data["pid"],
+                    proc_file,
+                )
+                os.remove(proc_file)
+            except OSError as err:
+                log.error("Unable to remove proc file: %s.", err)
+
+
 def _read_proc_file(path, opts):
     """
     Return a dict of JID metadata, or None
@@ -70,7 +111,7 @@ def _read_proc_file(path, opts):
                 log.debug("Unable to remove proc file %s.", path)
             return None
     if not isinstance(data, dict):
-        # Invalid serial object
+        # Invalid payload object
         return None
     if not salt.utils.process.os_is_running(data["pid"]):
         # The process is no longer running, clear out the file and
@@ -198,11 +239,11 @@ class MasterPillarUtil:
             )
             return mine_data
         if not minion_ids:
-            minion_ids = self.cache.list("minions")
+            minion_ids = self.cache.list("grains")
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch(f"minions/{minion_id}", "mine")
+            mdata = self.cache.fetch("mine", minion_id)
             if isinstance(mdata, dict):
                 mine_data[minion_id] = mdata
         return mine_data
@@ -216,23 +257,24 @@ class MasterPillarUtil:
             log.debug("Skipping cached data because minion_data_cache is not enabled.")
             return grains, pillars
         if not minion_ids:
-            minion_ids = self.cache.list("minions")
+            minion_ids = self.cache.list("grains")
         for minion_id in minion_ids:
             if not salt.utils.verify.valid_id(self.opts, minion_id):
                 continue
-            mdata = self.cache.fetch(f"minions/{minion_id}", "data")
-            if not isinstance(mdata, dict):
-                log.warning(
-                    "cache.fetch should always return a dict. ReturnedType: %s,"
-                    " MinionId: %s",
-                    type(mdata).__name__,
-                    minion_id,
-                )
-                continue
-            if "grains" in mdata:
-                grains[minion_id] = mdata["grains"]
-            if "pillar" in mdata:
-                pillars[minion_id] = mdata["pillar"]
+            for bank in ["grains", "pillar"]:
+                mdata = self.cache.fetch(bank, minion_id)
+                if not isinstance(mdata, dict):
+                    log.warning(
+                        "cache.fetch should always return a dict. ReturnedType: %s,"
+                        " MinionId: %s",
+                        type(mdata).__name__,
+                        minion_id,
+                    )
+                    continue
+                if bank == "grains":
+                    grains[minion_id] = mdata
+                if bank == "pillar":
+                    pillars[minion_id] = mdata
         return grains, pillars
 
     def _get_live_minion_grains(self, minion_ids):
@@ -504,10 +546,12 @@ class MasterPillarUtil:
         else:
             # Unless both clear_pillar and clear_grains are True, we need
             # to read in the pillar/grains data since they are both stored
-            # in the same file, 'data.p'
+            # in the the minion data cache
             grains, pillars = self._get_cached_minion_data(*minion_ids)
         try:
-            c_minions = self.cache.list("minions")
+            # we operate under the assumption that grains should be sufficient
+            # for minion list
+            c_minions = self.cache.list("grains")
             for minion_id in minion_ids:
                 if not salt.utils.verify.valid_id(self.opts, minion_id):
                     continue
@@ -515,29 +559,25 @@ class MasterPillarUtil:
                 if minion_id not in c_minions:
                     # Cache bank for this minion does not exist. Nothing to do.
                     continue
-                bank = f"minions/{minion_id}"
+
                 minion_pillar = pillars.pop(minion_id, False)
                 minion_grains = grains.pop(minion_id, False)
-                if (
-                    (clear_pillar and clear_grains)
-                    or (clear_pillar and not minion_grains)
-                    or (clear_grains and not minion_pillar)
-                ):
-                    # Not saving pillar or grains, so just delete the cache file
-                    self.cache.flush(bank, "data")
-                elif clear_pillar and minion_grains:
-                    self.cache.store(bank, "data", {"grains": minion_grains})
-                elif clear_grains and minion_pillar:
-                    self.cache.store(bank, "data", {"pillar": minion_pillar})
+
+                if clear_pillar:
+                    self.cache.flush("pillar", minion_id)
+
+                if clear_grains:
+                    self.cache.flush("grains", minion_id)
+
                 if clear_mine:
                     # Delete the whole mine file
-                    self.cache.flush(bank, "mine")
+                    self.cache.flush("mine", minion_id)
                 elif clear_mine_func is not None:
                     # Delete a specific function from the mine file
-                    mine_data = self.cache.fetch(bank, "mine")
+                    mine_data = self.cache.fetch("mine", minion_id)
                     if isinstance(mine_data, dict):
                         if mine_data.pop(clear_mine_func, False):
-                            self.cache.store(bank, "mine", mine_data)
+                            self.cache.store("mine", minion_id, mine_data)
         except OSError:
             return True
         return True

@@ -63,6 +63,10 @@
 #master_failback_interval: 0
 
 # Set whether the minion should connect to the master via IPv6:
+# When set to True, Salt also uses the IPv6 loopback address (::1) for
+# internal IPC connections instead of 127.0.0.1. On Windows, this is
+# required because Windows does not permit binding an AF_INET6 socket to
+# an IPv4 address.
 #ipv6: False
 
 # Set the number of seconds to wait before attempting to resolve
@@ -482,6 +486,18 @@
 #  - cmdmod
 #  - test
 #  - config
+
+# The state-loader counterpart to whitelist_modules.  If set, only state
+# modules whose name is in this list will be loadable, and an SLS that
+# references any other state module will fail compile with
+# "State '<mod>.<fun>' was not found in SLS ...".  Unset (the default)
+# means every discoverable state module is available.  Case-sensitive
+# module-name (not function-name) allowlist.
+#whitelist_state_modules:
+#  - test
+#  - file
+#  - pkg
+#  - service
 
 # Modules can be loaded from arbitrary paths. This enables the easy deployment
 # of third party modules. Modules for returners and minions can be loaded.

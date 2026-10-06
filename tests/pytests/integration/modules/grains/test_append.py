@@ -106,7 +106,7 @@ def test_grains_append_val_is_list(salt_call_cli, append_grain):
     assert ret.data == {append_grain.key: [append_grain.value, second_grain]}
 
 
-@pytest.mark.timeout_unless_on_windows(240)
+@pytest.mark.timeout_unless_on_windows(300)
 def test_grains_remove_add(
     salt_call_cli, append_grain, wait_for_pillar_refresh_complete
 ):

@@ -51,10 +51,10 @@ def matches(logging_master):
         f"*|PID:{logging_master.process_pid}|*",
         "*|MWorker-*|*",
         "*|Maintenance|*",
-        "*|ReqServer|*",
+        "*|RequestServer|*",
         "*|PubServerChannel._publish_daemon|*",
         "*|MWorkerQueue|*",
-        "*|FileServerUpdate|*",
+        "*|FileserverUpdate|*",
     ]
 
 

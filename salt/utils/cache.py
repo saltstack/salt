@@ -20,7 +20,7 @@ import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.msgpack
 import salt.utils.path
-import salt.version
+import salt.utils.versions
 from salt.utils.zeromq import zmq
 
 log = logging.getLogger(__name__)
@@ -146,7 +146,7 @@ class CacheDisk(CacheDict):
         """
         Read in from disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK or not os.path.exists(self._path):
+        if not salt.utils.versions.reqs.msgpack or not os.path.exists(self._path):
             return
 
         if 0 == os.path.getsize(self._path):
@@ -182,7 +182,7 @@ class CacheDisk(CacheDict):
         """
         Write out to disk
         """
-        if not salt.utils.msgpack.HAS_MSGPACK:
+        if not salt.utils.versions.reqs.msgpack:
             return
         # TODO Add check into preflight to ensure dir exists
         # TODO Dir hashing?
@@ -273,10 +273,10 @@ class CacheRegex:
             self.clear()
             self.timestamp = time.time()
         else:
-            paterns = list(self.cache.values())
-            paterns.sort()
+            patterns = list(self.cache.values())
+            patterns.sort(key=lambda x: x[0])
             for idx in range(self.clear_size):
-                del self.cache[paterns[idx][2]]
+                del self.cache[patterns[idx][2]]
 
     def get(self, pattern):
         """

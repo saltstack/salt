@@ -78,10 +78,11 @@ boto3==1.43.25
 botocore==1.43.25
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/static/ci/common.txt
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.5.20
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -130,17 +131,12 @@ clustershell==1.9.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-contextvars==2.4
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
-cryptography==47.0.0
+cryptography==48.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -213,6 +209,11 @@ gitpython==3.1.50
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
+googleapis-common-protos==1.75.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
 h11==0.16.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -239,12 +240,6 @@ idna==3.18
     #   httpx
     #   requests
     #   yarl
-immutables==0.21
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
-    #   contextvars
 importlib-metadata==9.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -320,7 +315,7 @@ junit-xml==1.9
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-junos-eznc==2.7.6
+junos-eznc==2.7.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
@@ -364,7 +359,7 @@ markdown-it-py==4.2.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   rich
-markupsafe==2.1.5
+markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -410,14 +405,57 @@ multidict==6.7.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-ncclient==0.7.0
+ncclient==0.7.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/static/ci/common.txt
     #   junos-eznc
 oauthlib==3.3.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   requests-oauthlib
+opentelemetry-api==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
+opentelemetry-exporter-otlp-proto-common==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
+opentelemetry-exporter-prometheus==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
+opentelemetry-proto==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   opentelemetry-exporter-otlp-proto-common
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-sdk==1.42.1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-exporter-prometheus
+opentelemetry-semantic-conventions==0.63b1
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   opentelemetry-sdk
 oscrypto==1.3.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -432,7 +470,6 @@ paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -455,12 +492,23 @@ portend==3.1.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   cherrypy
+prometheus-client==0.25.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   opentelemetry-exporter-prometheus
 propcache==0.3.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   aiohttp
     #   yarl
+protobuf==6.33.6
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
 psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -483,6 +531,7 @@ pycryptodomex==3.23.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/crypto.txt
     #   -r requirements/static/ci/common.txt
 pygit2==1.19.2
     # via
@@ -518,7 +567,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.1.0
+pyopenssl==26.2.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -586,17 +635,13 @@ pyyaml==6.0.3
     #   kubernetes
     #   responses
     #   yamllint
-    #   yamlloader
+    #   yamlordereddictloader
 pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/zeromq.txt
-redis==3.5.3
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   redis-py-cluster
-redis-py-cluster==2.1.3
+redis==7.4.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/linux.txt
@@ -615,12 +660,12 @@ requests==2.33.1
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-otlp-proto-http
     #   python-consul
     #   requests-oauthlib
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -633,6 +678,10 @@ responses==0.25.8
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   moto
+rfc3339-validator==0.1.4
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/static/ci/common.txt
 rfc3987==1.3.8
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -647,12 +696,6 @@ rpds-py==0.30.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -682,7 +725,7 @@ shellingham==1.5.4
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   typer
-six==1.17.0
+six==1.16.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -692,6 +735,7 @@ six==1.17.0
     #   kubernetes
     #   python-consul
     #   python-dateutil
+    #   rfc3339-validator
     #   transitions
     #   vcert
 slack-bolt==1.18.0
@@ -730,7 +774,9 @@ textfsm==2.1.0
     #   -r requirements/static/ci/common.txt
 timelib==0.3.0
     # via
+    #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
 toml==0.10.2
     # via
@@ -748,6 +794,11 @@ transitions==0.9.3
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   junos-eznc
+truststore==0.10.4
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
 twilio==9.10.9
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -768,6 +819,10 @@ typing-extensions==4.14.1
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   aiohttp
     #   aiosignal
+    #   opentelemetry-api
+    #   opentelemetry-exporter-otlp-proto-http
+    #   opentelemetry-sdk
+    #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   referencing
 urllib3==2.7.0
@@ -791,11 +846,6 @@ virtualenv==21.4.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -822,13 +872,19 @@ xmltodict==1.0.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   moto
+xxhash==3.7.0
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
 yamllint==1.32.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/linux.txt
-yamlloader==1.6.0
+yamlordereddictloader==0.4.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/static/ci/common.txt
     #   junos-eznc
 yarl==1.20.1
     # via

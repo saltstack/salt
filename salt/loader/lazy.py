@@ -29,10 +29,13 @@ import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.files
 import salt.utils.lazy
+
+# Lazy import: salt.utils.optsdict imported only when creating loaders
 import salt.utils.platform
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.utils.decorators import Depends
+from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 try:
     # Try the stdlib C extension first
@@ -180,6 +183,43 @@ class LoadedFunc:
         return f"<{self.__class__.__name__} name={self.name!r}>"
 
 
+class LoadedCoro(LoadedFunc):
+    """
+    Coroutine functions loaded by LazyLoader instances using subscript notation
+    'a[k]' will be wrapped with LoadedCoro.
+
+      - Makes sure functions are called with the correct loader's context.
+      - Provides access to a wrapped func's __global__ attribute
+
+    :param func str: The function name to wrap
+    :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
+    """
+
+    async def __call__(
+        self, *args, **kwargs
+    ):  # pylint: disable=invalid-overridden-method
+        run_func = self.func
+        mod = sys.modules[run_func.__module__]
+        # All modules we've imported should have __opts__ defined. There are
+        # cases in the test suite where mod ends up being something other than
+        # a module we've loaded.
+        set_test = False
+        if hasattr(mod, "__opts__"):
+            if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
+                if "test" in self.loader.opts:
+                    if self.loader.opts["test"] is False:
+                        mod.__opts__["test"] = False
+                    else:
+                        mod.__opts__["test"] = True
+                    set_test = True
+        if self.loader.inject_globals:
+            run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        ret = await self.loader.run(run_func, *args, **kwargs)
+        if set_test:
+            self.loader.opts["test"] = mod.__opts__["test"]
+        return ret
+
+
 class LoadedMod:
     """
     This class is used as a proxy to a loaded module
@@ -265,6 +305,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         In pack, if any of the values are None they will be replaced with an
         empty context-specific dict
         """
+        import salt.utils.optsdict
 
         self.parent_loader = None
         self.inject_globals = {}
@@ -274,14 +315,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[i] = self.pack[i].value()
         if opts is None:
             opts = {}
-        opts = copy.deepcopy(opts)
+        # Use OptsDict for copy-on-write instead of deep copy
+        opts = salt.utils.optsdict.safe_opts_copy(opts, name=f"loader:{tag}")
         for i in ["pillar", "grains"]:
             if i in opts and isinstance(
                 opts[i], salt.loader.context.NamedLoaderContext
             ):
                 opts[i] = opts[i].value()
+        if "optimization_order" not in opts:
+            opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
-        self.context_dict = salt.utils.context.ContextDict(threadsafe=threadsafety)
         self.opts = self.__prep_mod_opts(opts)
         self.pack_self = pack_self
 
@@ -297,12 +340,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         if "__context__" not in self.pack:
             self.pack["__context__"] = None
 
-        for k, v in self.pack.items():
+        for k, v in list(self.pack.items()):
             if v is None:  # if the value of a pack is None, lets make an empty dict
-                self.context_dict.setdefault(k, {})
-                self.pack[k] = salt.utils.context.NamespacedDictWrapper(
-                    self.context_dict, k
-                )
+                self.pack[k] = {}
 
         self.whitelist = whitelist
         self.virtual_enable = virtual_enable
@@ -337,7 +377,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_map[suffix] = (suffix, mode, kind)
             self.suffix_order.append(suffix)
 
-        self._lock = threading.RLock()
+        self._lock = self._get_lock()
+
         with self._lock:
             self._refresh_file_mapping()
 
@@ -348,6 +389,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         _generate_module(f"{self.loaded_base_name}.ext")
         _generate_module(f"{self.loaded_base_name}.ext.{tag}")
 
+    def _get_lock(self):
+        return threading.RLock()
+
     def __enter__(self):
         return self
 
@@ -356,20 +400,45 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def destroy(self):
         """
-        Destroy the loader and clean up modules
+        Destroy the loader.
+
+        This is intentionally a no-op. The earlier 3006.x leak-fix
+        (``33ad623aa4a``) added internal-state clearing here -- calling
+        ``clean_modules()`` (sys.modules eviction), ``self.pack.clear()``,
+        ``self._dict.clear()``, ``self.loaded_modules.clear()`` and
+        ``self.missing_modules.clear()`` -- so callers like
+        ``LocalClient.destroy()`` / ``MasterMinion.destroy()`` /
+        ``RunnerClient.__exit__`` would proactively free LazyLoader memory.
+
+        After dropping ``clean_modules()`` (commit ``2d119bba048``) the
+        rest_tornado functional suite still timed out (CI 28333916927 had
+        the same 86 failures as the prior round). Round-6 investigation
+        narrowed the remaining cost to the LazyLoader state-clearing
+        itself: ``LocalClient.__del__`` runs synchronously during Python
+        GC inside the tornado io_loop, and the cascading destroy() chain
+        (LocalClient -> functions/utils/returners LazyLoaders ->
+        ``pack.clear`` / ``_dict.clear`` / ``loaded_modules.clear``) stalls
+        the loop for several seconds per request -- exactly the symptom
+        reported in CI (~6-7 s per ``http_client.fetch`` vs ~30 ms on the
+        3007.x baseline).
+
+        Reverting ``destroy()`` to a no-op restores the 3007.x behavior
+        (LazyLoader objects are reclaimed by Python's normal GC when their
+        owner dies) without re-introducing the original ``clean_modules``
+        sys.modules thrash. The ``__enter__``/``__exit__`` shape is kept so
+        the per-request ``with RunnerClient(...) as runner:`` / ``with
+        WheelClient(...) as wheel:`` blocks added in
+        ``salt/netapi/__init__.py`` and ``salt/daemons/masterapi.py``
+        continue to compile and run without raising AttributeError --
+        their ``__exit__`` paths just stop interfering with the loader.
+
+        ``clean_modules()`` remains a public method for the one caller
+        that still needs sys.modules eviction (``loader.grains`` after a
+        grains refresh). Long-term cleanup of LazyLoader memory in
+        long-running daemons should be handled at the daemon scope
+        (Maintenance / MWorker recycle), not on the per-request
+        ``LocalClient.__del__`` hot path.
         """
-        self.clean_modules()
-        if hasattr(self, "context_dict") and self.context_dict is not None:
-            if hasattr(self.context_dict, "destroy"):
-                self.context_dict.destroy()
-        if hasattr(self, "pack") and isinstance(self.pack, dict):
-            self.pack.clear()
-        if hasattr(self, "_dict"):
-            self._dict.clear()
-        if hasattr(self, "loaded_modules"):
-            self.loaded_modules.clear()
-        if hasattr(self, "missing_modules"):
-            self.missing_modules.clear()
 
     def clean_modules(self):
         """
@@ -447,7 +516,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
-        super().__getitem__(item)  # try to get the item from the dictionary
+        _ = super().__getitem__(item)  # try to get the item from the dictionary
+        if not isinstance(_, LoadedFunc) and inspect.iscoroutinefunction(_):
+            return LoadedCoro(item, self)
         return LoadedFunc(item, self)
 
     def __getattr__(self, mod_name):
@@ -463,6 +534,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return object.__getattr__(self, mod_name)  # pylint: disable=no-member
         except AttributeError:
             pass
+
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``__getitem__`` reaches ``_load`` which enforces ``self.whitelist``,
+        # but attribute-style access -- used by Jinja's ``salt.cmd.run(...)``
+        # syntax via :class:`salt.utils.templates.AliasedLoader` / the
+        # ``LoadedMod`` wrapper -- bypasses ``_load`` and returns a
+        # ``LoadedMod`` whose per-function ``getattr`` never touches the
+        # gate.  Reject non-whitelisted modules here with ``AttributeError``
+        # so ``hasattr(salt, 'cmd')`` / Jinja's ``undefined`` fallthrough
+        # behave correctly.
+        if self.whitelist and mod_name not in self.whitelist:
+            raise AttributeError(mod_name)
 
         # otherwise we assume its jinja template access
         if mod_name not in self.loaded_modules and not self.loaded:
@@ -685,25 +768,34 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             grains = opts.get("grains", {})
             if isinstance(grains, salt.loader.context.NamedLoaderContext):
                 grains = grains.value()
-            self.context_dict["grains"] = grains
-            self.pack["__grains__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "grains"
-            )
+            self.pack["__grains__"] = grains
 
         if "__pillar__" not in self.pack:
             pillar = opts.get("pillar", {})
             if isinstance(pillar, salt.loader.context.NamedLoaderContext):
                 pillar = pillar.value()
-            self.context_dict["pillar"] = pillar
-            self.pack["__pillar__"] = salt.utils.context.NamespacedDictWrapper(
-                self.context_dict, "pillar"
-            )
+            self.pack["__pillar__"] = pillar
 
-        mod_opts = {}
-        for key, val in list(opts.items()):
-            if key == "logger":
-                continue
-            mod_opts[key] = val
+        # Preserve OptsDict type if present, otherwise create new dict
+        if isinstance(opts, salt.utils.optsdict.OptsDict):
+            # For OptsDict, we can remove logger key directly if needed
+            if "logger" in opts:
+                # Create child without logger
+                mod_opts = salt.utils.optsdict.OptsDict.from_parent(
+                    opts, name=f"prep:{self.tag}"
+                )
+                # We can't delete from parent, so we'll just keep it
+                # The logger key won't hurt anything
+                mod_opts = opts  # Keep the OptsDict as-is
+            else:
+                mod_opts = opts
+        else:
+            # Original behavior for regular dict
+            mod_opts = {}
+            for key, val in list(opts.items()):
+                if key == "logger":
+                    continue
+                mod_opts[key] = val
 
         if "__opts__" not in self.pack:
             self.pack["__opts__"] = mod_opts
@@ -785,9 +877,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # but the log will get spammed with "Bad Magic Number" messages that
         # can be very misleading if the user is debugging another problem.
         try:
-            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
-                "-"
-            )
+            implementation_tag, cache_tag_ver = sys.implementation.cache_tag.split("-")
             if cache_tag_ver not in fpath and implementation_tag in fpath:
                 log.trace(
                     "Trying to load %s on %s, returning False.",
@@ -862,14 +952,17 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     spec = file_finder.find_spec(mod_namespace)
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = spec.loader.load_module()
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    if mod_namespace in sys.modules:
+                        mod = sys.modules[mod_namespace]
+                        _update_module_attrs(mod, spec)
+                    else:
+                        mod = importlib.util.module_from_spec(spec)
+                    # We need to execute the module in this loader's context in case
+                    # we're reloading an already initialized module with NamedLoaderContext instances.
+                    # Accessing one of the Salt-specific dunders during initialization would throw a NameError usually,
+                    # but during reload without an active loader, NamedLoaderContexts resolve to None, which unexpectedly
+                    # raises a TypeError on access instead of a NameError.
+                    self.run(spec.loader.exec_module, mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
                     # reload all submodules if necessary
@@ -883,14 +976,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     )
                     if spec is None:
                         raise ImportError()
-                    # TODO: Get rid of load_module in favor of
-                    # exec_module below. load_module is deprecated, but
-                    # loading using exec_module has been causing odd things
-                    # with the magic dunders we pack into the loaded
-                    # modules, most notably with salt-ssh's __opts__.
-                    mod = self.run(spec.loader.load_module)
-                    # mod = importlib.util.module_from_spec(spec)
-                    # spec.loader.exec_module(mod)
+                    if mod_namespace in sys.modules:
+                        mod = sys.modules[mod_namespace]
+                        _update_module_attrs(mod, spec)
+                    else:
+                        mod = importlib.util.module_from_spec(spec)
+                    self.run(spec.loader.exec_module, mod)
                     # pylint: enable=no-member
                     sys.modules[mod_namespace] = mod
         except OSError:
@@ -959,13 +1050,24 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             if not isinstance(mod.__opts__, salt.loader.context.NamedLoaderContext):
                 if not hasattr(mod, "__orig_opts__"):
                     mod.__orig_opts__ = copy.deepcopy(mod.__opts__)
-                mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
-                mod.__opts__.update(self.opts)
+                # Use OptsDict for copy-on-write instead of deep copy
+                # Create child OptsDict with loader's opts as parent
+                mod.__opts__ = salt.utils.optsdict.safe_opts_copy(
+                    self.opts, name=f"module:{name}"
+                )
+                # Apply module-specific opts on top
+                if mod.__orig_opts__:
+                    mod.__opts__.update(mod.__orig_opts__)
         else:
             if not hasattr(mod, "__orig_opts__"):
                 mod.__orig_opts__ = {}
-            mod.__opts__ = copy.deepcopy(mod.__orig_opts__)
-            mod.__opts__.update(self.opts)
+            # Use OptsDict for copy-on-write instead of deep copy
+            mod.__opts__ = salt.utils.optsdict.safe_opts_copy(
+                self.opts, name=f"module:{name}"
+            )
+            # Apply module-specific opts on top
+            if mod.__orig_opts__:
+                mod.__opts__.update(mod.__orig_opts__)
 
         # pack whatever other globals we were asked to
         for p_name, p_value in self.pack.items():
@@ -1125,6 +1227,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 # functions defined(or namespaced) on the loaded module.
                 continue
 
+            # When the module is deprecated wrap functions in deprecation
+            # warning.
+            if hasattr(mod, "__deprecated__"):
+                func = extension_deprecation_message(*mod.__deprecated__)(func)
+
             # Let's get the function name.
             # If the module has the __func_alias__ attribute, it must be a
             # dictionary mapping in the form of(key -> value):
@@ -1220,7 +1327,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             for name in self.file_mapping:
                 if name in self.loaded_files or name in self.missing_modules:
                     continue
-                self._load_module(name)
+                try:
+                    self._load_module(name)
+                except FileNotFoundError:
+                    log.warning("Module file not found %s", name)
+                    self.missing_modules[name] = f"Module file not found {name}"
 
             self.loaded = True
 
@@ -1432,3 +1543,31 @@ def global_injector_decorator(inject_globals):
         return wrapper
 
     return inner_decorator
+
+
+def _update_module_attrs(mod, spec):
+    """
+    The Salt loader used to rely on the deprecated load_module method, which
+    ensured module instances in sys.modules were updated instead of replaced when loading
+    a module repeatedly. After the switch to exec_module, we need to do it ourselves since
+    this assumption is part of Salt's code (see issue #68281).
+
+    This function does the same as importlib's _init_module_attrs
+    with override=True, which is what load_module relied on.
+    """
+    upd = {
+        "__name__": spec.name,
+        "__package__": spec.parent,
+        "__spec__": spec,
+        "__loader__": spec.loader,
+    }
+    if spec.submodule_search_locations is not None:
+        upd["__path__"] = spec.submodule_search_locations
+    if spec.has_location:
+        upd["__file__"] = spec.origin
+        upd["__cached__"] = spec.cached
+    for param, override in upd.items():
+        try:
+            setattr(mod, param, override)
+        except AttributeError:
+            pass

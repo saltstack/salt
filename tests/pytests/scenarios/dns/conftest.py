@@ -54,6 +54,26 @@ def master(request, salt_factories):
         "transport": request.config.getoption("--transport"),
     }
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "interface": "0.0.0.0",
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
@@ -87,6 +107,26 @@ def minion(master, master_alive_interval):
     }
     port = master.config["ret_port"]
     config_overrides = {
+        "worker_pools_enabled": True,
+        "worker_pools": {
+            "fast": {
+                "worker_count": 2,
+                "commands": [
+                    "test.ping",
+                    "test.echo",
+                    "test.fib",
+                    "grains.items",
+                    "sys.doc",
+                    "pillar.items",
+                    "runner.test.arg",
+                    "auth",
+                ],
+            },
+            "general": {
+                "worker_count": 3,
+                "commands": ["*"],
+            },
+        },
         "master": f"master.local:{port}",
         "publish_port": master.config["publish_port"],
         "master_alive_interval": master_alive_interval,

@@ -312,6 +312,28 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
+def _wire_salt():
+    """
+    Return the whitelist-filtered execution-module loader for SLS-directed
+    dispatch (``module.run`` / ``module.function``).
+
+    Under the two-loader model implemented by :func:`salt.loader.minion_mods`
+    and :func:`salt.loader.states`, ``__salt__`` for a state module is the
+    unfiltered inner exec-module loader so trusted shipped code (e.g.
+    ``file.managed``) can compose freely.  ``salt.states.module`` however
+    exists to invoke an arbitrary execution module whose name is supplied by
+    the SLS author, which would otherwise be an escape hatch around
+    ``whitelist_modules``.  When the state loader was built with the
+    two-loader model it packs the wire-filtered loader as ``__wire_salt__``;
+    fall back to ``__salt__`` when the pack isn't present (single-loader /
+    unit-test contexts).
+    """
+    try:
+        return __wire_salt__  # noqa: F821  (packed by salt.loader.states)
+    except NameError:
+        return __salt__
+
+
 def wait(name, **kwargs):
     """
     Run a single module function only if the watch statement calls it
@@ -408,12 +430,16 @@ def _run(**kwargs):
         "result": None,
     }
 
+    # Route SLS-supplied dispatch through the wire-filtered loader so
+    # ``whitelist_modules`` gates ``module.run: - <mod>.<fun>`` even though
+    # the surrounding state module has an unfiltered ``__salt__``.
+    wire_salt = _wire_salt()
     functions = [func for func in kwargs if "." in func]
     missing = []
     tests = []
     for func in functions:
         func = func.split(":")[0]
-        if func not in __salt__:
+        if func not in wire_salt:
             missing.append(func)
         elif __opts__["test"]:
             tests.append(func)
@@ -497,9 +523,17 @@ def _call_function(name, returner=None, func_args=None, func_kwargs=None):
     if func_kwargs is None:
         func_kwargs = {}
 
-    mret = salt.utils.functools.call_function(__salt__[name], *func_args, **func_kwargs)
+    wire_salt = _wire_salt()
+    if name not in wire_salt:
+        raise SaltInvocationError(
+            "Module function {} is not available (not on "
+            "``whitelist_modules``)".format(name)
+        )
+    mret = salt.utils.functools.call_function(
+        wire_salt[name], *func_args, **func_kwargs
+    )
     if returner is not None:
-        returners = salt.loader.returners(__opts__, __salt__)
+        returners = salt.loader.returners(__opts__, wire_salt)
         if returner in returners:
             returners[returner](
                 {
@@ -529,7 +563,8 @@ def _legacy_run(name, **kwargs):
         Pass any arguments needed to execute the function
     """
     ret = {"name": name, "changes": {}, "comment": "", "result": None}
-    if name not in __salt__:
+    wire_salt = _wire_salt()
+    if name not in wire_salt:
         ret["comment"] = f"Module function {name} is not available"
         ret["result"] = False
         return ret
@@ -538,7 +573,7 @@ def _legacy_run(name, **kwargs):
         ret["comment"] = f"Module function {name} is set to execute"
         return ret
 
-    aspec = salt.utils.args.get_function_argspec(__salt__[name])
+    aspec = salt.utils.args.get_function_argspec(wire_salt[name])
     args = []
     defaults = {}
 
@@ -634,9 +669,9 @@ def _legacy_run(name, **kwargs):
 
     try:
         if aspec.keywords:
-            mret = __salt__[name](*args, **nkwargs)
+            mret = wire_salt[name](*args, **nkwargs)
         else:
-            mret = __salt__[name](*args)
+            mret = wire_salt[name](*args)
     except Exception as e:  # pylint: disable=broad-except
         ret["comment"] = "Module function {} threw an exception. Exception: {}".format(
             name, e
@@ -654,7 +689,7 @@ def _legacy_run(name, **kwargs):
             "fun": name,
             "jid": salt.utils.jid.gen_jid(__opts__),
         }
-        returners = salt.loader.returners(__opts__, __salt__)
+        returners = salt.loader.returners(__opts__, wire_salt)
         if kwargs["returner"] in returners:
             returners[kwargs["returner"]](ret_ret)
     ret["comment"] = f"Module function {name} executed"

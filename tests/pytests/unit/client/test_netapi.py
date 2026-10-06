@@ -1,7 +1,7 @@
 import logging
 
 import salt.client.netapi
-from tests.support.mock import Mock, patch
+from tests.support.mock import AsyncMock, Mock, patch
 
 
 def test_run_log(caplog, master_opts):
@@ -11,6 +11,7 @@ def test_run_log(caplog, master_opts):
     master_opts["rest_cherrypy"] = {"port": 8000}
     mock_process = Mock()
     mock_process.add_process.return_value = True
+    mock_process.return_value.run = AsyncMock()
     patch_process = patch.object(salt.utils.process, "ProcessManager", mock_process)
     with caplog.at_level(logging.INFO):
         with patch_process:

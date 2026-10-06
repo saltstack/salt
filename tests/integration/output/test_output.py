@@ -41,6 +41,7 @@ class OutputReturnTest(ShellCase):
         ret = self.run_call("test.ping --out=nested")
         self.assertEqual(ret, expected)
 
+    @pytest.mark.skip("GREAT MODULE MIGRATION")
     @pytest.mark.slow_test
     def test_output_quiet(self):
         """

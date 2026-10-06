@@ -58,12 +58,19 @@ def _mine_function_available(func):
 
 
 def _mine_send(load, opts):
-    eventer = salt.utils.event.MinionEvent(opts, listen=False)
-    event_ret = eventer.fire_event(load, "_minion_mine")
-    # We need to pause here to allow for the decoupled nature of
-    # events time to allow the mine to propagate
-    time.sleep(0.5)
-    return event_ret
+    # Use MinionEvent as a context manager so its subscriber / pusher /
+    # SyncWrapper chain is torn down synchronously.  Prior fire-and-forget
+    # form (``MinionEvent(...); .fire_event(...); return``) left the
+    # temporary event bundle unreferenced and reliant on GC to invoke
+    # ``__del__``; each per-mine-tick invocation leaked one
+    # ``PublishServer`` + ``_TCPPubServerPublisher`` + ``SyncWrapper``
+    # onto the minion event bus (issue #70175's per-job triad).
+    with salt.utils.event.MinionEvent(opts, listen=False) as eventer:
+        event_ret = eventer.fire_event(load, "_minion_mine")
+        # We need to pause here to allow for the decoupled nature of
+        # events time to allow the mine to propagate
+        time.sleep(0.5)
+        return event_ret
 
 
 def _mine_get(load, opts):
@@ -293,7 +300,7 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
 
         .. code-block:: jinja
 
-            {% set minion_ips = salt.saltutil.runner('mine.get',
+            {% set minion_ips = salt['saltutil.runner']('mine.get',
                 tgt='*',
                 fun='network.ip_addrs',
                 tgt_type='glob') %}
@@ -301,9 +308,18 @@ def get(tgt, fun, tgt_type="glob", exclude_minion=False):
     # Load from local minion's cache
     if __opts__["file_client"] == "local":
         ret = {}
-
-        is_target = __salt__[f"match.{tgt_type}"](tgt)
-        if not is_target:
+        _targets = {
+            "glob": __salt__["match.glob"],
+            "pcre": __salt__["match.pcre"],
+            "list": __salt__["match.list"],
+            "grain": __salt__["match.grain"],
+            "grain_pcre": __salt__["match.grain_pcre"],
+            "ipcidr": __salt__["match.ipcidr"],
+            "compound": __salt__["match.compound"],
+            "pillar": __salt__["match.pillar"],
+            "pillar_pcre": __salt__["match.pillar_pcre"],
+        }
+        if not _targets[tgt_type](tgt):
             return ret
 
         data = __salt__["data.get"]("mine_cache")

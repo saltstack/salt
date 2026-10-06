@@ -121,6 +121,7 @@ __grants__ = [
     "SELECT",
     "SET USER",  # MariaDB since 10.5.2
     "SET_USER_ID",
+    "SERVICE_CONNECTION_ADMIN",  # MySQL since 8.0.14
     "SHOW DATABASES",
     "SHOW VIEW",
     "SHUTDOWN",
@@ -1364,7 +1365,7 @@ def db_remove(name, **connection_args):
         log.info("DB '%s' does not exist", name)
         return False
 
-    if name in ("mysql", "information_scheme"):
+    if name in ("mysql", "information_schema"):
         log.info("DB '%s' may not be removed", name)
         return False
 

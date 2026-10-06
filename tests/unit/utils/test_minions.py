@@ -1,3 +1,4 @@
+import salt.config
 import salt.utils.minions
 from tests.support.mock import MagicMock, patch
 from tests.support.unit import TestCase
@@ -70,7 +71,12 @@ class CkMinionsTestCase(TestCase):
     """
 
     def setUp(self):
-        self.ckminions = salt.utils.minions.CkMinions({"minion_data_cache": True})
+        opts = salt.config.master_config(None)
+        opts["minion_data_cache"] = True
+        self.ckminions = salt.utils.minions.CkMinions(opts)
+
+    def tearDown(self):
+        del self.ckminions
 
     def test_spec_check(self):
         # Test spec-only rule
@@ -255,8 +261,8 @@ class CkMinionsTestCase(TestCase):
         self.assertFalse(ret)
 
     @patch(
-        "salt.utils.minions.CkMinions._pki_minions",
-        MagicMock(return_value=["alpha", "beta", "gamma"]),
+        "salt.key.Key.list_keys",
+        MagicMock(return_value={"minions": ["alpha", "beta", "gamma"]}),
     )
     def test_auth_check(self):
         # Test function-only rule

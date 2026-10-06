@@ -28,11 +28,13 @@ import salt.exceptions
 # Solve the Chicken and egg problem where grains need to run before any
 # of the modules are loaded and are generally available for any usage.
 import salt.modules.cmdmod
+import salt.modules.file as file
 import salt.modules.network
 import salt.modules.smbios
 import salt.utils.args
 import salt.utils.dns
 import salt.utils.files
+import salt.utils.locales
 import salt.utils.network
 import salt.utils.path
 import salt.utils.pkg.rpm
@@ -295,7 +297,18 @@ def _linux_gpu_data():
 
     devs = []
     try:
-        lspci_out = __salt__["cmd.run"](f"{lspci} -vmm")
+        # Run lspci directly (not via cmd.run) with a short timeout so a
+        # hung lspci -- e.g. inside a container without a live PCI bus --
+        # cannot leak orphan child processes on every grains refresh.
+        # On timeout subprocess.run kills the child before re-raising.
+        proc = subprocess.run(
+            [lspci, "-vmm"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        lspci_out = proc.stdout
 
         cur_dev = {}
         error = False
@@ -323,6 +336,13 @@ def _linux_gpu_data():
                 "check that you have a valid shell configured and "
                 "permissions to run lspci command"
             )
+    except subprocess.TimeoutExpired:
+        log.warning(
+            "The `lspci` command timed out while collecting GPU grains. "
+            "GPU grains will not be available. Set `enable_gpu_grains: "
+            "False` in the minion config to skip this collection entirely."
+        )
+        return {}
     except OSError:
         pass
 
@@ -460,7 +480,9 @@ def _bsd_cpudata(osdata):
     if osdata["kernel"] == "FreeBSD" and os.path.isfile("/var/run/dmesg.boot"):
         grains["cpu_flags"] = []
         # TODO: at least it needs to be tested for BSD other then FreeBSD
-        with salt.utils.files.fopen("/var/run/dmesg.boot", "r") as _fp:
+        with salt.utils.files.fopen(
+            "/var/run/dmesg.boot", "r", encoding="utf8", errors="ignore"
+        ) as _fp:
             cpu_here = False
             for line in _fp:
                 if line.startswith("CPU: "):
@@ -789,6 +811,9 @@ def _windows_virtual(osdata):
     # Manufacturer: Parallels Software International Inc.
     elif "Parallels" in manufacturer:
         grains["virtual"] = "Parallels"
+    elif "Nutanix" in manufacturer and "AHV" in product_name:
+        grains["virtual"] = "kvm"
+        grains["virtual_subtype"] = "Nutanix AHV"
     # Apache CloudStack
     elif "CloudStack KVM Hypervisor" in product_name:
         grains["virtual"] = "kvm"
@@ -960,6 +985,10 @@ def _virtual(osdata):
                 elif "parallels" in line:
                     grains["virtual"] = "Parallels"
                     break
+                elif "nutanix" in line:
+                    grains["virtual"] = "kvm"
+                    grains["virtual_subtype"] = "Nutanix AHV"
+                    break
                 elif "hyperv" in line:
                     grains["virtual"] = "HyperV"
                     break
@@ -1011,6 +1040,9 @@ def _virtual(osdata):
                 grains["virtual"] = "Parallels"
             elif "Manufacturer: Google" in output:
                 grains["virtual"] = "kvm"
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual"] = "kvm"
+                grains["virtual_subtype"] = "Nutanix AHV"
             # Proxmox KVM
             elif "Vendor: SeaBIOS" in output:
                 grains["virtual"] = "kvm"
@@ -1267,6 +1299,7 @@ def _virtual(osdata):
         grains["virtual"] = "virtual"
 
     # Try to detect if the instance is running on Amazon EC2
+    # or Nutanix AHV
     if grains["virtual"] in ("qemu", "kvm", "xen", "amazon"):
         dmidecode = salt.utils.path.which("dmidecode")
         if dmidecode:
@@ -1285,6 +1318,9 @@ def _virtual(osdata):
                     grains["virtual_subtype"] = f"Amazon EC2 ({product[1]})"
             elif re.match(r".*Version: [^\r\n]+\.amazon.*", output, flags=re.DOTALL):
                 grains["virtual_subtype"] = "Amazon EC2"
+
+            elif "Manufacturer: Nutanix" in output and "Product Name: AHV" in output:
+                grains["virtual_subtype"] = "Nutanix AHV"
 
     for command in failed_commands:
         log.info(
@@ -1790,7 +1826,9 @@ _OS_NAME_MAP = {
     "oracleserv": "OEL",
     "cloudserve": "CloudLinux",
     "cloudlinux": "CloudLinux",
+    "virtuozzo": "Virtuozzo",
     "almalinux": "AlmaLinux",
+    "almalinuxk": "AlmaLinux",
     "pidora": "Fedora",
     "scientific": "ScientificLinux",
     "synology": "Synology",
@@ -1861,7 +1899,9 @@ _OS_FAMILY_MAP = {
     "Scientific": "RedHat",
     "Amazon": "RedHat",
     "CloudLinux": "RedHat",
+    "Virtuozzo": "RedHat",
     "AlmaLinux": "RedHat",
+    "AlmaLinux Kitten": "RedHat",
     "OVS": "RedHat",
     "OEL": "RedHat",
     "XCP": "RedHat",
@@ -1884,6 +1924,10 @@ _OS_FAMILY_MAP = {
     "openSUSE Leap": "Suse",
     "openSUSE Tumbleweed": "Suse",
     "SLES_SAP": "Suse",
+    "alfaLinux": "Suse",
+    "alfaLinux Rise": "Suse",
+    "AlterOS": "RedHat",
+    "RED OS": "RedHat",
     "Arch ARM": "Arch",
     "Manjaro": "Arch",
     "Manjaro ARM": "Arch",
@@ -1918,6 +1962,7 @@ _OS_FAMILY_MAP = {
     "Alinux": "RedHat",
     "Mendel": "Debian",
     "OSMC": "Debian",
+    "openEuler": "RedHat",
 }
 
 
@@ -2217,8 +2262,33 @@ def _os_release_to_grains(os_release):
         or _os_release_quirks_for_osrelease(os_release),
     }
 
+    cpe = os_release.get("CPE_NAME") or _derive_cpe_grain(
+        grains.get("os"), grains.get("osrelease")
+    )
+    if cpe:
+        grains["cpe"] = cpe
+
     # oscodename and osrelease could be empty or None. Remove those.
     return {key: value for key, value in grains.items() if key}
+
+
+def _derive_cpe_grain(os, osrelease):
+    """
+    Derive the 'cpe' grain from the 'os' and 'osrelease' grains.
+
+    Normally, the 'cpe' grain can be extracted from the os_release file, but not all
+    distributions include it. In that case, we attempt to derive the CPE based on other
+    grains. Returns ``None`` if a CPE cannot be derived.
+
+    .. versionadded:: 3009.0
+    """
+    if not osrelease:
+        return None
+    if os == "Debian":
+        return "cpe:/o:debian:debian_linux:" + osrelease
+    elif os == "Ubuntu":
+        return "cpe:/o:canonical:ubuntu_linux:" + osrelease
+    return None
 
 
 def _linux_distribution_data():
@@ -2460,6 +2530,18 @@ def _legacy_linux_distribution_data(grains, os_release, lsb_has_error):
         grains["oscodename"] = oscodename
     if "os" not in grains:
         grains["os"] = _derive_os_grain(grains["osfullname"])
+    if "SUSE_SUPPORT_PRODUCT" in os_release and "SUSE_SUPPORT_PRODUCT_VERSION":
+        # It's a workaround for very specific case of SL Micro 6.2
+        # SL Micro 6.2 is different than prevoius ones and identifies itself
+        # as SLES-16, but transactional. This workaround was made to make the grains
+        # of SL Micro 6.2 aligned with the previous versions.
+        grains["oscodename"] = os_release.get(
+            "SUSE_PRETTY_NAME",
+            f"{os_release['SUSE_SUPPORT_PRODUCT']} {os_release['SUSE_SUPPORT_PRODUCT_VERSION']}",
+        )
+        grains["osrelease"] = os_release["SUSE_SUPPORT_PRODUCT_VERSION"]
+        if os_release["SUSE_SUPPORT_PRODUCT"] == "SUSE Linux Micro":
+            grains["osfullname"] = "SL-Micro"
     # this assigns family names based on the os name
     # family defaults to the os name if not found
     grains["os_family"] = _OS_FAMILY_MAP.get(grains["os"], grains["os"])
@@ -2514,13 +2596,21 @@ def _osrelease_data(os, osfullname, osrelease):
             grains["osrelease_info"],
         )
 
-    if os in ("Debian", "FreeBSD", "OpenBSD", "NetBSD", "Mac", "Raspbian"):
+    if os in (
+        "Debian",
+        "FreeBSD",
+        "OpenBSD",
+        "NetBSD",
+        "Mac",
+        "Raspbian",
+        "AlmaLinux",
+    ):
         os_name = os
     else:
         os_name = osfullname
     grains["osfinger"] = "{}-{}".format(
         os_name,
-        osrelease if os in ("Ubuntu", "Pop") else grains["osrelease_info"][0],
+        osrelease if os in ("Ubuntu", "Pop", "NixOS") else grains["osrelease_info"][0],
     )
 
     return grains
@@ -2952,12 +3042,12 @@ def ip_fqdn():
         if not ret["ipv" + ipv_num]:
             ret[key] = []
         else:
-            start_time = datetime.datetime.utcnow()
+            start_time = datetime.datetime.now(tz=datetime.timezone.utc)
             try:
                 info = socket.getaddrinfo(_fqdn, None, socket_type)
                 ret[key] = list({item[4][0] for item in info})
             except (OSError, UnicodeError):
-                timediff = datetime.datetime.utcnow() - start_time
+                timediff = datetime.datetime.now(tz=datetime.timezone.utc) - start_time
                 if timediff.seconds > 5 and __opts__["__role"] == "master":
                     log.warning(
                         'Unable to find IPv%s record for "%s" causing a %s '
@@ -3218,6 +3308,26 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
+
+    # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid.
+    # This file also exists on Xen Dom0 but contains all-zeros; skip that
+    # sentinel value so the real DMI/smbios UUID is used on Dom0 hosts.
+    if osdata["kernel"] == "Linux" and os.path.exists("/sys/hypervisor/uuid"):
+        try:
+            with salt.utils.files.fopen("/sys/hypervisor/uuid", "rb") as ifile:
+                hypervisor_uuid = salt.utils.stringutils.to_unicode(
+                    ifile.read().strip(), errors="replace"
+                ).lower()
+                # All-zero UUID is the Dom0 sentinel; ignore it.
+                if hypervisor_uuid and hypervisor_uuid.strip("0-"):
+                    grains["uuid"] = hypervisor_uuid
+                    log.debug(
+                        "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
+                        grains["uuid"],
+                    )
+        except OSError as err:
+            log.debug("Unable to read /sys/hypervisor/uuid: %s", err)
+
     if osdata["kernel"] == "Linux" and os.path.exists("/sys/class/dmi/id"):
         # On many Linux distributions basic firmware information is available via sysfs
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
@@ -3232,6 +3342,9 @@ def _hw_data(osdata):
             "serialnumber": "product_serial",
         }
         for key, fw_file in sysfs_firmware_info.items():
+            # Skip UUID if already read from /sys/hypervisor/uuid (Xen PV guests)
+            if key == "uuid" and "uuid" in grains:
+                continue
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
@@ -3262,18 +3375,20 @@ def _hw_data(osdata):
     ):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+        uuid = __salt__["smbios.get"]("system-uuid")
+        if uuid is not None:
+            uuid = uuid.lower()
+        else:
+            uuid = grains.get("uuid")
         grains = {
             "biosversion": __salt__["smbios.get"]("bios-version"),
             "biosvendor": __salt__["smbios.get"]("bios-vendor"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
-            "uuid": __salt__["smbios.get"]("system-uuid"),
+            "uuid": uuid,
         }
         grains = {key: val for key, val in grains.items() if val is not None}
-        uuid = __salt__["smbios.get"]("system-uuid")
-        if uuid is not None:
-            grains["uuid"] = uuid.lower()
         for serial in (
             "system-serial-number",
             "chassis-serial-number",
@@ -3600,3 +3715,13 @@ def kernelparams():
             log.debug("Failed to read /proc/cmdline: %s", exc)
 
         return grains
+
+
+def fibre_channel_host():
+    """
+    Determine whether the minion is a fibre channel host
+    """
+    grains = {"fibre_channel_host": False}
+    if file.directory_exists("/sys/class/fc_host"):
+        grains["fibre_channel_host"] = True
+    return grains

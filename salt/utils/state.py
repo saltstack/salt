@@ -4,7 +4,6 @@ Utility functions for state functions
 .. versionadded:: 2018.3.0
 """
 
-import copy
 import errno
 import logging
 import os
@@ -12,6 +11,7 @@ import os
 import salt.payload
 import salt.state
 import salt.utils.files
+import salt.utils.optsdict
 import salt.utils.process
 from salt.exceptions import CommandExecutionError
 
@@ -168,28 +168,20 @@ def check_prior_running_states(opts, jid, active_jobs):
     active_jobs = list(active_jobs)
 
     # Check for queued jobs in BOTH state_queue and job_queue
-    # Also check for 'running_' files to close the "Invisible Gap"
     for queue_dir in (state_queue_dir(opts), job_queue_dir(opts)):
         if not os.path.exists(queue_dir):
             continue
 
         try:
             for fn in os.listdir(queue_dir):
-                # We check for both 'queued_' and 'running_'
-                # 'running_' files are those that have been popped from the queue
-                # but haven't yet written their PID to the proc directory.
-                if (
-                    fn.startswith("queued_") or fn.startswith("running_")
-                ) and fn.endswith(".p"):
-                    # fn is <prefix>_<timestamp>_<jid>.p
-                    parts = fn[:-2].split("_")
+                if fn.startswith("queued_") and fn.endswith(".p"):
+                    # fn is queued_<timestamp>_<jid>.p
+                    parts = fn.split("_")
                     if len(parts) >= 3:
                         # The JID is the third part
                         job_jid = parts[2]
-                        # If the JID itself contains underscores (uncommon but possible),
-                        # it might be split further. Re-join just in case.
-                        if len(parts) > 3:
-                            job_jid = "_".join(parts[2:])
+                        if job_jid.endswith(".p"):
+                            job_jid = job_jid[:-2]
 
                         # We use PID 0 to indicate it's not a real process yet
                         active_jobs.append(
@@ -197,10 +189,6 @@ def check_prior_running_states(opts, jid, active_jobs):
                         )
         except OSError as exc:
             log.error("Unable to list queue directory %s: %s", queue_dir, exc)
-
-    if active_jobs:
-        # log.debug("check_prior_running_states: checking JID %s against active jobs: %s", jid, active_jobs)
-        pass
 
     for data in active_jobs:
         data_jid = data.get("jid")
@@ -218,12 +206,23 @@ def check_prior_running_states(opts, jid, active_jobs):
             if str(data_jid) == str(jid):
                 continue
 
-            # Only block if the other job is OLDER than the current one.
-            # This ensures FIFO ordering and prevents deadlocks where two
-            # jobs block each other.
-            # Salt JIDs are usually timestamp-based strings (e.g. 20230524100000)
-            # which sort correctly as strings OR ints.
-            if str(data_jid) < str(jid):
+            # A real running state.* job (non-zero PID) must always block,
+            # regardless of how its JID sorts relative to ours. Comparing by
+            # JID here would let a concurrently running job whose JID sorts
+            # *higher* than ours slip past the check, breaking the "one
+            # state run at a time per minion" guarantee (issue #69825).
+            #
+            # Queued placeholder entries (pid == 0, produced by scanning the
+            # queue directories above) represent jobs that have not yet
+            # started. For those, block only when the placeholder's JID
+            # sorts before ours so the queue processor can dequeue the
+            # oldest queued JID without deadlocking on younger siblings.
+            # Salt JIDs are usually timestamp-based strings (e.g.
+            # 20230524100000) which sort correctly as strings OR ints.
+            pid = data.get("pid")
+            if pid:
+                ret.append(data)
+            elif str(data_jid) < str(jid):
                 ret.append(data)
         except (ValueError, TypeError):
             continue
@@ -426,7 +425,8 @@ def get_sls_opts(opts, **kwargs):
     """
     Return a copy of the opts for use, optionally load a local config on top
     """
-    opts = copy.deepcopy(opts)
+    # Use OptsDict for copy-on-write instead of deep copy
+    opts = salt.utils.optsdict.safe_opts_copy(opts, name="get_sls_opts")
 
     if "localconfig" in kwargs:
         return salt.config.minion_config(kwargs["localconfig"], defaults=opts)
@@ -442,11 +442,23 @@ def get_sls_opts(opts, **kwargs):
                 )
             opts["saltenv"] = kwargs["saltenv"]
 
-    if "pillarenv" in kwargs or opts.get("pillarenv_from_saltenv", False):
-        pillarenv = kwargs.get("pillarenv") or kwargs.get("saltenv")
+    if "pillarenv" in kwargs:
+        # Explicit pillarenv kwarg wins — including an explicit ``None`` which
+        # is how callers request "merge all envs".
+        pillarenv = kwargs["pillarenv"]
         if pillarenv is not None and not isinstance(pillarenv, str):
             opts["pillarenv"] = str(pillarenv)
         else:
             opts["pillarenv"] = pillarenv
+    elif opts.get("pillarenv_from_saltenv", False) and "saltenv" in kwargs:
+        # ``pillarenv_from_saltenv`` only kicks in when the caller actually
+        # passes a ``saltenv`` kwarg; if they didn't, respect whatever
+        # ``pillarenv`` was already in opts (typically the minion config).
+        # Fixes #68791.
+        saltenv = kwargs["saltenv"]
+        if saltenv is not None and not isinstance(saltenv, str):
+            opts["pillarenv"] = str(saltenv)
+        else:
+            opts["pillarenv"] = saltenv
 
     return opts

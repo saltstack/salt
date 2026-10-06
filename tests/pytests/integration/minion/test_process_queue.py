@@ -214,6 +214,8 @@ def test_state_queue_interaction(
 
     # 4. Job A finishes.
     p1.wait()
+    # Under load the minion may need a moment to schedule the queued state.
+    time.sleep(1)
 
     # Job B should be popped from State Queue.
     # Job C is still running (Slot 2). Slot 1 is open.
@@ -221,7 +223,7 @@ def test_state_queue_interaction(
 
     # Wait for execution
     start_wait = time.time()
-    while not marker.exists() and time.time() - start_wait < 15:
+    while not marker.exists() and time.time() - start_wait < 45:
         time.sleep(0.5)
 
     assert marker.exists(), "Job B did not execute after Job A finished"

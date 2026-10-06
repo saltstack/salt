@@ -17,7 +17,7 @@ def test_pillar_using_cp_module(salt_master, salt_minion, salt_cli, tmp_path):
             assert ret.returncode == 0
 
             pillar_ret = salt_cli.run(
-                "pillar.item", "file_content", minion_tgt=salt_minion.id
+                "pillar.item", "file_content", unmask=True, minion_tgt=salt_minion.id
             )
             assert pillar_ret.returncode == 0
             assert '"file_content": "foobar"' in pillar_ret.stdout

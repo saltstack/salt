@@ -236,7 +236,13 @@ class SPMClient:
         if len(args) < 2:
             raise SPMInvocationError("A package must be specified")
 
-        caller_opts = self.opts.copy()
+        # Create child OptsDict to preserve type for Caller
+        from salt.utils.optsdict import OptsDict
+
+        if isinstance(self.opts, OptsDict):
+            caller_opts = OptsDict.from_parent(self.opts, name="spm_caller_opts")
+        else:
+            caller_opts = self.opts.copy()
         caller_opts["file_client"] = "local"
         self.caller = salt.client.Caller(mopts=caller_opts)
         self.client = salt.client.get_local_client(self.opts["conf_file"])

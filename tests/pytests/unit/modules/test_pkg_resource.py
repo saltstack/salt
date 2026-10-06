@@ -8,7 +8,7 @@ import yaml
 import salt.modules.pkg_resource as pkg_resource
 import salt.utils.data
 import salt.utils.yaml
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 
@@ -73,6 +73,36 @@ def test_parse_targets():
                 )
 
                 assert pkg_resource.parse_targets() == (None, None)
+
+
+def test_parse_targets_missing_salt_source():
+    """
+    Regression test for #68002.
+
+    When a ``salt://`` package source cannot be cached (e.g. the file does
+    not exist on the fileserver), ``cp.cache_file`` returns ``False``.
+    ``parse_targets`` must raise a ``CommandExecutionError`` that names the
+    offending source rather than silently propagating ``False`` into the
+    caller, which previously bubbled up as a cryptic ``TypeError`` from
+    ``dpkg_lowpkg.bin_pkg_info``.
+    """
+    with patch.dict(pkg_resource.__grains__, {"os": "Ubuntu"}):
+        with patch.object(
+            pkg_resource,
+            "pack_sources",
+            return_value={"my-package": "salt://this/does/not/exist.deb"},
+        ):
+            with patch.dict(
+                pkg_resource.__salt__,
+                {
+                    "config.valid_fileproto": MagicMock(return_value=True),
+                    "cp.cache_file": MagicMock(return_value=False),
+                },
+            ):
+                with pytest.raises(CommandExecutionError) as excinfo:
+                    pkg_resource.parse_targets(sources="s")
+                assert "salt://this/does/not/exist.deb" in str(excinfo.value)
+                assert "my-package" in str(excinfo.value)
 
 
 def test_version():

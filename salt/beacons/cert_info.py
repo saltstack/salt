@@ -21,6 +21,11 @@ try:
 except ImportError:
     HAS_OPENSSL = False
 
+# pyOpenSSL >= 25 removed X509.get_extension / X509.get_extension_count
+# (and X509Extension as a whole). This beacon iterates extensions via the
+# removed API, so refuse to load when those attributes are gone.
+HAS_X509_EXTENSION_API = HAS_OPENSSL and hasattr(crypto.X509(), "get_extension")
+
 log = logging.getLogger(__name__)
 
 DEFAULT_NOTIFY_DAYS = 45
@@ -28,48 +33,53 @@ DEFAULT_NOTIFY_DAYS = 45
 __virtualname__ = "cert_info"
 
 
-def _format_extension_value(value):
+def _format_x509_extension_value(ext):
     """
-    Render a ``cryptography.x509`` extension value in the OpenSSL-style
-    short form that pyOpenSSL's ``str(X509Extension)`` produced (for
-    example "CA:FALSE" or "DNS:foo, IP:1.2.3.4"). Only handles the
-    common extensions the cert_info beacon callers historically saw;
-    falls back to ``str(value)`` otherwise.
-    """
-    try:
-        # Import locally so that the module still loads if cryptography
-        # is missing — the legacy pyOpenSSL path does not need it.
-        from cryptography import x509 as _x509
-    except ImportError:
-        return str(value)
+    Re-format a ``cryptography.x509.Extension`` value into the legacy
+    OpenSSL printable string ("CA:FALSE", "DNS:host", "IP Address:1.2.3.4",
+    ...) that pyOpenSSL <= 25 emitted via ``str(cert.get_extension(i))``.
 
-    if isinstance(value, _x509.BasicConstraints):
+    Only used on pyOpenSSL >= 26, which removed the legacy X509 extension
+    API; consumers of this beacon would otherwise have to special-case the
+    pyOpenSSL version. Imported lazily so ``cryptography`` stays an
+    optional runtime dependency.
+    """
+    from cryptography import x509  # pylint: disable=import-outside-toplevel
+
+    oid = ext.oid
+    value = ext.value
+    if oid == x509.ExtensionOID.BASIC_CONSTRAINTS:
         out = "CA:TRUE" if value.ca else "CA:FALSE"
         if value.path_length is not None:
-            out = f"{out}, pathlen:{value.path_length}"
+            out += f", pathlen:{value.path_length}"
         return out
-
-    if isinstance(value, (_x509.SubjectAlternativeName, _x509.IssuerAlternativeName)):
-        parts = []
+    if oid in (
+        x509.ExtensionOID.SUBJECT_ALTERNATIVE_NAME,
+        x509.ExtensionOID.ISSUER_ALTERNATIVE_NAME,
+    ):
+        items = []
         for name in value:
-            if isinstance(name, _x509.DNSName):
-                parts.append(f"DNS:{name.value}")
-            elif isinstance(name, _x509.IPAddress):
-                parts.append(f"IP:{name.value}")
-            elif isinstance(name, _x509.RFC822Name):
-                parts.append(f"email:{name.value}")
-            elif isinstance(name, _x509.UniformResourceIdentifier):
-                parts.append(f"URI:{name.value}")
+            if isinstance(name, x509.DNSName):
+                items.append(f"DNS:{name.value}")
+            elif isinstance(name, x509.IPAddress):
+                items.append(f"IP Address:{name.value}")
+            elif isinstance(name, x509.RFC822Name):
+                items.append(f"email:{name.value}")
+            elif isinstance(name, x509.UniformResourceIdentifier):
+                items.append(f"URI:{name.value}")
             else:
-                parts.append(f"{type(name).__name__}:{name.value}")
-        return ", ".join(parts)
-
+                items.append(str(name))
+        return ", ".join(items)
     return str(value)
 
 
 def __virtual__():
     if HAS_OPENSSL is False:
         err_msg = "OpenSSL library is missing."
+        log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
+        return False, err_msg
+    if not HAS_X509_EXTENSION_API:
+        err_msg = "pyOpenSSL >= 25 removed the X509Extension API used by this beacon."
         log.error("Unable to load %s beacon: %s", __virtualname__, err_msg)
         return False, err_msg
 
@@ -159,12 +169,8 @@ def beacon(config):
                 notify_days,
             )
             extensions = []
-            # pyOpenSSL 26.2 removed X509.get_extension() (singular).
-            # Fall through to cryptography.x509 when the legacy API is
-            # missing so the beacon works against both old (<26.2) and
-            # new pyOpenSSL releases. The output shape — a list of
-            # {"ext_name": ..., "ext_data": ...} dicts — is preserved.
             if hasattr(cert, "get_extension"):
+                # pyOpenSSL <= 25 still exposes the legacy X509 extension API.
                 for ext in range(0, cert.get_extension_count()):
                     extensions.append(
                         {
@@ -175,20 +181,19 @@ def beacon(config):
                         }
                     )
             else:
-                try:
-                    crypto_cert = cert.to_cryptography()
-                    for ext in crypto_cert.extensions:
-                        extensions.append(
-                            {
-                                "ext_name": ext.oid._name,
-                                "ext_data": _format_extension_value(ext.value),
-                            }
-                        )
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error(
-                        "Unable to enumerate extensions for %s (%s)",
-                        cert_path,
-                        exc,
+                # pyOpenSSL >= 26 removed get_extension* on X509; go through
+                # the cryptography conversion which exposes a stable
+                # x509.Extension API on every version.
+                for ext in cert.to_cryptography().extensions:
+                    try:
+                        short_name = ext.oid._name
+                    except AttributeError:
+                        short_name = ext.oid.dotted_string
+                    extensions.append(
+                        {
+                            "ext_name": short_name,
+                            "ext_data": _format_x509_extension_value(ext),
+                        }
                     )
 
             certificates.append(

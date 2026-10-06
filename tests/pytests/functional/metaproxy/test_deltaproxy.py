@@ -25,6 +25,9 @@ identical values for every controlled minion.
 import logging
 
 import pytest
+import tornado.concurrent
+import tornado.gen
+import tornado.ioloop
 
 import salt.metaproxy.deltaproxy as deltaproxy
 import salt.modules.saltutil
@@ -91,11 +94,15 @@ def patched_subproxy_post_master_init(sub_proxy_opts):
     def _passthrough_proxy_config(conf_file, defaults, minion_id):
         return defaults
 
+    # ``subproxy_post_master_init`` is a ``@tornado.gen.coroutine`` that
+    # ``yield``s on ``get_async_pillar(...).compile_pillar()``; the mocked
+    # ``compile_pillar()`` returns a resolved Future so the yield resolves
+    # to the proxy-config dict.
     def _fake_pillar(opts, grains, minion_id, **kwargs):
         compiler = MagicMock()
-        compiler.compile_pillar.return_value = {
-            "proxy": {"proxytype": "serial_test_proxy"}
-        }
+        future = tornado.concurrent.Future()
+        future.set_result({"proxy": {"proxytype": "serial_test_proxy"}})
+        compiler.compile_pillar.return_value = future
         return compiler
 
     extmods_sync = MagicMock(return_value=({}, False))
@@ -106,7 +113,7 @@ def patched_subproxy_post_master_init(sub_proxy_opts):
     with patch.object(
         deltaproxy.salt.config, "proxy_config", side_effect=_passthrough_proxy_config
     ), patch.object(
-        deltaproxy.salt.pillar, "get_pillar", side_effect=_fake_pillar
+        deltaproxy.salt.pillar, "get_async_pillar", side_effect=_fake_pillar
     ), patch(
         "salt.utils.extmods.sync", extmods_sync
     ), patch.object(
@@ -130,14 +137,23 @@ def _run_subproxy_post_master_init(minion_id, sub_proxy_opts):
     to dereference; they intentionally don't contain a ``serial_test_proxy
     .grains`` callable, which is what forces the (post-init) second-pass
     grains to be the per-sub-proxy values.
+
+    ``subproxy_post_master_init`` is a ``@tornado.gen.coroutine``; drive it
+    via a dedicated IOLoop and unwrap the synchronous result.
     """
     import salt.loader
 
     main_proxy = salt.loader.proxy(sub_proxy_opts)
     main_utils = salt.loader.utils(sub_proxy_opts)
-    return deltaproxy.subproxy_post_master_init(
-        minion_id, 0, sub_proxy_opts, main_proxy, main_utils
-    )
+    loop = tornado.ioloop.IOLoop()
+    try:
+        return loop.run_sync(
+            lambda: deltaproxy.subproxy_post_master_init(
+                minion_id, 0, sub_proxy_opts, main_proxy, main_utils
+            )
+        )
+    finally:
+        loop.close()
 
 
 @pytest.mark.slow_test

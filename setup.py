@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 
 # pylint: disable=no-name-in-module
 from distutils import log
@@ -58,9 +58,11 @@ except ImportError:
     HAS_ZMQ = False
 
 try:
-    DATE = datetime.utcfromtimestamp(int(os.environ["SOURCE_DATE_EPOCH"]))
+    DATE = datetime.fromtimestamp(
+        int(os.environ["SOURCE_DATE_EPOCH"]), tz=timezone.utc
+    ).replace(tzinfo=None)
 except (KeyError, ValueError):
-    DATE = datetime.utcnow()
+    DATE = datetime.now(timezone.utc).replace(tzinfo=None)
 
 # Change to salt source's directory prior to running any command
 try:
@@ -134,7 +136,7 @@ SALT_LINUX_LOCKED_REQS = [
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.lock")
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.in")
 ]
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
@@ -148,7 +150,7 @@ SALT_OSX_LOCKED_REQS = [
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.lock")
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.in")
 ]
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
@@ -171,7 +173,9 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 
 # pylint: disable=W0122
-if os.path.exists(SALT_VERSION_HARDCODED):
+if os.environ.get("SALT_VERSION"):
+    SALT_VERSION = os.environ.get("SALT_VERSION")
+elif os.path.exists(SALT_VERSION_HARDCODED):
     with open(SALT_VERSION_HARDCODED, encoding="utf-8") as rfh:
         SALT_VERSION = rfh.read().strip()
 else:
@@ -606,24 +610,18 @@ HOME_DIR = {home_dir!r}
 
 class Build(build):
     def run(self):
+        if getattr(self.distribution, "with_salt_version", False):
+            self.distribution.salt_version_hardcoded_path = SALT_VERSION_HARDCODED
+            self.run_command("write_salt_version")
+
         # Run build.run function
         build.run(self)
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
 
-        if getattr(self.distribution, "with_salt_version", False):
-            # Write the hardcoded salt version module salt/_version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_egg", False):
-            # we are building an egg package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_wheel", False):
-            # we are building a wheel package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
+        # ALWAYS write the version file during build, so it's included in wheels built by PEP 517
+        log.info("Generating %s", salt_build_ver_file)
+        with open(salt_build_ver_file, "w", encoding="utf-8") as wfh:
+            wfh.write(str(SALT_VERSION))
 
         if getattr(self.distribution, "running_salt_install", False):
             # If our install attribute is present and set to True, we'll go

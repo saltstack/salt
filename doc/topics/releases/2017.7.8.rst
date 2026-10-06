@@ -2090,7 +2090,7 @@ Changelog for v2017.7.7..v2017.7.8
 
   * 0a621dd0ec add Pipfile for managing dependencies in salt
 
-  * f78b81db94 simplify dev and base.txt to single files
+  * f78b81db94 simplify dev and base.in to single files
 
 * **PR** `#47578`_: (`Ch3LL`_) Ensure mac_service.disabled is correctly querying services
   @ *2018-05-15 18:26:37 UTC*

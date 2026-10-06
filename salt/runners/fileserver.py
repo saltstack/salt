@@ -3,6 +3,7 @@ Directly manage the Salt fileserver plugins
 """
 
 import salt.fileserver
+import salt.utils.args
 
 
 def envs(backend=None, sources=False):
@@ -349,7 +350,19 @@ def update(backend=None, **kwargs):
         salt-run fileserver.update backend=roots,git
         salt-run fileserver.update backend=git remotes=myrepo,yourrepo
     """
+    # When this runner is invoked through saltutil.runner (or an
+    # orchestration), the runner client injects publisher metadata into the
+    # kwargs as ``__pub_*`` keys. Those must not be forwarded to the
+    # fileserver backends, whose update() signatures reject unknown keyword
+    # arguments (see #66793).
+    kwargs = salt.utils.args.clean_kwargs(**kwargs)
     fileserver = salt.fileserver.Fileserver(__opts__)
+
+    # Remove possible '__pub_user' in kwargs as it is not expected
+    # on "update" function for the different fileserver backends.
+    if "__pub_user" in kwargs:
+        del kwargs["__pub_user"]
+
     fileserver.update(back=backend, **kwargs)
     return True
 

@@ -2,7 +2,7 @@ mock >= 5.2.0
 # PyTest
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'
-pytest >= 8.4.2
+pytest >= 8.4.2, <9
 pytest-salt-factories >= 1.0.5
 pytest-helpers-namespace >= 2021.12.29
 pytest-subtests
@@ -17,3 +17,4 @@ pytest-skip-markers >= 1.5.2 ; python_version >= '3.8'
 pytest-skip-markers <= 1.5.1 ; python_version < '3.8'
 pytest-shell-utilities <= 1.9.0; python_version <= '3.9'
 pytest-shell-utilities >= 1.9.7; python_version >= '3.10'
+pytest-benchmark

@@ -588,12 +588,12 @@ But that advice is backwards for the changelog. We follow the
 `keepachangelog <https://keepachangelog.com/en/1.0.0/>`__ approach for
 our changelog, and use towncrier to generate it for each release. As a
 contributor, all that means is that you need to add a file to the
-``salt/changelog`` directory, using the ``<issue #>.<type>`` format. For
+``salt/changelog`` directory, using the ``<issue #>.<type>.md`` format. For
 instance, if you fixed issue 123, you would do:
 
 ::
 
-   echo "Made sys.doc inform when no minions return" > changelog/123.fixed
+   echo "Made sys.doc inform when no minions return" > changelog/123.fixed.md
 
 And that's all that would go into your file. When it comes to your
 commit message, it's usually a good idea to add other information, such as

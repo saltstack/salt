@@ -7,6 +7,22 @@ if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
 from setuptools import build_meta as _orig
+from setuptools.build_meta import build_editable as setuptools_build_editable
+from setuptools.build_meta import (
+    prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+)
+
+try:
+    from setuptools.build_meta import build_editable as setuptools_build_editable
+except ImportError:
+    setuptools_build_editable = None
+
+try:
+    from setuptools.build_meta import (
+        prepare_metadata_for_build_editable as setuptools_prepare_metadata,
+    )
+except ImportError:
+    setuptools_prepare_metadata = None
 
 try:
     from setuptools.build_meta import build_editable as setuptools_build_editable

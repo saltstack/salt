@@ -190,7 +190,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 **Essential guides in `agents/docs/`:**
 
-- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - venv310/venv311 setup, dependencies, verification
+- **[agents/docs/development-setup.md](agents/docs/development-setup.md)** - venv310/venv312 setup, dependencies, verification
 - **[agents/docs/architecture.md](agents/docs/architecture.md)** - Complete architecture, module types, loader, event bus
 - **[agents/docs/module-templates.md](agents/docs/module-templates.md)** - Complete templates, `__virtual__()` patterns, decorators
 - **[agents/docs/testing.md](agents/docs/testing.md)** - Test structure, templates, mocking, running tests

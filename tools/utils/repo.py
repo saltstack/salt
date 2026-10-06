@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ptscripts import Context
@@ -17,7 +17,7 @@ try:
 except ImportError:
     print(
         "\nPlease run 'python -m pip install -r "
-        "requirements/static/ci/py{}.{}/tools.lock'\n".format(*sys.version_info),
+        "requirements/static/ci/py{}.{}/tools.txt'\n".format(*sys.version_info),
         file=sys.stderr,
         flush=True,
     )
@@ -87,7 +87,7 @@ def create_top_level_repo_path(
             create_repo_path
             / "salt-dev"
             / nightly_build_from
-            / datetime.utcnow().strftime("%Y-%m-%d")
+            / datetime.now(timezone.utc).strftime("%Y-%m-%d")
         )
         create_repo_path.mkdir(exist_ok=True, parents=True)
         with ctx.chdir(create_repo_path.parent):

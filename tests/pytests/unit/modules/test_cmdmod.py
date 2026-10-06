@@ -284,7 +284,11 @@ def test_run_with_tuple():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", mock_true):
                 with patch("os.access", mock_true):
-                    cmdmod._run(("echo", "foo"), python_shell=True, cwd="/")
+                    # Python 3.13's ntpath.isabs rejects ``/`` (and ``\``) on
+                    # Windows; patch around it so this test exercises the
+                    # tuple-cmd path regardless of host platform.
+                    with patch("os.path.isabs", mock_true):
+                        cmdmod._run(("echo", "foo"), python_shell=True, cwd="/")
 
 
 def test_run_user_not_available():
@@ -297,6 +301,87 @@ def test_run_user_not_available():
             with patch("os.access", mock_true):
                 with pytest.raises(CommandExecutionError):
                     cmdmod._run("foo", "bar", runas="baz")
+
+
+@pytest.mark.skip_on_windows
+def test_run_runas_env_retrieval_timeout(caplog):
+    """
+    Regression test for issue #63901 / PR #63912.
+
+    When ``runas`` is supplied, ``_run`` shells out to fetch the user's
+    environment by piping a Python snippet through ``su``/``sudo`` and
+    reading the result back with ``subprocess.Popen.communicate()``. On
+    misconfigured PAM stacks (e.g. WINBIND), that subprocess can hang
+    indefinitely.
+
+    The fix adds ``timeout=10`` to that ``communicate()`` call and routes
+    a ``subprocess.TimeoutExpired`` into the existing "Environment could
+    not be retrieved" branch so execution continues with an empty
+    runas env rather than wedging the minion.
+
+    This test pins that behavior: the ``TimeoutExpired`` is swallowed,
+    the documented log.error is emitted, and ``_run`` proceeds to
+    invoke the actual command via ``TimedProc`` instead of raising.
+    """
+    import subprocess as _subprocess
+
+    mock_true = MagicMock(return_value=True)
+
+    # subprocess.Popen used for env retrieval; .communicate() must raise
+    # TimeoutExpired to drive the new except branch.
+    env_popen_instance = MagicMock()
+    env_popen_instance.communicate.side_effect = _subprocess.TimeoutExpired(
+        cmd=["su", "-", "baz", "-c"], timeout=10
+    )
+    env_popen_cls = MagicMock(return_value=env_popen_instance)
+
+    # After env retrieval falls back to empty env, the actual command runs
+    # via salt.utils.timed_subprocess.TimedProc -- mock that out so the
+    # test does not execute a real subprocess.
+    mock_timed_proc = MockTimedProc(stdout=b"ok\n", stderr=b"")
+
+    # pwd.getpwnam must succeed so the runas user is considered valid.
+    fake_pw = MagicMock(pw_name="baz", pw_shell="/bin/sh")
+
+    with patch("salt.modules.cmdmod._is_valid_shell", mock_true), patch(
+        "salt.utils.platform.is_windows", MagicMock(return_value=False)
+    ), patch("os.path.isfile", mock_true), patch("os.access", mock_true), patch(
+        "os.path.isabs", mock_true
+    ), patch(
+        "os.path.isdir", mock_true
+    ), patch(
+        "pwd.getpwnam", MagicMock(return_value=fake_pw)
+    ), patch(
+        "pwd.getpwall", MagicMock(return_value=[fake_pw])
+    ), patch(
+        "salt.utils.pkg.check_bundled", MagicMock(return_value=False)
+    ), patch.dict(
+        cmdmod.__grains__, {"os": "Linux", "os_family": "Debian"}, clear=False
+    ), patch(
+        "subprocess.Popen", env_popen_cls
+    ), patch(
+        "salt.utils.timed_subprocess.TimedProc",
+        MagicMock(return_value=mock_timed_proc),
+    ):
+        with caplog.at_level(logging.ERROR, logger="salt.modules.cmdmod"):
+            # Must not raise; TimeoutExpired must be caught inside _run.
+            ret = cmdmod._run("echo hi", "bar", runas="baz", python_shell=True)
+
+    # The fix routes the TimeoutExpired into the existing "Environment
+    # could not be retrieved" error log.
+    assert any(
+        "Environment could not be retrieved for user" in record.getMessage()
+        and "baz" in record.getMessage()
+        for record in caplog.records
+    ), (
+        "Expected 'Environment could not be retrieved' log.error to fire "
+        "when env-retrieval subprocess times out; got: "
+        f"{[r.getMessage() for r in caplog.records]}"
+    )
+
+    # Sanity: _run returned the dict shape callers expect (no exception
+    # propagated past the timeout handler).
+    assert isinstance(ret, dict)
 
 
 def test_run_zero_umask():
@@ -362,13 +447,17 @@ def test_run_no_vt_os_error():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
-                    with patch(
-                        "salt.utils.timed_subprocess.TimedProc",
-                        MagicMock(side_effect=OSError(expected_error)),
-                    ):
-                        with pytest.raises(CommandExecutionError) as error:
-                            cmdmod.run("foo", cwd="/")
-                        assert error.value.args[0].endswith(expected_error)
+                    # Python 3.13's ntpath.isabs rejects ``/`` on Windows; patch
+                    # so the cwd validation does not preempt the OSError path
+                    # we are exercising.
+                    with patch("os.path.isabs", MagicMock(return_value=True)):
+                        with patch(
+                            "salt.utils.timed_subprocess.TimedProc",
+                            MagicMock(side_effect=OSError(expected_error)),
+                        ):
+                            with pytest.raises(CommandExecutionError) as error:
+                                cmdmod.run("foo", cwd="/")
+                            assert error.value.args[0].endswith(expected_error)
 
 
 def test_run_no_vt_io_error():
@@ -380,13 +469,17 @@ def test_run_no_vt_io_error():
         with patch("salt.utils.platform.is_windows", MagicMock(return_value=False)):
             with patch("os.path.isfile", MagicMock(return_value=True)):
                 with patch("os.access", MagicMock(return_value=True)):
-                    with patch(
-                        "salt.utils.timed_subprocess.TimedProc",
-                        MagicMock(side_effect=IOError(expected_error)),
-                    ):
-                        with pytest.raises(CommandExecutionError) as error:
-                            cmdmod.run("foo", cwd="/")
-                        assert error.value.args[0].endswith(expected_error)
+                    # Python 3.13's ntpath.isabs rejects ``/`` on Windows; patch
+                    # so the cwd validation does not preempt the IOError path
+                    # we are exercising.
+                    with patch("os.path.isabs", MagicMock(return_value=True)):
+                        with patch(
+                            "salt.utils.timed_subprocess.TimedProc",
+                            MagicMock(side_effect=IOError(expected_error)),
+                        ):
+                            with pytest.raises(CommandExecutionError) as error:
+                                cmdmod.run("foo", cwd="/")
+                            assert error.value.args[0].endswith(expected_error)
 
 
 # ---------------------------------------------------------------------------

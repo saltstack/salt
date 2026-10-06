@@ -176,43 +176,6 @@ def test_flush_error(client):
         etcd_cache.flush("bank", "key")
 
 
-# --- _walk -------------------------------------------------------------------
-
-
-def test_walk_leaf_key(client):
-    leaf = FakeResult(key="/salt/cache/bank/minion", dir=False)
-    assert etcd_cache._walk(leaf) == ["minion"]
-
-
-def test_walk_skips_timestamp_keys(client):
-    leaf = FakeResult(key="/salt/cache/bank/minion.tstamp", dir=False)
-    assert etcd_cache._walk(leaf) == []
-
-
-def test_walk_directory(client):
-    minion = FakeResult(key="/salt/cache/bank/minion", dir=False)
-    tstamp = FakeResult(key="/salt/cache/bank/minion.tstamp", dir=False)
-    client.read.return_value = FakeResult(
-        key="/salt/cache/bank", dir=True, children=[minion, tstamp]
-    )
-    bank = FakeResult(key="/salt/cache/bank", dir=True)
-    assert etcd_cache._walk(bank) == ["minion"]
-
-
-def test_walk_empty_folder_does_not_recurse(client):
-    """
-    Regression test for #57377: an empty etcd folder lists itself as its only
-    child, which previously caused _walk to recurse until it hit the recursion
-    limit and raised a SaltCacheError.
-    """
-    self_ref = FakeResult(key="/salt/cache/bank", dir=True)
-    client.read.return_value = FakeResult(
-        key="/salt/cache/bank", dir=True, children=[self_ref]
-    )
-    bank = FakeResult(key="/salt/cache/bank", dir=True)
-    assert etcd_cache._walk(bank) == []
-
-
 # --- ls ----------------------------------------------------------------------
 
 
@@ -222,6 +185,85 @@ def test_ls(client):
         key="/salt/cache/bank", dir=True, children=[minion]
     )
     assert etcd_cache.ls("bank") == ["minion"]
+
+
+def test_ls_returns_immediate_children_not_nested_leaf_names(client):
+    """
+    Regression test: the minion data cache stores each minion under its own
+    ``minions/<minion_id>`` sub-bank (with ``data``/``mine`` leaf keys inside).
+    ``ls("minions")`` must return the minion IDs -- the immediate children of
+    the bank -- not the leaf key names from the nested sub-banks. ls() used to
+    recurse and return ``["data", "data", ...]``, which broke grain (``-G``)
+    targeting because the master could not enumerate the cached minions.
+    """
+    tree = {
+        "/salt/cache/minions": FakeResult(
+            key="/salt/cache/minions",
+            dir=True,
+            children=[
+                FakeResult(key="/salt/cache/minions/web01", dir=True),
+                FakeResult(key="/salt/cache/minions/db01", dir=True),
+            ],
+        ),
+        # ls() must NOT descend into these sub-banks. They are wired up so that
+        # a reintroduced recursion would (wrongly) surface the leaf names and
+        # fail this test.
+        "/salt/cache/minions/web01": FakeResult(
+            key="/salt/cache/minions/web01",
+            dir=True,
+            children=[
+                FakeResult(key="/salt/cache/minions/web01/data", dir=False),
+                FakeResult(key="/salt/cache/minions/web01/data.tstamp", dir=False),
+            ],
+        ),
+        "/salt/cache/minions/db01": FakeResult(
+            key="/salt/cache/minions/db01",
+            dir=True,
+            children=[
+                FakeResult(key="/salt/cache/minions/db01/data", dir=False),
+                FakeResult(key="/salt/cache/minions/db01/data.tstamp", dir=False),
+            ],
+        ),
+    }
+    client.read.side_effect = lambda key: tree[key]
+    assert sorted(etcd_cache.ls("minions")) == ["db01", "web01"]
+
+
+def test_ls_filters_timestamp_siblings(client):
+    """
+    A flat bank stores each key next to a ``<key><suffix>`` timestamp entry.
+    The timestamp entries are internal bookkeeping and must not be listed.
+    """
+    children = [
+        FakeResult(key="/salt/cache/grains/web01", dir=False),
+        FakeResult(key="/salt/cache/grains/web01.tstamp", dir=False),
+    ]
+    client.read.return_value = FakeResult(
+        key="/salt/cache/grains", dir=True, children=children
+    )
+    assert etcd_cache.ls("grains") == ["web01"]
+
+
+def test_ls_empty_dir_returns_empty(client):
+    """
+    Regression test for #57377: an empty etcd folder lists itself as its only
+    child. ls() must skip that self-reference and return an empty list without
+    recursing.
+    """
+    self_ref = FakeResult(key="/salt/cache/bank", dir=True)
+    client.read.return_value = FakeResult(
+        key="/salt/cache/bank", dir=True, children=[self_ref]
+    )
+    assert etcd_cache.ls("bank") == []
+
+
+def test_ls_preserves_dotted_ids(client):
+    """A minion id containing dots must survive intact (split on "/" only)."""
+    child = FakeResult(key="/salt/cache/minions/db01.example.com", dir=True)
+    client.read.return_value = FakeResult(
+        key="/salt/cache/minions", dir=True, children=[child]
+    )
+    assert etcd_cache.ls("minions") == ["db01.example.com"]
 
 
 def test_ls_missing_returns_empty(client):

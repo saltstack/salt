@@ -69,11 +69,18 @@ Options
 
 .. option:: --file-root=FILE_ROOT
 
-    Set this directory as the base file root.
+    Set this directory as the base file root. Can be specified more than once
+    to include multiple base file roots.
 
 .. option:: --pillar-root=PILLAR_ROOT
 
-    Set this directory as the base pillar root.
+    Set this directory as the base pillar root. Can be specified more than
+    once to include multiple base pillar roots.
+
+.. option:: --states-dir=STATES_DIR
+
+    Set this directory to search for additional states. Can be specified more
+    than once to include multiple states directories.
 
 .. option:: --retcode-passthrough
 
@@ -100,6 +107,38 @@ Options
 .. option:: --refresh-grains-cache
 
     Force a refresh of the grains cache
+
+.. option:: -r, --resources
+
+    .. versionadded:: 3008.0
+
+    Dispatch the call to managed resources in addition to the managing
+    minion. Without ``-r``, ``salt-call`` runs the function on the
+    managing minion only and returns a single bare value, preserving
+    legacy script behaviour. With ``-r``, the function runs against
+    every resource matched by ``--tgt`` and the result is a dict keyed
+    by resource id (or by managing-minion id, for the host itself).
+
+    See :ref:`resources-operations` for usage and :ref:`resources` for
+    background.
+
+.. option:: --tgt=TGT
+
+    .. versionadded:: 3008.0
+
+    Targeting expression. Only honoured when ``-r``/``--resources`` is
+    also passed. Default ``*`` — matches the managing minion and all
+    managed resources. Supports all targeting forms documented in
+    :ref:`resources-targeting`, controlled by ``--tgt-type``.
+
+.. option:: --tgt-type=TGT_TYPE
+
+    .. versionadded:: 3008.0
+
+    Targeting expression type. Only honoured when ``-r``/``--resources``
+    is also passed. Mirrors the master CLI's ``-t``/``--target-type``
+    options. Common values: ``glob`` (default), ``compound``, ``grain``,
+    ``grain_pcre``, ``list``, ``pillar``, ``range``, ``pcre``.
 
 .. include:: _includes/logging-options.rst
 .. |logfile| replace:: /var/log/salt/minion

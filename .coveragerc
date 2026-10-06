@@ -4,7 +4,38 @@ cover_pylib = False
 parallel = True
 concurrency = multiprocessing
 relative_files = True
-dynamic_context = test_function
+# dynamic_context = test_function
+#
+# Temporarily disabled while the Salt onedir is on Python 3.14.
+#
+# ``dynamic_context = test_function`` tells coverage.py to tag every
+# recorded ``(file, line)`` hit with the name of the test function
+# that drove it, so HTML reports can answer "which tests touched this
+# line?".  The cost is that the setting forces coverage off the new
+# sys.monitoring ("sysmon") core — sysmon does not implement dynamic
+# contexts.  On Python 3.14 sysmon is the default and is dramatically
+# faster than the PyTracer / CTracer fallbacks; falling back to
+# CTracer adds modest overhead, falling back to PyTracer (the only
+# option on the coverage version we currently pin, 7.3.1, which
+# ships no CTracer wheel for 3.14) adds catastrophic overhead.
+#
+# In Salt CI the catastrophic-overhead path showed up as the
+# functional zeromq 4 shard taking ~80 min instead of ~12 min and
+# 12 subprocess-heavy tests (test_publsh_server,
+# test_zeromq_filtering_*, test_concurrent_writers_no_data_loss, …)
+# blowing past their internal asyncio / queue / loop timeouts.  The
+# slow ``cov.start()`` in each forked subprocess also leaked
+# non-daemon child processes that blocked Python interpreter exit
+# and triggered the GHA 3-hour step timeout (the "test session
+# hangs at the end" symptom).
+#
+# Re-enable once Salt's coverage pin is bumped to a version that
+# either ships a CTracer wheel for Python 3.14 (>=7.10) or makes
+# sysmon usable with dynamic contexts (no version available as of
+# 2026-05-21).  See:
+#   * https://github.com/coveragepy/coveragepy/issues/2082
+#   * https://coverage.readthedocs.io/en/latest/contexts.html
+#   * https://coverage.readthedocs.io/en/latest/faq.html
 omit =
   setup.py
   .nox/*

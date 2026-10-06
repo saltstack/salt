@@ -10,12 +10,14 @@ import shutil
 import subprocess
 import time
 import types
+from pathlib import Path
 
 import psutil
 import pytest
 
 import salt.modules.gpg as gpg
-from tests.support.mock import MagicMock, call, patch
+import salt.utils.secret
+from tests.support.mock import MagicMock, Mock, call, patch
 
 pytest.importorskip("gnupg")
 
@@ -204,7 +206,14 @@ def gpghome(tmp_path):
 
 @pytest.fixture
 def configure_loader_modules(gpghome):
-    return {gpg: {}}
+    return {
+        gpg: {
+            "__salt__": {
+                "environ.get": lambda *x: "",
+                "cmd.run_stdout": lambda *x, **y: "",
+            }
+        }
+    }
 
 
 def test_list_keys():
@@ -275,6 +284,7 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
+            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -285,6 +295,7 @@ def test_list_keys():
             "uids": ["GPG Person <person@example.com>"],
             "created": "2017-09-28",
             "expires": "2033-09-24",
+            "expired": False,
             "keyLength": "4096",
             "ownerTrust": "Unknown",
             "fingerprint": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
@@ -347,6 +358,7 @@ def test_get_key():
         "trust": "Unknown",
         "ownerTrust": "Unknown",
         "expires": "2033-09-24",
+        "expired": False,
         "keyLength": "4096",
     }
 
@@ -466,8 +478,8 @@ def test_delete_key_with_passphrase_without_gpg_passphrase_in_pillar(gpghome):
     ]
 
     _expected_result = {
-        "res": True,
-        "message": "gpg_passphrase not available in pillar.",
+        "res": False,
+        "message": "Failed to delete secret key for xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx: gpg_passphrase not available in pillar.",
     }
 
     mock_opt = MagicMock(return_value="root")
@@ -546,10 +558,15 @@ def test_delete_key_with_passphrase_with_gpg_passphrase_in_pillar(gpghome):
                 ) as gnupg_delete_keys:
                     ret = gpg.delete_key("xxxxxxxxxxxxxxxx", delete_secret=True)
                     assert ret == _expected_result
+                    gnupg_delete_keys.assert_any_call(
+                        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                        True,
+                        passphrase=GPG_TEST_KEY_PASSPHRASE,
+                    )
                     gnupg_delete_keys.assert_called_with(
                         "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                         False,
-                        passphrase=GPG_TEST_KEY_PASSPHRASE,
+                        expect_passphrase=False,
                     )
 
 
@@ -893,7 +910,12 @@ def test_search_keys(gpghome):
                 assert ret == _expected_result
 
                 assert (
-                    call("person@example.com", "keys.openpgp.org", None)
+                    call(
+                        "person@example.com",
+                        "keys.openpgp.org",
+                        user=None,
+                        gnupghome=None,
+                    )
                     in mock_search_keys.mock_calls
                 )
 
@@ -901,7 +923,12 @@ def test_search_keys(gpghome):
                 assert ret == _expected_result
 
                 assert (
-                    call("person@example.com", "keyserver.ubuntu.com", None)
+                    call(
+                        "person@example.com",
+                        "keyserver.ubuntu.com",
+                        user=None,
+                        gnupghome=None,
+                    )
                     in mock_search_keys.mock_calls
                 )
 
@@ -1043,3 +1070,249 @@ def test_gpg_decrypt_message_with_gpg_passphrase_in_pillar(gpghome):
                     gnupghome=str(gpghome.path),
                 )
                 assert ret["res"] is True
+
+
+@pytest.fixture(params={})
+def _import_result_mock(request):
+    defaults = {
+        "gpg": Mock(),
+        "imported": 0,
+        "results": [],
+        "fingerprints": [],
+        "count": 0,
+        "no_user_id": 0,
+        "imported_rsa": 0,
+        "unchanged": 0,
+        "n_uids": 0,
+        "n_subk": 0,
+        "n_sigs": 0,
+        "n_revoc": 0,
+        "sec_read": 0,
+        "sec_imported": 0,
+        "sec_dups": 0,
+        "not_imported": 0,
+        "stderr": "",
+        "data": b"",
+    }
+    defaults.update(request.param)
+    import_result = MagicMock()
+    import_result.__bool__.return_value = False
+    for var, val in defaults.items():
+        setattr(import_result, var, val)
+    return import_result
+
+
+@pytest.mark.parametrize(
+    "_import_result_mock",
+    (
+        {
+            "count": 1,
+            "stderr": "gpg: key ABCDEF0123456789: no user ID\ngpg: Total number processed: 1\n[GNUPG:] IMPORT_RES 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0\n",
+        },
+    ),
+    indirect=True,
+)
+def test_gpg_receive_keys_no_user_id(_import_result_mock):
+    with patch("salt.modules.gpg._create_gpg") as create, patch(
+        "salt.modules.gpg._create_gnupghome"
+    ):
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            create.return_value.recv_keys.return_value = _import_result_mock
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert any("no user ID" in x for x in res["message"])
+
+
+@pytest.mark.parametrize(
+    "_import_result_mock",
+    (
+        {
+            "results": [{"fingerprint": None, "problem": "0", "text": "Other failure"}],
+            "stderr": "[GNUPG:] FAILURE recv-keys 167772346\ngpg: keyserver receive failed: No keyserver available\n",
+            "returncode": 2,
+        },
+    ),
+    indirect=True,
+)
+def test_gpg_receive_keys_keyserver_unavailable(_import_result_mock):
+    with patch("salt.modules.gpg._create_gpg") as create, patch(
+        "salt.modules.gpg._create_gnupghome"
+    ):
+        with patch.dict(
+            gpg.__salt__, {"user.info": MagicMock(), "config.option": Mock()}
+        ):
+            create.return_value.recv_keys.return_value = _import_result_mock
+            res = gpg.receive_keys(keys="abc", user="abc")
+            assert res["res"] is False
+            assert any("No keyserver available" in x for x in res["message"])
+
+
+@pytest.mark.parametrize(
+    "user,envvar",
+    (
+        ("testuser", ""),
+        ("testuser", "/home/testuser/local/share/gnupg"),
+        (None, ""),
+        (None, "/home/testuser/local/share/gnupg"),
+        ("salt", ""),
+        ("salt", "/this/should/not/matter"),
+    ),
+)
+def test_get_user_gnupghome_respects_shell_env_setup(user, envvar):
+    config_dir = "/etc/salt"  # minion_opts["config_dir"] is not set, only conf_dir (?)
+    user = user or "testuser"
+    if user == "salt":
+        homedir = "/opt/saltstack/salt"
+        expected = str(Path(config_dir) / "gpgkeys")
+    else:
+        homedir = f"/home/{user}"
+        expected = envvar or str(Path(homedir) / ".gnupg")
+    userinfo = {
+        "home": homedir,
+        "uid": 1000,
+        "gid": 1000,
+        "shell": "/bin/bash",
+    }
+    with patch.dict(
+        gpg.__salt__,
+        {
+            "user.info": lambda *x: userinfo,
+            "environ.get": lambda *x: envvar,
+            "cmd.run_stdout": lambda *x, **y: envvar,
+            "config.get": lambda *x: config_dir,
+        },
+    ):
+        res = gpg._get_user_gnupghome(user)
+    assert res == expected
+
+
+@pytest.fixture
+def masking_pillar_mock():
+    """
+    Fake pillar.get that behaves like the 3008 masking machinery: scalar
+    string values come back redacted unless the caller passes unmask=True.
+    """
+
+    def _pillar_get(key, default=None, **kwargs):
+        if kwargs.get("unmask"):
+            return salt.utils.secret.expose(GPG_TEST_KEY_PASSPHRASE)
+        return salt.utils.secret.serial(GPG_TEST_KEY_PASSPHRASE)
+
+    return MagicMock(side_effect=_pillar_get)
+
+
+def test_create_key_unmasks_pillar_passphrase(masking_pillar_mock, tmp_path):
+    """
+    gpg.create_key must pass the real pillar passphrase to gen_key_input,
+    not the masking placeholder.
+    """
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(tmp_path), "uid": 1000, "gid": 1000}
+    )
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.gen_key_input.return_value = "%commit\n"
+        create.return_value.gen_key.return_value.fingerprint = "F" * 40
+        with patch.dict(
+            gpg.__salt__,
+            {
+                "pillar.get": masking_pillar_mock,
+                "config.option": MagicMock(return_value="salt"),
+                "user.info": user_info,
+            },
+        ):
+            ret = gpg.create_key(use_passphrase=True, gnupghome=str(tmp_path))
+    assert ret["res"] is True
+    passed = create.return_value.gen_key_input.call_args.kwargs["passphrase"]
+    assert passed == GPG_TEST_KEY_PASSPHRASE
+    assert passed != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_delete_key_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.delete_key must pass the real pillar passphrase to delete_keys,
+    not the masking placeholder.
+    """
+    fingerprint = "F" * 40
+    key = {"fingerprint": fingerprint}
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.delete_keys.return_value = "ok"
+        with patch.object(gpg, "get_key", return_value=key), patch.object(
+            gpg, "get_secret_key", return_value=key
+        ):
+            with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+                ret = gpg.delete_key(fingerprint=fingerprint, delete_secret=True)
+    assert ret["res"] is True
+    create.return_value.delete_keys.assert_any_call(
+        fingerprint, True, passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_export_key_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.export_key must pass the real pillar passphrase to export_keys,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.export_keys.return_value = "exported key data"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.export_key(keyids="ABCDEF01", secret=True, use_passphrase=True)
+    assert ret["res"] is True
+    create.return_value.export_keys.assert_called_once_with(
+        ["ABCDEF01"], True, passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_sign_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.sign must pass the real pillar passphrase to gnupg's sign,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.sign.return_value.data = b"signed"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.sign(keyid="ABCDEF01", text="foo", use_passphrase=True)
+    assert ret == b"signed"
+    create.return_value.sign.assert_called_once_with(
+        "foo", keyid="ABCDEF01", passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_encrypt_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.encrypt with sign=True must pass the real pillar passphrase to
+    gnupg's encrypt, not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        result = create.return_value.encrypt.return_value
+        result.ok = True
+        result.data = b"encrypted"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.encrypt(
+                text="foo",
+                recipients="person@example.com",
+                sign=True,
+                use_passphrase=True,
+            )
+    assert ret["res"] is True
+    passed = create.return_value.encrypt.call_args.kwargs["passphrase"]
+    assert passed == GPG_TEST_KEY_PASSPHRASE
+    assert passed != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_decrypt_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.decrypt must pass the real pillar passphrase to gnupg's decrypt,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        result = create.return_value.decrypt.return_value
+        result.ok = True
+        result.data = b"decrypted"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.decrypt(text="foo", use_passphrase=True)
+    assert ret["res"] is True
+    create.return_value.decrypt.assert_called_once_with(
+        "foo", passphrase=GPG_TEST_KEY_PASSPHRASE
+    )

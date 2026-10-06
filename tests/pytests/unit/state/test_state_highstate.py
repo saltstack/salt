@@ -324,6 +324,7 @@ def test_dont_extend_in_excluded_sls_file(highstate, state_tree_dir):
                             ),
                             ("__sls__", "test2"),
                             ("__env__", "base"),
+                            ("__sls_included_from__", ["test1"]),
                         ]
                     ),
                 ),

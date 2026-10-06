@@ -1,0 +1,130 @@
+name: mirror from saltstack/salt
+
+# Multi-branch mirror from saltstack/salt into saltstack/salt-nightlies.
+# Lives in saltstack/salt but is GATED to only execute on saltstack/salt-nightlies,
+# so upstream salt never tries to mirror itself. Runs before the daily nightly
+# window so the branches carry the latest code when run-nightly.yml fires.
+#
+# The file must live in salt (not just salt-nightlies) because a mirror sync
+# would otherwise delete it from salt-nightlies (pruning refs/files that don't
+# exist upstream).
+#
+# Push uses scoped refspecs (branches + version tags only), NOT `git push
+# --mirror`. This is deliberate: publish-nightly-release.yml creates tags
+# like `nightly-YYYY-MM-DD-<branch>` on salt-nightlies that don't exist on
+# salt. `--mirror` would delete them on every sync, orphaning the GitHub
+# Releases those tags anchor. Scoped refspecs preserve custom
+# salt-nightlies-only refs while still pruning removed branches/version tags
+# in step with salt.
+#
+# Prereqs on salt-nightlies:
+#   - Repo variable `RUN_SCHEDULED_BUILDS=1` (enables run-nightly.yml despite fork check)
+#   - Repo variable `APP_ID` and secret `APP_PRIVATE_KEY` for the salt-bot GitHub App.
+#     The App must be installed on salt-nightlies with `contents: write` and
+#     `workflows: write` permissions. GITHUB_TOKEN cannot push workflow file changes,
+#     which a full mirror will inevitably touch.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 23:30 UTC — 30 minutes before run-nightly.yml (00:00 UTC) so mirrored
+    # branches are up-to-date when the nightly scheduler fires.
+    - cron: '30 23 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-from-saltstack-salt
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    # HARD GATE: only run on the nightlies fork. On saltstack/salt this workflow
+    # is dormant — the cron fires but no work is done.
+    if: github.repository == 'saltstack/salt-nightlies'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Environment gates access to the salt-bot APP_PRIVATE_KEY. Configure
+    # protection rules (approvals, allowed refs) in salt-nightlies Settings →
+    # Environments → mirror-salt-nightlies.
+    environment: mirror-salt-nightlies
+    steps:
+      - name: install git
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git
+
+      - name: generate salt-bot app token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: clone bare from upstream
+        run: |
+          git clone --bare --mirror https://github.com/saltstack/salt.git upstream.git
+
+      - name: prune refs/pull/* before push
+        working-directory: upstream.git
+        run: |
+          # GitHub rejects any push to refs/pull/* (managed by GitHub itself,
+          # not writable). --mirror still enumerates them during negotiation,
+          # which for salt is thousands of PR head/merge refs — sole cause of
+          # HTTP 408 timeouts observed on first cron attempts. Prune locally
+          # so negotiation only covers real branches + tags.
+          before=$(git for-each-ref refs/pull/ | wc -l)
+          git for-each-ref refs/pull/ --format='delete %(refname)' | git update-ref --stdin
+          after=$(git for-each-ref refs/pull/ | wc -l)
+          echo "refs/pull/ pruned: ${before} -> ${after}"
+
+      - name: fetch salt-nightlies-only branches (preserve during --prune)
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        working-directory: upstream.git
+        run: |
+          # Some branches exist only on salt-nightlies (not upstream salt):
+          # notably `gh-pages` for the nightlies visibility dashboard, updated
+          # by publish-nightly-release.yml. Without this, --prune below would
+          # DELETE those branches every mirror sync because they don't exist
+          # in the source clone. Fetch them into the local bare repo so the
+          # subsequent push sees them and doesn't prune.
+          #
+          # Add more refs here if we ever create additional salt-nightlies-only
+          # branches. Missing branches are tolerated (|| true).
+          for ref in refs/heads/gh-pages; do
+            git fetch \
+              "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git" \
+              "${ref}:${ref}" 2>&1 || echo "  (${ref} not found on destination — will be created on first publish)"
+          done
+
+      - name: push branches + version tags to salt-nightlies
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        working-directory: upstream.git
+        run: |
+          # Point origin at this repo, authenticated with the salt-bot app token.
+          # No git commits created here — just a straight ref replication, so
+          # no user.name/user.email config needed.
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
+          # Scoped refspecs (NOT --mirror): push refs/heads/* and refs/tags/v*
+          # with --prune to remove refs deleted on salt. Custom
+          # salt-nightlies-only refs (nightly-* tags, gh-pages branch) are
+          # preserved via prior fetch step for branches and by the tag pattern
+          # (refs/tags/v* only) for tags.
+          #
+          # `-c remote.origin.mirror=false` is required: `git clone --bare --mirror`
+          # above sets remote.origin.mirror=true in the local config, which makes
+          # `git push` implicitly use --mirror, which fatals when combined with
+          # refspecs ("--mirror can't be combined with refspecs"). Inline override
+          # avoids modifying the config.
+          git -c remote.origin.mirror=false push --prune origin \
+            '+refs/heads/*:refs/heads/*' \
+            '+refs/tags/v*:refs/tags/v*'
+
+      - name: summary
+        if: always()
+        run: |
+          echo "Mirrored saltstack/salt -> ${{ github.repository }}"
+          echo "Next: run-nightly.yml (00:00 UTC) will fire on the freshly-mirrored branches."

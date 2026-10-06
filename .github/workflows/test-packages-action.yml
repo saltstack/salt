@@ -47,6 +47,10 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      raise-deprecations-runtime-errors:
+        required: true
+        type: string
+        description: Whether to raise RuntimeError on deprecation warnings ("1" or "0")
 
 env:
   COLUMNS: 190
@@ -56,13 +60,13 @@ env:
   PIP_TRUSTED_HOST: ${{ vars.PIP_TRUSTED_HOST }}
   PIP_EXTRA_INDEX_URL: ${{ vars.PIP_EXTRA_INDEX_URL }}
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  RAISE_DEPRECATIONS_RUNTIME_ERRORS: "1"
+  RAISE_DEPRECATIONS_RUNTIME_ERRORS: ${{ inputs.raise-deprecations-runtime-errors }}
   USE_S3_CACHE: 'false'
 
 jobs:
 
   test-linux:
-    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }}
+    name: ${{ matrix.display_name }} ${{ matrix.tests-chunk }} ${{ matrix.version }}
     runs-on: ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
     if: ${{ !cancelled() && toJSON(fromJSON(inputs.matrix)['linux']) != '[]' }}
     timeout-minutes: 120  # 2 Hours - More than this and something is wrong
@@ -84,6 +88,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Set up Python ${{ inputs.ci-python-version }}
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
@@ -187,8 +195,12 @@ jobs:
 
       - name: Run Package Tests
         if: ${{ !cancelled() }}
+        env:
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           docker exec \
+          -e SALT_VERSION \
           ${{ github.run_id }}_salt-test-pkg \
           python3 -m nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
@@ -197,7 +209,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ env.TIMESTAMP }}
+          name: pkg-testrun-log-artifacts-${{ matrix.slug }}-${{ inputs.nox-session }}${{ matrix.fips && '-fips' || '' }}-${{ matrix.pkg_type }}-${{ matrix.arch }}-${{ matrix.tests-chunk }}-${{ matrix.version || 'no-version'}}-${{ env.TIMESTAMP }}
           path: |
             artifacts/logs
           include-hidden-files: true
@@ -237,6 +249,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download Packages
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -303,7 +319,9 @@ jobs:
           GITHUB_ACTIONS_PIPELINE: "1"
           SKIP_INITIAL_GH_ACTIONS_FAILURES: "1"
           COVERAGE_CONTEXT: ${{ matrix.slug }}
+          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
+          echo "${{ inputs.salt-version }}" > salt/_version.txt
           sudo -E nox --force-color -e ${{ inputs.nox-session }}-pkgs -- ${{ matrix.tests-chunk }} \
           ${{ matrix.version && format('--prev-version={0}', matrix.version) || ''}}
 
@@ -370,6 +388,10 @@ jobs:
 
       - name: Checkout Source Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Download Packages
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -512,6 +534,10 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Setup Salt Version
+        shell: bash
+        run: echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: "Throttle Builds"
         shell: bash

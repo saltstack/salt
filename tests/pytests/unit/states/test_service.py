@@ -1,5 +1,5 @@
 """
-    :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
+    :codeauthor: Gareth J. Greenaway
 """
 
 import logging
@@ -602,6 +602,7 @@ def test_mod_watch():
         assert service.mod_watch("salt", "stack") == ret[1]
 
 
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
 def test_mod_beacon(tmp_path):
     """
     Test to create a beacon based on a service

@@ -238,7 +238,7 @@ output=`pip install --upgrade pip`
 _log "$output"
 
 # Check if wheel is supported in current version of pip
-pip help install 2>/dev/null | egrep --quiet '(--)no-use-wheel' && PIP_OPTS='--no-use-wheel' || PIP_OPTS=''
+pip help install 2>/dev/null | grep -E --quiet '(--)no-use-wheel' && PIP_OPTS='--no-use-wheel' || PIP_OPTS=''
 
 # Make sure swig is available
 test -z "$SWIG" && SWIG=`command -v swig`
@@ -310,7 +310,7 @@ for dep in "${deps[@]}"; do
         else
             _display "Bundled ZeroMQ detected"
         fi
-        zeromq_version=`egrep '^Version' "$zeromq_spec" | awk '{print $2}'`
+        zeromq_version=`grep -E '^Version' "$zeromq_spec" | awk '{print $2}'`
         _display "ZeroMQ version: $zeromq_version"
     fi
     _display "Installing $src"

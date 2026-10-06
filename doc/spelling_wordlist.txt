@@ -427,7 +427,6 @@ mongodb
 monit
 moosefs
 mountpoint
-msazure
 msc
 msdos
 msg

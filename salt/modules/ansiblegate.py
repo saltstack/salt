@@ -18,6 +18,7 @@ import fnmatch
 import json
 import logging
 import os
+import shlex
 import subprocess
 import sys
 from tempfile import NamedTemporaryFile
@@ -364,9 +365,9 @@ def playbooks(
     if diff:
         command.append("--diff")
     if isinstance(extra_vars, dict):
-        command.append(f"--extra-vars='{json.dumps(extra_vars)}'")
+        command.append(f"--extra-vars={shlex.quote(json.dumps(extra_vars))}")
     elif isinstance(extra_vars, str) and extra_vars.startswith("@"):
-        command.append(f"--extra-vars={extra_vars}")
+        command.append(f"--extra-vars={shlex.quote(extra_vars)}")
     if flush_cache:
         command.append("--flush-cache")
     if inventory:
@@ -420,7 +421,7 @@ def playbooks(
     return retdata
 
 
-def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
+def targets(inventory=None, inventories=None, yaml=False, export=False):
     """
     .. versionadded:: 3005
 
@@ -428,6 +429,10 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
 
     :param inventory:
         The inventory file to read the inventory from. Default: "/etc/ansible/hosts"
+
+    :param inventories:
+        The list of inventory files to read the inventory from.
+        Uses `inventory` in case if `inventories` is not specified.
 
     :param yaml:
         Return the inventory as yaml output. Default: False
@@ -443,7 +448,9 @@ def targets(inventory="/etc/ansible/hosts", yaml=False, export=False):
         salt 'ansiblehost' ansible.targets inventory=my_custom_inventory
 
     """
-    return salt.utils.ansible.targets(inventory=inventory, yaml=yaml, export=export)
+    return salt.utils.ansible.targets(
+        inventory=inventory, inventories=inventories, yaml=yaml, export=export
+    )
 
 
 def discover_playbooks(
@@ -499,7 +506,7 @@ def discover_playbooks(
         List of paths to discover playbooks from.
 
     :param playbook_extension:
-        File extension of playbooks file to search for. Default: "yml"
+        File extension(s) of playbook files to search for, can be a string or tuple of strings. Default: (".yml", ".yaml")
 
     :param hosts_filename:
         Filename of custom playbook inventory to search for. Default: "hosts"
@@ -530,7 +537,7 @@ def discover_playbooks(
         )
 
     if not playbook_extension:
-        playbook_extension = "yml"
+        playbook_extension = (".yml", ".yaml")
     if not hosts_filename:
         hosts_filename = "hosts"
 
@@ -568,7 +575,7 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
         # Check files in the given path
         for _f in os.listdir(path):
             _path = os.path.join(path, _f)
-            if os.path.isfile(_path) and _path.endswith("." + playbook_extension):
+            if os.path.isfile(_path) and _path.endswith(playbook_extension):
                 ret[_f] = {"fullpath": _path}
                 # Check for custom inventory file
                 if os.path.isfile(os.path.join(path, hosts_filename)):
@@ -579,9 +586,7 @@ def _explore_path(path, playbook_extension, hosts_filename, syntax_check):
                 # Check files in the 1st level of subdirectories
                 for _f2 in os.listdir(_path):
                     _path2 = os.path.join(_path, _f2)
-                    if os.path.isfile(_path2) and _path2.endswith(
-                        "." + playbook_extension
-                    ):
+                    if os.path.isfile(_path2) and _path2.endswith(playbook_extension):
                         ret[os.path.join(_f, _f2)] = {"fullpath": _path2}
                         # Check for custom inventory file
                         if os.path.isfile(os.path.join(_path, hosts_filename)):

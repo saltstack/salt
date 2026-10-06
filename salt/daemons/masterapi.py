@@ -291,7 +291,13 @@ def access_keys(opts):
                 )
     for user in acl_users:
         log.info("Preparing the %s key for local communication", user)
-        key = mk_key(opts, user)
+
+        keyfile = os.path.join(opts["cachedir"], f".{user}_key")
+        if os.path.exists(keyfile):
+            with salt.utils.files.fopen(keyfile, "r") as fp:
+                key = salt.utils.stringutils.to_unicode(fp.read())
+        else:
+            key = mk_key(opts, user)
         if key is not None:
             keys[user] = key
 
@@ -303,7 +309,11 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
-                keys[user] = mk_key(opts, user)
+                if os.path.exists(keyfile):
+                    with salt.utils.files.fopen(keyfile, "r") as fp:
+                        keys[user] = salt.utils.stringutils.to_unicode(fp.read())
+                else:
+                    keys[user] = mk_key(opts, user)
         log.profile("End pwd.getpwall() call in masterapi access_keys function")
 
     return keys
@@ -394,7 +404,11 @@ class AutoKey:
         """
         Check a keyid for membership in a autosign directory.
         """
-        autosign_dir = os.path.join(self.opts["pki_dir"], "minions_autosign")
+        if self.opts["cluster_id"]:
+            pki_dir = self.opts["cluster_pki_dir"]
+        else:
+            pki_dir = self.opts["pki_dir"]
+        autosign_dir = os.path.join(pki_dir, "minions_autosign")
 
         # cleanup expired files
         expire_minutes = self.opts.get("autosign_timeout", 120)
@@ -438,7 +452,7 @@ class AutoKey:
                             line = salt.utils.stringutils.to_unicode(line).strip()
                             if line.startswith("#"):
                                 continue
-                            if autosign_grains[grain] == line:
+                            if str(autosign_grains[grain]) == line:
                                 return True
         return False
 
@@ -668,7 +682,7 @@ class RemoteFuncs:
         minions = _res["minions"]
         minion_side_acl = {}  # Cache minion-side ACL
         for minion in minions:
-            mine_data = self.cache.fetch(f"minions/{minion}", "mine")
+            mine_data = self.cache.fetch("mine", minion)
             if not isinstance(mine_data, dict):
                 continue
             for function in functions_allowed:
@@ -719,8 +733,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            ckey = load["id"]
+            cbank = "mine"
             new_data = load["data"]
             if not load.get("clear", False):
                 data = self.cache.fetch(cbank, ckey)
@@ -738,8 +752,8 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            cbank = "minions/{}".format(load["id"])
-            ckey = "mine"
+            cbank = "mine"
+            ckey = load["id"]
             try:
                 data = self.cache.fetch(cbank, ckey)
                 if not isinstance(data, dict):
@@ -760,7 +774,7 @@ class RemoteFuncs:
         if self.opts.get("minion_data_cache", False) or self.opts.get(
             "enforce_mine_cache", False
         ):
-            return self.cache.flush("minions/{}".format(load["id"]), "mine")
+            return self.cache.flush("mine", load["id"])
         return True
 
     def _file_recv(self, load):
@@ -833,11 +847,7 @@ class RemoteFuncs:
         )
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
-            self.cache.store(
-                "minions/{}".format(load["id"]),
-                "data",
-                {"grains": load["grains"], "pillar": data},
-            )
+            self.cache.store("grains", load["id"], load["grains"])
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"comment": "Minion data cache refresh"},
@@ -860,15 +870,19 @@ class RemoteFuncs:
                     event_data = event["data"]
                 else:
                     event_data = event
-                if not valid_minion_tag(event["tag"]):
-                    log.warning("Filtering blacklisted event tag %s", event["tag"])
-                    continue
-                self.event.fire_event(event_data, event["tag"])  # old dup event
+                # Fire pretagged event first (for syndics) before blacklist check
+                # This allows syndics to forward events like salt/job/*/new with
+                # the syndic/ prefix, bypassing the minion event blacklist
                 if load.get("pretag") is not None:
                     self.event.fire_event(
                         event_data,
                         salt.utils.event.tagify(event["tag"], base=load["pretag"]),
                     )
+                # Check blacklist for original tag
+                if not valid_minion_tag(event["tag"]):
+                    log.warning("Filtering blacklisted event tag %s", event["tag"])
+                    continue
+                self.event.fire_event(event_data, event["tag"])  # old dup event
         else:
             tag = load["tag"]
             self.event.fire_event(load, tag)

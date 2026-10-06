@@ -76,6 +76,12 @@ def beacon(config):
     event when the minion is reload. Applicable only when `onchangeonly` is True.
     The default is True.
 
+    `is_running_state`: This boolean parameter controls when the beacon will
+    fire based on the service's running state. If `is_running_state` is set to
+    `True`, the beacon will fire only when the service is running. If
+    `is_running_state` is set to `False`, the beacon will fire only when the
+    service is not running.
+
     `uncleanshutdown`: If `uncleanshutdown` is present it should point to the
     location of a pid file for the service.  Most services will not clean up
     this pid file if they are shutdown uncleanly (e.g. via `kill -9`) or if they
@@ -141,6 +147,15 @@ def beacon(config):
             ret_dict[service]["uncleanshutdown"] = (
                 True if os.path.exists(filename) else False
             )
+
+        # If is_running_state does not match the current running state, skip it
+        if (
+            "is_running_state" in service_config
+            and isinstance(service_config["is_running_state"], bool)
+            and service_config["is_running_state"] != ret_dict[service]["running"]
+        ):
+            continue
+
         if "onchangeonly" in service_config and service_config["onchangeonly"] is True:
             if service not in LAST_STATUS:
                 LAST_STATUS[service] = ret_dict[service]

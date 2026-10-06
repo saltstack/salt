@@ -1,3 +1,4 @@
+import packaging.version
 import pytest
 
 pytestmark = [
@@ -47,3 +48,19 @@ def test_grains_setval_key_val(salt_cli, salt_minion, salt_master):
     ret = salt_cli.run("grains.setval", "key", "val", minion_tgt=salt_minion.id)
     assert ret.data, ret
     assert "key" in ret.data
+
+
+def test_grains_package_onedir(salt_cli, salt_minion, install_salt):
+    """
+    Test that the package grain returns onedir
+    """
+    # This grain was added in 3007.0
+    if packaging.version.parse(install_salt.version) < packaging.version.parse(
+        "3007.0"
+    ):
+        pytest.skip(
+            "The package grain is only going to equal 'onedir' in version 3007.0 or later"
+        )
+    ret = salt_cli.run("grains.get", "package", minion_tgt=salt_minion.id)
+    assert ret.data == "onedir"
+    assert ret.data, ret
