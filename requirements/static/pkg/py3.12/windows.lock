@@ -246,6 +246,7 @@ typing-extensions==4.15.0
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.15.2
     # via -r requirements/base.txt
