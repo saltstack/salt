@@ -42,7 +42,7 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.6.17
+certifi==2026.7.22
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -70,7 +70,7 @@ click==8.1.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   typer
-croniter==6.2.2
+croniter==6.2.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -115,7 +115,7 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.18
+idna==3.20
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -241,7 +241,7 @@ opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -310,7 +310,7 @@ python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
-python-gnupg==0.5.6
+python-gnupg==0.5.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -323,7 +323,7 @@ pyyaml==6.0.3
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==27.1.0
+pyzmq==27.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/zeromq.txt
