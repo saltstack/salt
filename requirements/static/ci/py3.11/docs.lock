@@ -425,6 +425,7 @@ urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.15.2
     # via
