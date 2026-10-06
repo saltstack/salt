@@ -882,6 +882,7 @@ urllib3==2.8.0
     #   botocore
     #   docker
     #   kubernetes
+    #   opentelemetry-exporter-http-transport
     #   python-etcd
     #   requests
     #   responses
