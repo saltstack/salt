@@ -119,7 +119,7 @@ def parse_version(version: str) -> tuple[int, ...]:
 
 
 def urllib3_pin_from_lock(
-    lock_file: pathlib.Path, python_version: tuple[int, int]
+    lock_file: pathlib.Path, python_version: tuple[int, ...]
 ) -> str | None:
     """
     Return the urllib3 version *lock_file* pins for *python_version*, or
