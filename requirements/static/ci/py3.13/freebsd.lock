@@ -315,38 +315,48 @@ ncclient==0.7.1 ; sys_platform != 'win32'
     #   junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
-opentelemetry-api==1.42.1
+opentelemetry-api==1.45.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-http-transport==0.66b0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-common==0.66b0
+    # via
+    #   -c requirements/static/pkg/py3.13/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.45.0
+    # via
+    #   -c requirements/static/pkg/py3.13/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.45.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.66b0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.45.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.45.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-common
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.66b0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   opentelemetry-sdk
@@ -548,7 +558,6 @@ requests==2.34.2
     #   etcd3-py
     #   kubernetes
     #   moto
-    #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
     #   vcert
@@ -652,6 +661,7 @@ urllib3==2.8.0
     #   botocore
     #   docker
     #   kubernetes
+    #   opentelemetry-exporter-http-transport
     #   python-etcd
     #   requests
     #   responses
