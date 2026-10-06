@@ -410,7 +410,7 @@ typing-extensions==4.14.1
     #   pyopenssl
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
