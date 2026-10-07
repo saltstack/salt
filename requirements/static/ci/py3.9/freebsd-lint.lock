@@ -32,7 +32,12 @@ isort==5.13.2
     # via pylint
 mccabe==0.7.0
     # via pylint
-platformdirs==4.4.0
+platformdirs==4.4.0 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/ci/py3.9/freebsd.lock
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   pylint
+platformdirs==4.12.3 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/ci/py3.9/freebsd.lock
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -62,13 +67,13 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.9/freebsd.lock
     #   -r requirements/static/ci/lint.txt
-tomli==2.2.1 ; python_full_version < '3.11'
+tomli==2.5.0 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/ci/py3.9/freebsd.lock
     #   pylint
 tomlkit==0.15.1
     # via pylint
-typing-extensions==4.14.1 ; python_full_version < '3.11'
+typing-extensions==4.16.0 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/ci/py3.9/freebsd.lock
     #   -c requirements/static/pkg/py3.9/freebsd.lock

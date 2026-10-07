@@ -47,13 +47,13 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/lint.txt
-tomli==2.2.1
+tomli==2.5.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pylint
 tomlkit==0.15.1
     # via pylint
-typing-extensions==4.14.1
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
