@@ -18,7 +18,7 @@ looseversion==1.3.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/changelog.txt
-markupsafe==3.0.3
+markupsafe==3.0.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   jinja2
@@ -26,7 +26,7 @@ packaging==26.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/changelog.txt
-tomli==2.2.1
+tomli==2.5.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   towncrier

@@ -16,7 +16,7 @@ aiosignal==1.4.0
     #   aiohttp
 alabaster==0.7.13
     # via sphinx
-annotated-doc==0.0.4
+annotated-doc==0.0.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   typer
@@ -79,7 +79,7 @@ cryptography==46.0.7
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.0
+distlib==0.4.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
@@ -174,7 +174,7 @@ markdown-it-py==2.2.0
     #   mdit-py-plugins
     #   myst-docutils
     #   rich
-markupsafe==3.0.3
+markupsafe==3.0.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -250,15 +250,15 @@ platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
-portend==3.1.0
+portend==3.2.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   cherrypy
-prometheus-client==0.25.0
+prometheus-client==0.26.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-exporter-prometheus
-propcache==0.3.2
+propcache==0.4.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiohttp
@@ -281,7 +281,7 @@ pycparser==2.23
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   cffi
-pycryptodomex==3.23.0
+pycryptodomex==3.24.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -290,7 +290,7 @@ pydata-sphinx-theme==0.16.1
     # via -r requirements/static/ci/docs.txt
 pyenchant==3.2.2
     # via sphinxcontrib-spelling
-pygments==2.20.0
+pygments==2.21.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   accessible-pygments
@@ -314,10 +314,6 @@ python-gnupg==0.5.7
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
-pytz==2024.1
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   tempora
 pyyaml==6.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -338,7 +334,7 @@ rich==15.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   typer
-setproctitle==1.3.7
+setproctitle==1.3.8
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -346,12 +342,12 @@ shellingham==1.5.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   typer
-six==1.16.0
+six==1.17.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   python-dateutil
     #   sphinxcontrib-httpdomain
-smmap==5.0.2
+smmap==5.0.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   gitdb
@@ -381,7 +377,7 @@ sphinxcontrib-serializinghtml==1.1.5
     # via sphinx
 sphinxcontrib-spelling==8.0.0
     # via -r requirements/static/ci/docs.txt
-tempora==5.3.0
+tempora==5.8.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   portend
@@ -401,7 +397,7 @@ typer-slim==0.23.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   jaraco-text
-typing-extensions==4.14.1
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   aiosignal
