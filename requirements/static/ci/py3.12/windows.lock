@@ -309,6 +309,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 passlib==1.7.4
     # via -r requirements/static/ci/common.txt
 patch==1.16
@@ -318,7 +319,6 @@ pathspec==1.0.3
 platformdirs==4.9.2
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -433,7 +433,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   virtualenv
@@ -594,7 +594,7 @@ urllib3==2.8.0
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   -r requirements/base.txt

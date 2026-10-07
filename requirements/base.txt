@@ -110,7 +110,7 @@ urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.8.0; python_version >= '3.10'
 # virtualenv 21.5.1 drops Python 3.9; keep the last 3.9-compatible release there.
 virtualenv>=21.4.2,<21.5.1; python_version < '3.10'
-virtualenv>=21.4.2; python_version >= '3.10'
+virtualenv>=21.7.13; python_version >= '3.10'
 # Transitive of virtualenv; some uv resolver caches pin a stale 3.25
 # version that conflicts with the CI floor of 3.29.1 on Python 3.10+.
 filelock>=3.29.1; python_version >= '3.10'

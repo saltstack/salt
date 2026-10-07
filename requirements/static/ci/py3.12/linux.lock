@@ -355,6 +355,7 @@ packaging==24.0
     #   -r requirements/base.txt
     #   ansible-core
     #   pytest
+    #   virtualenv
 paramiko==5.0.0
     # via
     #   -r requirements/static/ci/common.txt
@@ -367,7 +368,6 @@ pathspec==0.12.1
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.12/linux.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -493,7 +493,7 @@ python-dateutil==2.9.0.post0
     #   croniter
     #   kubernetes
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   virtualenv
@@ -667,7 +667,7 @@ urllib3==2.8.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt

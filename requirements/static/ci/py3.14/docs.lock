@@ -233,10 +233,10 @@ packaging==24.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   sphinx
+    #   virtualenv
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.2.1
     # via
@@ -295,7 +295,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   virtualenv
@@ -408,7 +408,7 @@ urllib3==2.8.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt

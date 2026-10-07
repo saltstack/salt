@@ -535,11 +535,13 @@ packaging==24.0 ; python_full_version >= '3.11'
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 packaging==26.2 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
@@ -555,7 +557,6 @@ pathspec==0.12.1
 platformdirs==4.4.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -714,7 +715,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   moto
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   virtualenv
@@ -969,7 +970,13 @@ urllib3==2.8.0 ; python_full_version >= '3.10'
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.5.0 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
+    #   pytest-salt-factories
+virtualenv==21.14.5 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
