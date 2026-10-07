@@ -6,9 +6,9 @@ attrs==24.2.0
     # via
     #   -r requirements/static/ci/tools.txt
     #   python-tools-scripts
-boto3==1.35.46
+boto3==1.43.109
     # via -r requirements/static/ci/tools.txt
-botocore==1.35.46
+botocore==1.43.109
     # via
     #   boto3
     #   s3transfer
@@ -28,7 +28,7 @@ jmespath==1.0.1
     #   botocore
 markdown-it-py==3.0.0
     # via rich
-markupsafe==2.1.5
+markupsafe==3.0.4
     # via jinja2
 mdurl==0.1.2
     # via markdown-it-py
@@ -38,7 +38,7 @@ pydantic==2.9.2
     # via python-tools-scripts
 pydantic-core==2.23.4
     # via pydantic
-pygments==2.18.0
+pygments==2.21.0
     # via rich
 python-dateutil==2.9.0.post0
     # via botocore
@@ -46,15 +46,15 @@ python-tools-scripts==0.20.5
     # via -r requirements/static/ci/tools.txt
 pyyaml==6.0.2
     # via -r requirements/static/ci/tools.txt
-requests==2.32.3
+requests==2.34.2
     # via python-tools-scripts
 rich==13.9.3
     # via python-tools-scripts
-s3transfer==0.10.3
+s3transfer==0.19.2
     # via boto3
-six==1.16.0
+six==1.17.0
     # via python-dateutil
-typing-extensions==4.12.2
+typing-extensions==4.16.0
     # via
     #   pydantic
     #   pydantic-core

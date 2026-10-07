@@ -32,7 +32,7 @@ isort==5.13.2
     # via pylint
 mccabe==0.7.0
     # via pylint
-platformdirs==4.5.1
+platformdirs==4.12.3
     # via
     #   -c requirements/static/ci/py3.14/freebsd.lock
     #   -c requirements/static/pkg/py3.14/freebsd.lock
