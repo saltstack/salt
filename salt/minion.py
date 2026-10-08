@@ -659,13 +659,17 @@ class MinionBase:
         if context is None:
             context = {}
         if initial_load:
-            self.opts["pillar"] = salt.pillar.get_pillar(
+            pillar = salt.pillar.get_pillar(
                 self.opts,
                 self.opts["grains"],
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
+            )
+            try:
+                self.opts["pillar"] = pillar.compile_pillar()
+            finally:
+                pillar.destroy()
 
         # Populate opts["resources"] from pillar now that pillar is available.
         # Must happen before the resource loader loop below so that per-type
@@ -6482,13 +6486,17 @@ class SProxyMinion(SMinion):
         salt.utils.extmods.sync(self.opts, "grains")
         new_grains = salt.loader.grains(self.opts)
         self.opts.mutate_key("grains", new_grains)
-        new_pillar = salt.pillar.get_pillar(
+        pillar = salt.pillar.get_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
-        ).compile_pillar()
+        )
+        try:
+            new_pillar = pillar.compile_pillar()
+        finally:
+            pillar.destroy()
         self.opts.mutate_key("pillar", new_pillar)
 
         if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:
