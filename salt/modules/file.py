@@ -1945,13 +1945,14 @@ def _eol_aware(pattern, *repls):
     replacement text refers to a carriage return explicitly. A literal
     ``\\r\\n`` pair in a replacement is fine, since it is normalized as well.
     """
-    if _CR_RE.search(salt.utils.stringutils.to_unicode(pattern)):
+    # Never fail on undecodable bytes, a replacement character is enough here
+    if _CR_RE.search(salt.utils.stringutils.to_unicode(pattern, errors="replace")):
         return False
     for repl in repls:
         if repl is None:
             continue
         repl = salt.utils.stringutils.to_unicode(
-            repl if isinstance(repl, (str, bytes)) else str(repl)
+            repl if isinstance(repl, (str, bytes)) else str(repl), errors="replace"
         )
         if _CR_RE.search(repl.replace("\r\n", "\n")):
             return False
@@ -3910,7 +3911,7 @@ def prepend(path, *args, **kwargs):
         contents = []
 
     # Follow the line endings already used by the file
-    eol = _detect_eol("".join(contents), default="\n")
+    eol = _detect_eol(contents[0] if contents else "", default="\n")
     preface = []
     for line in args:
         preface.append(f"{line}{eol}")

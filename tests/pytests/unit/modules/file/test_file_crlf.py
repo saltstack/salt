@@ -431,3 +431,17 @@ def test_write_new_file_uses_lf(tmp_path):
     path = tmp_path / "new.txt"
     filemod.write(str(path), "a", "b")
     assert path.read_bytes() == b"a\nb\n"
+
+
+def test_eol_aware_tolerates_undecodable_bytes():
+    """
+    A bytes pattern that is not valid UTF-8 must not make the check fail.
+    """
+    assert filemod._eol_aware(b"caf\xe9$", b"\xff") is True
+    assert filemod._eol_aware(b"\xe9\r") is False
+
+
+def test_prepend_detects_eol_from_first_line_only(make_file):
+    path = make_file(b"first\r\nsecond\nthird\n")
+    filemod.prepend(str(path), "new")
+    assert path.read_bytes() == b"new\r\nfirst\r\nsecond\nthird\n"
