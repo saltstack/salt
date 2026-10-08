@@ -3125,12 +3125,3 @@ class RequestClient(salt.transport.base.RequestClient):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-class TCPReqClient(RequestClient):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPReqClient has been deprecated, use RequestClient instead.",
-        )
-        super().__init__(*args, **kwargs)
