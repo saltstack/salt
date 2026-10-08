@@ -658,15 +658,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
 
-class TCPPubClient(PublishClient):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPPubClient has been deprecated, use PublishClient instead.",
-        )
-        super().__init__(*args, **kwargs)
-
-
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
     """
     Tornado based TCP Request/Reply Server
@@ -2591,15 +2582,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pass
 
     # pylint: enable=W1701
-
-
-class TCPPublishServer(PublishServer):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPPublishServer has been deprecated, use PublishServer instead.",
-        )
-        super().__init__(*args, **kwargs)
 
 
 class _TCPPubServerPublisher:

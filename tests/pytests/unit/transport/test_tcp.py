@@ -443,7 +443,7 @@ async def test_async_tcp_pub_channel_connect_publish_port(
         acceptance_wait_time_max=5,
     )
     patch_auth = MagicMock(return_value=True)
-    transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    transport = MagicMock(spec=salt.transport.tcp.PublishClient)
     transport.connect = MagicMock()
     future = asyncio.Future()
     transport.connect.return_value = future
@@ -756,11 +756,9 @@ async def test_mixin_should_use_correct_path_when_syndic():
 def test_presence_events_callback_passed(temp_salt_master, salt_message_client):
     opts = dict(temp_salt_master.config.copy(), transport="tcp", presence_events=True)
     channel = salt.channel.server.PubServerChannel.factory(opts)
-    channel.transport = salt.transport.tcp.TCPPublishServer(opts)
+    channel.transport = salt.transport.tcp.PublishServer(opts)
     mock_publish_daemon = MagicMock()
-    with patch(
-        "salt.transport.tcp.TCPPublishServer.publish_daemon", mock_publish_daemon
-    ):
+    with patch("salt.transport.tcp.PublishServer.publish_daemon", mock_publish_daemon):
         channel._publish_daemon()
         mock_publish_daemon.assert_called_with(
             channel.publish_payload,
@@ -803,23 +801,27 @@ async def test_presence_removed_on_stream_closed():
             server.remove_presence_callback.assert_called_with(client)
 
 
-async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
+async def test_tcp_publish_client_decode_dict(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
-    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+    with salt.transport.tcp.PublishClient(
+        minion_opts, io_loop, path=tmp_path
+    ) as client:
         ret = client._decode_messages(dmsg)
         assert ret == dmsg
 
 
-async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop, tmp_path):
+async def test_tcp_publish_client_decode_msgpack(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     msg = salt.payload.dumps(dmsg)
-    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+    with salt.transport.tcp.PublishClient(
+        minion_opts, io_loop, path=tmp_path
+    ) as client:
         ret = client._decode_messages(msg)
         assert ret == dmsg
 
 
-def test_tcp_pub_client_close(minion_opts, io_loop, tmp_path):
-    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path)
+def test_tcp_publish_client_close(minion_opts, io_loop, tmp_path):
+    client = salt.transport.tcp.PublishClient(minion_opts, io_loop, path=tmp_path)
 
     stream = MagicMock()
 
@@ -1107,9 +1109,9 @@ async def test_message_client_stream_return_exception(minion_opts, io_loop):
         client.close()
 
 
-def test_tcp_pub_server_pre_fork(master_opts):
+def test_tcp_publish_server_pre_fork(master_opts):
     process_manager = MagicMock()
-    server = salt.transport.tcp.TCPPublishServer(master_opts)
+    server = salt.transport.tcp.PublishServer(master_opts)
     server.pre_fork(process_manager)
 
 
