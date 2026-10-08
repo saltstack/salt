@@ -359,3 +359,75 @@ def test_line_delete_dollar_matches_crlf(make_file):
     ret = filemod.line(str(path), match=r"^foo$", mode="delete")
     assert ret
     assert path.read_bytes() == b"bar\r\n"
+
+
+# --------------------------------------------------------------------------
+# file.append / file.prepend / file.write
+# --------------------------------------------------------------------------
+
+
+def test_append_follows_crlf_endings(make_file):
+    path = make_file(b"foo\r\nbar")
+    filemod.append(str(path), "baz")
+    assert path.read_bytes() == b"foo\r\nbar\r\nbaz\r\n"
+
+
+def test_append_follows_lf_endings(make_file):
+    path = make_file(b"foo\nbar")
+    filemod.append(str(path), "baz")
+    assert path.read_bytes() == b"foo\nbar\nbaz\n"
+
+
+def test_append_to_file_ending_in_newline_adds_no_blank_line(make_file):
+    path = make_file(b"foo\n")
+    filemod.append(str(path), "bar")
+    assert path.read_bytes() == b"foo\nbar\n"
+
+    path = make_file(b"foo\r\n")
+    filemod.append(str(path), "bar", "baz")
+    assert path.read_bytes() == b"foo\r\nbar\r\nbaz\r\n"
+
+
+def test_append_to_empty_file_uses_os_linesep(make_file):
+    path = make_file(b"")
+    filemod.append(str(path), "bar")
+    expected = salt.utils.stringutils.to_bytes("bar" + os.linesep)
+    assert path.read_bytes() == expected
+
+
+def test_prepend_follows_crlf_endings(make_file):
+    path = make_file(b"foo\r\nbar\r\n")
+    filemod.prepend(str(path), "baz")
+    assert path.read_bytes() == b"baz\r\nfoo\r\nbar\r\n"
+
+
+def test_prepend_follows_lf_endings(make_file):
+    path = make_file(b"foo\nbar\n")
+    filemod.prepend(str(path), "baz")
+    assert path.read_bytes() == b"baz\nfoo\nbar\n"
+
+
+def test_write_always_uses_lf_even_on_crlf_file(make_file):
+    """
+    file.write intentionally does not follow the line endings of the file it
+    overwrites, unlike file.append and file.prepend. It replaces the whole
+    file and writes the caller's strings as given (callers such as
+    iptables.save pass multi-line strings with their own newlines), so the
+    only terminator it adds is "\\n". Callers that want CRLF pass "\\r\\n".
+    Do not "fix" this without reading the note in the file.write docstring.
+    """
+    path = make_file(b"old\r\ncontent\r\n")
+    filemod.write(str(path), "a", "b")
+    assert path.read_bytes() == b"a\nb\n"
+
+
+def test_write_passes_embedded_crlf_through(make_file):
+    path = make_file(b"old\n")
+    filemod.write(str(path), "a\r\nb")
+    assert path.read_bytes() == b"a\r\nb\n"
+
+
+def test_write_new_file_uses_lf(tmp_path):
+    path = tmp_path / "new.txt"
+    filemod.write(str(path), "a", "b")
+    assert path.read_bytes() == b"a\nb\n"
