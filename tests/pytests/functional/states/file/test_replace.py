@@ -573,3 +573,44 @@ def test_replace_utf16_execution_module(modules, tmp_path):
 
     raw = name.read_bytes()
     assert raw[:2] in (b"\xff\xfe", b"\xfe\xff"), "BOM missing after replace"
+
+
+def test_replace_append_if_not_found_converges_after_one_run_crlf(file, tmp_path):
+    """
+    Two ``file.replace`` states appending to the same CRLF file must not
+    keep rewriting it on later runs (#52457).
+    """
+    name = tmp_path / "pg_hba.conf"
+    name.write_bytes(b"# managed by salt\r\n")
+    states = [
+        (r"^host\s+all\s+all\s+0\.0\.0\.0/0\s+md5.*", "host all all 0.0.0.0/0 md5"),
+        (r"^host\s+all\s+all\s+::/0\s+md5.*", "host all all ::/0 md5"),
+    ]
+
+    def run():
+        return [
+            file.replace(
+                name=str(name),
+                pattern=pattern,
+                repl=repl,
+                append_if_not_found=True,
+                backup=False,
+            )
+            for pattern, repl in states
+        ]
+
+    first = run()
+    assert all(ret.result is True for ret in first)
+    assert all(ret.changes for ret in first)
+    expected = (
+        b"# managed by salt\r\n"
+        b"host all all 0.0.0.0/0 md5\r\n"
+        b"host all all ::/0 md5\r\n"
+    )
+    assert name.read_bytes() == expected
+
+    for _ in range(2):
+        for ret in run():
+            assert ret.result is True
+            assert not ret.changes
+        assert name.read_bytes() == expected
