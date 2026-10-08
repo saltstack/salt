@@ -1918,6 +1918,128 @@ def _set_line_eol(src, line):
     return line.rstrip() + line_ending
 
 
+# How much of the beginning of a file is read to detect its line endings
+_EOL_PROBE_SIZE = 65536
+
+# Matches a carriage return, either literally or as a regular expression or
+# template escape (``\r``, ``\x0d``, ``\015``, ``\u000d``).
+_CR_RE = re.compile(r"\r|\\r|\\x0[dD]|\\015|\\u000[dD]|\\N\{CARRIAGE RETURN\}")
+
+
+def _eol_aware(pattern, *repls):
+    """
+    Return ``True`` if matching can safely treat ``\\r\\n`` as ``\\n``.
+
+    Python's :py:mod:`re` only treats ``\\n`` as a line boundary. In a file with
+    CRLF line endings ``.`` and ``\\s`` match the ``\\r`` and ``$`` does not
+    match before ``\\r\\n``. :py:func:`_subn_eol_aware` hides the ``\\r`` from the
+    pattern, which is only correct when neither the pattern nor the
+    replacement text refers to a carriage return explicitly. A literal
+    ``\\r\\n`` pair in a replacement is fine, since it is normalized as well.
+    """
+    if _CR_RE.search(salt.utils.stringutils.to_unicode(pattern)):
+        return False
+    for repl in repls:
+        if repl is None:
+            continue
+        repl = salt.utils.stringutils.to_unicode(
+            repl if isinstance(repl, (str, bytes)) else str(repl)
+        )
+        if _CR_RE.search(repl.replace("\r\n", "\n")):
+            return False
+    return True
+
+
+def _lf_line(line):
+    """
+    Return ``line`` with a trailing ``\\r\\n`` replaced by ``\\n``, so a regular
+    expression using ``$`` matches a CRLF terminated line like an LF
+    terminated one. Only meant for matching; write the original line back.
+    """
+    if line.endswith("\r\n"):
+        return line[:-2] + "\n"
+    return line
+
+
+def _line_matcher(regex):
+    """
+    Return the function used to prepare lines for matching against ``regex``:
+    :py:func:`_lf_line`, unless the expression refers to a carriage return
+    explicitly.
+    """
+    if _eol_aware(regex):
+        return _lf_line
+    return lambda line: line
+
+
+def _detect_eol(data, default=os.linesep):
+    """
+    Return the line ending used by the first line of ``data`` (``str``,
+    ``bytes`` or ``mmap``) as a ``str``, falling back to ``default`` when
+    ``data`` does not contain a line ending. This mirrors the detection done
+    by :py:func:`blockreplace`.
+    """
+    if isinstance(data, str):
+        lf, cr = "\n", "\r"
+    else:
+        lf, cr = b"\n", b"\r"
+    idx = data.find(lf, 0)
+    if idx == -1:
+        return default
+    if idx > 0 and data[idx - 1 : idx] == cr:
+        return "\r\n"
+    return "\n"
+
+
+def _lf_view(data, eol_aware=True):
+    """
+    Return ``(data, is_crlf)``.
+
+    If ``data`` (``str``, ``bytes`` or ``mmap``) only uses CRLF line endings
+    and ``eol_aware`` is true, return a copy with the line endings normalized
+    to ``\\n`` and ``True``. Otherwise return ``data`` unchanged and ``False``.
+    Files with mixed line endings are never normalized, since they could not
+    be restored faithfully.
+    """
+    if not eol_aware:
+        return data, False
+    if isinstance(data, str):
+        crlf, lf = "\r\n", "\n"
+    else:
+        crlf, lf = b"\r\n", b"\n"
+    if data.find(crlf, 0) == -1:
+        return data, False
+    if not isinstance(data, str):
+        # Materialize mmap objects, which do not support count() or replace()
+        data = bytes(data)
+    if data.count(lf) != data.count(crlf):
+        return data, False
+    return data.replace(crlf, lf), True
+
+
+def _subn_eol_aware(
+    cpattern, repl, data, count=0, backslash_literal=False, eol_aware=True
+):
+    """
+    Wrapper around :py:func:`re.subn` that makes CRLF files behave like LF
+    files, so that ``.*`` does not swallow the ``\\r`` and ``$`` matches at the
+    end of a CRLF terminated line. The result keeps the line endings of
+    ``data``. See :py:func:`_eol_aware` and :py:func:`_lf_view`.
+    """
+    data, crlf = _lf_view(data, eol_aware)
+    is_str = isinstance(data, str)
+    if crlf:
+        repl = repl.replace("\r\n", "\n") if is_str else repl.replace(b"\r\n", b"\n")
+    if backslash_literal:
+        repl = repl.replace("\\", "\\\\") if is_str else repl.replace(b"\\", b"\\\\")
+    result, nrepl = re.subn(cpattern, repl, data, count=count)
+    if crlf:
+        result = (
+            result.replace("\n", "\r\n") if is_str else result.replace(b"\n", b"\r\n")
+        )
+    return result, nrepl
+
+
 def _set_line(
     lines,
     content=None,
@@ -2612,6 +2734,15 @@ def replace(
 
         Example: ``encoding=utf-16``
 
+    .. note::
+        A file that uses ``\\r\\n`` line endings for every line is matched as if
+        it used ``\\n``, so ``.*`` does not consume the carriage return and
+        ``$`` matches at the end of a line. The line endings of the file are
+        preserved, and text appended or prepended with ``append_if_not_found``
+        or ``prepend_if_not_found`` uses them. This does not apply when the
+        pattern or ``repl`` refers to a carriage return explicitly (for example
+        ``\\r``), or when the file has mixed line endings.
+
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
     processing can be bypassed in order to pass an equal sign through to the
@@ -2681,14 +2812,19 @@ def replace(
                 f"Unable to open file '{path}'. Exception: {exc}"
             )
 
-        if search_only:
-            return bool(re.search(cpattern, orig_contents))
+        eol_aware = _eol_aware(pattern, repl_str, not_found_content)
 
-        result, nrepl = re.subn(
+        if search_only:
+            lf_contents, _ = _lf_view(orig_contents, eol_aware)
+            return bool(re.search(cpattern, lf_contents))
+
+        result, nrepl = _subn_eol_aware(
             cpattern,
-            repl_str.replace("\\", "\\\\") if backslash_literal else repl_str,
+            repl_str,
             orig_contents,
             count,
+            backslash_literal=backslash_literal,
+            eol_aware=eol_aware,
         )
 
         found = nrepl > 0
@@ -2727,12 +2863,14 @@ def replace(
 
         if not found and (append_if_not_found or prepend_if_not_found):
             nfc = str(not_found_content) if not_found_content is not None else repl_str
+            # Follow the line endings already used by the file
+            eol = _detect_eol(orig_contents)
             if prepend_if_not_found:
-                new_file.insert(0, nfc + os.linesep)
+                new_file.insert(0, nfc + eol)
             else:
-                if new_file and not new_file[-1].endswith(os.linesep):
-                    new_file[-1] += os.linesep
-                new_file.append(nfc + os.linesep)
+                if new_file and not new_file[-1].endswith("\n"):
+                    new_file[-1] += eol
+                new_file.append(nfc + eol)
             has_changes = True
             if not dry_run:
                 try:
@@ -2808,6 +2946,10 @@ def replace(
         pre_group = get_group(path)
         pre_mode = salt.utils.files.normalize_mode(get_mode(path))
 
+    # Decide before repl is converted to bytes whether CRLF files can be
+    # matched as if they used LF line endings
+    eol_aware = _eol_aware(pattern, repl, not_found_content)
+
     # Avoid TypeErrors by forcing repl to be bytearray related to mmap
     # Replacement text may contains integer: 123 for example
     repl = salt.utils.stringutils.to_bytes(str(repl))
@@ -2816,6 +2958,7 @@ def replace(
 
     found = False
     temp_file = None
+    file_eol = os.linesep
     content = (
         salt.utils.stringutils.to_unicode(not_found_content)
         if not_found_content and (prepend_if_not_found or append_if_not_found)
@@ -2836,16 +2979,20 @@ def replace(
                 r_data = b"".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
-                if re.search(cpattern, r_data):
+                lf_data, _ = _lf_view(r_data, eol_aware)
+                if re.search(cpattern, lf_data):
                     return True  # `with` block handles file closure
                 else:
                     return False
             else:
-                result, nrepl = re.subn(
+                file_eol = _detect_eol(r_data)
+                result, nrepl = _subn_eol_aware(
                     cpattern,
-                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
+                    repl,
                     r_data,
                     count,
+                    backslash_literal=backslash_literal,
+                    eol_aware=eol_aware,
                 )
 
                 # found anything? (even if no change)
@@ -2900,11 +3047,13 @@ def replace(
                         temp_file, mode="r", buffering=bufsize
                     ) as r_file:
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
-                        result, nrepl = re.subn(
+                        result, nrepl = _subn_eol_aware(
                             cpattern,
-                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
+                            repl,
                             r_data,
                             count,
+                            backslash_literal=backslash_literal,
+                            eol_aware=eol_aware,
                         )
                         try:
                             w_file.write(salt.utils.stringutils.to_str(result))
@@ -2926,21 +3075,17 @@ def replace(
     if not found and (append_if_not_found or prepend_if_not_found):
         if not_found_content is None:
             not_found_content = repl
+        # Follow the line endings already used by the file
+        eol = salt.utils.stringutils.to_bytes(file_eol)
         if prepend_if_not_found:
-            new_file.insert(
-                0, not_found_content + salt.utils.stringutils.to_bytes(os.linesep)
-            )
+            new_file.insert(0, not_found_content + eol)
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(
-                    salt.utils.stringutils.to_bytes(os.linesep)
-                ):
-                    new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
-            new_file.append(
-                not_found_content + salt.utils.stringutils.to_bytes(os.linesep)
-            )
+                if not new_file[-1].endswith(b"\n"):
+                    new_file[-1] += eol
+            new_file.append(not_found_content + eol)
         has_changes = True
         if not dry_run:
             try:
