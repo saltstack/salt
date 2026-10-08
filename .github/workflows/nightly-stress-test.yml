@@ -33,6 +33,14 @@ on:
         required: false
         default: '5'
         type: string
+      metrics_exporter:
+        description: metrics.exporter used when enable_metrics is true
+        required: false
+        default: otlp-http
+        type: choice
+        options:
+          - otlp-http
+          - prometheus
 
 jobs:
   stress-test:
@@ -71,6 +79,7 @@ jobs:
         env:
           ENABLE_METRICS: ${{ github.event.inputs.enable_metrics || 'false' }}
           WORKER_THREADS: ${{ github.event.inputs.worker_threads || '5' }}
+          METRICS_EXPORTER: ${{ github.event.inputs.metrics_exporter || 'otlp-http' }}
         run: |
           cd tests/monitoring
           need_restart=0
@@ -81,7 +90,13 @@ jobs:
             # re-runs are idempotent.  ``printf`` (not a heredoc) keeps
             # the YAML block-scalar indentation intact.
             if ! grep -q '^metrics:' master.conf; then
-              printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              if [ "$METRICS_EXPORTER" = "prometheus" ]; then
+                # Listen on all interfaces so the prometheus container
+                # can scrape ``salt-master:9464``.
+                printf '\nmetrics:\n  enabled: true\n  exporter: prometheus\n  prometheus:\n    host: 0.0.0.0\n    port: 9464\n' >> master.conf
+              else
+                printf '\nmetrics:\n  enabled: true\n' >> master.conf
+              fi
               need_restart=1
             fi
           else
@@ -134,7 +149,23 @@ jobs:
           pkill -P $STRESS_PID || true
           kill $STRESS_PID || true
 
+      - name: Show the master's own metrics
+        if: always() && github.event.inputs.enable_metrics == 'true' && github.event.inputs.metrics_exporter == 'prometheus'
+        run: |
+          mkdir -p artifacts
+          docker exec salt-master python3 -c \
+            "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:9464/metrics', timeout=10).read().decode())" \
+            > artifacts/salt-metrics.txt || true
+          # One file per process that has written metrics: the main
+          # process plus every MWorker (and any that were replaced).
+          docker exec salt-master sh -c 'ls -la /tmp/salt-metrics-*/' \
+            > artifacts/salt-metrics-dir.txt || true
+          grep -E '^salt_' artifacts/salt-metrics.txt | head -40 || true
+          cat artifacts/salt-metrics-dir.txt || true
+
       - name: Analyze Results
+        env:
+          EXPECT_SALT_PROMETHEUS_METRICS: ${{ (github.event.inputs.enable_metrics == 'true' && github.event.inputs.metrics_exporter == 'prometheus') && '1' || '0' }}
         run: |
           cd tests/monitoring
           # Give Prometheus a moment to finish scraping the final points
