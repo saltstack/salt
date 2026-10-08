@@ -284,7 +284,7 @@ def test_replace_encoding_append_if_not_found_is_idempotent(make_file):
 
 
 # --------------------------------------------------------------------------
-# file.search
+# file.search / file.contains_regex
 # --------------------------------------------------------------------------
 
 
@@ -293,3 +293,69 @@ def test_search_dollar_matches_crlf(make_file):
     assert filemod.search(str(path), r"^alpha$") is True
     assert filemod.search(str(path), r"^alpha$", multiline=True) is True
     assert filemod.search(str(path), r"^gamma$") is False
+
+
+def test_contains_regex_dollar_matches_crlf(make_file):
+    path = make_file(b"alpha\r\nbeta\r\n")
+    assert filemod.contains_regex(str(path), r"^beta$") is True
+    assert filemod.contains_regex(str(path), r"^gamma$") is False
+
+
+# --------------------------------------------------------------------------
+# file.comment_line / file.comment / file.uncomment
+# --------------------------------------------------------------------------
+
+
+def test_comment_line_dollar_matches_crlf(make_file):
+    path = make_file(b"foo\r\nbar\r\n")
+    ret = filemod.comment_line(str(path), r"^foo$", backup=False)
+    assert ret
+    assert path.read_bytes() == b"#foo\r\nbar\r\n"
+
+
+def test_uncomment_line_dollar_matches_crlf(make_file):
+    path = make_file(b"#foo\r\nbar\r\n")
+    ret = filemod.comment_line(str(path), r"^foo$", cmnt=False, backup=False)
+    assert ret
+    assert path.read_bytes() == b"foo\r\nbar\r\n"
+
+
+def test_comment_dollar_matches_crlf(make_file):
+    path = make_file(b"foo\r\nbar\r\n")
+    ret = filemod.comment(str(path), r"^foo$", backup=False)
+    assert ret
+    assert path.read_bytes() == b"#foo\r\nbar\r\n"
+
+
+# --------------------------------------------------------------------------
+# file.line
+# --------------------------------------------------------------------------
+
+
+def test_line_replace_dollar_matches_crlf(make_file):
+    path = make_file(b"foo\r\nbar\r\n")
+    ret = filemod.line(str(path), content="baz", match=r"^foo$", mode="replace")
+    assert ret
+    assert path.read_bytes() == b"baz\r\nbar\r\n"
+
+
+@pytest.mark.parametrize("eol", [b"\n", b"\r\n"], ids=["lf", "crlf"])
+def test_line_insert_after_first_line_follows_file_endings(make_file, eol):
+    """
+    The line ending of an inserted line comes from the previous line. For the
+    second line of the file it used to be taken from the line itself, which
+    has none yet, so os.linesep was used.
+    """
+    path = make_file(eol.join([b"first", b"second", b"third", b""]))
+    ret = filemod.line(
+        str(path), content="new", after=r"^first$", mode="insert", backup=False
+    )
+    assert ret
+    assert path.read_bytes() == eol.join([b"first", b"new", b"second", b"third", b""])
+
+
+def test_line_delete_dollar_matches_crlf(make_file):
+    path = make_file(b"foo\r\nbar\r\n")
+    ret = filemod.line(str(path), match=r"^foo$", mode="delete")
+    assert ret
+    assert path.read_bytes() == b"bar\r\n"
