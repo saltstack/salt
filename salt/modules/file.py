@@ -3790,6 +3790,12 @@ def append(path, *args, **kwargs):
     `*args`
         strings to append to file
 
+    .. note::
+        Each string is terminated with the line ending used by the first line
+        of the file (``\\r\\n`` or ``\\n``), falling back to the system's line
+        ending when the file has no line ending yet. Line endings inside a
+        string are written as given.
+
     CLI Example:
 
     .. code-block:: bash
@@ -3824,9 +3830,11 @@ def append(path, *args, **kwargs):
     # Make sure we have a newline at the end of the file. Do this in binary
     # mode so SEEK_END with nonzero offset will work.
     with salt.utils.files.fopen(path, "rb+") as ofile:
-        linesep = salt.utils.stringutils.to_bytes(os.linesep)
+        # Follow the line endings already used by the file, falling back to
+        # the system's when it has none yet
+        linesep = _detect_eol(ofile.read(_EOL_PROBE_SIZE))
         try:
-            ofile.seek(-len(linesep), os.SEEK_END)
+            ofile.seek(-1, os.SEEK_END)
         except OSError as exc:
             if exc.errno in (errno.EINVAL, errno.ESPIPE):
                 # Empty file, simply append lines at the beginning of the file
@@ -3834,14 +3842,14 @@ def append(path, *args, **kwargs):
             else:
                 raise
         else:
-            if ofile.read(len(linesep)) != linesep:
+            if ofile.read(1) != b"\n":
                 ofile.seek(0, os.SEEK_END)
-                ofile.write(linesep)
+                ofile.write(salt.utils.stringutils.to_bytes(linesep))
 
     # Append lines in text mode
     with salt.utils.files.fopen(path, "a") as ofile:
         for new_line in args:
-            ofile.write(salt.utils.stringutils.to_str(f"{new_line}{os.linesep}"))
+            ofile.write(salt.utils.stringutils.to_str(f"{new_line}{linesep}"))
 
     return f'Wrote {len(args)} lines to "{path}"'
 
@@ -3857,6 +3865,12 @@ def prepend(path, *args, **kwargs):
 
     `*args`
         strings to prepend to the file
+
+    .. note::
+        Each string is terminated with the line ending used by the first line
+        of the file (``\\r\\n`` or ``\\n``), falling back to ``\\n`` when the
+        file has no line ending yet. Line endings inside a string are written
+        as given.
 
     CLI Example:
 
@@ -3895,9 +3909,11 @@ def prepend(path, *args, **kwargs):
     except OSError:
         contents = []
 
+    # Follow the line endings already used by the file
+    eol = _detect_eol("".join(contents), default="\n")
     preface = []
     for line in args:
-        preface.append(f"{line}\n")
+        preface.append(f"{line}{eol}")
 
     with salt.utils.files.fopen(path, "w") as ofile:
         contents = preface + contents
@@ -3916,6 +3932,15 @@ def write(path, *args, **kwargs):
 
     `*args`
         strings to write to the file
+
+    .. note::
+        Every string is terminated with ``\\n`` on all platforms, regardless of
+        the line endings of the file being overwritten. Unlike
+        :py:func:`file.append <salt.modules.file.append>` and
+        :py:func:`file.prepend <salt.modules.file.prepend>`, which add to
+        existing content and follow its line endings, this function replaces
+        the whole file and writes the strings as given. To write ``\\r\\n``
+        line endings, include them in the strings.
 
     CLI Example:
 
@@ -3945,6 +3970,10 @@ def write(path, *args, **kwargs):
         else:
             args = [kwargs["args"]]
 
+    # Intentionally always terminate with "\n", unlike append and prepend. The
+    # existing file is replaced, so there is nothing to stay consistent with,
+    # and the caller's content is written as given. See the note in the
+    # docstring before changing this.
     contents = []
     for line in args:
         contents.append(f"{line}\n")
