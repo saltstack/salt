@@ -885,15 +885,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         return None
 
 
-class TCPReqServer(RequestServer):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPReqServer has been deprecated, use RequestServer instead.",
-        )
-        super().__init__(*args, **kwargs)
-
-
 class SaltMessageServer(tornado.tcpserver.TCPServer):
     """
     Raw TCP server which will receive all of the TCP streams and re-assemble
