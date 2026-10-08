@@ -15,6 +15,7 @@ from pytestshellutils.utils import ports
 
 import salt.channel.server
 import salt.exceptions
+import salt.transport.frame
 import salt.transport.tcp
 import salt.utils.platform
 from tests.support.mock import AsyncMock, MagicMock, PropertyMock, patch
@@ -643,6 +644,103 @@ def test_tcp_publish_client_close(minion_opts, io_loop, tmp_path):
     assert client._stream is None
     client.close()
     stream.close.assert_called_once_with()
+
+
+@pytest.fixture
+def tcp_request_client(minion_opts, io_loop):
+    opts = dict(minion_opts, master_uri="tcp://127.0.0.1:4506")
+    client = salt.transport.tcp.RequestClient(opts, io_loop)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+def test_tcp_request_client_close_closes_stream_once(tcp_request_client):
+    stream = MagicMock()
+    tcp_request_client._stream = stream
+
+    tcp_request_client.close()
+    tcp_request_client.close()
+
+    assert tcp_request_client._closing is True
+    assert tcp_request_client._stream is None
+    stream.close.assert_called_once_with()
+
+
+async def test_tcp_request_client_close_cancels_stream_return_task(
+    tcp_request_client,
+):
+    task = asyncio.create_task(asyncio.sleep(60))
+    tcp_request_client.task = task
+
+    tcp_request_client.close()
+    await asyncio.sleep(0)
+
+    assert task.cancelled() is True
+    assert tcp_request_client.task is None
+
+
+async def test_tcp_request_client_send_after_close_raises_closing_error(
+    tcp_request_client,
+):
+    tcp_request_client.close()
+
+    with pytest.raises(salt.transport.tcp.ClosingError):
+        await asyncio.wait_for(tcp_request_client.send({"cmd": "ping"}), timeout=5)
+
+
+def test_tcp_request_client_timeout_message_unknown_id_is_ignored(
+    tcp_request_client,
+):
+    tcp_request_client.timeout_message("no-such-id", "message")
+
+    assert tcp_request_client.send_future_map == {}
+
+
+async def test_tcp_request_client_timeout_message_fails_the_future(
+    tcp_request_client,
+):
+    future = tornado.concurrent.Future()
+    tcp_request_client.send_future_map["abc"] = future
+
+    tcp_request_client.timeout_message("abc", "message")
+
+    assert "abc" not in tcp_request_client.send_future_map
+    assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+
+
+async def test_tcp_request_client_stream_return_resolves_future_by_message_id(
+    tcp_request_client,
+):
+    reply = {"ret": "pong"}
+    framed = salt.transport.frame.frame_msg(reply, header={"mid": "abc"})
+    other = tornado.concurrent.Future()
+    wanted = tornado.concurrent.Future()
+    # "xyz" is first on purpose: the reply must go by message id, not to
+    # whichever request happens to be oldest.
+    tcp_request_client.send_future_map["xyz"] = other
+    tcp_request_client.send_future_map["abc"] = wanted
+
+    calls = []
+
+    async def read_bytes(*args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            return framed
+        # Stop the loop: closing is set before the stream error is raised.
+        tcp_request_client._closing = True
+        raise tornado.iostream.StreamClosedError()
+
+    tcp_request_client._stream = MagicMock()
+    tcp_request_client._stream.read_bytes = read_bytes
+
+    await tcp_request_client._stream_return()
+
+    assert wanted.result() == reply
+    # The reply was for "abc" only. The other request is failed by the
+    # stream error, not given someone else's answer.
+    assert isinstance(other.exception(), tornado.iostream.StreamClosedError)
 
 
 async def test_pub_server__stream_read(master_opts, io_loop):
