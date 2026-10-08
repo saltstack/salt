@@ -1643,6 +1643,9 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
             char, regex.lstrip("^").rstrip("$"), "$" if regex.endswith("$") else ""
         )
 
+    # Lines keep their line ending, make sure ``$`` matches CRLF terminated lines
+    match_line = _line_matcher(regex)
+
     # Load the real path to the file
     path = os.path.realpath(os.path.expanduser(path))
 
@@ -1671,7 +1674,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
             for line in r_file:
                 # Is it in this line
                 line = salt.utils.stringutils.to_unicode(line)
-                if re.match(regex, line):
+                if re.match(regex, match_line(line)):
                     # Load lines into dictionaries, set found to True
                     orig_file.append(line)
                     if cmnt:
@@ -1711,7 +1714,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
                         line = salt.utils.stringutils.to_unicode(line)
                         try:
                             # Is it in this line
-                            if re.match(regex, line):
+                            if re.match(regex, match_line(line)):
                                 # Write the new line
                                 if cmnt:
                                     wline = f"{char}{line}"
@@ -1860,7 +1863,12 @@ def _regex_to_static(src, regex):
 
     try:
         compiled = re.compile(regex, re.DOTALL)
-        src = [line for line in src if compiled.search(line) or line.count(regex)]
+        match_line = _line_matcher(regex)
+        src = [
+            line
+            for line in src
+            if compiled.search(match_line(line)) or line.count(regex)
+        ]
     except Exception as ex:  # pylint: disable=broad-except
         raise CommandExecutionError(f"{_get_error_message(ex)}: '{regex}'")
 
@@ -2548,7 +2556,11 @@ def line(
     if body:
         for idx, line in enumerate(body):
             if not _get_eol(line) and idx + 1 < len(body):
-                prev = idx and idx - 1 or 1
+                # Take the line ending from the previous line, or from the next
+                # one for the first line. (``idx and idx - 1 or 1`` used to
+                # pick the line itself for the second line, which has no line
+                # ending yet, and so fell back to ``os.linesep``.)
+                prev = idx - 1 if idx > 0 else 1
                 body[idx] = _set_line_eol(body[prev], line)
         # We do not need empty line at the end anymore
         if "" == body[-1]:
@@ -3724,13 +3736,14 @@ def contains_regex(path, regex, lchar=""):
     if not os.path.exists(path):
         return False
 
+    match_line = _line_matcher(regex)
     try:
         with salt.utils.files.fopen(path, "r") as target:
             for line in target:
                 line = salt.utils.stringutils.to_unicode(line)
                 if lchar:
                     line = line.lstrip(lchar)
-                if re.search(regex, line):
+                if re.search(regex, match_line(line)):
                     return True
             return False
     except OSError:
