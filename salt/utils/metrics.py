@@ -11,10 +11,15 @@ function short-circuits and instrument factories return no-op stubs.  No
 ``MeterProvider`` is initialised, no exporter is created, no background
 thread is started, no listener is bound.
 
-The provider is rebuilt per-PID.  ``PeriodicExportingMetricReader`` and
-the Prometheus listener thread do not survive ``fork``, so every public
-entry point calls :func:`_ensure_meter` which detects a PID change and
-rebuilds the provider, reader and exporter in the child.
+The provider is rebuilt per-PID.  ``PeriodicExportingMetricReader`` does
+not survive ``fork``, so every public entry point calls
+:func:`_ensure_meter` which detects a PID change and rebuilds the
+provider, reader and exporter in the child.
+
+``exporter: prometheus`` does not use the OpenTelemetry SDK.  Counters and
+histograms are ``prometheus_client`` metrics in multiprocess mode, so the
+values of the master and all its workers are added up when
+``/metrics`` is scraped (see :mod:`salt.utils.metrics_prometheus`).
 
 Configuration lives in ``opts['metrics']``::
 
@@ -30,6 +35,7 @@ Configuration lives in ``opts['metrics']``::
       prometheus:
         host: 127.0.0.1               # localhost-bind by default
         port: 9464
+        multiproc_dir: ""             # temp dir when empty; wiped at start
       histogram_boundaries:
         salt.job.duration: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000]
         salt.minion.exec.duration: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
@@ -50,6 +56,8 @@ import logging
 import os
 import threading
 from types import SimpleNamespace
+
+import salt.utils.metrics_prometheus
 
 log = logging.getLogger(__name__)
 
@@ -127,8 +135,6 @@ _provider = None
 _meter = None
 _cached_opts = None
 _atexit_registered = False
-# Track the Prometheus HTTP server thread so we can stop it across forks.
-_prometheus_server_thread = None
 
 
 class _NoopCounter:
@@ -165,7 +171,14 @@ def is_enabled():
     """
     if not _cached_opts or not _cached_opts.get("enabled"):
         return False
+    if _prometheus_selected():
+        return salt.utils.metrics_prometheus.load()
     return _load_otel()
+
+
+def _prometheus_selected():
+    exporter = (_cached_opts or {}).get("exporter") or ""
+    return exporter.lower() == "prometheus"
 
 
 def configure(opts):
@@ -189,6 +202,14 @@ def configure(opts):
             _cached_opts.get("service_name"),
         )
         return
+    if _prometheus_selected():
+        if not _atexit_registered:
+            atexit.register(shutdown)
+            _atexit_registered = True
+        if not salt.utils.metrics_prometheus.start(_cached_opts):
+            # The cause was logged where it happened (and only once).
+            log.debug("The prometheus metrics backend is not running here.")
+        return
     if not _load_otel():
         log.warning(
             "metrics.enabled is true but opentelemetry is not installed; "
@@ -210,15 +231,13 @@ def configure(opts):
 
 def shutdown():
     """Flush and tear down the active provider."""
-    global _provider, _meter, _last_pid, _prometheus_server_thread
+    global _provider, _meter, _last_pid  # pylint: disable=global-statement
     with _lock:
         provider = _provider
         _provider = None
         _meter = None
         _last_pid = None
-        # The prometheus_client http server thread is daemonic; we just
-        # drop our reference.  It will exit with the process.
-        _prometheus_server_thread = None
+    salt.utils.metrics_prometheus.stop()
     if provider is not None:
         try:
             provider.shutdown()
@@ -235,6 +254,8 @@ def counter(name, *, description="", unit=""):
     """
     if not is_enabled():
         return _NOOP_COUNTER
+    if _prometheus_selected():
+        return salt.utils.metrics_prometheus.counter(name, description, unit)
     _ensure_meter()
     if _meter is None:
         return _NOOP_COUNTER
@@ -253,6 +274,8 @@ def histogram(name, *, description="", unit="ms", boundaries=None):
     """
     if not is_enabled():
         return _NOOP_HISTOGRAM
+    if _prometheus_selected():
+        return salt.utils.metrics_prometheus.histogram(name, description, unit)
     _ensure_meter()
     if _meter is None:
         return _NOOP_HISTOGRAM
@@ -273,6 +296,11 @@ def observable_gauge(name, callback, *, description="", unit=""):
     """
     if not is_enabled():
         return _NOOP_OBSERVABLE
+    if _prometheus_selected():
+        salt.utils.metrics_prometheus.observable_gauge(
+            name, callback, description, unit
+        )
+        return _NOOP_OBSERVABLE
     _ensure_meter()
     if _meter is None:
         return _NOOP_OBSERVABLE
@@ -285,9 +313,9 @@ def get_meter(name=_INSTRUMENTATION_NAME):
     """Return the underlying OTel Meter, or ``None`` when disabled.
 
     Useful as an escape hatch for instruments not covered by the
-    convenience helpers above.
+    convenience helpers above.  Always ``None`` with ``exporter: prometheus``.
     """
-    if not is_enabled():
+    if not is_enabled() or _prometheus_selected():
         return None
     _ensure_meter()
     return _meter
@@ -372,9 +400,9 @@ def _build_views(opts):
 def _build_readers(opts):
     """Build the metric reader(s) for the configured exporter.
 
-    Returns a list because some configurations (notably ``prometheus``)
-    naturally combine a pull reader with a push fallback.  Today we
-    return exactly one reader per call.
+    Returns a list so a configuration can use more than one reader.  Today
+    we return exactly one reader per call.  ``prometheus`` is not handled
+    here: it does not use the OpenTelemetry SDK.
     """
     name = (opts.get("exporter") or "otlp-http").lower()
     interval_seconds = float(opts.get("export_interval_seconds") or 60)
@@ -427,36 +455,6 @@ def _build_readers(opts):
                 export_interval_millis=int(interval_seconds * 1000),
             )
         ]
-
-    if name == "prometheus":
-        try:
-            from opentelemetry.exporter.prometheus import PrometheusMetricReader
-            from prometheus_client import start_http_server
-        except ImportError:
-            log.error(
-                "opentelemetry-exporter-prometheus is not installed; "
-                "either install it or pick a different metrics.exporter."
-            )
-            return []
-        prometheus_opts = opts.get("prometheus") or {}
-        host = prometheus_opts.get("host", "127.0.0.1")
-        port = int(prometheus_opts.get("port", 9464))
-        global _prometheus_server_thread  # pylint: disable=global-statement
-        try:
-            # ``start_http_server`` is idempotent in the sense that calling
-            # it twice in the same process raises ``OSError`` (port in use).
-            # We track the thread we started so a fork child can re-bind.
-            _prometheus_server_thread = start_http_server(port=port, addr=host)
-        except OSError as exc:
-            log.error(
-                "Failed to bind Prometheus listener on %s:%d: %s",
-                host,
-                port,
-                exc,
-            )
-            return []
-        log.info("Prometheus /metrics listener bound on %s:%d", host, port)
-        return [PrometheusMetricReader()]
 
     log.warning("Unknown metrics exporter %r; metrics will be a no-op", name)
     return []

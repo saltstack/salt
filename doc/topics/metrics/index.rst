@@ -57,7 +57,9 @@ are the same on both daemons.
       platform / interpreter combinations).
     - ``prometheus`` — bind a local ``/metrics`` HTTP endpoint that
       Prometheus can scrape.  Operators who already run Prometheus can
-      skip the OTel Collector entirely.
+      skip the OTel Collector entirely.  See
+      :ref:`metrics-prometheus-multiprocess` for how a master with
+      several processes is reported.
     - ``console`` — print metrics to stdout for debugging.
 
 ``endpoint``
@@ -78,11 +80,16 @@ are the same on both daemons.
 
 ``prometheus.host`` / ``prometheus.port``
     Where the Prometheus pull listener binds.  Defaults to
-    localhost-only.  In a multi-process master only the parent binds
-    this port; counters incremented inside MWorker children are not
-    visible through the parent's ``/metrics`` (use the OTLP push
-    exporter if you need worker-side counters in a Prometheus
-    deployment with multiple workers).
+    localhost-only.  Only the master (or minion) main process binds
+    the port; the values recorded by its worker processes are added to
+    what it serves.
+
+``prometheus.multiproc_dir``
+    Directory where the processes keep their values.  When empty, a
+    temporary directory is created at start and removed at stop.  When
+    set, ``*.db`` files left in it by a previous run are deleted at
+    start.  If ``PROMETHEUS_MULTIPROC_DIR`` is set in the master's
+    environment, Salt logs a warning and uses its own directory instead.
 
 ``histogram_boundaries``
     Per-instrument explicit bucket boundaries.  The defaults span
@@ -183,6 +190,32 @@ Prometheus pull::
 
 ``curl -s http://127.0.0.1:9464/metrics | grep '^salt_'`` then shows
 the salt-namespaced metrics.
+
+.. _metrics-prometheus-multiprocess:
+
+Prometheus and multiple processes
+---------------------------------
+
+The master runs several processes (the main process, MWorkers and
+others).  With ``exporter: prometheus`` the main process serves one
+``/metrics`` endpoint that includes what all of them counted.  Each
+metric and label set appears once, as it would for a single process, so
+there is nothing to ``sum`` and no per-process label.
+
+Counters never go backwards: what a worker counted stays in the total
+when that worker exits or is restarted.
+
+The processes share a small directory on local disk (see
+``prometheus.multiproc_dir``).  Salt creates it at start and removes it
+at stop.  It holds one 64 KiB file per process that has run since the
+master started.  Workers are normally not replaced, so it stays small;
+if workers are restarted repeatedly it keeps growing until the master is
+restarted.
+
+Metric names do not change (for example ``salt_jobs_completed_total`` and
+``salt_job_duration_milliseconds_*``).  The ``service_name`` and
+``resource_attributes`` settings appear on a ``target_info`` metric, as
+before.  The ``otel_scope_*`` labels are no longer added to each series.
 
 Fork handling
 -------------
