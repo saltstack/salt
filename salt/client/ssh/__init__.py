@@ -1743,6 +1743,9 @@ def mod_data(fsclient):
         "grains",
         "renderers",
         "returners",
+        "utils",
+        "wrapper",
+        "tops",
     ]
     ret = {}
 
