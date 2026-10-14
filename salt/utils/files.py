@@ -984,12 +984,12 @@ def case_insensitive_filesystem(path=None):
 
 def get_bom_encoding(path):
     """
-    Return the codec named by a UTF-16 or UTF-32 byte order mark (BOM) at the
-    start of a file, otherwise ``None``.
+    Return the codec named by a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+    at the start of a file, otherwise ``None``.
 
-    Files in these encodings contain null bytes, so :py:func:`is_text` treats
-    them as binary. The codecs returned are endian specific, so they keep the
-    BOM as ``U+FEFF`` when decoding and never add one when encoding.
+    UTF-16 and UTF-32 files contain null bytes, so :py:func:`is_text` treats
+    them as binary. The codecs returned keep the BOM as ``U+FEFF`` when
+    decoding and never add one when encoding.
 
     .. versionadded:: 3008.5
 
@@ -998,8 +998,8 @@ def get_bom_encoding(path):
         path (str): The path to the file to check
 
     Returns:
-        str: ``UTF-32-LE``, ``UTF-32-BE``, ``UTF-16-LE``, ``UTF-16-BE`` or
-        ``None``
+        str: ``UTF-32-LE``, ``UTF-32-BE``, ``UTF-16-LE``, ``UTF-16-BE``,
+        ``UTF-8`` or ``None``
     """
     try:
         with fopen(path, "rb") as fp_:
@@ -1012,6 +1012,7 @@ def get_bom_encoding(path):
         ("UTF-32-BE", codecs.BOM_UTF32_BE),
         ("UTF-16-LE", codecs.BOM_UTF16_LE),
         ("UTF-16-BE", codecs.BOM_UTF16_BE),
+        ("UTF-8", codecs.BOM_UTF8),
     ):
         if data.startswith(bom):
             return encoding
