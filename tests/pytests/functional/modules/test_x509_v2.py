@@ -9,7 +9,6 @@ import salt.exceptions
 try:
     import cryptography
     import cryptography.x509 as cx509
-    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.serialization import (
         load_pem_private_key,
         pkcs7,
@@ -1719,165 +1718,153 @@ def test_read_certificates(x509, cert_exts, cert_exts_read, tmp_path):
     assert res == {str(cert): cert_exts_read}
 
 
-# Deprecated arguments
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_create_certificate_default_validity(
+    x509, rsa_privkey, monkeypatch, raise_deprecations
+):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    cert = _get_cert(x509.create_certificate(signing_private_key=rsa_privkey))
+    assert cert.not_valid_after_utc - cert.not_valid_before_utc == datetime.timedelta(
+        days=30
+    )
+
+
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_create_crl_default_validity(x509, crl_args, monkeypatch, raise_deprecations):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    crl = cx509.load_pem_x509_crl(x509.create_crl(**crl_args).encode())
+    assert crl.next_update_utc - crl.last_update_utc == datetime.timedelta(days=7)
+
+
+# Arguments removed in Salt 3009
 
 
 @pytest.mark.parametrize("arg", [{"version": 3}, {"serial_bits": 64}, {"text": True}])
-def test_create_certificate_should_not_fail_with_removed_args(x509, arg, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_certificate(
+def test_create_certificate_rejects_removed_args(x509, arg, rsa_privkey):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
+        x509.create_certificate(
             signing_private_key=rsa_privkey, CN="success", days_valid=1, **arg
         )
-    assert res.startswith("-----BEGIN CERTIFICATE-----")
-    cert = _get_cert(res)
-    assert cert.subject.rfc4514_string() == "CN=success"
 
 
-def test_create_certificate_warns_about_algorithm_renaming(x509, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_certificate(
+def test_create_certificate_rejects_algorithm(x509, rsa_privkey):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Use `digest` instead"
+    ):
+        x509.create_certificate(
             signing_private_key=rsa_privkey, days_valid=1, algorithm="sha512"
         )
-    assert res.startswith("-----BEGIN CERTIFICATE-----")
-    cert = _get_cert(res)
-    assert isinstance(cert.signature_hash_algorithm, hashes.SHA512)
 
 
-def test_create_certificate_warns_about_long_name_attributes(x509, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_certificate(
+def test_create_certificate_rejects_long_name_attributes(x509, rsa_privkey):
+    with pytest.raises(salt.exceptions.SaltInvocationError, match="Use `CN` instead"):
+        x509.create_certificate(
             signing_private_key=rsa_privkey, days_valid=1, commonName="success"
         )
-    assert res.startswith("-----BEGIN CERTIFICATE-----")
-    cert = _get_cert(res)
-    assert cert.subject.rfc4514_string() == "CN=success"
 
 
-def test_create_certificate_warns_about_long_extensions(x509, rsa_privkey):
+def test_create_certificate_rejects_long_extensions(x509, rsa_privkey):
     kwarg = {"X509v3 Basic Constraints": "critical CA:TRUE, pathlen:1"}
-    with pytest.deprecated_call():
-        res = x509.create_certificate(
-            signing_private_key=rsa_privkey, days_valid=1, **kwarg
-        )
-    assert res.startswith("-----BEGIN CERTIFICATE-----")
-    cert = _get_cert(res)
-    assert len(cert.extensions) == 1
-    assert isinstance(cert.extensions[0].value, cx509.BasicConstraints)
-    assert cert.extensions[0].critical
-    assert cert.extensions[0].value.ca
-    assert cert.extensions[0].value.path_length == 1
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Use `basicConstraints` instead"
+    ):
+        x509.create_certificate(signing_private_key=rsa_privkey, days_valid=1, **kwarg)
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
-def test_create_csr_should_not_fail_with_removed_args(x509, arg, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_csr(private_key=rsa_privkey, CN="success", **arg)
-    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
+def test_create_csr_rejects_removed_args(x509, arg, rsa_privkey):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
+        x509.create_csr(private_key=rsa_privkey, CN="success", **arg)
 
 
-def test_create_csr_warns_about_algorithm_renaming(x509, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_csr(private_key=rsa_privkey, algorithm="sha512")
-    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
-    csr = cx509.load_pem_x509_csr(res.encode())
-    assert isinstance(csr.signature_hash_algorithm, hashes.SHA512)
+def test_create_csr_rejects_algorithm(x509, rsa_privkey):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Use `digest` instead"
+    ):
+        x509.create_csr(private_key=rsa_privkey, algorithm="sha512")
 
 
-def test_create_csr_warns_about_long_name_attributes(x509, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.create_csr(private_key=rsa_privkey, commonName="success")
-    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
-    csr = cx509.load_pem_x509_csr(res.encode())
-    assert csr.subject.rfc4514_string() == "CN=success"
+def test_create_csr_rejects_long_name_attributes(x509, rsa_privkey):
+    with pytest.raises(salt.exceptions.SaltInvocationError, match="Use `CN` instead"):
+        x509.create_csr(private_key=rsa_privkey, commonName="success")
 
 
-def test_create_csr_warns_about_long_extensions(x509, rsa_privkey):
+def test_create_csr_rejects_long_extensions(x509, rsa_privkey):
     kwarg = {"X509v3 Basic Constraints": "critical CA:FALSE"}
-    with pytest.deprecated_call():
-        res = x509.create_csr(private_key=rsa_privkey, **kwarg)
-    assert res.startswith("-----BEGIN CERTIFICATE REQUEST-----")
-    csr = cx509.load_pem_x509_csr(res.encode())
-    assert len(csr.extensions) == 1
-    assert isinstance(csr.extensions[0].value, cx509.BasicConstraints)
-    assert csr.extensions[0].critical
-    assert csr.extensions[0].value.ca is False
-    assert csr.extensions[0].value.path_length is None
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Use `basicConstraints` instead"
+    ):
+        x509.create_csr(private_key=rsa_privkey, **kwarg)
 
 
 @pytest.mark.parametrize("arg", [{"text": True}])
-def test_create_crl_should_not_fail_with_removed_args(x509, arg, crl_args):
+def test_create_crl_rejects_removed_args(x509, arg, crl_args):
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
-        res = x509.create_crl(**crl_args, **arg)
-    assert res.startswith("-----BEGIN X509 CRL-----")
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
+        x509.create_crl(**crl_args, **arg)
 
 
-def test_create_crl_should_recognize_old_style_revoked(x509, crl_args, crl_revoked):
+def test_create_crl_rejects_old_style_revoked(x509, crl_args, crl_revoked):
     revoked = [
         {f"key_{i}": [{"serial_number": rev["serial_number"]}]}
         for i, rev in enumerate(crl_revoked)
     ]
     crl_args["revoked"] = revoked
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
-        res = x509.create_crl(**crl_args)
-    crl = cx509.load_pem_x509_crl(res.encode())
-    assert len(crl) == len(crl_revoked)
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="simple list of dicts"
+    ):
+        x509.create_crl(**crl_args)
 
 
-def test_create_crl_should_recognize_old_style_reason(x509, crl_args):
-    revoked = [{"key_1": [{"serial_number": "01337A"}, {"reason": "keyCompromise"}]}]
+def test_create_crl_rejects_old_style_reason(x509, crl_args):
+    revoked = [{"serial_number": "01337A", "reason": "keyCompromise"}]
     crl_args["revoked"] = revoked
     crl_args["days_valid"] = 7
-    with pytest.deprecated_call():
-        res = x509.create_crl(**crl_args)
-    crl = cx509.load_pem_x509_crl(res.encode())
-    assert len(crl) == 1
-    rev = crl.get_revoked_certificate_by_serial_number(78714)
-    assert rev
-    assert rev.extensions
-    assert len(rev.extensions) == 1
-    assert isinstance(rev.extensions[0].value, cx509.CRLReason)
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="extensions:CRLReason"
+    ):
+        x509.create_crl(**crl_args)
 
 
 @pytest.mark.parametrize(
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
-def test_create_private_key_should_not_fail_with_removed_args(x509, arg, crl_args):
-    with pytest.deprecated_call():
-        res = x509.create_private_key(**arg)
-    assert res.startswith("-----BEGIN PRIVATE KEY-----")
+def test_create_private_key_rejects_removed_args(x509, arg, crl_args):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
+        x509.create_private_key(**arg)
 
 
-def test_create_private_key_warns_about_bits_renaming(x509):
-    with pytest.deprecated_call():
-        res = x509.create_private_key(bits=3072)
-    pk = load_pem_private_key(res.encode(), None)
-    assert pk.key_size == 3072
+def test_create_private_key_rejects_bits(x509):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
+        x509.create_private_key(bits=3072)
 
 
-def test_get_public_key_should_not_fail_with_removed_arg(x509, rsa_privkey):
-    with pytest.deprecated_call():
-        res = x509.get_public_key(rsa_privkey, asObj=True)
-    assert res.startswith("-----BEGIN PUBLIC KEY-----")
+def test_get_public_key_rejects_removed_arg(x509, rsa_privkey):
+    with pytest.raises(TypeError, match="asObj"):
+        x509.get_public_key(rsa_privkey, asObj=True)
 
 
-def test_get_signing_policy_warns_about_long_names(x509):
-    with pytest.deprecated_call():
-        res = x509.get_signing_policy("testdeprecatednamepolicy")
-    assert res
-    assert "commonName" not in res
-    assert "CN" in res
-    assert res["CN"] == "deprecated"
+def test_get_signing_policy_rejects_long_names(x509):
+    with pytest.raises(salt.exceptions.SaltInvocationError, match="Use `CN` instead"):
+        x509.get_signing_policy("testdeprecatednamepolicy")
 
 
-def test_get_signing_policy_warns_about_long_exts(x509):
-    with pytest.deprecated_call():
-        res = x509.get_signing_policy("testdeprecatedextpolicy")
-    assert res
-    assert "X509v3 Basic Constraints" not in res
-    assert "basicConstraints" in res
-    assert res["basicConstraints"] == "critical CA:FALSE"
+def test_get_signing_policy_rejects_long_exts(x509):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Use `basicConstraints` instead"
+    ):
+        x509.get_signing_policy("testdeprecatedextpolicy")
 
 
 def _get_cert(cert, encoding="pem", passphrase=None):
