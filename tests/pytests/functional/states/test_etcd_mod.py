@@ -75,7 +75,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {},
         }
         assert etcd_state.rm(f"{prefix}/2/3", profile=profile_name) == expected
-
     with subtests.test("We should be able to set a value"):
         expected = {
             "name": f"{prefix}/1",
@@ -84,19 +83,9 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {f"{prefix}/1": "one"},
         }
         assert etcd_state.set_(f"{prefix}/1", "one", profile=profile_name) == expected
-
     with subtests.test(
         "We should be able to create an empty directory and set values in it"
     ):
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            expected = {
-                "name": f"{prefix}/2",
-                "comment": "New directory created",
-                "result": True,
-                "changes": {f"{prefix}/2": "Created"},
-            }
-            assert etcd_state.directory(f"{prefix}/2", profile=profile_name) == expected
-
         expected = {
             "name": f"{prefix}/2/3",
             "comment": "New key created",
@@ -107,7 +96,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             etcd_state.set_(f"{prefix}/2/3", "two-three", profile=profile_name)
             == expected
         )
-
     with subtests.test("We should be able to remove an existing key"):
         expected = {
             "name": f"{prefix}/2/3",
@@ -116,25 +104,3 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {f"{prefix}/2/3": "Deleted"},
         }
         assert etcd_state.rm(f"{prefix}/2/3", profile=profile_name) == expected
-
-
-def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
-    """
-    Test the correct response when the profile is missing and we can't connect
-    """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
-        # Only need to run this once
-        with subtests.test("Test no profile and bad connection in set_"):
-            ret = etcd_state.set_(f"{prefix}/1", "one")
-            assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
-
-        with subtests.test("Test no profile and bad connection in directory"):
-            ret = etcd_state.directory(f"{prefix}/2")
-            assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
-
-        with subtests.test("Test no profile and bad connection in rm"):
-            ret = etcd_state.rm(f"{prefix}/2/3")
-            assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG

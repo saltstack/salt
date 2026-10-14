@@ -3,7 +3,7 @@ Utilities for working with etcd
 
 .. versionadded:: 2014.7.0
 
-:depends:  - python-etcd or etcd3-py
+:depends:  - etcd3-py
 
 This library sets up a client object for etcd, using the configuration passed
 into the get_conn() function. Normally, this is __opts__. Optionally, a profile
@@ -19,7 +19,7 @@ may be passed in. The following configurations are both valid:
     etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
     etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
     etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
-    etcd.require_v2: True # Optional; defaults to True
+    etcd.require_v2: False # API v2 is no longer supported
     etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
     etcd.encode_values: True # Optional (v3 ONLY); defaults to True
     etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
@@ -35,7 +35,7 @@ may be passed in. The following configurations are both valid:
       etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
       etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
       etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
-      etcd.require_v2: True # Optional; defaults to True
+      etcd.require_v2: False # API v2 is no longer supported
       etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
       etcd.encode_values: True # Optional (v3 ONLY); defaults to True
       etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
@@ -52,24 +52,18 @@ the name of a profile to be used.
 
 .. code-block:: python
 
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.get_conn(__opts__, profile='my_etcd_config')
+    import salt.utils.etcd_util
+    client = salt.utils.etcd_util.get_conn(__opts__, profile='my_etcd_config')
 
 You may also use the newer syntax and bypass the generator function.
-
-V2 API
-.. code-block:: python
-
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.EtcdClient(__opts__, profile='my_etcd_config')
 
 V3 API
 .. versionadded:: 3005
 
 .. code-block:: python
 
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.EtcdClientV3(__opts__, profile='my_etcd_config')
+    import salt.utils.etcd_util
+    client = salt.utils.etcd_util.EtcdClientV3(__opts__, profile='my_etcd_config')
 
 It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
@@ -81,14 +75,6 @@ import logging
 import salt.utils.msgpack
 import salt.utils.versions
 from salt.exceptions import SaltException
-
-try:
-    import etcd
-    from urllib3.exceptions import MaxRetryError, ReadTimeoutError
-
-    HAS_ETCD_V2 = True
-except ImportError:
-    HAS_ETCD_V2 = False
 
 try:
     import etcd3
@@ -340,328 +326,6 @@ class EtcdBase:
         raise NotImplementedError()
 
 
-class EtcdClient(EtcdBase):
-    def __init__(self, opts, **kwargs):
-        if not HAS_ETCD_V2:
-            raise EtcdLibraryNotInstalled("Don't have python-etcd, need to install it.")
-        log.debug("etcd_util has the libraries needed for etcd v2")
-
-        super().__init__(opts, **kwargs)
-
-        if not self.conf.get("etcd.require_v2", True):
-            raise IncompatibleEtcdRequirements("Can't create v2 with a v3 requirement")
-
-        self.client = etcd.Client(host=self.host, port=self.port, **self.xargs)
-
-    def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
-        index = kwargs.pop("index", None)
-        if index is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The index kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use start_revision instead.",
-            )
-            start_revision = index
-        if kwargs:
-            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-
-        ret = {"key": key, "value": None, "changed": False, "mIndex": 0, "dir": False}
-        try:
-            result = self.read(
-                key,
-                recurse=recurse,
-                wait=True,
-                timeout=timeout,
-                start_revision=start_revision,
-            )
-        except EtcdUtilWatchTimeout:
-            try:
-                result = self.read(key)
-            except etcd.EtcdKeyNotFound:
-                log.debug("etcd: key was not created while watching")
-                return ret
-            except ValueError:
-                return {}
-            if result and getattr(result, "dir"):
-                ret["dir"] = True
-            ret["value"] = getattr(result, "value")
-            ret["mIndex"] = getattr(result, "modifiedIndex")
-            return ret
-        except MaxRetryError:
-            # This gets raised when we can't contact etcd at all
-            log.error(
-                "etcd: failed to perform 'watch' operation on key %s due to connection"
-                " error",
-                key,
-            )
-            return {}
-        except etcd.EtcdConnectionFailed as err:
-            log.error("etcd: %s", err)
-            return None
-        except ValueError:
-            return {}
-
-        if result is None:
-            return {}
-
-        if recurse:
-            ret["key"] = getattr(result, "key", None)
-        ret["value"] = getattr(result, "value", None)
-        ret["dir"] = getattr(result, "dir", None)
-        ret["changed"] = True
-        ret["mIndex"] = getattr(result, "modifiedIndex")
-        return ret
-
-    def get(self, key, recurse=False):
-        if not recurse:
-            try:
-                result = self.read(key)
-            except etcd.EtcdKeyNotFound:
-                # etcd already logged that the key wasn't found, no need to do
-                # anything here but return
-                return None
-            except etcd.EtcdConnectionFailed:
-                log.error(
-                    "etcd: failed to perform 'get' operation on key %s due to connection"
-                    " error",
-                    key,
-                )
-                return None
-            except ValueError:
-                return None
-
-            return getattr(result, "value", None)
-
-        return self.tree(key)
-
-    def read(
-        self,
-        key,
-        recurse=False,
-        wait=False,
-        timeout=None,
-        start_revision=None,
-        **kwargs,
-    ):
-        recursive = kwargs.pop("recursive", None)
-        wait_index = kwargs.pop("waitIndex", None)
-        if recursive is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The recursive kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use recurse instead.",
-            )
-            recurse = recursive
-        if wait_index is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The waitIndex kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use start_revision instead.",
-            )
-            start_revision = wait_index
-        if kwargs:
-            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-
-        try:
-            if start_revision:
-                result = self.client.read(
-                    key,
-                    recursive=recurse,
-                    wait=wait,
-                    timeout=timeout,
-                    waitIndex=start_revision,
-                )
-            else:
-                result = self.client.read(
-                    key, recursive=recurse, wait=wait, timeout=timeout
-                )
-        except (etcd.EtcdConnectionFailed, etcd.EtcdKeyNotFound) as err:
-            log.error("etcd: %s", err)
-            raise
-        except ReadTimeoutError:
-            # For some reason, we have to catch this directly.  It falls through
-            # from python-etcd because it's trying to catch
-            # urllib3.exceptions.ReadTimeoutError and strangely, doesn't catch.
-            # This can occur from a watch timeout that expires, so it may be 'expected'
-            # behavior. See issue #28553
-            if wait:
-                # Wait timeouts will throw ReadTimeoutError, which isn't bad
-                log.debug("etcd: Timed out while executing a wait")
-                raise EtcdUtilWatchTimeout(f"Watch on {key} timed out")
-            log.error("etcd: Timed out")
-            raise etcd.EtcdConnectionFailed("Connection failed")
-        except MaxRetryError as err:
-            # Same issue as ReadTimeoutError.  When it 'works', python-etcd
-            # throws EtcdConnectionFailed, so we'll do that for it.
-            log.error("etcd: Could not connect")
-            raise etcd.EtcdConnectionFailed("Could not connect to etcd server")
-        except etcd.EtcdException as err:
-            # EtcdValueError inherits from ValueError, so we don't want to accidentally
-            # catch this below on ValueError and give a bogus error message
-            log.error("etcd: %s", err)
-            raise
-        except ValueError:
-            # python-etcd doesn't fully support python 2.6 and ends up throwing this for *any* exception because
-            # it uses the newer {} format syntax
-            log.error(
-                "etcd: error. python-etcd does not fully support python 2.6, no error"
-                " information available"
-            )
-            raise
-        except Exception as err:  # pylint: disable=broad-except
-            log.error("etcd: uncaught exception %s", err)
-            raise
-        return result
-
-    def update(self, fields, path=""):
-        if not isinstance(fields, dict):
-            log.error("etcd.update: fields is not type dict")
-            return None
-        fields = self._flatten(fields, path)
-        keys = {}
-        for k, v in fields.items():
-            is_dir = False
-            if isinstance(v, dict):
-                is_dir = True
-            keys[k] = self.write(k, v, directory=is_dir)
-            if keys[k] is None:
-                return None
-        return keys
-
-    def write(self, key, value, ttl=None, directory=False):
-        """
-        Write a file or directory depending on directory flag
-        """
-        try:
-            if directory:
-                return self.write_directory(key, value, ttl)
-            return self.write_file(key, value, ttl)
-        except etcd.EtcdConnectionFailed as err:
-            log.error("etcd: %s", err)
-            return None
-
-    def write_file(self, key, value, ttl=None):
-        try:
-            result = self.client.write(key, value, ttl=ttl, dir=False)
-        except (etcd.EtcdNotFile, etcd.EtcdRootReadOnly, ValueError) as err:
-            # If EtcdNotFile is raised, then this key is a directory and
-            # really this is a name collision.
-            log.error("etcd: %s", err)
-            return None
-        except MaxRetryError as err:
-            log.error("etcd: Could not connect to etcd server: %s", err)
-            return None
-        except Exception as err:  # pylint: disable=broad-except
-            log.error("etcd: uncaught exception %s", err)
-            raise
-
-        return getattr(result, "value")
-
-    def write_directory(self, key, value, ttl=None):
-        if value is not None:
-            log.info("etcd: non-empty value passed for directory: %s", value)
-        try:
-            # directories can't have values, but have to have it passed
-            result = self.client.write(key, None, ttl=ttl, dir=True)
-        except etcd.EtcdNotFile:
-            # When a directory already exists, python-etcd raises an EtcdNotFile
-            # exception. In this case, we just catch and return True for success.
-            log.info("etcd: directory already exists: %s", key)
-            return True
-        except (etcd.EtcdNotDir, etcd.EtcdRootReadOnly, ValueError) as err:
-            # If EtcdNotDir is raised, then the specified path is a file and
-            # thus this is an error.
-            log.error("etcd: %s", err)
-            return None
-        except MaxRetryError as err:
-            log.error("etcd: Could not connect to etcd server: %s", err)
-            return None
-        except Exception as err:  # pylint: disable=broad-except
-            log.error("etcd: uncaught exception %s", err)
-            raise
-
-        return getattr(result, "dir")
-
-    def ls(self, path):
-        ret = {}
-        try:
-            items = self.read(path)
-        except (etcd.EtcdKeyNotFound, ValueError):
-            return {}
-        except etcd.EtcdConnectionFailed:
-            log.error(
-                "etcd: failed to perform 'ls' operation on path %s due to connection"
-                " error",
-                path,
-            )
-            return None
-
-        # This will find the top level keys only since it's not recursive
-        for item in items.children:
-            if item.dir is True:
-                if item.key == path:
-                    continue
-                dir_name = f"{item.key}/"
-                ret[dir_name] = {}
-            else:
-                ret[item.key] = item.value
-        return {path: ret}
-
-    def delete(self, key, recurse=False, **kwargs):
-        recursive = kwargs.pop("recursive", None)
-        if recursive is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The recursive kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use recurse instead.",
-            )
-            recurse = recursive
-        if kwargs:
-            log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-
-        try:
-            if self.client.delete(key, recursive=recurse):
-                return True
-            else:
-                return False
-        except (
-            etcd.EtcdNotFile,
-            etcd.EtcdRootReadOnly,
-            etcd.EtcdDirNotEmpty,
-            etcd.EtcdKeyNotFound,
-            etcd.EtcdConnectionFailed,
-            ValueError,
-        ) as err:
-            log.error("etcd: %s", err)
-            return None
-        except MaxRetryError as err:
-            log.error("etcd: Could not connect to etcd server: %s", err)
-            return None
-        except Exception as err:  # pylint: disable=broad-except
-            log.error("etcd: uncaught exception %s", err)
-            raise
-
-    def tree(self, path):
-        ret = {}
-        try:
-            items = self.read(path)
-        except (etcd.EtcdKeyNotFound, ValueError):
-            return None
-        except etcd.EtcdConnectionFailed as err:
-            log.error("etcd: %s", err)
-            return None
-
-        for item in items.children:
-            comps = str(item.key).split("/")
-            if item.dir is True:
-                if item.key == path:
-                    continue
-                ret[comps[-1]] = self.tree(item.key)
-            else:
-                ret[comps[-1]] = item.value
-        return ret
-
-
 class EtcdClientV3(EtcdBase):
     """
     .. versionadded:: 3005
@@ -685,8 +349,10 @@ class EtcdClientV3(EtcdBase):
 
         super().__init__(opts, **kwargs)
 
-        if self.conf.get("etcd.require_v2", True):
-            raise IncompatibleEtcdRequirements("Can't create v3 with a v2 requirement")
+        if self.conf.get("etcd.require_v2", False):
+            raise IncompatibleEtcdRequirements(
+                "etcd API v2 support was removed in Salt 3009. Use etcd API v3."
+            )
 
         self.encode_keys = encode_keys or self.conf.get("etcd.encode_keys", False)
         self.encode_values = encode_values or self.conf.get("etcd.encode_values", True)
@@ -981,19 +647,12 @@ def get_conn(opts, profile=None, **kwargs):
 
     conf = _get_etcd_opts(opts, profile=profile)
 
-    # Figure out which API version they are using...
-    use_v2 = conf.get("etcd.require_v2", True)
-    if use_v2:
-        salt.utils.versions.warn_until(
-            3009,
-            "etcd API v2 has been deprecated.  It will be removed in "
-            "the Potassium release, and etcd API v3 will be the default.",
+    if conf.get("etcd.require_v2", False):
+        raise IncompatibleEtcdRequirements(
+            "etcd API v2 support was removed in Salt 3009. Use etcd API v3."
         )
-        client = EtcdClient(conf, has_etcd_opts=True, **kwargs)
-        log.debug("etcd_util will be attempting to use etcd API v2: python-etcd")
-    else:
-        client = EtcdClientV3(conf, has_etcd_opts=True, **kwargs)
-        log.debug("etcd_util will be attempting to use etcd API v3: etcd3-py")
+    client = EtcdClientV3(conf, has_etcd_opts=True, **kwargs)
+    log.debug("etcd_util will be attempting to use etcd API v3: etcd3-py")
 
     return client
 

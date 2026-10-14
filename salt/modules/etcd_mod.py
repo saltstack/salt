@@ -1,7 +1,7 @@
 """
 Execution module to work with etcd
 
-:depends:  - python-etcd or etcd3-py
+:depends:  - etcd3-py
 
 Configuration
 -------------
@@ -24,13 +24,8 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
-In order to choose whether to use etcd API v2 or v3, you can put the following
-configuration option in the same place as your etcd configuration.  This option
-defaults to true, meaning you will use v2 unless you specify otherwise.
-
-.. code-block:: yaml
-
-    etcd.require_v2: True
+Only etcd API v3 is supported. Explicitly requesting API v2 with
+``etcd.require_v2: True`` raises an error.
 
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
@@ -90,9 +85,9 @@ __func_alias__ = {"get_": "get", "set_": "set", "rm_": "rm", "ls_": "ls"}
 
 def __virtual__():
     """
-    Only return if python-etcd is installed
+    Only return if etcd3-py is installed
     """
-    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+    if salt.utils.etcd_util.HAS_ETCD_V3:
         return __virtualname__
     return (
         False,

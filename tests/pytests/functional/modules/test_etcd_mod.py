@@ -63,13 +63,11 @@ def test_basic_operations(subtests, profile_name, prefix):
     """
     with subtests.test("There should be no entries at the start with our prefix."):
         assert etcd_mod.get_(prefix, recurse=True, profile=profile_name) is None
-
     with subtests.test("We should be able to set and retrieve simple values"):
         etcd_mod.set_(f"{prefix}/1", "one", profile=profile_name)
         assert (
             etcd_mod.get_(f"{prefix}/1", recurse=False, profile=profile_name) == "one"
         )
-
     with subtests.test("We should be able to update and retrieve those values"):
         updated = {
             "1": "not one",
@@ -80,7 +78,6 @@ def test_basic_operations(subtests, profile_name, prefix):
         }
         etcd_mod.update(updated, path=prefix, profile=profile_name)
         assert etcd_mod.get_(prefix, recurse=True, profile=profile_name) == updated
-
     with subtests.test("We should be list all top level values at a directory"):
         expected = {
             prefix: {
@@ -89,7 +86,6 @@ def test_basic_operations(subtests, profile_name, prefix):
             },
         }
         assert etcd_mod.ls_(path=prefix, profile=profile_name) == expected
-
     with subtests.test("We should be able to remove values and get a tree hierarchy"):
         updated = {
             "2": {
@@ -99,7 +95,6 @@ def test_basic_operations(subtests, profile_name, prefix):
         }
         etcd_mod.rm_(f"{prefix}/1", profile=profile_name)
         assert etcd_mod.tree(path=prefix, profile=profile_name) == updated
-
     with subtests.test("updates should be able to be caught by waiting in read"):
         return_list = []
 
@@ -116,31 +111,3 @@ def test_basic_operations(subtests, profile_name, prefix):
         modified = return_list.pop()
         assert modified["key"] == f"{prefix}/1"
         assert modified["value"] == "one"
-
-
-def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
-    """
-    Test the correct response when the profile is missing and we can't connect
-    """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
-        # Only need to run this once
-        with subtests.test("Test no profile and bad connection in get_"):
-            assert etcd_mod.get_(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in set_"):
-            assert etcd_mod.set_(f"{prefix}/1", "lol") is None
-
-        with subtests.test("Test no profile and bad connection in update"):
-            assert etcd_mod.update({f"{prefix}/1": "SIUUU"}) is None
-
-        with subtests.test("Test no profile and bad connection in watch"):
-            assert etcd_mod.watch(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in ls_"):
-            assert etcd_mod.ls_() is None
-
-        with subtests.test("Test no profile and bad connection in rm"):
-            assert etcd_mod.rm_(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in tree"):
-            assert etcd_mod.tree() is None
