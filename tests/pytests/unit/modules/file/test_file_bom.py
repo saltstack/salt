@@ -433,6 +433,22 @@ def test_text_file_line_replace_keeps_eol(target, eol):
     assert target.read_bytes() == b"foo = 2" + eol
 
 
+@pytest.mark.parametrize("prefix", [b"", codecs.BOM_UTF8], ids=["utf-8", "utf-8-bom"])
+def test_text_file_line_keeps_utf8(target, prefix):
+    """
+    file.line writes the file back in the encoding it was read with, not the
+    system locale's (issue #54377).
+    """
+    text = "<configuration>\r\n  <!-- \u4e2d\u6587 \u201cquoted\u201d -->\r\n</configuration>\r\n"
+    target.write_bytes(prefix + text.encode("utf-8"))
+    content = '  <add key="a" value="\u503c" />'
+    filemod.line(str(target), content=content, mode="ensure", before="</configuration>")
+    expected = text.replace(
+        "\r\n</configuration>", f"\r\n{content}\r\n</configuration>"
+    )
+    assert target.read_bytes() == prefix + expected.encode("utf-8")
+
+
 def test_text_file_comment_line_unchanged(target):
     target.write_bytes(b"foo\nbar\n")
     filemod.comment_line(str(target), r"^bar$", backup=False)
