@@ -45,7 +45,6 @@ def configure_loader_modules():
             "__opts__": opts,
             "__grains__": grains,
             "__utils__": {
-                "files.get_encoding": salt.utils.files.get_encoding,
                 "files.is_text": salt.utils.files.is_text,
                 "stringutils.get_diff": salt.utils.stringutils.get_diff,
             },
