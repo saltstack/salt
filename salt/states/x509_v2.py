@@ -18,6 +18,12 @@ Manage X.509 certificates
 Configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
 
+.. versionchanged:: 3009.0
+
+    Deprecated arguments and legacy X.509 input formats are no longer
+    accepted. See :ref:`x509-migration-3009` for replacements and changes
+    to the default validity and renewal periods.
+
 For the list of breaking changes versus the previous ``x509`` modules,
 please also refer to the :ref:`execution module docs <x509-setup>`.
 
@@ -210,8 +216,6 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__["features"].get("x509_v2", True):
-        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
@@ -257,7 +261,7 @@ def certificate_managed(
     days_remaining
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of days.
-        Defaults to ``90`` (until v3009) or ``7`` (from v3009 onwards).
+        Defaults to ``7``.
 
     ca_server
         Request a remotely signed certificate from ca_server. For this to
@@ -373,7 +377,7 @@ def certificate_managed(
     days_valid
         If ``not_after`` is unspecified, the number of days from the time of issuance
         the certificate should be valid for.
-        Defaults to ``365`` (until v3009) or ``30`` (from v3009 onwards).
+        Defaults to ``30``.
 
     pkcs12_passphrase
         When encoding a certificate as ``pkcs12``, encrypt it with this passphrase.
@@ -396,22 +400,13 @@ def certificate_managed(
         :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview.
     """
-    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
-    # use `digest`.
-    if "algorithm" in kwargs:
-        raise SaltInvocationError(
-            "Keyword argument `algorithm` was removed in 3009.0. "
-            "Use `digest` instead."
-        )
     if days_valid is None and not_after is None:
-        # Default changed from 365 to 30 in 3009.0 (Potassium).
         days_valid = 30
 
     if days_remaining is None:
-        # Default changed from 90 to 7 in 3009.0 (Potassium).
         days_remaining = 7
 
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+    x509util.validate_cert_kwargs(kwargs)
 
     ret = {
         "name": name,
@@ -662,7 +657,7 @@ def crl_managed(
     days_remaining
         The certificate revocation list will be recreated once the remaining
         CRL validity period is less than this number of days.
-        Defaults to ``30`` (until v3009) or ``3`` (from v3009 onwards).
+        Defaults to ``3``.
         Set to 0 to disable automatic renewal without anything changing.
 
     signing_cert
@@ -676,7 +671,7 @@ def crl_managed(
 
     days_valid
         The number of days that the CRL should be valid for. This sets the ``Next Update``
-        field in the CRL. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
+        field in the CRL. Defaults to ``7``.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -720,38 +715,13 @@ def crl_managed(
             - extensions:
                 cRLNumber: auto
     """
-    # `text` was ignored (compat with the pre-x509_v2 module). Removed in
-    # 3009.0 (Potassium).
-    if "text" in kwargs:
-        raise SaltInvocationError(
-            "Keyword argument `text` was removed in 3009.0. Remove it from the call."
-        )
-
     if days_valid is None:
-        # Default changed from 100 to 7 in 3009.0 (Potassium).
         days_valid = 7
 
     if days_remaining is None:
-        # Default changed from 30 to 3 in 3009.0 (Potassium).
         days_remaining = 3
 
-    # ``revoked`` must be a flat list of dicts and must spell the revocation
-    # reason via ``extensions:CRLReason``. The dict-of-key-to-list wrapper
-    # and the top-level ``reason`` key were accepted (with a deprecation
-    # warning) through 3008.x; both were removed in 3009.0 (Potassium).
-    for rev in revoked:
-        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
-            raise SaltInvocationError(
-                "Revoked certificates must be specified as a flat list of "
-                "dicts. The {<key>: [<dict>, ...]} wrapper is no longer "
-                "accepted (removed in 3009.0)."
-            )
-        if "reason" in rev:
-            raise SaltInvocationError(
-                "The top-level `reason` key for revoked certificates is no "
-                "longer accepted (removed in 3009.0). Specify the reason "
-                "via `extensions:CRLReason` instead."
-            )
+    x509util.validate_revoked(revoked)
 
     ret = {
         "name": name,
@@ -987,14 +957,7 @@ def csr_managed(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
-    # use `digest`.
-    if "algorithm" in kwargs:
-        raise SaltInvocationError(
-            "Keyword argument `algorithm` was removed in 3009.0. "
-            "Use `digest` instead."
-        )
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+    x509util.validate_cert_kwargs(kwargs)
 
     ret = {
         "name": name,
@@ -1251,16 +1214,6 @@ def private_key_managed(
               - x509: /etc/pki/www.crt
         {%- endif %}
     """
-    # `bits` was deprecated in 3007.0 and removed in 3009.0 (Potassium); use
-    # `keysize`. `cipher`, `verbose`, and `text` were ignored kwargs removed
-    # in the same release.
-    for removed in ("bits", "cipher", "verbose", "text"):
-        if removed in kwargs:
-            raise SaltInvocationError(
-                f"Keyword argument `{removed}` was removed in 3009.0. "
-                f"{'Use `keysize` instead.' if removed == 'bits' else 'Remove it from the call.'}"
-            )
-
     ret = {
         "name": name,
         "changes": {},

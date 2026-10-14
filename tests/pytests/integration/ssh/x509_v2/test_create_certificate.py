@@ -238,11 +238,10 @@ def test_get_signing_policy_remote_rejects_long_name(
     )
     assert ret.returncode != 0
     payload = str(ret.data or "") + (ret.stdout or "") + (ret.stderr or "")
-    assert "was removed in 3009.0" in payload
-    assert "commonName" in payload
+    assert "Use `CN` instead" in payload
 
 
-def test_get_signing_policy_remote_rejects_long_extension(
+def test_get_signing_policy_remote_rejects_long_ext(
     x509_salt_ssh_cli, cert_args, ca_minion_config
 ):
     ret = x509_salt_ssh_cli.run(
@@ -252,8 +251,7 @@ def test_get_signing_policy_remote_rejects_long_extension(
     )
     assert ret.returncode != 0
     payload = str(ret.data or "") + (ret.stdout or "") + (ret.stderr or "")
-    assert "was removed in 3009.0" in payload
-    assert "X509v3 Basic Constraints" in payload
+    assert "Use `basicConstraints` instead" in payload
 
 
 def test_sign_remote_certificate_ext_override(

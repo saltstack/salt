@@ -204,7 +204,7 @@ def __virtual__():
             False,
             "pyOpenSSL {} no longer exposes the legacy X509Extension / "
             "X509Req / PKCS12 / CRL APIs that salt.modules.tls depends "
-            "on. Use salt.modules.x509 (backed by the cryptography "
+            "on. Use salt.modules.x509_v2 (backed by the cryptography "
             "package) instead.".format(OpenSSL_version),
         )
     if OpenSSL_version < Version("0.14"):
