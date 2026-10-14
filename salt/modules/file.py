@@ -1586,9 +1586,57 @@ def comment(path, regex, char="#", backup=".bak"):
     return comment_line(path=path, regex=regex, char=char, cmnt=True, backup=backup)
 
 
+def _comment_line_write(path, temp_file, bufsize, regex, match_line, char, cmnt):
+    """
+    Rewrite ``path`` from its copy ``temp_file`` for :py:func:`comment_line`,
+    commenting or uncommenting the lines that match ``regex``.
+    """
+    try:
+        # Open the file in write mode
+        mode = "w"
+        with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
+            try:
+                # Open the temp file in read mode
+                with salt.utils.files.fopen(
+                    temp_file, mode="rb", buffering=bufsize
+                ) as r_file:
+                    # Loop through each line of the file and look for a match
+                    for line in r_file:
+                        line = salt.utils.stringutils.to_unicode(line)
+                        try:
+                            # Is it in this line
+                            if re.match(regex, match_line(line)):
+                                # Write the new line
+                                if cmnt:
+                                    wline = f"{char}{line}"
+                                else:
+                                    wline = line.lstrip(char)
+                            else:
+                                # Write the existing line (no change)
+                                wline = line
+                            wline = salt.utils.stringutils.to_str(wline)
+                            w_file.write(wline)
+                        except OSError as exc:
+                            raise CommandExecutionError(
+                                "Unable to write file '{}'. Contents may "
+                                "be truncated. Temporary file contains copy "
+                                "at '{}'. "
+                                "Exception: {}".format(path, temp_file, exc)
+                            )
+            except OSError as exc:
+                raise CommandExecutionError(f"Exception: {exc}")
+    except OSError as exc:
+        raise CommandExecutionError(f"Exception: {exc}")
+
+
 def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     r"""
     Comment or Uncomment a line in a text file.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
 
     :param path: string
         The full path to the text file.
@@ -1654,10 +1702,13 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
         raise SaltInvocationError(f"File not found: {path}")
 
     # Make sure it is a text file
+    encoding = None
     if not __utils__["files.is_text"](path):
-        raise SaltInvocationError(
-            f"Cannot perform string replacements on a binary file: {path}"
-        )
+        encoding = _detect_bom_encoding(path)
+        if encoding is None:
+            raise SaltInvocationError(
+                f"Cannot perform string replacements on a binary file: {path}"
+            )
 
     # First check the whole file, determine whether to make the replacement
     # Searching first avoids modifying the time stamp if there are no changes
@@ -1667,23 +1718,36 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     new_file = []
     # Buffer size for fopen
     bufsize = os.path.getsize(path)
-    try:
-        # Use a read-only handle to open the file
-        with salt.utils.files.fopen(path, mode="rb", buffering=bufsize) as r_file:
-            # Loop through each line of the file and look for a match
-            for line in r_file:
-                # Is it in this line
-                line = salt.utils.stringutils.to_unicode(line)
-                if re.match(regex, match_line(line)):
-                    # Load lines into dictionaries, set found to True
-                    orig_file.append(line)
-                    if cmnt:
-                        new_file.append(f"{char}{line}")
-                    else:
-                        new_file.append(line.lstrip(char))
-                    found = True
-    except OSError as exc:
-        raise CommandExecutionError(f"Unable to open file '{path}'. Exception: {exc}")
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        new_lines = []
+        for line in text.splitlines(True):
+            if re.match(regex, match_line(line)):
+                orig_file.append(line)
+                line = f"{char}{line}" if cmnt else line.lstrip(char)
+                new_file.append(line)
+                found = True
+            new_lines.append(line)
+    else:
+        try:
+            # Use a read-only handle to open the file
+            with salt.utils.files.fopen(path, mode="rb", buffering=bufsize) as r_file:
+                # Loop through each line of the file and look for a match
+                for line in r_file:
+                    # Is it in this line
+                    line = salt.utils.stringutils.to_unicode(line)
+                    if re.match(regex, match_line(line)):
+                        # Load lines into dictionaries, set found to True
+                        orig_file.append(line)
+                        if cmnt:
+                            new_file.append(f"{char}{line}")
+                        else:
+                            new_file.append(line.lstrip(char))
+                        found = True
+        except OSError as exc:
+            raise CommandExecutionError(
+                f"Unable to open file '{path}'. Exception: {exc}"
+            )
 
     # We've searched the whole file. If we didn't find anything, return False
     if not found:
@@ -1700,42 +1764,18 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     except OSError as exc:
         raise CommandExecutionError(f"Exception: {exc}")
 
-    try:
-        # Open the file in write mode
-        mode = "w"
-        with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
-            try:
-                # Open the temp file in read mode
-                with salt.utils.files.fopen(
-                    temp_file, mode="rb", buffering=bufsize
-                ) as r_file:
-                    # Loop through each line of the file and look for a match
-                    for line in r_file:
-                        line = salt.utils.stringutils.to_unicode(line)
-                        try:
-                            # Is it in this line
-                            if re.match(regex, match_line(line)):
-                                # Write the new line
-                                if cmnt:
-                                    wline = f"{char}{line}"
-                                else:
-                                    wline = line.lstrip(char)
-                            else:
-                                # Write the existing line (no change)
-                                wline = line
-                            wline = salt.utils.stringutils.to_str(wline)
-                            w_file.write(wline)
-                        except OSError as exc:
-                            raise CommandExecutionError(
-                                "Unable to write file '{}'. Contents may "
-                                "be truncated. Temporary file contains copy "
-                                "at '{}'. "
-                                "Exception: {}".format(path, temp_file, exc)
-                            )
-            except OSError as exc:
-                raise CommandExecutionError(f"Exception: {exc}")
-    except OSError as exc:
-        raise CommandExecutionError(f"Exception: {exc}")
+    if encoding:
+        try:
+            with salt.utils.files.fopen(path, mode="wb") as w_file:
+                w_file.write(_encode_bom_text(bom, "".join(new_lines), encoding))
+        except OSError as exc:
+            raise CommandExecutionError(
+                "Unable to write file '{}'. Contents may be truncated. "
+                "Temporary file contains copy at '{}'. "
+                "Exception: {}".format(path, temp_file, exc)
+            )
+    else:
+        _comment_line_write(path, temp_file, bufsize, regex, match_line, char, cmnt)
 
     if backup:
         # Move the backup file to the original directory
