@@ -2360,6 +2360,8 @@ def line(
 
         Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
         and written in that encoding, and the BOM and byte order are preserved.
+        Other files are written back as UTF-8, the encoding they are read with,
+        instead of the system locale's encoding.
 
     .. note::
 
@@ -2708,13 +2710,16 @@ def line(
             fh_ = None
             try:
                 body = salt.utils.data.decode_list(body, to_str=True)
-                if encoding:
-                    fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
-                    fh_.write(_encode_bom_text(bom, "".join(body), encoding))
-                else:
-                    # Make sure we match the file mode from salt.utils.files.fopen
-                    fh_ = salt.utils.atomicfile.atomic_open(path, "w")
-                    fh_.writelines(body)
+                # Encode the way the file was decoded, not with the system
+                # locale that atomic_open uses in text mode
+                file_encoding = encoding or __salt_system_encoding__
+                data = [
+                    _encode_bom_text("", line, file_encoding)
+                    for line in [bom, *body]
+                    if line
+                ]
+                fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+                fh_.writelines(data)
             finally:
                 if fh_:
                     fh_.close()
