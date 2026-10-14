@@ -1,3 +1,4 @@
+import codecs
 import os
 
 import pytest
@@ -614,3 +615,55 @@ def test_replace_append_if_not_found_converges_after_one_run_crlf(file, tmp_path
             assert ret.result is True
             assert not ret.changes
         assert name.read_bytes() == expected
+
+
+def test_replace_utf16_bom_crlf_without_encoding(file, tmp_path):
+    """
+    A UTF-16 file with a BOM and CRLF line endings is detected without
+    ``encoding``. The state converges in one run and the BOM and line endings
+    are preserved (#65906).
+    """
+    name = tmp_path / "abc.txt"
+    lines = ["one two", "three", "four", "      something=111111", "ten", "nine"]
+    text = "".join(f"{line}\r\n" for line in lines)
+    original = codecs.BOM_UTF16_LE + text.encode("utf-16-le")
+    name.write_bytes(original)
+    kwargs = {
+        "name": str(name),
+        "pattern": r"^(.*)something=\d+$",
+        "repl": r"\1something=123",
+        "flags": ["IGNORECASE", "MULTILINE"],
+        "backup": False,
+    }
+
+    ret = file.replace(test=True, **kwargs)
+    assert ret.result is None
+    assert ret.changes
+    assert name.read_bytes() == original
+
+    ret = file.replace(**kwargs)
+    assert ret.result is True
+    assert ret.changes
+    text = text.replace("something=111111", "something=123")
+    expected = codecs.BOM_UTF16_LE + text.encode("utf-16-le")
+    assert name.read_bytes() == expected
+
+    ret = file.replace(**kwargs)
+    assert ret.result is True
+    assert not ret.changes
+    assert name.read_bytes() == expected
+
+
+def test_replace_utf16_without_bom_fails(file, tmp_path):
+    """
+    A UTF-16 file without a BOM still requires ``encoding``.
+    """
+    name = tmp_path / "nobom.txt"
+    original = "key = old\r\n".encode("utf-16-le")
+    name.write_bytes(original)
+
+    ret = file.replace(name=str(name), pattern="old", repl="new", backup=False)
+
+    assert ret.result is False
+    assert "binary file" in ret.comment
+    assert name.read_bytes() == original
