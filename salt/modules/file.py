@@ -2308,6 +2308,11 @@ def line(
 
     Line-focused editing of a file.
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+
     .. note::
 
         ``file.line`` exists for historic reasons, and is not
@@ -2575,8 +2580,17 @@ def line(
     if before is None and after is None and not match:
         match = content
 
-    with salt.utils.files.fopen(path, mode="r") as fp_:
-        body = salt.utils.data.decode_list(fp_.readlines())
+    bom = ""
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        body = text.splitlines(True)
+    else:
+        with salt.utils.files.fopen(path, mode="r") as fp_:
+            body = salt.utils.data.decode_list(fp_.readlines())
+    orig_body = list(body)
+    # Used for new lines that have no neighbor with a line ending to copy
+    file_eol = _detect_eol("".join(body))
     body_before = hashlib.sha256(
         salt.utils.stringutils.to_bytes("".join(body))
     ).hexdigest()
@@ -2608,7 +2622,10 @@ def line(
                 # pick the line itself for the second line, which has no line
                 # ending yet, and so fell back to ``os.linesep``.)
                 prev = idx - 1 if idx > 0 else 1
-                body[idx] = _set_line_eol(body[prev], line)
+                # The neighbor can be the empty placeholder for the end of the
+                # file, use the file's line ending then
+                src = body[prev] if _get_eol(body[prev]) else file_eol
+                body[idx] = _set_line_eol(src, line)
         # We do not need empty line at the end anymore
         if "" == body[-1]:
             body.pop()
@@ -2638,17 +2655,18 @@ def line(
 
     if changed:
         if show_changes:
-            with salt.utils.files.fopen(path, "r") as fp_:
-                path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = __utils__["stringutils.get_diff"](path_content, body)
+            changes_diff = __utils__["stringutils.get_diff"](orig_body, body)
         if __opts__["test"] is False:
             fh_ = None
             try:
-                # Make sure we match the file mode from salt.utils.files.fopen
-                mode = "w"
                 body = salt.utils.data.decode_list(body, to_str=True)
-                fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.writelines(body)
+                if encoding:
+                    fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+                    fh_.write(_encode_bom_text(bom, "".join(body), encoding))
+                else:
+                    # Make sure we match the file mode from salt.utils.files.fopen
+                    fh_ = salt.utils.atomicfile.atomic_open(path, "w")
+                    fh_.writelines(body)
             finally:
                 if fh_:
                     fh_.close()

@@ -70,6 +70,14 @@ def configure_loader_modules():
     }
 
 
+@pytest.fixture(autouse=True)
+def no_bom_detection():
+    # These tests mock fopen with text data, which cannot be read in binary
+    # mode to look for a byte order mark
+    with patch.object(filemod, "_detect_bom_encoding", MagicMock(return_value=None)):
+        yield
+
+
 @pytest.fixture
 def get_body():
     def _get_body(content):
