@@ -8,6 +8,7 @@ group, mode, and data
 # some time in the future
 
 
+import codecs
 import datetime
 import errno
 import fnmatch
@@ -3987,13 +3988,37 @@ def append(path, *args, **kwargs):
 
     encoding = _detect_bom_encoding(path)
     if encoding:
-        _, text = _read_bom_text(path, encoding)
+        # The BOM is one code unit long
+        unit = len("\ufeff".encode(encoding))
+        try:
+            with salt.utils.files.fopen(path, "rb") as ofile:
+                head = ofile.read(_EOL_PROBE_SIZE)
+                size = ofile.seek(0, os.SEEK_END)
+                ofile.seek(size - unit)
+                tail = ofile.read()
+        except OSError as exc:
+            raise CommandExecutionError(
+                f"Unable to open file '{path}'. Exception: {exc}"
+            )
+        try:
+            # The probe can end in the middle of a character
+            text = codecs.getincrementaldecoder(encoding)().decode(
+                head, final=len(head) == size
+            )
+        except UnicodeDecodeError:
+            text = None
+        if text is None or size % unit:
+            raise SaltInvocationError(
+                f"Cannot perform string replacements on a binary file: {path}"
+            )
         linesep = _detect_eol(text)
-        data = "" if not text or text.endswith("\n") else linesep
+        needs_eol = size > unit and tail != "\n".encode(encoding)
+        data = linesep if needs_eol else ""
         data += "".join(f"{new_line}{linesep}" for new_line in args)
         # Endian specific codecs do not add a second byte order mark
+        data = _encode_bom_text("", data, encoding)
         with salt.utils.files.fopen(path, "ab") as ofile:
-            ofile.write(data.encode(encoding))
+            ofile.write(data)
         return f'Wrote {len(args)} lines to "{path}"'
 
     # Make sure we have a newline at the end of the file. Do this in binary
