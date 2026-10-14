@@ -9,6 +9,7 @@ order and line endings unchanged. Files are written and compared as bytes.
 
 import codecs
 import os
+import tempfile
 
 import pytest
 
@@ -17,7 +18,7 @@ import salt.modules.config as configmod
 import salt.modules.file as filemod
 import salt.utils.files
 import salt.utils.stringutils
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import CommandExecutionError, SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 BOM_ENCODINGS = [
@@ -34,6 +35,10 @@ EOLS = [
 
 # An unpaired high surrogate after a UTF-16-LE BOM is not valid UTF-16
 INVALID_UTF16 = codecs.BOM_UTF16_LE + b"\x00\xd8\x00\x00\x01\x02"
+
+# A lone surrogate cannot be encoded in UTF-16 or UTF-32. Python produces these
+# when it decodes command line arguments that are not valid UTF-8.
+UNENCODABLE = "\ud800"
 
 
 @pytest.fixture
@@ -80,6 +85,17 @@ def encoded(request):
 @pytest.fixture
 def target(tmp_path):
     return tmp_path / "target.txt"
+
+
+@pytest.fixture
+def temp_dir(tmp_path, monkeypatch):
+    """
+    Point temporary files at an empty directory so leftovers can be detected.
+    """
+    path = tmp_path / "tmp"
+    path.mkdir()
+    monkeypatch.setattr(tempfile, "tempdir", str(path))
+    return path
 
 
 @pytest.fixture
@@ -166,6 +182,14 @@ def test_prepend_invalid_bom_file_raises(target):
     with pytest.raises(SaltInvocationError, match="binary file"):
         filemod.prepend(str(target), "new")
     assert target.read_bytes() == INVALID_UTF16
+
+
+def test_prepend_unencodable_line_leaves_file(target, encoded):
+    original = encoded("existing\r\n")
+    target.write_bytes(original)
+    with pytest.raises(CommandExecutionError, match="Unable to encode"):
+        filemod.prepend(str(target), UNENCODABLE)
+    assert target.read_bytes() == original
 
 
 # --------------------------------------------------------------------------
@@ -266,6 +290,16 @@ def test_comment_line_no_match(target, encoded):
     target.write_bytes(original)
     assert filemod.comment_line(str(target), r"^missing$") is False
     assert target.read_bytes() == original
+
+
+def test_comment_line_unencodable_char_leaves_file(target, encoded, temp_dir):
+    original = encoded("foo\r\n")
+    target.write_bytes(original)
+    with pytest.raises(CommandExecutionError, match="Unable to encode"):
+        filemod.comment_line(str(target), r"^foo$", char=UNENCODABLE)
+    assert target.read_bytes() == original
+    assert not (target.parent / "target.txt.bak").exists()
+    assert not list(temp_dir.iterdir())
 
 
 def test_comment_line_invalid_bom_file_raises(target):
