@@ -5928,6 +5928,12 @@ def replace(
                 - repl: "PowerShellVersion = '3.0'"
                 - encoding: utf-16
 
+        .. versionchanged:: 3008.5
+
+            Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are
+            detected automatically, and the BOM and byte order are preserved.
+            ``encoding`` is only required for multi-byte files without a BOM.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.

@@ -2026,6 +2026,21 @@ def _lf_view(data, eol_aware=True):
     return data.replace(crlf, lf), True
 
 
+def _detect_bom_encoding(path):
+    """
+    Return the codec for a file that starts with a UTF-16 or UTF-32 byte order
+    mark, otherwise ``None``. Files in these encodings contain null bytes, so
+    the text check treats them as binary.
+    """
+    try:
+        encoding = __utils__["files.get_encoding"](path)
+    except CommandExecutionError:
+        return None
+    if encoding in ("UTF-32-BE", "UTF-32-LE", "UTF-16-BE", "UTF-16-LE"):
+        return encoding
+    return None
+
+
 def _subn_eol_aware(
     cpattern, repl, data, count=0, backslash_literal=False, eol_aware=True
 ):
@@ -2747,6 +2762,12 @@ def replace(
 
         Example: ``encoding=utf-16``
 
+        .. versionchanged:: 3008.5
+
+            Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are
+            detected automatically, and the BOM and byte order are preserved.
+            ``encoding`` is only required for multi-byte files without a BOM.
+
     .. note::
         A file that uses ``\\r\\n`` line endings for every line is matched as if
         it used ``\\n``, so ``.*`` does not consume the carriage return and
@@ -2787,10 +2808,14 @@ def replace(
         else:
             raise SaltInvocationError(f"File not found: {path}")
 
+    detected_encoding = False
     if encoding is None and not __utils__["files.is_text"](path):
-        raise SaltInvocationError(
-            f"Cannot perform string replacements on a binary file: {path}"
-        )
+        encoding = _detect_bom_encoding(path)
+        if encoding is None:
+            raise SaltInvocationError(
+                f"Cannot perform string replacements on a binary file: {path}"
+            )
+        detected_encoding = True
 
     if search_only and (append_if_not_found or prepend_if_not_found):
         raise SaltInvocationError(
@@ -2824,6 +2849,21 @@ def replace(
             raise CommandExecutionError(
                 f"Unable to open file '{path}'. Exception: {exc}"
             )
+        except UnicodeDecodeError as exc:
+            if detected_encoding:
+                raise SaltInvocationError(
+                    f"Cannot perform string replacements on a binary file: {path}"
+                )
+            raise CommandExecutionError(
+                f"Unable to decode file '{path}' as {encoding}. Exception: {exc}"
+            )
+
+        # Endian specific codecs keep the byte order mark as U+FEFF. Keep it out
+        # of the text being matched and write it back unchanged.
+        bom = ""
+        if orig_contents.startswith("\ufeff"):
+            bom = "\ufeff"
+            orig_contents = orig_contents[1:]
 
         eol_aware = _eol_aware(pattern, repl_str, not_found_content)
 
@@ -2864,7 +2904,7 @@ def replace(
                     path, mode="w", encoding=encoding
                 ) as w_file:
                     try:
-                        w_file.write(result)
+                        w_file.write(bom + result)
                     except OSError as exc:
                         raise CommandExecutionError(
                             "Unable to write file '{}'. Contents may be "
@@ -2896,6 +2936,7 @@ def replace(
                     with salt.utils.files.fopen(
                         path, mode="w", encoding=encoding
                     ) as fh_:
+                        fh_.write(bom)
                         fh_.writelines(new_file)
                 except OSError as exc:
                     raise CommandExecutionError(f"Exception: {exc}")
