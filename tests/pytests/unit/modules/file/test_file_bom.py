@@ -26,6 +26,7 @@ BOM_ENCODINGS = [
     pytest.param(("utf-16-be", codecs.BOM_UTF16_BE), id="utf-16-be"),
     pytest.param(("utf-32-le", codecs.BOM_UTF32_LE), id="utf-32-le"),
     pytest.param(("utf-32-be", codecs.BOM_UTF32_BE), id="utf-32-be"),
+    pytest.param(("utf-8", codecs.BOM_UTF8), id="utf-8"),
 ]
 
 EOLS = [
@@ -119,7 +120,7 @@ def no_check_perms():
         (codecs.BOM_UTF16_LE + "a".encode("utf-16-le"), "UTF-16-LE"),
         (codecs.BOM_UTF16_BE + "a".encode("utf-16-be"), "UTF-16-BE"),
         (codecs.BOM_UTF16_LE, "UTF-16-LE"),
-        (codecs.BOM_UTF8 + b"a", None),
+        (codecs.BOM_UTF8 + b"a", "UTF-8"),
         (b"plain text\n", None),
         (b"", None),
     ],
@@ -403,6 +404,84 @@ def test_blockreplace_invalid_bom_file_raises(target, no_check_perms):
     with pytest.raises(SaltInvocationError, match="binary file"):
         _blockreplace(target, append_if_not_found=True)
     assert target.read_bytes() == INVALID_UTF16
+
+
+# --------------------------------------------------------------------------
+# Files with a UTF-8 BOM
+# --------------------------------------------------------------------------
+
+
+def _utf8_bom(text):
+    return codecs.BOM_UTF8 + text.encode("utf-8")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_replace_first_line(target, eol):
+    target.write_bytes(_utf8_bom(f"foo = 1{eol}bar{eol}"))
+    filemod.replace(str(target), r"^foo = 1$", "foo = 2", backup=False)
+    assert target.read_bytes() == _utf8_bom(f"foo = 2{eol}bar{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_replace_prepend_goes_after_bom(target, eol):
+    target.write_bytes(_utf8_bom(f"existing{eol}"))
+    kwargs = {"prepend_if_not_found": True, "backup": False}
+    filemod.replace(str(target), r"^top$", "top", **kwargs)
+    expected = _utf8_bom(f"top{eol}existing{eol}")
+    assert target.read_bytes() == expected
+    filemod.replace(str(target), r"^top$", "top", **kwargs)
+    assert target.read_bytes() == expected
+
+
+def test_utf8_bom_replace_invalid_utf8_raises(target):
+    data = codecs.BOM_UTF8 + b"key = old \xff\n"
+    target.write_bytes(data)
+    with pytest.raises(CommandExecutionError, match="Unable to decode"):
+        filemod.replace(str(target), "old", "new", backup=False)
+    assert target.read_bytes() == data
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_comment_line_first_line(target, eol):
+    target.write_bytes(_utf8_bom(f"foo{eol}bar{eol}"))
+    ret = filemod.comment_line(str(target), r"^foo$", backup=False)
+    assert "\ufeff" not in ret
+    assert target.read_bytes() == _utf8_bom(f"#foo{eol}bar{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_line_replace_first_line(target, eol):
+    target.write_bytes(_utf8_bom(f"foo = 1{eol}bar{eol}"))
+    filemod.line(str(target), content="foo = 2", match="^foo", mode="replace")
+    assert target.read_bytes() == _utf8_bom(f"foo = 2{eol}bar{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_line_insert_start(target, eol):
+    target.write_bytes(_utf8_bom(f"first{eol}"))
+    filemod.line(str(target), content="top", mode="insert", location="start")
+    assert target.read_bytes() == _utf8_bom(f"top{eol}first{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_line_delete_first_line(target, eol):
+    target.write_bytes(_utf8_bom(f"foo{eol}bar{eol}"))
+    filemod.line(str(target), match="^foo$", mode="delete")
+    assert target.read_bytes() == _utf8_bom(f"bar{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_prepend(target, eol):
+    target.write_bytes(_utf8_bom(f"existing{eol}"))
+    filemod.prepend(str(target), "top")
+    assert target.read_bytes() == _utf8_bom(f"top{eol}existing{eol}")
+
+
+@pytest.mark.parametrize("eol", EOLS)
+def test_utf8_bom_append(target, eol):
+    target.write_bytes(_utf8_bom(f"existing{eol}"))
+    filemod.append(str(target), "new")
+    assert target.read_bytes() == _utf8_bom(f"existing{eol}new{eol}")
 
 
 # --------------------------------------------------------------------------

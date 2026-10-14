@@ -892,8 +892,8 @@ def _check_file(name):
 def _read_file_text(name):
     """
     Return the contents of ``name`` as text, for building diffs. Files that
-    start with a UTF-16 or UTF-32 byte order mark are decoded in that encoding
-    with the byte order mark removed.
+    start with a UTF-8, UTF-16 or UTF-32 byte order mark are decoded in that
+    encoding with the byte order mark removed.
     """
     with salt.utils.files.fopen(name, "rb") as fp_:
         data = fp_.read()
@@ -909,9 +909,9 @@ def _is_text_file(name):
     Return ``True`` if a diff can be shown for ``name``, which includes files
     that start with a UTF-16 or UTF-32 byte order mark.
     """
-    return bool(
-        __utils__["files.is_text"](name) or salt.utils.files.get_bom_encoding(name)
-    )
+    if __utils__["files.is_text"](name):
+        return True
+    return salt.utils.files.get_bom_encoding(name) not in (None, "UTF-8")
 
 
 def _find_keep_files(root, keep):
@@ -5955,8 +5955,9 @@ def replace(
 
         .. versionchanged:: 3008.5
 
-            Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are
-            detected automatically, and the BOM and byte order are preserved.
+            Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark
+            (BOM) are detected automatically, and the BOM and byte order are
+            preserved.
             ``encoding`` is only required for multi-byte files without a BOM.
 
     For complex regex patterns, it can be useful to avoid the need for complex
@@ -6772,8 +6773,9 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The full path to the file to be edited
@@ -6879,8 +6881,9 @@ def uncomment(name, regex, char="#", backup=".bak"):
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The full path to the file to be edited
@@ -6994,8 +6997,9 @@ def append(
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The location of the file to append to.
@@ -7277,8 +7281,9 @@ def prepend(
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
         The text is inserted after the BOM.
 
     name
