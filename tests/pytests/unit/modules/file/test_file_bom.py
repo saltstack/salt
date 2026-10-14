@@ -165,6 +165,49 @@ def test_append_invalid_bom_file_raises(target):
     assert target.read_bytes() == INVALID_UTF16
 
 
+@pytest.mark.parametrize("final_eol", [True, False], ids=["final-eol", "no-final-eol"])
+@pytest.mark.parametrize("eol", EOLS)
+def test_append_file_larger_than_probe(target, encoded, eol, final_eol):
+    """
+    Only the start and the end of the file are read, so the line ending and
+    the missing final line ending are still detected on large files.
+    """
+    text = "".join(f"line {idx:06d}{eol}" for idx in range(filemod._EOL_PROBE_SIZE))
+    if not final_eol:
+        text += "last"
+    target.write_bytes(encoded(text))
+    filemod.append(str(target), "new")
+    expected = text + ("" if final_eol else eol) + f"new{eol}"
+    assert target.read_bytes() == encoded(expected)
+
+
+@pytest.mark.parametrize(
+    "codec,bom",
+    [("utf-16-le", codecs.BOM_UTF16_LE), ("utf-16-be", codecs.BOM_UTF16_BE)],
+    ids=["utf-16-le", "utf-16-be"],
+)
+def test_append_probe_splits_surrogate_pair(target, codec, bom):
+    """
+    A character outside the BMP that straddles the end of the probe does not
+    make a valid file look binary.
+    """
+    head = "first\r\n"
+    # Place the 4 byte surrogate pair across the end of the probe
+    filler = (filemod._EOL_PROBE_SIZE - len(bom) - len(head) * 2 - 2) // 2
+    text = head + "a" * filler + "\U0001f600\r\n"
+    target.write_bytes(bom + text.encode(codec))
+    filemod.append(str(target), "new")
+    assert target.read_bytes() == bom + (text + "new\r\n").encode(codec)
+
+
+def test_append_unencodable_line_leaves_file(target, encoded):
+    original = encoded("first\r\n")
+    target.write_bytes(original)
+    with pytest.raises(CommandExecutionError, match="Unable to encode"):
+        filemod.append(str(target), UNENCODABLE)
+    assert target.read_bytes() == original
+
+
 # --------------------------------------------------------------------------
 # file.prepend
 # --------------------------------------------------------------------------
