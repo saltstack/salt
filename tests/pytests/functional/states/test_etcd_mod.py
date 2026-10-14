@@ -75,7 +75,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {},
         }
         assert etcd_state.rm(f"{prefix}/2/3", profile=profile_name) == expected
-
     with subtests.test("We should be able to set a value"):
         expected = {
             "name": f"{prefix}/1",
@@ -84,7 +83,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {f"{prefix}/1": "one"},
         }
         assert etcd_state.set_(f"{prefix}/1", "one", profile=profile_name) == expected
-
     with subtests.test(
         "We should be able to create an empty directory and set values in it"
     ):
@@ -98,7 +96,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             etcd_state.set_(f"{prefix}/2/3", "two-three", profile=profile_name)
             == expected
         )
-
     with subtests.test("We should be able to remove an existing key"):
         expected = {
             "name": f"{prefix}/2/3",

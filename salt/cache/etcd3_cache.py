@@ -5,9 +5,8 @@ Minion data cache plugin for the etcd key/value store, using API v3.
 
 A from-scratch cache backend built around etcd v3 semantics: a flat
 keyspace, native byte values, single-PUT atomicity, and lease-based
-expiry. It is not a port of
-:mod:`salt.cache.etcd_cache <salt.cache.etcd_cache>`, which targets the
-v2 HTTP API; the two use different etcd APIs and storage and do not share
+expiry. It is not a port of the removed ``etcd`` cache driver, which targets
+the v2 HTTP API; the two use different etcd APIs and storage and do not share
 data.
 
 Storage model
@@ -28,9 +27,9 @@ base64). To inspect the cache directly::
 
     etcdctl get --prefix /salt_cache/
 
-The v2 :mod:`salt.cache.etcd_cache <salt.cache.etcd_cache>` driver shares
-the default ``/salt_cache`` prefix, but the etcd v2 and v3 APIs use
-independent keyspaces, so the two do not collide even on the same cluster.
+The removed v2 ``etcd`` cache driver used the default ``/salt_cache`` prefix,
+but the etcd v2 and v3 APIs use independent keyspaces, so the two do not
+collide even on the same cluster.
 No other Salt etcd integration (the ``etcd`` execution module, state, or
 SDB) writes under this prefix.
 
