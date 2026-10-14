@@ -6768,6 +6768,11 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     Comment out specified lines in a file.
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+
     name
         The full path to the file to be edited
     regex
@@ -6841,24 +6846,18 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(name).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, True, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(name).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6875,6 +6874,11 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 def uncomment(name, regex, char="#", backup=".bak"):
     """
     Uncomment specified commented lines in a file
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
 
     name
         The full path to the file to be edited
@@ -6939,14 +6943,12 @@ def uncomment(name, regex, char="#", backup=".bak"):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = salt.utils.data.decode(fp_.readlines())
+    slines = _read_file_text(name).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, False, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = salt.utils.data.decode(fp_.readlines())
+    nlines = _read_file_text(name).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](
@@ -6954,7 +6956,7 @@ def uncomment(name, regex, char="#", backup=".bak"):
     )
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
