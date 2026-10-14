@@ -228,7 +228,7 @@ def test_get_signing_policy_remote(x509_salt_ssh_cli, cert_args, ca_minion_confi
     assert ret.data == testpolicy
 
 
-def test_get_signing_policy_remote_deprecated_name(
+def test_get_signing_policy_remote_rejects_long_name(
     x509_salt_ssh_cli, cert_args, ca_minion_config
 ):
     ret = x509_salt_ssh_cli.run(
@@ -236,14 +236,11 @@ def test_get_signing_policy_remote_deprecated_name(
         "testdeprecatednamepolicy",
         ca_server=cert_args["ca_server"],
     )
-    assert ret.returncode == 0
-    assert ret.data
-    assert "commonName" not in ret.data
-    assert "CN" in ret.data
-    assert ret.data["CN"] == "deprecated"
+    assert ret.returncode != 0
+    assert "Use `CN` instead" in ret.stdout + ret.stderr
 
 
-def test_get_signing_policy_remote_deprecated_ext(
+def test_get_signing_policy_remote_rejects_long_ext(
     x509_salt_ssh_cli, cert_args, ca_minion_config
 ):
     ret = x509_salt_ssh_cli.run(
@@ -251,11 +248,8 @@ def test_get_signing_policy_remote_deprecated_ext(
         "testdeprecatedextpolicy",
         ca_server=cert_args["ca_server"],
     )
-    assert ret.returncode == 0
-    assert ret.data
-    assert "X509v3 Basic Constraints" not in ret.data
-    assert "basicConstraints" in ret.data
-    assert ret.data["basicConstraints"] == "critical CA:FALSE"
+    assert ret.returncode != 0
+    assert "Use `basicConstraints` instead" in ret.stdout + ret.stderr
 
 
 def test_sign_remote_certificate_ext_override(

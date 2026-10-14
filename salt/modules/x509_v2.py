@@ -126,8 +126,15 @@ or compound matcher (for the latter, see the notes above).
       with the items taken from the signing policy having priority.
 
 
-Breaking changes versus the previous ``x509`` modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _x509-migration-3009:
+
+Migration from older x509 modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following changes were introduced by the cryptography-based
+``x509_v2`` modules, available since Salt 3006.0 and the default since
+Salt 3008.0:
+
 * The ``public_key`` parameter to ``x509.certificate_managed`` (and corresponding
   ``x509.create_certificate``) used to accept a private key.
   The new modules require an actual public key if this parameter is specified.
@@ -160,19 +167,76 @@ Breaking changes versus the previous ``x509`` modules
       ca_server:
         - match.compound_matches
 
-Note that when a ``ca_server`` is involved, both peers must use the updated module version.
+When using remote signing with ``ca_server``, both the requesting minion
+and the CA minion must use the ``x509_v2`` implementation.
 
-Revert to old modules
-~~~~~~~~~~~~~~~~~~~~~
-Until they are removed, you can still revert to the deprecated ``x509`` modules
-by setting the following minion configuration value:
+The remaining compatibility behavior was removed in Salt 3009:
 
-.. code-block:: yaml
+.. versionchanged:: 3009.0
 
-    # /etc/salt/minion.d/x509.conf
+    Removed compatibility with deprecated arguments, attribute and extension
+    names, and CRL entry formats. The announced validity and renewal defaults
+    now apply unconditionally.
 
-    features:
-      x509_v2: false
+The original M2Crypto-based execution and state modules have been removed.
+The cryptography-based ``x509_v2`` modules are now the only implementation
+of ``x509``. Remove ``features: {x509_v2: false}`` from minion configuration;
+it no longer selects the old implementation.
+
+These changes apply to the ``x509_v2`` execution and state modules, exposed as
+``x509``, and to the Salt SSH wrapper. Update requests, state declarations,
+and signing policies that use the removed forms:
+
+* Use ``digest`` instead of ``algorithm`` when creating certificates or CSRs.
+* Use ``keysize`` instead of ``bits`` when creating or managing private keys.
+* Remove obsolete arguments: ``text``, ``version``, and ``serial_bits`` for
+  certificates; ``text`` and ``version`` for CSRs; ``text`` for CRLs; and
+  ``cipher``, ``verbose``, and ``text`` for private keys. These arguments are
+  rejected instead of being ignored.
+* Remove ``asObj`` from calls to ``x509.get_public_key``. The function returns
+  a PEM-encoded public key.
+* Use canonical attribute names, such as ``CN`` instead of ``commonName`` and
+  ``O`` instead of ``organizationName``. Use canonical extension names, such
+  as ``basicConstraints`` instead of ``X509v3 Basic Constraints`` and
+  ``issuerAltName`` instead of the misspelled ``issuserAltName``. This also
+  applies to attributes and extensions in signing policies.
+* Specify revoked certificates as a simple list of dictionaries, rather than
+  a mapping containing a list of individual fields. Move the legacy
+  ``reason`` field into ``extensions:CRLReason``. For example:
+
+  .. code-block:: yaml
+
+      revoked:
+        - certificate: /etc/pki/certs/revoked.crt
+          extensions:
+            CRLReason: keyCompromise
+
+The default validity and renewal periods have changed:
+
+.. list-table:: Default periods in days
+   :header-rows: 1
+
+   * - Parameter
+     - Before Salt 3009
+     - Salt 3009
+   * - Certificate ``days_valid``
+     - 365
+     - 30
+   * - Certificate state ``days_remaining``
+     - 90
+     - 7
+   * - CRL ``days_valid``
+     - 100
+     - 7
+   * - CRL state ``days_remaining``
+     - 30
+     - 3
+
+Set these parameters explicitly if your deployment requires different
+periods. A certificate's explicit ``not_after`` takes precedence over
+``days_valid``. ``days_remaining`` controls when the corresponding state
+renews an existing certificate or CRL.
+
 
 .. _x509-setup:
 """
@@ -198,7 +262,6 @@ except ImportError:
 
 from collections import OrderedDict
 
-import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.stringutils
@@ -509,30 +572,7 @@ def create_certificate(
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
     """
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        kwargs["digest"] = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version", "serial_bits"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
-
-    if "days_valid" not in kwargs and "not_after" not in kwargs:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
-            )
-            kwargs["days_valid"] = 365
-        except RuntimeError:
-            pass
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -901,7 +941,7 @@ def create_crl(
 
     days_valid
         The number of days the CRL should be valid for. This sets the ``Next Update``
-        field. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
+        field. Defaults to ``7``.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -960,12 +1000,7 @@ def create_crl(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # Deprecation checks vs the old x509 module
     if kwargs:
-        if "text" in kwargs:
-            salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
-            kwargs.pop("text")
-
         unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
         if unknown:
             raise SaltInvocationError(
@@ -973,35 +1008,9 @@ def create_crl(
             )
 
     if days_valid is None:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
-            )
-            days_valid = 100
-        except RuntimeError:
-            days_valid = 7
+        days_valid = 7
 
-    revoked_parsed = []
-    for rev in revoked:
-        parsed = {}
-        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
-            salt.utils.versions.warn_until(
-                3009,
-                "Revoked certificates should be specified as a simple list of dicts.",
-            )
-            for val in rev[next(iter(rev))]:
-                parsed.update(val)
-        if "reason" in (parsed or rev):
-            salt.utils.versions.warn_until(
-                3009,
-                "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
-            )
-            salt.utils.dictupdate.set_dict_key_value(
-                (parsed or rev), "extensions:CRLReason", (parsed or rev).pop("reason")
-            )
-        revoked_parsed.append(parsed or rev)
-    revoked = revoked_parsed
+    x509util.validate_revoked(revoked)
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1141,18 +1150,7 @@ def create_csr(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        digest = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version"}.intersection(kwargs)  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1287,22 +1285,6 @@ def create_private_key(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # Deprecation checks vs the old x509 module
-    if "bits" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`bits` has been renamed to `keysize`. Please update your code.",
-        )
-        keysize = kwargs.pop("bits")
-
-    ignored_params = {"cipher", "verbose", "text"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
-        for x in ignored_params:
-            kwargs.pop(x)
-
     unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
     if unknown:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
@@ -1600,7 +1582,7 @@ def get_private_key_size(private_key, passphrase=None):
     return privkey.key_size
 
 
-def get_public_key(key, passphrase=None, asObj=None):
+def get_public_key(key, passphrase=None):
     """
     Returns a PEM-encoded public key derived from some reference.
     The reference should be a public key, certificate, private key or CSR.
@@ -1617,10 +1599,6 @@ def get_public_key(key, passphrase=None, asObj=None):
     passphrase
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
-    # Deprecation checks vs the old x509 module
-    if asObj is not None:
-        salt.utils.versions.kwargs_warn_until(["asObj"], "Potassium")
-
     try:
         return x509util.to_pem(x509util.load_pubkey(key)).decode()
     except (CommandExecutionError, SaltInvocationError):
@@ -1697,25 +1675,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Don't immediately break for the long form of name attributes
-    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
-                )
-                policy[name] = policy.pop(long_name)
-
-    # Don't immediately break for the long form of extensions
-    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
-                )
-                policy[extname] = policy.pop(long_name)
+    x509util.validate_cert_kwargs(policy)
     return policy
 
 

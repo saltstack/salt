@@ -7,6 +7,12 @@ Manage X.509 certificates
 General configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
 
+.. versionchanged:: 3009.0
+
+    Deprecated arguments and legacy X.509 input formats are no longer
+    accepted. See :ref:`x509-migration-3009` for replacements and changes
+    to the default validity and renewal periods.
+
 .. note::
 
     Compound matching allowed callers is **not supported** with salt-ssh
@@ -24,9 +30,6 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
-import salt.utils.dictupdate
-import salt.utils.files
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -340,30 +343,7 @@ def create_certificate(
             **kwargs,
         )
 
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        kwargs["digest"] = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version", "serial_bits"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
-
-    if "days_valid" not in kwargs and "not_after" not in kwargs:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
-            )
-            kwargs["days_valid"] = 365
-        except RuntimeError:
-            pass
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -535,25 +515,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Don't immediately break for the long form of name attributes
-    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
-                )
-                policy[name] = policy.pop(long_name)
-
-    # Don't immediately break for the long form of extensions
-    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
-                )
-                policy[extname] = policy.pop(long_name)
+    x509util.validate_cert_kwargs(policy)
     return policy
 
 

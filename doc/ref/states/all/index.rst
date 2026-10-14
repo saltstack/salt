@@ -140,5 +140,4 @@ state modules
     win_wua
     win_wusa
     winrepo
-    x509
     x509_v2
