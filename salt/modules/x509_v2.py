@@ -129,7 +129,7 @@ or compound matcher (for the latter, see the notes above).
 .. _x509-migration-3009:
 
 Migration from older x509 modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following changes were introduced by the cryptography-based
 ``x509_v2`` modules, available since Salt 3006.0 and the default since
