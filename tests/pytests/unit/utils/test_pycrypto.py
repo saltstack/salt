@@ -1,7 +1,10 @@
 import contextlib
+import importlib.util
 import logging
 import re
 import string
+import sys
+import warnings
 
 import pytest
 
@@ -286,3 +289,31 @@ def test_secure_password_all_chars_no_has_random():
         check = re.compile(f"[^{re.escape(string.printable)}]")
         assert check.search(ret) is None
         assert ret
+
+
+def test_crypt_import_does_not_emit_deprecation_warning(tmp_path, monkeypatch):
+    """
+    Importing the deprecated stdlib ``crypt`` module must not leak a
+    DeprecationWarning, since salt enables those for its own modules.
+    """
+    (tmp_path / "crypt.py").write_text(
+        "import warnings\n"
+        "warnings.warn('crypt is deprecated', DeprecationWarning)\n"
+        "methods = []\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    # Have monkeypatch restore (or remove) sys.modules["crypt"] on teardown
+    monkeypatch.setitem(sys.modules, "crypt", None)
+    del sys.modules["crypt"]
+
+    # Execute a fresh copy so the real salt.utils.pycrypto is left untouched
+    spec = importlib.util.spec_from_file_location(
+        "pycrypto_under_test", salt.utils.pycrypto.__file__
+    )
+    module = importlib.util.module_from_spec(spec)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        spec.loader.exec_module(module)
+
+    assert module.HAS_CRYPT is True
+    assert not [w for w in caught if "crypt" in str(w.message)]

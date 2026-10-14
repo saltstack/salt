@@ -6,6 +6,7 @@ import logging
 import random
 import re
 import string
+import warnings
 
 import salt.utils.platform
 import salt.utils.stringutils
@@ -32,7 +33,12 @@ if get_random_bytes is None:
 HAS_RANDOM = True
 
 try:
-    import crypt  # pylint: disable=deprecated-module
+    # ``crypt`` is deprecated since Python 3.11 and removed in 3.13. Salt
+    # enables DeprecationWarning for its own modules, so silence the stdlib
+    # warning here instead of showing it on every start.
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+        import crypt  # pylint: disable=deprecated-module
 
     # We need to ensure if the right `crypt` is loaded,
     # as LazyLoader can load `salt.utils.crypt` instead of `crypt`
