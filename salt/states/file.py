@@ -889,6 +889,31 @@ def _check_file(name):
     return ret, msg
 
 
+def _read_file_text(name):
+    """
+    Return the contents of ``name`` as text, for building diffs. Files that
+    start with a UTF-16 or UTF-32 byte order mark are decoded in that encoding
+    with the byte order mark removed.
+    """
+    with salt.utils.files.fopen(name, "rb") as fp_:
+        data = fp_.read()
+    encoding = salt.utils.files.get_bom_encoding(name)
+    if encoding:
+        text = data.decode(encoding)
+        return text[1:] if text.startswith("\ufeff") else text
+    return data.decode(__salt_system_encoding__)
+
+
+def _is_text_file(name):
+    """
+    Return ``True`` if a diff can be shown for ``name``, which includes files
+    that start with a UTF-16 or UTF-32 byte order mark.
+    """
+    return bool(
+        __utils__["files.is_text"](name) or salt.utils.files.get_bom_encoding(name)
+    )
+
+
 def _find_keep_files(root, keep):
     """
     Compile a list of valid keep files (and directories).
@@ -6965,6 +6990,11 @@ def append(
     The text will not be appended if it already exists in the file.
     A single string of text or a list of strings may be appended.
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+
     name
         The location of the file to append to.
 
@@ -7162,10 +7192,7 @@ def append(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines()
+    slines = _read_file_text(name).splitlines()
 
     append_lines = []
     try:
@@ -7192,7 +7219,7 @@ def append(
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7210,13 +7237,10 @@ def append(
     else:
         ret["comment"] = f"File {name} is in correct state"
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines()
+    nlines = _read_file_text(name).splitlines()
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"
@@ -7248,6 +7272,12 @@ def prepend(
 
     The text will not be prepended again if it already exists in the file. You
     may specify a single line of text or a list of lines to append.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+        The text is inserted after the BOM.
 
     name
         The location of the file to prepend to.
@@ -7462,10 +7492,7 @@ def prepend(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(name).splitlines(True)
 
     count = 0
     test_lines = []
@@ -7496,7 +7523,7 @@ def prepend(
     if __opts__["test"]:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7511,33 +7538,27 @@ def prepend(
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.files.fopen(name, "rb") as fp_:
-            # read as many lines of target file as length of user input
-            contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__)
-            contents = contents.splitlines(True)
-            target_head = contents[0 : len(preface)]
-            target_lines = []
-            # strip newline chars from list entries
-            for chunk in target_head:
-                target_lines += chunk.splitlines()
-            # compare current top lines in target file with user input
-            # and write user input if they differ
-            if target_lines != preface:
-                __salt__["file.prepend"](name, *preface)
-            else:
-                # clear changed lines counter if target file not modified
-                count = 0
+        # read as many lines of target file as length of user input
+        contents = _read_file_text(name).splitlines(True)
+        target_head = contents[0 : len(preface)]
+        target_lines = []
+        # strip newline chars from list entries
+        for chunk in target_head:
+            target_lines += chunk.splitlines()
+        # compare current top lines in target file with user input
+        # and write user input if they differ
+        if target_lines != preface:
+            __salt__["file.prepend"](name, *preface)
+        else:
+            # clear changed lines counter if target file not modified
+            count = 0
     else:
         __salt__["file.prepend"](name, *preface)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(name).splitlines(True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"

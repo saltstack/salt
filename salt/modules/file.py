@@ -3854,6 +3854,11 @@ def append(path, *args, **kwargs):
 
     Append text to the end of a file
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+
     path
         path to file
 
@@ -3897,6 +3902,17 @@ def append(path, *args, **kwargs):
         else:
             args = [kwargs["args"]]
 
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        _, text = _read_bom_text(path, encoding)
+        linesep = _detect_eol(text)
+        data = "" if not text or text.endswith("\n") else linesep
+        data += "".join(f"{new_line}{linesep}" for new_line in args)
+        # Endian specific codecs do not add a second byte order mark
+        with salt.utils.files.fopen(path, "ab") as ofile:
+            ofile.write(data.encode(encoding))
+        return f'Wrote {len(args)} lines to "{path}"'
+
     # Make sure we have a newline at the end of the file. Do this in binary
     # mode so SEEK_END with nonzero offset will work.
     with salt.utils.files.fopen(path, "rb+") as ofile:
@@ -3929,6 +3945,12 @@ def prepend(path, *args, **kwargs):
     .. versionadded:: 2014.7.0
 
     Prepend text to the beginning of a file
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
+        and written in that encoding, and the BOM and byte order are preserved.
+        The text is inserted after the BOM.
 
     path
         path to file
@@ -3970,6 +3992,15 @@ def prepend(path, *args, **kwargs):
             args = kwargs["args"]
         else:
             args = [kwargs["args"]]
+
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        eol = _detect_eol(text, default="\n")
+        preface = "".join(f"{line}{eol}" for line in args)
+        with salt.utils.files.fopen(path, "wb") as ofile:
+            ofile.write(_encode_bom_text(bom, preface + text, encoding))
+        return f'Prepended {len(args)} lines to "{path}"'
 
     try:
         with salt.utils.files.fopen(path) as fhr:
