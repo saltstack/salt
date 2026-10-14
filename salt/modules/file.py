@@ -3316,6 +3316,11 @@ def blockreplace(
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
 
+    .. versionchanged:: 3008.5
+
+        A byte order mark (BOM) at the start of the file is preserved, and a
+        block prepended to the file is inserted after it.
+
     .. note::
 
         This function will store two copies of the file in-memory (the original
@@ -3489,12 +3494,19 @@ def blockreplace(
     # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
+    bom = ""
     try:
         with salt.utils.files.fopen(
             path, "r", encoding=file_encoding, newline=""
         ) as fi_file:
             for line in fi_file:
                 write_line_to_new_file = True
+
+                if not orig_file:
+                    # Endian specific codecs and UTF-8 keep the byte order
+                    # mark as U+FEFF. Keep it out of the lines being matched
+                    # and write it back unchanged.
+                    bom, line = _split_bom(line)
 
                 if linesep is None:
                     # Auto-detect line separator
@@ -3536,6 +3548,10 @@ def blockreplace(
 
     except OSError as exc:
         raise CommandExecutionError(f"Failed to read from {path}: {exc}")
+    except UnicodeDecodeError:
+        raise SaltInvocationError(
+            f"Cannot perform string replacements on a binary file: {path}"
+        )
     finally:
         if linesep is None:
             # If the file was empty, we will not have set linesep yet. Assume
@@ -3652,6 +3668,8 @@ def blockreplace(
         # write new content in the file while avoiding partial reads
         try:
             fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+            if bom:
+                fh_.write(salt.utils.stringutils.to_bytes(bom, encoding=file_encoding))
             for line in new_file:
                 fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
         finally:
