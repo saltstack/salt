@@ -1753,6 +1753,9 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     if not found:
         return False
 
+    if encoding:
+        data = _encode_bom_text(bom, "".join(new_lines), encoding)
+
     if not salt.utils.platform.is_windows():
         pre_user = get_user(path)
         pre_group = get_group(path)
@@ -1767,7 +1770,7 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     if encoding:
         try:
             with salt.utils.files.fopen(path, mode="wb") as w_file:
-                w_file.write(_encode_bom_text(bom, "".join(new_lines), encoding))
+                w_file.write(data)
         except OSError as exc:
             raise CommandExecutionError(
                 "Unable to write file '{}'. Contents may be truncated. "
@@ -2107,9 +2110,13 @@ def _read_bom_text(path, encoding):
 
 def _encode_bom_text(bom, text, encoding):
     """
-    Encode ``text`` for a file read with :py:func:`_read_bom_text`.
+    Encode ``text`` for a file read with :py:func:`_read_bom_text`. Encode
+    before opening the file for writing, so a failure leaves it untouched.
     """
-    return (bom + text).encode(encoding)
+    try:
+        return (bom + text).encode(encoding)
+    except UnicodeEncodeError as exc:
+        raise CommandExecutionError(f"Unable to encode text as {encoding}: {exc}")
 
 
 def _subn_eol_aware(
@@ -4074,8 +4081,9 @@ def prepend(path, *args, **kwargs):
         bom, text = _read_bom_text(path, encoding)
         eol = _detect_eol(text, default="\n")
         preface = "".join(f"{line}{eol}" for line in args)
+        data = _encode_bom_text(bom, preface + text, encoding)
         with salt.utils.files.fopen(path, "wb") as ofile:
-            ofile.write(_encode_bom_text(bom, preface + text, encoding))
+            ofile.write(data)
         return f'Prepended {len(args)} lines to "{path}"'
 
     try:
