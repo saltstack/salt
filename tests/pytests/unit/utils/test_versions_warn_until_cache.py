@@ -100,13 +100,13 @@ def test_warn_until_makes_zero_saltstackversion_allocations_after_warmup():
         # Warmup — this call is allowed to allocate.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            salt.utils.versions.warn_until(3009, "warmup")
+            salt.utils.versions.warn_until(3009, "warmup", _version_info_=(3008, 3))
 
         call_count["n"] = 0
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for _ in range(1000):
-                salt.utils.versions.warn_until(3009, "test")
+                salt.utils.versions.warn_until(3009, "test", _version_info_=(3008, 3))
         assert call_count["n"] == 0
     finally:
         salt.version.SaltStackVersion.__init__ = original_init
@@ -142,4 +142,6 @@ def test_warn_until_accepts_saltversion_target():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # Should not raise TypeError; the SaltVersion branch handles it.
-        salt.utils.versions.warn_until(future_saltversion, "future")
+        salt.utils.versions.warn_until(
+            future_saltversion, "future", _version_info_=(3008, 3)
+        )

@@ -1,5 +1,6 @@
 import warnings
 
+import salt.version
 from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 
@@ -13,18 +14,21 @@ def get_configured_provider():
     return True
 
 
-def test_extension_deprecation():
+def test_extension_deprecation(monkeypatch):
     """
     this tests the extension_deprecation_message decorator to
     ensure that the warning is raised when a decorated function
     is called.
     """
+    # Keep the test before the deprecation deadline regardless of Salt's version.
+    monkeypatch.setattr(salt.version, "__version_info__", (3008, 3))
     expected_deprecation_message = (
         "The 'salt_mod' functionality in Salt has been deprecated and "
         "its functionality will be removed in version 3009.0 (Potassium) "
         "in favor of the saltext.salt_mod Salt Extension. (http://www.example.com)"
     )
     with warnings.catch_warnings(record=True) as catch_warnings:
+        warnings.simplefilter("always", DeprecationWarning)
         ret = salt_func()
         assert ret
         assert len(catch_warnings) == 1
@@ -32,6 +36,7 @@ def test_extension_deprecation():
         assert str(catch_warnings[-1].message) == expected_deprecation_message
 
     with warnings.catch_warnings(record=True) as catch_warnings:
+        warnings.simplefilter("always", DeprecationWarning)
         ret = get_configured_provider()
         assert ret
         assert len(catch_warnings) == 0
