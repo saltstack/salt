@@ -1636,8 +1636,9 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     :param path: string
         The full path to the text file.
@@ -1703,13 +1704,11 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
         raise SaltInvocationError(f"File not found: {path}")
 
     # Make sure it is a text file
-    encoding = None
-    if not __utils__["files.is_text"](path):
-        encoding = _detect_bom_encoding(path)
-        if encoding is None:
-            raise SaltInvocationError(
-                f"Cannot perform string replacements on a binary file: {path}"
-            )
+    encoding = _detect_bom_encoding(path)
+    if not __utils__["files.is_text"](path) and encoding in (None, "UTF-8"):
+        raise SaltInvocationError(
+            f"Cannot perform string replacements on a binary file: {path}"
+        )
 
     # First check the whole file, determine whether to make the replacement
     # Searching first avoids modifying the time stamp if there are no changes
@@ -2072,9 +2071,9 @@ def _lf_view(data, eol_aware=True):
 
 def _detect_bom_encoding(path):
     """
-    Return the codec for a file that starts with a UTF-16 or UTF-32 byte order
-    mark, otherwise ``None``. Files in these encodings contain null bytes, so
-    the text check treats them as binary.
+    Return the codec for a file that starts with a UTF-8, UTF-16 or UTF-32 byte
+    order mark, otherwise ``None``. UTF-16 and UTF-32 files contain null bytes,
+    so the text check treats them as binary.
     """
     return salt.utils.files.get_bom_encoding(path)
 
@@ -2358,8 +2357,9 @@ def line(
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
         Other files are written back as UTF-8, the encoding they are read with,
         instead of the system locale's encoding.
 
@@ -2866,8 +2866,9 @@ def replace(
 
         .. versionchanged:: 3008.5
 
-            Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are
-            detected automatically, and the BOM and byte order are preserved.
+            Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark
+            (BOM) are detected automatically, and the BOM and byte order are
+            preserved.
             ``encoding`` is only required for multi-byte files without a BOM.
 
     .. note::
@@ -2911,13 +2912,18 @@ def replace(
             raise SaltInvocationError(f"File not found: {path}")
 
     detected_encoding = False
-    if encoding is None and not __utils__["files.is_text"](path):
-        encoding = _detect_bom_encoding(path)
-        if encoding is None:
-            raise SaltInvocationError(
-                f"Cannot perform string replacements on a binary file: {path}"
-            )
-        detected_encoding = True
+    if encoding is None:
+        bom_encoding = _detect_bom_encoding(path)
+        if not __utils__["files.is_text"](path):
+            if bom_encoding in (None, "UTF-8"):
+                raise SaltInvocationError(
+                    f"Cannot perform string replacements on a binary file: {path}"
+                )
+            encoding = bom_encoding
+            detected_encoding = True
+        elif bom_encoding == "UTF-8":
+            # Decode the file so the BOM is kept out of the text being matched
+            encoding = bom_encoding
 
     if search_only and (append_if_not_found or prepend_if_not_found):
         raise SaltInvocationError(
@@ -2960,7 +2966,7 @@ def replace(
                 f"Unable to decode file '{path}' as {encoding}. Exception: {exc}"
             )
 
-        # Endian specific codecs keep the byte order mark as U+FEFF. Keep it out
+        # The BOM codecs keep the byte order mark as U+FEFF. Keep it out
         # of the text being matched and write it back unchanged.
         bom, orig_contents = _split_bom(orig_contents)
 
@@ -3945,8 +3951,9 @@ def append(path, *args, **kwargs):
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     path
         path to file
@@ -3993,13 +4000,14 @@ def append(path, *args, **kwargs):
 
     encoding = _detect_bom_encoding(path)
     if encoding:
-        # The BOM is one code unit long
-        unit = len("\ufeff".encode(encoding))
+        bom_size = len("\ufeff".encode(encoding))
+        # One code unit: 1 byte in UTF-8, 2 in UTF-16 and 4 in UTF-32
+        newline = "\n".encode(encoding)
         try:
             with salt.utils.files.fopen(path, "rb") as ofile:
                 head = ofile.read(_EOL_PROBE_SIZE)
                 size = ofile.seek(0, os.SEEK_END)
-                ofile.seek(size - unit)
+                ofile.seek(size - len(newline))
                 tail = ofile.read()
         except OSError as exc:
             raise CommandExecutionError(
@@ -4012,15 +4020,15 @@ def append(path, *args, **kwargs):
             )
         except UnicodeDecodeError:
             text = None
-        if text is None or size % unit:
+        if text is None or size % len(newline):
             raise SaltInvocationError(
                 f"Cannot perform string replacements on a binary file: {path}"
             )
         linesep = _detect_eol(text)
-        needs_eol = size > unit and tail != "\n".encode(encoding)
+        needs_eol = size > bom_size and tail != newline
         data = linesep if needs_eol else ""
         data += "".join(f"{new_line}{linesep}" for new_line in args)
-        # Endian specific codecs do not add a second byte order mark
+        # The BOM codecs do not add a second byte order mark
         data = _encode_bom_text("", data, encoding)
         with salt.utils.files.fopen(path, "ab") as ofile:
             ofile.write(data)
@@ -4061,8 +4069,9 @@ def prepend(path, *args, **kwargs):
 
     .. versionchanged:: 3008.5
 
-        Files that start with a UTF-16 or UTF-32 byte order mark (BOM) are read
-        and written in that encoding, and the BOM and byte order are preserved.
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
         The text is inserted after the BOM.
 
     path

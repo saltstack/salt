@@ -20,6 +20,7 @@ BOM_ENCODINGS = [
     pytest.param(("utf-16-be", codecs.BOM_UTF16_BE), id="utf-16-be"),
     pytest.param(("utf-32-le", codecs.BOM_UTF32_LE), id="utf-32-le"),
     pytest.param(("utf-32-be", codecs.BOM_UTF32_BE), id="utf-32-be"),
+    pytest.param(("utf-8", codecs.BOM_UTF8), id="utf-8"),
 ]
 
 EOLS = [
