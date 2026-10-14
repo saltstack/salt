@@ -1,10 +1,12 @@
 """
-Tests for file.replace with encoding support (issue #52793).
+Tests for file.replace with encoding support (issues #52793 and #65906).
 
 Verifies that UTF-16 and other multi-byte encoded files can be handled by
-file.replace when an explicit encoding is provided.
+file.replace when an explicit encoding is provided, and that files starting
+with a UTF-16 or UTF-32 byte order mark are detected without one.
 """
 
+import codecs
 import logging
 
 import pytest
@@ -43,6 +45,7 @@ def configure_loader_modules():
             "__opts__": opts,
             "__grains__": grains,
             "__utils__": {
+                "files.get_encoding": salt.utils.files.get_encoding,
                 "files.is_text": salt.utils.files.is_text,
                 "stringutils.get_diff": salt.utils.stringutils.get_diff,
             },
@@ -248,3 +251,189 @@ def test_replace_binary_without_encoding_raises(tmp_path):
             pattern=r"binary",
             repl="text",
         )
+
+
+BOM_ENCODINGS = [
+    pytest.param("utf-16-le", codecs.BOM_UTF16_LE, id="utf-16-le"),
+    pytest.param("utf-16-be", codecs.BOM_UTF16_BE, id="utf-16-be"),
+    pytest.param("utf-32-le", codecs.BOM_UTF32_LE, id="utf-32-le"),
+    pytest.param("utf-32-be", codecs.BOM_UTF32_BE, id="utf-32-be"),
+]
+
+
+def _bom_bytes(codec, bom, text):
+    return bom + text.encode(codec)
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_without_encoding(tmp_path, codec, bom):
+    """
+    A file starting with a UTF-16 or UTF-32 BOM is detected without an
+    explicit encoding, and the BOM and byte order are written back unchanged.
+    """
+    p = tmp_path / "bom.txt"
+    p.write_bytes(_bom_bytes(codec, bom, "key = old\r\nother = 1\r\n"))
+
+    result = filemod.replace(
+        str(p), pattern=r"key = old", repl="key = new", show_changes=False
+    )
+
+    assert result is True
+    assert p.read_bytes() == _bom_bytes(codec, bom, "key = new\r\nother = 1\r\n")
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_anchor_on_first_line(tmp_path, codec, bom):
+    """
+    The BOM is not part of the text, so ``^`` matches at the start of the
+    first line.
+    """
+    p = tmp_path / "bom.txt"
+    p.write_bytes(_bom_bytes(codec, bom, "first = 1\nsecond = 2\n"))
+
+    filemod.replace(str(p), pattern=r"^first = \d+$", repl="first = 9")
+
+    assert p.read_bytes() == _bom_bytes(codec, bom, "first = 9\nsecond = 2\n")
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_prepend_after_bom(tmp_path, codec, bom):
+    """
+    prepend_if_not_found puts the new line after the BOM, and a second run
+    finds it and makes no change.
+    """
+    p = tmp_path / "bom.txt"
+    p.write_bytes(_bom_bytes(codec, bom, "existing\r\n"))
+
+    filemod.replace(str(p), pattern=r"^added$", repl="added", prepend_if_not_found=True)
+    expected = _bom_bytes(codec, bom, "added\r\nexisting\r\n")
+    assert p.read_bytes() == expected
+
+    result = filemod.replace(
+        str(p),
+        pattern=r"^added$",
+        repl="added",
+        prepend_if_not_found=True,
+        show_changes=False,
+    )
+    assert result is False
+    assert p.read_bytes() == expected
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_append_uses_file_eol(tmp_path, codec, bom):
+    """
+    append_if_not_found adds the line with the file's line ending.
+    """
+    p = tmp_path / "bom.txt"
+    p.write_bytes(_bom_bytes(codec, bom, "existing\r\n"))
+
+    filemod.replace(str(p), pattern=r"^added$", repl="added", append_if_not_found=True)
+
+    assert p.read_bytes() == _bom_bytes(codec, bom, "existing\r\nadded\r\n")
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_dry_run(tmp_path, codec, bom):
+    """
+    dry_run reports a diff without the BOM in it and leaves the file alone.
+    """
+    p = tmp_path / "bom.txt"
+    original = _bom_bytes(codec, bom, "key = old\n")
+    p.write_bytes(original)
+
+    diff = filemod.replace(str(p), pattern=r"key = old", repl="key = new", dry_run=True)
+
+    assert "+key = new" in diff
+    assert "\ufeff" not in diff
+    assert p.read_bytes() == original
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_search_only(tmp_path, codec, bom):
+    p = tmp_path / "bom.txt"
+    original = _bom_bytes(codec, bom, "key = old\n")
+    p.write_bytes(original)
+
+    assert filemod.replace(str(p), pattern=r"^key", repl="", search_only=True)
+    assert not filemod.replace(str(p), pattern=r"missing", repl="", search_only=True)
+    assert p.read_bytes() == original
+
+
+@pytest.mark.parametrize("codec,bom", BOM_ENCODINGS)
+def test_replace_bom_file_no_match_is_unchanged(tmp_path, codec, bom):
+    p = tmp_path / "bom.txt"
+    original = _bom_bytes(codec, bom, "key = old\n")
+    p.write_bytes(original)
+
+    result = filemod.replace(str(p), pattern=r"missing", repl="new", show_changes=False)
+
+    assert result is False
+    assert p.read_bytes() == original
+    assert not (tmp_path / "bom.txt.bak").exists()
+
+
+def test_replace_invalid_utf16_after_bom_raises(tmp_path):
+    """
+    A binary file that happens to start with a UTF-16 BOM fails to decode, so
+    it is reported as binary and never modified.
+    """
+    p = tmp_path / "fake.bin"
+    # An unpaired high surrogate is invalid UTF-16
+    original = codecs.BOM_UTF16_LE + b"\x00\xd8\x00\x00\x01\x02"
+    p.write_bytes(original)
+
+    with pytest.raises(SaltInvocationError, match="binary file"):
+        filemod.replace(str(p), pattern=r"x", repl="y")
+    assert p.read_bytes() == original
+
+
+def test_replace_utf16_without_bom_still_raises(tmp_path):
+    """
+    Without a BOM the encoding can only be guessed, so an explicit encoding is
+    still required.
+    """
+    p = tmp_path / "nobom.txt"
+    original = "key = old\r\n".encode("utf-16-le")
+    p.write_bytes(original)
+
+    with pytest.raises(SaltInvocationError, match="binary file"):
+        filemod.replace(str(p), pattern=r"key = old", repl="key = new")
+    assert p.read_bytes() == original
+
+
+def test_replace_explicit_endian_encoding_keeps_bom(tmp_path):
+    """
+    An endian specific codec keeps the BOM as U+FEFF when decoding. It is
+    stripped before matching and written back.
+    """
+    p = tmp_path / "bom.txt"
+    p.write_bytes(codecs.BOM_UTF16_LE + "first = 1\n".encode("utf-16-le"))
+
+    filemod.replace(
+        str(p), pattern=r"^first = 1$", repl="first = 2", encoding="utf-16-le"
+    )
+
+    assert p.read_bytes() == codecs.BOM_UTF16_LE + "first = 2\n".encode("utf-16-le")
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        pytest.param(b"key = old\nnext\n", id="ascii"),
+        pytest.param("key = old caf\u00e9\n".encode("utf-8"), id="utf-8"),
+        pytest.param(
+            codecs.BOM_UTF8 + "key = old caf\u00e9\n".encode("utf-8"), id="utf-8-bom"
+        ),
+    ],
+)
+def test_replace_text_files_unaffected(tmp_path, data):
+    """
+    Files that already pass the text check keep using the bytes code path.
+    """
+    p = tmp_path / "text.txt"
+    p.write_bytes(data)
+
+    filemod.replace(str(p), pattern=r"key = old", repl="key = new")
+
+    assert p.read_bytes() == data.replace(b"key = old", b"key = new")
