@@ -116,7 +116,8 @@ salt/cache/*:
   - pytests.unit.cache.test_cache
   - pytests.unit.cache.test_memcache
   - pytests.functional.cache.test_consul
-  - pytests.functional.cache.test_etcd
+  - pytests.unit.cache.test_etcd3_cache
+  - pytests.integration.cache.test_etcd3_cache
   - pytests.functional.cache.test_localfs
   - pytests.functional.cache.test_memcache
   - pytests.functional.cache.test_mysql

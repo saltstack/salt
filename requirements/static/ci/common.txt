@@ -57,7 +57,6 @@ passlib>=1.7.4
 pycryptodomex
 pynacl>=1.5.0
 pyinotify>=0.9.6; sys_platform != 'win32' and sys_platform != 'darwin' and platform_system != "openbsd"
-python-etcd>=0.4.5
 pyvmomi
 rfc3339-validator>=0.1.4
 rfc3987
