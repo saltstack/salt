@@ -6,6 +6,17 @@ ESXi Proxy Minion
 
 .. versionadded:: 2015.8.4
 
+.. important::
+
+    This tutorial describes the legacy integration in Salt releases before
+    3009. The built-in ``vsphere`` execution module was removed in Salt 3009
+    after its deprecation period. The examples below depend on that module
+    and do not work with Salt 3009 alone.
+
+    For VMware functionality on Salt 3009 and later, consult the
+    `saltext.vmware extension <https://github.com/saltstack/salt-ext-modules-vmware>`_
+    for installation and migration instructions.
+
 .. note::
 
     This tutorial assumes basic knowledge of Salt. To get up to speed, check
@@ -196,7 +207,7 @@ one password in this list is required.
 The proxy integration will try the passwords listed in order. It is
 configured this way so you can have a regular password and the password you
 may be updating for an ESXi host either via the
-:mod:`vsphere.update_host_password <salt.modules.vsphere.update_host_password>`
+``vsphere.update_host_password``
 execution module function or via the
 :mod:`esxi.password_present <salt.states.esxi.password_present>` state
 function. This way, after the password is changed, you should not need to
@@ -387,7 +398,7 @@ state commands against the ESXi host via a Proxy Minion: the
 vSphere Execution Module
 ------------------------
 
-The :mod:`Salt.modules.vsphere <salt.modules.vsphere>` is a
+The legacy ``salt.modules.vsphere`` module is a
 standard Salt execution module that does the bulk of the work for the ESXi Proxy
 Minion. If you pull up the docs for it you'll see that almost every function in
 the module takes credentials (``username`` and ``password``) and a target ``host``
@@ -423,7 +434,7 @@ Proxy Minion.
 
 Because of the presence of the shim, to lookup documentation for what
 functions you can use to interface with the ESXi host, you'll want to
-look in :mod:`salt.modules.vsphere <salt.modules.vsphere>`
+look in the ``salt.modules.vsphere`` documentation for your Salt release
 instead of :mod:`salt.modules.esxi <salt.modules.esxi>`.
 
 
@@ -522,4 +533,4 @@ Relevant Salt Files and Resources
 - :mod:`ESXi State Module <salt.states.esxi>`
 - :ref:`Salt Proxy Minion Docs <proxy-minion>`
 - :ref:`Salt Proxy Minion End-to-End Example <proxy-minion-end-to-end-example>`
-- :mod:`vSphere Execution Module <salt.modules.vsphere>`
+- `saltext.vmware extension <https://github.com/saltstack/salt-ext-modules-vmware>`_
