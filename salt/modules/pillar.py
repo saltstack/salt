@@ -146,7 +146,7 @@ def get(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = not salt.utils.secret.values_masked()
 
     if merge:
         if isinstance(default, dict):
@@ -305,7 +305,7 @@ def items(
         # it does not disable masking elsewhere (pillar.get/item/raw/ext,
         # no_log states, or the general output safety net keep their own
         # existing behavior regardless of this option).
-        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
+        unmask = not salt.utils.secret.values_masked() or not __opts__.get(
             "pillar_mask_output", True
         )
     if unmask:
@@ -589,7 +589,7 @@ def item(
     )
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = not salt.utils.secret.values_masked()
 
     try:
         for arg in args:
@@ -690,9 +690,9 @@ def ext(external, pillar=None, unmask=None):
     unmask
         If set to ``True``, the pillar data will be returned unmasked. If set
         to ``False``, masked values are returned. The default of ``None``
-        auto-detects from the :func:`salt.utils.secret.mask_pillar` context
-        variable so direct user invocations see plain values while invocations
-        from inside the renderer/state pipeline stay masked.
+        auto-detects via :func:`salt.utils.secret.values_masked`, so direct
+        user invocations see plain values while invocations from inside the
+        renderer/state pipeline stay masked.
 
         .. versionadded:: 3008.2
 
@@ -718,7 +718,7 @@ def ext(external, pillar=None, unmask=None):
     ret = pillar_obj.compile_pillar()
 
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = not salt.utils.secret.values_masked()
 
     if unmask:
         return salt.utils.secret.expose(ret)

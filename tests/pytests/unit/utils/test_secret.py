@@ -448,3 +448,47 @@ def test_masked_nested_repr_respects_context_var():
     r = repr(d)
     assert secret.REDACT_PLACEHOLDER in r
     assert "host1" not in r
+
+
+# ---------------------------------------------------------------------------
+# mask_values: value switch, independent of the mask_pillar display switch
+# ---------------------------------------------------------------------------
+
+
+def test_values_masked_follows_mask_pillar_by_default():
+    """With mask_values unset, values_masked() tracks mask_pillar exactly."""
+    assert secret.mask_values.get() is None
+    assert secret.values_masked() is True
+    token = secret.mask_pillar.set(False)
+    try:
+        assert secret.values_masked() is False
+    finally:
+        secret.mask_pillar.reset(token)
+    assert secret.values_masked() is True
+
+
+def test_mask_values_unmasks_values_but_keeps_repr_masked():
+    """Real values for callers, redacted repr for logs."""
+    d = secret.MaskedDict({"k": "v"})
+    token = secret.mask_values.set(False)
+    try:
+        assert secret.values_masked() is False
+        assert secret.mask_pillar.get() is True
+        assert secret.REDACT_PLACEHOLDER in repr(d)
+        assert secret.REDACT_PLACEHOLDER in str(d)
+    finally:
+        secret.mask_values.reset(token)
+    assert secret.values_masked() is True
+
+
+def test_mask_values_overrides_mask_pillar():
+    """An explicit mask_values wins in both directions."""
+    d = secret.MaskedDict({"k": "v"})
+    pillar_token = secret.mask_pillar.set(False)
+    values_token = secret.mask_values.set(True)
+    try:
+        assert secret.values_masked() is True
+        assert "v" in repr(d)
+    finally:
+        secret.mask_values.reset(values_token)
+        secret.mask_pillar.reset(pillar_token)
