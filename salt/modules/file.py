@@ -2032,13 +2032,44 @@ def _detect_bom_encoding(path):
     mark, otherwise ``None``. Files in these encodings contain null bytes, so
     the text check treats them as binary.
     """
+    return salt.utils.files.get_bom_encoding(path)
+
+
+def _split_bom(text):
+    """
+    Return ``(bom, text)`` with a leading ``U+FEFF`` split off, so the byte
+    order mark is not matched or edited and can be written back unchanged.
+    """
+    if text.startswith("\ufeff"):
+        return "\ufeff", text[1:]
+    return "", text
+
+
+def _read_bom_text(path, encoding):
+    """
+    Read ``path`` with ``encoding`` (as returned by
+    :py:func:`_detect_bom_encoding`) and return ``(bom, text)``. Line endings
+    are not translated. A file that does not decode is reported as binary.
+    """
     try:
-        encoding = __utils__["files.get_encoding"](path)
-    except CommandExecutionError:
-        return None
-    if encoding in ("UTF-32-BE", "UTF-32-LE", "UTF-16-BE", "UTF-16-LE"):
-        return encoding
-    return None
+        with salt.utils.files.fopen(path, "rb") as fp_:
+            data = fp_.read()
+    except OSError as exc:
+        raise CommandExecutionError(f"Unable to open file '{path}'. Exception: {exc}")
+    try:
+        text = data.decode(encoding)
+    except UnicodeDecodeError:
+        raise SaltInvocationError(
+            f"Cannot perform string replacements on a binary file: {path}"
+        )
+    return _split_bom(text)
+
+
+def _encode_bom_text(bom, text, encoding):
+    """
+    Encode ``text`` for a file read with :py:func:`_read_bom_text`.
+    """
+    return (bom + text).encode(encoding)
 
 
 def _subn_eol_aware(
@@ -2860,10 +2891,7 @@ def replace(
 
         # Endian specific codecs keep the byte order mark as U+FEFF. Keep it out
         # of the text being matched and write it back unchanged.
-        bom = ""
-        if orig_contents.startswith("\ufeff"):
-            bom = "\ufeff"
-            orig_contents = orig_contents[1:]
+        bom, orig_contents = _split_bom(orig_contents)
 
         eol_aware = _eol_aware(pattern, repl_str, not_found_content)
 
