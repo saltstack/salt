@@ -909,6 +909,88 @@ def test_get_device_from_path(tmp_path):
                 assert ret == "mydevice"
 
 
+@pytest.mark.parametrize("test", [False, True], ids=["apply", "dry-run"])
+@pytest.mark.parametrize("operation", ["add", "update", "present", "not-change"])
+def test_set_fstab_overlay_matches_mountpoint(tmp_path, test, operation):
+    fstab = tmp_path / "fstab"
+    first = (
+        "overlay /mnt/first overlay lowerdir=/ro1,upperdir=/rw1,workdir=/work1 0 0\n"
+    )
+    second = (
+        "overlay /mnt/second overlay lowerdir=/ro2,upperdir=/rw2,workdir=/work2 0 0\n"
+    )
+    original = "# Preserve unrelated mounts\n/dev/root / ext4 defaults 0 1\n" + first
+    if operation != "add":
+        original += second
+    fstab.write_text(original, encoding="utf-8")
+    opts = (
+        "lowerdir=/ro2,upperdir=/rw2,workdir=/work2"
+        if operation == "present"
+        else "lowerdir=/new-ro,upperdir=/new-rw,workdir=/new-work"
+    )
+    kwargs = {
+        "name": "/mnt/second",
+        "device": "overlay",
+        "fstype": "overlay",
+        "opts": opts,
+        "config": str(fstab),
+        "not_change": operation == "not-change",
+    }
+
+    result = mount.set_fstab(**kwargs, test=test)
+    assert (
+        result
+        == {
+            "add": "new",
+            "update": "change",
+            "present": "present",
+            "not-change": "present",
+        }[operation]
+    )
+
+    if test:
+        assert fstab.read_text(encoding="utf-8") == original
+    else:
+        contents = fstab.read_text(encoding="utf-8")
+        assert contents.startswith(
+            "# Preserve unrelated mounts\n/dev/root / ext4 defaults 0 1\n" + first
+        )
+        entries = [
+            line.split() for line in contents.splitlines() if not line.startswith("#")
+        ]
+        assert len(entries) == 3
+        assert entries[-1][1] == "/mnt/second"
+        assert entries[-1][3] == (
+            second.split()[3] if operation == "not-change" else opts
+        )
+        assert mount.set_fstab(**kwargs) == "present"
+        assert fstab.read_text(encoding="utf-8") == contents
+
+
+def test_set_fstab_overlay_explicit_device_matching(tmp_path):
+    """An explicit match_on continues to override the filesystem default."""
+    fstab = tmp_path / "fstab"
+    fstab.write_text("overlay /mnt/old overlay defaults 0 0\n", encoding="utf-8")
+    assert (
+        mount.set_fstab(
+            name="/mnt/new",
+            device="overlay",
+            fstype="overlay",
+            config=str(fstab),
+            match_on="device",
+        )
+        == "change"
+    )
+    assert fstab.read_text(encoding="utf-8").splitlines()[0].split() == [
+        "overlay",
+        "/mnt/new",
+        "overlay",
+        "defaults",
+        "0",
+        "0",
+    ]
+
+
 def test_set_fstab_ceph_special_filesystem():
     """
     Test that 'ceph' filesystem type is treated as special filesystem

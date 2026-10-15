@@ -833,6 +833,7 @@ def set_fstab(
         specialFSes = frozenset(
             [
                 "none",
+                "overlay",
                 "tmpfs",
                 "sysfs",
                 "proc",
