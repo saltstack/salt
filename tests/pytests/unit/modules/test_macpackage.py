@@ -119,6 +119,14 @@ def test_unmount():
         mock.assert_called_once_with('hdiutil detach "/path/to/file.dmg"')
 
 
+def test_unmount_return_status():
+    result = {"retcode": 0, "stdout": "disk ejected", "stderr": ""}
+    run_all = MagicMock(return_value=result)
+    with patch.dict(macpackage.__salt__, {"cmd.run_all": run_all}):
+        assert macpackage.unmount("/path/to/mountpoint", return_status=True) == result
+    run_all.assert_called_once_with('hdiutil detach "/path/to/mountpoint"')
+
+
 def test_installed_pkgs():
     """
     Test getting a list of the installed packages

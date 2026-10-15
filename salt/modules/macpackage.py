@@ -144,15 +144,17 @@ def mount(dmg):
     return __salt__["cmd.run"](cmd), temp_dir
 
 
-def unmount(mountpoint):
+def unmount(mountpoint, return_status=False):
     """
     Attempt to unmount a dmg file from a temporary location
 
     Args:
         mountpoint (str): The location of the mount point
+        return_status (bool): Return command output and exit status as a dictionary.
+                              Defaults to returning only the command output.
 
     Returns:
-        str: The results of the hdutil detach command
+        str or dict: Command output, or the full result when return_status is True.
 
     CLI Example:
 
@@ -163,6 +165,8 @@ def unmount(mountpoint):
 
     cmd = f'hdiutil detach "{mountpoint}"'
 
+    if return_status:
+        return __salt__["cmd.run_all"](cmd)
     return __salt__["cmd.run"](cmd)
 
 
