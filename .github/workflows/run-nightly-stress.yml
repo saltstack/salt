@@ -55,14 +55,11 @@ jobs:
       - workflow-requirements
     environment: workflow-restart
     strategy:
+      fail-fast: false
       matrix:
-        # master isn't listed here -- its own nightly-stress-test.yml
-        # already carries a `schedule:` trigger and fires directly (it's
-        # the default branch, so GitHub actually honors that trigger).
-        # This job only needs to reach branches whose `schedule:` is
-        # otherwise inert. 3007.x/3008.x don't have their own
-        # nightly-stress-test.yml yet -- add them here once ported.
-        branch: [3006.x]
+        # Dispatch each supported branch's own workflow and source code.
+        # nightly-stress-test.yml has no schedule; this is the sole cron owner.
+        branch: [master, 3008.x]
     steps:
 
       - name: Generate a token
