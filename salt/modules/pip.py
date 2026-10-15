@@ -1717,6 +1717,7 @@ def list_all_versions(
     cwd=None,
     index_url=None,
     extra_index_url=None,
+    proxy=None,
 ):
     """
     .. versionadded:: 2017.7.3
@@ -1755,6 +1756,11 @@ def list_all_versions(
         Additional URL of Python Package Index
         .. versionadded:: 2019.2.0
 
+    proxy
+        Proxy URL to use when querying package versions. If omitted, use the
+        Minion's global proxy configuration. Set to ``False`` to ignore the
+        Minion's global proxy configuration.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1788,6 +1794,19 @@ def list_all_versions(
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
         cmd.extend(["--extra-index-url", extra_index_url])
+
+    config = __opts__
+    if proxy:
+        cmd.extend(["--proxy", proxy])
+    elif proxy is not False and config.get("proxy_host") and config.get("proxy_port"):
+        if config.get("proxy_username") and config.get("proxy_password"):
+            http_proxy_url = "http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}".format(
+                **config
+            )
+        else:
+            http_proxy_url = "http://{proxy_host}:{proxy_port}".format(**config)
+        cmd.extend(["--proxy", http_proxy_url])
+
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
     )
