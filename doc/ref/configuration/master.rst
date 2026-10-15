@@ -5138,6 +5138,10 @@ and the general CLI output safety net are unaffected and keep redacting by
 default regardless of this setting. Callers of ``pillar.items`` can always
 override the default explicitly with ``unmask=True``/``unmask=False``.
 
+The default only applies to ``pillar.*`` functions run directly from the CLI
+or API. Code that runs inside a job and calls them through ``__salt__``
+receives real values unless it passes ``unmask=False``.
+
 .. code-block:: yaml
 
     pillar_mask_output: True

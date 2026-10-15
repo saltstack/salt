@@ -122,6 +122,24 @@ CLI and compares against a real value, pass ``unmask=True``::
 
     salt-call pillar.get resources:widget:hosts unmask=True
 
+When ``unmask`` isn't passed, the default depends on the caller:
+
+* SLS files and templates (Jinja, etc.) get real values.
+* Python code in a state or execution module that calls
+  ``__salt__["pillar.get"]`` (or ``items``, ``item``, ``ext``) while a job
+  runs gets real values.
+* ``pillar.*`` functions run directly from the CLI or API return masked
+  values.
+
+While a job runs, ``repr()`` and log output of pillar data stays
+redacted, even when ``pillar.get`` returns real values.
+
+A function that returns pillar data to the user without using it should ask
+for masked output explicitly, so the data is not shown in clear text::
+
+    def show_settings():
+        return __salt__["pillar.get"]("myapp:settings", unmask=False)
+
 
 Examples in the wild
 ====================
