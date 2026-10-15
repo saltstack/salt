@@ -345,8 +345,9 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.12/windows.lock
     #   googleapis-common-protos
     #   opentelemetry-proto

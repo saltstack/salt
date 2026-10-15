@@ -418,6 +418,7 @@ propcache==0.3.2
     #   yarl
 protobuf==6.33.6
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
