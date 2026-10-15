@@ -4,7 +4,7 @@ import pytest
 
 import salt.modules.selinux as selinux
 from salt.exceptions import CommandExecutionError, SaltInvocationError
-from tests.support.mock import MagicMock, mock_open, patch
+from tests.support.mock import MagicMock, call, mock_open, patch
 
 pytestmark = [pytest.mark.skip_unless_on_linux]
 
@@ -12,6 +12,13 @@ pytestmark = [pytest.mark.skip_unless_on_linux]
 @pytest.fixture
 def configure_loader_modules():
     return {selinux: {}}
+
+
+def _semanage_list(stdout, retcode=0, stderr=""):
+    header = "SELinux fcontext                                   type               Context\n\n"
+    return MagicMock(
+        return_value={"retcode": retcode, "stdout": header + stdout, "stderr": stderr}
+    )
 
 
 def test_fcontext_get_policy_parsing():
@@ -85,7 +92,7 @@ def test_fcontext_get_policy_parsing():
     for case in cases:
         with patch.dict(
             selinux.__salt__,
-            {"cmd.shell": MagicMock(return_value=case["semanage_out"])},
+            {"cmd.run_all": _semanage_list(case["semanage_out"])},
         ):
             ret = selinux.fcontext_get_policy(case["name"])
             assert ret["filespec"] == case["name"]
@@ -401,6 +408,21 @@ SELINUXTYPE=targeted
                 assert line == "SELINUX=disabled"
 
 
+def _semanage_run_all(list_stdout, add_result=None):
+    """
+    Mock ``cmd.run_all`` so that listing returns ``list_stdout`` and any other
+    semanage invocation returns ``add_result``
+    """
+    add_result = add_result or {"retcode": 0, "stdout": "", "stderr": ""}
+
+    def run_all(cmd, *args, **kwargs):
+        if isinstance(cmd, list) and cmd[:3] == ["semanage", "fcontext", "--list"]:
+            return {"retcode": 0, "stdout": list_stdout, "stderr": ""}
+        return add_result
+
+    return MagicMock(side_effect=run_all)
+
+
 @pytest.mark.parametrize(
     "name,sel_type",
     (
@@ -410,27 +432,18 @@ SELINUXTYPE=targeted
 )
 def test_selinux_add_policy_regex(name, sel_type):
     """
-    Test adding policy with regex components parsing the stdout response of restorecon used in fcontext_policy_applied, new style.
+    Test adding policy with regex components modifies an existing entry with
+    the exact same filespec
     """
-    mock_cmd_shell = MagicMock(return_value={"retcode": 0})
-    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    mock_cmd_run_all = _semanage_run_all(
+        f"{name}    all files    system_u:object_r:var_t:s0\n"
+    )
 
-    with patch.dict(selinux.__salt__, {"cmd.shell": mock_cmd_shell}), patch.dict(
-        selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}
-    ):
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
         selinux.fcontext_add_policy(name, sel_type=sel_type)
-        filespec = re.escape(name)
-        expected_cmd_shell = f"semanage fcontext --list | grep -E '{filespec} '"
-        mock_cmd_shell.assert_called_once_with(
-            expected_cmd_shell,
-            ignore_retcode=True,
-        )
-        expected_cmd_run_all = (
-            f"semanage fcontext --modify --type {sel_type} {filespec}"
-        )
-        mock_cmd_run_all.assert_called_once_with(
-            expected_cmd_run_all,
-        )
+
+    expected_cmd = f"semanage fcontext --modify --type {sel_type} {re.escape(name)}"
+    assert mock_cmd_run_all.call_args_list[-1] == call(expected_cmd)
 
 
 @pytest.mark.parametrize(
@@ -442,24 +455,88 @@ def test_selinux_add_policy_regex(name, sel_type):
 )
 def test_selinux_add_policy_shorter_path(name, sel_type):
     """
-    Test adding policy with a shorter path than an existing entry
+    Test adding policy with a shorter path than an existing entry uses
+    ``--add``, not ``--modify``
     """
-    mock_cmd_shell = MagicMock(return_value={"retcode": 0})
-    mock_cmd_run_all = MagicMock(return_value={"retcode": 0})
+    mock_cmd_run_all = _semanage_run_all(
+        "/usr/share/munin/plugins/mysql_queries_extra    all files"
+        "    system_u:object_r:var_t:s0\n"
+    )
 
-    with patch.dict(selinux.__salt__, {"cmd.shell": mock_cmd_shell}), patch.dict(
-        selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}
-    ):
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
         selinux.fcontext_add_policy(name, sel_type=sel_type)
-        filespec = re.escape(name)
-        expected_cmd_shell = f"semanage fcontext --list | grep -E '{filespec} '"
-        mock_cmd_shell.assert_called_once_with(
-            expected_cmd_shell,
-            ignore_retcode=True,
-        )
-        expected_cmd_run_all = (
-            f"semanage fcontext --modify --type {sel_type} {filespec}"
-        )
-        mock_cmd_run_all.assert_called_once_with(
-            expected_cmd_run_all,
-        )
+
+    expected_cmd = f"semanage fcontext --add --type {sel_type} {re.escape(name)}"
+    assert mock_cmd_run_all.call_args_list[-1] == call(expected_cmd)
+
+
+def test_selinux_add_policy_hyphenated_path_ignores_grep_warning():
+    """
+    Regression test for #66854.
+
+    A filespec containing a hyphen must not be treated as an existing entry
+    because of a warning on stderr (grep 3.8+ warns about the escaped hyphen).
+    """
+    name = "/etc/usbguard/usbguard-daemon.conf"
+    mock_cmd_run_all = _semanage_run_all("")
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        selinux.fcontext_add_policy(name, sel_type="usbguard_conf_t")
+
+    assert mock_cmd_run_all.call_args_list[0] == call(
+        ["semanage", "fcontext", "--list"], python_shell=False
+    )
+    expected_cmd = f"semanage fcontext --add --type usbguard_conf_t {re.escape(name)}"
+    assert mock_cmd_run_all.call_args_list[-1] == call(expected_cmd)
+
+
+def test_selinux_add_policy_modify_only_for_matching_filetype():
+    """
+    An entry for another filetype does not make ``--modify`` valid
+    """
+    name = "/srv/data"
+    mock_cmd_run_all = _semanage_run_all(
+        f"{name}    all files    system_u:object_r:var_t:s0\n"
+    )
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        selinux.fcontext_add_policy(name, filetype="d", sel_type="var_t")
+
+    expected_cmd = f"semanage fcontext --add --ftype d --type var_t {re.escape(name)}"
+    assert mock_cmd_run_all.call_args_list[-1] == call(expected_cmd)
+
+
+def test_fcontext_get_policy_hyphenated_path():
+    """
+    Regression test for #66854
+    """
+    name = "/vol/apache/dummy/bla-bla(/.*)?"
+    mock_cmd_run_all = _semanage_run_all(
+        f"{name}    all files    system_u:object_r:httpd_sys_content_t:s0\n"
+    )
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        ret = selinux.fcontext_get_policy(name)
+
+    assert ret["filespec"] == name
+    assert ret["sel_type"] == "httpd_sys_content_t"
+
+
+def test_fcontext_get_policy_no_match_returns_none():
+    mock_cmd_run_all = _semanage_run_all(
+        "/var/www(/.*)?    all files    system_u:object_r:httpd_sys_content_t:s0\n"
+    )
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        assert selinux.fcontext_get_policy("/var/www") is None
+        assert selinux.fcontext_get_policy("/var/www(/.*)?", sel_type="other_t") is None
+
+
+def test_fcontext_list_policy_raises_when_semanage_fails():
+    mock_cmd_run_all = MagicMock(
+        return_value={"retcode": 1, "stdout": "", "stderr": "semanage: not found"}
+    )
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        with pytest.raises(CommandExecutionError, match="semanage: not found"):
+            selinux.fcontext_get_policy("/var/www")
