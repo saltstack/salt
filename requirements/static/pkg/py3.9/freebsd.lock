@@ -251,8 +251,14 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==6.33.6 ; python_full_version < '3.10'
     # via
+    #   -c requirements/constraints.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+protobuf==7.36.2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/constraints.txt
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==5.9.8 ; python_full_version < '3.10'
