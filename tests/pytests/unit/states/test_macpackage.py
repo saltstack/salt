@@ -6,7 +6,99 @@ from tests.support.mock import MagicMock, patch
 
 @pytest.fixture
 def configure_loader_modules():
-    return {macpackage: {}}
+    return {macpackage: {"__opts__": {"test": False}}}
+
+
+@pytest.fixture
+def dry_run_functions():
+    functions = {
+        "macpackage.installed_pkgs": MagicMock(return_value=[]),
+        "macpackage.get_pkg_id": MagicMock(return_value=["pkg.id"]),
+        "macpackage.get_mpkg_ids": MagicMock(return_value=["pkg.id"]),
+        "macpackage.install": MagicMock(return_value={"retcode": 0}),
+        "macpackage.install_app": MagicMock(return_value=""),
+        "macpackage.mount": MagicMock(
+            side_effect=AssertionError("Must not mount in test mode")
+        ),
+        "macpackage.unmount": MagicMock(),
+        "cmd.run": MagicMock(return_value="1.0"),
+    }
+    with patch.dict(macpackage.__opts__, {"test": True}), patch.dict(
+        macpackage.__salt__, functions
+    ):
+        yield functions
+
+
+@pytest.mark.skip_on_windows(reason="Not a Windows test")
+@pytest.mark.parametrize("package_type", ["pkg", "mpkg", "app"])
+@pytest.mark.parametrize(
+    "already_installed,force", [(False, False), (True, False), (True, True)]
+)
+def test_installed_test_mode(dry_run_functions, package_type, already_installed, force):
+    name = f"/path/to/file.{package_type}"
+    dry_run_functions["macpackage.installed_pkgs"].return_value = (
+        ["pkg.id"] if already_installed else []
+    )
+    with patch("os.path.exists", return_value=already_installed):
+        ret = macpackage.installed(
+            name, app=package_type == "app", mpkg=package_type == "mpkg", force=force
+        )
+
+    if already_installed and not force:
+        assert ret["result"] is True
+        assert ret["changes"] == {}
+    else:
+        assert ret["result"] is None
+        assert "would be installed" in ret["comment"]
+        assert ret["changes"] == {
+            "installed": ["file.app" if package_type == "app" else "pkg.id"]
+        }
+    for function in ("install", "install_app", "mount", "unmount"):
+        dry_run_functions[f"macpackage.{function}"].assert_not_called()
+
+
+@pytest.mark.skip_on_windows(reason="Not a Windows test")
+@pytest.mark.parametrize("package_type", ["pkg", "mpkg", "app"])
+@pytest.mark.parametrize("version_status", ["unchecked", "matches", "mismatch"])
+def test_installed_dmg_test_mode(dry_run_functions, package_type, version_status):
+    kwargs = {"dmg": True, "app": package_type == "app", "mpkg": package_type == "mpkg"}
+    if version_status != "unchecked":
+        kwargs["version_check"] = "example --version=1\\.0"
+        dry_run_functions["cmd.run"].return_value = (
+            "1.0" if version_status == "matches" else "0.9"
+        )
+    ret = macpackage.installed("/path/to/file.dmg", **kwargs)
+
+    assert ret["result"] is (True if version_status == "matches" else None)
+    assert ret["changes"] == {}
+    if version_status != "matches":
+        assert "would be mounted" in ret["comment"]
+    for function in (
+        "install",
+        "install_app",
+        "mount",
+        "unmount",
+        "installed_pkgs",
+        "get_pkg_id",
+        "get_mpkg_ids",
+    ):
+        dry_run_functions[f"macpackage.{function}"].assert_not_called()
+
+
+@pytest.mark.skip_on_windows(reason="Not a Windows test")
+@pytest.mark.parametrize("matches", [True, False])
+def test_installed_pkg_test_mode_version_check(dry_run_functions, matches):
+    dry_run_functions["cmd.run"].return_value = "1.0" if matches else "0.9"
+    ret = macpackage.installed(
+        "/path/to/file.pkg", version_check="example --version=1\\.0"
+    )
+    assert ret["result"] is (True if matches else None)
+    if matches:
+        assert ret["changes"] == {}
+        assert "Version already matches" in ret["comment"]
+    else:
+        assert ret["changes"] == {"installed": ["pkg.id"]}
+    dry_run_functions["macpackage.install"].assert_not_called()
 
 
 @pytest.mark.skip_on_windows(reason="Not a Windows test")
