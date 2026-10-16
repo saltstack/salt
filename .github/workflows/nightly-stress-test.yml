@@ -1,7 +1,7 @@
 name: Nightly Stress Test
 run-name: "Nightly Stress Test (branch: ${{ github.ref_name }})"
 
-# run-nightly-stress.yml owns the schedule and dispatches each branch via --ref.
+# Branch schedulers on the default branch dispatch each target via --ref.
 on:
   workflow_dispatch:
     inputs:
