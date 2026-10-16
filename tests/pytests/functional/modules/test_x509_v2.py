@@ -419,7 +419,7 @@ def cert_exts_read():
             },
             "nameConstraints": {
                 "critical": False,
-                "excluded": ["mail:.com"],
+                "excluded": ["email:.com"],
                 "permitted": ["IP:192.168.0.0/16"],
             },
             "noCheck": {"critical": False, "value": True},
@@ -430,7 +430,7 @@ def cert_exts_read():
             },
             "subjectAltName": {
                 "critical": False,
-                "value": ["DNS:sub.salt.ca", "mail:sub@salt.ca"],
+                "value": ["DNS:sub.salt.ca", "email:sub@salt.ca"],
             },
             "subjectKeyIdentifier": {
                 "critical": False,
@@ -506,7 +506,7 @@ def csr_exts_read():
             },
             "nameConstraints": {
                 "critical": False,
-                "excluded": ["mail:.com"],
+                "excluded": ["email:.com"],
                 "permitted": ["IP:192.168.0.0/16"],
             },
             "noCheck": {"critical": False, "value": True},
@@ -517,7 +517,7 @@ def csr_exts_read():
             },
             "subjectAltName": {
                 "critical": False,
-                "value": ["DNS:sub.salt.ca", "mail:sub@salt.ca"],
+                "value": ["DNS:sub.salt.ca", "email:sub@salt.ca"],
             },
             "subjectKeyIdentifier": {
                 "critical": False,
@@ -847,7 +847,7 @@ def test_create_certificate_with_extensions(x509, ca_key, ca_cert, rsa_privkey):
         "authorityKeyIdentifier": "keyid:always",
         "issuerAltName": "DNS:salt.ca",
         "authorityInfoAccess": "OCSP;URI:http://ocsp.salt.ca/",
-        "subjectAltName": "DNS:sub.salt.ca,email:sub@salt.ca",
+        "subjectAltName": "DNS:sub.salt.ca,email:sub@salt.ca,otherName:1.2.3.4;UTF8:foobar",
         "crlDistributionPoints": "URI:http://salt.ca/myca.crl",
         "certificatePolicies": "1.2.4.5",
         "policyConstraints": "requireExplicitPolicy:3",
@@ -1438,7 +1438,8 @@ def test_create_private_key_pkcs12(x509, passphrase):
 @pytest.mark.parametrize("encoding", ["pem", "der"])
 def test_create_private_key_write_to_path(x509, encoding, tmp_path):
     tgt = tmp_path / "pk"
-    x509.create_private_key(encoding=encoding, path=str(tgt))
+    res = x509.create_private_key(encoding=encoding, path=str(tgt))
+    assert str(tgt) in res
     assert tgt.exists()
     if encoding == "pem":
         assert tgt.read_text().startswith("-----BEGIN PRIVATE KEY-----")
