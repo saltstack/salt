@@ -238,6 +238,84 @@ You can point ``bin_env``/``pip_bin``, or ``salt-pip install
 directory, but this is unsupported: site-packages is replaced on every
 Salt upgrade, so anything installed there is lost.
 
+Restoring local dependencies on upgrade
+--------------------------------------
+
+The extras directory is specific to the bundled Python major/minor version.
+Its contents survive ordinary package upgrades, but an upgrade from, for
+example, Python 3.10 to 3.11 selects a different extras directory. Dependencies
+must be installed again for that interpreter, especially compiled extensions.
+
+Onedir packages support an optional, operator-managed requirements file:
+
+* Linux DEB and RPM packages and macOS installers:
+  ``/etc/salt/local-requirements.txt``.
+* Windows MSI and NSIS installers: ``<Salt root directory>\conf\local-requirements.txt``.
+  The default is ``C:\ProgramData\Salt Project\Salt\conf\local-requirements.txt``;
+  a custom configuration/root directory is respected.
+
+For example, create the file with the packages your deployment needs, using
+appropriate version constraints:
+
+.. code-block:: text
+
+    pymysql==1.1.1
+    psycopg2-binary==2.9.10
+
+During a package upgrade, the package or installer runs the newly installed
+``salt-pip install --requirement <file>`` after installing the runtime and before
+its package-managed service starts or restarts. This runs even when the bundled
+Python version has not changed. If the file does not exist, no pip command runs.
+
+This is a package/installer hook, not a service-start hook. Ordinary service
+starts, restarts, and system boots do not run ``salt-pip`` or reinstall
+requirements. The hook also runs on fresh installation and when the relevant
+package configuration or installer actions are repeated: Debian
+reconfiguration, RPM base-package reinstallation, Windows MSI repair, or
+rerunning the macOS or Windows NSIS installer.
+
+The installer does not create or overwrite the file. Packages previously
+installed manually are not automatically recorded in it. Removing a requirement
+does not uninstall an already installed package.
+
+Standard pip requirements syntax is supported, including ``--no-index`` and
+``--find-links`` for a local wheel directory. Provide wheels compatible with
+the new interpreter for offline upgrades. Requirements installation uses the
+normal ``salt-pip`` configuration and permissions; it does not load a Salt state
+or require a connection to a master. Linux packages also source their setup
+files so a configured ``SALT_EXTRAS_DIR`` reaches pip.
+
+If installation fails, Debian leaves ``salt-common`` unconfigured, blocking
+configuration of dependent daemon packages. Correct the requirements or package
+source and rerun ``dpkg --configure -a``.
+
+RPM installs requirements once in the base ``salt`` package's post-install
+scriptlet. If that fails, it leaves
+``/var/lib/rpm-state/salt/local-requirements.failed`` in place. The daemon
+scriptlets check this marker before their package-managed service starts or
+restarts, since RPM continues the transaction after a scriptlet failure. These
+checks only read the marker; they do not run pip, and ordinary service starts
+and restarts do not perform these checks. Correct the requirements
+or package source and reinstall the base ``salt`` package to retry and clear
+the marker. Reinstalling only a daemon subpackage does not retry requirements
+installation.
+
+On macOS, installation fails before registering or starting launchd services.
+Correct the cause and rerun the installer. Windows MSI reports an installation
+failure and performs its normal rollback; NSIS aborts before its successful-install
+service-start callback. NSIS can leave an updated installation with the service
+stopped; correct the cause and rerun the installer. A pip failure can leave
+partially installed Python dependencies; these are not transactionally rolled
+back by this feature.
+
+.. note::
+
+    A minion configured to run as a non-root user must already have write access
+    to the target extras directory. On Linux the base-package hook runs before
+    the daemon post-install ownership setup. Requirements files and referenced
+    artifacts must be managed by an administrator, since installing
+    Python dependencies can execute code during package installation.
+
 Relocating the extras directory
 -------------------------------
 
