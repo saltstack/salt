@@ -151,27 +151,14 @@ class SyncWrapper:
             return False
         return True
 
-    def close(self):
-        for method in self._close_methods:
-            if method in self._async_methods:
-                method = self._wrap(method)
-            else:
-                try:
-                    method = getattr(self.obj, method)
-                except AttributeError:
-                    log.error("No sync method %s on object %r", method, self.obj)
-                    continue
-            try:
-                method()
-            except AttributeError:
-                log.error("No async method %s on object %r", method, self.obj)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "Exception encountered while running stop method: %s", exc
-                )
-        # Shut down asyncio resources before closing the IOLoop so file descriptors
-        # held by pending tasks, async generators, and the default executor are released.
-        #
+    def _shutdown_asyncio_loop(self):
+        """
+        Cancel and drain pending tasks, then shut down async generators and
+        the default executor of ``self.asyncio_loop``.
+
+        Must be called from a thread with no running event loop, otherwise
+        ``run_until_complete`` raises and the tasks are left pending.
+        """
         # Each of the three ``run_until_complete`` calls below takes a freshly
         # constructed coroutine object as its argument.  If the loop is already
         # closed (or running) at that point ``run_until_complete`` raises
@@ -237,6 +224,46 @@ class SyncWrapper:
 
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error during asyncio shutdown: %s", exc)
+
+    def close(self):
+        for method in self._close_methods:
+            if method in self._async_methods:
+                method = self._wrap(method)
+            else:
+                try:
+                    method = getattr(self.obj, method)
+                except AttributeError:
+                    log.error("No sync method %s on object %r", method, self.obj)
+                    continue
+            try:
+                method()
+            except AttributeError:
+                log.error("No async method %s on object %r", method, self.obj)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Shut down asyncio resources before closing the IOLoop so file descriptors
+        # held by pending tasks, async generators, and the default executor are released.
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._shutdown_asyncio_loop()
+        else:
+            # ``close()`` was called from code running on another event loop
+            # in this thread (e.g. ``Minion.handle_event`` -> ``_mine_send``).
+            # ``run_until_complete`` refuses to run ``self.asyncio_loop`` while
+            # that loop is running, so the drain would fail and the loop would
+            # be closed below with its cancelled tasks still pending.  Their
+            # coroutines never resume, so the ZMQ sockets they hold (e.g. an
+            # ``AsyncAuth._authenticate`` suspended in
+            # ``RequestClient.close_async``) are never closed, and the
+            # ``_finalize_zmq_context`` finalizer later blocks in
+            # ``zmq_ctx_term()`` (#70353).  Drain from a helper thread instead,
+            # the same way ``_wrap`` runs methods.
+            thread = threading.Thread(target=self._shutdown_asyncio_loop)
+            thread.start()
+            thread.join()
 
         io_loop = self.io_loop
         try:

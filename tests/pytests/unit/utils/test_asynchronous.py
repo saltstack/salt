@@ -287,10 +287,71 @@ def test_close_drains_tasks_belonging_to_the_wrappers_own_loop():
     finally:
         driver.close()
 
-    # Only the swallowed exception is asserted on.  The tasks themselves
-    # cannot be driven to completion here -- a loop cannot be run from inside
-    # another running loop -- so their state is not the thing under test.
+    # Only the swallowed exception is asserted on here.  That the tasks are
+    # actually driven to completion is covered by
+    # test_close_from_running_loop_runs_pending_tasks_to_completion_70353.
     assert not errors, errors
+
+
+class HelperHeldTask:
+    """
+    A helper that leaves a task on the wrapper's own loop and keeps a
+    reference to it, so ``_target``'s orphan reaper leaves it alone and only
+    ``close()`` can clean it up.  This is the shape of the
+    ``AsyncAuth._authenticate`` task in #70353, which on Python 3.12+ is
+    referenced by the ``asyncio.Timeout`` of the ``wait_for`` it is
+    suspended in.
+    """
+
+    async_methods = [
+        "start_background",
+    ]
+
+    def __init__(self, io_loop=None):
+        self.task = None
+        self.cleaned_up = False
+
+    async def _background(self):
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # Stands in for ``RequestClient.close_async`` closing its ZMQ
+            # socket once the task is cancelled.
+            self.cleaned_up = True
+
+    async def start_background(self):
+        self.task = asyncio.ensure_future(self._background())
+        return True
+
+
+def test_close_from_running_loop_runs_pending_tasks_to_completion_70353():
+    """
+    ``Minion.handle_event`` (a coroutine on the minion's loop) calls the
+    synchronous ``_mine_send``, which uses a ``SyncWrapper`` and closes it
+    while the minion's loop is running in the same thread.  ``close()``
+    cancelled the tasks left on the wrapper's loop but could not run that
+    loop to let them finish (``run_until_complete`` refuses to run while
+    another loop is running in the thread), then closed it.  The cancelled
+    coroutines never resumed, so the ZMQ sockets they held were never closed
+    and a later GC pass deadlocked the minion in ``zmq_ctx_term()``.
+    """
+    sync = asynchronous.SyncWrapper(HelperHeldTask)
+    obj = sync.obj
+
+    async def _use_and_close_from_running_loop():
+        assert sync.start_background() is True
+        assert not obj.task.done()
+        sync.close()
+
+    driver = asyncio.new_event_loop()
+    try:
+        driver.run_until_complete(_use_and_close_from_running_loop())
+    finally:
+        driver.close()
+
+    assert obj.task.done()
+    assert obj.task.cancelled()
+    assert obj.cleaned_up is True
 
 
 def test_syncwrapper_del_safety_net_calls_close_70175():
