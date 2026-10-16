@@ -2095,3 +2095,69 @@ def test_freeze_disables_pip_version_check_issue_68214(python_binary):
 )
 def test_normalize(name, expected):
     assert pip.normalize(name) == expected
+
+
+@pytest.mark.parametrize("pip_version", ["20.2", "26.2"])
+@pytest.mark.parametrize(
+    "proxy,config,expected_proxy",
+    [
+        pytest.param(None, {}, None, id="no-proxy"),
+        pytest.param("http://explicit:8080", {}, "http://explicit:8080", id="explicit"),
+        pytest.param(
+            None,
+            {"proxy_host": "global", "proxy_port": 3128},
+            "http://global:3128",
+            id="global",
+        ),
+        pytest.param(
+            None,
+            {
+                "proxy_host": "global",
+                "proxy_port": 3128,
+                "proxy_username": "user",
+                "proxy_password": "password",
+            },
+            "http://user:password@global:3128",
+            id="global-auth",
+        ),
+        pytest.param(
+            "http://explicit:8080",
+            {"proxy_host": "global", "proxy_port": 3128},
+            "http://explicit:8080",
+            id="explicit-overrides-global",
+        ),
+        pytest.param(
+            False,
+            {"proxy_host": "global", "proxy_port": 3128},
+            None,
+            id="disable-global",
+        ),
+    ],
+)
+def test_list_all_versions_proxy(
+    python_binary, pip_version, proxy, config, expected_proxy
+):
+    modern_pip = pip_version == "26.2"
+    stdout = (
+        "Available versions: 2.0, 1.0"
+        if modern_pip
+        else "Could not find a version that satisfies the requirement example==versions (from versions: 1.0, 2.0)"
+    )
+    run_all = MagicMock(
+        return_value={"retcode": 0 if modern_pip else 1, "stdout": stdout}
+    )
+    with patch.dict(pip.__opts__, config, clear=True), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value=pip_version):
+        assert pip.list_all_versions("example", proxy=proxy) == ["1.0", "2.0"]
+
+    command = run_all.call_args.args[0]
+    expected = [*python_binary, "--disable-pip-version-check"]
+    expected.extend(
+        ["index", "versions", "example"]
+        if modern_pip
+        else ["install", "example==versions"]
+    )
+    if expected_proxy:
+        expected.extend(["--proxy", expected_proxy])
+    assert command == expected
