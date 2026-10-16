@@ -25,6 +25,7 @@ import salt.payload
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.doc
+import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.json
@@ -39,7 +40,7 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -223,24 +224,81 @@ async def test_send_req_async_regression_62453(minion_opts):
                 rtn = await minion._send_req_async(load, timeout)
 
 
-def test_mine_send_tries(minion_opts):
+async def test_mine_send_tries(minion_opts):
     channel_enter = MagicMock()
-    channel_enter.send.side_effect = lambda load, timeout, tries: tries
+    channel_enter.send = AsyncMock(side_effect=lambda load, timeout, tries: tries)
     channel = MagicMock()
-    channel.__enter__.return_value = channel_enter
+    channel.__aenter__.return_value = channel_enter
 
     minion_opts["return_retry_tries"] = 20
-    with patch("salt.channel.client.ReqChannel.factory", return_value=channel), patch(
-        "salt.loader.grains"
-    ):
+    with patch(
+        "salt.channel.client.AsyncReqChannel.factory", return_value=channel
+    ), patch("salt.loader.grains"):
         minion = salt.minion.Minion(minion_opts)
         minion.tok = "token"
 
         data = {}
         tag = "tag"
 
-        rtn = minion._mine_send(tag, data)
+        rtn = await minion._mine_send(tag, data)
         assert rtn == 20
+        assert channel_enter.send.call_args.args[0]["tok"] == "token"
+
+
+async def test_minion_mine_event_does_not_block_io_loop(minion_opts):
+    """
+    While a master is unreachable a mine send can take minutes (timeout *
+    tries).  It must not block the event loop, which the minion shares with
+    every master it is connected to.
+    """
+    send_time = 1
+
+    async def async_send(load, timeout, tries):
+        await asyncio.sleep(send_time)
+
+    def sync_send(load, timeout, tries):
+        time.sleep(send_time)
+
+    async_channel = MagicMock()
+    async_channel.__aenter__.return_value = async_channel
+    async_channel.send = AsyncMock(side_effect=async_send)
+    sync_channel = MagicMock()
+    sync_channel.__enter__.return_value = sync_channel
+    sync_channel.send.side_effect = sync_send
+
+    ticks = 0
+
+    async def heartbeat():
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    with patch(
+        "salt.channel.client.AsyncReqChannel.factory", return_value=async_channel
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", return_value=sync_channel
+    ), patch(
+        "salt.loader.grains"
+    ):
+        minion = salt.minion.Minion(minion_opts)
+        try:
+            minion.ready = True
+            minion.tok = "token"
+            package = salt.utils.event.SaltEvent.pack(
+                "_minion_mine", {"cmd": "_mine", "data": {}, "id": minion_opts["id"]}
+            )
+            task = asyncio.create_task(heartbeat())
+            try:
+                await minion.handle_event(package)
+            finally:
+                task.cancel()
+        finally:
+            minion.destroy()
+
+    # About 20 ticks fit in the send; none run if the send blocks the loop.
+    assert ticks >= 10
+    async_channel.send.assert_awaited_once()
 
 
 def test_invalid_master_address(minion_opts):
