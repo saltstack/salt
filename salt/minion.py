@@ -4498,15 +4498,17 @@ class Minion(MinionBase):
                 exc_info=err,
             )
 
-    def _mine_send(self, tag, data):
+    async def _mine_send(self, tag, data):
         """
         Send mine data to the master
         """
         # Consider using a long-running req channel to send mine data
-        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
+        async with salt.channel.client.AsyncReqChannel.factory(
+            self.opts, io_loop=self.io_loop
+        ) as channel:
             data["tok"] = self.tok
             try:
-                ret = channel.send(
+                ret = await channel.send(
                     data,
                     timeout=self._return_retry_timer(),
                     tries=self.opts["return_retry_tries"],
@@ -4611,7 +4613,7 @@ class Minion(MinionBase):
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
         elif tag.startswith("_minion_mine"):
-            self._mine_send(tag, data)
+            await self._mine_send(tag, data)
         elif tag.startswith("fire_master"):
             if self.connected:
                 log.debug(
