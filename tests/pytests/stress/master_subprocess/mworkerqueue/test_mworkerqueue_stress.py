@@ -55,6 +55,53 @@ def _poll_recv(sock: zmq.Socket, timeout_ms: int) -> bytes | None:
     return None
 
 
+def _probe_ready(mwq, worker: zmq.Socket, timeout: float = 10.0) -> None:
+    """
+    Confirm the proxy's inner DEALER has registered ``worker`` as a routable
+    peer by running a single-shot REQ -> worker -> ack round-trip.
+
+    HANDSHAKE_SUCCEEDED on the worker's REP monitor only tells us the REP's
+    view of the ZMTP handshake with the DEALER completed; it does not
+    guarantee the DEALER has processed the REP's greeting and added it to
+    its dispatch set.  On busy CI runners the DEALER-side peer-list update
+    lags the REP-side event by several hundred ms, so a REQ sent during
+    that window is routed to no peer and the worker's ``recv()`` times
+    out.  Keep probing (one in-flight message at a time, each probe REQ
+    created and torn down with ``linger=0`` so nothing lingers on the
+    worker's inbound queue) until a full round-trip succeeds.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        probe = mwq.ctx.socket(zmq.REQ)
+        probe.setsockopt(zmq.LINGER, 0)
+        probe.setsockopt(zmq.RCVTIMEO, 500)
+        probe.setsockopt(zmq.SNDTIMEO, 500)
+        probe.connect(mwq.router_uri)
+        try:
+            try:
+                probe.send(b"__probe__")
+            except zmq.error.ZMQError:
+                continue
+            msg = _poll_recv(worker, 1500)
+            if msg != b"__probe__":
+                # Either timeout (DEALER not routing yet) or we drained a
+                # leftover message from an earlier aborted probe.  Either
+                # way, the pipeline isn't confirmed-live yet -- retry.
+                continue
+            try:
+                worker.send(b"__probe_ack__")
+            except zmq.error.ZMQError:
+                continue
+            if _poll_recv(probe, 1500) == b"__probe_ack__":
+                return
+        finally:
+            probe.close(linger=0)
+    raise AssertionError(
+        f"REQ<->worker probe round-trip never completed within {timeout}s "
+        "(proxy's inner DEALER never routed to the worker)"
+    )
+
+
 def _drain_and_reply(worker: zmq.Socket, timeout_ms: int) -> int:
     """
     Drain any pending requests on ``worker`` (REP) and echo them back.
@@ -326,11 +373,9 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     A truly unbounded per-connection leak would grow phase 2 as much or
     more than phase 1.
     """
-    import zmq.utils.monitor
-
     pid = mworkerqueue.process.pid
 
-    # ``mworkerqueue.worker()`` only issues ``connect()``; the ROUTER↔DEALER
+    # ``mworkerqueue.worker()`` only issues ``connect()``; the ROUTER<->DEALER
     # zmq handshake and the internal DEALER's peer-list update are
     # asynchronous.  On the first churn cycle we would otherwise race:
     # a REQ can complete its own handshake with the ROUTER and land a
@@ -338,42 +383,15 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     # as a routable peer, so the DEALER queues the message internally
     # and ``_poll_recv(worker, 2000)`` in the churn loop times out.
     #
-    # Wait for the worker REP's HANDSHAKE_SUCCEEDED against the proxy's
-    # inner DEALER *before* we start the churn loop.  This is a passive
-    # readiness signal — no test traffic is injected — so it can't
-    # leave stale probe messages queued at the DEALER or leave the REP
-    # in "must send" state.  (An earlier attempt that used an active
-    # probe REQ→worker round-trip pileged stale ``b"probe"`` messages
-    # onto the worker's inbound queue, which the churn loop then
-    # mis-read as its own reply key and ended up hanging on ``m.recv()``
-    # in the ROUTER→REQ direction.)
-    worker = mworkerqueue.ctx.socket(zmq.REP)
-    worker.setsockopt(zmq.LINGER, 500)
-    worker.setsockopt(zmq.RCVTIMEO, 5000)
-    worker.setsockopt(zmq.SNDTIMEO, 5000)
-    monitor = worker.get_monitor_socket()
-    worker.connect(mworkerqueue.dealer_uri)
-    # Keep the socket alive for the fixture's teardown sweep.
-    mworkerqueue._sockets.append(worker)  # noqa: SLF001 — intentional
-
-    handshake_deadline = time.monotonic() + 15.0
-    while time.monotonic() < handshake_deadline:
-        if not monitor.poll(500):
-            continue
-        try:
-            ev = zmq.utils.monitor.recv_monitor_message(monitor, zmq.NOBLOCK)
-        except zmq.error.Again:
-            continue
-        if ev.get("event") == zmq.Event.HANDSHAKE_SUCCEEDED:
-            break
-    else:
-        monitor.close(linger=0)
-        raise AssertionError(
-            "worker REP never completed HANDSHAKE_SUCCEEDED against the "
-            "inner DEALER within 15s (test setup race, not the FD-bound "
-            "assertion)"
-        )
-    monitor.close(linger=0)
+    # A passive wait on the worker's HANDSHAKE_SUCCEEDED monitor event is
+    # not enough: that only tells us the REP's view of the handshake, not
+    # that the DEALER has processed our greeting and added us to its
+    # dispatch set.  Run a single-shot REQ<->worker round-trip (``_probe_ready``)
+    # instead -- that's the only reliable readiness signal, and it drains
+    # itself with ``linger=0`` so no stale probe messages pile up on the
+    # worker's inbound queue to confuse the churn loop below.
+    worker = mworkerqueue.worker()
+    _probe_ready(mworkerqueue, worker)
 
     def _churn(n_cycles: int, id_prefix: str) -> None:
         for i in range(n_cycles):
@@ -454,8 +472,14 @@ def test_malformed_input_does_not_kill_queue(mworkerqueue):
     # Proxy must still be alive.
     assert mworkerqueue.process.is_alive()
 
-    # And well-formed traffic must still round-trip.
+    # And well-formed traffic must still round-trip.  ``worker()`` only
+    # issues ``connect()`` and returns before the proxy's inner DEALER has
+    # registered this REP as a routable peer, so a bare 3 s poll races the
+    # handshake on busy CI runners (symptom: ``assert None == b"still
+    # alive?"``).  Confirm the pipeline is live with an explicit probe
+    # round-trip before the real liveness check.
     worker = mworkerqueue.worker()
+    _probe_ready(mworkerqueue, worker)
     minion = mworkerqueue.minion()
     minion.send(b"still alive?")
     req = _poll_recv(worker, 3000)
