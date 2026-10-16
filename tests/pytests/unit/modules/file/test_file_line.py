@@ -70,16 +70,24 @@ def configure_loader_modules():
     }
 
 
+@pytest.fixture(autouse=True)
+def no_bom_detection():
+    # These tests mock fopen with text data, which cannot be read in binary
+    # mode to look for a byte order mark
+    with patch.object(filemod, "_detect_bom_encoding", MagicMock(return_value=None)):
+        yield
+
+
 @pytest.fixture
 def get_body():
     def _get_body(content):
         """
-        The body is written as bytestrings or strings depending on platform.
-        This func accepts a string of content and returns the appropriate list
-        of strings back.
+        The body is written as a list of encoded lines. This func accepts a
+        string of content and returns the lines that are expected to be written.
         """
-        ret = content.splitlines(True)
-        return salt.utils.data.decode_list(ret, to_str=True)
+        return [
+            salt.utils.stringutils.to_bytes(line) for line in content.splitlines(True)
+        ]
 
     return _get_body
 
