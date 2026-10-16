@@ -425,10 +425,9 @@ class Key:
         keydir, keyname, keysize, user, cache = self._get_key_attrs(
             keydir, keyname, keysize, user
         )
-        priv = self.master_keys.find_or_create_keys(
-            keyname, keysize=keysize, cache=cache
-        )
-        return salt.utils.crypt.pem_finger(key=priv.public_key())
+        self.master_keys.find_or_create_keys(keyname, keysize=keysize, cache=cache)
+        pub = cache.fetch("master_keys", f"{keyname}.pub")
+        return salt.utils.crypt.pem_finger(key=pub)
 
     def gen_keys_signature(
         self, priv, pub, signature_path, auto_create=False, keysize=None
