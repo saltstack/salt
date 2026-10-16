@@ -363,3 +363,23 @@ def test_ext_forwards_unmask_to_expose():
         masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
         for key in compiled:
             assert "*" in masked[key]
+
+
+def test_get_default_follows_mask_values_not_repr_switch():
+    """
+    pillar.get() decides its default from the *value* switch, so internal
+    code can receive real values while repr()/logging stays redacted.
+    """
+    with patch.dict(pillarmod.__pillar__, {"foo": 42, "db": {"password": "pw"}}):
+        assert pillarmod.get("foo") == secret.REDACT_PLACEHOLDER
+        token = secret.mask_values.set(False)
+        try:
+            assert secret.mask_pillar.get() is True
+            assert pillarmod.get("foo") == 42
+            assert pillarmod.get("db") == {"password": "pw"}
+            # Explicit caller choice still wins.
+            assert pillarmod.get("foo", unmask=False) == secret.REDACT_PLACEHOLDER
+            assert secret.REDACT_PLACEHOLDER in repr(secret.hide({"foo": 42}))
+        finally:
+            secret.mask_values.reset(token)
+        assert pillarmod.get("foo") == secret.REDACT_PLACEHOLDER

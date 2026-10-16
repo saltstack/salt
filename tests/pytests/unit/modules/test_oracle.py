@@ -11,7 +11,7 @@ import pytest
 import salt.modules.oracle as oracle
 import salt.utils.data
 import salt.utils.secret
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -120,3 +120,21 @@ def test_show_env():
         },
     ):
         assert oracle.show_env() == {}
+
+
+def test_display_functions_keep_pillar_masked_explicitly():
+    """
+    show_dbs() without arguments and show_pillar() only display pillar data,
+    so they must ask for masked output explicitly instead of relying on the
+    default (which gives real values to code running inside a job).
+    """
+    pillar_get = MagicMock(return_value={})
+    with patch.dict(oracle.__salt__, {"pillar.get": pillar_get}):
+        oracle.show_dbs()
+        oracle.show_pillar()
+        oracle.show_pillar("dbs")
+    assert pillar_get.call_args_list == [
+        call("oracle:dbs", unmask=False),
+        call("oracle", unmask=False),
+        call("oracle:dbs", unmask=False),
+    ]
