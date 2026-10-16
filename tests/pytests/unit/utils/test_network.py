@@ -1635,3 +1635,25 @@ def test_ip_addrs(linux_interfaces_dict):
     ):
         ret = network.ip_addrs6("eth0")
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
+
+
+def test_nm_managed_70354():
+    """
+    nm_managed is what nm_ip and rh_ip call from __virtual__; it must exist and
+    be True only with nmcli + /run/NetworkManager + no ifup/ifdown.
+    """
+
+    def _which(cmd):
+        return "/usr/bin/nmcli" if cmd == "nmcli" else None
+
+    with patch("salt.utils.path.which", MagicMock(side_effect=_which)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is True
+        with patch("os.path.isdir", MagicMock(return_value=False)):
+            assert network.nm_managed() is False
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
