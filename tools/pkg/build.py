@@ -21,13 +21,15 @@ from typing import TYPE_CHECKING
 
 from ptscripts import Context, command_group
 
+import tools.pkg.pip_urllib3
 import tools.utils
 
 log = logging.getLogger(__name__)
 
-# Cached path to the pip wheel downloaded by _download_pip_wheel.
-# None until first call; reused across all build steps in the same process.
-_DOWNLOADED_PIP_WHEEL: pathlib.Path | None = None
+# Cache of the pip wheels prepared by _download_pip_wheel, keyed by the
+# urllib3 version overlaid onto them (None when no overlay applies). Reused
+# across all build steps in the same process.
+_DOWNLOADED_PIP_WHEELS: dict[str | None, pathlib.Path] = {}
 
 
 def _set_pip_constraint_env(env: dict[str, str]) -> None:
@@ -46,26 +48,55 @@ def _set_pip_constraint_env(env: dict[str, str]) -> None:
     env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
 
-def _download_pip_wheel(ctx: Context) -> pathlib.Path:
+def _pkg_lock_file(platform: str, python_version: str) -> pathlib.Path:
+    """
+    Return the static package lockfile for *platform* and a ``X.Y`` (or
+    longer) *python_version*.
+    """
+    major, minor = python_version.split(".")[:2]
+    return (
+        tools.utils.REPO_ROOT
+        / "requirements"
+        / "static"
+        / "pkg"
+        / f"py{major}.{minor}"
+        / f"{platform if platform != 'macos' else 'darwin'}.lock"
+    )
+
+
+def _download_pip_wheel(
+    ctx: Context, requirements_file: pathlib.Path, python_version: str
+) -> pathlib.Path:
     """
     Download pip==26.2 into a temporary directory and return the path to
     the wheel. The result is cached for the lifetime of the current process
     so subsequent calls are free.
 
-    pip 26.2 vendors urllib3 2.7.0, which already contains upstream fixes
-    for CVE-2025-66418, CVE-2026-21441, and CVE-2026-44432 -- no patching
-    is needed.
+    pip 26.2 vendors urllib3 2.7.0, and pip lags upstream urllib3 releases.
+    To make the pip we ship (and the copy virtualenv embeds to seed new
+    virtualenvs) carry the same urllib3 as the one *requirements_file*
+    installs into the onedir, the pinned urllib3 is overlaid onto the wheel
+    (see tools/pkg/pip_urllib3.py). This is a no-op once the vendored
+    urllib3 is at least as new as the pin, e.g. after a pip bump, and is
+    skipped for Python < 3.10, which stays on urllib3 1.x.
     """
-    global _DOWNLOADED_PIP_WHEEL
-    if _DOWNLOADED_PIP_WHEEL is not None:
-        return _DOWNLOADED_PIP_WHEEL
+    urllib3_version = tools.pkg.pip_urllib3.urllib3_pin_from_lock(
+        requirements_file,
+        tuple(int(part) for part in python_version.split(".")[:2]),
+    )
+    if urllib3_version in _DOWNLOADED_PIP_WHEELS:
+        return _DOWNLOADED_PIP_WHEELS[urllib3_version]
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-download-"))
     ctx.info("Downloading pip==26.2 ...")
-    # Drop PIP_CONSTRAINT for this single call: requirements/constraints.txt
+    # Drop PIP_CONSTRAINT for these calls: requirements/constraints.txt
     # pins pip to an older version for the dev/lint tooling venvs, which
     # would conflict with explicitly requesting pip==26.2 here.
-    download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
+    download_env = {
+        k: v
+        for k, v in os.environ.items()
+        if k not in ("PIP_CONSTRAINT", "PIP_BUILD_CONSTRAINT")
+    }
     ctx.run(
         sys.executable,
         "-m",
@@ -78,7 +109,37 @@ def _download_pip_wheel(ctx: Context) -> pathlib.Path:
         env=download_env,
     )
     wheel = next(tmpdir.glob("pip-*.whl"))
-    _DOWNLOADED_PIP_WHEEL = wheel
+    if urllib3_version is not None:
+        ctx.info(f"Downloading urllib3=={urllib3_version} ...")
+        urllib3_dir = tmpdir / "urllib3"
+        # --python-version: the tools interpreter may be older than the
+        # onedir's, and urllib3 2.x requires Python >= 3.10.
+        ctx.run(
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            f"urllib3=={urllib3_version}",
+            "--no-deps",
+            "--only-binary=:all:",
+            "--python-version",
+            ".".join(python_version.split(".")[:2]),
+            "--dest",
+            str(urllib3_dir),
+            env=download_env,
+        )
+        urllib3_wheel = next(urllib3_dir.glob("urllib3-*.whl"))
+        if tools.pkg.pip_urllib3.overlay_urllib3(wheel, urllib3_wheel):
+            ctx.info(
+                f"Replaced the urllib3 vendored in {wheel.name} with "
+                f"urllib3=={urllib3_version}"
+            )
+        else:
+            ctx.info(
+                f"The urllib3 vendored in {wheel.name} is already "
+                f"up to date with urllib3=={urllib3_version}"
+            )
+    _DOWNLOADED_PIP_WHEELS[urllib3_version] = wheel
     return wheel
 
 
@@ -382,12 +443,24 @@ def macos(
 
         # Upgrade pip in the standalone macOS build. install_salt.sh uses the
         # relenv pip but does not upgrade it, so install the pinned version
-        # and replace the copy that virtualenv embeds so that new
-        # environments also seed from it.
+        # (with its vendored urllib3 aligned to Salt's) and replace the copy
+        # that virtualenv embeds so that new environments also seed from it.
         build_env = checkout / "pkg" / "macos" / "build" / "opt" / "salt"
         python_bin = build_env / "bin" / "python3"
-        pip_wheel = _download_pip_wheel(ctx)
-        ctx.run(str(python_bin), "-m", "pip", "install", str(pip_wheel))
+        pip_wheel = _download_pip_wheel(
+            ctx, _pkg_lock_file("macos", python_version), python_version
+        )
+        # --force-reinstall: the wheel has the same version as the pip
+        # already installed, which pip would otherwise skip.
+        ctx.run(
+            str(python_bin),
+            "-m",
+            "pip",
+            "install",
+            "--force-reinstall",
+            "--no-deps",
+            str(pip_wheel),
+        )
         for old_pip in (build_env / "lib").glob(
             "python*/site-packages/virtualenv/seed/wheels/embed/pip-*.whl"
         ):
@@ -784,14 +857,7 @@ def onedir_dependencies(
         capture=True,
     )
     requirements_version = version_info.stdout.strip().decode()
-    requirements_file = (
-        tools.utils.REPO_ROOT
-        / "requirements"
-        / "static"
-        / "pkg"
-        / f"py{requirements_version}"
-        / f"{platform if platform != 'macos' else 'darwin'}.lock"
-    )
+    requirements_file = _pkg_lock_file(platform, requirements_version)
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
     # This matters here since install_args enables --no-binary=:all: for
@@ -809,13 +875,15 @@ def onedir_dependencies(
         "wheel",
         env=env,
     )
-    # Install the pinned pip version instead of leaving relenv's bundled
-    # copy in place. --force-reinstall is required because relenv ships
-    # with pip pre-installed, so without it pip would skip the install as
-    # "already satisfied". PIP_CONSTRAINT/PIP_BUILD_CONSTRAINT are dropped
-    # for this single call because requirements/constraints.txt pins pip to
-    # an older version for the dev/lint tooling, which would conflict with
-    # the newer pip explicitly requested here.
+    # Install the pinned pip version, with its vendored urllib3 aligned to
+    # the one in requirements_file, instead of leaving relenv's bundled copy
+    # in place. --force-reinstall is required because relenv ships with pip
+    # pre-installed at the same version, so without it pip would skip the
+    # install as "already satisfied". PIP_CONSTRAINT/PIP_BUILD_CONSTRAINT
+    # are dropped for this single call because requirements/constraints.txt
+    # pins pip to an older version for the dev/lint tooling, which would
+    # conflict with the newer pip explicitly requested here.
+    pip_wheel = _download_pip_wheel(ctx, requirements_file, requirements_version)
     pip_env = {
         k: v
         for k, v in env.items()
@@ -828,7 +896,7 @@ def onedir_dependencies(
         "install",
         "--force-reinstall",
         "--no-deps",
-        "pip==26.2",
+        str(pip_wheel),
         env=pip_env,
     )
     ctx.run(
@@ -1086,9 +1154,12 @@ def salt_onedir(
         str(embed_dir),
         env=env,
     )
-    # Copy the pinned pip wheel into the embed directory so that virtualenv
-    # seeds new environments with it.
-    pip_wheel = _download_pip_wheel(ctx)
+    # Copy the pinned pip wheel, with its vendored urllib3 aligned to the
+    # one Salt's lockfile installs, into the embed directory so that
+    # virtualenv seeds new environments with it.
+    pip_wheel = _download_pip_wheel(
+        ctx, _pkg_lock_file(platform, python_version_info), python_version_info
+    )
     shutil.copy(str(pip_wheel), str(embed_dir / pip_wheel.name))
 
     # Update __init__.py with the new versions
