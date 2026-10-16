@@ -2852,14 +2852,9 @@ class GitCLI(GitProvider):
         if not git_ref:
             return None, None, None
 
-        # Check if file exists and get its metadata
-        # Use ls-tree for specific path
-        # If we have a root, we need to join it
+        # GitFS.find_file() has already applied the root and mountpoint.
+        # Providers receive a path relative to the repository root.
         tree_path = path
-        if self.root(tgt_env):
-            tree_path = salt.utils.path.join(
-                self.root(tgt_env), path, use_posixpath=True
-            )
 
         res = self._run_git(["ls-tree", git_ref, tree_path])
         if res.returncode != 0 or not res.stdout:
