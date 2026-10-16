@@ -2175,9 +2175,22 @@ ARGS = {arguments}\n'''.format(
         log.debug("Regenerating extension modules tarball before command execution")
         self.mods = mod_data(self.fsclient)
 
-        # Deploy the fresh tarball to the remote system
-        log.debug("Deploying extension modules tarball to remote system")
-        self.deploy_ext()
+        # Deploy the fresh tarball only if the remote thin dir already exists;
+        # otherwise the subsequent shim invocation will trigger a full
+        # ``deploy()`` which uploads the thin (creating the dir) and then
+        # ``deploy_ext()`` using the regenerated ``self.mods`` from above.
+        # Skipping this when the dir is missing avoids an scp failure on
+        # OpenSSH 9+ clients, whose scp uses SFTP by default and refuses to
+        # upload into a non-existent remote directory.
+        if self.check_thin_dir():
+            log.debug("Deploying extension modules tarball to remote system")
+            self.deploy_ext()
+        else:
+            log.debug(
+                "Remote thin dir %s does not exist yet; deferring ext_mods "
+                "deployment to the full deploy() triggered by the shim.",
+                self.thin_dir,
+            )
 
         cmd_str = self._cmd_str()
         trace_carrier = {}
