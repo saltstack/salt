@@ -57,13 +57,13 @@ multidict>=6.6.0
 # opentelemetry 1.43.0 (and exporter-prometheus 0.64b0) drop Python 3.9; keep
 # the last 3.9-compatible releases there and let py>=3.10 float forward.
 opentelemetry-api>=1.41.1,<1.43.0; python_version < '3.10'
-opentelemetry-api>=1.41.1; python_version >= '3.10'
+opentelemetry-api>=1.45.0; python_version >= '3.10'
 opentelemetry-sdk>=1.41.1,<1.43.0; python_version < '3.10'
-opentelemetry-sdk>=1.41.1; python_version >= '3.10'
+opentelemetry-sdk>=1.45.0; python_version >= '3.10'
 opentelemetry-exporter-otlp-proto-http>=1.41.1,<1.43.0; python_version < '3.10'
-opentelemetry-exporter-otlp-proto-http>=1.41.1; python_version >= '3.10'
+opentelemetry-exporter-otlp-proto-http>=1.45.0; python_version >= '3.10'
 opentelemetry-exporter-prometheus>=0.62b1,<0.64b0; python_version < '3.10'
-opentelemetry-exporter-prometheus>=0.62b1; python_version >= '3.10'
+opentelemetry-exporter-prometheus>=0.66b0; python_version >= '3.10'
 # xxhash 3.8.0 drops Python 3.9; keep the last 3.9-compatible release there.
 xxhash>=3.7.0,<3.8.0; python_version < '3.10'
 xxhash>=3.7.0; python_version >= '3.10'
