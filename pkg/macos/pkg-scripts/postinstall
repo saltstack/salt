@@ -204,6 +204,16 @@ log "Path: Added Successfully"
 #-------------------------------------------------------------------------------
 # Register Salt as a service
 #-------------------------------------------------------------------------------
+if [ -f "$CONFIG_DIR/local-requirements.txt" ]; then
+    log "Installing Salt local requirements before service startup"
+    if ! SALT_CONFIG_DIR="$CONFIG_DIR" "$INSTALL_DIR/salt-pip" install \
+        --requirement "$CONFIG_DIR/local-requirements.txt"; then
+        log "Salt local requirements installation failed; service startup will not proceed"
+        echo "Salt local requirements installation failed. Correct $CONFIG_DIR/local-requirements.txt or the package source and rerun the installer." >&2
+        exit 1
+    fi
+fi
+
 log "Service: Configuring..."
 
 log "Service: Enabling salt-minion..."
