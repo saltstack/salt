@@ -272,6 +272,30 @@ class ReqServerChannel:
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file, so the random-file path would hand
+        # each peer a different session key and an L4-balanced minion
+        # would fail "bad load" on its first non-auth request routed to
+        # a peer.  Derive from ``cluster.pem`` instead -- it is
+        # distributed master-to-master in join-reply and never leaves
+        # the cluster, so no minion can derive another minion's session
+        # key.  ``cluster_aes`` is used as the HKDF salt so a
+        # cluster-wide aes rotation rotates every derived session key
+        # in lockstep.  See ``Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -892,6 +916,24 @@ class PoolRoutingChannel:
         """
         Returns a session key for the given minion id.
         """
+        # See ``ReqServerChannel.session_key`` -- derive from
+        # ``cluster.pem`` (master-only) salted by ``cluster_aes`` so
+        # isolated-FS peers agree without replicating the sessions
+        # directory and no minion can derive a peer minion's key.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
