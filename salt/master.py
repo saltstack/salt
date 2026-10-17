@@ -3909,6 +3909,30 @@ class AuthFuncs(TransportMethods):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file.  Derive from ``cluster.pem``
+        # (master-only; distributed in join-reply, never leaves the
+        # cluster) salted by ``cluster_aes`` so every peer master
+        # agrees on the key while no minion can derive another
+        # minion's key.  ``cluster_aes`` as HKDF salt rotates the
+        # derived key in lockstep with cluster-wide aes rotation.
+        # See ``salt.crypt.Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = SMaster.secrets["cluster_aes"]["secret"].value
+            with self._sessions_lock:
+                cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            with self._sessions_lock:
+                self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         # Fast-path cache hit: single read of ``self.sessions[minion]``.
