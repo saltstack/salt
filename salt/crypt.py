@@ -56,6 +56,7 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:
@@ -2133,6 +2134,35 @@ class Crypticle:
         b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
+
+    @classmethod
+    def derive_session_key(cls, cluster_aes, minion_id, key_size=192):
+        """
+        Derive a deterministic per-minion session key from the cluster AES
+        secret via HKDF-SHA256.
+
+        Returns the same base64-encoded shape as :meth:`generate_key_string`
+        so callers can feed it to ``Crypticle(opts, key_string)`` unchanged.
+
+        Used by cluster masters configured with
+        ``cluster_isolated_filesystem: True``: every peer shares
+        ``cluster_aes`` (distributed via ``cluster/peer/join-reply`` and
+        rotated cluster-wide by ``rotate_cluster_aes_key``) so each one
+        derives an identical session key for the same minion without any
+        replication of the per-minion ``sessions/<minion>`` file.  An
+        ``cluster_aes`` rotation therefore rotates every minion's session
+        key in lockstep across the whole cluster.
+        """
+        if not isinstance(cluster_aes, bytes):
+            cluster_aes = salt.utils.stringutils.to_bytes(cluster_aes)
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=key_size // 8 + cls.SIG_SIZE,
+            salt=b"salt-cluster-session-key",
+            info=salt.utils.stringutils.to_bytes(minion_id),
+        )
+        key = hkdf.derive(cluster_aes)
+        return base64.b64encode(key).decode("utf-8").replace("\n", "")
 
     @classmethod
     def write_key(cls, path, key_size=192):
