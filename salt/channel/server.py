@@ -219,6 +219,22 @@ class ReqServerChannel:
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file, so the random-file path would hand
+        # each peer a different session key and an L4-balanced minion
+        # would fail "bad load" on its first non-auth request routed to
+        # a peer. Derive deterministically from ``cluster_aes`` instead
+        # -- every peer already agrees on that value and rotates it in
+        # lockstep. See ``Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            key = salt.crypt.Crypticle.derive_session_key(cluster_aes, minion)
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -836,6 +852,18 @@ class PoolRoutingChannel:
         """
         Returns a session key for the given minion id.
         """
+        # See ``ReqServerChannel.session_key`` -- deterministic derivation
+        # from ``cluster_aes`` keeps isolated-FS peers in agreement
+        # without replicating the sessions directory.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            key = salt.crypt.Crypticle.derive_session_key(cluster_aes, minion)
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:

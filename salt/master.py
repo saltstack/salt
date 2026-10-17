@@ -3909,6 +3909,24 @@ class AuthFuncs(TransportMethods):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file, so the random-file path would hand
+        # each peer a different session key and an L4-balanced minion
+        # would fail "bad load" on its first non-auth request routed to
+        # a peer. Derive deterministically from ``cluster_aes`` instead
+        # -- every peer already agrees on that value and rotates it in
+        # lockstep. See ``salt.crypt.Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = SMaster.secrets["cluster_aes"]["secret"].value
+            with self._sessions_lock:
+                cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            key = salt.crypt.Crypticle.derive_session_key(cluster_aes, minion)
+            with self._sessions_lock:
+                self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         # Fast-path cache hit: single read of ``self.sessions[minion]``.
