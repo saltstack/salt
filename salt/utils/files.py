@@ -411,6 +411,7 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
     if time_start is None:
         time_start = time.time()
     obtained_lock = False
+    in_body = False
 
     def _raise_error(msg, race=False):
         """
@@ -459,6 +460,7 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 log.trace("Write lock %s obtained", lock_fn)
                 obtained_lock = True
                 # Transfer control back to the code inside the with block
+                in_body = True
                 yield
                 # Exit the loop
                 break
@@ -473,6 +475,9 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
+        if in_body:
+            # Not a locking failure; let the caller see the real exception
+            raise
         _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
