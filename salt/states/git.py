@@ -1547,7 +1547,7 @@ def latest(
                         password=password,
                         output_encoding=output_encoding,
                     )
-                    comments.append(upstream_action)
+                    comments.append(upstream_action)  # pylint: disable=used-before-assignment
 
                 # Fast-forward to the desired revision
                 if fast_forward is True and not _revs_equal(
