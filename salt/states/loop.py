@@ -203,7 +203,7 @@ def until_no_eval(
             )
             break
         res_archive.append(res)
-        cmp_res = comparator(res, expected)
+        cmp_res = comparator(res, expected)  # pylint: disable=used-before-assignment
         log.debug(
             "%s:until_no_eval:\n"
             "\t\tAttempt %s, result: %s, expected: %s, compare result: %s",

@@ -1284,12 +1284,12 @@ class CkMinions:
                 "compound",
                 "compound_pillar_exact",
             ):
-                # pylint: disable=not-callable
+                # pylint: disable=not-callable,unexpected-keyword-arg
                 if tgt_type in ("compound", "compound_pillar_exact"):
                     _res = check_func(expr, delimiter, greedy, fun=fun)
                 else:
                     _res = check_func(expr, delimiter, greedy)
-                # pylint: enable=not-callable
+                # pylint: enable=not-callable,unexpected-keyword-arg
             else:
                 _res = check_func(expr, greedy)  # pylint: disable=not-callable
             # For wildcard glob targets (e.g. ``salt '*'``), include resource

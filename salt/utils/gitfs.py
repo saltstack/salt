@@ -3640,7 +3640,7 @@ class GitBase:
 
                 verify_func = getattr(self, f"verify_{desired_provider}", None)
                 if verify_func:
-                    if verify_func():
+                    if verify_func():  # pylint: disable=not-callable
                         self.provider = desired_provider
                 else:
                     # No specific verify function for this provider, assume it's verified
