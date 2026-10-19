@@ -994,13 +994,14 @@ def test_install_proxy_argument_in_resulting_command(python_binary, venv_target)
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, proxy=proxy)
-        expected = [*python_binary, "install", "--proxy", proxy, *venv_target, pkg]
+        expected = [*python_binary, "install", *venv_target, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
             runas=None,
             use_vt=False,
             python_shell=False,
+            env={"PIP_PROXY": proxy},
         )
 
 
@@ -1047,20 +1048,14 @@ def test_install_global_proxy_in_resulting_command(python_binary, venv_target):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.install(pkg)
-            expected = [
-                *python_binary,
-                "install",
-                "--proxy",
-                proxy,
-                *venv_target,
-                pkg,
-            ]
+            expected = [*python_binary, "install", *venv_target, pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
                 runas=None,
                 use_vt=False,
                 python_shell=False,
+                env={"PIP_PROXY": proxy},
             )
 
 
@@ -1242,14 +1237,7 @@ def test_uninstall_global_proxy_in_resulting_command(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.uninstall(pkg)
-            expected = [
-                *python_binary,
-                "uninstall",
-                "-y",
-                "--proxy",
-                proxy,
-                pkg,
-            ]
+            expected = [*python_binary, "uninstall", "-y", pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
@@ -1257,6 +1245,7 @@ def test_uninstall_global_proxy_in_resulting_command(python_binary):
                 runas=None,
                 use_vt=False,
                 python_shell=False,
+                env={"PIP_PROXY": proxy},
             )
 
 
@@ -2158,6 +2147,65 @@ def test_list_all_versions_proxy(
         if modern_pip
         else ["install", "example==versions"]
     )
-    if expected_proxy:
-        expected.extend(["--proxy", expected_proxy])
     assert command == expected
+    env = run_all.call_args.kwargs.get("env", {})
+    assert env.get("PIP_PROXY") == expected_proxy
+
+
+@pytest.mark.parametrize(
+    "func,args",
+    [
+        (pip.install, ("pep8",)),
+        (pip.uninstall, ("pep8",)),
+        (pip.list_all_versions, ("pep8",)),
+    ],
+)
+def test_proxy_credentials_not_in_command_line(func, args):
+    """
+    Proxy credentials must not be passed as command line arguments, where any
+    local user could read them from the process list.
+    """
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    config = {
+        "proxy_host": "global",
+        "proxy_port": 3128,
+        "proxy_username": "user",
+        "proxy_password": "s3cret",
+    }
+    with patch.dict(pip.__opts__, config), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value="26.2"):
+        func(*args)
+        func(*args, proxy="http://explicit:hunter2@proxy:8080")
+
+    assert run_all.call_count == 2
+    for call in run_all.call_args_list:
+        command = call.args[0]
+        assert "--proxy" not in command
+        assert not any("s3cret" in a or "hunter2" in a for a in command)
+    assert (
+        run_all.call_args_list[0].kwargs["env"]["PIP_PROXY"]
+        == "http://user:s3cret@global:3128"
+    )
+    assert (
+        run_all.call_args_list[1].kwargs["env"]["PIP_PROXY"]
+        == "http://explicit:hunter2@proxy:8080"
+    )
+
+
+def test_install_proxy_keeps_env_vars_and_virtualenv(tmp_path):
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": run_all}), patch.object(
+        pip, "version", return_value="26.2"
+    ), patch.object(pip, "_get_pip_bin", return_value=["pip"]):
+        pip.install(
+            "pep8",
+            bin_env=str(tmp_path),
+            env_vars={"FOO": "bar"},
+            proxy="http://proxy:8080",
+        )
+    assert run_all.call_args.kwargs["env"] == {
+        "FOO": "bar",
+        "PIP_PROXY": "http://proxy:8080",
+        "VIRTUAL_ENV": str(tmp_path),
+    }
