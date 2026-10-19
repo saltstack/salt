@@ -2,7 +2,10 @@ import hashlib
 import ipaddress
 import logging
 import os
+import re
+import shutil
 import ssl
+import tempfile
 import traceback
 import warnings
 from abc import ABC, abstractmethod
@@ -558,6 +561,86 @@ def _explicit_trust_locations(ssl_options):
     return locations
 
 
+def _crl_paths(ssl_options):
+    """
+    Return the certificate revocation list files configured with ``crlfile``.
+
+    ``crlfile`` is a path, or a list of paths, to PEM files holding one or
+    more CRLs (one per issuing CA, typically).  Returns a list, empty when no
+    CRL is configured.
+    """
+    value = ssl_options.get("crlfile")
+    if not value:
+        return []
+    if isinstance(value, str):
+        return [value]
+    return [path for path in value if path]
+
+
+# A PEM CRL block: header, base64 body only, footer.  Nothing else (no other
+# PEM type, no encapsulated headers) is accepted in a ``crlfile``.
+_CRL_PEM_BLOCK = re.compile(
+    rb"-----BEGIN X509 CRL-----\r?\n[A-Za-z0-9+/=\r\n]+-----END X509 CRL-----"
+)
+
+
+def _crl_pem_blocks(data, path):
+    """
+    Return the CRLs in ``data`` (the content of the ``crlfile`` ``path``),
+    each re-encoded as canonical PEM.
+
+    ``crlfile`` must hold PEM encoded CRLs and nothing else.  OpenSSL's file
+    loader would take a certificate found in the same file as a *trust
+    anchor*, and the CRL file is typically written by an unprivileged
+    refresh job, so anything that is not a CRL is refused (``ValueError``)
+    rather than skipped.
+    """
+    from cryptography import x509
+    from cryptography.hazmat.primitives import serialization
+
+    blocks = _CRL_PEM_BLOCK.findall(data)
+    if _CRL_PEM_BLOCK.sub(b"", data).strip():
+        raise ValueError(
+            f"{path} contains data other than PEM encoded CRLs; a crlfile must "
+            "hold certificate revocation lists only"
+        )
+    if not blocks:
+        raise ValueError(f"{path} contains no PEM encoded CRL")
+    canonical = []
+    for block in blocks:
+        try:
+            crl = x509.load_pem_x509_crl(block)
+        except ValueError as exc:
+            raise ValueError(f"cannot parse the CRL in {path}: {exc}") from exc
+        canonical.append(crl.public_bytes(serialization.Encoding.PEM))
+    return canonical
+
+
+def _load_crl_files(context, paths):
+    """
+    Load the CRLs of the ``crlfile`` ``paths`` into ``context``.
+
+    Only the validated, re-encoded CRLs are handed to OpenSSL (through a
+    private temporary file, as ``cadata`` does not take CRLs), never the
+    raw file, so a ``crlfile`` can never add a trust anchor.  Raises
+    ``ValueError`` for a file that is not CRLs only, ``OSError`` /
+    ``ssl.SSLError`` when it cannot be read or loaded.
+    """
+    for path in paths:
+        with open(path, "rb") as fh:  # pylint: disable=resource-leakage
+            blocks = _crl_pem_blocks(fh.read(), path)
+        tmpdir = tempfile.mkdtemp(prefix="salt-crl-")  # created 0700
+        try:
+            copy = os.path.join(tmpdir, "crl.pem")
+            fd = os.open(copy, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(b"".join(blocks))
+            log.debug("Loading certificate revocation list: %s", path)
+            context.load_verify_locations(cafile=copy)
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+
 def _same_address(left, right):
     """
     Whether two host strings name the same address. IP literals are compared
@@ -632,6 +715,10 @@ def ssl_context(ssl_options, server_side=False):
     client certificate (``clientAuth`` EKU) when its own request server is
     contacted by master-local tooling such as ``salt``, ``salt-run`` or
     ``salt-api``, while ``certfile`` stays a ``serverAuth``-only certificate.
+
+    ``crlfile`` (a path or a list of paths) loads certificate revocation lists
+    and turns on ``VERIFY_CRL_CHECK_LEAF``; ``verify_flags`` extends that, for
+    example with ``VERIFY_CRL_CHECK_CHAIN``.
     """
     if server_side:
         default_version = ssl.PROTOCOL_TLS_SERVER
@@ -679,6 +766,12 @@ def ssl_context(ssl_options, server_side=False):
     # Load CA certificates BEFORE setting cert_reqs to ensure proper validation
     for location in remaining_trust:
         context.load_verify_locations(**location)
+    crl_files = _crl_paths(ssl_options)
+    _load_crl_files(context, crl_files)
+    if crl_files:
+        # Revocation is checked for the peer's own certificate by default;
+        # ``verify_flags`` below can widen this (VERIFY_CRL_CHECK_CHAIN).
+        context.verify_flags |= ssl.VERIFY_CRL_CHECK_LEAF
     # Now set cert_reqs after CA is loaded
     if "cert_reqs" in ssl_options:
         cert_reqs = ssl_options["cert_reqs"]
