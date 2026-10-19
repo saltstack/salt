@@ -32,8 +32,13 @@ logged once and ignored; the previously loaded context stays in use so a
 botched rotation never takes the transport down.  For CRLs this means "keep
 the last good CRL": OpenSSL still rejects every peer once that CRL itself
 passes its ``nextUpdate``, which is logged at ERROR level.
+
+Server-side, handshakes rejected by certificate verification (a revoked
+peer, a missing or expired CRL, an untrusted issuer) are logged once per
+peer address and reason per hour, with a hint, instead of once per attempt.
 """
 
+import collections
 import datetime
 import hashlib
 import logging
@@ -42,6 +47,8 @@ import re
 import shutil
 import ssl
 import tempfile
+import threading
+import time
 
 import salt.transport.base
 import salt.utils.asynchronous
@@ -754,6 +761,136 @@ def validate_material(ssl_options, server_side, now=None, crls=None):
     return context
 
 
+# -- reporting rejected handshakes ------------------------------------------
+
+#: Seconds during which further rejections of the same peer for the same
+#: reason are logged at debug level only.
+REPORT_INTERVAL = 3600
+_REPORT_MAX_PEERS = 4096
+_reported = collections.OrderedDict()
+_reported_lock = threading.Lock()
+
+# OpenSSL X509_V_ERR_* codes that point at this daemon's revocation setup
+# rather than at the peer: every peer of the affected CA is rejected.
+_LOCAL_CRL_ERRORS = {
+    3: "no CRL is loaded for the issuer of the peer certificate: ssl.crlfile "
+    "must hold a current CRL for every issuing CA (and, with "
+    "VERIFY_CRL_CHECK_CHAIN, for every CA in the chain)",
+    6: "the CRL signature cannot be decrypted: check the CRL in ssl.crlfile",
+    8: "the CRL signature is invalid: a correctly signed CRL with a later "
+    "thisUpdate must be installed in ssl.crlfile, or the daemon restarted",
+    11: "the CRL is not valid yet: check the clocks of this host and the CA",
+    12: "the CRL has expired: refresh ssl.crlfile; every peer of that CA is "
+    "rejected until then",
+    33: "the CRL issuer certificate is unknown: add the CA that signs the CRL "
+    "to the trust anchors",
+}
+_PEER_HINTS = {
+    23: "the peer certificate is listed in the CRL (ssl.crlfile); issue the "
+    "peer a new certificate if it should still connect",
+}
+
+
+def report_handshake_failure(exc, peer):
+    """
+    Log a server-side handshake rejected by certificate verification.
+
+    The first rejection per peer address and reason is logged with a hint
+    (WARNING for a problem with the peer's certificate, ERROR when this
+    daemon's CRL setup is at fault); repeats within :data:`REPORT_INTERVAL`
+    are logged at debug level so a peer retrying in a loop cannot flood the
+    log.  ``peer`` is the socket peer address, or ``None`` when unknown.
+    """
+    code = getattr(exc, "verify_code", None)
+    reason = getattr(exc, "verify_message", None) or str(exc)
+    host = peer[0] if isinstance(peer, (tuple, list)) and peer else peer
+    # Lets _QuietReportedHandshakes drop the per-attempt duplicate the
+    # event loop library logs for the same exception.
+    try:
+        exc.salt_tls_reported = True
+    except AttributeError:  # pragma: no cover - exceptions have a __dict__
+        pass
+    key = (host, code)
+    now = time.monotonic()
+    with _reported_lock:
+        last = _reported.get(key)
+        repeat = last is not None and now - last < REPORT_INTERVAL
+        if not repeat:
+            _reported[key] = now
+            _reported.move_to_end(key)
+            while len(_reported) > _REPORT_MAX_PEERS:
+                _reported.popitem(last=False)
+    if repeat:
+        log.debug("Rejected TLS connection from %s again: %s", host, reason)
+        return
+    if code in _LOCAL_CRL_ERRORS:
+        level, hint = logging.ERROR, _LOCAL_CRL_ERRORS[code]
+    else:
+        level = logging.WARNING
+        hint = _PEER_HINTS.get(code, "the peer certificate failed verification")
+    log.log(
+        level,
+        "Rejected TLS connection from %s: %s (%s). Further rejections of this "
+        "peer for the same reason are logged at debug level for %d minutes.",
+        host or "an unknown peer",
+        reason,
+        hint,
+        REPORT_INTERVAL // 60,
+    )
+
+
+class _QuietReportedHandshakes(logging.Filter):
+    """
+    Drop tornado's per-attempt "SSL Error on ..." warning for handshakes that
+    :func:`report_handshake_failure` already logged (rate limited).
+    """
+
+    def filter(self, record):
+        args = record.args if isinstance(record.args, tuple) else ()
+        return not any(getattr(arg, "salt_tls_reported", False) for arg in args)
+
+
+def _quiet_tornado_duplicates():
+    logger = logging.getLogger("tornado.general")
+    if not any(isinstance(f, _QuietReportedHandshakes) for f in logger.filters):
+        logger.addFilter(_QuietReportedHandshakes())
+
+
+class _ReportingSSLSocket(ssl.SSLSocket):
+    """``SSLSocket`` (tornado servers) reporting rejected client certificates."""
+
+    def do_handshake(self, *args, **kwargs):
+        try:
+            return super().do_handshake(*args, **kwargs)
+        except ssl.SSLCertVerificationError as exc:
+            if self.server_side:
+                try:
+                    peer = self.getpeername()
+                except OSError:
+                    peer = None
+                report_handshake_failure(exc, peer)
+            raise
+
+
+class _ReportingSSLObject(ssl.SSLObject):
+    """``SSLObject`` (asyncio / aiohttp servers); the peer address is unknown here."""
+
+    def do_handshake(self):
+        try:
+            return super().do_handshake()
+        except ssl.SSLCertVerificationError as exc:
+            if self.server_side:
+                report_handshake_failure(exc, None)
+            raise
+
+
+def report_rejected_handshakes(context):
+    """Make the server ``context`` report handshakes it rejects."""
+    context.sslsocket_class = _ReportingSSLSocket
+    context.sslobject_class = _ReportingSSLObject
+    _quiet_tornado_duplicates()
+
+
 class ReloadableTLS:
     """
     An :class:`ssl.SSLContext` that follows certificate rotation on disk.
@@ -775,6 +912,8 @@ class ReloadableTLS:
         self.context = salt.transport.base.ssl_context(
             ssl_options, server_side=server_side
         )
+        if server_side:
+            report_rejected_handshakes(self.context)
         self._fingerprint = fingerprint(ssl_options, server_side)
         self._material_fp, self._crl_fp = _part_fingerprints(ssl_options, server_side)
         self._anchors = _anchor_digest(ssl_options)

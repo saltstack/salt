@@ -305,6 +305,13 @@ the daemon restarts, so memory grows by about the size of the CRL with every
 refresh: a 100 KB CRL refreshed every four hours adds about 600 KB a day, a
 few KB CRL a negligible amount.  Only CRLs that actually changed are added.
 
+A refused handshake is logged by the master once per peer address and reason
+per hour, with a hint, rather than once per connection attempt: a revoked
+minion logs a WARNING naming its address, a problem with the master's own CRL
+setup (missing, expired or not yet valid CRL, bad CRL signature) an ERROR.
+The ``ws`` transport cannot see the peer address at that point and logs the
+reason without it.
+
 Loading a CRL through ``verify_locations`` together with a
 ``VERIFY_CRL_CHECK_*`` flag still works, but such CRLs are treated as trust
 anchors: they are not validated on reload and, on the master, every refresh logs the
