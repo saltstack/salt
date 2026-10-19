@@ -6331,7 +6331,7 @@ def create_cluster(cluster_dict, datacenter=None, cluster=None, service_instance
         if vsan_spec:
             cluster_ref = salt.utils.vmware.get_cluster(dc_ref, cluster)
             salt.utils.vsan.reconfigure_cluster_vsan(cluster_ref, vsan_spec)
-        if enable_ha:
+        if enable_ha:  # pylint: disable=used-before-assignment
             # Set HA after VSAN has been configured
             _apply_cluster_dict(cluster_spec, {"ha": ha_config})
             salt.utils.vmware.update_cluster(cluster_ref, cluster_spec)
