@@ -593,7 +593,7 @@ def _find_install_targets(
                 normalize=normalize,
             )
 
-        if not desired:
+        if not desired:  # pylint: disable=used-before-assignment
             # Badly-formatted SLS
             return {
                 "name": name,

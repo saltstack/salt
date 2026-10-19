@@ -26,7 +26,7 @@ if not HAS_M2:
     except ImportError:
         HAS_CRYPTO = False
 
-if not HAS_M2 and not HAS_CRYPTO:
+if not HAS_M2 and not HAS_CRYPTO:  # pylint: disable=used-before-assignment
     try:
         # let this be imported, if possible
         from Crypto import Random  # nosec
