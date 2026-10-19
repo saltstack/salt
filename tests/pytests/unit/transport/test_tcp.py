@@ -2,6 +2,7 @@ import asyncio
 import gc
 import os
 import socket
+import ssl
 import warnings
 import weakref
 
@@ -2745,3 +2746,188 @@ def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
     )
     # And the stream itself must be closed.
     fake_stream.close.assert_called()
+
+
+# ---------------------------------------------------------------------------
+# Mutual TLS with custom PKI
+# ---------------------------------------------------------------------------
+
+
+def test_tcp_client_keepalive_create_stream_honours_address_family():
+    """
+    Tornado resolves the master and hands ``_create_stream`` the address
+    family.  Creating the socket from the ``ipv6`` option instead broke
+    hostname masters that resolve to AAAA / ``::1`` with
+    ``TypeError: AF_INET address must be a pair``.
+    """
+    client = salt.transport.tcp.TCPClientKeepAlive({"ipv6": False})
+    with patch("socket.socket") as sock, patch("tornado.iostream.IOStream") as iostream:
+        client._create_stream(1024, socket.AF_INET6, ("::1", 4506))
+    sock.assert_called_once_with(socket.AF_INET6, socket.SOCK_STREAM)
+    iostream.return_value.connect.assert_called_once_with(("::1", 4506))
+
+
+async def test_tcp_client_keepalive_connect_tls_uses_server_hostname():
+    """
+    ``connect_tls`` connects in plaintext and starts TLS verifying the
+    certificate against the hostname the operator configured, not the IP
+    Salt resolved it to.
+    """
+    client = salt.transport.tcp.TCPClientKeepAlive({})
+    ctx = MagicMock()
+    stream = MagicMock()
+    stream.start_tls = AsyncMock(return_value="tls-stream")
+    with patch.object(client, "connect", AsyncMock(return_value=stream)) as connect:
+        ret = await client.connect_tls(
+            "[fd00::5]",
+            4506,
+            ssl_options=ctx,
+            server_hostname="salt-master.corp.example",
+            source_ip="fd00::9",
+        )
+    assert ret == "tls-stream"
+    connect.assert_awaited_once_with("fd00::5", 4506, source_ip="fd00::9")
+    stream.start_tls.assert_awaited_once_with(
+        False, ssl_options=ctx, server_hostname="salt-master.corp.example"
+    )
+
+
+async def test_tcp_client_keepalive_connect_tls_defaults_to_host():
+    client = salt.transport.tcp.TCPClientKeepAlive({})
+    stream = MagicMock()
+    stream.start_tls = AsyncMock(return_value=stream)
+    with patch.object(client, "connect", AsyncMock(return_value=stream)):
+        await client.connect_tls("10.0.0.5", 4506, ssl_options=MagicMock())
+    assert stream.start_tls.await_args.kwargs["server_hostname"] == "10.0.0.5"
+
+
+async def test_tcp_client_keepalive_connect_tls_plaintext_without_ssl():
+    client = salt.transport.tcp.TCPClientKeepAlive({})
+    stream = MagicMock()
+    stream.start_tls = AsyncMock()
+    with patch.object(client, "connect", AsyncMock(return_value=stream)):
+        ret = await client.connect_tls("10.0.0.5", 4506)
+    assert ret is stream
+    stream.start_tls.assert_not_awaited()
+
+
+async def test_request_client_getstream_verifies_configured_master_name(
+    minion_opts, io_loop
+):
+    """
+    A minion configured with ``master: salt-master.corp.example`` connects to
+    the resolved ``master_ip`` but must verify the certificate against the
+    configured name (enterprise certificates rarely carry IP SANs).
+    """
+    minion_opts["master"] = "salt-master.corp.example"
+    minion_opts["master_ip"] = "10.0.0.5"
+    minion_opts["master_uri"] = "tcp://10.0.0.5:4506"
+    minion_opts["ssl"] = {
+        "certfile": "minion.crt",
+        "keyfile": "minion.key",
+        "ca_certs": "corp-root.crt",
+        "cert_reqs": ssl.CERT_REQUIRED,
+    }
+    client = salt.transport.tcp.RequestClient(minion_opts, io_loop)
+    ctx = MagicMock()
+    try:
+        with patch(
+            "salt.transport.base.ssl_context", return_value=ctx
+        ) as ssl_context, patch.object(
+            client._tcp_client, "connect_tls", AsyncMock(return_value=MagicMock())
+        ) as connect_tls:
+            await client.getstream()
+    finally:
+        client.close()
+    ssl_context.assert_called_once_with(minion_opts["ssl"], server_side=False)
+    kwargs = connect_tls.await_args.kwargs
+    assert connect_tls.await_args.args == ("10.0.0.5", 4506)
+    assert kwargs["ssl_options"] is ctx
+    assert kwargs["server_hostname"] == "salt-master.corp.example"
+
+
+async def test_request_client_getstream_pinned_server_hostname(minion_opts, io_loop):
+    minion_opts["master"] = "10.0.0.5"
+    minion_opts["master_ip"] = "10.0.0.5"
+    minion_opts["master_uri"] = "tcp://10.0.0.5:4506"
+    minion_opts["ssl"] = {
+        "ca_certs": "corp-root.crt",
+        "cert_reqs": ssl.CERT_REQUIRED,
+        "server_hostname": "salt-master.corp.example",
+    }
+    client = salt.transport.tcp.RequestClient(minion_opts, io_loop)
+    try:
+        with patch(
+            "salt.transport.base.ssl_context", return_value=MagicMock()
+        ), patch.object(
+            client._tcp_client, "connect_tls", AsyncMock(return_value=MagicMock())
+        ) as connect_tls:
+            await client.getstream()
+    finally:
+        client.close()
+    assert (
+        connect_tls.await_args.kwargs["server_hostname"] == "salt-master.corp.example"
+    )
+
+
+async def test_publish_client_getstream_verifies_configured_master_name(
+    minion_opts, io_loop
+):
+    minion_opts["master"] = "salt-master.corp.example"
+    minion_opts["master_ip"] = "10.0.0.5"
+    ssl_opts = {"ca_certs": "corp-root.crt", "cert_reqs": ssl.CERT_REQUIRED}
+    client = salt.transport.tcp.PublishClient(
+        minion_opts, io_loop, host="10.0.0.5", port=4505, ssl=ssl_opts
+    )
+    ctx = MagicMock()
+    try:
+        with patch("salt.transport.base.ssl_context", return_value=ctx), patch(
+            "salt.transport.tcp.TCPClientKeepAlive"
+        ) as keepalive:
+            stream = MagicMock()
+            stream.closed.return_value = False
+            keepalive.return_value.connect_tls = AsyncMock(return_value=stream)
+            await client.getstream(timeout=1)
+    finally:
+        client.close()
+    connect_tls = keepalive.return_value.connect_tls
+    assert connect_tls.await_args.args == ("10.0.0.5", 4505)
+    assert connect_tls.await_args.kwargs["ssl_options"] is ctx
+    assert (
+        connect_tls.await_args.kwargs["server_hostname"] == "salt-master.corp.example"
+    )
+
+
+async def test_request_server_handle_message_logs_client_cert_at_debug(
+    master_opts, caplog
+):
+    """Every request used to log the peer certificate at ERROR level."""
+    master_opts["transport"] = "tcp"
+    req_server = salt.transport.tcp.RequestServer(master_opts)
+    req_server.message_handler = AsyncMock(return_value={"ret": True})
+    stream = MagicMock()
+    stream.socket.getpeercert.return_value = {
+        "subject": ((("commonName", "minion-a.corp.example"),),)
+    }
+    with caplog.at_level("DEBUG", logger="salt.transport.tcp"):
+        await req_server.handle_message(stream, {"load": {}})
+    records = [r for r in caplog.records if "Request client cert" in r.getMessage()]
+    assert records and all(r.levelname == "DEBUG" for r in records)
+    stream.write.assert_called_once()
+
+
+async def test_tcp_client_keepalive_connect_tls_applies_timeout_to_handshake():
+    client = salt.transport.tcp.TCPClientKeepAlive({})
+    stream = MagicMock()
+    stream.start_tls = AsyncMock(return_value="tls-stream")
+    with patch.object(
+        client, "connect", AsyncMock(return_value=stream)
+    ) as connect, patch(
+        "salt.transport.tcp.asyncio.wait_for", AsyncMock(return_value="tls-stream")
+    ) as wait_for:
+        ret = await client.connect_tls(
+            "10.0.0.5", 4506, ssl_options=MagicMock(), timeout=3
+        )
+    assert ret == "tls-stream"
+    assert connect.await_args.kwargs["timeout"] == 3
+    assert wait_for.await_args.args[1] == 3

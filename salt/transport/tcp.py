@@ -34,6 +34,7 @@ import salt.master
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
+import salt.transport.tls_reload
 import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.msgpack
@@ -42,6 +43,7 @@ import salt.utils.process
 import salt.utils.resource_warnings
 import salt.utils.versions
 from salt.exceptions import SaltClientError, SaltReqTimeoutError
+from salt.transport.tls_reload import stop_polling as _stop_tls_polling
 from salt.utils.network import ip_bracket
 
 if salt.utils.platform.is_windows():
@@ -341,6 +343,7 @@ class PublishClient(salt.transport.base.PublishClient):
         if self._closing:
             return
         self._closing = True
+        _stop_tls_polling(self)
 
         # Collect tasks we need to wind down so we can drain them after the
         # stream is closed. Without draining, ``salt`` CLI shutdown left
@@ -392,15 +395,20 @@ class PublishClient(salt.transport.base.PublishClient):
                         self.opts, resolver=self.resolver
                     )
                     ctx = None
+                    server_hostname = None
                     if self.ssl is not None:
-                        ctx = salt.transport.base.ssl_context(
-                            self.ssl, server_side=False
+                        ctx = salt.transport.tls_reload.client_context(
+                            self, self.ssl, getattr(self, "io_loop", None)
+                        )
+                        server_hostname = salt.transport.base.tls_server_hostname(
+                            self.ssl, self.opts, self.host
                         )
                     stream = await asyncio.wait_for(
-                        self._tcp_client.connect(
-                            ip_bracket(self.host, strip=True),
+                        self._tcp_client.connect_tls(
+                            self.host,
                             self.port,
                             ssl_options=ctx,
+                            server_hostname=server_hostname,
                             **kwargs,
                         ),
                         timeout if timeout is not None else 5,
@@ -688,6 +696,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         return self._socket
 
     def close(self):
+        _stop_tls_polling(self)
         if self._socket is not None:
             try:
                 self._socket.shutdown(socket.SHUT_RDWR)
@@ -825,7 +834,13 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         with salt.utils.asynchronous.current_ioloop(io_loop):
             ctx = None
             if self.ssl is not None:
-                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
+                # Follows certificate rotation on disk; see
+                # salt.transport.tls_reload.ReloadableTLS.
+                self._tls = salt.transport.tls_reload.ReloadableTLS(
+                    self.ssl, server_side=True
+                )
+                ctx = self._tls.context
+                self._tls.start(io_loop)
             # See issue #69930: pass the configured cap through to the
             # per-stream Tornado outbound write buffer.  ``ipc_write_buffer``
             # is the legacy option name kept for master.conf compatibility;
@@ -862,7 +877,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         payload = self.decode_payload(payload)
         reply = await self.message_handler(payload)
         # XXX Handle StreamClosedError
@@ -1048,11 +1063,43 @@ class TCPClientKeepAlive(tornado.tcpclient.TCPClient):
         """
         # Always connect in plaintext; we'll convert to ssl if necessary
         # after one connection has completed.
-        sock = _get_socket(self.opts)
+        #
+        # Use the address family tornado resolved for ``addr`` instead of the
+        # one implied by the ``ipv6`` option: a hostname master that resolves
+        # to ``::1``/AAAA on a dual-stack host otherwise ends up on an
+        # AF_INET socket and fails with "AF_INET address must be a pair".
+        sock = socket.socket(af, socket.SOCK_STREAM)
         _set_tcp_keepalive(sock, self.opts)
         stream = tornado.iostream.IOStream(sock, max_buffer_size=max_buffer_size)
         _cap_stream_write_buffer(stream, self.opts)
         return stream, stream.connect(addr)
+
+    async def connect_tls(
+        self, host, port, ssl_options=None, server_hostname=None, **kwargs
+    ):
+        """
+        Connect to ``host``:``port`` and, when ``ssl_options`` is given, start
+        TLS verifying the peer certificate against ``server_hostname``
+        (defaults to ``host``).
+
+        ``tornado.tcpclient.TCPClient.connect`` always verifies against the
+        address it connected to.  Salt connects to the *resolved* master IP,
+        so this wrapper exists to keep the operator-configured hostname (or an
+        explicit ``ssl.server_hostname``) as the name the certificate must
+        match.
+        """
+        stream = await self.connect(ip_bracket(host, strip=True), port, **kwargs)
+        if ssl_options is None:
+            return stream
+        if not server_hostname:
+            server_hostname = ip_bracket(host, strip=True)
+        timeout = kwargs.get("timeout")
+        tls = stream.start_tls(
+            False, ssl_options=ssl_options, server_hostname=server_hostname
+        )
+        if timeout is not None:
+            return await asyncio.wait_for(tls, timeout)
+        return await tls
 
 
 class MessageClient:
@@ -1102,6 +1149,7 @@ class MessageClient:
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
 
     def close(self):
+        _stop_tls_polling(self)
         # Under salt-api load memray showed 18 MessageClient objects
         # leaking per second (see analysis of the +5.8 GB/h post-inflection
         # phase on the TCP-transport stress soak).  The previous
@@ -1155,10 +1203,20 @@ class MessageClient:
         stream = None
         while stream is None and (not self._closed and not self._closing):
             try:
-                stream = await self._tcp_client.connect(
-                    ip_bracket(self.host, strip=True),
+                ctx = None
+                server_hostname = None
+                if self.opts.get("ssl") is not None:
+                    ctx = salt.transport.tls_reload.client_context(
+                        self, self.opts["ssl"], getattr(self, "io_loop", None)
+                    )
+                    server_hostname = salt.transport.base.tls_server_hostname(
+                        self.opts["ssl"], self.opts, self.host
+                    )
+                stream = await self._tcp_client.connect_tls(
+                    self.host,
                     self.port,
-                    ssl_options=self.opts.get("ssl"),
+                    ssl_options=ctx,
+                    server_hostname=server_hostname,
                     **kwargs,
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -2224,7 +2282,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # Spin up the publisher
         ctx = None
         if self.ssl is not None:
-            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
+            self._tls = salt.transport.tls_reload.ReloadableTLS(
+                self.ssl, server_side=True
+            )
+            ctx = self._tls.context
+            self._tls.start(io_loop)
         self.pub_server = PubServer(
             self.opts,
             io_loop=io_loop,
@@ -2458,6 +2520,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_sock.send(payload)
 
     def close(self):
+        _stop_tls_polling(self)
         self._closing = True
         if self.pub_sock:
             # pub_sock is a SyncWrapper - need to call close() on the wrapper itself.
@@ -2949,8 +3012,14 @@ class RequestClient(salt.transport.base.RequestClient):
             try:
                 # XXX: Support ipc sockets too
                 ctx = None
+                server_hostname = None
                 if self.ssl is not None:
-                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
+                    ctx = salt.transport.tls_reload.client_context(
+                        self, self.ssl, getattr(self, "io_loop", None)
+                    )
+                    server_hostname = salt.transport.base.tls_server_hostname(
+                        self.ssl, self.opts, self.host
+                    )
 
                 if getattr(self, "is_ipc", False):
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -2959,10 +3028,11 @@ class RequestClient(salt.transport.base.RequestClient):
                     _cap_stream_write_buffer(stream, self.opts)
                     await stream.connect(self.host)
                 else:
-                    stream = await self._tcp_client.connect(
-                        ip_bracket(self.host, strip=True),
+                    stream = await self._tcp_client.connect_tls(
+                        self.host,
                         self.port,
                         ssl_options=ctx,
+                        server_hostname=server_hostname,
                         **kwargs,
                     )
                     _cap_stream_write_buffer(stream, self.opts)
@@ -3103,6 +3173,7 @@ class RequestClient(salt.transport.base.RequestClient):
         return recv
 
     def close(self):
+        _stop_tls_polling(self)
         if self._closing:
             return
         self._closing = True

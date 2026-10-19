@@ -11,6 +11,7 @@ import pytest
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import padding
+from saltfactories.utils import random_string
 
 import salt.utils.files
 from tests.conftest import FIPS_TESTRUN
@@ -287,3 +288,144 @@ def test_ssl_certificate_chain(ssl_ca_cert_key, ssl_server_cert_key):
         # ValueError: Invalid signature
         # TypeError: Invalid parameters
         pytest.fail(f"Certificate verification failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Custom (enterprise) PKI regression tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def ssl_pooled_master(salt_factories, ssl_transport, ssl_master_config):
+    """
+    Master with mutual TLS *and* the default ``worker_pools_enabled: True``.
+
+    Before the fix the pool router inherited the external ``ssl`` settings for
+    its local IPC hop to the MWorkers and every encrypted request failed with
+    ``WRONG_VERSION_NUMBER``.
+    """
+    config_defaults = {
+        "transport": ssl_transport,
+        "auto_accept": True,
+        "sign_pub_messages": False,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+        "ssl": ssl_master_config,
+        "worker_pools_enabled": True,
+    }
+    factory = salt_factories.salt_master_daemon(
+        random_string(f"ssl-pooled-{ssl_transport}-master-"),
+        defaults=config_defaults,
+    )
+    return factory
+
+
+@pytest.fixture
+def ssl_pooled_minion(ssl_pooled_master, ssl_transport, ssl_minion_config):
+    config_defaults = {
+        "transport": ssl_transport,
+        "master_ip": "127.0.0.1",
+        "master_port": ssl_pooled_master.config["ret_port"],
+        "auth_timeout": 5,
+        "auth_tries": 1,
+        "master_uri": "tcp://127.0.0.1:{}".format(ssl_pooled_master.config["ret_port"]),
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "ssl": ssl_minion_config,
+    }
+    return ssl_pooled_master.salt_minion_daemon(
+        random_string(f"ssl-pooled-{ssl_transport}-minion-"),
+        defaults=config_defaults,
+    )
+
+
+async def test_ssl_with_worker_pools_enabled(ssl_pooled_master, ssl_pooled_minion):
+    """
+    Mutual TLS must work with worker pools (the 3008 default): the minion gets
+    past ``_auth`` to an encrypted pillar request, and the master-local ``salt``
+    CLI (a TLS client presenting the master's certificate) reaches the minion.
+    """
+    with ssl_pooled_master.started():
+        with ssl_pooled_minion.started():
+            ret = ssl_pooled_minion.salt_call_cli().run("pillar.items")
+            assert ret.returncode == 0
+            assert isinstance(ret.data, dict)
+
+            ret = ssl_pooled_master.salt_cli().run(
+                "test.ping", minion_tgt=ssl_pooled_minion.id
+            )
+            assert ret.returncode == 0
+            assert ret.data is True
+
+
+@pytest.fixture
+def ssl_chained_master(salt_factories, ssl_transport, ssl_chained_master_config):
+    """
+    Master certificate issued by an intermediate CA, SAN with DNS names only
+    (``localhost``), trust anchor = root only.  Mirrors an enterprise PKI.
+    """
+    config_defaults = {
+        "transport": ssl_transport,
+        "auto_accept": True,
+        "sign_pub_messages": False,
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+        "ssl": ssl_chained_master_config,
+        "worker_pools_enabled": True,
+    }
+    return salt_factories.salt_master_daemon(
+        random_string(f"ssl-chained-{ssl_transport}-master-"),
+        defaults=config_defaults,
+    )
+
+
+@pytest.fixture
+def ssl_chained_minion(ssl_chained_master, ssl_transport, ssl_chained_minion_config):
+    """
+    Minion that addresses the master by *hostname*.  Salt resolves it to
+    127.0.0.1 before connecting; the certificate (DNS SAN only) must still be
+    verified against ``localhost``.
+    """
+    config_defaults = {
+        "transport": ssl_transport,
+        "master_port": ssl_chained_master.config["ret_port"],
+        "auth_timeout": 5,
+        "auth_tries": 1,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+        "ssl": ssl_chained_minion_config,
+    }
+    # salt-factories merges its own ``master: 127.0.0.1`` over ``defaults``;
+    # the hostname has to go in ``overrides`` to survive.
+    return ssl_chained_master.salt_minion_daemon(
+        random_string(f"ssl-chained-{ssl_transport}-minion-"),
+        defaults=config_defaults,
+        overrides={"master": "localhost", "ipv6": False},
+    )
+
+
+async def test_ssl_intermediate_ca_and_dns_only_san(
+    ssl_chained_master, ssl_chained_minion
+):
+    """
+    Root-only trust anchor + leaf/intermediate chain in ``certfile`` + a master
+    certificate without an IP SAN: the minion must connect and the CLI must
+    reach it.
+    """
+    with ssl_chained_master.started():
+        with ssl_chained_minion.started():
+            ret = ssl_chained_minion.salt_call_cli().run("grains.item", "id")
+            assert ret.returncode == 0
+            assert ret.data["id"] == ssl_chained_minion.id
+
+            ret = ssl_chained_master.salt_cli().run(
+                "test.ping", minion_tgt=ssl_chained_minion.id
+            )
+            assert ret.returncode == 0
+            assert ret.data is True

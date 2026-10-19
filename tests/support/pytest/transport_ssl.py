@@ -358,6 +358,236 @@ def ssl_minion_config(ssl_ca_cert_key, ssl_client_cert_key):
 
 
 @pytest.fixture(scope="session")
+def ssl_chained_root_ca_cert_key(ssl_ca_cert_key):
+    """
+    Root CA that may issue an intermediate (``pathlen:1``).  The shared
+    ``ssl_ca_cert_key`` root is ``pathlen:0`` and cannot sit above one.
+
+    Returns:
+        tuple: (root_cert_path, root_key_path)
+    """
+    if not HAS_CRYPTOGRAPHY:
+        pytest.skip("cryptography library not available")
+
+    import os
+
+    cert_dir = os.path.dirname(ssl_ca_cert_key[0])
+    key = _generate_private_key()
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Salt Test"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Salt Test Root CA (chained)"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(salt.utils.timeutil.utcnow())
+        .not_valid_after(salt.utils.timeutil.utcnow() + datetime.timedelta(days=365))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=1), critical=True)
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=True,
+                key_encipherment=False,
+                key_cert_sign=True,
+                crl_sign=True,
+                content_commitment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(key.public_key()),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256(), default_backend())
+    )
+    cert_path = os.path.join(cert_dir, "chained-root.crt")
+    key_path = os.path.join(cert_dir, "chained-root.key")
+    _write_certificate(cert, cert_path)
+    _write_private_key(key, key_path)
+    return str(cert_path), str(key_path)
+
+
+@pytest.fixture(scope="session")
+def ssl_intermediate_ca_cert_key(ssl_chained_root_ca_cert_key):
+    """
+    Generate an intermediate (issuing) CA signed by the chained root CA.
+
+    Enterprise PKIs issue leaf certificates from an intermediate; this lets
+    the transport tests cover chain building with a root-only trust anchor.
+
+    Returns:
+        tuple: (intermediate_cert_path, intermediate_key_path)
+    """
+    if not HAS_CRYPTOGRAPHY:
+        pytest.skip("cryptography library not available")
+
+    import os
+
+    ca_cert_path, ca_key_path = ssl_chained_root_ca_cert_key
+    cert_dir = os.path.dirname(ca_cert_path)
+    with salt.utils.files.fopen(ca_cert_path, "rb") as f:
+        ca_cert = x509.load_pem_x509_certificate(f.read(), default_backend())
+    with salt.utils.files.fopen(ca_key_path, "rb") as f:
+        ca_key = serialization.load_pem_private_key(f.read(), None, default_backend())
+
+    key = _generate_private_key()
+    subject = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Salt Test"),
+            x509.NameAttribute(NameOID.COMMON_NAME, "Salt Test Issuing CA"),
+        ]
+    )
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(ca_cert.subject)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(salt.utils.timeutil.utcnow())
+        .not_valid_after(salt.utils.timeutil.utcnow() + datetime.timedelta(days=365))
+        .add_extension(x509.BasicConstraints(ca=True, path_length=0), critical=True)
+        .add_extension(
+            x509.KeyUsage(
+                digital_signature=True,
+                key_encipherment=False,
+                key_cert_sign=True,
+                crl_sign=True,
+                content_commitment=False,
+                data_encipherment=False,
+                key_agreement=False,
+                encipher_only=False,
+                decipher_only=False,
+            ),
+            critical=True,
+        )
+        .add_extension(
+            x509.SubjectKeyIdentifier.from_public_key(key.public_key()),
+            critical=False,
+        )
+        .add_extension(
+            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()),
+            critical=False,
+        )
+        .sign(ca_key, hashes.SHA256(), default_backend())
+    )
+    cert_path = os.path.join(cert_dir, "intermediate.crt")
+    key_path = os.path.join(cert_dir, "intermediate.key")
+    _write_certificate(cert, cert_path)
+    _write_private_key(key, key_path)
+    return str(cert_path), str(key_path)
+
+
+def _issue_chained_cert(cert_dir, name, intermediate_cert_key, common_name, san):
+    """Issue a leaf from the intermediate and write ``<name>.chain.crt``."""
+    import os
+
+    int_cert_path, int_key_path = intermediate_cert_key
+    with salt.utils.files.fopen(int_cert_path, "rb") as f:
+        int_cert_pem = f.read()
+    int_cert = x509.load_pem_x509_certificate(int_cert_pem, default_backend())
+    with salt.utils.files.fopen(int_key_path, "rb") as f:
+        int_key = serialization.load_pem_private_key(f.read(), None, default_backend())
+    key = _generate_private_key()
+    key_path = os.path.join(cert_dir, f"{name}.key")
+    _write_private_key(key, key_path)
+    cert = _generate_certificate(
+        key, int_cert, int_key, common_name=common_name, san_dns_names=san
+    )
+    chain_path = os.path.join(cert_dir, f"{name}.chain.crt")
+    with salt.utils.files.fopen(chain_path, "wb") as f:
+        f.write(cert.public_bytes(serialization.Encoding.PEM))
+        f.write(int_cert_pem)
+    return str(chain_path), str(key_path)
+
+
+@pytest.fixture(scope="session")
+def ssl_chained_server_cert_key_dns_only(ssl_ca_cert_key, ssl_intermediate_ca_cert_key):
+    """
+    Server certificate issued by the intermediate CA whose SAN holds *DNS
+    names only* (``localhost`` and ``salt-master``), the way enterprise PKIs
+    issue them.  The returned certfile bundles leaf + intermediate.
+
+    Returns:
+        tuple: (server_chain_path, server_key_path)
+    """
+    if not HAS_CRYPTOGRAPHY:
+        pytest.skip("cryptography library not available")
+    import os
+
+    cert_dir = os.path.dirname(ssl_ca_cert_key[0])
+    return _issue_chained_cert(
+        cert_dir,
+        "server-chained-dns-only",
+        ssl_intermediate_ca_cert_key,
+        common_name="salt-master",
+        san=["localhost", "salt-master"],
+    )
+
+
+@pytest.fixture(scope="session")
+def ssl_chained_client_cert_key(ssl_ca_cert_key, ssl_intermediate_ca_cert_key):
+    """
+    Client certificate issued by the intermediate CA (leaf + intermediate).
+
+    Returns:
+        tuple: (client_chain_path, client_key_path)
+    """
+    if not HAS_CRYPTOGRAPHY:
+        pytest.skip("cryptography library not available")
+    import os
+
+    cert_dir = os.path.dirname(ssl_ca_cert_key[0])
+    return _issue_chained_cert(
+        cert_dir,
+        "client-chained",
+        ssl_intermediate_ca_cert_key,
+        common_name="salt-minion",
+        san=["salt-minion"],
+    )
+
+
+@pytest.fixture
+def ssl_chained_master_config(
+    ssl_chained_root_ca_cert_key, ssl_chained_server_cert_key_dns_only
+):
+    """Master TLS config: chained DNS-only server cert, root-only trust anchor."""
+    cert_path, key_path = ssl_chained_server_cert_key_dns_only
+    return {
+        "certfile": cert_path,
+        "keyfile": key_path,
+        "ca_certs": ssl_chained_root_ca_cert_key[0],
+        "cert_reqs": "CERT_REQUIRED",
+        # The master-local ``salt`` CLI connects to ``interface``; the DNS-only
+        # certificate must still verify.
+        "server_hostname": "localhost",
+    }
+
+
+@pytest.fixture
+def ssl_chained_minion_config(
+    ssl_chained_root_ca_cert_key, ssl_chained_client_cert_key
+):
+    """Minion TLS config: chained client cert, root-only trust anchor."""
+    cert_path, key_path = ssl_chained_client_cert_key
+    return {
+        "certfile": cert_path,
+        "keyfile": key_path,
+        "ca_certs": ssl_chained_root_ca_cert_key[0],
+        "cert_reqs": "CERT_REQUIRED",
+    }
+
+
+@pytest.fixture(scope="session")
 def ssl_invalid_ca_cert_key(tmp_path_factory):
     """
     Generate a separate (invalid) CA certificate that won't validate
