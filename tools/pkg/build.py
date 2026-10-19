@@ -812,7 +812,10 @@ def onedir_dependencies(
         # collides with our setuptools>=82.0.1 --build-constraint. It is a pure-
         # Python package with a universal wheel on PyPI, so allow the wheel to
         # sidestep the source build's build-system requirements entirely.
-        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf,zc.lockfile",
+        # python-gnupg==0.5.7 has the same problem (its build-system.requires
+        # asks for setuptools>=68,<75) and is also pure-Python with a
+        # universal wheel.
+        "--only-binary=maturin,apache-libcloud,pymssql,hatchling,cmake,ninja,protobuf,zc.lockfile,python-gnupg",
     ]
     if platform == "windows":
         python_bin = env_scripts_dir / "python"
@@ -828,10 +831,10 @@ def onedir_dependencies(
         # on large deployments. The upstream PyYAML manylinux2014 wheel
         # bundles libyaml (MIT-licensed) and is compatible with the relenv
         # target platform, so allow it through --no-binary=:all: here.
-        # See zc.lockfile comment above for why it also needs an --only-binary
-        # exception under the Linux --no-binary=:all: path.
+        # See zc.lockfile comment above for why it and python-gnupg also need
+        # an --only-binary exception under the Linux --no-binary=:all: path.
         install_args.append(
-            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml,zc.lockfile"
+            "--only-binary=maturin,apache-libcloud,pymssql,cassandra-driver,hatchling,cmake,ninja,protobuf,pyyaml,zc.lockfile,python-gnupg"
         )
         # CMake 4.x removed support for cmake_minimum_required(VERSION < 3.5).
         # pyzmq's bundled libzmq still declares an older floor; set the policy
