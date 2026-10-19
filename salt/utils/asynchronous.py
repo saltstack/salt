@@ -55,6 +55,7 @@ class SyncWrapper:
         async_methods=None,
         close_methods=None,
         loop_kwarg=None,
+        timeout=None,
     ):
         # Imported lazily so this module loads cleanly on the salt-ssh
         # py3.6/3.7 thin tarball (which does not ship ``typing_extensions``
@@ -81,6 +82,7 @@ class SyncWrapper:
         if close_methods is None:
             close_methods = []
         self.loop_kwarg = loop_kwarg
+        self.timeout = timeout
         self.cls = cls
         if loop_kwarg:
             kwargs[self.loop_kwarg] = self.io_loop
@@ -146,7 +148,16 @@ class SyncWrapper:
                 args=(key, args, kwargs, results, self.io_loop),
             )
             thread.start()
-            thread.join()
+            thread.join(self.timeout)
+            if thread.is_alive():
+                # The wrapped coroutine did not finish within ``timeout``
+                # seconds.  Raise instead of joining forever: an unbounded
+                # join here turned any stuck event-bus publish into a
+                # permanent, silent MWorker deadlock (see #69824).
+                raise TimeoutError(
+                    f"SyncWrapper call {key!r} did not complete within "
+                    f"{self.timeout} seconds"
+                )
             if results[0]:
                 return results[1]
             else:
