@@ -628,6 +628,11 @@ def test_win_user_present_new_password(states, account_with_password):
     assert ret.changes.get("passwd") == "XXX-REDACTED-XXX", ret.changes
 
 
+# ---------------------------------------------------------------------------
+# Windows user/group name collision, new Windows-only fields, fullname bugs
+# ---------------------------------------------------------------------------
+
+
 @pytest.mark.skip_unless_on_windows
 def test_user_present_group_name_collision(modules, states, username):
     """
@@ -702,6 +707,32 @@ def test_user_present_windows_unlock_account_noop_when_not_locked(states, userna
     ret = states.user.present(name=username, win_unlock_account=True)
     assert ret.result is True
     assert ret.changes == {}
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_clear_fullname(modules, states, username):
+    """
+    Regression test: win_useradd.update() used a truthy check on fullname,
+    so user.present could never clear the Windows "Full Name" field.
+    """
+    ret = states.user.present(name=username, fullname="Something")
+    assert ret.result is True
+
+    ret = states.user.present(name=username, fullname="")
+    assert ret.result is True
+    assert ret.changes
+    assert modules.user.info(username)["fullname"] == ""
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_fullname_with_comma(states, username):
+    """
+    Bonus fix: Windows "Full Name" is not comma-delimited GECOS data, so a
+    comma in fullname must not be rejected there.
+    """
+    ret = states.user.present(name=username, fullname="Doe, John")
+    assert ret.result is True
+    assert "Unsupported char" not in ret.comment
 
 
 @pytest.mark.skip_unless_on_linux(reason="user.present's shell param only applies on Linux/Unix")

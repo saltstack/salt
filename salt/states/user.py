@@ -698,12 +698,16 @@ def present(
     }
 
     # the comma is used to separate field in GECOS, thus resulting into
-    # salt adding the end of fullname each time this function is called
-    for gecos_field in [fullname, roomnumber, workphone]:
-        if isinstance(gecos_field, str) and "," in gecos_field:
-            ret["comment"] = f"Unsupported char ',' in {gecos_field}"
-            ret["result"] = False
-            return ret
+    # salt adding the end of fullname each time this function is called.
+    # This is a POSIX/GECOS-only restriction (roomnumber/workphone do not
+    # even exist on Windows); skip it there so Windows "Last, First" style
+    # full names are not rejected.
+    if not salt.utils.platform.is_windows():
+        for gecos_field in [fullname, roomnumber, workphone]:
+            if isinstance(gecos_field, str) and "," in gecos_field:
+                ret["comment"] = f"Unsupported char ',' in {gecos_field}"
+                ret["result"] = False
+                return ret
 
     missing_groups = []
     if groups:

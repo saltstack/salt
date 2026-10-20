@@ -358,6 +358,21 @@ def test_update_str(user, value_name, new_value, info_field, expected, account_s
     assert ret[info_field] == expected
 
 
+def test_update_clear_fullname(user, account_str):
+    """
+    Regression test: update() used a truthy check (`if fullname:`) which
+    silently ignored an explicit empty fullname, so the Windows "Full Name"
+    field could never be cleared. It must now accept fullname="".
+    """
+    ret = user.chfullname(account_str.username, "Something")
+    assert ret is True
+    assert user.info(account_str.username)["fullname"] == "Something"
+
+    ret = user.update(account_str.username, fullname="")
+    assert ret is True
+    assert user.info(account_str.username)["fullname"] == ""
+
+
 @pytest.fixture
 def group(modules):
     return modules.group

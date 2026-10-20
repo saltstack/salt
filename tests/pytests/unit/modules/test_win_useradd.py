@@ -147,3 +147,18 @@ def test_add_group_name_collision():
     assert "bob114" in result
     assert "local group" in result
     assert "already exists" in result
+
+
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
+def test_update_clear_fullname(account):
+    """
+    Regression test: update() used a truthy check (`if fullname:`) which
+    silently ignored an explicit empty fullname, so the Windows "Full Name"
+    field could never be cleared. It must now accept fullname="".
+    """
+    win_useradd.chfullname(account.username, "Something")
+    assert win_useradd.info(account.username)["fullname"] == "Something"
+
+    result = win_useradd.update(account.username, fullname="")
+    assert result is True
+    assert win_useradd.info(account.username)["fullname"] == ""

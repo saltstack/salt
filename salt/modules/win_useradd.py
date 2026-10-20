@@ -363,7 +363,7 @@ def update(
         user_info["comment"] = description
     if logonscript:
         user_info["script_path"] = logonscript
-    if fullname:
+    if fullname is not None:
         user_info["full_name"] = fullname
     if profile:
         user_info["profile"] = profile

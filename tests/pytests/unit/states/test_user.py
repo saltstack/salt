@@ -786,3 +786,41 @@ def test_present_dispatches_windows_update_fields():
     ), patch("salt.utils.platform.is_windows", return_value=True):
         user.present("bob")
         mock_update.assert_any_call(name="bob", account_disabled=True)
+
+
+def test_gecos_comma_check_skipped_on_windows():
+    """
+    Bonus fix: Windows "Full Name" is not comma-delimited GECOS data, so a
+    comma in fullname must not be rejected there.
+    """
+    dunder_salt = {
+        "group.info": MagicMock(return_value=False),
+        "user.info": MagicMock(return_value={}),
+        "user.add": MagicMock(return_value=True),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob", fullname="Doe, John")
+        assert "Unsupported char" not in ret["comment"]
+
+
+def test_gecos_comma_check_rejected_on_posix():
+    """
+    The comma-in-GECOS-field restriction must still apply on POSIX.
+    """
+    dunder_salt = {
+        "group.info": MagicMock(return_value=False),
+        "user.info": MagicMock(return_value={}),
+        "user.add": MagicMock(return_value=True),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=False
+    ):
+        ret = user.present("bob", fullname="Doe, John")
+        assert ret["result"] is False
+        assert "Unsupported char" in ret["comment"]
