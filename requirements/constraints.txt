@@ -24,8 +24,11 @@ setuptools-scm < 11
 # just-installed 25.2 inside the pre-commit hook venv on Python 3.14,
 # which leaves the venv in a corrupted state because pip 26.0.1's
 # vendored pygments wheel is missing the modeline submodule on cpython
-# 3.14. Stay on 25.2.
-pip == 26.2.1
+# 3.14. It also breaks macOS source builds of packages without a cp314
+# wheel (e.g. watchdog): under pip 26.2.x's build isolation relenv's
+# sysconfig override is not applied, so extensions are linked with
+# ``gcc -shared`` and fail with undefined Python symbols. Stay on 25.2.
+pip == 25.2
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
 # markdown-it-py ~=3.0; the 5.x line that pairs with markdown-it-py 4.x
