@@ -72,7 +72,18 @@ def sanitize_host(host):
     """
     Sanitize host string.
     https://tools.ietf.org/html/rfc1123#section-2.1
+
+    If ``host`` is already a valid IP address (IPv4 or IPv6) it is returned
+    unchanged so that characters like ``:`` in IPv6 addresses are not
+    stripped.
     """
+    if isinstance(host, str):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            pass
+        else:
+            return host
     RFC952_characters = ascii_letters + digits + ".-_"
     return "".join([c for c in host[0:255] if c in RFC952_characters])
 
@@ -653,9 +664,13 @@ def rpad_ipv4_network(ip_addr):
     return ".".join(itertools.islice(itertools.chain(ip_addr.split("."), "0000"), 0, 4))
 
 
+@jinja_filter("cidr_to_ipv4_netmask")
 def cidr_to_ipv4_netmask(cidr_bits):
     """
     Returns an IPv4 netmask
+
+    .. versionchanged:: 3009.0
+        Exposed as the ``cidr_to_ipv4_netmask`` Jinja filter.
     """
     try:
         cidr_bits = int(cidr_bits)

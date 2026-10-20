@@ -223,6 +223,9 @@ def yamlify_arg(arg):
         return original_arg
 
 
+_ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
+
+
 def get_function_argspec(func, is_class_method=None):
     """
     A small wrapper around inspect.signature that also supports callable objects and wrapped functions
@@ -249,7 +252,6 @@ def get_function_argspec(func, is_class_method=None):
         raise TypeError(f"Cannot inspect argument list for '{func}'")
 
     # Build a namedtuple which looks like the result of a Python 2 argspec
-    _ArgSpec = namedtuple("ArgSpec", "args varargs keywords defaults")
     args = []
     defaults = []
     varargs = keywords = None

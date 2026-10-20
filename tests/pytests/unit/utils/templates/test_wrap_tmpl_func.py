@@ -61,6 +61,47 @@ def test_sls_context_no_call(tmp_path):
         generate_sls_context.assert_not_called()
 
 
+def test_user_supplied_sls_context_is_preserved_68754():
+    """Caller-supplied sls/slspath/etc. must not be overwritten by
+    generate_sls_context (Issue #68754).
+
+    When ``file.managed`` is given a templated source via ``defaults`` (or
+    ``context``) that includes its own ``sls`` plus the derived ``slspath``,
+    ``sls_path``, ``slsdotpath`` and ``slscolonpath``, the rendering pipeline
+    used to regenerate those derived values from the user-supplied ``sls`` and
+    silently clobber the caller's overrides. The user's explicit values must
+    win.
+    """
+    render = MockRender()
+    user_context = {
+        "opts": {},
+        "saltenv": "base",
+        "sls": "test.basic.output",
+        "slspath": "test/basic",
+        "sls_path": "test_basic",
+        "slsdotpath": "test.basic",
+        "slscolonpath": "test:basic",
+        "tplpath": "/var/cache/salt/minion/files/base/test/basic/output.sls",
+        "tplfile": "test/basic/output.sls",
+        "tpldir": "test/basic",
+        "tpldot": "test.basic",
+    }
+    wrapped = wrap_tmpl_func(render)
+    wrapped("hello", from_str=True, to_str=True, context=user_context)
+    assert render.context["sls"] == "test.basic.output"
+    assert render.context["slspath"] == "test/basic"
+    assert render.context["sls_path"] == "test_basic"
+    assert render.context["slsdotpath"] == "test.basic"
+    assert render.context["slscolonpath"] == "test:basic"
+    assert (
+        render.context["tplpath"]
+        == "/var/cache/salt/minion/files/base/test/basic/output.sls"
+    )
+    assert render.context["tplfile"] == "test/basic/output.sls"
+    assert render.context["tpldir"] == "test/basic"
+    assert render.context["tpldot"] == "test.basic"
+
+
 def test_generate_sls_context__top_level():
     """generate_sls_context - top_level Use case"""
     _test_generated_sls_context(

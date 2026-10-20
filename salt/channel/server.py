@@ -14,14 +14,23 @@ import os
 import pathlib
 import random
 import string
+import threading
 import time
 import zlib
 
 import tornado.ioloop
 
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
 import salt.cache
 import salt.cluster.consensus.rpc
 import salt.crypt
+import salt.daemons.masterapi
 import salt.master
 import salt.payload
 import salt.transport
@@ -211,11 +220,22 @@ class ReqServerChannel:
         Returns a session key for the given minion id.
         """
         now = time.time()
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
             if now - self.sessions[minion][0] < self.opts["publish_session"]:
-                return self.sessions[minion][1]
+                # Master cluster deployments share ``sessions/<minion>``
+                # on a shared filesystem so a peer master's rotation must
+                # invalidate our in-memory cache. Comparing the file
+                # mtime against the mtime we cached catches that case
+                # without penalising the single-master fast path -- the
+                # ``stat`` is cheap and only runs on cache hits.
+                try:
+                    disk_mtime = path.stat().st_mtime
+                except FileNotFoundError:
+                    disk_mtime = None
+                if disk_mtime is not None and disk_mtime <= self.sessions[minion][0]:
+                    return self.sessions[minion][1]
 
-        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         try:
             if now - path.stat().st_mtime > self.opts["publish_session"]:
                 salt.crypt.Crypticle.write_key(path)
@@ -410,7 +430,7 @@ class ReqServerChannel:
                 # Store time at the beginning of serving _auth call
                 # to calculate duration of the call with master_stats
                 start = time.time()
-                ret = self._auth(payload["load"], sign_messages, version)
+                ret = await self._auth(payload["load"], sign_messages, version)
                 if self.opts.get("master_stats", False):
                     await self.payload_handler({"cmd": "_auth", "_start": start})
                 return ret
@@ -612,7 +632,7 @@ class ReqServerChannel:
             return False
         return True
 
-    def _auth(self, load, sign_messages=False, version=0):
+    async def _auth(self, load, sign_messages=False, version=0):
         """
         Authenticate a minion by delegating to :class:`salt.master.AuthFuncs`.
 
@@ -630,15 +650,40 @@ class ReqServerChannel:
         af.event = self.event
         af.master_key = self.master_key
         af.sessions = self.sessions
-        af.auto_key = getattr(self, "auto_key", None)
+        # PATCH: ``AuthFuncs.__init__`` sets ``_sessions_lock`` but this
+        # ``__new__``-based construction path bypasses ``__init__``.
+        # ``session_key`` (called from ``_auth_impl`` via
+        # ``run_in_executor``) does ``with self._sessions_lock:``, so
+        # without this the first auth attempt raises AttributeError.
+        # Per-call lock is fine here: only one ``_auth`` invocation
+        # touches ``af.sessions`` at a time.
+        af._sessions_lock = threading.Lock()
+        # PATCH: TCP path enters ``_auth`` via
+        # ``_handle_clear_auth_local`` which passes a ``proxy`` object
+        # that has no ``auto_key`` / ``ckminions``.  Fall back to
+        # constructing a fresh ``AutoKey`` (cheap; wraps the same
+        # opts) rather than crashing with
+        # ``AttributeError: 'NoneType' object has no attribute
+        # 'check_autoreject'``.
+        af.auto_key = getattr(self, "auto_key", None) or salt.daemons.masterapi.AutoKey(
+            self.opts
+        )
         af.cache_cli = getattr(self, "cache_cli", False)
-        af.ckminions = getattr(self, "ckminions", None)
-        return af._auth(load, sign_messages, version)
+        af.ckminions = getattr(self, "ckminions", None) or salt.utils.minions.CkMinions(
+            self.opts
+        )
+        return await af._auth(load, sign_messages, version)
 
     def close(self):
         self.transport.close()
         if self.event is not None:
             self.event.destroy()
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
 
 
 class PoolRoutingChannel:
@@ -689,14 +734,41 @@ class PoolRoutingChannel:
         self.opts = opts
         self.transport = transport
         self.worker_pools = worker_pools
-        self.pool_clients = {}  # pool_name -> RequestClient
+        # PATCH: was ``pool_name -> RequestClient`` (single client per
+        # pool).  The IPC RequestClient holds one connection to
+        # whichever MWorker accepts first, so all traffic funnels to
+        # one MWorker regardless of ``worker_count``.  Under stress
+        # this pins one MWorker at ~2 GB RSS with 32 executor threads
+        # while the other 9 sit idle at 69 MB.  ZMQ transport dodges
+        # this because ``zmq_device_pooled``'s ROUTER-DEALER does the
+        # fanout in libzmq; TCP has no such shim.
+        #
+        # New: ``pool_name -> [RequestClient, ...]`` with one client
+        # per worker in the pool, plus a round-robin index so
+        # successive dispatches spread across MWorkers.
+        self.pool_clients = {}  # pool_name -> list[RequestClient]
+        self.pool_client_next = {}  # pool_name -> int (rr cursor)
         self.pool_servers = {}  # pool_name -> RequestServer
         self.io_loop = None
         self.event = None
         self.router = None
         self.crypticle = None
         self.master_key = None
-        self.auto_key = None
+        # PATCH: cache one ``AutoKey`` per ``PoolRoutingChannel`` so the
+        # ``_auth`` fallback in ``_ensure_auth_support`` /
+        # ``_req_channel_auth_delegate`` can reuse it across every auth
+        # this channel handles.  Pre-PR ``AuthFuncs.__init__``
+        # constructed ``AutoKey`` once per worker; when this class
+        # replaced that path with ``auto_key = None`` the fallback in
+        # ``ReqServerChannel._auth`` fired on every auth, rebuilding
+        # ``AutoKey`` each time and resetting its ``signing_files``
+        # mtime cache.  That silently regresses masters with
+        # ``autosign_file`` / ``autoreject_file`` configured to O(N)
+        # disk reads under an auth storm (N minions restarting
+        # together) where the cached version does O(1) after the first
+        # mtime check per file.  ``AutoKey.__init__`` only stores opts
+        # and inits an empty dict, so early construction here is safe.
+        self.auto_key = salt.daemons.masterapi.AutoKey(self.opts)
 
         (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
         self.sessions = {}
@@ -765,11 +837,22 @@ class PoolRoutingChannel:
         Returns a session key for the given minion id.
         """
         now = time.time()
+        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
             if now - self.sessions[minion][0] < self.opts["publish_session"]:
-                return self.sessions[minion][1]
+                # Master cluster deployments share ``sessions/<minion>``
+                # on a shared filesystem so a peer master's rotation must
+                # invalidate our in-memory cache. Comparing the file
+                # mtime against the mtime we cached catches that case
+                # without penalising the single-master fast path -- the
+                # ``stat`` is cheap and only runs on cache hits.
+                try:
+                    disk_mtime = path.stat().st_mtime
+                except FileNotFoundError:
+                    disk_mtime = None
+                if disk_mtime is not None and disk_mtime <= self.sessions[minion][0]:
+                    return self.sessions[minion][1]
 
-        path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         try:
             if now - path.stat().st_mtime > self.opts["publish_session"]:
                 salt.crypt.Crypticle.write_key(path)
@@ -842,11 +925,27 @@ class PoolRoutingChannel:
                 sock_dir = pool_opts.get("sock_dir", "/tmp/salt")
                 os.makedirs(sock_dir, exist_ok=True)
                 pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                log.debug(
-                    "Pool '%s' RequestServer using IPC socket: %s",
-                    pool_name,
-                    pool_opts["workers_ipc_name"],
-                )
+                # LTS default: single shared workers IPC socket per pool
+                # (pre-PR behavior). When ``master_async_mworker`` is
+                # enabled the RequestServer binds one socket per worker
+                # index and the PoolRouter fans out via per-worker
+                # RequestClients so every MWorker in the pool receives
+                # fair share of dispatch.
+                if self.opts.get("master_async_mworker", False):
+                    pool_opts["pool_worker_count"] = int(config.get("worker_count", 1))
+                    log.debug(
+                        "Pool '%s' RequestServer using per-worker IPC sockets "
+                        "(base: %s, count: %d)",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                        pool_opts["pool_worker_count"],
+                    )
+                else:
+                    log.debug(
+                        "Pool '%s' RequestServer using shared IPC socket: %s",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                    )
 
             # Create RequestServer for this pool using transport factory
             try:
@@ -956,8 +1055,21 @@ class PoolRoutingChannel:
 
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
-        # Create RequestClient for each pool (connects to pool's IPC RequestServer)
-        for pool_name in self.worker_pools.keys():
+        # Create RequestClients for each pool (connects to pool's IPC
+        # RequestServer). LTS default (``master_async_mworker`` off):
+        # single client per pool, matching pre-PR behavior. Async opt-in:
+        # one client per MWorker + round-robin dispatch so every worker
+        # in the pool receives fair share.
+        async_mworker = self.opts.get("master_async_mworker", False)
+        for pool_name, pool_cfg in self.worker_pools.items():
+            worker_count = max(1, int(pool_cfg.get("worker_count", 1)))
+            if not async_mworker:
+                # LTS default: single shared client per pool. Same as
+                # the pre-PR ``for pool_name in self.worker_pools.keys()``
+                # loop that ignored ``worker_count``.
+                client_count = 1
+            else:
+                client_count = worker_count
             # Create pool-specific opts matching the pool's RequestServer
             pool_opts = self.opts.copy()
             pool_opts["pool_name"] = pool_name
@@ -971,28 +1083,62 @@ class PoolRoutingChannel:
                 pool_opts["ret_port"] = base_port + port_offset
                 pool_opts["master_uri"] = f"tcp://127.0.0.1:{pool_opts['ret_port']}"
                 log.debug(
-                    "Pool '%s' client connecting to TCP port %d",
+                    "Pool '%s' clients connecting to TCP port %d (count=%d)",
                     pool_name,
                     pool_opts["ret_port"],
+                    client_count,
                 )
+                per_worker_uris = [pool_opts["master_uri"]] * client_count
             else:
-                # IPC socket: connect to pool's socket
-                pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], pool_opts["workers_ipc_name"]
-                )
-                pool_opts["master_uri"] = f"ipc://{ipc_path}"
-                log.debug(
-                    "Pool '%s' client connecting to IPC socket: %s",
-                    pool_name,
-                    pool_opts["workers_ipc_name"],
-                )
+                if async_mworker:
+                    # Async opt-in: one IPC socket per worker index (matches
+                    # per-worker binds in ``RequestServer.pre_fork``).
+                    base = f"workers-{pool_name}"
+                    per_worker_uris = []
+                    for idx in range(client_count):
+                        per_ipc = os.path.join(
+                            self.opts["sock_dir"], f"{base}-{idx}.ipc"
+                        )
+                        per_worker_uris.append(f"ipc://{per_ipc}")
+                    log.debug(
+                        "Pool '%s' clients connecting to per-worker IPC sockets "
+                        "(base: %s-{0..%d}.ipc)",
+                        pool_name,
+                        base,
+                        client_count - 1,
+                    )
+                else:
+                    # LTS default: single shared IPC socket per pool
+                    # (pre-PR behavior). Path matches the shared socket
+                    # bound by ``RequestServer.pre_fork`` above.
+                    pool_opts["workers_ipc_name"] = f"workers-{pool_name}.ipc"
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], pool_opts["workers_ipc_name"]
+                    )
+                    pool_opts["master_uri"] = f"ipc://{ipc_path}"
+                    per_worker_uris = [pool_opts["master_uri"]]
+                    log.debug(
+                        "Pool '%s' client connecting to shared IPC socket: %s",
+                        pool_name,
+                        pool_opts["workers_ipc_name"],
+                    )
 
             try:
-                # Use our dedicated request client factory for routing
-                client = create_request_client(pool_opts, io_loop)
-                self.pool_clients[pool_name] = client
-                log.info("Created RequestClient for pool '%s'", pool_name)
+                clients = []
+                for idx in range(client_count):
+                    per_opts = pool_opts.copy()
+                    per_opts["master_uri"] = per_worker_uris[idx]
+                    if async_mworker and per_opts.get("ipc_mode") != "tcp":
+                        per_opts["workers_ipc_name"] = f"workers-{pool_name}-{idx}.ipc"
+                    # Use our dedicated request client factory for routing
+                    clients.append(create_request_client(per_opts, io_loop))
+                self.pool_clients[pool_name] = clients
+                self.pool_client_next[pool_name] = 0
+                log.info(
+                    "Created %d RequestClient(s) for pool '%s'",
+                    client_count,
+                    pool_name,
+                )
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Failed to create RequestClient for pool '%s': %s", pool_name, exc
@@ -1072,7 +1218,9 @@ class PoolRoutingChannel:
             and payload.get("load", {}).get("cmd") == "_auth"
         ):
             start = time.time()
-            ret = ReqServerChannel._auth(proxy, payload["load"], sign_messages, version)
+            ret = await ReqServerChannel._auth(
+                proxy, payload["load"], sign_messages, version
+            )
             if self.opts.get("master_stats", False) and getattr(
                 self, "payload_handler", None
             ):
@@ -1212,8 +1360,13 @@ class PoolRoutingChannel:
                 )
                 return {"error": f"No client for pool {pool_name}"}
 
-            # Forward to the appropriate pool's RequestServer via IPC
-            client = self.pool_clients[pool_name]
+            # Forward to the appropriate pool's RequestServer via IPC.
+            # PATCH: round-robin across the per-pool client list so
+            # dispatch actually reaches every MWorker in the pool.
+            clients = self.pool_clients[pool_name]
+            idx = self.pool_client_next[pool_name] % len(clients)
+            self.pool_client_next[pool_name] = idx + 1
+            client = clients[idx]
             reply = await client.send(payload)
 
             return reply
@@ -1236,15 +1389,20 @@ class PoolRoutingChannel:
         log.info("Closing PoolRoutingChannel")
 
         # Close all pool clients (RequestClients to pool RequestServers)
-        for pool_name, client in self.pool_clients.items():
-            try:
-                if hasattr(client, "close"):
-                    client.close()
-                elif hasattr(client, "destroy"):
-                    client.destroy()
-            except Exception as exc:  # pylint: disable=broad-except
-                log.error("Error closing client for pool '%s': %s", pool_name, exc)
+        # PATCH: iterate the per-pool list rather than treating each
+        # entry as a single client.
+        for pool_name, clients in self.pool_clients.items():
+            client_list = clients if isinstance(clients, list) else [clients]
+            for client in client_list:
+                try:
+                    if hasattr(client, "close"):
+                        client.close()
+                    elif hasattr(client, "destroy"):
+                        client.destroy()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error("Error closing client for pool '%s': %s", pool_name, exc)
         self.pool_clients.clear()
+        self.pool_client_next.clear()
 
         # Close all pool servers
         for pool_name, server in self.pool_servers.items():
@@ -1335,6 +1493,12 @@ class PubServerChannel:
         if self.aes_funcs is not None:
             self.aes_funcs.destroy()
             self.aes_funcs = None
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -1379,14 +1543,20 @@ class PubServerChannel:
             started=started,
         )
 
-    def presence_callback(self, subscriber, msg):
+    async def presence_callback(self, subscriber, msg):
         if msg["enc"] != "aes":
             # We only accept 'aes' encoded messages for 'id'
             return
         crypticle = _get_crypticle(self.opts, self.aes_key)
         load = crypticle.loads(msg["load"])
         load = salt.transport.frame.decode_embedded_strs(load)
-        if not self.aes_funcs.verify_minion(load["id"], load["tok"]):
+        # LTS default (``master_async_mworker`` off): ``verify_minion`` is a
+        # sync callable and returns ``bool`` directly. Async opt-in path:
+        # ``verify_minion`` is ``async def`` and returns a coroutine.
+        verified = self.aes_funcs.verify_minion(load["id"], load["tok"])
+        if asyncio.iscoroutine(verified):
+            verified = await verified
+        if not verified:
             return
         subscriber.id_ = load["id"]
         self._add_client_present(subscriber)
@@ -1534,7 +1704,7 @@ class MasterPubServerChannel:
         if opts.get("cluster_id"):
             # Cluster mode: Use TCP-based transport for peer communication while
             # preserving normal local IPC behavior for internal processes.
-            port = opts.get("cluster_port", 55596)
+            port = opts["cluster_pool_port"]
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
             bind_host = opts.get("interface", "127.0.0.1")
@@ -1650,7 +1820,7 @@ class MasterPubServerChannel:
             )
 
             aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-            port = self.opts.get("cluster_port", 55596)
+            port = self.opts["cluster_pool_port"]
 
             # One pusher per remote host.  Do not use ``build_peer_pushers`` here:
             # discover-reply appends duplicate hosts to ``opts["cluster_peers"]`` and
@@ -2755,7 +2925,14 @@ class MasterPubServerChannel:
 
     def send_aes_key_event(self):
         log.debug("Sending AES key event")
-        data = {"peer_id": self.opts["id"], "peers": {}}
+        # ``cluster_peers`` is documented to hold bare master names so the
+        # cluster identity used on the wire and on disk must match that
+        # form.  ``apply_master_config`` auto-appends ``_master`` to
+        # ``opts["id"]`` when ``id`` is not configured, leaving sibling
+        # masters unable to find their own entry in ``data["peers"]``.
+        # See https://github.com/saltstack/salt/issues/68462.
+        master_id = self.opts["id"].removesuffix("_master")
+        data = {"peer_id": master_id, "peers": {}}
         for peer in self.cluster_peers:
             peer_pub = (
                 pathlib.Path(self.opts["cluster_pki_dir"]) / "peers" / f"{peer}.pub"
@@ -2781,7 +2958,7 @@ class MasterPubServerChannel:
         ) as event:
             success = event.fire_event(
                 data,
-                salt.utils.event.tagify(self.opts["id"], "peer", "cluster"),
+                salt.utils.event.tagify(master_id, "peer", "cluster"),
                 timeout=30000,  # 30 second timeout
             )
             if not success:
@@ -2819,6 +2996,17 @@ class MasterPubServerChannel:
 
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
+        # Ensure the process title is ``EventPublisher`` on both initial fork
+        # and respawn. ``ProcessManager.add_process`` is called with
+        # ``name="EventPublisher"`` from ``pre_fork``, but
+        # ``ProcessManager.restart_process`` drops the ``name`` kwarg, so on
+        # respawn the fallback ``__qualname__`` (``MasterPubServerChannel.
+        # _publish_daemon``) would otherwise be used instead. Setting the
+        # title explicitly here keeps the historical process label stable
+        # across restarts so operator tooling keyed on ``EventPublisher``
+        # continues to work.
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle("EventPublisher")
         import salt.master  # pylint: disable=import-outside-toplevel
 
         if (
@@ -2851,7 +3039,7 @@ class MasterPubServerChannel:
 
         # Cluster-specific peer communication (separate from local IPC)
         if self.opts.get("cluster_id"):
-            self.tcp_master_pool_port = self.opts.get("cluster_port", 55596)
+            self.tcp_master_pool_port = self.opts["cluster_pool_port"]
             self.auth_errors = collections.defaultdict(collections.deque)
             self.peer_map = {}
 
@@ -3326,6 +3514,45 @@ class MasterPubServerChannel:
                         if pub_pem:
                             with salt.utils.files.fopen(pub_path, "w") as fp:
                                 fp.write(pub_pem)
+                        # Refresh the key cache so subsequent
+                        # ``MasterKeys.get_pub_str()`` / ``find_or_create_keys``
+                        # lookups see the wire-delivered cluster keypair
+                        # rather than the stale locally-generated bytes that
+                        # ``_setup_keys`` stored during startup. Without this
+                        # the mmap_key driver's per-master index still points
+                        # at the joiner's own cluster.pub, so under HAProxy
+                        # (or any load-balancer) the minion sees a different
+                        # cluster.pub from each backend and hits
+                        # "Invalid master key" on its second sign-in.
+                        # See https://github.com/saltstack/salt/issues/70090
+                        try:
+                            self.master_key.cache.store(
+                                "master_keys", "cluster.pem", pem_bytes
+                            )
+                            if pub_pem:
+                                self.master_key.cache.store(
+                                    "master_keys",
+                                    "cluster.pub",
+                                    salt.utils.stringutils.to_bytes(pub_pem),
+                                )
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception(
+                                "Failed to refresh cluster keypair in cache "
+                                "after join-reply install"
+                            )
+                        # Reload the in-memory PrivateKey so the running
+                        # master process signs and decrypts with the shared
+                        # cluster identity from this event onward.
+                        try:
+                            self.master_key.cluster_key = (
+                                salt.crypt.PrivateKey.from_str(pem_bytes)
+                            )
+                            self.master_key.key = self.master_key.cluster_key
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception(
+                                "Failed to reload cluster_key from "
+                                "join-reply-delivered PEM"
+                            )
                         log.info(
                             "Installed cluster.pem (%d bytes) and cluster.pub from join-reply",
                             len(pem_bytes),
@@ -3693,11 +3920,17 @@ class MasterPubServerChannel:
                 await self.pusher(payload["peer_id"]).publish(event_data)
             elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
-                if peer == self.opts["id"]:
+                # Sibling masters key ``data["peers"]`` by the bare names
+                # in their ``cluster_peers``, so look our own entry up by
+                # the bare master id rather than the ``_master``-suffixed
+                # form ``apply_master_config`` may have produced.  See
+                # https://github.com/saltstack/salt/issues/68462.
+                master_id = self.opts["id"].removesuffix("_master")
+                if peer == master_id:
                     log.debug("Skip our own cluster peer event %s", tag)
                     return
-                aes = data["peers"][self.opts["id"]]["aes"]
-                sig = data["peers"][self.opts["id"]]["sig"]
+                aes = data["peers"][master_id]["aes"]
+                sig = data["peers"][master_id]["sig"]
                 key_str = self.master_key.master_key.decrypt(
                     aes, algorithm=self.opts["cluster_encryption_algorithm"]
                 )
@@ -3776,14 +4009,20 @@ class MasterPubServerChannel:
             return event_data
         raise salt.exceptions.AuthenticationError("Peer aes key not available")
 
-    async def publish_payload(self, load, *args):
-        tag, data = salt.utils.event.SaltEvent.unpack(load)
+    async def publish_payload(self, load, *args, raw_payload=None):
+        _tagend = salt.utils.stringutils.to_bytes(salt.utils.event.TAGEND)
+        mtag_bytes, _, mdata = load.partition(_tagend)
+        tag = salt.utils.stringutils.to_str(mtag_bytes)
+
+        def _decode_data():
+            return salt.payload.loads(mdata, encoding="utf-8")
+
         # Operator-triggered cluster operations originate as ``cluster/runner/*``
         # events fired by the runner subprocess.  Intercept them here so the
         # event is consumed locally rather than broadcast as a regular
         # cluster event.
         if tag == "cluster/runner/sync_roots":
-            channels = data.get("channels") or ["file_roots", "pillar_roots"]
+            channels = _decode_data().get("channels") or ["file_roots", "pillar_roots"]
             asyncio.create_task(self._run_root_sync_to_peers(channels))
             return
         if tag == "cluster/runner/collect_from_peers":
@@ -3793,7 +4032,7 @@ class MasterPubServerChannel:
             # initiates an outbound state-sync send to us.  Receiver
             # side reuses the existing state-sync chunk handler at
             # ``cluster/peer/state-sync-chunk``.
-            channels = data.get("channels") or ["keys", "denied_keys"]
+            channels = _decode_data().get("channels") or ["keys", "denied_keys"]
             asyncio.create_task(self._run_collect_from_peers(channels))
             return
         if tag == "cluster/runner/shed_unowned_all":
@@ -3803,7 +4042,7 @@ class MasterPubServerChannel:
             # writes a per-master sentinel.  The originator runner
             # subprocess (which fired this event) also ran its own
             # local shed inline — no need to repeat that here.
-            asyncio.create_task(self._run_shed_unowned_all(data))
+            asyncio.create_task(self._run_shed_unowned_all(_decode_data()))
             return
         if tag == "cluster/runner/delegate_write":
             # Delegate-on-miss: the EventMonitor on this master saw
@@ -3814,7 +4053,7 @@ class MasterPubServerChannel:
             # replication already delivered the original event to
             # the owner — this delegate is a safety net for
             # asymmetric topologies (or a guard against bus drops).
-            asyncio.create_task(self._run_delegate_write(data))
+            asyncio.create_task(self._run_delegate_write(_decode_data()))
             return
         if tag in (
             "cluster/runner/ring_create",
@@ -3831,6 +4070,7 @@ class MasterPubServerChannel:
             # currently the leader picks it up.  Followers that
             # receive the fan-out log "not leader" and skip — no
             # double-commit because the leader is unique.
+            data = _decode_data()
             self._handle_multi_ring_runner_event(tag, data)
             asyncio.create_task(self._fanout_multi_ring_request(tag, data))
             return
@@ -3838,7 +4078,8 @@ class MasterPubServerChannel:
         if not tag.startswith("cluster/peer"):
             tasks = [
                 asyncio.create_task(
-                    self.transport.publish_payload(load), name=self.opts["id"]
+                    self.transport.publish_payload(load, raw_payload=raw_payload),
+                    name=self.opts["id"],
                 )
             ]
         for pusher in self.pushers:
@@ -3852,7 +4093,7 @@ class MasterPubServerChannel:
             crypticle = _get_crypticle(
                 self.opts, salt.master.SMaster.secrets["aes"]["secret"].value
             )
-            load = {"event_payload": data}
+            load = {"event_payload": _decode_data()}
             event_data = salt.utils.event.SaltEvent.pack(
                 salt.utils.event.tagify(tag, self.opts["id"], "cluster/event"),
                 crypticle.dumps(load),

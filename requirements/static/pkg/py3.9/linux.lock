@@ -16,8 +16,10 @@ attrs==23.2.0
     # via aiohttp
 backports-tarfile==1.2.0
     # via jaraco-context
-certifi==2026.1.4
-    # via requests
+certifi==2026.6.17
+    # via
+    #   -r requirements/base.txt
+    #   requests
 cffi==2.0.0
     # via
     #   -r requirements/base.txt
@@ -58,7 +60,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.50
+gitpython==3.1.60
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -114,8 +116,9 @@ more-itertools==10.8.0
     #   jaraco-text
 msgpack==1.1.2
     # via -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 opentelemetry-api==1.41.1
@@ -162,7 +165,7 @@ protobuf==6.33.6
     #   opentelemetry-proto
 psutil==5.9.8
     # via -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via -r requirements/base.txt
 pycparser==2.23
     # via
@@ -201,18 +204,13 @@ requests==2.32.5
     #   -r requirements/base.txt
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
-    #   vultr
 rich==15.0.0
     # via typer
-rpm-vercmp==0.1.2
-    # via
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 setproctitle==1.3.7
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
-setuptools==82.0.0
+setuptools==82.0.1
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
@@ -239,6 +237,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
@@ -250,8 +249,6 @@ urllib3==1.26.20
     #   -r requirements/base.txt
     #   requests
 virtualenv==21.4.2
-    # via -r requirements/base.txt
-vultr==1.0.1
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt

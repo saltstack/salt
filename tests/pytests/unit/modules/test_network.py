@@ -127,7 +127,10 @@ def test___virtual__is_windows_true():
 def test___virtual__is_windows_false():
     with patch("salt.utils.platform.is_windows", return_value=False):
         result = networkmod.__virtual__()
-        assert result
+        # __virtual__ returns the literal True on non-Windows; a bare
+        # truthiness check would also pass for the (False, "reason")
+        # failure tuple, which is a truthy non-empty tuple.
+        assert result is True
 
 
 def test_wol_bad_mac():
@@ -250,13 +253,55 @@ def test_dig():
 
 def test_arp():
     """
-    Test for return the arp table from the minion
+    On Linux with net-tools available, network.arp parses ``arp -an``.
     """
-    with patch.dict(
-        networkmod.__salt__,
-        {"cmd.run": MagicMock(return_value="A,B,C,D\nE,F,G,H\n")},
-    ), patch("salt.utils.path.which", MagicMock(return_value="")):
+    arp_out = (
+        "? (192.168.1.1) at 00:11:22:33:44:55 [ether] on eth0\n"
+        "? (192.168.1.2) at aa:bb:cc:dd:ee:ff [ether] on eth0\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch.dict(
+        networkmod.__utils__, {"path.which": MagicMock(return_value="/usr/sbin/arp")}
+    ):
+        assert networkmod.arp() == {
+            "00:11:22:33:44:55": "192.168.1.1",
+            "aa:bb:cc:dd:ee:ff": "192.168.1.2",
+        }
+
+
+def test_arp_linux_falls_back_to_ip_neigh():
+    """
+    On Linux without net-tools, network.arp falls back to ``ip neigh``
+    (iproute2) rather than raising CommandNotFoundError.
+    """
+    ip_neigh_out = (
+        "192.168.1.1 dev eth0 lladdr 00:11:22:33:44:55 REACHABLE\n"
+        "192.168.1.2 dev eth0 lladdr aa:bb:cc:dd:ee:ff STALE\n"
+        "192.168.1.9 dev eth0 FAILED\n"
+    )
+    cmd_mock = MagicMock(return_value=ip_neigh_out)
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": cmd_mock}
+    ), patch.dict(networkmod.__utils__, {"path.which": MagicMock(return_value=None)}):
+        assert networkmod.arp() == {
+            "00:11:22:33:44:55": "192.168.1.1",
+            "aa:bb:cc:dd:ee:ff": "192.168.1.2",
+        }
+    cmd_mock.assert_called_once_with("ip neigh show")
+
+
+def test_arp_non_linux_uses_arp_command():
+    """
+    On non-Linux kernels the ``ip neigh`` fallback does not apply; arp() always
+    uses the native ``arp`` command even when path.which reports it missing.
+    """
+    cmd_mock = MagicMock(return_value="")
+    with patch.dict(networkmod.__grains__, {"kernel": "SunOS"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": cmd_mock}
+    ), patch.dict(networkmod.__utils__, {"path.which": MagicMock(return_value=None)}):
         assert networkmod.arp() == {}
+    cmd_mock.assert_called_once_with("arp -an")
 
 
 def test_interfaces():

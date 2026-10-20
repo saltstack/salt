@@ -65,6 +65,7 @@ def cert_args_exts():
 
 @pytest.fixture(scope="module", autouse=True)
 def cm_wrapper(x509_salt_master):
+    name = "cert"
     state_contents = """
     {{
         salt["x509.certificate_managed_wrapper"](
@@ -80,8 +81,8 @@ def cm_wrapper(x509_salt_master):
         ) | yaml(false)
     }}
     """
-    with x509_salt_master.state_tree.base.temp_file("cert.sls", state_contents):
-        yield
+    with x509_salt_master.state_tree.base.temp_file(f"{name}.sls", state_contents):
+        yield name
 
 
 @pytest.fixture
@@ -138,6 +139,20 @@ def test_certificate_managed_remote(x509_salt_ssh_cli, cert_args, ca_key, rsa_pr
     assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
     assert _signed_by(cert, ca_key)
     assert _belongs_to(cert, rsa_privkey)
+
+
+def test_certificate_managed_remote_file_managed_kwargs(
+    x509_salt_ssh_cli, cert_args, ca_key, cm_wrapper
+):
+    cert_args["certificate_managed"]["mode"] = "0400"
+    ret = x509_salt_ssh_cli.run("state.apply", cm_wrapper, pillar={"args": cert_args})
+    assert ret.returncode == 0
+    cert = _get_cert(cert_args["name"])
+    assert cert.subject.rfc4514_string() == "CN=from_signing_policy"
+    assert _signed_by(cert, ca_key)
+    ret = x509_salt_ssh_cli.run("file.get_mode", cert_args["name"])
+    assert ret.returncode == 0
+    assert ret.data == "0400"
 
 
 def test_certificate_managed_remote_with_privkey_managed(

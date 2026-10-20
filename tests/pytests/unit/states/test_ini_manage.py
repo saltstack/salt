@@ -20,6 +20,8 @@ def configure_loader_modules():
             "__salt__": {
                 "ini.get_ini": mod_ini_manage.get_ini,
                 "ini.set_option": mod_ini_manage.set_option,
+                "ini.remove_option": mod_ini_manage.remove_option,
+                "ini.remove_section": mod_ini_manage.remove_section,
             },
             "__opts__": {"test": False},
         },
@@ -108,6 +110,68 @@ def test_options_present_true_file(tmp_path, sections):
 
     assert os.path.exists(name)
     assert mod_ini_manage.get_ini(name) == sections
+
+
+def test_options_present_strict_removes_extra_sections(tmp_path, sections):
+    """
+    Test that options_present with strict=True removes sections that are
+    present in the ini file but absent from the supplied ``sections`` dict.
+
+    Regression test for #68673 - strict=True previously only removed extra
+    keys within declared sections and extra top-level options, but it left
+    entire undeclared sections in the file.
+    """
+    name = str(tmp_path / "test_strict_extra_section.ini")
+
+    # Seed the ini file with two sections.
+    initial = OrderedDict()
+    initial["general"] = OrderedDict()
+    initial["general"]["hostname"] = "myserver.com"
+    initial["general"]["port"] = "1234"
+    initial["extra"] = OrderedDict()
+    initial["extra"]["leftover"] = "stale"
+    ini_manage.options_present(name, initial)
+    assert os.path.exists(name)
+    assert "extra" in mod_ini_manage.get_ini(name)
+
+    # Re-apply with only the "general" section and strict=True.
+    # The "extra" section should be removed.
+    ret = ini_manage.options_present(name, sections, strict=True)
+
+    assert ret["result"] is True
+    on_disk = mod_ini_manage.get_ini(name)
+    assert (
+        "extra" not in on_disk
+    ), f"strict=True should have removed 'extra' section; got {dict(on_disk)}"
+    assert on_disk["general"]["hostname"] == "myserver.com"
+    assert on_disk["general"]["port"] == "1234"
+    assert "extra" in ret["changes"]
+
+
+def test_options_present_strict_removes_extra_sections_test_mode(tmp_path, sections):
+    """
+    Test that options_present with strict=True under test=True reports the
+    extra section as one that would be removed without modifying the file.
+    """
+    name = str(tmp_path / "test_strict_extra_section_test.ini")
+
+    initial = OrderedDict()
+    initial["general"] = OrderedDict()
+    initial["general"]["hostname"] = "myserver.com"
+    initial["general"]["port"] = "1234"
+    initial["extra"] = OrderedDict()
+    initial["extra"]["leftover"] = "stale"
+    ini_manage.options_present(name, initial)
+
+    with patch.dict(ini_manage.__opts__, {"test": True}), patch.dict(
+        mod_ini_manage.__opts__, {"test": True}
+    ):
+        ret = ini_manage.options_present(name, sections, strict=True)
+
+    assert ret["result"] is None
+    assert "Removed section extra" in ret["comment"]
+    # File contents must be unchanged in test mode.
+    assert "extra" in mod_ini_manage.get_ini(name)
 
 
 def test_options_absent():

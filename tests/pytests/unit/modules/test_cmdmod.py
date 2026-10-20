@@ -303,6 +303,87 @@ def test_run_user_not_available():
                     cmdmod._run("foo", "bar", runas="baz")
 
 
+@pytest.mark.skip_on_windows
+def test_run_runas_env_retrieval_timeout(caplog):
+    """
+    Regression test for issue #63901 / PR #63912.
+
+    When ``runas`` is supplied, ``_run`` shells out to fetch the user's
+    environment by piping a Python snippet through ``su``/``sudo`` and
+    reading the result back with ``subprocess.Popen.communicate()``. On
+    misconfigured PAM stacks (e.g. WINBIND), that subprocess can hang
+    indefinitely.
+
+    The fix adds ``timeout=10`` to that ``communicate()`` call and routes
+    a ``subprocess.TimeoutExpired`` into the existing "Environment could
+    not be retrieved" branch so execution continues with an empty
+    runas env rather than wedging the minion.
+
+    This test pins that behavior: the ``TimeoutExpired`` is swallowed,
+    the documented log.error is emitted, and ``_run`` proceeds to
+    invoke the actual command via ``TimedProc`` instead of raising.
+    """
+    import subprocess as _subprocess
+
+    mock_true = MagicMock(return_value=True)
+
+    # subprocess.Popen used for env retrieval; .communicate() must raise
+    # TimeoutExpired to drive the new except branch.
+    env_popen_instance = MagicMock()
+    env_popen_instance.communicate.side_effect = _subprocess.TimeoutExpired(
+        cmd=["su", "-", "baz", "-c"], timeout=10
+    )
+    env_popen_cls = MagicMock(return_value=env_popen_instance)
+
+    # After env retrieval falls back to empty env, the actual command runs
+    # via salt.utils.timed_subprocess.TimedProc -- mock that out so the
+    # test does not execute a real subprocess.
+    mock_timed_proc = MockTimedProc(stdout=b"ok\n", stderr=b"")
+
+    # pwd.getpwnam must succeed so the runas user is considered valid.
+    fake_pw = MagicMock(pw_name="baz", pw_shell="/bin/sh")
+
+    with patch("salt.modules.cmdmod._is_valid_shell", mock_true), patch(
+        "salt.utils.platform.is_windows", MagicMock(return_value=False)
+    ), patch("os.path.isfile", mock_true), patch("os.access", mock_true), patch(
+        "os.path.isabs", mock_true
+    ), patch(
+        "os.path.isdir", mock_true
+    ), patch(
+        "pwd.getpwnam", MagicMock(return_value=fake_pw)
+    ), patch(
+        "pwd.getpwall", MagicMock(return_value=[fake_pw])
+    ), patch(
+        "salt.utils.pkg.check_bundled", MagicMock(return_value=False)
+    ), patch.dict(
+        cmdmod.__grains__, {"os": "Linux", "os_family": "Debian"}, clear=False
+    ), patch(
+        "subprocess.Popen", env_popen_cls
+    ), patch(
+        "salt.utils.timed_subprocess.TimedProc",
+        MagicMock(return_value=mock_timed_proc),
+    ):
+        with caplog.at_level(logging.ERROR, logger="salt.modules.cmdmod"):
+            # Must not raise; TimeoutExpired must be caught inside _run.
+            ret = cmdmod._run("echo hi", "bar", runas="baz", python_shell=True)
+
+    # The fix routes the TimeoutExpired into the existing "Environment
+    # could not be retrieved" error log.
+    assert any(
+        "Environment could not be retrieved for user" in record.getMessage()
+        and "baz" in record.getMessage()
+        for record in caplog.records
+    ), (
+        "Expected 'Environment could not be retrieved' log.error to fire "
+        "when env-retrieval subprocess times out; got: "
+        f"{[r.getMessage() for r in caplog.records]}"
+    )
+
+    # Sanity: _run returned the dict shape callers expect (no exception
+    # propagated past the timeout handler).
+    assert isinstance(ret, dict)
+
+
 def test_run_zero_umask():
     """
     Tests error raised when umask is set to zero
@@ -1042,6 +1123,49 @@ def test_cmd_script_saltenv_from_config_windows():
                     assert mock_cp_get_template.call_args[0][3] == "base"
                     assert mock_run.call_count == 2
                     assert mock_run.call_args[1]["saltenv"] == "base"
+
+
+def test_cmd_script_runas_domain_user_windows_68578(tmp_path, caplog):
+    """
+    Regression test for #68578.
+
+    On Windows ``cmd.script`` used to abort with ``Invalid user: <runas>``
+    whenever the ``user.info`` precheck returned an empty dict. ``user.info``
+    (NetUserGetInfo) only sees local-machine accounts, so domain users
+    (``DOMAIN\\user``, ``user@DOMAIN``, SIDs) were rejected even though the
+    underlying ``win_runas`` machinery can authenticate them.
+
+    The precheck must not abort execution when ``user.info`` returns empty;
+    instead the script should proceed and let ``win_runas`` raise a precise
+    error if the user is truly invalid.
+    """
+    mock_cp_cache_file = MagicMock(return_value="fnord")
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base", "cachedir": str(tmp_path)}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "file.remove": MagicMock(),
+                # user.info returns {} for domain users on Windows when the
+                # local SAM and DC lookups can't resolve the account; the
+                # precheck must not treat that as a fatal error.
+                "user.info": MagicMock(return_value={}),
+            },
+        ):
+            with patch("salt.utils.platform.is_windows", return_value=True):
+                with patch(
+                    "salt.utils.win_dacl.set_permissions", MagicMock(create=True)
+                ):
+                    with patch("salt.modules.cmdmod._run") as mock_run:
+                        mock_run.return_value = {
+                            "pid": 1,
+                            "retcode": 0,
+                            "stdout": "",
+                            "stderr": "",
+                        }
+                        with patch("shutil.copyfile", MagicMock()):
+                            cmdmod.script("salt://test.ps1", runas="DOMAIN\\someuser")
+                            assert mock_run.call_count == 1
 
 
 @pytest.mark.parametrize("bundled", [True, False])

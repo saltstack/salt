@@ -879,36 +879,45 @@ class State:
         else:
             self.file_client = salt.fileclient.get_file_client(self.opts)
             self.preserve_file_client = False
-        self.proxy = proxy
-        self._pillar_override = pillar_override
-        if pillar_enc is not None:
-            try:
-                pillar_enc = pillar_enc.lower()
-            except AttributeError:
-                pillar_enc = str(pillar_enc).lower()
-        self._pillar_enc = pillar_enc
-        log.debug("Gathering pillar data for state run")
-        if initial_pillar and not self._pillar_override:
-            self.opts["pillar"] = initial_pillar
-        else:
-            # Compile pillar data
-            self.opts["pillar"] = self._gather_pillar()
-            # Reapply overrides on top of compiled pillar
-            if self._pillar_override:
-                self.opts["pillar"] = salt.utils.dictupdate.merge(
-                    self.opts["pillar"],
-                    self._pillar_override,
-                    self.opts.get("pillar_source_merging_strategy", "smart"),
-                    self.opts.get("renderer", "yaml"),
-                    self.opts.get("pillar_merge_lists", False),
-                )
-        log.debug("Finished gathering pillar data for state run")
-        if context is None:
-            self.state_con = {}
-        else:
-            self.state_con = context
-        self.state_con["fileclient"] = self.file_client
-        self.load_modules()
+        # If any of the calls below raise, destroy the file client we just
+        # allocated so its ZeroMQ ``RequestClient`` isn't finalized with
+        # ``_closing = False`` and trip ``TransportWarning: Unclosed
+        # transport!`` during interpreter shutdown (issue #69637).
+        try:
+            self.proxy = proxy
+            self._pillar_override = pillar_override
+            if pillar_enc is not None:
+                try:
+                    pillar_enc = pillar_enc.lower()
+                except AttributeError:
+                    pillar_enc = str(pillar_enc).lower()
+            self._pillar_enc = pillar_enc
+            log.debug("Gathering pillar data for state run")
+            if initial_pillar and not self._pillar_override:
+                self.opts["pillar"] = initial_pillar
+            else:
+                # Compile pillar data
+                self.opts["pillar"] = self._gather_pillar()
+                # Reapply overrides on top of compiled pillar
+                if self._pillar_override:
+                    self.opts["pillar"] = salt.utils.dictupdate.merge(
+                        self.opts["pillar"],
+                        self._pillar_override,
+                        self.opts.get("pillar_source_merging_strategy", "smart"),
+                        self.opts.get("renderer", "yaml"),
+                        self.opts.get("pillar_merge_lists", False),
+                    )
+            log.debug("Finished gathering pillar data for state run")
+            if context is None:
+                self.state_con = {}
+            else:
+                self.state_con = context
+            self.state_con["fileclient"] = self.file_client
+            self.load_modules()
+        except Exception:
+            if not self.preserve_file_client:
+                self._destroy_fileclient_on_init_failure()
+            raise
         self.mod_init = set()
         self.pre = {}
         self.__run_num = 0
@@ -925,6 +934,33 @@ class State:
         # running dict because the ParallelState objects, which filter unpicklable objects
         # out of the context dict when necessary, are not picklable themselves.
         self.procs = {}
+        # Fix for Issue #30971: Track processed SLS files to handle empty SLS files
+        self._processed_sls_files = set()
+
+    def _destroy_fileclient_on_init_failure(self):
+        """
+        Best-effort teardown for ``self.file_client`` when the constructor
+        is unwinding due to an exception (issue #69637).
+
+        ``RemoteClient`` exposes ``destroy()``; ``FSChan`` / older
+        fileclients expose ``close()``.  Swallow errors -- the caller
+        re-raises the original exception.
+        """
+        try:
+            file_client = self.file_client
+        except AttributeError:
+            return
+        try:
+            teardown = getattr(file_client, "destroy", None)
+            if teardown is None:
+                teardown = getattr(file_client, "close", None)
+            if teardown is not None:
+                teardown()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Error while destroying State file client after failed init",
+                exc_info=True,
+            )
 
     def _match_global_state_conditions(self, full, state, name):
         """
@@ -944,8 +980,14 @@ class State:
         }
 
         if not isinstance(self.global_state_conditions, dict):
+            # ``config.option`` / ``match.compound`` are trusted engine
+            # internals (see VCOPS-90587 audit); read them via the
+            # unfiltered ``_trusted_functions`` so ``whitelist_modules``
+            # doesn't have to enumerate them for global state
+            # conditioning to work.
             self.global_state_conditions = (
-                self.functions["config.option"]("global_state_conditions") or {}
+                self._trusted_functions["config.option"]("global_state_conditions")
+                or {}
             )
 
         for state_match, conditions in self.global_state_conditions.items():
@@ -954,7 +996,7 @@ class State:
                     conditions = [conditions]
                 if isinstance(conditions, list):
                     matches.extend(
-                        self.functions["match.compound"](condition)
+                        self._trusted_functions["match.compound"](condition)
                         for condition in conditions
                     )
 
@@ -1006,8 +1048,19 @@ class State:
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
         )
-        compiled = pillar.compile_pillar()
-        return compiled
+        try:
+            return pillar.compile_pillar()
+        finally:
+            # Explicitly release the pillar's channel/transport.  Relying
+            # on ``__del__`` for cleanup during interpreter shutdown can
+            # trip ``Unclosed transport!`` warnings (#69637) because the
+            # transport may be finalized before the pillar or its channel.
+            destroy = getattr(pillar, "destroy", None)
+            if destroy is not None:
+                try:
+                    destroy()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug("Error while destroying pillar", exc_info=True)
 
     def _mod_init(self, low):
         """
@@ -1360,6 +1413,13 @@ class State:
                 # In non-resource context this is None and the dunder isn't
                 # packed.
                 minion_mods=self.minion_functions,
+                # Two-loader propagation for ``whitelist_modules``:  give
+                # state modules the unfiltered inner exec-module loader as
+                # ``__salt__`` so trusted shipped code (e.g. ``file.managed``
+                # calling ``__salt__['file.source_list']``) is not gated,
+                # while wire dispatch and any ``__wire_salt__`` consumer
+                # (``salt.states.module.run`` / ``.function``) stay gated.
+                dunder_salt=getattr(self.functions, "_dunder_salt", None),
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1428,6 +1488,23 @@ class State:
                 proxy=self.proxy,
                 file_client=salt.fileclient.ContextlessFileClient(self.file_client),
             )
+        # ``self._trusted_functions`` is the unfiltered inner exec-module
+        # loader (built by :func:`salt.loader.minion_mods` when
+        # ``whitelist_modules`` is set).  It is used only for
+        # state-engine internal composition -- ``config.option`` reads,
+        # requisite/aggregate machinery, ``saltutil.refresh_modules``,
+        # ``event.fire_master``, ``test.sleep`` in the retry loop --
+        # so those trusted salt-core-authored call sites keep working
+        # when the operator's whitelist doesn't happen to include the
+        # helper modules they need.  User-facing dispatch
+        # (``unless``/``onlyif``/``check_cmd``, ``__slot__:salt:...``,
+        # ``module.run``, Jinja renderer context) still uses
+        # ``self.functions`` and stays wire-filtered.  Falls back to
+        # ``self.functions`` on loaders that don't expose the inner
+        # loader (master-side compile, older salt versions).
+        self._trusted_functions = (
+            getattr(self.functions, "_dunder_salt", None) or self.functions
+        )
         if isinstance(data, dict):
             if data.get("provider", False):
                 if isinstance(data["provider"], str):
@@ -1477,7 +1554,9 @@ class State:
                 )
         self.load_modules()
         if not self.opts.get("local", False) and self.opts.get("multiprocessing", True):
-            self.functions["saltutil.refresh_modules"]()
+            # Trusted internal refresh; do not depend on the operator
+            # putting ``saltutil`` on the wire whitelist (VCOPS-90587).
+            self._trusted_functions["saltutil.refresh_modules"]()
 
     def check_refresh(self, data: dict, ret: dict) -> None:
         """
@@ -1614,8 +1693,11 @@ class State:
             disabled_reqs = [disabled_reqs]
         if not self.dependency_dag.dag:
             # if order_chunks was called without calling compile_high_data then
-            # we need to add the chunks to the dag
-            agg_opt = self.functions["config.option"]("state_aggregate")
+            # we need to add the chunks to the dag.  ``config.option`` is
+            # trusted engine internal (VCOPS-90587); route through
+            # ``_trusted_functions`` so a minion whose whitelist excludes
+            # ``config`` still gets aggregate ordering.
+            agg_opt = self._trusted_functions["config.option"]("state_aggregate")
             for chunk in chunks:
                 self.dependency_dag.add_chunk(
                     chunk, self._allow_aggregate(chunk, agg_opt)
@@ -1670,10 +1752,19 @@ class State:
         self.dependency_dag = DependencyGraph()
         chunks = []
         disabled = {}
-        agg_opt = self.functions["config.option"]("state_aggregate")
+        # ``config.option`` here reads a salt-core aggregate opt.  Route
+        # through ``_trusted_functions`` (unfiltered) so
+        # ``compile_high_data`` doesn't KeyError under a strict
+        # ``whitelist_modules`` that omits ``config`` (VCOPS-90587).
+        agg_opt = self._trusted_functions["config.option"]("state_aggregate")
         for id_, body in high.items():
             if id_.startswith("__"):
                 continue
+            # Track SLS files from the high data, even if they produce no chunks.
+            # This is needed to handle SLS files that produce no output but are
+            # still required by other states (Issue #30971).
+            if "__sls__" in body:
+                self._processed_sls_files.add(body["__sls__"])
             for state, run in body.items():
                 # This should be a single value instead of a set
                 # because multiple functions of the same state
@@ -2483,7 +2574,10 @@ class State:
                             "state will be re-run in %s seconds",
                             interval,
                         )
-                        self.functions["test.sleep"](interval)
+                        # Retry sleep is engine-internal (VCOPS-90587
+                        # audit); don't require ``test`` on the wire
+                        # whitelist just to retry a failed state.
+                        self._trusted_functions["test.sleep"](interval)
                         retry_ret = self.call(low, chunks, running, retries=retries + 1)
                         orig_ret = ret
                         ret = retry_ret
@@ -2553,7 +2647,7 @@ class State:
             return_get = slot_text[slot_text.rindex(")") + 1 :]
         except ValueError:
             pass
-        if return_get:
+        if "." in (return_get or ""):
             # remove first period
             return_get = return_get.split(".", 1)[1].strip()
             log.debug("Searching slot result %s for %s", slot_return, return_get)
@@ -2565,6 +2659,12 @@ class State:
             if isinstance(slot_return, str):
                 # Append text to slot string result
                 append_data = " ".join(append_data).strip()
+                if (
+                    len(append_data) >= 2
+                    and append_data[0] == append_data[-1]
+                    and append_data[0] in ('"', "'")
+                ):
+                    append_data = append_data[1:-1]
                 log.debug("appending to slot result: %s", append_data)
                 slot_return += append_data
             else:
@@ -2915,16 +3015,18 @@ class State:
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
                         continue
-                else:
-                    if run_dict[tag]["result"] is False:
-                        req_stats.add("fail")
-                        continue
-                if r_type_base == RequisiteType.ONCHANGES.value:
-                    if not run_dict[tag]["changes"]:
+                elif r_type_base == RequisiteType.ONCHANGES.value:
+                    # onchanges is a soft trigger: a failed target is treated
+                    # the same as a target with no changes, not a hard failure.
+                    if run_dict[tag]["result"] is False or not run_dict[tag]["changes"]:
                         req_stats.add("onchanges")
                     else:
                         req_stats.add("onchangesmet")
                     continue
+                else:
+                    if run_dict[tag]["result"] is False:
+                        req_stats.add("fail")
+                        continue
                 if (
                     r_type_base == RequisiteType.WATCH.value
                     and run_dict[tag]["changes"]
@@ -3016,7 +3118,11 @@ class State:
                         _evt.fire_event(ret, tag)
 
             else:
-                ev_func = self.functions["event.fire_master"]
+                # State result event firing is engine internal
+                # (VCOPS-90587); use the unfiltered dunder so a strict
+                # whitelist that omits ``event`` still gets state-result
+                # events on the master bus.
+                ev_func = self._trusted_functions["event.fire_master"]
 
             ret: dict[str, Any] = {"ret": chunk_ret}
             if fire_event is True:
@@ -3136,12 +3242,40 @@ class State:
                 )
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
-            if not ret["changes"] and not ret.get("skip_watch", False):
+            force_mod_watch = ret.pop("force_mod_watch", False)
+            if not ret.get("skip_watch", False) and (
+                not ret["changes"] or force_mod_watch
+            ):
                 low = low.copy()
                 low["sfun"] = low["fun"]
                 low["fun"] = "mod_watch"
                 low["__reqs__"] = reqs
-                ret = self.call(low, chunks, running)
+                if not ret["changes"]:
+                    # Normal run produced no changes: replace its result
+                    # with mod_watch's, preserving the historical
+                    # single-result output.
+                    ret = self.call(low, chunks, running)
+                else:
+                    # Normal run produced changes and explicitly opted in
+                    # via ``force_mod_watch`` because those changes do not
+                    # subsume the work of mod_watch (e.g.
+                    # docker_container.running did a network reconnect but
+                    # did not recreate or restart the container). Run
+                    # mod_watch and merge its result so neither set of
+                    # changes is lost.
+                    mod_ret = self.call(low, chunks, running)
+                    for change_key, change_val in mod_ret.get("changes", {}).items():
+                        ret["changes"][change_key] = change_val
+                    mod_comment = mod_ret.get("comment", "")
+                    if mod_comment:
+                        existing_comment = ret.get("comment", "")
+                        if existing_comment:
+                            ret["comment"] = existing_comment + "\n" + mod_comment
+                        else:
+                            ret["comment"] = mod_comment
+                    ret["result"] = bool(ret.get("result")) and bool(
+                        mod_ret.get("result", True)
+                    )
             running[tag] = ret
         elif status == "pre":
             self._assign_not_run_result_dict(
@@ -3243,10 +3377,30 @@ class State:
                     return running, pending
         if low.get("__prereq__"):
             status, _ = self._check_requisites(low, running)
-            self.pre[tag] = self.call(low, chunks, running)
-            if not self.pre[tag]["changes"] and status == "change":
-                self.pre[tag]["changes"] = {"watch": "watch"}
-                self.pre[tag]["result"] = None
+            if status == "pre":
+                # The prereq chain for this state reported no changes, so
+                # this state should not run either. Mark it as having no
+                # changes so a state prerequiring this one does not run.
+                # Fixes #68438.
+                start_time, duration = _calculate_fake_duration()
+                pre_ret = {
+                    "changes": {},
+                    "result": True,
+                    "duration": duration,
+                    "start_time": start_time,
+                    "comment": "No changes detected",
+                    "__run_num__": self.__run_num,
+                    "__state_ran__": False,
+                }
+                for key in ("__sls__", "__id__", "name"):
+                    pre_ret[key] = low.get(key)
+                self.pre[tag] = pre_ret
+                self.__run_num += 1
+            else:
+                self.pre[tag] = self.call(low, chunks, running)
+                if not self.pre[tag]["changes"] and status == "change":
+                    self.pre[tag]["changes"] = {"watch": "watch"}
+                    self.pre[tag]["result"] = None
         else:
             depth += 1
             # even this depth is being generous. This shouldn't exceed 1 no
@@ -4052,10 +4206,12 @@ class BaseHighState:
                     "The top file matches for saltenv {} are not "
                     "formatted as a dict".format(saltenv)
                 )
-            for slsmods in matches.values():
+            for match, slsmods in matches.items():
                 if not isinstance(slsmods, list):
                     errors.append(
-                        "Malformed topfile (state declarations not formed as a list)"
+                        "Malformed topfile: state declarations for matcher"
+                        " {!r} in saltenv {!r} are not formed as a list (got"
+                        " {})".format(match, saltenv, type(slsmods).__name__)
                     )
                     continue
                 for slsmod in slsmods:
@@ -4246,6 +4402,12 @@ class BaseHighState:
                 mods.add(f"{saltenv}:{sls}")
             except AttributeError:
                 pass
+
+            # Track SLS files that were rendered, even if they produce no
+            # output (empty state), so they can satisfy requisites
+            # (Issue #30971)
+            if hasattr(self.state, "_processed_sls_files"):
+                self.state._processed_sls_files.add(sls)
 
         if state:
             if not isinstance(state, dict):
@@ -4873,19 +5035,35 @@ class HighState(BaseHighState):
         else:
             self.client = salt.fileclient.get_file_client(self.opts)
             self.preserve_client = False
-        BaseHighState.__init__(self, opts)
-        self.state = State(
-            self.opts,
-            pillar_override,
-            jid,
-            pillar_enc,
-            proxy=proxy,
-            context=context,
-            mocked=mocked,
-            loader=loader,
-            initial_pillar=initial_pillar,
-            file_client=self.client,
-        )
+        # If any of the calls below raise, destroy the file client we just
+        # allocated so its transport doesn't get finalized without close()
+        # (issue #69637 -- ``Unclosed transport!`` TransportWarning during
+        # interpreter shutdown).
+        try:
+            BaseHighState.__init__(self, opts)
+            self.state = State(
+                self.opts,
+                pillar_override,
+                jid,
+                pillar_enc,
+                proxy=proxy,
+                context=context,
+                mocked=mocked,
+                loader=loader,
+                initial_pillar=initial_pillar,
+                file_client=self.client,
+            )
+        except Exception:
+            if not self.preserve_client:
+                try:
+                    self.client.destroy()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "Error while destroying HighState file client "
+                        "after failed init",
+                        exc_info=True,
+                    )
+            raise
         self.matchers = salt.loader.matchers(self.opts)
         self.proxy = proxy
 
@@ -4946,6 +5124,10 @@ class MasterState(State):
         # from the minion, but uses remote execution
         #
         self.functions = salt.client.FunctionWrapper(self.opts, self.opts["id"])
+        # Master-side compile has no two-loader model (FunctionWrapper
+        # doesn't expose ``_dunder_salt``); trusted internal composition
+        # falls back to the same wrapper the wire uses.
+        self._trusted_functions = self.functions
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.utils = salt.loader.utils(self.opts)

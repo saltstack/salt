@@ -381,10 +381,14 @@ def _check_skip(grains):
 @pytest.mark.skip_initial_gh_actions_failure(skip=_check_skip)
 def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_cli):
     """
-    Tests return of minion using grains targeting on a disconnected minion.
-    """
-    expected_output = "Minion did not return. [No response]"
+    Tests grains targeting against a disconnected minion (#68976).
 
+    A minion whose key has been accepted but which has never returned grain
+    data to the master must not match any grain expression, because the
+    master has no grain data to evaluate against. The CLI should report
+    "No return received" (exit code 2) instead of silently including the
+    disconnected minion in the "expected returners" wait set.
+    """
     # Create a minion key, but do not start the "fake" minion. This mimics a
     # disconnected minion.
     disconnected_minion_id = "disconnected"
@@ -402,9 +406,10 @@ def test_grains_targeting_minion_id_disconnected(salt_master, salt_minion, salt_
             minion_tgt=f"id:{disconnected_minion_id}",
             _timeout=30,
         )
-        assert ret.returncode == 1
-        assert disconnected_minion_id in ret.data
-        assert expected_output in ret.data[disconnected_minion_id]
+        # No minion returned, so the CLI emits "No return received" and exits 2.
+        assert ret.returncode == 2
+        assert ret.data == {}
+        assert "No return received" in ret.stderr
 
 
 def test_regrain(salt_cli, salt_minion, salt_sub_minion):

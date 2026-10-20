@@ -68,12 +68,10 @@ ESXCLI
 Currently, about a third of the functions used in the vSphere Execution Module require
 the ESXCLI package be installed on the machine running the Proxy Minion process.
 
-The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. VMware
-provides vCLI package installation instructions for `vSphere 5.5`_ and
-`vSphere 6.0`_.
+The ESXCLI package is also referred to as the VMware vSphere CLI, or vCLI. See
+the `VMware vSphere documentation`_ for vCLI package installation instructions.
 
-.. _vSphere 5.5: http://pubs.vmware.com/vsphere-55/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
-.. _vSphere 6.0: http://pubs.vmware.com/vsphere-60/index.jsp#com.vmware.vcli.getstart.doc/cli_install.4.2.html
+.. _VMware vSphere documentation: https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/vsphere-supervisor-installation-and-configuration.html
 
 Once all of the required dependencies are in place and the vCLI package is
 installed, you can check to see if you can connect to your ESXi host or vCenter
@@ -99,7 +97,7 @@ You should see output related to the ESXi host's syslog configuration.
 
     Please see the `vSphere Comparison`_ page for more information.
 
-.. _vSphere Comparison: https://www.vmware.com/products/vsphere/compare
+.. _vSphere Comparison: https://www.vmware.com/products/vsphere.html#compare
 
 
 About
@@ -1261,8 +1259,6 @@ def set_syslog_config(
         Value for the above parameter. For ``loghost``, URLs or IP addresses to
         use for logging. Multiple log servers can be specified by listing them,
         comma-separated, but without spaces before or after commas.
-
-        (reference: https://blogs.vmware.com/vsphere/2012/04/configuring-multiple-syslog-servers-for-esxi-5.html)
 
     protocol
         Optionally set to alternate protocol if the host is not using the default
@@ -8106,9 +8102,10 @@ def add_host_to_dvs(
 
     This was very difficult to figure out.  VMware's PyVmomi documentation at
 
-    https://github.com/vmware/pyvmomi/blob/master/docs/vim/DistributedVirtualSwitch.rst
-    (which is a copy of the official documentation here:
-    https://www.vmware.com/support/developer/converter-sdk/conv60_apireference/vim.DistributedVirtualSwitch.html)
+    https://github.com/vmware/pyvmomi
+    (the official vSphere Web Services API reference for ``vim.DistributedVirtualSwitch``
+    is here:
+    https://developer.broadcom.com/xapis/vsphere-web-services-api/latest/vim.DistributedVirtualSwitch.html)
 
     says to create the DVS, create distributed portgroups, and then add the
     host to the DVS specifying which physical NIC to use as the port backing.
@@ -8116,7 +8113,8 @@ def add_host_to_dvs(
     to vSphere, this will fail with an unhelpful "busy" error.
 
     There is, however, a Powershell PowerCLI cmdlet called Add-VDSwitchPhysicalNetworkAdapter
-    that does what we want.  I used Onyx (https://labs.vmware.com/flings/onyx)
+    that does what we want.  I used Onyx (search for it at
+    https://community.broadcom.com/flings/home)
     to sniff the SOAP stream from Powershell to our vSphere server and got
     this snippet out:
 

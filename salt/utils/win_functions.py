@@ -92,6 +92,33 @@ def is_elevated():
         return False
 
 
+def is_domain_controller():
+    """
+    Detect whether the current machine is a Windows Domain Controller.
+
+    Reads ``HKLM\\SYSTEM\\CurrentControlSet\\Control\\ProductOptions\\ProductType``
+    directly. A value of ``LanmanNT`` indicates a Domain Controller.
+
+    Returns:
+        bool: ``True`` if the machine is a Domain Controller, ``False``
+        otherwise (including on error).
+    """
+    # Direct registry read is used instead of WMI intentionally: this function
+    # is called on every policy write, and a RegQueryValueEx is sub-millisecond
+    # vs. 100ms+ for a WMI/DCOM round-trip. WMI reads from this key internally.
+    try:
+        import salt.utils.win_reg
+
+        result = salt.utils.win_reg.read_value(
+            hive="HKLM",
+            key=r"SYSTEM\CurrentControlSet\Control\ProductOptions",
+            vname="ProductType",
+        )
+        return result.get("vdata") == "LanmanNT"
+    except Exception:  # pylint: disable=broad-exception-caught
+        return False
+
+
 def get_user_groups(name, sid=False):
     """
     Get the groups to which a user belongs

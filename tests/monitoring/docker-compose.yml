@@ -1,0 +1,118 @@
+services:
+  salt-master:
+    build:
+      context: ../..
+      dockerfile: tests/monitoring/Dockerfile.salt
+    container_name: salt-master
+    entrypoint: ["/usr/bin/tini", "--"]
+    command: ["sh", "-c", "salt-master -d && salt-api"]
+    volumes:
+      - ../../salt:/app/salt
+      - ./master.conf:/etc/salt/master
+      - ./minion.conf:/etc/salt/minion
+      - ./srv/salt:/srv/salt
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      - ./pki/master:/etc/salt/pki
+      - ./ids/master_id:/etc/salt/minion_id
+    ports:
+      - "44505:44505"
+      - "44506:44506"
+      - "18000:8000"
+    networks:
+      salt-net:
+        aliases:
+          - salt
+
+  salt-minion-1:
+    build:
+      context: ../..
+      dockerfile: tests/monitoring/Dockerfile.salt
+    container_name: salt-minion-1
+    hostname: salt-minion-1
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../salt:/app/salt
+      - ./minion.conf:/etc/salt/minion
+      - ./pki/minion-1:/etc/salt/pki
+      - ./ids/minion-1_id:/etc/salt/minion_id
+    depends_on:
+      - salt-master
+    networks:
+      - salt-net
+
+  salt-minion-2:
+    build:
+      context: ../..
+      dockerfile: tests/monitoring/Dockerfile.salt
+    container_name: salt-minion-2
+    hostname: salt-minion-2
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../salt:/app/salt
+      - ./minion.conf:/etc/salt/minion
+      - ./pki/minion-2:/etc/salt/pki
+      - ./ids/minion-2_id:/etc/salt/minion_id
+    depends_on:
+      - salt-master
+    networks:
+      - salt-net
+
+  salt-minion-3:
+    build:
+      context: ../..
+      dockerfile: tests/monitoring/Dockerfile.salt
+    container_name: salt-minion-3
+    hostname: salt-minion-3
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../salt:/app/salt
+      - ./minion.conf:/etc/salt/minion
+      - ./pki/minion-3:/etc/salt/pki
+      - ./ids/minion-3_id:/etc/salt/minion_id
+    depends_on:
+      - salt-master
+    networks:
+      - salt-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus_data:/prometheus
+    ports:
+      - "19090:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    ports:
+      - "18081:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - salt-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "13000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    networks:
+      - salt-net
+
+networks:
+  salt-net:
+    driver: bridge

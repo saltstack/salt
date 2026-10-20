@@ -79,6 +79,32 @@ def test_ssh_kwargs(opts, roster):
         assert client.defaults["identities_only"] is True
 
 
+def test_ssh_fsclient_refreshes_fileserver(opts):
+    """
+    Regression test for #66148.
+
+    salt-ssh loads its opts via ``salt.config.master_config`` which sets
+    ``__fs_update = True`` to suppress fileserver refreshes for the master
+    daemon (which has its own maintenance thread). salt-ssh has no such
+    maintenance thread, so the ``FSClient`` it instantiates must refresh
+    the fileserver backends, otherwise ``gitfs_remotes`` are never fetched
+    and wrappers like ``cp.list_states`` see no gitfs content.
+    """
+    # Simulate the opts as they come out of ``salt.config.master_config``.
+    opts["__fs_update"] = True
+    opts["file_client"] = "local"
+    opts["tgt"] = "localhost"
+
+    with patch("salt.roster.get_roster_file", MagicMock(return_value="")), patch(
+        "salt.client.ssh.shell.gen_key"
+    ), patch("salt.utils.thin.gen_thin"), patch(
+        "salt.fileserver.Fileserver"
+    ) as fileserver_mock:
+        client = ssh.SSH(opts)
+
+    assert client.fsclient.channel.fs.update.call_count == 1
+
+
 def test_expand_target_ip_address(opts, roster):
     """
     test expand_target when target is root@<ip address>

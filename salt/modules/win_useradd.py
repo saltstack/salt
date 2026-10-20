@@ -533,7 +533,15 @@ def setpassword(name, password):
 
         salt '*' user.setpassword jsnuffy sup3rs3cr3t
     """
-    return update(name=name, password=password)
+    # update() returns the Win32 error string on failure (e.g. when the user
+    # does not exist), which is truthy and would otherwise be misreported as
+    # success by callers that check the return value as a boolean. Verify the
+    # user exists first so we can return a proper ``False`` and surface a
+    # clear log message.
+    if not info(name):
+        log.error("User '%s' does not exist", name)
+        return False
+    return update(name=name, password=password) is True
 
 
 def addgroup(name, group):

@@ -2,6 +2,7 @@
 Support for DEB packages
 """
 
+import datetime
 import logging
 import os
 import re
@@ -11,7 +12,6 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.path
 import salt.utils.stringutils
-import salt.utils.timeutil
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
@@ -254,8 +254,10 @@ def _get_pkg_info(*packages, **kwargs):
         bin_var = "${Package}"
 
     ret = []
-    cmd = (
-        "dpkg-query -W -f='package:" + bin_var + "\\n"
+    cmd = [
+        "dpkg-query",
+        "-W",
+        "-f=package:" + bin_var + "\\n"
         "revision:${binary:Revision}\\n"
         "architecture:${Architecture}\\n"
         "maintainer:${Maintainer}\\n"
@@ -271,11 +273,10 @@ def _get_pkg_info(*packages, **kwargs):
         "origin:${Origin}\\n"
         "homepage:${Homepage}\\n"
         "status:${db:Status-Abbrev}\\n"
+        "install_date:${db-fsys:Last-Modified}\\n"
         "description:${Description}\\n"
-        "\\n*/~^\\\\*\\n'"
-    )
-    cmd += " {}".format(" ".join(packages))
-    cmd = cmd.strip()
+        "\\n*/~^\\\\*\\n",
+    ] + list(packages)
 
     call = __salt__["cmd.run_all"](cmd, python_shell=False)
     if call["retcode"]:
@@ -297,11 +298,22 @@ def _get_pkg_info(*packages, **kwargs):
             el.strip() for el in pkg_info.split(os.linesep) if el.strip()
         ]:
             key, value = pkg_info_line.split(":", 1)
+            if key == "install_date":
+                # ${db-fsys:Last-Modified} is a Unix timestamp; convert to ISO
+                # format in UTC. Empty/non-integer values (older dpkg, packages
+                # without that field) are skipped.
+                try:
+                    value = (
+                        datetime.datetime.fromtimestamp(
+                            int(value), tz=datetime.timezone.utc
+                        )
+                        .isoformat()
+                        .replace("+00:00", "Z")
+                    )
+                except ValueError:
+                    value = None
             if value:
                 pkg_data[key] = value
-            install_date = _get_pkg_install_time(pkg_data.get("package"))
-            if install_date:
-                pkg_data["install_date"] = install_date
         pkg_data["description"] = pkg_descr
         ret.append(pkg_data)
 
@@ -327,53 +339,42 @@ def _get_pkg_license(pkg):
     return ", ".join(sorted(licenses))
 
 
-def _get_pkg_install_time(pkg):
-    """
-    Return package install time, based on the /var/lib/dpkg/info/<package>.list
-
-    :return:
-    """
-    iso_time = None
-    if pkg is not None:
-        location = f"/var/lib/dpkg/info/{pkg}.list"
-        if os.path.exists(location):
-            iso_time = (
-                salt.utils.timeutil.utcfromtimestamp(
-                    int(os.path.getmtime(location))
-                ).isoformat()
-                + "Z"
-            )
-
-    return iso_time
-
-
 def _get_pkg_ds_avail():
     """
-    Get the package information of the available packages, maintained by dselect.
-    Note, this will be not very useful, if dselect isn't installed.
+    Get the package information of the available packages via
+    ``dpkg-query --print-avail``. Returns an empty dict when ``dselect`` is
+    not installed (the legacy ``/var/lib/dpkg/available`` file is only
+    maintained by dselect).
+
+    Previously this read ``/var/lib/dpkg/available`` directly, which is a
+    dpkg internal file. Now uses the public ``dpkg-query`` interface to get
+    the same data; see https://lintian.debian.org/tags/uses-dpkg-database-directly.
 
     :return:
     """
-    avail = "/var/lib/dpkg/available"
-    if not salt.utils.path.which("dselect") or not os.path.exists(avail):
-        return dict()
+    if not salt.utils.path.which("dselect"):
+        return {}
 
-    # Do not update with dselect, just read what is.
-    ret = dict()
+    call = __salt__["cmd.run_all"](
+        ["dpkg-query", "--print-avail"], python_shell=False, ignore_retcode=True
+    )
+    if call["retcode"]:
+        return {}
+
+    ret = {}
     pkg_mrk = "Package:"
     pkg_name = "package"
-    with salt.utils.files.fopen(avail) as fp_:
-        for pkg_info in salt.utils.stringutils.to_unicode(fp_.read()).split(pkg_mrk):
-            nfo = dict()
-            for line in (pkg_mrk + pkg_info).split(os.linesep):
-                line = line.split(": ", 1)
-                if len(line) != 2:
-                    continue
-                key, value = line
-                if value.strip():
-                    nfo[key.lower()] = value
-            if nfo.get(pkg_name):
-                ret[nfo[pkg_name]] = nfo
+    for pkg_info in call["stdout"].split(pkg_mrk):
+        nfo = {}
+        for line in (pkg_mrk + pkg_info).split(os.linesep):
+            line = line.split(": ", 1)
+            if len(line) != 2:
+                continue
+            key, value = line
+            if value.strip():
+                nfo[key.lower()] = value
+        if nfo.get(pkg_name):
+            ret[nfo[pkg_name]] = nfo
 
     return ret
 
@@ -402,8 +403,9 @@ def info(*packages, **kwargs):
         salt '*' lowpkg.info apache2 bash
         salt '*' lowpkg.info 'php5*' failhard=false
     """
-    # Get the missing information from the /var/lib/dpkg/available, if it is there.
-    # However, this file is operated by dselect which has to be installed.
+    # Get the missing information via `dpkg-query --print-avail`, if dselect is
+    # installed. This data is only kept up-to-date by dselect, so it is only
+    # queried when dselect is present.
     dselect_pkg_avail = _get_pkg_ds_avail()
 
     kwargs = salt.utils.args.clean_kwargs(**kwargs)

@@ -2145,6 +2145,28 @@ Returns:
   "2001:db8::250:56ff:fe01:203"
 
 
+.. jinja_ref:: cidr_to_ipv4_netmask
+
+``cidr_to_ipv4_netmask``
+------------------------
+
+.. versionadded:: 3009.0
+
+Returns the dotted-decimal IPv4 netmask for a CIDR prefix length.
+
+Example:
+
+.. code-block:: jinja
+
+  {{ 24 | cidr_to_ipv4_netmask }}
+
+Returns:
+
+.. code-block:: python
+
+  "255.255.255.0"
+
+
 .. jinja_ref:: network_hosts
 
 ``network_hosts``

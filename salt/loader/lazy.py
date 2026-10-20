@@ -392,6 +392,54 @@ class LazyLoader(salt.utils.lazy.LazyDict):
     def _get_lock(self):
         return threading.RLock()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    def destroy(self):
+        """
+        Destroy the loader.
+
+        This is intentionally a no-op. The earlier 3006.x leak-fix
+        (``33ad623aa4a``) added internal-state clearing here -- calling
+        ``clean_modules()`` (sys.modules eviction), ``self.pack.clear()``,
+        ``self._dict.clear()``, ``self.loaded_modules.clear()`` and
+        ``self.missing_modules.clear()`` -- so callers like
+        ``LocalClient.destroy()`` / ``MasterMinion.destroy()`` /
+        ``RunnerClient.__exit__`` would proactively free LazyLoader memory.
+
+        After dropping ``clean_modules()`` (commit ``2d119bba048``) the
+        rest_tornado functional suite still timed out (CI 28333916927 had
+        the same 86 failures as the prior round). Round-6 investigation
+        narrowed the remaining cost to the LazyLoader state-clearing
+        itself: ``LocalClient.__del__`` runs synchronously during Python
+        GC inside the tornado io_loop, and the cascading destroy() chain
+        (LocalClient -> functions/utils/returners LazyLoaders ->
+        ``pack.clear`` / ``_dict.clear`` / ``loaded_modules.clear``) stalls
+        the loop for several seconds per request -- exactly the symptom
+        reported in CI (~6-7 s per ``http_client.fetch`` vs ~30 ms on the
+        3007.x baseline).
+
+        Reverting ``destroy()`` to a no-op restores the 3007.x behavior
+        (LazyLoader objects are reclaimed by Python's normal GC when their
+        owner dies) without re-introducing the original ``clean_modules``
+        sys.modules thrash. The ``__enter__``/``__exit__`` shape is kept so
+        the per-request ``with RunnerClient(...) as runner:`` / ``with
+        WheelClient(...) as wheel:`` blocks added in
+        ``salt/netapi/__init__.py`` and ``salt/daemons/masterapi.py``
+        continue to compile and run without raising AttributeError --
+        their ``__exit__`` paths just stop interfering with the loader.
+
+        ``clean_modules()`` remains a public method for the one caller
+        that still needs sys.modules eviction (``loader.grains`` after a
+        grains refresh). Long-term cleanup of LazyLoader memory in
+        long-running daemons should be handled at the daemon scope
+        (Maintenance / MWorker recycle), not on the per-request
+        ``LocalClient.__del__`` hot path.
+        """
+
     def clean_modules(self):
         """
         Clean modules and free memory for this loader's tag only.
@@ -486,6 +534,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             return object.__getattr__(self, mod_name)  # pylint: disable=no-member
         except AttributeError:
             pass
+
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``__getitem__`` reaches ``_load`` which enforces ``self.whitelist``,
+        # but attribute-style access -- used by Jinja's ``salt.cmd.run(...)``
+        # syntax via :class:`salt.utils.templates.AliasedLoader` / the
+        # ``LoadedMod`` wrapper -- bypasses ``_load`` and returns a
+        # ``LoadedMod`` whose per-function ``getattr`` never touches the
+        # gate.  Reject non-whitelisted modules here with ``AttributeError``
+        # so ``hasattr(salt, 'cmd')`` / Jinja's ``undefined`` fallthrough
+        # behave correctly.
+        if self.whitelist and mod_name not in self.whitelist:
+            raise AttributeError(mod_name)
 
         # otherwise we assume its jinja template access
         if mod_name not in self.loaded_modules and not self.loaded:
@@ -817,9 +877,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # but the log will get spammed with "Bad Magic Number" messages that
         # can be very misleading if the user is debugging another problem.
         try:
-            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
-                "-"
-            )
+            implementation_tag, cache_tag_ver = sys.implementation.cache_tag.split("-")
             if cache_tag_ver not in fpath and implementation_tag in fpath:
                 log.trace(
                     "Trying to load %s on %s, returning False.",
@@ -833,9 +891,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
+        fpath_appended = False
         try:
             self.__populate_sys_path()
-            sys.path.append(fpath_dirname)
+            if fpath_dirname not in sys.path:
+                sys.path.append(fpath_dirname)
+                fpath_appended = True
             if suffix == ".pyx":
                 mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             elif suffix == ".o":
@@ -973,7 +1034,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         finally:
-            sys.path.remove(fpath_dirname)
+            if fpath_appended:
+                sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
         loader_context = salt.loader.context.LoaderContext()
@@ -1080,10 +1142,27 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # if _process_virtual returned a non-True value then we are
                 # supposed to not process this module
-                if virtual_ret is not True and module_name not in self.missing_modules:
-                    # If a module has information about why it could not be loaded, record it
-                    self.missing_modules[module_name] = virtual_err
+                if virtual_ret is not True:
+                    # Always record the per-file reason; `name` is unique.
                     self.missing_modules[name] = virtual_err
+                    # The virtualname (module_name) can collide when multiple
+                    # files declare the same __virtualname__ (e.g. x509 and
+                    # x509_v2 both use "x509"). If we've already recorded a
+                    # reason for this virtualname, append the new one so the
+                    # user sees every failure, not just the first.
+                    if module_name not in self.missing_modules:
+                        self.missing_modules[module_name] = virtual_err
+                    elif virtual_err is not None:
+                        existing = self.missing_modules[module_name]
+                        if existing is None:
+                            self.missing_modules[module_name] = virtual_err
+                        else:
+                            existing_str = str(existing)
+                            new_str = str(virtual_err)
+                            if new_str and new_str not in existing_str.split("; "):
+                                self.missing_modules[module_name] = (
+                                    f"{existing_str}; {new_str}"
+                                )
                     return False
         else:
             virtual_aliases = ()
@@ -1340,6 +1419,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             mod.__name__,
                             module_name,
                         )
+
+                    # If the module explicitly declares __virtualname__, report
+                    # the failure under that name so the caller can detect
+                    # collisions with other modules claiming the same name.
+                    if (
+                        hasattr(mod, "__virtualname__")
+                        and isinstance(virtualname, str)
+                        and virtualname
+                    ):
+                        module_name = virtualname
 
                     return (False, module_name, error_reason, virtual_aliases)
 

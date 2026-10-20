@@ -445,6 +445,13 @@ class SSH(MultiprocessingStateMixin):
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
+        # salt-ssh has no maintenance thread to refresh fileserver backends
+        # (e.g. gitfs_remotes). master_config() sets ``__fs_update = True``
+        # to suppress the refresh done by FSChan, on the assumption that the
+        # master daemon's maintenance thread will keep things current. Remove
+        # the flag here so the FSClient instantiated for salt-ssh triggers an
+        # initial refresh of the fileserver backends.
+        self.opts.pop("__fs_update", None)
         self.fsclient = salt.fileclient.FSClient(self.opts)
         if self.opts.get("relenv"):
             self.thin = None
@@ -1138,6 +1145,7 @@ class Single:
         mods=None,
         fsclient=None,
         thin=None,
+        relenv=False,
         mine=False,
         minion_opts=None,
         identities_only=False,
@@ -1163,6 +1171,12 @@ class Single:
             self.wipe = False
         else:
             self.wipe = bool(self.opts.get("ssh_wipe"))
+        # Allow the roster to enable relenv per-host, mirroring the --relenv
+        # CLI flag.  This is additive only: an explicit CLI/global True must
+        # not be silently downgraded by a roster that omits the key.
+        # See #69885.
+        if relenv:
+            self.opts["relenv"] = True
         if kwargs.get("thin_dir"):
             self.thin_dir = kwargs["thin_dir"]
         elif self.winrm:
@@ -1282,7 +1296,17 @@ class Single:
                 f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
             )
             self.minion_opts["module_dirs"] = self.opts["module_dirs"]
-            self.minion_opts["__master_opts__"] = self.context["master_opts"]
+            # Note: __master_opts__ is intentionally NOT added here. It's a
+            # master-side-only convention consumed by the Python wrapper
+            # modules (salt/client/ssh/wrapper/*.py) while they run on the
+            # master -- nothing on the remote target reads it from its own
+            # minion config. self.context["master_opts"] is also mutated as
+            # nested Single/wrapper calls restore/adjust the master cachedir
+            # (see #69605, #68458), so embedding it here caused this
+            # (otherwise fixed-size) minion config to grow, unbounded, with
+            # every nested Single created during a single state run, until
+            # it exceeded the kernel's ARG_MAX and the ssh command failed
+            # with "Argument list too long" (#70186).
 
             # Re-serialize the minion config after updating relenv-specific paths
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
@@ -1660,6 +1684,15 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
+        # Do not propagate the per-minion ``cachedir`` (which is rooted under
+        # the on-target ``thin_dir``) onto the master-side fileclient. The
+        # fileclient lives on the master and serves files for state rendering
+        # there; pointing its ``cachedir`` at a thin_dir path causes the
+        # master to cache state fileserver artifacts under that path on the
+        # master filesystem (see #68458). The state ``cachedir`` is corrected
+        # inside ``SSHHighState`` / ``SSHState`` so the per-minion ``opts``
+        # surfaced to ssh wrapper modules (e.g. ``config.get cachedir``)
+        # still reports the minion's cachedir.
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 

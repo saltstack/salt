@@ -82,10 +82,11 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -397,10 +398,11 @@ msgpack==1.1.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1
@@ -664,7 +666,6 @@ requests==2.33.1
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -695,12 +696,6 @@ rpds-py==0.30.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -851,11 +846,6 @@ virtualenv==21.4.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -c requirements/static/pkg/py3.12/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock

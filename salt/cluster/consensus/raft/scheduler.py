@@ -9,6 +9,7 @@ use :class:`ManualTimeoutScheduler` for deterministic time.
 """
 
 import asyncio
+import inspect
 import logging
 import threading
 import time
@@ -53,6 +54,11 @@ class TimeoutScheduler:
 
     def schedule(self, timeout, callback):
         t = time.monotonic() + timeout
+        # Avoid clobbering an existing timeout scheduled for the exact same
+        # instant (millisecond-granularity randoms collide easily under the
+        # manual-clock tests).  Nudge forward by a tiny epsilon until unique.
+        while t in self.timeouts:
+            t += 1e-9
         self.timeouts[t] = callback
         return TimeoutHandle(self, t, callback)
 
@@ -71,6 +77,12 @@ class ManualTimeoutScheduler(TimeoutScheduler):
 
     def schedule(self, timeout, callback):
         t = self.time + timeout
+        # Same collision avoidance as the base scheduler; the manual clock
+        # doesn't advance between successive schedule() calls, so identical
+        # (self.time, timeout) pairs would otherwise silently overwrite one
+        # another and drop callbacks (or duplicate them into the wrong slot).
+        while t in self.timeouts:
+            t += 1e-9
         self.timeouts[t] = callback
         return TimeoutHandle(self, t, callback)
 
@@ -106,7 +118,7 @@ class AsyncTimeoutScheduler:
         def _wrapper():
             if state.cancelled:
                 return
-            if asyncio.iscoroutinefunction(callback):
+            if inspect.iscoroutinefunction(callback):
                 self.loop.create_task(callback())
             else:
                 callback()
@@ -145,6 +157,8 @@ class ThreadedTimeoutScheduler:
     def schedule(self, timeout, callback):
         with self._lock:
             t = time.monotonic() + timeout
+            while t in self.timeouts:
+                t += 1e-9
             self.timeouts[t] = callback
             return TimeoutHandle(self, t, callback)
 

@@ -6,12 +6,18 @@ import pytest
 from tests.conftest import FIPS_TESTRUN
 from tests.pytests.integration.cluster.conftest import (
     cluster_cache_path,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
     cluster_master_1,
+    cluster_master_1_isolated,
     cluster_master_2,
+    cluster_master_2_isolated,
     cluster_master_3,
     cluster_master_4,
     cluster_minion_1,
+    cluster_pillar_roots_path_isolated,
     cluster_pki_path,
+    cluster_pki_path_isolated,
     cluster_shared_path,
 )
 

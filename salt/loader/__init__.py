@@ -304,6 +304,89 @@ def _module_dirs(
     )
 
 
+def _resource_type_module_dirs(
+    opts,
+    ext_type,
+    tag=None,
+    int_type=None,
+    base_path=None,
+    load_extensions=True,
+):
+    """
+    Return ONLY the per-resource-type override directories for a given
+    ``ext_type`` (``modules``, ``states``, etc.) — no stock salt/ dir,
+    no plain extension_modules dir, no plain entry-point dir.
+
+    Layers checked, in priority order:
+
+    * ``<cli module_dir>/resources/<rtype>/<ext_type>/`` for each
+      ``opts["module_dirs"]`` entry
+    * ``<extension_modules>/resources/<rtype>/<ext_type>/``
+    * ``<entry-point-package>/resources/<rtype>/<ext_type>/`` for every
+      entry-point-contributed package under ``salt.loader``
+    * ``<SALT_BASE_PATH>/resources/<rtype>/<ext_type>/``
+
+    ``opts["resource_type"]`` MUST be set; if it is not, this returns an
+    empty list (callers should not build a resource-scoped loader
+    without a resource type).
+
+    This helper is what :func:`resource_modules` uses to build a
+    per-resource-type execution loader that is deny-by-default: only
+    modules explicitly shipped for the resource type are reachable via
+    ``__salt__`` in a resource context.  Managing-minion access remains
+    available via the ``__minion__`` escape hatch.
+    """
+    rtype = opts.get("resource_type")
+    if not rtype:
+        return []
+
+    subpath_parts = ("resources", rtype, int_type or ext_type)
+
+    def _per_type(base):
+        if not base:
+            return []
+        candidate = os.path.join(base, *subpath_parts)
+        return [candidate] if os.path.isdir(candidate) else []
+
+    cli_per_type = []
+    for _dir in opts.get("module_dirs", []):
+        cli_per_type.extend(_per_type(_dir))
+
+    ext_per_type = _per_type(opts.get("extension_modules"))
+
+    # Walk the same entry-point packages :func:`_module_dirs` would
+    # walk, but only accept their per-type overlay dir — never the
+    # entry-point's own ``<ext_type>`` root.
+    entry_point_per_type = []
+    if load_extensions:
+        for entry_point in entrypoints.iter_entry_points("salt.loader"):
+            with catch_entry_points_exception(entry_point) as ctx:
+                loaded_entry_point = entry_point.load()
+            if ctx.exception_caught:
+                continue
+            if isinstance(loaded_entry_point, types.ModuleType):
+                for loaded_entry_point_path in loaded_entry_point.__path__:
+                    entry_point_per_type.extend(_per_type(loaded_entry_point_path))
+            # Function-style entry points are considered path providers
+            # in :func:`_module_dirs`; we take their parent dir as the
+            # package root and probe for the per-type overlay under it.
+            elif isinstance(loaded_entry_point, types.FunctionType):
+                with catch_entry_points_exception(entry_point) as ctx:
+                    loaded_entry_point_value = loaded_entry_point()
+                if ctx.exception_caught:
+                    continue
+                if isinstance(loaded_entry_point_value, dict):
+                    for path in loaded_entry_point_value.get(ext_type, ()):
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+                else:
+                    for path in loaded_entry_point_value:
+                        entry_point_per_type.extend(_per_type(os.path.dirname(path)))
+
+    sys_per_type = _per_type(base_path or str(SALT_BASE_PATH))
+
+    return cli_per_type + ext_per_type + entry_point_per_type + sys_per_type
+
+
 def minion_mods(
     opts,
     context=None,
@@ -358,6 +441,14 @@ def minion_mods(
     # TODO Publish documentation for module whitelisting
     if not whitelist:
         whitelist = opts.get("whitelist_modules", None)
+    # Both loaders must share the same ``__context__`` dict.  If we
+    # leave it as ``None`` LazyLoader.__init__ replaces it with a fresh
+    # ``{}`` in each loader's ``self.pack``, so writes made via one
+    # loader's NamedLoaderContext never reach reads made via the other's.
+    # Materialising the dict here keeps both packs pointing at the same
+    # object.
+    if context is None:
+        context = {}
     pack = {
         "__context__": context,
         "__utils__": utils,
@@ -365,6 +456,26 @@ def minion_mods(
         "__opts__": opts,
         "__file_client__": file_client,
     }
+    # Two-loader model: outer loader is whitelist-filtered for wire
+    # dispatch; inner ``salt_dunder`` is unfiltered and packed as
+    # ``__salt__`` inside every loaded module, so a whitelisted module
+    # can still compose with non-whitelisted modules via ``__salt__[...]``.
+    # When no whitelist is set both loaders load the same set of modules;
+    # LazyLoader reuses an existing per-module ``LoaderContext`` when it
+    # encounters one, so both loaders share the same NamedLoaderContext
+    # bindings and per-module ``__context__`` state stays consistent.
+    salt_dunder = LazyLoader(
+        _module_dirs(opts, "modules", "module"),
+        opts,
+        tag="module",
+        pack=pack,
+        loaded_base_name=loaded_base_name,
+        static_modules=static_modules,
+        extra_module_dirs=utils.module_dirs if utils else None,
+        pack_self="__salt__",
+    )
+    pack = dict(pack)
+    pack["__salt__"] = salt_dunder
     if pillar is not None:
         pack["__pillar__"] = pillar
     ret = LazyLoader(
@@ -376,12 +487,43 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
-        pack_self="__salt__",
     )
+
+    # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
+    # pre-split-loader tests injected mocks that both the wire-dispatch path
+    # AND internal ``__salt__[...]`` composition would see, because there was
+    # only one loader.  With the split, exec modules' ``__salt__`` is now the
+    # unfiltered inner ``salt_dunder`` and writes to ``ret`` don't reach it.
+    # Mirror writes made on ``ret`` into ``salt_dunder._dict`` so the classic
+    # ``patch.dict(ret, ...)`` idiom still works; reads through ``ret`` still
+    # go through ``_load()`` (which enforces the whitelist) so the security
+    # boundary at wire dispatch is preserved.
+    _salt_dunder = salt_dunder
+
+    class _WriteThroughLoader(type(ret)):  # noqa: N801
+        __module__ = type(ret).__module__
+
+        def __setitem__(self, key, val):
+            LazyLoader.__setitem__(self, key, val)
+            _salt_dunder._dict[key] = val
+
+        def __delitem__(self, key):
+            LazyLoader.__delitem__(self, key)
+            _salt_dunder._dict.pop(key, None)
+
+    ret.__class__ = _WriteThroughLoader
+
+    # Expose the unfiltered inner loader on the outer loader so downstream
+    # loader factories (e.g. ``salt.loader.states``) can propagate the same
+    # two-loader model:  wire dispatch reads through ``ret`` and is
+    # whitelist-gated, but internal ``__salt__[...]`` composition inside
+    # trusted shipped code (state modules, execution modules) reads through
+    # ``salt_dunder`` and is not gated.
+    ret._dunder_salt = salt_dunder
 
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
-        utils.pack["__salt__"] = ret
+        utils.pack["__salt__"] = salt_dunder
 
     # Load any provider overrides from the configuration file providers option
     #  Note: Providers can be pkg, service, user or group - not to be confused
@@ -511,9 +653,18 @@ def engines(opts, functions, runners, utils, proxy=None, loaded_base_name=None):
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+
+    Engines are internal Salt machinery (operator-configured, not
+    user-dispatched over the wire), so they receive the unfiltered inner
+    loader (``functions._dunder_salt`` when present) as ``__salt__``.
+    This lets shipped engines such as ``salt.engines.slack`` /
+    ``salt.engines.webhook`` compose with ``event.send`` / ``pillar.get``
+    even when the operator's ``whitelist_modules`` scopes the wire-facing
+    outer loader down.  Falls back to ``functions`` for salt-ssh
+    ``FunctionWrapper`` and plain-dict test fixtures.
     """
     pack = {
-        "__salt__": functions,
+        "__salt__": getattr(functions, "_dunder_salt", None) or functions,
         "__runners__": runners,
         "__proxy__": proxy,
         "__utils__": utils,
@@ -633,6 +784,16 @@ def resource_modules(
     a key), and call ``__salt__["x.y"]`` to dispatch through the
     resource itself.
 
+    The loader is **deny-by-default**: only modules discovered under
+    ``resources/<resource_type>/modules/`` overlay directories are
+    reachable via ``__salt__``.  Stock ``salt/modules/*`` are NOT
+    exposed here; targeting a resource with a stock function name
+    (``salt <rid> cmd.run …``) surfaces the "Function 'cmd.run' is not
+    supported for resource type 'X'" guard in ``_thread_return``
+    instead of silently running against the managing minion.  Types
+    that intentionally want stock behavior ship a thin override that
+    calls back through ``__minion__``.
+
     :param dict opts: The Salt options dictionary.  A copy is made and
         ``resource_type`` is injected before passing to the loader.
     :param str resource_type: The resource type string (e.g. ``"dummy"``).
@@ -665,7 +826,7 @@ def resource_modules(
         pack["__minion__"] = minion_mods
 
     return LazyLoader(
-        _module_dirs(resource_opts, "modules", "module"),
+        _resource_type_module_dirs(resource_opts, "modules", "module"),
         resource_opts,
         tag="module",
         pack=pack,
@@ -980,14 +1141,18 @@ def states(
     loaded_base_name=None,
     file_client=None,
     minion_mods=None,
+    dunder_salt=None,
 ):
     """
     Returns the state modules
 
     :param dict opts: The Salt options dictionary
     :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``
-        (or, in a resource context, from ``resource_modules``).  This becomes
-        ``__salt__`` for state modules.
+        (or, in a resource context, from ``resource_modules``).  In the
+        two-loader model this is the wire-filtered (``whitelist_modules``)
+        outer loader; it is packed as ``__wire_salt__`` on every loaded state
+        module so state code that legitimately dispatches an SLS-supplied
+        function name (e.g. ``salt.states.module.run``) stays whitelist-gated.
     :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
     :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
     :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
@@ -1002,6 +1167,21 @@ def states(
         modules running in a resource context can call back into the
         managing minion explicitly.  Typically the result of
         ``salt.loader.minion_mods(opts)``.
+    :param LazyLoader dunder_salt: Optional unfiltered execution-module
+        loader (the inner ``salt_dunder`` produced by :func:`minion_mods`).
+        When supplied it is packed as ``__salt__`` for every state module,
+        so trusted shipped code such as ``file.managed`` can compose with
+        non-whitelisted execution modules (e.g. ``file.source_list``)
+        even when ``whitelist_modules`` is set.  When ``None`` the caller's
+        ``functions`` is used for backwards compatibility.
+
+    When ``whitelist`` is not passed explicitly the ``whitelist_state_modules``
+    minion option is consulted; it is the state-loader counterpart to
+    ``whitelist_modules`` (which gates execution modules) and lets an
+    operator restrict which state modules an SLS is allowed to declare.
+    State modules whose name is not on the list will not load, so an SLS
+    that references them fails compile with
+    ``"State '<mod>.<fun>' was not found in SLS ..."``.
 
     .. code-block:: python
 
@@ -1014,8 +1194,26 @@ def states(
     if context is None:
         context = {}
 
+    # Two-loader model for states:
+    #   * ``__salt__``      -> unfiltered ``dunder_salt`` when supplied, so
+    #                          shipped state modules can call any exec
+    #                          module they need internally.
+    #   * ``__wire_salt__`` -> whitelist-filtered ``functions``, for state
+    #                          modules that dispatch an SLS-supplied exec
+    #                          module name (``salt.states.module.run`` /
+    #                          ``.function``) so those stay gated.
+    salt_pack = dunder_salt if dunder_salt is not None else functions
+
+    # State-loader whitelist gate (counterpart to ``whitelist_modules``
+    # for exec modules).  Only auto-fetch when the caller didn't pin
+    # ``whitelist=`` explicitly, matching the pattern in
+    # ``salt.loader.minion_mods``.
+    if not whitelist:
+        whitelist = opts.get("whitelist_state_modules", None)
+
     pack = {
-        "__salt__": functions,
+        "__salt__": salt_pack,
+        "__wire_salt__": functions,
         "__proxy__": proxy or {},
         "__utils__": utils,
         "__serializers__": serializers,
@@ -1048,12 +1246,23 @@ def beacons(opts, functions, context=None, proxy=None, loaded_base_name=None):
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
+
+    Beacons are internal Salt minion machinery (operator-configured, not
+    user-dispatched over the wire), so they receive the unfiltered inner
+    loader (``functions._dunder_salt`` when present) as ``__salt__``.
+    Shipped beacons such as ``salt.beacons.status`` (which invokes
+    ``__salt__[f"status.{func}"]``) or ``salt.beacons.sh`` (``status.procs()``)
+    then compose with their helper execution modules regardless of the
+    operator's ``whitelist_modules`` setting.  Falls back to
+    ``functions`` for salt-ssh ``FunctionWrapper`` and plain-dict test
+    fixtures.
     """
+    salt_pack = getattr(functions, "_dunder_salt", None) or functions
     return LazyLoader(
         _module_dirs(opts, "beacons"),
         opts,
         tag="beacons",
-        pack={"__context__": context, "__salt__": functions, "__proxy__": proxy or {}},
+        pack={"__context__": context, "__salt__": salt_pack, "__proxy__": proxy or {}},
         virtual_funcs=[],
         loaded_base_name=loaded_base_name,
     )

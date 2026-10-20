@@ -373,6 +373,19 @@ class DependencyGraph:
                     )
         self.dag.add_edge(prereq_check_node, node_tag, RequisiteType.PREREQ)
         self.dag.add_edge(node_tag, req_tag, RequisiteType.REQUIRE)
+        # If node_tag already has its own prereq_check_node (because it
+        # is being prereq'd by another state), that prereq check must
+        # also depend on req_tag's prereq_check so nested prereq chains
+        # are evaluated in dependency order. Otherwise node_tag's prereq
+        # check would run in test mode before req_tag has been evaluated
+        # and unconditionally show pending changes.
+        node_prereq_check_node = self._get_prereq_node_tag(node_tag)
+        if self.dag.nodes.get(node_prereq_check_node):
+            self.dag.add_edge(
+                prereq_check_node,
+                node_prereq_check_node,
+                RequisiteType.PREREQ,
+            )
 
     def _add_reqs(
         self,

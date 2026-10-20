@@ -27,6 +27,7 @@ it applies to systems that dual-boot with Windows. This is explained in greater
 detail here_.
 """
 
+import salt.utils.platform
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 
@@ -47,7 +48,13 @@ def system(name, utc=True):
         The name of the timezone to use (e.g.: America/Denver)
 
     utc
-        Whether or not to set the hardware clock to UTC (default is True)
+        Whether or not to set the hardware clock to UTC (default is True).
+
+        .. note::
+            This parameter has no effect on Windows. The Windows hardware
+            clock is always set to local time and cannot be configured to
+            UTC via Salt. The state will succeed regardless of the value
+            passed here.
     """
     ret = {"name": name, "changes": {}, "result": None, "comment": ""}
     # Set up metadata
@@ -78,11 +85,13 @@ def system(name, utc=True):
         do_zone = True
 
     # If the user passed in utc, do a check
-    if utc and utc != myutc:
-        ret["result"] = None
-        do_utc = True
-    elif utc and utc == myutc:
-        messages.append(f"UTC already set to {name}")
+    # Windows hardware clock is always localtime and is not configurable
+    if not salt.utils.platform.is_windows():
+        if utc and utc != myutc:
+            ret["result"] = None
+            do_utc = True
+        elif utc and utc == myutc:
+            messages.append(f"UTC already set to {name}")
 
     if ret["result"] is True:
         ret["comment"] = ", ".join(messages)
@@ -92,7 +101,7 @@ def system(name, utc=True):
         messages = []
         if compzone is False:
             messages.append(f"Timezone {name} needs to be set")
-        if utc and myutc != utc:
+        if not salt.utils.platform.is_windows() and utc and myutc != utc:
             messages.append(f"UTC needs to be set to {utc}")
         ret["comment"] = ", ".join(messages)
         return ret

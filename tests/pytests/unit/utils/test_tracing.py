@@ -15,6 +15,12 @@ def _reset_tracing_state(monkeypatch):
     """Reset module-level state between tests so they are isolated."""
     tracing.shutdown()
     monkeypatch.setattr(tracing, "_cached_opts", None)
+    # Force _load_otel() to re-probe on next call so tests that flip
+    # tracing on don't rely on a stale _OTEL_AVAILABLE value from a
+    # previous test.  Import-once caching in sys.modules keeps re-probes
+    # cheap.
+    monkeypatch.setattr(tracing, "_OTEL_AVAILABLE", None)
+    monkeypatch.setattr(tracing, "_otel", None)
     yield
     tracing.shutdown()
 
@@ -266,9 +272,13 @@ def test_module_works_when_opentelemetry_missing():
             del sys.modules[cached]
 
         import salt.utils.tracing as t
-        assert t._OTEL_AVAILABLE is False, 'expected otel to look absent'
+        # _OTEL_AVAILABLE is now a tri-state; None until first probe.
+        # After configure(enabled=True) the probe fires (via _load_otel)
+        # and finds the blocker; the flag settles to False.
+        assert t._OTEL_AVAILABLE is None
         assert t.SpanKind.SERVER == 'SERVER'
         t.configure({'tracing': {'enabled': True}, '__role': 'master'})
+        assert t._OTEL_AVAILABLE is False, 'expected otel to look absent'
         assert t.is_enabled() is False, 'enabled must stay false without otel'
         with t.start_span('foo', kind=t.SpanKind.SERVER, attributes={'a': 'b'}) as s:
             assert s is t._NOOP_SPAN
@@ -288,6 +298,161 @@ def test_module_works_when_opentelemetry_missing():
         capture_output=True,
         text=True,
         timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
+def test_import_does_not_load_opentelemetry():
+    """
+    Regression test for the OTel eager-import baseline shift.
+
+    Importing ``salt.utils.tracing`` (as every daemon entry point does
+    transitively via ``salt.master`` / ``salt.minion`` /
+    ``salt.channel.*`` / ``salt.netapi.rest_cherrypy.app``) must not
+    cause ``opentelemetry`` to end up in ``sys.modules``.  Prior to the
+    fix, the module unconditionally imported the OTel SDK at module top,
+    adding ~15 MB per Python process (~225 MB across a 15-process
+    salt-master container) even though ``tracing.enabled`` defaults to
+    false.
+
+    Runs in a fresh subprocess so no earlier test that flipped tracing
+    on can pollute the assertion.
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+
+        # Sanity: nothing in the baseline interpreter has pulled in otel.
+        assert not any(k.startswith('opentelemetry') for k in sys.modules), (
+            'baseline interpreter already has opentelemetry loaded, '
+            'test cannot distinguish tracing-triggered imports'
+        )
+
+        import salt.utils.tracing  # noqa: F401
+
+        leaked = sorted(k for k in sys.modules if k.startswith('opentelemetry'))
+        assert not leaked, (
+            'salt.utils.tracing import pulled in opentelemetry: ' + repr(leaked)
+        )
+
+        # Also assert the disabled-path stays quiet.
+        salt.utils.tracing.configure({'tracing': {'enabled': False}})
+        with salt.utils.tracing.start_span('x'):
+            pass
+        leaked = sorted(k for k in sys.modules if k.startswith('opentelemetry'))
+        assert not leaked, (
+            'disabled tracing still pulled in opentelemetry: ' + repr(leaked)
+        )
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
+def test_enabling_tracing_loads_opentelemetry_lazily():
+    """
+    The mirror of :func:`test_import_does_not_load_opentelemetry`: when
+    ``tracing.enabled`` is true, ``configure()`` must trigger the OTel
+    import (otherwise the tracer stays null and no spans are emitted).
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+        import salt.utils.tracing as t
+
+        assert not any(k.startswith('opentelemetry') for k in sys.modules)
+        t.configure({'tracing': {'enabled': True, 'exporter': 'console',
+                                 'sampler': 'always_on'}})
+        assert t.is_enabled() is True
+        assert any(k.startswith('opentelemetry') for k in sys.modules), \
+            'enabling tracing should have imported opentelemetry'
+        with t.start_span('probe') as span:
+            assert span is not t._NOOP_SPAN
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
+def test_master_and_minion_imports_do_not_load_opentelemetry():
+    """
+    End-to-end guard for the whole daemon import chain.
+
+    ``salt.utils.tracing`` is imported transitively by ``salt.master``,
+    ``salt.minion``, ``salt.channel.client``, ``salt.channel.server``,
+    ``salt.utils.event`` and ``salt.netapi.rest_cherrypy.app``.  If any
+    module in that chain ever adds an eager top-level ``opentelemetry``
+    import, this test catches it -- without needing to reproduce a full
+    daemon startup.
+
+    Runs in a subprocess so the parent test-runner's opentelemetry
+    presence (pulled in by other tests) does not mask the failure.
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+
+        # The whole daemon-import chain.  If any of these modules pulls
+        # in opentelemetry at import time, we want to know.
+        import salt.utils.tracing  # noqa: F401
+        import salt.utils.event  # noqa: F401
+        import salt.channel.client  # noqa: F401
+        import salt.channel.server  # noqa: F401
+        import salt.master  # noqa: F401
+        import salt.minion  # noqa: F401
+
+        leaked = sorted(k for k in sys.modules if k.startswith('opentelemetry'))
+        assert not leaked, (
+            'importing salt master/minion chain pulled in opentelemetry: '
+            + repr(leaked)
+        )
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=90,
     )
     assert result.returncode == 0, (
         f"subprocess failed (rc={result.returncode}):\n"

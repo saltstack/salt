@@ -341,3 +341,61 @@ def test_check_queue_detects_queued_file_as_conflict():
 
         # Should have dumped payload
         assert mock_dump.called
+
+
+def test_event_handles_binary_payload(tmp_path):
+    """
+    state.event must not abort with UnicodeDecodeError when an event payload
+    contains arbitrary binary bytes (e.g. the DER-encoded certificate returned
+    by x509.sign_remote_certificate).
+
+    Regression test for #68411.
+    """
+    import json as _json
+
+    # A snippet of real DER-encoded cert bytes that cannot be UTF-8 decoded.
+    binary_payload = b"0\x82\x04\x8c\x82\x18\xb0"
+    fake_event = {
+        "tag": "salt/job/20251020115221844441/ret/localhost",
+        "data": {
+            "fun": "x509.sign_remote_certificate",
+            "return": {
+                "data": {"signing_cert": binary_payload},
+                "errors": [],
+            },
+        },
+    }
+
+    captured = []
+
+    class _FakeEvent:
+        def __init__(self, *args, **kwargs):
+            self._delivered = False
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def get_event(self, *args, **kwargs):
+            if self._delivered:
+                return None
+            self._delivered = True
+            return fake_event
+
+    def _capture(msg):
+        captured.append(msg)
+
+    with patch("salt.utils.event.get_event", _FakeEvent), patch(
+        "salt.utils.stringutils.print_cli", _capture
+    ), patch.dict(state.__opts__, {"sock_dir": str(tmp_path)}, create=True):
+        # count=1 so the loop exits after the single matched event.
+        state.event(tagmatch="*", count=1, quiet=False)
+
+    assert captured, "state.event did not emit the binary-payload event"
+    line = captured[0]
+    tag, _, body = line.partition("\t")
+    assert tag == fake_event["tag"]
+    parsed = _json.loads(body)
+    assert parsed["fun"] == "x509.sign_remote_certificate"

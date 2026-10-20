@@ -688,7 +688,13 @@ class LocalClient:
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
-            if fun in minion_ret[minion]:
+            # Minions that failed to respond to ``sys.list_functions`` are
+            # represented as ``False`` (see the failed-minion handling in
+            # ``cmd``). Skip them rather than letting ``in`` raise.
+            functions = minion_ret[minion]
+            if not isinstance(functions, (list, tuple, set, dict)):
+                continue
+            if fun in functions:
                 f_tgt.append(minion)
             if len(f_tgt) >= subset:
                 break
@@ -745,38 +751,20 @@ class LocalClient:
         import salt.cli.batch
         import salt.utils.args
 
-        arg = salt.utils.args.condition_input(arg, kwarg)
-        opts = {
-            "tgt": tgt,
-            "fun": fun,
-            "arg": arg,
-            "tgt_type": tgt_type,
-            "ret": ret,
-            "batch": batch,
-            "failhard": kwargs.get("failhard", self.opts.get("failhard", False)),
-            "raw": kwargs.get("raw", False),
-        }
+        opts = salt.cli.batch.batch_get_opts(
+            tgt,
+            fun,
+            batch,
+            self.opts,
+            arg=arg,
+            tgt_type=tgt_type,
+            ret=ret,
+            kwarg=kwarg,
+            **kwargs,
+        )
 
-        if "timeout" in kwargs:
-            opts["timeout"] = kwargs["timeout"]
-        if "gather_job_timeout" in kwargs:
-            opts["gather_job_timeout"] = kwargs["gather_job_timeout"]
-        if "batch_wait" in kwargs:
-            opts["batch_wait"] = int(kwargs["batch_wait"])
+        eauth = salt.cli.batch.batch_get_eauth(kwargs)
 
-        eauth = {}
-        if "eauth" in kwargs:
-            eauth["eauth"] = kwargs.pop("eauth")
-        if "username" in kwargs:
-            eauth["username"] = kwargs.pop("username")
-        if "password" in kwargs:
-            eauth["password"] = kwargs.pop("password")
-        if "token" in kwargs:
-            eauth["token"] = kwargs.pop("token")
-
-        for key, val in self.opts.items():
-            if key not in opts:
-                opts[key] = val
         batch = salt.cli.batch.Batch(opts, eauth=eauth, quiet=True)
         for ret, _ in batch.run():
             yield ret
@@ -2276,6 +2264,18 @@ class LocalClient:
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     def __enter__(self):
         return self

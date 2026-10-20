@@ -674,11 +674,26 @@ def crl_revoked():
 
 
 @pytest.mark.parametrize("algo", ["rsa", "ec", "ed25519", "ed448"])
-def test_create_certificate_self_signed(x509, algo, request):
+def test_create_certificate_self_signed_algo(x509, algo, request):
     privkey = request.getfixturevalue(f"{algo}_privkey")
     res = x509.create_certificate(signing_private_key=privkey, CN="success")
     assert res.startswith("-----BEGIN CERTIFICATE-----")
     cert = _get_cert(res)
+    assert cert.subject.rfc4514_string() == "CN=success"
+
+
+@pytest.mark.parametrize("encoding", ("pem", "der", "pkcs7_der", "pkcs7_pem", "pkcs12"))
+def test_create_certificate_self_signed_encoding(x509, encoding, rsa_privkey):
+    res = x509.create_certificate(
+        signing_private_key=rsa_privkey, CN="success", encoding=encoding
+    )
+    cert = _get_cert(res, encoding=encoding)
+    if "pkcs7" in encoding:
+        cert = cert[0]
+    elif encoding == "pkcs12":
+        pk = load_pem_private_key(rsa_privkey.encode(), None)
+        assert pk.private_numbers() == cert.key.private_numbers()
+        cert = cert.cert.certificate
     assert cert.subject.rfc4514_string() == "CN=success"
 
 

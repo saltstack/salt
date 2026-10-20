@@ -1151,6 +1151,23 @@ jobs:
           cd artifacts
           tar xvf ${{ inputs.package-name }}-${{ inputs.salt-version }}-onedir-${{ matrix.platform }}-${{ matrix.arch }}.tar.xz
 
+      - name: Patch cpython#104135 in onedir Lib/ssl.py
+        # Test sessions and test helpers (salt.utils.virtualenv.VirtualEnv)
+        # create venvs from the onedir Python and run pip in them; without
+        # this patch Python 3.10's _load_windows_store_certs aborts on the
+        # first ASN.1-malformed cert in the Windows root store under OpenSSL
+        # 3.5.x. Needed on Python 3.10 and 3.11 (cpython#104135 was never
+        # backported); self-disables on 3.12+.
+        # DURABLE CLEANUP: drop this step + the matching steps in
+        # build-deps-ci-action.yml and test-packages-action.yml +
+        # cicd/windows-ssl-104135-patch.py + salt/__init__.py +
+        # salt/ext/tornado/netutil.py once relenv ships the cpython#104135
+        # patch in its cpython build. See salt/__init__.py for the cleanup
+        # pointer.
+        shell: bash
+        run: |
+          python3 cicd/windows-ssl-104135-patch.py artifacts/salt/Lib/ssl.py
+
       - name: Install System Dependencies
         run: |
           echo true

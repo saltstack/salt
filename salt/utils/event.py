@@ -53,9 +53,11 @@ import asyncio
 import datetime
 import errno
 import fnmatch
+import inspect
 import logging
 import os
 import time
+import weakref
 from collections.abc import Iterable, MutableMapping
 
 import tornado.ioloop
@@ -72,6 +74,7 @@ import salt.utils.files
 import salt.utils.metrics
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
@@ -234,6 +237,88 @@ class SaltEvent:
     The base class used to manage salt events
     """
 
+    # Live SaltEvent instances tracked weakly so the at-fork handler can
+    # drop ZMQ pub/push sockets and asyncio/tornado loops inherited by
+    # any forked child.  Sharing a parent's subscriber across sibling
+    # children races the SUB-side message dispatch and deadlocks the
+    # asyncio loop the same way RemoteClient does -- see fileclient.py.
+    _instances = weakref.WeakSet()
+    _atfork_registered = False
+
+    @classmethod
+    def _register_atfork(cls):
+        if cls._atfork_registered or not hasattr(os, "register_at_fork"):
+            return
+        os.register_at_fork(after_in_child=cls._after_fork_in_child)
+        cls._atfork_registered = True
+
+    @classmethod
+    def _after_fork_in_child(cls):
+        # Drop inherited ZMQ socket / IOLoop references without close():
+        # close() would tear down FDs and asyncio loop state copied from
+        # the parent and could affect the parent's bus.  Connections will
+        # be lazily reopened by connect_pub() / connect_pull() on next
+        # use.
+        for inst in list(cls._instances):
+            try:
+                inst.subscriber = None
+                inst.pusher = None
+                inst.cpub = False
+                inst.cpush = False
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        # On this LTS branch ``__del__`` both surfaces the leak via
+        # ``warn_until_close`` (loud WARNING-level log record and
+        # ``ResourceWarning``) AND falls back to calling ``destroy()`` as
+        # a safety net, so callers that historically relied on GC-time
+        # cleanup (e.g. sseape's fire-and-forget
+        # ``get_master_event(...).fire_event(...)`` pattern) do not
+        # silently leak one ``master_event_pull.ipc`` (and, for
+        # ``listen=True``, one ``master_event_pub.ipc``) socket per
+        # instance.
+        #
+        # The companion change on ``master`` (Potassium) drops the
+        # ``destroy()`` fallback and requires callers to use a context
+        # manager or explicit ``destroy()``; the loud warning here is the
+        # migration signal for that change.
+        #
+        # Python's ``__del__`` runs during GC (may be delayed, may skip
+        # on reference cycles) and during interpreter shutdown (when the
+        # world is already tearing down and closing sockets can raise
+        # from a partially-freed C extension).  Everything below is
+        # guarded so a finalizer never propagates an exception.
+        try:
+            unclosed = (
+                getattr(self, "subscriber", None) is not None
+                or getattr(self, "pusher", None) is not None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        salt.utils.resource_warnings.warn_until_close(
+            f"unclosed {type(self).__name__} {self!r}; call "
+            f"``destroy()`` or use as a context manager",
+            source=self,
+            log=log,
+        )
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            # Finalizer must never raise.
+            pass
+
+    # pylint: enable=W1701
+
     def __init__(
         self,
         node,
@@ -286,6 +371,8 @@ class SaltEvent:
         self.pending_tags = []
         self.pending_events = []
         self.__load_cache_regex()
+        type(self)._register_atfork()
+        type(self)._instances.add(self)
         if listen and not self.cpub:
             # Only connect to the publisher at initialization time if
             # we know we want to listen. If we connect to the publisher
@@ -359,7 +446,7 @@ class SaltEvent:
 
         loop = salt.utils.asynchronous.aioloop(self.io_loop)
 
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             loop.create_task(func(*args, **kwargs))
             return
 
@@ -648,9 +735,20 @@ class SaltEvent:
                 else:
                     return None
             except SaltDeserializationError:
-                log.error("Unable to deserialize received event")
-                return None
-            except RuntimeError:
+                # Malformed msgpack frame — can occur under extreme event bus
+                # load when multiple events are concatenated in the IPC buffer
+                # and msgpack reports ExtraData or a UTF-8 decode failure.
+                # Skip this frame rather than crashing the subscriber so the
+                # caller's timeout budget still applies.
+                log.debug(
+                    "Event subscriber: skipping malformed event (deserialization error)"
+                )
+                continue
+            except RuntimeError as exc:
+                log.debug(
+                    "Event subscriber: RuntimeError while reading event, returning None",
+                    exc_info=exc,
+                )
                 return None
 
             if not match_func(ret["tag"], tag) or not self._subproxy_match(ret["data"]):
@@ -826,11 +924,54 @@ class SaltEvent:
         ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
-        if self._run_io_loop_sync:
-            # pusher is a SyncWrapper; publish() runs synchronously.
-            self.pusher.publish(msg)
+        # LTS default: pre-PR sync publish path preserved. The
+        # SyncWrapper-bypass below only kicks in when
+        # ``master_async_mworker`` is on, because that's the only path
+        # where async handlers invoke ``fire_event_async`` from a
+        # running asyncio loop and could hit the nested-SyncWrapper
+        # deadlock / dead-loop-cache issues it fixes.
+        async_mworker = bool(self.opts.get("master_async_mworker", False))
+        if not async_mworker:
+            if self._run_io_loop_sync:
+                # pusher is a SyncWrapper; publish() runs synchronously.
+                self.pusher.publish(msg)
+            else:
+                await self.pusher.publish(msg)
         else:
-            await self.pusher.publish(msg)
+            # ``self.pusher`` may be a ``SyncWrapper`` (constructed with
+            # ``io_loop=None`` in ``AESFuncs.__init__`` etc.).  Its
+            # ``publish`` normally runs synchronously via ``run_sync`` on
+            # the wrapper's own io_loop.  But when ``fire_event_async``
+            # is invoked from a running asyncio loop -- as async-dispatched
+            # master handlers do (``_pillar``, ``_return``,
+            # ``_minion_event`` etc.) -- going through SyncWrapper races
+            # both (a) the SyncWrapper's own loop teardown (RuntimeError:
+            # Event loop stopped before Future completed) and (b) the
+            # nested-SyncWrapper deadlock that Bug 1 patched at the outer
+            # ``PublishServer.publish`` level.
+            #
+            # Reach into ``self.pusher.obj`` -- the raw async publisher --
+            # and await its ``publish`` directly on the running loop.  The
+            # per-loop cache from Bug 1 handles the fact that the
+            # publisher was constructed on the SyncWrapper's io_loop and
+            # is now being invoked from a different loop.
+            underlying = getattr(self.pusher, "obj", None)
+            if (
+                self._run_io_loop_sync
+                and underlying is not None
+                and hasattr(underlying, "publish")
+            ):
+                result = underlying.publish(msg)
+                if inspect.isawaitable(result):
+                    await result
+            elif self._run_io_loop_sync:
+                # No async publisher available; fall back to the sync path
+                # by running it in the default executor so we don't block
+                # our own event loop.
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, self.pusher.publish, msg)
+            else:
+                await self.pusher.publish(msg)
         if cb is not None:
             warn_until(
                 3009,
@@ -874,12 +1015,37 @@ class SaltEvent:
             try:
                 self.pusher.publish(msg)
             except Exception as exc:  # pylint: disable=broad-except
-                log.debug(
-                    "Publisher send failed with exception: %s",
+                # LTS default: pre-PR behaviour re-raises the exception
+                # (``fire_event`` returning ``False`` on connect failure but
+                # propagating publisher errors). The drop-and-warn path
+                # exists to avoid a memory leak that only manifests when
+                # async handlers offload via ``run_in_executor`` and the
+                # traceback pins large payloads across threads; that only
+                # happens with ``master_async_mworker`` on.
+                if not self.opts.get("master_async_mworker", False):
+                    log.debug(
+                        "Publisher send failed with exception: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    raise
+                # PATCH: do NOT re-raise.  ``fire_event`` is best-effort:
+                # callers use it to publish informational events (job
+                # returns, state changes, etc.) and should not fail
+                # because the local IPC bus is temporarily unavailable.
+                # More importantly, re-raising leaks memory catastrophically
+                # under sustained failure -- the traceback holds every
+                # frame in ``run_in_executor``'s thread including ``load``
+                # (a state.apply return dict, often MB) and asyncio's
+                # exception logging retains those tracebacks.  Under
+                # stress with ``self.pusher``'s SyncWrapper io_loop closed
+                # this leaks tens of GB per minute (observed
+                # ~66 GB in a single MWorker within a few minutes).
+                log.warning(
+                    "Publisher send failed, dropping event tag=%s: %s",
+                    tag,
                     exc,
-                    exc_info_on_loglevel=logging.DEBUG,
                 )
-                raise
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
             self._publish_tasks.add(task)
@@ -1001,25 +1167,9 @@ class SaltEvent:
         assert not self._run_io_loop_sync
         if not self.cpub:
             self.connect_pub()
+
         # This will handle reconnects
         self._schedule(self.subscriber.on_recv, event_handler)
-
-    # pylint: disable=W1701
-    def __del__(self):
-        # skip exceptions in destroy-- since destroy() doesn't cover interpreter
-        # shutdown-- where globals start going missing
-        try:
-            self.destroy()
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-    # pylint: enable=W1701
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.destroy()
 
 
 class MasterEvent(SaltEvent):
@@ -1127,6 +1277,28 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
         local_minion_opts = self.opts.copy()
         local_minion_opts["file_client"] = "local"
         self.minion = salt.minion.MasterMinion(local_minion_opts)
+        # Validate all configured returners exist at startup so operators get
+        # a clear error immediately rather than thousands of per-event errors.
+        configured = self.opts["event_return"]
+        if not isinstance(configured, list):
+            configured = [configured]
+        missing = [
+            r for r in configured if f"{r}.event_return" not in self.minion.returners
+        ]
+        if missing:
+            log.error(
+                "EventReturn: the following configured event_return returner(s) "
+                "were not found and events will NOT be stored: %s. "
+                "Check that the returner modules are installed and the "
+                "returner_dirs configuration is correct.",
+                missing,
+            )
+        self._missing_returners = set(missing)
+        # Track last warning time per returner to rate-limit log spam.
+        # With event_return_queue=0 every event flushes independently, so
+        # a per-flush-cycle set would still log once per event. Use wall
+        # time instead: only warn once every 60 seconds per returner.
+        self._warned_returners = {}  # returner_name -> last_warn_time
         self.event_queue = []
         self.stop = False
 
@@ -1171,10 +1343,16 @@ class EventReturn(salt.utils.process.SignalHandlingProcess):
                         "Event data that caused an exception: %s", self.event_queue
                     )
         else:
-            log.error(
-                "Could not store return for event(s) - returner '%s' not found.",
-                event_return,
-            )
+            # Rate-limit to one error per returner per 60 s to prevent log
+            # spam at high event rates (e.g. event_return_queue=0 flushes
+            # on every single event).
+            now = time.time()
+            if now - self._warned_returners.get(event_return, 0) >= 60:
+                log.error(
+                    "Could not store return for event(s) - returner '%s' not found.",
+                    event_return,
+                )
+                self._warned_returners[event_return] = now
 
     def run(self):
         """

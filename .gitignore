@@ -156,6 +156,7 @@ nox.*.tar.xz
 .tools-venvs
 
 # AI Agent instruction files (templates are in agents/)
+.claude
 /CLAUDE.md
 /GEMINI.md
 /CURSOR.md

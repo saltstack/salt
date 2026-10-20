@@ -737,10 +737,14 @@ def existing_symlink(request):
     # cleanup is done by tmp_path
 
 
-def test_certificate_managed_self_signed(x509, cert_args, ca_key):
+@pytest.mark.parametrize("encoding", ("pem", "der", "pkcs7_pem", "pkcs7_der", "pkcs12"))
+def test_certificate_managed_self_signed(x509, cert_args, ca_key, encoding):
     cert_args.pop("signing_cert")
+    cert_args["encoding"] = encoding
     ret = x509.certificate_managed(**cert_args)
-    _assert_cert_created_basic(ret, cert_args["name"], ca_key, ca_key)
+    _assert_cert_created_basic(
+        ret, cert_args["name"], ca_key, ca_key, encoding=encoding
+    )
 
 
 def test_certificate_managed_self_signed_enc(x509, cert_args, ca_key, ca_key_enc):

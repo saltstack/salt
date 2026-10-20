@@ -4,7 +4,7 @@ Unit Tests for the salt.cli.batch module
 
 import pytest
 
-from salt.cli.batch import Batch
+from salt.cli.batch import Batch, batch_get_opts, get_bnum
 from tests.support.mock import MagicMock, patch
 
 
@@ -31,7 +31,7 @@ def test_get_bnum_str(batch):
     """
     batch.opts = {"batch": "2", "timeout": 5}
     batch.minions = ["foo", "bar"]
-    assert Batch.get_bnum(batch) == 2
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 2
 
 
 def test_get_bnum_int(batch):
@@ -40,7 +40,7 @@ def test_get_bnum_int(batch):
     """
     batch.opts = {"batch": 2, "timeout": 5}
     batch.minions = ["foo", "bar"]
-    assert Batch.get_bnum(batch) == 2
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 2
 
 
 def test_get_bnum_percentage(batch):
@@ -49,7 +49,7 @@ def test_get_bnum_percentage(batch):
     """
     batch.opts = {"batch": "50%", "timeout": 5}
     batch.minions = ["foo"]
-    assert Batch.get_bnum(batch) == 1
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 1
 
 
 def test_get_bnum_high_percentage(batch):
@@ -58,14 +58,14 @@ def test_get_bnum_high_percentage(batch):
     """
     batch.opts = {"batch": "160%", "timeout": 5}
     batch.minions = ["foo", "bar", "baz"]
-    assert Batch.get_bnum(batch) == 4
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 4
 
 
 def test_get_bnum_invalid_batch_data(batch):
     """
     Tests when an invalid batch value is passed
     """
-    ret = Batch.get_bnum(batch)
+    ret = get_bnum(batch.opts, batch.minions, batch.quiet)
     assert ret is None
 
 
@@ -266,7 +266,7 @@ def test_get_bnum_100_percentage_exact(batch):
     """
     batch.opts = {"batch": "100%", "timeout": 5}
     batch.minions = ["a", "b", "c", "d"]
-    assert Batch.get_bnum(batch) == 4
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 4
 
 
 def test_get_bnum_low_percentage_rounds_up(batch):
@@ -276,7 +276,7 @@ def test_get_bnum_low_percentage_rounds_up(batch):
     """
     batch.opts = {"batch": "1%", "timeout": 5}
     batch.minions = [f"m{i}" for i in range(10)]
-    assert Batch.get_bnum(batch) == 1
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 1
 
 
 def test_get_bnum_zero(batch):
@@ -286,7 +286,7 @@ def test_get_bnum_zero(batch):
     """
     batch.opts = {"batch": 0, "timeout": 5}
     batch.minions = ["a", "b"]
-    assert Batch.get_bnum(batch) == 0
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 0
 
 
 def test_get_bnum_percentage_no_minions(batch):
@@ -296,7 +296,7 @@ def test_get_bnum_percentage_no_minions(batch):
     """
     batch.opts = {"batch": "50%", "timeout": 5}
     batch.minions = []
-    assert Batch.get_bnum(batch) == 0
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 0
 
 
 def test_get_bnum_fractional_percentage(batch):
@@ -306,7 +306,7 @@ def test_get_bnum_fractional_percentage(batch):
     """
     batch.opts = {"batch": "33.3%", "timeout": 5}
     batch.minions = [f"m{i}" for i in range(10)]
-    assert Batch.get_bnum(batch) == 3
+    assert get_bnum(batch.opts, batch.minions, batch.quiet) == 3
 
 
 def test_run_no_minions_returns_early(batch):
@@ -746,3 +746,169 @@ def test_run_event_failures_are_swallowed(batch):
     results = list(Batch.run(batch))
     assert len(results) == 1
     assert next(iter(results[0][0].values())) is True
+
+
+def test_batch_presence_ping(batch):
+    """
+    Tests passing batch_presence_ping_timeout and batch_presence_ping_gather_job_timeout
+    """
+    ret = batch_get_opts("", "test.ping", "2", {}, timeout=20, gather_job_timeout=120)
+    assert ret["batch_presence_ping_timeout"] == 20
+    assert ret["batch_presence_ping_gather_job_timeout"] == 120
+    ret = batch_get_opts(
+        "",
+        "test.ping",
+        "2",
+        {},
+        timeout=20,
+        gather_job_timeout=120,
+        batch_presence_ping_timeout=4,
+        batch_presence_ping_gather_job_timeout=360,
+    )
+    assert ret["batch_presence_ping_timeout"] == 4
+    assert ret["batch_presence_ping_gather_job_timeout"] == 360
+
+
+def test_gather_minions_with_batch_presence_ping(batch):
+    """
+    Tests __gather_minions with batch_presence_ping options
+    """
+    opts_no_pp = {
+        "batch": "2",
+        "conf_file": {},
+        "tgt": "",
+        "transport": "",
+        "timeout": 10,
+        "gather_job_timeout": 20,
+    }
+    opts_with_pp = {
+        "batch": "2",
+        "conf_file": {},
+        "tgt": "",
+        "transport": "",
+        "timeout": 5,
+        "gather_job_timeout": 20,
+        "batch_presence_ping_timeout": 3,
+        "batch_presence_ping_gather_job_timeout": 4,
+    }
+    local_client_mock = MagicMock()
+    with patch(
+        "salt.client.get_local_client", MagicMock(return_value=local_client_mock)
+    ), patch("salt.client.LocalClient.cmd_iter", MagicMock(return_value=[])):
+        Batch(opts_no_pp).gather_minions()
+        Batch(opts_with_pp).gather_minions()
+        assert local_client_mock.mock_calls[0][1][3] == opts_no_pp["timeout"]
+        assert (
+            local_client_mock.mock_calls[0][2]["gather_job_timeout"]
+            == opts_no_pp["gather_job_timeout"]
+        )
+        assert (
+            local_client_mock.mock_calls[2][1][3]
+            == opts_with_pp["batch_presence_ping_timeout"]
+        )
+        assert (
+            local_client_mock.mock_calls[2][2]["gather_job_timeout"]
+            == opts_with_pp["batch_presence_ping_gather_job_timeout"]
+        )
+
+
+def test_gather_minions_ignores_error_payload(batch):
+    """
+    Transport-level error payloads (e.g. ``{"error": "...", "jid": "..."}``
+    or ``{"error": "Authentication failure"}``) must not be treated as
+    minion IDs in gather_minions().
+
+    Regression for issues #46876, #48509, #50238, #60724.
+    """
+    ping_returns = [
+        # Transport-level error payload — must be ignored
+        {"error": "Authentication failure", "jid": "20260101000000"},
+        # Legit discovery payload — emitted before individual pings
+        {"minions": ["minion1"], "jid": "20260101000001"},
+        # Individual minion ping reply
+        {"minion1": {"ret": True}},
+    ]
+
+    batch.local.cmd_iter = MagicMock(return_value=iter(ping_returns))
+
+    batch.opts.update(
+        {
+            "tgt": "*",
+            "tgt_type": "glob",
+            "timeout": 5,
+            "gather_job_timeout": 5,
+        }
+    )
+
+    minions, _, _ = batch.gather_minions()
+
+    assert "error" not in minions
+    assert minions == ["minion1"]
+
+
+def test_gather_minions_fixes_minions_jid_check(batch):
+    """
+    The Python expression ``("minions" and "jid") in ret`` evaluates to
+    ``"jid" in ret`` — a bug that causes the discovery payload to be
+    processed as a minion return rather than skipped.
+
+    The fix replaces it with ``"minions" in ret and "jid" in ret`` so
+    the full-list discovery packet is handled correctly.
+    """
+    # A payload that has "jid" but NOT "minions" — the old buggy check
+    # would have treated it as a discovery payload; the fixed check must
+    # fall through to the else branch.
+    ping_returns = [
+        {"jid": "20260101000000"},  # has "jid", no "minions" — old code would skip
+        {"minion1": {"ret": True}},
+    ]
+
+    batch.local.cmd_iter = MagicMock(return_value=iter(ping_returns))
+
+    batch.opts.update(
+        {
+            "tgt": "*",
+            "tgt_type": "glob",
+            "timeout": 5,
+            "gather_job_timeout": 5,
+        }
+    )
+
+    minions, _, _ = batch.gather_minions()
+
+    # minion1 must be discovered; the jid-only dict must not be treated as a
+    # discovery packet that feeds "minion1" into nret (it has no "minions" key).
+    assert "minion1" in minions
+
+
+def test_run_ignores_error_payload_in_cmd_returns(batch):
+    """
+    When ``cmd_iter_no_block`` yields a transport-level error dict
+    (keyed by ``"error"`` instead of a real minion ID) the batch run
+    must silently skip it rather than treating ``"error"`` as a minion.
+
+    Regression for the ``KeyError: 'ret'`` crash described in #46876.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["minion1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        # First yield is a transport-level error payload
+        yield {"error": "Publish failed", "failed": True}
+        # Second yield is the real minion return
+        yield {"minion1": {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    results = list(Batch.run(batch))
+
+    returned_minions = [next(iter(d.keys())) for d, _rc in results]
+    assert "error" not in returned_minions
+    assert "minion1" in returned_minions

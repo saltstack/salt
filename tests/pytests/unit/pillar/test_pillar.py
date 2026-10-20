@@ -35,6 +35,58 @@ def test_pillar_envs_order(envs, temp_salt_minion, tmp_path):
     assert pillar._get_envs() == ["base"] + envs
 
 
+def test_pillar_get_tops_iterates_envs_in_pillar_roots_order(
+    temp_salt_minion, tmp_path
+):
+    """
+    Regression test for issue #44937.
+
+    ``Pillar.get_tops`` used to collect saltenvs into a ``set`` which is
+    iterated in hash order. With a randomized ``PYTHONHASHSEED`` this made
+    top-file processing non-deterministic. The fix uses an insertion-ordered
+    dict so iteration follows the order returned by ``_get_envs``, which
+    itself follows ``pillar_roots`` config order.
+
+    This test exercises ``get_tops`` directly with multiple envs whose
+    top.sls all match the same minion and asserts the resulting ``tops``
+    keys appear in ``_get_envs`` order.
+    """
+    envs = ["base", "foo", "bar", "baz"]
+    for envname in envs:
+        env_dir = tmp_path / envname
+        env_dir.mkdir()
+        (env_dir / "top.sls").write_text(
+            f"{envname}:\n  '{temp_salt_minion.id}':\n    - data\n",
+            encoding="utf-8",
+        )
+        (env_dir / "data.sls").write_text(f"key: {envname}\n", encoding="utf-8")
+
+    opts = temp_salt_minion.config.copy()
+    opts["pillarenv"] = None
+    opts["pillar_roots"] = OrderedDict(
+        (envname, [str(tmp_path / envname)]) for envname in envs
+    )
+    grains = salt.loader.grains(opts)
+    pillar = salt.pillar.Pillar(
+        opts=opts,
+        grains=grains,
+        minion_id=temp_salt_minion.id,
+        saltenv="base",
+    )
+    tops, errors = pillar.get_tops()
+    assert not errors, errors
+    # ``_get_envs`` prepends "base" then appends the remaining roots in
+    # config order. Any env whose top.sls rendered should appear in
+    # ``tops`` in that same order.
+    expected_order = pillar._get_envs()
+    actual_order = list(tops.keys())
+    assert actual_order == expected_order, (
+        f"get_tops iteration order {actual_order!r} does not match "
+        f"_get_envs order {expected_order!r}; pillar top-file processing "
+        f"is non-deterministic (issue #44937)."
+    )
+
+
 def test_pillar_get_tops_should_not_error_when_merging_strategy_is_none_and_no_pillarenv(
     temp_salt_minion,
 ):

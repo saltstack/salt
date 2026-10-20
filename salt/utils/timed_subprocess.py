@@ -95,12 +95,7 @@ class TimedProc:
             if rt.is_alive():
                 # Subprocess cleanup (best effort)
                 self.process.kill()
-
-                def terminate():
-                    if rt.is_alive():
-                        self.process.terminate()
-
-                threading.Timer(10, terminate).start()
+                self.process.wait()
                 raise salt.exceptions.TimedProcTimeoutError(
                     "{} : Timed out after {} seconds".format(
                         self.command,

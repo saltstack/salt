@@ -83,6 +83,19 @@ class ContextDict(MutableMapping):
         except AttributeError:
             return False
 
+    def destroy(self):
+        """
+        Destroy the ContextDict and clear internal state
+        """
+        if hasattr(self, "_state"):
+            self._state.data = None
+            try:
+                del self._state.data
+            except AttributeError:
+                pass
+        if hasattr(self, "global_data"):
+            self.global_data.clear()
+
     # TODO: rename?
     def clone(self, **kwargs):
         """

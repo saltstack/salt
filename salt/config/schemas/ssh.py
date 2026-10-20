@@ -85,6 +85,15 @@ class RosterEntryConfig(Schema):
             "components. Defaults to /tmp/salt-<hash>."
         ),
     )
+    relenv = BooleanItem(
+        title="Relenv",
+        description=(
+            "Deploy and use a relenv (Salt+Python bundled) environment on "
+            "the SSH target, equivalent to the --relenv CLI flag but scoped "
+            "to this roster entry."
+        ),
+        default=False,
+    )
     minion_opts = DictItem(
         title="Minion Options",
         description="Dictionary of minion options",

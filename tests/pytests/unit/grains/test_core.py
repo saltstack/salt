@@ -3,7 +3,7 @@ tests.pytests.unit.grains.test_core
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: Erik Johnson <erik@saltstack.com>
-    :codeauthor: David Murphy <damurphy@vmware.com>
+    :codeauthor: David Murphy
 """
 
 import errno
@@ -13,6 +13,7 @@ import os
 import pathlib
 import platform
 import socket
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -3560,6 +3561,50 @@ def test__hw_data_linux_unicode_error():
         assert core._hw_data({"kernel": "Linux"}) == {}
 
 
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_xen_pv_uuid():
+    hypervisor_uuid = b"12345678-1234-1234-1234-123456789ABC"
+    expected_uuid = "12345678-1234-1234-1234-123456789abc"
+
+    def _exists_side_effect(path):
+        if path == "/sys/hypervisor/uuid":
+            return True
+        return False
+
+    with patch("os.path.exists", side_effect=_exists_side_effect), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.path.which_bin", return_value=None), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data=hypervisor_uuid),
+    ):
+        result = core._hw_data({"kernel": "Linux"})
+        assert result.get("uuid") == expected_uuid
+
+
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_xen_dom0_uuid_ignored():
+    """
+    On Xen Dom0, /sys/hypervisor/uuid contains an all-zero sentinel value.
+    The grain should not be set from that value so the real DMI UUID can
+    be used instead.
+    """
+    dom0_uuid = b"00000000-0000-0000-0000-000000000000"
+
+    def _exists_side_effect(path):
+        if path == "/sys/hypervisor/uuid":
+            return True
+        return False
+
+    with patch("os.path.exists", side_effect=_exists_side_effect), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.path.which_bin", return_value=None), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data=dom0_uuid),
+    ):
+        result = core._hw_data({"kernel": "Linux"})
+        assert result.get("uuid") is None
+
+
 @pytest.mark.skip_unless_on_windows
 def test_kernelparams_return_windows():
     """
@@ -3680,7 +3725,7 @@ def test_linux_gpus(caplog):
     Test GPU detection on Linux systems
     """
 
-    def _cmd_side_effect(cmd):
+    def _cmd_side_effect(cmd, *args, **kwargs):
         ret = ""
         for device in devices:
             ret += textwrap.dedent(
@@ -3694,7 +3739,7 @@ def test_linux_gpus(caplog):
                                       NUMANode:	0"""
             ).format(*device)
             ret += "\n"
-        return ret.strip()
+        return subprocess.CompletedProcess(cmd, 0, stdout=ret.strip(), stderr="")
 
     devices = [
         [
@@ -3757,7 +3802,10 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}):
+    ), patch(
+        "salt.grains.core.subprocess.run",
+        MagicMock(side_effect=_cmd_side_effect),
+    ):
         ret = core._linux_gpu_data()["gpus"]
         count = 0
         for device in devices:
@@ -3769,7 +3817,7 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+    ), patch("salt.grains.core.subprocess.run", MagicMock(side_effect=OSError)):
         ret = core._linux_gpu_data()
         assert ret == {"num_gpus": 0, "gpus": []}
 
@@ -3783,11 +3831,14 @@ def test_linux_gpus(caplog):
         Rev: c1
         NUMANode:	0"""
     )
+    bad_gpu_proc = subprocess.CompletedProcess(
+        ["/usr/sbin/lspci", "-vmm"], 0, stdout=bad_gpu_data, stderr=""
+    )
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(
-        core.__salt__, {"cmd.run": MagicMock(return_value=bad_gpu_data)}
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(return_value=bad_gpu_proc)
     ), caplog.at_level(
         logging.WARN
     ):
@@ -3797,6 +3848,28 @@ def test_linux_gpus(caplog):
             "check that you have a valid shell configured and permissions "
             "to run lspci command" in caplog.messages
         )
+
+
+def test_linux_gpus_lspci_timeout(caplog):
+    """
+    If ``lspci`` hangs, the subprocess call must time out, kill the child,
+    log a warning, and return an empty grain (matching the behavior when
+    ``lspci`` is not installed). Regression for the orphan-lspci leak that
+    accumulates task_structs on every grains refresh.
+    """
+    timeout_exc = subprocess.TimeoutExpired(cmd=["/usr/sbin/lspci", "-vmm"], timeout=5)
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(side_effect=timeout_exc)
+    ), caplog.at_level(
+        logging.WARNING
+    ):
+        ret = core._linux_gpu_data()
+        assert ret == {}
+        assert any(
+            "lspci" in msg and "timed out" in msg for msg in caplog.messages
+        ), f"expected timeout warning in log; got: {caplog.messages!r}"
 
 
 def test_get_server_id():
@@ -5314,6 +5387,54 @@ em0: link state changed to UP"""
                     ]
 
 
+def test__bsd_cpudata_freebsd_non_utf8(tmp_path):
+    """
+    Regression test for #66764.
+
+    /var/run/dmesg.boot can contain non-UTF-8 bytes (e.g. when a connected
+    device exposes a serial number with non-UTF-8 characters). Loading the
+    "cpu_flags" grain on FreeBSD must not raise UnicodeDecodeError in that
+    case; the offending bytes should be skipped and the readable CPU
+    features still extracted.
+    """
+    boot = tmp_path / "dmesg.boot"
+    # The CPU: line contains non-UTF-8 bytes (0xff, 0xfe) that would crash
+    # a strict utf-8 decode. The Features= line is valid ASCII and must
+    # still be parsed.
+    boot.write_bytes(
+        b"CPU: Intel(R) Test CPU \xff\xfe garbage\n"
+        b'  Origin="GenuineIntel"\n'
+        b"  Features=0x1<FPU,VME,DE>\n"
+        b"real memory = 0\n"
+    )
+
+    osdata = {"kernel": "FreeBSD"}
+    mock_cmd_run = ["1", "amd64", "Intel(R) Test CPU"]
+
+    # Delegate to the real open() so the encoding/errors kwargs added by
+    # the fix are actually exercised against the non-UTF-8 bytes on disk.
+    # Using open() directly here (rather than salt.utils.files.fopen) is
+    # intentional: salt.utils.files.fopen is what we are patching.
+    def _real_fopen(_path, *args, **kwargs):
+        return open(  # pylint: disable=resource-leakage,unspecified-encoding
+            str(boot), *args, **kwargs
+        )
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            with patch("os.path.isfile", return_value=True):
+                with patch("salt.utils.files.fopen", side_effect=_real_fopen):
+                    # The pre-fix code raised UnicodeDecodeError here.
+                    ret = core._bsd_cpudata(osdata)
+
+    assert "cpu_flags" in ret
+    assert ret["cpu_flags"] == ["FPU", "VME", "DE"]
+    assert ret["num_cpus"] == 1
+
+
 def test__bsd_cpudata_netbsd():
     """
     test _bsd_cpudata for NetBSD
@@ -5640,3 +5761,191 @@ def test_fibre_channel_host(status):
         grains = core.fibre_channel_host()
         assert "fibre_channel_host" in grains
         assert grains["fibre_channel_host"] is status
+
+
+# ---------------------------------------------------------------------------
+# Tests for the 'cpe' grain introduced in PR #65905
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "os_name,osrelease,expected",
+    [
+        ("Debian", "12", "cpe:/o:debian:debian_linux:12"),
+        ("Debian", "11", "cpe:/o:debian:debian_linux:11"),
+        ("Ubuntu", "22.04", "cpe:/o:canonical:ubuntu_linux:22.04"),
+        ("Ubuntu", "20.04", "cpe:/o:canonical:ubuntu_linux:20.04"),
+        # Unknown OS → no CPE derivable
+        ("CentOS", "8", None),
+        ("Arch", "rolling", None),
+        # Missing version → no CPE derivable
+        ("Debian", None, None),
+        ("Debian", "", None),
+        ("Ubuntu", None, None),
+    ],
+)
+def test_derive_cpe_grain(os_name, osrelease, expected):
+    """
+    _derive_cpe_grain returns a CPE string for Debian/Ubuntu and None otherwise.
+    It also returns None when osrelease is falsy (None or empty string).
+    """
+    result = core._derive_cpe_grain(os_name, osrelease)
+    assert result == expected
+
+
+def test_os_release_to_grains_cpe_from_os_release():
+    """
+    When CPE_NAME is present in os-release, the 'cpe' grain is taken directly.
+    """
+    os_release = {
+        "ID": "centos",
+        "NAME": "CentOS Linux",
+        "PRETTY_NAME": "CentOS Linux 8 (Core)",
+        "VERSION_ID": "8",
+        "CPE_NAME": "cpe:/o:centos:centos:8",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:centos:centos:8"
+
+
+def test_os_release_to_grains_cpe_derived_debian():
+    """
+    When CPE_NAME is absent but OS is Debian, 'cpe' is derived from osrelease.
+    """
+    os_release = {
+        "ID": "debian",
+        "NAME": "Debian GNU/Linux",
+        "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+        "VERSION_ID": "12",
+        "VERSION_CODENAME": "bookworm",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:debian:debian_linux:12"
+
+
+def test_os_release_to_grains_cpe_derived_ubuntu():
+    """
+    When CPE_NAME is absent but OS is Ubuntu, 'cpe' is derived from osrelease.
+    """
+    os_release = {
+        "ID": "ubuntu",
+        "NAME": "Ubuntu",
+        "PRETTY_NAME": "Ubuntu 22.04.3 LTS",
+        "VERSION_ID": "22.04",
+        "VERSION_CODENAME": "jammy",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:canonical:ubuntu_linux:22.04"
+
+
+def test_os_release_to_grains_no_cpe_for_unknown_os():
+    """
+    When CPE_NAME is absent and OS is not in the derivation map, 'cpe' is not set.
+    """
+    os_release = {
+        "ID": "arch",
+        "NAME": "Arch Linux",
+        "PRETTY_NAME": "Arch Linux",
+        "VERSION_ID": "rolling",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert "cpe" not in grains
+
+
+def test_os_release_to_grains_no_cpe_when_version_missing():
+    """
+    When CPE_NAME is absent and VERSION_ID is missing, 'cpe' is not set even
+    for Debian — avoids a TypeError from concatenating None.
+    """
+    os_release = {
+        "ID": "debian",
+        "NAME": "Debian GNU/Linux",
+        "PRETTY_NAME": "Debian GNU/Linux (unknown version)",
+        # No VERSION_ID intentionally — osrelease will be None/empty
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert "cpe" not in grains
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux",
+        "PRETTY_NAME": "alfaLinux",
+        "ID": "alfalinux",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux",
+        "oscodename": "alfaLinux",
+        "osfinger": "alfaLinux-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_rise_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux Rise",
+        "PRETTY_NAME": "alfaLinux Rise",
+        "ID": "alfalinux-rise",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux Rise",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux Rise",
+        "oscodename": "alfaLinux Rise",
+        "osfinger": "alfaLinux Rise-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alteros_os_grains():
+    _os_release_data = {
+        "NAME": "AlterOS",
+        "PRETTY_NAME": "AlterOS",
+        "ID": "alteros",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "AlterOS",
+        "os_family": "RedHat",
+        "osfullname": "AlterOS",
+        "oscodename": "AlterOS",
+        "osfinger": "AlterOS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_red_os_os_grains():
+    _os_release_data = {
+        "NAME": "RED OS",
+        "PRETTY_NAME": "RED OS",
+        "ID": "redos",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "RED OS",
+        "os_family": "RedHat",
+        "osfullname": "RED OS",
+        "oscodename": "RED OS",
+        "osfinger": "RED OS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)

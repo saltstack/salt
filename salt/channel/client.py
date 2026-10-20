@@ -11,6 +11,7 @@ import uuid
 
 import tornado.gen
 import tornado.ioloop
+import tornado.locks
 
 import salt.crypt
 import salt.exceptions
@@ -111,6 +112,17 @@ class AsyncReqChannel:
         self._closing = False
         self.timeout = timeout
         self.tries = tries
+        # Serialize concurrent send()/decode_dictentry() calls on this
+        # channel so that the AES nonce embedded in the encrypted reply is
+        # matched with the request that produced it.  The underlying
+        # transport (AsyncReqMessageClient) already queues sends FIFO, but
+        # the channel-layer crypt uses ``self.auth.session_crypticle`` which
+        # can be swapped mid-flight by a concurrent re-auth, and the master
+        # encrypts each reply with a session key drawn from a rotating
+        # cache.  Holding this lock across the send + decrypt window makes
+        # the request/reply pair atomic w.r.t. any other coroutine on the
+        # same io_loop.  See issue #69753.
+        self._req_lock = tornado.locks.Lock()
 
     @property
     def crypt(self):
@@ -122,7 +134,7 @@ class AsyncReqChannel:
     def ttype(self):
         return self.transport.ttype
 
-    def _package_load(self, load, nonce=None):
+    def _package_load(self, load, nonce=None, session_crypticle=None):
         """
         Prepare the load to be sent over the wire.
 
@@ -130,6 +142,11 @@ class AsyncReqChannel:
         before encrypting it using our aes session key. Then wrap the encrypted
         load with some meta data. For 'clear' encryption, no extra feilds are
         added to the load. The unencyrpted load is wrapped with meta data.
+
+        ``session_crypticle`` may be provided to pin a specific Crypticle
+        reference (needed by ``_crypted_transfer`` so the same key is used
+        for both dumps and loads across a coroutine yield point).  See
+        issue #69753.
         """
         if self.crypt == "aes":
             if nonce is None:
@@ -162,7 +179,9 @@ class AsyncReqChannel:
                     type(load),
                 )
 
-            load = self.auth.session_crypticle.dumps(load)
+            if session_crypticle is None:
+                session_crypticle = self.auth.session_crypticle
+            load = session_crypticle.dumps(load)
         elif isinstance(load, dict):
             salt.utils.tracing.inject(load)
 
@@ -209,21 +228,25 @@ class AsyncReqChannel:
         if not self.auth.authenticated:
             await self.auth.authenticate()
 
-        nonce = uuid.uuid4().hex
-        ret = await self._send_with_retry(
-            self._package_load(load, nonce),
-            tries,
-            timeout,
-        )
-        key = self.auth.get_keys()
-        if not isinstance(ret, dict) or "key" not in ret:
-            # Reauth in the case our key is deleted on the master side.
-            await self.auth.authenticate()
+        # Serialize concurrent transfers on this channel to keep each
+        # (send, decrypt-reply) pair atomic w.r.t. any other coroutine
+        # driving this same channel.  See issue #69753.
+        async with self._req_lock:
+            nonce = uuid.uuid4().hex
             ret = await self._send_with_retry(
                 self._package_load(load, nonce),
                 tries,
                 timeout,
             )
+            key = self.auth.get_keys()
+            if not isinstance(ret, dict) or "key" not in ret:
+                # Reauth in the case our key is deleted on the master side.
+                await self.auth.authenticate()
+                ret = await self._send_with_retry(
+                    self._package_load(load, nonce),
+                    tries,
+                    timeout,
+                )
         if not isinstance(ret, dict) or "key" not in ret:
             # The master is still not returning a usable session key.  This
             # happens when a clustered master defers requests with a
@@ -283,10 +306,14 @@ class AsyncReqChannel:
         """
 
         async def _do_transfer():
+            # Pin the session_crypticle reference so a concurrent re-auth
+            # cannot swap the key between the ``dumps`` on the send path
+            # and the ``loads`` on the receive path.  See issue #69753.
+            session_crypticle = self.auth.session_crypticle
             # Yield control to the caller. When send() completes, resume by populating data with the Future.result
             nonce = uuid.uuid4().hex
             data = await self.transport.send(
-                self._package_load(load, nonce),
+                self._package_load(load, nonce, session_crypticle=session_crypticle),
                 timeout=timeout,
             )
             # we may not have always data
@@ -294,7 +321,7 @@ class AsyncReqChannel:
             # communication, we do not subscribe to return events, we just
             # upload the results to the master
             if data:
-                data = self.auth.session_crypticle.loads(data, raw, nonce=nonce)
+                data = session_crypticle.loads(data, raw, nonce=nonce)
             if not raw or self.ttype == "tcp":  # XXX Why is this needed for tcp
                 data = salt.transport.frame.decode_embedded_strs(data)
             return data
@@ -302,13 +329,17 @@ class AsyncReqChannel:
         if not self.auth.authenticated:
             # Return control back to the caller, resume when authentication succeeds
             await self.auth.authenticate()
-        try:
-            # We did not get data back the first time. Retry.
-            ret = await _do_transfer()
-        except salt.crypt.AuthenticationError:
-            # If auth error, return control back to the caller, continue when authentication succeeds
-            await self.auth.authenticate()
-            ret = await _do_transfer()
+        # Serialize concurrent transfers on this channel to keep each
+        # (send, decrypt-reply) pair atomic w.r.t. any other coroutine
+        # driving this same channel.  See issue #69753.
+        async with self._req_lock:
+            try:
+                # We did not get data back the first time. Retry.
+                ret = await _do_transfer()
+            except salt.crypt.AuthenticationError:
+                # If auth error, return control back to the caller, continue when authentication succeeds
+                await self.auth.authenticate()
+                ret = await _do_transfer()
         return ret
 
     async def _uncrypted_transfer(self, load, timeout):

@@ -5,12 +5,14 @@ import logging
 import os
 import pathlib
 import signal
+import threading
 import time
 import uuid
 
 import pytest
 import tornado
 import tornado.gen
+import tornado.ioloop
 import tornado.testing
 
 import salt.minion
@@ -115,6 +117,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
     req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
+    event_enter.get_event.return_value = {"ret": True}
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
@@ -487,6 +490,14 @@ def test_process_count_max(minion_opts, io_loop):
         yield
 
     fopen_mock = MagicMock()
+    # ``_handle_decoded_payload`` calls ``get_proc_dir`` on the parent side
+    # (to precompute the finalize-registered proc-file path for the job
+    # child). ``get_proc_dir`` requires ``<cachedir>/proc`` to be
+    # ``os.stat``-able; patching ``os.makedirs`` to a no-op below would
+    # otherwise leave the directory missing on real disk. Create it up
+    # front so the un-patched ``os.stat`` call inside ``get_proc_dir``
+    # succeeds without touching production code.
+    os.makedirs("/tmp/salt_test_cache/proc", exist_ok=True)
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -1326,6 +1337,35 @@ def test_fire_start_event_missing_jid_does_not_raise(minion_opts):
 
 
 @pytest.mark.slow_test
+def test_return_pub_handles_send_req_timeout(minion_opts):
+    """
+    Ensure _return_pub catches SaltReqTimeoutError from _send_req_sync and
+    returns an empty string rather than letting the exception propagate.
+
+    This is the end-to-end contract between the two methods: _send_req_sync
+    must raise SaltReqTimeoutError (not the bare TimeoutError builtin) so
+    that _return_pub's except clause fires correctly.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.proc_dir = salt.minion.get_proc_dir(minion_opts["cachedir"])
+        minion._send_req_sync = MagicMock(side_effect=SaltReqTimeoutError("timed out"))
+        result = minion._return_pub(
+            {
+                "id": minion_opts["id"],
+                "jid": "20260101000000000001",
+                "return": True,
+                "fun": "test.ping",
+            }
+        )
+        assert result == ""
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
 def test_minion_retry_dns_count(minion_opts):
     """
     Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -1342,6 +1382,110 @@ def test_minion_retry_dns_count(minion_opts):
     )
     with pytest.raises(SaltMasterUnresolvableError):
         salt.minion.resolve_dns(minion_opts)
+
+
+def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    The resolve_dns() retry loop must wake up promptly when a shutdown is
+    requested (e.g. SIGTERM via MinionManager.stop()) instead of blocking
+    the io_loop for the full ``retry_dns`` interval. Without the fix the
+    blocking ``time.sleep(opts["retry_dns"])`` inside resolve_dns starved
+    the io_loop and the shutdown callback never ran until systemd sent
+    SIGKILL.
+    """
+    # The fix exposes a public module-level abort hook used by
+    # MinionManager.stop(). Its absence is itself a regression.
+    assert hasattr(salt.minion, "request_resolve_dns_abort"), (
+        "salt.minion is missing request_resolve_dns_abort(); the SIGTERM "
+        "path cannot interrupt the DNS retry loop. See #69466."
+    )
+    assert hasattr(salt.minion, "_RESOLVE_DNS_ABORT"), (
+        "salt.minion is missing the _RESOLVE_DNS_ABORT event used to "
+        "wake an in-progress resolve_dns() retry. See #69466."
+    )
+
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A retry interval that is much larger than the test deadline.
+            # If the abort path is not honored, this test would block for
+            # the full 90 seconds.
+            "retry_dns": 90,
+            "retry_dns_count": None,
+        },
+    )
+
+    # The resolve_dns abort flag is process-wide; make sure we leave it
+    # clean for other tests.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    def trip_abort():
+        # Give resolve_dns a moment to enter its sleep, then request abort
+        # the same way MinionManager.stop() does on SIGTERM.
+        time.sleep(0.25)
+        salt.minion.request_resolve_dns_abort()
+
+    aborter = threading.Thread(target=trip_abort, daemon=True)
+    started = time.monotonic()
+    try:
+        aborter.start()
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    finally:
+        aborter.join(timeout=5)
+        salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    elapsed = time.monotonic() - started
+    # The fix should wake well under 5s; the broken code would sleep for
+    # the full retry_dns (90s) per iteration.
+    assert elapsed < 5, (
+        f"resolve_dns did not honor the shutdown abort flag "
+        f"(elapsed={elapsed:.2f}s); regression of #69466."
+    )
+
+
+def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    ``MinionManager.stop()`` is the entry point invoked from the SIGTERM
+    handler. It must trip the resolve_dns abort flag before scheduling
+    the async shutdown so a minion currently stuck in the DNS retry loop
+    yields the io_loop. Without this, ``stop_async`` is queued but never
+    runs and systemd escalates to SIGKILL after 90 seconds.
+    """
+    # The abort flag must be cleared at entry; stop() should set it.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+    assert not salt.minion._RESOLVE_DNS_ABORT.is_set()
+
+    manager = salt.minion.MinionManager.__new__(salt.minion.MinionManager)
+    manager.io_loop = MagicMock()
+    # Populate the attributes __del__ -> destroy() touches so the
+    # interpreter does not log an AttributeError at GC time.
+    manager.minions = []
+    manager.event_publisher = None
+    manager.event = None
+    try:
+        manager.stop(signal.SIGTERM, lambda *a, **kw: None)
+        assert salt.minion._RESOLVE_DNS_ABORT.is_set(), (
+            "MinionManager.stop() did not request a resolve_dns abort; "
+            "a SIGTERM during the DNS retry loop will be ignored. See #69466."
+        )
+        # MinionManager.stop() schedules stop_async via
+        # ``io_loop.create_task`` (the 3007.x refactor replaced the earlier
+        # ``add_callback`` form).  Either call is acceptable evidence that
+        # the async shutdown got queued.
+        assert (
+            manager.io_loop.create_task.call_count
+            + manager.io_loop.add_callback.call_count
+            == 1
+        )
+    finally:
+        salt.minion._RESOLVE_DNS_ABORT.clear()
 
 
 @pytest.mark.slow_test
@@ -1504,6 +1648,7 @@ async def test_master_type_failover(minion_opts):
             "master": ["master1", "master2"],
             "__role": "",
             "retry_dns": 0,
+            "master_tries": 1,
         }
     )
 
@@ -1562,6 +1707,68 @@ async def test_master_type_failover_no_masters(minion_opts):
             # Mock the io_loop so calls to stop/close won't happen.
             minion.io_loop = MagicMock()
             await minion.connect_master()
+
+
+def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_opts):
+    """
+    Regression test for #68901: every AsyncPubChannel constructed by
+    Minion.eval_master in the single-master sign-in path must be close()-d
+    when the connection attempt fails, regardless of which exception type
+    pub_channel.connect() raised. Failing to do so leaks the channel's
+    underlying socket file descriptor on each retry, which over time
+    exhausts the minion's fd limit.
+    """
+    minion_opts.update(
+        {
+            "master": "127.0.0.1",
+            "master_type": "str",
+            "transport": "zeromq",
+            "__role": "",
+            "retry_dns": 0,
+            "acceptance_wait_time": 0,
+            "acceptance_wait_time_max": 0,
+            "master_tries": 1,
+        }
+    )
+
+    created = []
+
+    class MockPubChannel:
+        def __init__(self):
+            self.closed = 0
+            created.append(self)
+
+        @tornado.gen.coroutine
+        def connect(self):
+            # Non-SaltClientError on purpose: prior to the fix, this leaks
+            # the channel because the single-master path only closes
+            # pub_channel inside an `except SaltClientError` clause.
+            raise OSError("simulated transport failure")
+
+        def close(self):
+            self.closed += 1
+
+    def mock_channel_factory(opts, **kwargs):
+        return MockPubChannel()
+
+    def mock_resolve_dns(opts, fallback=True):
+        return {"master_ip": "127.0.0.1", "master_uri": "tcp://127.0.0.1:4506"}
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
+        ), patch("salt.loader.grains", MagicMock(return_value={})):
+            minion = salt.minion.Minion(minion_opts, io_loop=io_loop, load_grains=False)
+            with pytest.raises(OSError):
+                io_loop.run_sync(lambda: minion.eval_master(minion_opts, timeout=1))
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert len(created) == 1, "exactly one pub channel should have been created"
+    assert (
+        created[0].closed == 1
+    ), "pub channel was not closed on connection failure (#68901 leak)"
 
 
 def test_config_cache_path_overrides():
@@ -1694,6 +1901,76 @@ async def test_master_type_disable(minion_opts):
         assert minion.connected is False
     finally:
         # Mock the io_loop so calls to stop/close won't happen.
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
+async def test_masterless_minion_does_not_connect_to_master(minion_opts):
+    """
+    When file_client is local and use_master_when_local is False (the default),
+    MinionManager._connect_minion must not call connect_master.
+    Regression test for https://github.com/saltstack/salt/issues/57866 and
+    https://github.com/saltstack/salt/issues/64952.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": False,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert not connect_master_called, (
+            "connect_master should not be called when file_client=local and"
+            " use_master_when_local=False"
+        )
+    finally:
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
+async def test_masterless_minion_connects_when_use_master_when_local(minion_opts):
+    """
+    When file_client is local and use_master_when_local is True,
+    MinionManager._connect_minion must still call connect_master.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": True,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert connect_master_called, (
+            "connect_master should be called when file_client=local and"
+            " use_master_when_local=True"
+        )
+    finally:
         minion.io_loop = MagicMock()
         minion.destroy()
 
@@ -1838,6 +2115,56 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is None
 
 
+async def test_minion_manager_destroy_closes_event_publisher(
+    io_loop, minion_opts, tmp_path
+):
+    """
+    Regression test for issue #70175.
+
+    ``MinionManager.destroy()`` is invoked from
+    ``cli.daemons.Minion.shutdown()`` (KeyboardInterrupt, SaltSystemExit,
+    the ``shutdown(1)`` guard in ``prepare()``) and from
+    ``MinionManager.__del__`` on GC.  It must close the ``event_publisher``
+    ``PublishServer`` graph -- otherwise the three-warning cascade
+    from #70175 fires at interpreter shutdown:
+
+      - ``unclosed publish server <PublishServer>``
+      - ``unclosed SyncWrapper for cls=<_TCPPubServerPublisher>``
+      - ``unclosed publisher client <_TCPPubServerPublisher>``
+
+    Only the ``stop_async`` shutdown path (invoked from the SIGTERM
+    signal handler) used to close these; ``destroy()`` did not, so any
+    non-SIGTERM exit leaked them.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    mm = salt.minion.MinionManager(minion_opts)
+    mm._bind()
+    assert mm.event_publisher is not None
+    assert mm.event is not None
+
+    # Wait for pub server to bind so the underlying PublishServer graph
+    # is fully constructed.
+    while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
+        await tornado.gen.sleep(0.1)
+
+    ep = mm.event_publisher
+    ev = mm.event
+
+    # Call destroy directly (the buggy path).  Post-fix it must close
+    # both resources and null the references.
+    mm.destroy()
+
+    assert mm.event_publisher is None
+    assert mm.event is None
+    # PublishServer.close() sets _closing=True so __del__ won't warn.
+    assert ep._closing is True
+    # SaltEvent.destroy() closes pusher / subscriber and clears them.
+    assert ev.subscriber is None
+    assert ev.pusher is None
+
+
 def test_minion_io_loop_is_asyncio_loop(minion_opts):
     """
     Test that Minion io_loop is converted to asyncio.AbstractEventLoop.
@@ -1912,3 +2239,325 @@ def test_syndic_manager_io_loop_is_asyncio_loop(minion_opts):
         assert not hasattr(sm.io_loop, "spawn_callback")
     finally:
         sm.destroy()
+
+
+def _run_eval_master(opts):
+    """
+    Drive MinionBase.eval_master far enough to hit the single-master branch
+    (where the random_master warning lives) without touching the network:
+    DNS resolution is stubbed and the pub channel connects immediately.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.MinionBase(opts)
+    mock_channel = MagicMock()
+    mock_channel.connect.return_value = tornado.gen.maybe_future(None)
+    mock_channel.auth.gen_token.return_value = b"token"
+    try:
+        with patch(
+            "salt.channel.client.AsyncPubChannel.factory", return_value=mock_channel
+        ), patch("salt.minion.resolve_dns", return_value={}), patch(
+            "salt.minion.prep_ip_port", return_value={}
+        ):
+            io_loop.run_sync(lambda: minion.eval_master(opts))
+    finally:
+        io_loop.close()
+
+
+def _single_master_opts(minion_opts):
+    minion_opts["master"] = "salt-master-1"
+    minion_opts["master_type"] = "str"
+    minion_opts["random_master"] = True
+    minion_opts["transport"] = "zeromq"
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master_tries"] = 1
+    return minion_opts
+
+
+def test_eval_master_random_master_warning_suppressed_for_multimaster(
+    minion_opts, caplog
+):
+    """
+    In multi-master mode the MinionManager spawns one Minion per master, each
+    bound to a single master but inheriting random_master (multimaster=True).
+    Those children must NOT emit the "random_master ... only one master ...
+    Ignoring" warning. Regression test for the spurious per-master warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts["multimaster"] = True
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert (
+        "random_master is True but there is only one master specified"
+        not in caplog.text
+    )
+
+
+def test_eval_master_random_master_warning_for_real_single_master(minion_opts, caplog):
+    """
+    A genuinely single-master minion (not a multimaster child) with
+    random_master set still gets warned -- random_master really is a no-op
+    there. Guards against over-suppressing the warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts.pop("multimaster", None)
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert "random_master is True but there is only one master specified" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Graceful-stop fixup unit tests (issue #70050 audit follow-up)
+# ---------------------------------------------------------------------------
+
+
+def test_remove_proc_file_swallows_missing_file(tmp_path):
+    """
+    ``_remove_proc_file`` is a finalize callback invoked from inside
+    ``SignalHandlingProcess._handle_signals``. A race where the file is
+    already gone (happy-path completion beat the signal) must NOT raise
+    -- an exception in a signal-handler callback aborts the remaining
+    finalize methods on the loop at ``salt/utils/process.py:1058-1068``.
+    """
+    missing = tmp_path / "nope" / "jid"
+    salt.minion._remove_proc_file(str(missing))  # no exception
+
+
+def test_remove_proc_file_deletes_existing_file(tmp_path):
+    """
+    Happy path: file exists, gets removed.
+    """
+    fn = tmp_path / "20260814000000000000"
+    fn.write_bytes(b"payload")
+    salt.minion._remove_proc_file(str(fn))
+    assert not fn.exists()
+
+
+async def test_handle_decoded_payload_registers_proc_file_finalize(
+    minion_opts, tmp_path, io_loop
+):
+    """
+    Gap-2 fix: when ``_handle_decoded_payload`` spawns a
+    ``SignalHandlingProcess`` for a job, it must register
+    ``_remove_proc_file`` as a finalize method against the resolved
+    ``<cachedir>/proc/<jid>`` path so that a graceful SIGTERM triggers
+    proc-file cleanup even though ``SignalHandlingProcess._handle_signals``
+    later calls ``os._exit`` and skips ``_thread_return``'s own finally
+    block.
+    """
+    minion_opts["cachedir"] = str(tmp_path)
+    minion_opts["multiprocessing"] = True
+
+    jid = "20260814000000000001"
+    data = {"jid": jid, "fun": "test.sleep", "arg": [30]}
+
+    captured = {}
+
+    class _FakeProcess:
+        def __init__(self, *args, **kwargs):
+            self.name = kwargs.get("name", "fake")
+            self.pid = 0
+            self._alive = False
+            self.finalize = []
+
+        def register_finalize_method(self, function, *args, **kwargs):
+            self.finalize.append((function, args, kwargs))
+
+        def start(self):
+            captured["started"] = True
+
+        def is_alive(self):
+            return self._alive
+
+    fake_process = None
+
+    def _factory(*args, **kwargs):
+        nonlocal fake_process
+        fake_process = _FakeProcess(*args, **kwargs)
+        return fake_process
+
+    minion = salt.minion.Minion(
+        minion_opts, jid_queue=[], load_grains=False, io_loop=io_loop
+    )
+    try:
+        minion.connected = True
+        minion.subprocess_list = salt.utils.process.SubprocessList()
+        # _handle_decoded_payload's early-exit paths reference these:
+        minion.functions = {}
+        minion._system_resource_limit_hit_timestamp = 0
+        with patch("salt.minion.SignalHandlingProcess", side_effect=_factory), patch(
+            "salt.minion.default_signals"
+        ) as default_signals_mock:
+            default_signals_mock.return_value.__enter__ = MagicMock()
+            default_signals_mock.return_value.__exit__ = MagicMock(return_value=False)
+            await minion._handle_decoded_payload(data)
+    finally:
+        minion.destroy()
+
+    assert fake_process is not None, "SignalHandlingProcess was never constructed"
+    expected_proc_file = os.path.join(str(tmp_path), "proc", jid)
+    assert (
+        salt.minion._remove_proc_file,
+        (expected_proc_file,),
+        {},
+    ) in fake_process.finalize, (
+        f"_remove_proc_file finalize not registered on the job child; "
+        f"finalize list was: {fake_process.finalize!r}"
+    )
+
+
+def test_terminate_subprocess_list_none():
+    """``_terminate_subprocess_list(None, ...)`` is a valid no-op."""
+    salt.minion._terminate_subprocess_list(None, signal.SIGTERM)
+
+
+def test_terminate_subprocess_list_signals_live_only():
+    """
+    Gap-1 fix: iterate ``subprocess_list.processes``, deliver ``signum``
+    to each live entry, then escalate the ones that ignored it. Dead
+    entries must be skipped (no ``os.kill`` against ESRCH pids). The
+    escalation uses SIGKILL on POSIX (``proc.terminate()`` re-sends
+    SIGTERM which a stubborn child by definition ignored).
+    """
+    live = MagicMock(name="live-proc", pid=4242)
+    # Alive at the pre-filter, dead by the escalation loop (as if it
+    # honoured the SIGTERM during the join).
+    live.is_alive.side_effect = [True, False]
+    live.join = MagicMock()
+    live.terminate = MagicMock()
+    live.kill = MagicMock()
+
+    dead = MagicMock(name="dead-proc", pid=999999)
+    dead.is_alive.return_value = False
+    dead.join = MagicMock()
+    dead.terminate = MagicMock()
+    dead.kill = MagicMock()
+
+    stubborn = MagicMock(name="stubborn-proc", pid=4243)
+    stubborn.is_alive.return_value = True  # always alive
+    stubborn.join = MagicMock()
+    stubborn.terminate = MagicMock()
+    stubborn.kill = MagicMock()
+
+    subprocess_list = MagicMock(processes=[live, dead, stubborn])
+
+    with patch("salt.utils.platform.is_windows", return_value=False), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+
+    signaled_pairs = {(call.args[0], call.args[1]) for call in kill_mock.call_args_list}
+    # Live and stubborn both got the graceful signum.
+    assert (4242, signal.SIGTERM) in signaled_pairs
+    assert (4243, signal.SIGTERM) in signaled_pairs
+    # Stubborn escalates to SIGKILL; live doesn't (it exited during the join).
+    assert (4243, signal.SIGKILL) in signaled_pairs
+    assert (4242, signal.SIGKILL) not in signaled_pairs
+    # Dead child never receives anything.
+    assert not any(pid == 999999 for pid, _ in signaled_pairs)
+
+    dead.terminate.assert_not_called()
+    dead.kill.assert_not_called()
+
+
+def test_terminate_subprocess_list_windows_skips_signal():
+    """
+    On Windows, job children have no SIGTERM handler; sending SIGTERM
+    would kill them mid-signal-handler and orphan grandchildren. Fall
+    straight through to ``.kill()`` (which maps to ``TerminateProcess``).
+    """
+    proc = MagicMock(pid=1234)
+    proc.is_alive.return_value = True
+    proc.join = MagicMock()
+    proc.terminate = MagicMock()
+    proc.kill = MagicMock()
+    subprocess_list = MagicMock(processes=[proc])
+
+    with patch("salt.utils.platform.is_windows", return_value=True), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+    kill_mock.assert_not_called()
+    proc.kill.assert_called_once()
+
+
+def test_notify_systemd_stopping_no_socket_and_no_bindings(monkeypatch):
+    """
+    Gap-3 fix: ``notify_systemd_stopping`` must be a silent no-op when
+    the systemd bindings are absent *and* ``systemd-notify`` is not on
+    ``PATH`` (i.e. the daemon was not started under a Type=notify unit,
+    or was started on a non-systemd platform).
+    """
+    monkeypatch.delenv("NOTIFY_SOCKET", raising=False)
+
+    def _no_bindings(name, *a, **kw):
+        if name == "systemd.daemon":
+            raise ImportError("no systemd bindings")
+        return original_import(name, *a, **kw)
+
+    import builtins
+
+    original_import = builtins.__import__
+    monkeypatch.setattr(builtins, "__import__", _no_bindings)
+    monkeypatch.setattr("salt.utils.path.which", lambda name: None)
+    assert salt.utils.process.notify_systemd_stopping() is False
+
+
+def test_notify_systemd_stopping_uses_systemd_daemon(monkeypatch):
+    """
+    When the ``systemd`` Python bindings ARE available and the host is
+    systemd-booted, ``notify_systemd_stopping`` calls ``systemd.daemon.notify``
+    with the literal ``"STOPPING=1"`` payload (not ``"READY=1"``).
+    """
+    fake_daemon = MagicMock()
+    fake_daemon.booted.return_value = True
+    fake_module = MagicMock(daemon=fake_daemon)
+    fake_pkg = MagicMock(daemon=fake_daemon)
+    monkeypatch.setitem(__import__("sys").modules, "systemd", fake_pkg)
+    monkeypatch.setitem(__import__("sys").modules, "systemd.daemon", fake_daemon)
+
+    salt.utils.process.notify_systemd_stopping()
+    fake_daemon.notify.assert_called_once_with("STOPPING=1")
+
+
+async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
+    minion_opts,
+):
+    """
+    Gap-1 + Gap-3 wired into ``MinionManager.stop_async``:
+      - ``notify_systemd_stopping`` fires on entry
+      - ``_terminate_subprocess_list`` is invoked per-managed-minion with
+        the incoming signum (before ``kill_children`` and ``destroy``)
+    """
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        fake_minion = MagicMock()
+        fake_minion.subprocess_list = MagicMock(processes=[])
+        manager.minions = [fake_minion]
+        manager.event = None
+        manager.event_publisher = None
+
+        parent = MagicMock()
+
+        async def _instant_sleep(_):
+            return None
+
+        with patch("salt.utils.process.notify_systemd_stopping") as notify_mock, patch(
+            "salt.minion._terminate_subprocess_list"
+        ) as term_mock, patch("salt.minion.asyncio.sleep", side_effect=_instant_sleep):
+            await manager.stop_async(signal.SIGTERM, parent)
+
+        notify_mock.assert_called_once()
+        term_mock.assert_called_once()
+        args, kwargs = term_mock.call_args
+        assert args[0] is fake_minion.subprocess_list
+        assert args[1] == signal.SIGTERM
+        parent.assert_called_once_with(signal.SIGTERM, None)
+    finally:
+        # MinionManager owns an io_loop but no persistent resources on this
+        # code path; the .destroy() call would try to tear down channels
+        # we never created. A best-effort close is enough.
+        pass

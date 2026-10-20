@@ -160,7 +160,7 @@ prone to errors.
 Virtual Machine generation applications are available for many platforms:
 
 kiwi: (openSUSE, SLES, RHEL, CentOS)
-  https://opensuse.github.io/kiwi/
+  https://osinside.github.io/kiwi/
 
 vm-builder:
   https://wiki.debian.org/VMBuilder

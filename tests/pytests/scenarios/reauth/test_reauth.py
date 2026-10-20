@@ -106,7 +106,22 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
 
 
 def test_presence_events(salt_cli, salt_minion, salt_master, event_listener):
-    assert salt_cli.run("test.ping", minion_tgt=salt_minion.id).data is True
+    # On slow runners (FIPS/Arm64 in particular) the first ping after
+    # master+minion startup can exceed the factory-level 30 s CLI timeout
+    # while the minion finishes auth/reauth and the presence machinery
+    # warms up.  Retry the ping a few times with the override pattern used
+    # elsewhere in this file before failing the test.
+    for attempt in range(1, 4):
+        log.debug("Initial ping attempt %s/3", attempt)
+        ret = salt_cli.run(
+            "--timeout=60", "test.ping", minion_tgt=salt_minion.id, _timeout=120
+        )
+        if ret and ret.data is True:
+            break
+        time.sleep(5)
+    else:
+        pytest.fail(f"Minion failed to respond to ping after 3 attempts: {ret}")
+
     start = time.time()
     matched = event_listener.wait_for_events(
         [(salt_master.id, "salt/presence/present")],

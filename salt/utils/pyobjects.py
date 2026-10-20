@@ -377,7 +377,13 @@ class MapMeta(type):
                     attrs.update(match_attrs)
 
         if hasattr(cls, "merge"):
-            pillar = Map.__salt__["pillar.get"](cls.merge)
+            # The merged values become Map class attributes that are used
+            # operationally in rendered states, so the real pillar values
+            # are needed here, not the masked placeholders. The pyobjects
+            # renderer does not run under the mask_pillar=False context
+            # that string-template renderers (jinja, mako, ...) get from
+            # salt.utils.templates.wrap_tmpl_func.
+            pillar = Map.__salt__["pillar.get"](cls.merge, unmask=True)
             if pillar:
                 attrs.update(pillar)
 

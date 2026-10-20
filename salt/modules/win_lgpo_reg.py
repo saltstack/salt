@@ -58,6 +58,7 @@ The same values can also be used to create states for setting these policies.
 import logging
 
 import salt.utils.platform
+import salt.utils.win_functions
 import salt.utils.win_lgpo_reg
 import salt.utils.win_reg
 import salt.utils.winapi
@@ -405,6 +406,8 @@ def set_value(
     v_data,
     v_type="REG_DWORD",
     policy_class="Machine",
+    write_registry=None,
+    refresh_policy=False,
 ):
     r"""
     Add a key/value pair to the registry.pol file. This bypasses the admx/adml
@@ -437,6 +440,30 @@ def set_value(
             - User
 
             Default is ``Machine``.
+
+        write_registry (:obj:`bool`, optional):
+            Controls whether the value is also written to the live registry
+            immediately after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry write on
+              Domain Controllers where ``HKLM\\SOFTWARE\\Policies\\`` is
+              write-protected; writes directly on all other machine types.
+            - ``True``: always write to the registry (non-DC behaviour).
+            - ``False``: always skip the registry write; the Group Policy
+              engine will commit the value on the next refresh.
+
+        refresh_policy (:obj:`bool`, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use :func:`get_rsop_value` to verify applied state.
+
+            Default is ``False``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -496,35 +523,42 @@ def set_value(
             msg = f"{v_type} data must be an integer"
             raise SaltInvocationError(msg)
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    if found_key:
-        if found_name:
-            if "**del." in found_name:
-                log.debug("LGPO_REG Mod: Found disabled name: %s", found_name)
-                pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
-                found_name = v_name
-            log.debug("LGPO_REG Mod: Updating value: %s", found_name)
-            pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
+        if found_key:
+            if found_name:
+                if "**del." in found_name:
+                    log.debug("LGPO_REG Mod: Found disabled name: %s", found_name)
+                    pol_data[found_key][v_name] = pol_data[found_key].pop(found_name)
+                    found_name = v_name
+                log.debug("LGPO_REG Mod: Updating value: %s", found_name)
+                pol_data[found_key][found_name] = {"data": v_data, "type": v_type}
+            else:
+                log.debug("LGPO_REG Mod: Setting new value: %s", found_name)
+                pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
         else:
-            log.debug("LGPO_REG Mod: Setting new value: %s", found_name)
-            pol_data[found_key][v_name] = {"data": v_data, "type": v_type}
-    else:
-        log.debug("LGPO_REG Mod: Adding new key and value: %s", found_name)
-        pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
+            log.debug("LGPO_REG Mod: Adding new key and value: %s", found_name)
+            pol_data[key] = {v_name: {"data": v_data, "type": v_type}}
 
-    success = True
-    if not write_reg_pol(pol_data, policy_class=policy_class):
-        log.error("LGPO_REG Mod: Failed to write registry.pol file")
-        success = False
+        success = True
+        if not write_reg_pol(pol_data, policy_class=policy_class):
+            log.error("LGPO_REG Mod: Failed to write registry.pol file")
+            success = False
 
-    # We only want to modify the actual registry value if this is machine policy
+    # Resolve auto-detect: skip registry write on Domain Controllers where
+    # HKLM\SOFTWARE\Policies\ is write-protected by AD security hardening.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
+    # We only want to modify the actual registry value if this is machine policy.
     # The user policy will be applied by the user registry.pol when the user
     # logs in. Setting it here only sets it on the user running the salt minion,
-    # most likely SYSTEM, which doesn't make sense here
-    if policy_class == "Machine":
+    # most likely SYSTEM, which doesn't make sense here.
+    if policy_class == "Machine" and write_registry:
         if not salt.utils.win_reg.set_value(
             hive=hive,
             key=key,
@@ -534,6 +568,12 @@ def set_value(
         ):
             log.error("LGPO_REG Mod: Failed to set registry entry")
             success = False
+
+    if success and refresh_policy:
+        if not salt.utils.win_lgpo_reg.refresh_policy():
+            log.warning(
+                "LGPO_REG Mod: Group Policy refresh did not complete successfully"
+            )
 
     if success and policy_class == "Machine":
         rsop = get_rsop_value(key=key, v_name=v_name)
@@ -549,7 +589,13 @@ def set_value(
     return success
 
 
-def disable_value(key, v_name, policy_class="machine"):
+def disable_value(
+    key,
+    v_name,
+    policy_class="machine",
+    write_registry=None,
+    refresh_policy=False,
+):
     r"""
     Mark a registry value for deletion in the registry.pol file. This bypasses
     the admx/adml style policies. This is the equivalent of setting the policy
@@ -568,6 +614,29 @@ def disable_value(key, v_name, policy_class="machine"):
             - User
 
             Default is ``Machine``.
+
+        write_registry (:obj:`bool`, optional):
+            Controls whether the registry value is also deleted immediately
+            after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry delete on
+              Domain Controllers; deletes directly on all other machine types.
+            - ``True``: always delete from the registry (non-DC behaviour).
+            - ``False``: always skip the registry delete; the Group Policy
+              engine will remove the value on the next refresh.
+
+        refresh_policy (:obj:`bool`, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use :func:`get_rsop_value` to verify applied state.
+
+            Default is ``False``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -594,47 +663,53 @@ def disable_value(key, v_name, policy_class="machine"):
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    pol_modified = False
-    if found_key:
-        if found_name:
-            if "**del." in found_name:
-                log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
+        pol_modified = False
+        if found_key:
+            if found_name:
+                if "**del." in found_name:
+                    log.debug("LGPO_REG Mod: Already disabled: %s", v_name)
+                else:
+                    log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
+                    pol_data[found_key].pop(found_name)
+                    found_name = f"**del.{found_name}"
+                    pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+                    pol_modified = True
             else:
-                log.debug("LGPO_REG Mod: Disabling value name: %s", v_name)
-                pol_data[found_key].pop(found_name)
-                found_name = f"**del.{found_name}"
-                pol_data[found_key][found_name] = {"data": " ", "type": "REG_SZ"}
+                log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
+                pol_data[found_key][f"**del.{v_name}"] = {
+                    "data": " ",
+                    "type": "REG_SZ",
+                }
                 pol_modified = True
         else:
-            log.debug("LGPO_REG Mod: Setting new disabled value name: %s", v_name)
-            pol_data[found_key][f"**del.{v_name}"] = {
-                "data": " ",
-                "type": "REG_SZ",
-            }
+            log.debug(
+                "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
+            )
+            pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
             pol_modified = True
-    else:
-        log.debug(
-            "LGPO_REG Mod: Adding new key and disabled value name: %s", found_name
-        )
-        pol_data[key] = {f"**del.{v_name}": {"data": " ", "type": "REG_SZ"}}
-        pol_modified = True
 
-    success = True
-    if pol_modified:
-        if not write_reg_pol(pol_data, policy_class=policy_class):
-            log.error("LGPO_REG Mod: Failed to write registry.pol file")
-            success = False
+        success = True
+        if pol_modified:
+            if not write_reg_pol(pol_data, policy_class=policy_class):
+                log.error("LGPO_REG Mod: Failed to write registry.pol file")
+                success = False
 
-    # We only want to modify the actual registry value if this is machine policy
+    # Resolve auto-detect: skip registry delete on Domain Controllers.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
+    # We only want to modify the actual registry value if this is machine policy.
     # The user policy will be applied by the user registry.pol when the user
     # logs in. Setting it here only sets it on the user running the salt minion,
-    # most likely SYSTEM, which doesn't make sense here
+    # most likely SYSTEM, which doesn't make sense here.
     reg_ret = None
-    if policy_class == "Machine":
+    if policy_class == "Machine" and write_registry:
         reg_ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
         if not reg_ret:
             if reg_ret is None:
@@ -646,6 +721,12 @@ def disable_value(key, v_name, policy_class="machine"):
     # Return None only when pol was already disabled and registry was already absent
     if not pol_modified and reg_ret is None:
         return None
+
+    if success and refresh_policy:
+        if not salt.utils.win_lgpo_reg.refresh_policy():
+            log.warning(
+                "LGPO_REG Mod: Group Policy refresh did not complete successfully"
+            )
 
     if success and policy_class == "Machine":
         rsop = get_rsop_value(key=key, v_name=v_name)
@@ -661,7 +742,13 @@ def disable_value(key, v_name, policy_class="machine"):
     return success
 
 
-def delete_value(key, v_name, policy_class="Machine"):
+def delete_value(
+    key,
+    v_name,
+    policy_class="Machine",
+    write_registry=None,
+    refresh_policy=False,
+):
     r"""
     Delete a key/value pair from the Registry.pol file. This bypasses the
     admx/adml style policies. This is the equivalent of setting the policy to
@@ -680,6 +767,29 @@ def delete_value(key, v_name, policy_class="Machine"):
             - User
 
             Default is ``Machine``.
+
+        write_registry (:obj:`bool`, optional):
+            Controls whether the registry value is also deleted immediately
+            after updating ``Registry.pol``.
+
+            - ``None`` (default): auto-detect. Skips the registry delete on
+              Domain Controllers; deletes directly on all other machine types.
+            - ``True``: always delete from the registry (non-DC behaviour).
+            - ``False``: always skip the registry delete; the Group Policy
+              engine will remove the value on the next refresh.
+
+        refresh_policy (:obj:`bool`, optional):
+            When ``True``, trigger a native in-process Group Policy refresh
+            via ``userenv.dll`` after successfully writing ``Registry.pol``.
+
+            .. note::
+                The refresh is **asynchronous**. This call signals the
+                Group Policy service to begin processing; it returns before
+                processing is complete. Registry values will reflect the
+                updated policy only after the service finishes its refresh
+                cycle. Use :func:`get_rsop_value` to verify applied state.
+
+            Default is ``False``.
 
     Raises:
         SaltInvocationError: Invalid policy_class
@@ -707,36 +817,42 @@ def delete_value(key, v_name, policy_class="Machine"):
     else:
         raise SaltInvocationError("An invalid policy class was specified")
 
-    pol_data = read_reg_pol(policy_class=policy_class)
+    machine = policy_class == "Machine"
+    with salt.utils.win_lgpo_reg._policy_lock(machine=machine):
+        pol_data = read_reg_pol(policy_class=policy_class)
 
-    found_key, found_name = _find_value(pol_data, key, v_name)
+        found_key, found_name = _find_value(pol_data, key, v_name)
 
-    pol_modified = False
-    if found_key:
-        if found_name:
-            log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
-            pol_data[found_key].pop(found_name)
-            pol_modified = True
-            if len(pol_data[found_key]) == 0:
-                log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
-                pol_data.pop(found_key)
+        pol_modified = False
+        if found_key:
+            if found_name:
+                log.debug("LGPO_REG Mod: Removing value name: %s", found_name)
+                pol_data[found_key].pop(found_name)
+                pol_modified = True
+                if len(pol_data[found_key]) == 0:
+                    log.debug("LGPO_REG Mod: Removing empty key: %s", found_key)
+                    pol_data.pop(found_key)
+            else:
+                log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
         else:
-            log.debug("LGPO_REG Mod: Value name not found: %s", v_name)
-    else:
-        log.debug("LGPO_REG Mod: Key not found: %s", key)
+            log.debug("LGPO_REG Mod: Key not found: %s", key)
 
-    success = True
-    if pol_modified:
-        if not write_reg_pol(pol_data, policy_class=policy_class):
-            log.error("LGPO_REG Mod: Failed to write registry.pol file")
-            success = False
+        success = True
+        if pol_modified:
+            if not write_reg_pol(pol_data, policy_class=policy_class):
+                log.error("LGPO_REG Mod: Failed to write registry.pol file")
+                success = False
 
-    # We only want to modify the actual registry value if this is machine policy
+    # Resolve auto-detect: skip registry delete on Domain Controllers.
+    if write_registry is None:
+        write_registry = not salt.utils.win_functions.is_domain_controller()
+
+    # We only want to modify the actual registry value if this is machine policy.
     # The user policy will be applied by the user registry.pol when the user
     # logs in. Setting it here only sets it on the user running the salt minion,
-    # most likely SYSTEM, which doesn't make sense here
+    # most likely SYSTEM, which doesn't make sense here.
     reg_ret = None
-    if policy_class == "Machine":
+    if policy_class == "Machine" and write_registry:
         reg_ret = salt.utils.win_reg.delete_value(hive=hive, key=key, vname=v_name)
         if not reg_ret:
             if reg_ret is None:
@@ -748,6 +864,12 @@ def delete_value(key, v_name, policy_class="Machine"):
     # Return None only when there was nothing to do in either pol or registry
     if not pol_modified and reg_ret is None:
         return None
+
+    if success and refresh_policy:
+        if not salt.utils.win_lgpo_reg.refresh_policy():
+            log.warning(
+                "LGPO_REG Mod: Group Policy refresh did not complete successfully"
+            )
 
     if success and policy_class == "Machine":
         rsop = get_rsop_value(key=key, v_name=v_name)
@@ -761,6 +883,34 @@ def delete_value(key, v_name, policy_class="Machine"):
             )
 
     return success
+
+
+def refresh_policy():
+    r"""
+    Trigger a native in-process Machine Group Policy refresh.
+
+    Delegates to :func:`salt.utils.win_lgpo_reg.refresh_policy`. Use this
+    after a batch of ``set_value`` / ``disable_value`` calls made with
+    ``refresh_policy=False`` to commit all policy changes in a single pass.
+
+    .. note::
+        This call is **asynchronous**. It signals the Group Policy service
+        to begin processing the local ``Registry.pol`` file, but returns
+        before that processing is complete. Registry values will reflect
+        the updated policy only after the service finishes its refresh
+        cycle. Use :func:`get_rsop_value` to verify the applied state after
+        the refresh has had time to complete.
+
+    Returns:
+        bool: ``True`` if the refresh signal was accepted successfully
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' lgpo_reg.refresh_policy
+    """
+    return salt.utils.win_lgpo_reg.refresh_policy()
 
 
 # This is for testing different settings and verifying that we are writing the

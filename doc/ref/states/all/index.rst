@@ -26,6 +26,7 @@ state modules
     cron
     debconfmod
     disk
+    dnfmodule
     environ
     etcd_mod
     event
@@ -86,6 +87,7 @@ state modules
     process
     proxy
     pyenv
+    python
     quota
     rabbitmq_cluster
     rabbitmq_plugin

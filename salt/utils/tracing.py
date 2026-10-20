@@ -7,8 +7,14 @@ so that the rest of the codebase can call ``start_span``, ``inject`` and
 
 When ``opts['tracing']['enabled']`` is false (the default), every public
 function short-circuits and ``start_span`` returns a :class:`_NoopSpan`.  No
-spans are created, no exporter is initialised and no background threads are
-started.
+spans are created, no exporter is initialised, no background threads are
+started -- and, critically, ``opentelemetry`` is never imported.  Every
+salt daemon entry point (master, minion, salt-api, syndic) imports this
+module, so eagerly importing OpenTelemetry at module load added ~15 MB
+per Python process (~225 MB across a 15-process salt-master container)
+even though tracing.enabled defaults to false.  The imports are now
+deferred to :func:`_load_otel`, which is only invoked from paths that
+have already confirmed tracing is on.
 
 The carrier format on the wire is W3C TraceContext: a ``traceparent`` (and
 optional ``tracestate``) string injected into the appropriate dict / header
@@ -42,60 +48,112 @@ import contextlib
 import logging
 import os
 import threading
+from types import SimpleNamespace
 
 log = logging.getLogger(__name__)
 
 _INSTRUMENTATION_NAME = "salt"
 
-# OpenTelemetry is optional.  It is not shipped in the salt-ssh thin
-# tarball, may be absent from older installed onedirs that the upgrade /
-# downgrade tests still exercise, and may be intentionally uninstalled by
-# operators who want a minimal footprint.  When opentelemetry is missing,
-# every public function in this module short-circuits to a no-op, exactly
-# as if ``opts['tracing']['enabled']`` were false.
-try:
-    from opentelemetry import context as otel_context
-    from opentelemetry import trace
-    from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
-        OTLPSpanExporter as _OTLPSpanExporterHTTP,
-    )
-    from opentelemetry.sdk.resources import Resource
-    from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.sdk.trace.sampling import (
-        ALWAYS_OFF,
-        ALWAYS_ON,
-        ParentBased,
-        TraceIdRatioBased,
-    )
-    from opentelemetry.trace.propagation.tracecontext import (
-        TraceContextTextMapPropagator,
-    )
+# Deferred OpenTelemetry state.  ``None`` means "we have not yet tried
+# to import"; ``True`` / ``False`` are set by :func:`_load_otel` on
+# first use.  ``_otel`` is a ``SimpleNamespace`` of the symbols we need
+# from ``opentelemetry`` once the probe succeeds.
+_OTEL_AVAILABLE = None
+_otel = None
+_otel_load_lock = threading.Lock()
 
-    _OTEL_AVAILABLE = True
-    SpanKind = trace.SpanKind
-except ImportError:  # pragma: no cover - exercised when opentelemetry is absent
-    _OTEL_AVAILABLE = False
-    otel_context = None  # type: ignore[assignment]
-    trace = None  # type: ignore[assignment]
-    _OTLPSpanExporterHTTP = None  # type: ignore[assignment]
-    Resource = None  # type: ignore[assignment]
-    TracerProvider = None  # type: ignore[assignment]
-    BatchSpanProcessor = None  # type: ignore[assignment]
-    ConsoleSpanExporter = None  # type: ignore[assignment]
-    ALWAYS_OFF = ALWAYS_ON = ParentBased = TraceIdRatioBased = None  # type: ignore[assignment]
-    TraceContextTextMapPropagator = None  # type: ignore[assignment]
 
-    class _SpanKindStub:
-        """Duck-typed ``trace.SpanKind`` used when opentelemetry is missing."""
+class _SpanKindStub:
+    """
+    Duck-typed ``trace.SpanKind`` used regardless of whether opentelemetry
+    is loaded.
 
-        INTERNAL = "INTERNAL"
-        SERVER = "SERVER"
-        CLIENT = "CLIENT"
-        PRODUCER = "PRODUCER"
-        CONSUMER = "CONSUMER"
+    Callers reach for ``salt.utils.tracing.SpanKind.SERVER`` at import time
+    (see e.g. ``salt/minion.py``, ``salt/channel/server.py``,
+    ``salt/netapi/rest_cherrypy/app.py``).  We can't hand them the real
+    ``opentelemetry.trace.SpanKind`` without importing opentelemetry
+    unconditionally, so we always expose the stub and translate to the
+    real enum inside :func:`_translate_kind` -- but only when tracing is
+    actually enabled.
+    """
 
-    SpanKind = _SpanKindStub()  # type: ignore[assignment]
+    INTERNAL = "INTERNAL"
+    SERVER = "SERVER"
+    CLIENT = "CLIENT"
+    PRODUCER = "PRODUCER"
+    CONSUMER = "CONSUMER"
+
+
+SpanKind = _SpanKindStub()
+
+
+def _load_otel():
+    """
+    Attempt to import opentelemetry on first use.  Returns ``True`` if
+    available.
+
+    Only called from paths where tracing has already been confirmed
+    enabled, so daemons with ``tracing.enabled = false`` (the default)
+    never pay the ~15 MB per-process import cost.  Idempotent; the
+    second call short-circuits on the memoised flag.
+    """
+    global _OTEL_AVAILABLE, _otel  # pylint: disable=global-statement
+    if _OTEL_AVAILABLE is not None:
+        return _OTEL_AVAILABLE
+    with _otel_load_lock:
+        if _OTEL_AVAILABLE is not None:
+            return _OTEL_AVAILABLE
+        try:
+            # pylint: disable=import-outside-toplevel
+            from opentelemetry import context as otel_context
+            from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter as OTLPSpanExporterHTTP,
+            )
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import (
+                BatchSpanProcessor,
+                ConsoleSpanExporter,
+            )
+            from opentelemetry.sdk.trace.sampling import (
+                ALWAYS_OFF,
+                ALWAYS_ON,
+                ParentBased,
+                TraceIdRatioBased,
+            )
+            from opentelemetry.trace.propagation.tracecontext import (
+                TraceContextTextMapPropagator,
+            )
+        except ImportError:  # pragma: no cover - exercised when otel is absent
+            _OTEL_AVAILABLE = False
+            return False
+        _otel = SimpleNamespace(
+            otel_context=otel_context,
+            trace=trace,
+            OTLPSpanExporterHTTP=OTLPSpanExporterHTTP,
+            Resource=Resource,
+            TracerProvider=TracerProvider,
+            BatchSpanProcessor=BatchSpanProcessor,
+            ConsoleSpanExporter=ConsoleSpanExporter,
+            ALWAYS_OFF=ALWAYS_OFF,
+            ALWAYS_ON=ALWAYS_ON,
+            ParentBased=ParentBased,
+            TraceIdRatioBased=TraceIdRatioBased,
+            propagator=TraceContextTextMapPropagator(),
+        )
+        _OTEL_AVAILABLE = True
+        return True
+
+
+def _translate_kind(kind):
+    """Map a public :class:`_SpanKindStub` value to real ``trace.SpanKind``."""
+    if kind is None:
+        return _otel.trace.SpanKind.INTERNAL
+    if isinstance(kind, str):
+        return getattr(_otel.trace.SpanKind, kind, _otel.trace.SpanKind.INTERNAL)
+    # Already a real ``trace.SpanKind`` (or duck-typed equivalent).
+    return kind
 
 
 _lock = threading.Lock()
@@ -103,7 +161,6 @@ _last_pid = None
 _provider = None
 _tracer = None
 _cached_opts = None
-_propagator = TraceContextTextMapPropagator() if _OTEL_AVAILABLE else None
 _atexit_registered = False
 
 
@@ -154,8 +211,8 @@ class _NoopSpan:
         return None
 
     def get_span_context(self):
-        if _OTEL_AVAILABLE:
-            return trace.INVALID_SPAN_CONTEXT
+        if _OTEL_AVAILABLE and _otel is not None:
+            return _otel.trace.INVALID_SPAN_CONTEXT
         return _INVALID_SPAN_CONTEXT_FALLBACK
 
 
@@ -163,10 +220,18 @@ _NOOP_SPAN = _NoopSpan()
 
 
 def is_enabled():
-    """Return True if tracing is configured and enabled."""
-    if not _OTEL_AVAILABLE:
+    """
+    Return True if tracing is configured, enabled, and opentelemetry can
+    be imported.
+
+    Structured so the disabled path never touches opentelemetry: when
+    ``_cached_opts`` is unset or ``enabled`` is false (both true by
+    default), :func:`_load_otel` is not called and the imports stay
+    deferred.
+    """
+    if not _cached_opts or not _cached_opts.get("enabled"):
         return False
-    return bool(_cached_opts and _cached_opts.get("enabled"))
+    return _load_otel()
 
 
 def configure(opts):
@@ -181,20 +246,10 @@ def configure(opts):
     this is a cheap no-op that just caches the opts so that subsequent
     calls in fork children can pick up the same setting.
     """
-    global _cached_opts, _atexit_registered
+    global _cached_opts, _atexit_registered  # pylint: disable=global-statement
     tracing_opts = (opts or {}).get("tracing") or {}
     _cached_opts = dict(tracing_opts)
     _cached_opts.setdefault("service_name", _default_service_name(opts))
-    if not _OTEL_AVAILABLE:
-        if _cached_opts.get("enabled"):
-            log.warning(
-                "tracing.enabled is true but opentelemetry is not installed; "
-                "tracing remains disabled in this process."
-            )
-        return
-    if not _atexit_registered:
-        atexit.register(shutdown)
-        _atexit_registered = True
     if not _cached_opts.get("enabled"):
         log.debug(
             "tracing.configure called but tracing.enabled is false (pid=%d, service=%s)",
@@ -202,6 +257,15 @@ def configure(opts):
             _cached_opts.get("service_name"),
         )
         return
+    if not _load_otel():
+        log.warning(
+            "tracing.enabled is true but opentelemetry is not installed; "
+            "tracing remains disabled in this process."
+        )
+        return
+    if not _atexit_registered:
+        atexit.register(shutdown)
+        _atexit_registered = True
     log.info(
         "Enabling OpenTelemetry tracing (pid=%d, service=%s, exporter=%s, endpoint=%s)",
         os.getpid(),
@@ -214,7 +278,7 @@ def configure(opts):
 
 def shutdown():
     """Flush and tear down the active provider."""
-    global _provider, _tracer, _last_pid
+    global _provider, _tracer, _last_pid  # pylint: disable=global-statement
     with _lock:
         provider = _provider
         _provider = None
@@ -240,11 +304,12 @@ def start_span(name, *, kind=None, attributes=None, links=None, context=None):
     _ensure_tracer()
     if _tracer is None:
         return _NOOP_SPAN
+    real_kind = _translate_kind(kind)
     if context is not None:
-        return _start_with_context(name, context, kind, attributes, links)
+        return _start_with_context(name, context, real_kind, attributes, links)
     return _tracer.start_as_current_span(
         name,
-        kind=kind or trace.SpanKind.INTERNAL,
+        kind=real_kind,
         attributes=attributes,
         links=links,
     )
@@ -252,31 +317,31 @@ def start_span(name, *, kind=None, attributes=None, links=None, context=None):
 
 @contextlib.contextmanager
 def _start_with_context(name, ctx, kind, attributes, links):
-    token = otel_context.attach(ctx)
+    token = _otel.otel_context.attach(ctx)
     try:
         with _tracer.start_as_current_span(
             name,
-            kind=kind or trace.SpanKind.INTERNAL,
+            kind=kind,
             attributes=attributes,
             links=links,
         ) as span:
             yield span
     finally:
-        otel_context.detach(token)
+        _otel.otel_context.detach(token)
 
 
 def current_span():
     """Return the currently active span, or a :class:`_NoopSpan`."""
     if not is_enabled():
         return _NOOP_SPAN
-    return trace.get_current_span()
+    return _otel.trace.get_current_span()
 
 
 def set_attribute(key, value):
     """Set an attribute on the current span (no-op when disabled)."""
     if not is_enabled():
         return
-    span = trace.get_current_span()
+    span = _otel.trace.get_current_span()
     if span is not None and span.is_recording():
         span.set_attribute(key, value)
 
@@ -285,7 +350,7 @@ def record_exception(exc):
     """Record an exception on the current span (no-op when disabled)."""
     if not is_enabled():
         return
-    span = trace.get_current_span()
+    span = _otel.trace.get_current_span()
     if span is not None and span.is_recording():
         span.record_exception(exc)
 
@@ -300,12 +365,12 @@ def inject(carrier):
     not installed — this is a no-op so the on-the-wire payload is not
     bloated with empty headers.
     """
-    if not is_enabled() or _propagator is None:
+    if not is_enabled():
         return
-    span = trace.get_current_span()
+    span = _otel.trace.get_current_span()
     if span is None or not span.is_recording():
         return
-    _propagator.inject(carrier)
+    _otel.propagator.inject(carrier)
 
 
 def extract(carrier):
@@ -316,10 +381,10 @@ def extract(carrier):
     :func:`start_span` as ``context=...``, or ``None`` when no context was
     found, tracing is disabled, or opentelemetry is not installed.
     """
-    if not is_enabled() or not carrier or _propagator is None:
+    if not is_enabled() or not carrier:
         return None
-    ctx = _propagator.extract(carrier)
-    if ctx is otel_context.Context():
+    ctx = _otel.propagator.extract(carrier)
+    if ctx is _otel.otel_context.Context():
         return None
     return ctx
 
@@ -334,19 +399,21 @@ def _ensure_tracer():
             return
         if _cached_opts is None or not _cached_opts.get("enabled"):
             return
+        if not _load_otel():
+            return
         _build_provider()
         _last_pid = pid
 
 
 def _build_provider():
-    global _provider, _tracer
+    global _provider, _tracer  # pylint: disable=global-statement
     opts = _cached_opts or {}
     resource = _build_resource(opts)
     sampler = _build_sampler(opts)
-    provider = TracerProvider(resource=resource, sampler=sampler)
+    provider = _otel.TracerProvider(resource=resource, sampler=sampler)
     exporter = _build_exporter(opts)
     if exporter is not None:
-        provider.add_span_processor(BatchSpanProcessor(exporter))
+        provider.add_span_processor(_otel.BatchSpanProcessor(exporter))
     _provider = provider
     _tracer = provider.get_tracer(_INSTRUMENTATION_NAME)
 
@@ -356,29 +423,29 @@ def _build_resource(opts):
     extra = opts.get("resource_attributes") or {}
     if isinstance(extra, dict):
         attrs.update(extra)
-    return Resource.create(attrs)
+    return _otel.Resource.create(attrs)
 
 
 def _build_sampler(opts):
     name = (opts.get("sampler") or "parent_based").lower()
     arg = opts.get("sampler_arg", 1.0)
     if name == "always_on":
-        return ALWAYS_ON
+        return _otel.ALWAYS_ON
     if name == "always_off":
-        return ALWAYS_OFF
+        return _otel.ALWAYS_OFF
     if name == "trace_id_ratio":
-        return TraceIdRatioBased(float(arg))
+        return _otel.TraceIdRatioBased(float(arg))
     if name == "parent_based":
         try:
             ratio = float(arg)
         except (TypeError, ValueError):
             ratio = 1.0
-        root = ALWAYS_ON if ratio >= 1.0 else TraceIdRatioBased(ratio)
-        return ParentBased(root=root)
+        root = _otel.ALWAYS_ON if ratio >= 1.0 else _otel.TraceIdRatioBased(ratio)
+        return _otel.ParentBased(root=root)
     log.warning(
         "Unknown tracing sampler %r; defaulting to parent_based+always_on", name
     )
-    return ParentBased(root=ALWAYS_ON)
+    return _otel.ParentBased(root=_otel.ALWAYS_ON)
 
 
 def _build_exporter(opts):
@@ -388,21 +455,22 @@ def _build_exporter(opts):
     insecure = opts.get("insecure", True)
     try:
         if name == "console":
-            return ConsoleSpanExporter()
+            return _otel.ConsoleSpanExporter()
         if name == "otlp-http":
             kwargs = {}
             if endpoint:
                 kwargs["endpoint"] = endpoint
             if headers:
                 kwargs["headers"] = headers
-            return _OTLPSpanExporterHTTP(**kwargs)
+            return _otel.OTLPSpanExporterHTTP(**kwargs)
         if name == "otlp-grpc":
             # The gRPC exporter pulls in grpcio which has no wheel for some
             # interpreter / platform combinations.  Import lazily so the
             # default HTTP path works even when grpc isn't installed.
             try:
+                # pylint: disable=import-outside-toplevel
                 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-                    OTLPSpanExporter as _OTLPSpanExporterGRPC,
+                    OTLPSpanExporter as OTLPSpanExporterGRPC,
                 )
             except ImportError:
                 log.error(
@@ -415,7 +483,7 @@ def _build_exporter(opts):
                 kwargs["endpoint"] = endpoint
             if headers:
                 kwargs["headers"] = headers
-            return _OTLPSpanExporterGRPC(**kwargs)
+            return OTLPSpanExporterGRPC(**kwargs)
     except Exception:  # pylint: disable=broad-except
         log.exception("Failed to build tracing exporter %r", name)
         return None

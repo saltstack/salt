@@ -180,10 +180,7 @@ async def post_master_init(self, master):
         proxy_init_func_name not in self.proxy
         or proxy_shutdown_func_name not in self.proxy
     ):
-        errmsg = (
-            "Proxymodule {} is missing an init() or a shutdown() or both. "
-            "Check your proxymodule.  Salt-proxy aborted.".format(fq_proxyname)
-        )
+        errmsg = salt.minion.proxy_load_failure_message(self.proxy, fq_proxyname)
         log.error(errmsg)
         self._running = False
         raise SaltSystemExit(code=-1, msg=errmsg)
@@ -226,7 +223,11 @@ async def post_master_init(self, master):
         )
 
     # add default scheduling jobs to the minions scheduler
-    if self.opts["mine_enabled"] and "mine.update" in self.functions:
+    # ``mine.update`` is Salt-internal machinery injected as
+    # ``__mine_interval``; route the presence check through the
+    # unfiltered inner loader (see companion fix in salt/minion.py).
+    _inner_functions = getattr(self.functions, "_dunder_salt", None) or self.functions
+    if self.opts["mine_enabled"] and "mine.update" in _inner_functions:
         self.schedule.add_job(
             {
                 "__mine_interval": {
@@ -542,6 +543,17 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     )
     proxyopts["grains"] = proxy_grains
 
+    # The execution-module loader was packed earlier with the first-pass
+    # grains (computed through the parent control proxy's LazyLoader, before
+    # this sub-proxy's own proxymodule was initialised). Re-pack the fresh
+    # per-sub-proxy grains so ``__grains__`` inside every loaded module
+    # reflects this sub-proxy's device, not the placeholder values shared
+    # with its siblings.  See issue #68248.
+    _proxy_minion.functions.pack["__grains__"] = proxy_grains
+    _proxy_minion.returners.pack["__grains__"] = proxy_grains
+    _proxy_minion.executors.pack["__grains__"] = proxy_grains
+    _proxy_minion.proxy.pack["__grains__"] = proxy_grains
+
     if not hasattr(_proxy_minion, "schedule"):
         _proxy_minion.schedule = salt.utils.schedule.Schedule(
             proxyopts,
@@ -794,7 +806,14 @@ def thread_return(cls, minion_instance, opts, data):
             ret["out"] = "nested"
             ret["retcode"] = salt.defaults.exitcodes.EX_GENERIC
     else:
-        docs = minion_instance.functions["sys.doc"](f"{function_name}*")
+        # Error-path documentation lookup: route through the unfiltered
+        # inner loader so ``sys.doc`` still resolves under a strict
+        # ``whitelist_modules`` that omits ``sys``.
+        _sys_loader = (
+            getattr(minion_instance.functions, "_dunder_salt", None)
+            or minion_instance.functions
+        )
+        docs = _sys_loader["sys.doc"](f"{function_name}*")
         if docs:
             docs[function_name] = minion_instance.functions.missing_fun_string(
                 function_name

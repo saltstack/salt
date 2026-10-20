@@ -260,7 +260,7 @@ changed to the filesystem location shared between peers in the cluster.
     cluster_pki_dir: /my/gluster/share/pki
 
 
-.. conf_master:: cluster_port
+.. conf_master:: cluster_pool_port
 
 ``cluster_pool_port``
 ---------------------
@@ -273,43 +273,6 @@ listens on for incoming TCP connections. The default is ``4520``
 .. code-block:: yaml
 
     cluster_pool_port: 4520
-
-.. conf_master:: cluster_secret
-
-``cluster_secret``
-------------------
-
-.. versionadded:: 3008.0
-
-Pre-shared string that authenticates a master joining the cluster. All peers
-must be configured with the same value. Leaving it unset matches empty against
-empty and provides no authentication -- always set a high-entropy value in
-production. See :ref:`tutorial-master-cluster`.
-
-.. code-block:: yaml
-
-    cluster_secret: "d8b4c2e1f07a4c3e8a1b5d0a9c7f3e42b6d9a1c4f8e2b7d0a3c6e9f1b4d7a0c3"
-
-.. conf_master:: cluster_pub_fingerprint
-
-``cluster_pub_fingerprint``
----------------------------
-
-.. versionadded:: 3008.0
-
-Optional SHA-256 hex digest of the shared cluster public key. When set, a
-joining master rejects any discover-reply whose cluster public key does not
-hash to this value. Useful when the joining master cannot read the cluster
-public key from a shared ``cluster_pki_dir``; otherwise leave unset and rely
-on ``cluster_secret`` to authenticate the join.
-
-.. code-block:: shell
-
-    openssl dgst -sha256 /path/to/cluster_pki_dir/cluster.pub
-
-.. code-block:: yaml
-
-    cluster_pub_fingerprint: "3b1f9d...<64 hex chars>...c7a2"
 
 .. conf_master:: extension_modules
 
@@ -425,6 +388,23 @@ Verify and set permissions on configuration directories at startup.
 .. code-block:: yaml
 
     verify_env: True
+
+.. conf_master:: keep_jobs
+
+``keep_jobs``
+-------------
+
+Default: ``24``
+
+Set the number of hours to keep old job information. Note that setting this option
+to ``0`` disables the cache cleaner.
+
+.. deprecated:: 3006
+    Replaced by :conf_master:`keep_jobs_seconds`
+
+.. code-block:: yaml
+
+    keep_jobs: 24
 
 .. conf_master:: keep_jobs_seconds
 
@@ -721,26 +701,11 @@ are expected to reply from executions.
 
 Default: ``localfs``
 
-Cache subsystem module to use for minion data cache.  Common values:
-
-* ``localfs`` — file-per-entry under :conf_master:`cachedir`.  The default;
-  fine for small deployments.
-* ``mmap_cache`` — fast memory-mapped hash-table backend.  Drop-in for
-  ``localfs`` with an O(1) get/contains/updated and O(occupied) bulk
-  listing.  On large fleets ``salt-key -L`` and grain/pillar target
-  matching can run **orders of magnitude faster** than ``localfs``.
-  Migrate existing data with ``salt-run cache.migrate``.  See
-  :ref:`mmap-cache` for benchmarks, sizing, and durability notes.
-* ``consul``, ``redis``, ``etcd``, ``mysql`` — networked backends, useful
-  for sharing cache across multiple masters.
-
-The minion-key store is selected separately via ``keys.cache_driver``
-(``localfs_key`` by default; set to ``mmap_key`` for the memory-mapped
-variant).
+Cache subsystem module to use for minion data cache.
 
 .. code-block:: yaml
 
-    cache: mmap_cache
+    cache: consul
 
 .. conf_master:: memcache_expire_seconds
 
@@ -1268,22 +1233,6 @@ a minion performs an authentication check with the master.
 
     auth_events: True
 
-.. conf_master:: auth_events_autosign_grains
-
-``auth_events_autosign_grains``
--------------------------------
-
-.. versionadded:: 3008
-
-Default: ``[]``
-
-Determines which actions the master will include autosign_grains for when
-firing authentication events.
-
-.. code-block:: yaml
-
-    auth_events_autosign_grains: ["accept", "pend", "reject", "full", "denied", "error"]
-
 .. conf_master:: minion_data_cache_events
 
 ``minion_data_cache_events``
@@ -1767,8 +1716,6 @@ Pass a list of importable Python modules that are typically located in
 the `site-packages` Python directory so they will be also always included
 into the Salt Thin, once generated.
 
-.. conf_master:: min_extra_mods
-
 ``min_extra_mods``
 ------------------
 
@@ -1776,47 +1723,6 @@ Default: None
 
 Identical as `thin_extra_mods`, only applied to the Salt Minimal.
 
-.. conf_master:: thin_exclude_saltexts
-
-``thin_exclude_saltexts``
--------------------------
-
-Default: False
-
-By default, Salt-SSH autodiscovers Salt extensions in the current Python environment
-and adds them to the Salt Thin. This disables that behavior.
-
-.. note::
-
-    When the list of modules/extensions to include in the Salt Thin changes
-    for any reason (e.g. Saltext was added/removed, :conf_master:`thin_exclude_saltexts`,
-    :conf_master:`thin_saltext_allowlist` or :conf_master:`thin_saltext_blocklist`
-    was changed), you typically need to regenerate the Salt Thin by passing
-    ``--regen-thin`` to the next Salt-SSH invocation.
-
-.. conf_master:: thin_saltext_allowlist
-
-``thin_saltext_allowlist``
---------------------------
-
-Default: None
-
-A list of Salt extension **distribution** names which are allowed to be
-included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
-is inactive) and they are discovered. Any extension not in this list
-will be excluded. If unset, all discovered extensions are added,
-unless present in :conf_master:`thin_saltext_blocklist`.
-
-.. conf_master:: thin_saltext_blocklist
-
-``thin_saltext_blocklist``
---------------------------
-
-Default: None
-
-A list of Salt extension **distribution** names which should never be
-included in the Salt Thin (when :conf_master:`thin_exclude_saltexts`
-is inactive).
 
 .. _master-security-settings:
 
@@ -2321,116 +2227,6 @@ constant names without ssl module prefix: ``CERT_REQUIRED`` or ``PROTOCOL_SSLv23
         certfile: <path_to_certfile>
         ssl_version: PROTOCOL_TLSv1_2
 
-.. conf_master:: disable_aes_with_tls
-
-``disable_aes_with_tls``
-------------------------
-
-.. versionadded:: 3008.0
-
-Default: ``False``
-
-When set to ``True``, Salt will skip application-layer AES encryption when TLS
-is active with validated certificates. This optimization can improve performance
-by eliminating redundant encryption, as TLS already provides encryption at the
-transport layer.
-
-**Requirements for optimization to activate:**
-
-1. ``disable_aes_with_tls: true`` on both master and minion
-2. Valid SSL configuration (``ssl`` option configured)
-3. Mutual TLS authentication (``cert_reqs: CERT_REQUIRED``)
-4. TCP or WebSocket transport (not ZeroMQ)
-5. Valid peer certificates
-6. Minion certificates must contain minion ID in CN or SAN
-
-If any requirement is not met, Salt automatically falls back to standard AES
-encryption. This ensures the feature is safe to enable and maintains backward
-compatibility.
-
-.. code-block:: yaml
-
-    transport: tcp
-    ssl:
-        certfile: /etc/pki/tls/certs/salt-master.crt
-        keyfile: /etc/pki/tls/private/salt-master.key
-        ca_certs: /etc/pki/tls/certs/ca-bundle.crt
-        cert_reqs: CERT_REQUIRED
-    disable_aes_with_tls: true
-
-.. warning::
-    Minion certificates **must** contain the minion ID in either the Common Name
-    (CN) or Subject Alternative Name (SAN) field to prevent impersonation attacks.
-
-See :ref:`tls-encryption-optimization` for detailed configuration and security
-information.
-
-.. conf_master:: use_os_truststore
-
-``use_os_truststore``
-----------------------
-
-.. versionadded:: 3008.0
-
-Default: ``False``
-
-If ``True``, Salt will use the native operating system certificate store for
-SSL/TLS verification instead of the bundled ``certifi`` CA bundle.  This is
-the recommended setting for environments with transparent proxies or internal
-root CAs deployed via Group Policy or a device-management system.
-
-Platform mapping:
-
-- **Windows** — Local Machine Certificate Store (CryptoAPI)
-- **macOS** — Keychain
-- **Linux** — ``/etc/ssl/certs`` or ``/etc/pki/tls``
-
-.. code-block:: yaml
-
-    use_os_truststore: True
-
-.. rubric:: Requirements
-
-The ``truststore`` package must be installed (Python 3.10 or newer).
-If the package is not present, Salt logs a warning and falls back to
-``certifi``.  The ``ca_truststore`` grain reports which store is active.
-
-.. warning::
-
-    Do **not** install ``pip-system-certs`` into the Salt Python environment.
-    That package ships a ``.pth`` file that unconditionally activates the OS
-    trust store on every Python startup, before Salt reads its configuration,
-    completely bypassing this setting.
-
-.. rubric:: Interaction with ``ca_bundle``
-
-An explicit ``ca_bundle: /path/to/bundle.pem`` setting always takes
-precedence over ``use_os_truststore``.  Use ``ca_bundle`` when you need to
-pin a specific certificate file regardless of the OS store.
-
-.. rubric:: PKI architecture
-
-This setting has **no effect** on Salt's master/minion key authentication
-system (``pki_dir``, AES session keys, minion key acceptance).  It only
-affects outbound HTTPS/TLS connections made by Salt — HTTP runner, gitfs,
-fileserver backends, cloud drivers, and similar components.
-
-.. note::
-
-    On Windows, the ``LocalSystem`` service account (the default account
-    for the salt-master and salt-minion Windows services) only has access to
-    the **Local Machine** certificate store, not the Current User store.
-    Certificates must be deployed to the Local Machine store, for example
-    via Group Policy, to be visible to Salt.
-
-.. note::
-
-    On Windows, certificate verification is performed via a CryptoAPI service
-    call rather than a simple file read.  This may add a small amount of
-    latency on the first TLS connection made by a new process compared with
-    the simple file read used with ``certifi``.  On Linux and macOS the
-    performance difference is negligible.
-
 .. conf_master:: preserve_minion_cache
 
 ``preserve_minion_cache``
@@ -2527,9 +2323,9 @@ limit is to search the internet for something like this:
 
 Default: ``5``
 
-The number of MWorker processes to start for receiving commands and replies
-from minions.  If minions are stalling on replies because you have many
-minions, raise the ``worker_threads`` value.
+The number of threads to start for receiving commands and replies from minions.
+If minions are stalling on replies because you have many minions, raise the
+worker_threads value.
 
 Worker threads should not be put below 3 when using the peer system, but can
 drop down to 1 worker otherwise.
@@ -2537,106 +2333,19 @@ drop down to 1 worker otherwise.
 Standards for busy environments:
 
 * Use one worker thread per 200 minions.
-* The value of ``worker_threads`` should not exceed 1½ times the available CPU
-  cores.
+* The value of worker_threads should not exceed 1½ times the available CPU cores.
 
 .. note::
     When the master daemon starts, it is expected behaviour to see
-    multiple salt-master processes, even if ``worker_threads`` is set to
-    ``1``. At a minimum, a controlling process will start along with a
-    Publisher, an EventPublisher, and a number of MWorker processes will be
-    started. The number of MWorker processes is tuneable by the
-    ``worker_threads`` configuration value while the others are not.
+    multiple salt-master processes, even if 'worker_threads' is set to '1'. At
+    a minimum, a controlling process will start along with a Publisher, an
+    EventPublisher, and a number of MWorker processes will be started. The
+    number of MWorker processes is tuneable by the 'worker_threads'
+    configuration value while the others are not.
 
 .. code-block:: yaml
 
     worker_threads: 5
-
-.. note::
-    ``worker_threads`` only controls the size of the single default worker
-    pool used by the legacy code path.  For finer-grained routing — for
-    example to give ``_auth`` its own dedicated MWorkers — see
-    :conf_master:`worker_pools`, :conf_master:`worker_pools_enabled`, and the
-    :ref:`tunable worker pools <tunable-worker-pools>` topic guide.  When
-    ``worker_pools`` is unset the master automatically builds a single
-    catchall pool sized by ``worker_threads``, so existing configurations
-    behave exactly as before.
-
-.. conf_master:: worker_pools_enabled
-
-``worker_pools_enabled``
-------------------------
-
-.. versionadded:: 3008.0
-
-Default: ``True``
-
-Master-level switch for the :ref:`tunable worker pools <tunable-worker-pools>`
-feature.  When ``True`` (the default) the master uses
-:conf_master:`worker_pools` (or, if that is unset, a single catchall pool
-sized by :conf_master:`worker_threads`) to route requests to per-pool
-MWorkers.  When ``False`` the master falls back to the legacy single-queue
-MWorker model.
-
-The default value preserves the historical behavior when no other pool
-settings are provided, so upgrading does not require any configuration
-changes.  Set this to ``False`` only if you need to disable pooled routing
-entirely — for example to debug a transport issue.
-
-.. code-block:: yaml
-
-    worker_pools_enabled: True
-
-.. conf_master:: worker_pools
-
-``worker_pools``
-----------------
-
-.. versionadded:: 3008.0
-
-Default: ``{}`` (an implicit single catchall pool sized by
-:conf_master:`worker_threads`)
-
-Defines the MWorker pools the master should start and the commands each pool
-should service.  When unset, the master builds a single pool named
-``default`` with ``worker_count`` equal to :conf_master:`worker_threads` and
-a catchall that receives every command — equivalent to the pre-3008.0
-behavior.
-
-Each key under ``worker_pools`` names a pool.  The value is a dictionary
-with two required fields:
-
-``worker_count``
-    Integer ``>= 1``.  The number of MWorker processes to start for the
-    pool.
-
-``commands``
-    List of command strings.  Each string must be either an exact command
-    name (for example ``_auth`` or ``_return``) or the single catchall
-    entry ``"*"``.
-
-A command may be mapped to at most one pool.  Exactly one pool must use
-the ``"*"`` catchall so that every command has a routing destination;
-payloads whose ``cmd`` is not matched by an explicit mapping are sent to
-that pool.
-
-The master refuses to start if the configuration is invalid — for example
-if two pools claim the same command, if no pool (or more than one pool)
-uses the ``"*"`` catchall, or if a pool has no ``commands``.  See
-:ref:`tunable worker pools <tunable-worker-pools>` for a full walkthrough
-of the validation rules and recommended layouts.
-
-.. code-block:: yaml
-
-    worker_pools:
-      auth:
-        worker_count: 2
-        commands:
-          - _auth
-      default:
-        worker_count: 8
-        commands:
-          - "*"
 
 .. conf_master:: pub_hwm
 
@@ -2745,11 +2454,7 @@ This option has no default value. Set it to an environment name to ensure that
 :ref:`highstate <running-highstate>`.
 
 .. note::
-    Minions which have an explicit :conf_minion:`saltenv` set will use that
-    environment's top file, ignoring this master config option.
-
-.. note::
-    Using this option does not change the merging strategy. For instance, if
+    Using this value does not change the merging strategy. For instance, if
     :conf_master:`top_file_merging_strategy` is set to ``merge``, and
     :conf_master:`state_top_saltenv` is set to ``foo``, then any sections for
     environments other than ``foo`` in the top file for the ``foo`` environment
@@ -2897,6 +2602,14 @@ To set the options for sls templates use :conf_master:`jinja_sls_env`.
 
     The `Jinja2 Environment documentation <https://jinja.palletsprojects.com/en/2.11.x/api/#jinja2.Environment>`_ is the official source for the default values.
     Not all the options listed in the jinja documentation can be overridden using :conf_master:`jinja_env` or :conf_master:`jinja_sls_env`.
+
+.. note::
+
+    :conf_master:`jinja_env` and :conf_master:`jinja_sls_env` apply to **every**
+    template, so changing them can break unrelated states or third-party
+    formulas that were written for the defaults. To set Jinja environment
+    options for a single template instead, add a ``#jinja2:`` header to that
+    template (see :ref:`Jinja Environment Configuration Override <jinja-fileopts>`).
 
 The default options are:
 
@@ -3072,9 +2785,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_master:: state_output_diff
 
@@ -3574,23 +3297,6 @@ be a better option.
 
 .. versionchanged:: 2016.11.0
     The default config value changed from ``False`` to ``True``.
-
-.. conf_master:: gitfs_proxy
-
-``gitfs_proxy``
-***************
-
-.. versionadded:: 3008.0
-
-Default: ``''``
-
-Specifies the URL of the proxy server that will be used to connect to the
-repositories configured in :conf_master:`gitfs_remotes`. By default, no proxy
-server will be used.
-
-.. code-block:: yaml
-
-    gitfs_proxy: http://foo.com:8080/
 
 .. conf_master:: gitfs_mountpoint
 
@@ -5060,22 +4766,6 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
     pygit2 only supports disabling SSL verification in versions 0.23.2 and
     newer.
 
-.. conf_master:: git_pillar_proxy
-
-``git_pillar_proxy``
-********************
-
-.. versionadded:: 3008.0
-
-Default: ``''``
-
-Specifies the URL of the proxy server that will be used to connect to the
-remote repository. By default, no proxy server will be used.
-
-.. code-block:: yaml
-
-    git_pillar_proxy: http://foo.com:8080/
-
 .. conf_master:: git_pillar_global_lock
 
 ``git_pillar_global_lock``
@@ -5434,6 +5124,33 @@ Recursively merge lists by aggregating them instead of replacing them.
 .. code-block:: yaml
 
     pillar_merge_lists: False
+
+.. conf_master:: pillar_mask_output
+
+``pillar_mask_output``
+**********************
+
+.. versionadded:: 3008.3
+
+Default: ``True``
+
+Changes the *default* behavior of :py:func:`pillar.items
+<salt.modules.pillar.items>` when a caller doesn't explicitly pass
+``unmask``. When ``True`` (the default), ``pillar.items`` returns masked
+values (``**********``) by default, matching :py:func:`pillar.get
+<salt.modules.pillar.get>` and friends. Set to ``False`` to make
+``pillar.items`` default to returning real, unmasked values instead —
+useful for sites relying on the pre-masking ``pillar.items`` behavior.
+
+This option does **not** disable pillar masking elsewhere: ``pillar.get``,
+``pillar.item``, ``pillar.raw``, ``pillar.ext``, ``no_log`` state output,
+and the general CLI output safety net are unaffected and keep redacting by
+default regardless of this setting. Callers of ``pillar.items`` can always
+override the default explicitly with ``unmask=True``/``unmask=False``.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
 
 .. conf_master:: pillar_includes_override_sls
 
@@ -6474,22 +6191,6 @@ In the 2016.11.0 release, the default config value changed from ``False`` to
 .. code-block:: yaml
 
     winrepo_ssl_verify: True
-
-.. conf_master:: winrepo_proxy
-
-``winrepo_proxy``
------------------
-
-.. versionadded:: 3008.0
-
-Default: ``''``
-
-Specifies the URL of the proxy server that will be used to connect to the
-remote repository. By default, no proxy server will be used.
-
-.. code-block:: yaml
-
-    winrepo_proxy: http://foo.com:8080/
 
 Winrepo Authentication Options
 ------------------------------
