@@ -327,7 +327,14 @@ def test_requester_churn_fd_bounded(mworkerqueue, proc_stats):
     more than phase 1.
     """
     pid = mworkerqueue.process.pid
-    worker = mworkerqueue.worker()
+
+    # ``mworkerqueue.worker()`` only issues ``connect()`` by default;
+    # the ROUTER <-> DEALER zmq handshake and the internal DEALER's
+    # peer-list update are asynchronous and would otherwise race the
+    # first churn message.  ``wait_ready=True`` runs an end-to-end
+    # REQ <-> worker <-> ack probe before returning so the DEALER has
+    # us in its dispatch set when the churn loop below starts.
+    worker = mworkerqueue.worker(wait_ready=True)
 
     def _churn(n_cycles: int, id_prefix: str) -> None:
         for i in range(n_cycles):
@@ -408,8 +415,11 @@ def test_malformed_input_does_not_kill_queue(mworkerqueue):
     # Proxy must still be alive.
     assert mworkerqueue.process.is_alive()
 
-    # And well-formed traffic must still round-trip.
-    worker = mworkerqueue.worker()
+    # And well-formed traffic must still round-trip.  Request a worker
+    # that has been confirmed routable (``wait_ready=True``) so the bare
+    # 3 s poll below is not racing the DEALER-side handshake on busy CI
+    # runners (symptom: ``assert None == b"still alive?"``).
+    worker = mworkerqueue.worker(wait_ready=True)
     minion = mworkerqueue.minion()
     minion.send(b"still alive?")
     req = _poll_recv(worker, 3000)

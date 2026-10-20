@@ -211,12 +211,11 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -815,7 +814,7 @@ tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   pytest
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock

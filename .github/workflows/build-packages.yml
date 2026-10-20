@@ -27,7 +27,7 @@ on:
       sign-deb-packages:
         type: boolean
         default: false
-        description: Sign DEB Packages (via debsigs, using NIGHTLY_SIGNING_GPG_KEY)
+        description: Sign DEB Packages (via debsigs; NIGHTLY_SIGNING_GPG_KEY for nightlies, SIGNING_GPG_KEY otherwise)
       sign-macos-packages:
         type: boolean
         default: false
@@ -167,8 +167,14 @@ jobs:
       - name: Setup GnuPG
         if: ${{ inputs.sign-deb-packages }}
         env:
-          SIGNING_GPG_KEY: ${{ secrets.NIGHTLY_SIGNING_GPG_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.NIGHTLY_SIGNING_PASSPHRASE }}
+          # NIGHTLY_SIGNING_GPG_KEY is only populated in the nightly environment;
+          # staging / release environments carry SIGNING_GPG_KEY instead.
+          # Pick by inputs.environment so this reusable workflow signs correctly
+          # under nightly.yml, staging.yml, and release.yml alike (see the
+          # rename in 350ae7032cd, which mistakenly assumed build-packages.yml
+          # was only reachable from nightly.yml).
+          SIGNING_GPG_KEY: ${{ inputs.environment == 'nightly' && secrets.NIGHTLY_SIGNING_GPG_KEY || secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ inputs.environment == 'nightly' && secrets.NIGHTLY_SIGNING_PASSPHRASE || secrets.SIGNING_PASSPHRASE }}
         run: |
           install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
           GNUPGHOME="$(mktemp -d -p /run/gpg)"
@@ -199,12 +205,9 @@ jobs:
         working-directory: pkgs/checkout/
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
-          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build Deb
         working-directory: pkgs/checkout/
-        env:
-          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build deb --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
@@ -299,8 +302,14 @@ jobs:
       - name: Setup GnuPG
         if: ${{ inputs.sign-rpm-packages }}
         env:
-          SIGNING_GPG_KEY: ${{ secrets.NIGHTLY_SIGNING_GPG_KEY }}
-          SIGNING_PASSPHRASE: ${{ secrets.NIGHTLY_SIGNING_PASSPHRASE }}
+          # NIGHTLY_SIGNING_GPG_KEY is only populated in the nightly environment;
+          # staging / release environments carry SIGNING_GPG_KEY instead.
+          # Pick by inputs.environment so this reusable workflow signs correctly
+          # under nightly.yml, staging.yml, and release.yml alike (see the
+          # rename in 350ae7032cd, which mistakenly assumed build-packages.yml
+          # was only reachable from nightly.yml).
+          SIGNING_GPG_KEY: ${{ inputs.environment == 'nightly' && secrets.NIGHTLY_SIGNING_GPG_KEY || secrets.SIGNING_GPG_KEY }}
+          SIGNING_PASSPHRASE: ${{ inputs.environment == 'nightly' && secrets.NIGHTLY_SIGNING_PASSPHRASE || secrets.SIGNING_PASSPHRASE }}
         run: |
           install -d -m 0700 -o "$(id -u)" -g "$(id -g)" /run/gpg
           GNUPGHOME="$(mktemp -d -p /run/gpg)"
@@ -331,11 +340,8 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           tools pkg apply-release-patch salt-${{ inputs.salt-version }}.patch --delete
-          echo "${{ inputs.salt-version }}" > salt/_version.txt
 
       - name: Build RPM
-        env:
-          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build rpm  --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
               inputs.source == 'onedir' &&
@@ -463,7 +469,6 @@ jobs:
 
       - name: Build MacOS Package
         env:
-          SALT_VERSION: "${{ inputs.salt-version }}"
           DEV_APP_CERT: "${{ secrets.MAC_SIGN_DEV_APP_CERT }}"
           DEV_INSTALL_CERT: "${{ secrets.MAC_SIGN_DEV_INSTALL_CERT }}"
           APPLE_ACCT: "${{ secrets.MAC_SIGN_APPLE_ACCT }}"
@@ -597,8 +602,6 @@ jobs:
         uses: digicert/ssm-code-signing@v1.2.1
 
       - name: Build Windows Packages
-        env:
-          SALT_VERSION: "${{ inputs.salt-version }}"
         run: |
           tools pkg build windows --relenv-version=${{ inputs.relenv-version }} --python-version=${{ inputs.python-version }} ${{
             inputs.source == 'onedir' &&
