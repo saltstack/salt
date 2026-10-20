@@ -26,6 +26,11 @@ import tools.utils
 
 log = logging.getLogger(__name__)
 
+# The pip version shipped in the onedir and in virtualenv's embedded wheels.
+# This is independent of the pip pinned in requirements/constraints.txt, which
+# only applies to the dev/CI tooling venvs.
+PACKAGED_PIP_VERSION = "26.2.2"
+
 # Cache of the pip wheels prepared by _download_pip_wheel, keyed by the
 # urllib3 version overlaid onto them (None when no overlay applies). Reused
 # across all build steps in the same process.
@@ -68,11 +73,11 @@ def _download_pip_wheel(
     ctx: Context, requirements_file: pathlib.Path, python_version: str
 ) -> pathlib.Path:
     """
-    Download pip==26.2 into a temporary directory and return the path to
-    the wheel. The result is cached for the lifetime of the current process
-    so subsequent calls are free.
+    Download pip==PACKAGED_PIP_VERSION into a temporary directory and return
+    the path to the wheel. The result is cached for the lifetime of the
+    current process so subsequent calls are free.
 
-    pip 26.2 vendors urllib3 2.7.0, and pip lags upstream urllib3 releases.
+    pip 26.2.x vendors urllib3 2.7.0, and pip lags upstream urllib3 releases.
     To make the pip we ship (and the copy virtualenv embeds to seed new
     virtualenvs) carry the same urllib3 as the one *requirements_file*
     installs into the onedir, the pinned urllib3 is overlaid onto the wheel
@@ -88,10 +93,10 @@ def _download_pip_wheel(
         return _DOWNLOADED_PIP_WHEELS[urllib3_version]
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-download-"))
-    ctx.info("Downloading pip==26.2 ...")
+    ctx.info(f"Downloading pip=={PACKAGED_PIP_VERSION} ...")
     # Drop PIP_CONSTRAINT for these calls: requirements/constraints.txt
     # pins pip to an older version for the dev/lint tooling venvs, which
-    # would conflict with explicitly requesting pip==26.2 here.
+    # would conflict with explicitly requesting the packaged pip here.
     download_env = {
         k: v
         for k, v in os.environ.items()
@@ -102,7 +107,7 @@ def _download_pip_wheel(
         "-m",
         "pip",
         "download",
-        "pip==26.2",
+        f"pip=={PACKAGED_PIP_VERSION}",
         "--no-deps",
         "--dest",
         str(tmpdir),
