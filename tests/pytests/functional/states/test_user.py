@@ -626,3 +626,29 @@ def test_win_user_present_new_password(states, account_with_password):
     ret = states.user.present(name=account_with_password, password="N3wP@ssW0rd!")
     assert ret.result is True
     assert ret.changes.get("passwd") == "XXX-REDACTED-XXX", ret.changes
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_group_name_collision(modules, states, username):
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups, so user.present must fail fast with a clear message
+    when a group.present of the same name has already run, instead of ever
+    calling user.add/NetUserAdd.
+    """
+    try:
+        ret = states.group.present(name=username)
+        assert ret.result is True
+
+        ret = states.user.present(name=username)
+        assert ret.result is False
+        assert "already exists" in ret.comment
+        assert modules.user.info(username) == {}
+
+        # Must also fail fast in test mode -- this restriction can't be
+        # resolved by a later requisite, unlike a merely-missing group.
+        ret = states.user.present(name=username, test=True)
+        assert ret.result is False
+        assert "already exists" in ret.comment
+    finally:
+        states.group.absent(name=username)

@@ -560,3 +560,72 @@ def test__group_changes(current, wanted, remove, return_value, expected):
     with patch.dict(user.__salt__, {"group.info": return_value}):
         ret = user._group_changes(current, wanted, remove)
     assert ret == expected
+
+
+def test_present_windows_group_name_collision():
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups, so creating a user with the same name as an existing
+    local group must fail fast with a clear message instead of ever calling
+    user.add/NetUserAdd.
+    """
+    mock_add = MagicMock()
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": "S-1-5-32-547"}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is False
+        assert "bob114" in ret["comment"]
+        assert "already exists" in ret["comment"]
+        mock_add.assert_not_called()
+
+
+def test_present_windows_group_name_collision_test_mode():
+    """
+    The group/user name collision on Windows is a hard OS restriction that
+    cannot be resolved by a later group.present requisite (unlike
+    missing_groups), so it must fail fast even in test mode.
+    """
+    mock_add = MagicMock()
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": "S-1-5-32-547"}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is False
+        assert "already exists" in ret["comment"]
+        mock_add.assert_not_called()
+
+
+def test_present_no_group_collision_on_posix():
+    """
+    The Windows-only group/user name collision check must never fire on
+    POSIX, where a same-named user and primary group is the normal idiom.
+    """
+    mock_add = MagicMock(return_value=True)
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": 5000}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=False
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is True
+        mock_add.assert_called_once()

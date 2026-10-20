@@ -160,6 +160,12 @@ def add(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
+        if exc.winerror == 2220:  # NERR_GroupExists
+            return (
+                f"Cannot create user '{name}': a local group with this name "
+                "already exists. Windows does not allow a local user and a "
+                "local group to share the same name."
+            )
         return exc.strerror
 
     update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)

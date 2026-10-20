@@ -915,6 +915,21 @@ def present(
 
     if changes is False:
         # The user is not present, make it!
+        if salt.utils.platform.is_windows() and __salt__["group.info"](name):
+            # Windows shares one namespace for local users and local groups.
+            # NetUserAdd will fail with winerror 2220 if a group with this
+            # name already exists. Fail fast with a clear message instead of
+            # ever calling user.add/NetUserAdd. This is a hard OS-level
+            # restriction that cannot be worked around, so it is checked
+            # unconditionally -- even in test mode -- unlike missing_groups
+            # above, which can resolve itself via a group.present requisite.
+            ret["result"] = False
+            ret["comment"] = (
+                f"Cannot create user {name}: a local group named '{name}' "
+                "already exists. Windows does not allow a local user and a "
+                "local group to share the same name."
+            )
+            return ret
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = f"User {name} set to be added"
