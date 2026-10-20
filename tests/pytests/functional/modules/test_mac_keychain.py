@@ -100,10 +100,13 @@ def test_mac_keychain_get_friendly_name(keychain, shell, setup_teardown_vars):
 
     ret = shell.run("openssl", "version")
     assert ret.stdout
-    openssl_version = ret.stdout.split()[1]
+    openssl_flavor, openssl_version = ret.stdout.split()[:2]
 
-    # openssl versions under 3.0.0 do not include legacy flag
-    if salt.utils.versions.compare(ver1=openssl_version, oper="<", ver2="3.0.0"):
+    # openssl versions under 3.0.0 do not include legacy flag. LibreSSL (the
+    # macOS default) has its own version numbers and no -legacy flag at all.
+    if openssl_flavor != "OpenSSL" or salt.utils.versions.compare(
+        ver1=openssl_version, oper="<", ver2="3.0.0"
+    ):
         get_name = keychain.get_friendly_name(cert, passwd, legacy=False)
     else:
         get_name = keychain.get_friendly_name(cert, passwd, legacy=True)
