@@ -3,6 +3,15 @@ import pytest
 from tests.support.case import SyndicCase
 
 
+@pytest.fixture(scope="module", autouse=True)
+def salt_syndic(salt_syndic_master_factory, salt_syndic_factory):
+    """
+    The master of masters and the syndic, which aren't started by default
+    """
+    with salt_syndic_master_factory.started(), salt_syndic_factory.started():
+        yield salt_syndic_factory
+
+
 @pytest.mark.windows_whitelisted
 class TestSyndic(SyndicCase):
     """

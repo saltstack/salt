@@ -827,13 +827,15 @@ class SyndicCase(TestCase, SaltClientTestCaseMixin):
         Run a single salt function and condition the return down to match the
         behavior of the raw function call
         """
-        orig = self.client.cmd("minion", function, arg, timeout=timeout)
-        if "minion" not in orig:
+        # The minion behind the syndic has the same id as the syndic
+        minion_id = RUNTIME_VARS.RUNTIME_CONFIGS["syndic"]["id"]
+        orig = self.client.cmd(minion_id, function, arg, timeout=timeout)
+        if minion_id not in orig:
             self.fail(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
                 "from the minion. Command output: {}".format(orig)
             )
-        return orig["minion"]
+        return orig[minion_id]
 
 
 @pytest.mark.requires_sshd_server
