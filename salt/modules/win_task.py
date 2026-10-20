@@ -13,6 +13,7 @@ import logging
 import time
 from datetime import datetime
 
+import salt.utils.hashutils
 import salt.utils.platform
 import salt.utils.winapi
 from salt.exceptions import ArgumentValueError, CommandExecutionError
@@ -581,10 +582,12 @@ def create_task(
             the task is compatible with. Corresponds to the ``Configure for``
             dropdown in the Task Scheduler GUI. Valid values are:
 
-            - 0: Windows Server 2003, Windows XP, or Windows 2000
-            - 1: Windows Vista, Windows Server 2008 (V1 task)
-            - 2: Windows 7, Windows Server 2008 R2 (V2 task, default)
-            - 3: Windows 10
+            - 0: AT command compatibility (not in gui)
+            - 1: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
+              Windows 2000``)
+            - 2: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
+              later)
+            - 3: Task Scheduler 3.0 (``Windows 10`` or later)
 
             Default is ``2``.
 
@@ -1096,10 +1099,12 @@ def edit_task(
             ``Configure for`` dropdown in the Task Scheduler GUI. Valid values
             are:
 
-            - 0: Windows Server 2003, Windows XP, or Windows 2000
-            - 1: Windows Vista, Windows Server 2008 (V1 task)
-            - 2: Windows 7, Windows Server 2008 R2 (V2 task)
-            - 3: Windows 10
+            - 0: AT command compatibility
+            - 1: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
+              Windows 2000``)
+            - 2: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
+              later)
+            - 3: Task Scheduler 3.0 (``Windows 10`` or later)
 
             Default is ``None``.
 
@@ -1182,7 +1187,10 @@ def edit_task(
         if hidden is not None:
             task_definition.Settings.Hidden = hidden
         if compatibility is not None:
-            task_definition.Settings.Compatibility = compatibility
+            if compatibility in (0, 1, 2, 3):
+                task_definition.Settings.Compatibility = compatibility
+            else:
+                return 'Invalid value for "compatibility"'
 
         # Settings: Conditions Tab (Idle)
         # https://msdn.microsoft.com/en-us/library/windows/desktop/aa380669(v=vs.85).aspx
@@ -1623,6 +1631,7 @@ def info(name, location="\\"):
         settings = {
             "allow_demand_start": def_set.AllowDemandStart,
             "force_stop": def_set.AllowHardTerminate,
+            "compatibility": def_set.Compatibility,
         }
 
         if def_set.DeleteExpiredTaskAfter == "":
@@ -2508,8 +2517,10 @@ def add_trigger(
         if trigger_types[trigger_type] == TASK_TRIGGER_EVENT:
             # Check for required kwargs
             if kwargs.get("subscription", False):
-                trigger.Id = f"Event_{kwargs.get('subscription')}"
-                trigger.Subscription = kwargs.get("subscription")
+                subscription = kwargs.get("subscription")
+                digest = salt.utils.hashutils.sha256_digest(subscription)
+                trigger.Id = f"Event_{digest[:8]}"
+                trigger.Subscription = subscription
             else:
                 return 'Required parameter "subscription" not passed'
 
@@ -2518,7 +2529,7 @@ def add_trigger(
 
         # Daily Trigger Parameters
         elif trigger_types[trigger_type] == TASK_TRIGGER_DAILY:
-            trigger.Id = f"Daily__{start_boundary}"
+            trigger.Id = f"Daily_{start_boundary}"
             trigger.DaysInterval = kwargs.get("days_interval", 1)
 
         # Weekly Trigger Parameters
