@@ -652,3 +652,53 @@ def test_user_present_group_name_collision(modules, states, username):
         assert "already exists" in ret.comment
     finally:
         states.group.absent(name=username)
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    "param_name, value, info_field, expected",
+    [
+        ("win_password_never_expires", True, "password_never_expires", None),
+        ("win_disallow_change_password", True, "disallow_change_password", None),
+        ("win_account_disabled", True, "account_disabled", None),
+        ("win_expiration_date", "3/19/2030", "expiration_date", "2030-03-19 00:00:00"),
+    ],
+)
+def test_user_present_windows_account_flags(
+    modules, states, username, param_name, value, info_field, expected
+):
+    """
+    Regression test for #38563: these Windows-only user.update() fields
+    must be settable through user.present, and applying them a second time
+    must be a no-op (idempotent).
+    """
+    ret = states.user.present(name=username)
+    assert ret.result is True
+
+    ret = states.user.present(name=username, **{param_name: value})
+    assert ret.result is True
+    assert ret.changes
+
+    user_info = modules.user.info(username)
+    expected = expected if expected is not None else value
+    assert user_info[info_field] == expected
+
+    # Re-applying the same value should produce no changes.
+    ret = states.user.present(name=username, **{param_name: value})
+    assert ret.result is True
+    assert ret.changes == {}
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_unlock_account_noop_when_not_locked(states, username):
+    """
+    win_useradd.update()'s unlock_account only supports unlocking (True);
+    applying win_unlock_account=True to an account that isn't locked must be
+    a safe no-op per the documented asymmetry (see states.user._changes).
+    """
+    ret = states.user.present(name=username)
+    assert ret.result is True
+
+    ret = states.user.present(name=username, win_unlock_account=True)
+    assert ret.result is True
+    assert ret.changes == {}

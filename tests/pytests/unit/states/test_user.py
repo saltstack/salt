@@ -629,3 +629,160 @@ def test_present_no_group_collision_on_posix():
         ret = user.present("bob114")
         assert ret["result"] is True
         mock_add.assert_called_once()
+
+
+def _windows_lusr(**overrides):
+    lusr = {
+        "uid": 5000,
+        "gid": 5000,
+        "groups": [],
+        "home": None,
+        "fullname": "Foo Bar",
+        "homedrive": None,
+        "profile": None,
+        "logonscript": None,
+        "description": None,
+        "password_never_expires": False,
+        "disallow_change_password": False,
+        "account_disabled": False,
+        "account_locked": False,
+        "expiration_date": "Never",
+    }
+    lusr.update(overrides)
+    return lusr
+
+
+def test_changes_windows_fields():
+    """
+    Test salt.states.user._changes diff logic for the new Windows-only
+    win_password_never_expires/win_disallow_change_password/
+    win_account_disabled/win_unlock_account/win_expiration_date parameters.
+    """
+    dunder_salt = {
+        "user.info": MagicMock(return_value=_windows_lusr()),
+        "file.group_to_gid": MagicMock(return_value=5000),
+        "file.gid_to_group": MagicMock(return_value="somegroup"),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user._changes(
+            "foo",
+            fullname=None,
+            createhome=False,
+            win_password_never_expires=True,
+            win_disallow_change_password=True,
+            win_account_disabled=True,
+            win_unlock_account=True,
+            win_expiration_date="2030-01-01",
+        )
+        assert ret == {
+            "win_password_never_expires": True,
+            "win_disallow_change_password": True,
+            "win_account_disabled": True,
+            "win_expiration_date": "2030-01-01",
+        }
+
+        # Nothing requested -> no diff keys.
+        ret = user._changes("foo", fullname=None, createhome=False)
+        assert ret == {}
+
+        # Matching current state -> no diff keys.
+        ret = user._changes(
+            "foo",
+            fullname=None,
+            createhome=False,
+            win_password_never_expires=False,
+            win_disallow_change_password=False,
+            win_account_disabled=False,
+        )
+        assert ret == {}
+
+
+def test_changes_win_unlock_account_asymmetry():
+    """
+    win_useradd.update()'s unlock_account only supports unlocking (True);
+    _changes() must only surface a change when the account is currently
+    locked and the desired state is True, never for False, and never when
+    already unlocked.
+    """
+    dunder_salt_base = {
+        "file.group_to_gid": MagicMock(return_value=5000),
+        "file.gid_to_group": MagicMock(return_value="somegroup"),
+    }
+
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__opts__, {"test": False}
+    ), patch("salt.utils.platform.is_windows", return_value=True):
+        # Not locked + unlock requested -> no change.
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(
+                    return_value=_windows_lusr(account_locked=False)
+                ),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=True
+            )
+            assert "win_unlock_account" not in ret
+
+        # Locked + unlock requested -> change.
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(
+                    return_value=_windows_lusr(account_locked=True)
+                ),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=True
+            )
+            assert ret["win_unlock_account"] is True
+
+        # Locked + win_unlock_account=False -> never emits a change (documented no-op).
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(
+                    return_value=_windows_lusr(account_locked=True)
+                ),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=False
+            )
+            assert "win_unlock_account" not in ret
+
+
+def test_present_dispatches_windows_update_fields():
+    """
+    When _changes() reports a win_account_disabled-style change, present()
+    must dispatch it via user.update with the plain (non win_-prefixed)
+    kwarg name.
+    """
+    mock_changes = MagicMock(
+        side_effect=[
+            {"win_account_disabled": True},
+            {},
+        ]
+    )
+    mock_update = MagicMock(return_value=True)
+    dunder_salt = {
+        "user.info": MagicMock(return_value=_windows_lusr()),
+        "user.update": mock_update,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch.object(
+        user, "_changes", mock_changes
+    ), patch("salt.utils.platform.is_windows", return_value=True):
+        user.present("bob")
+        mock_update.assert_any_call(name="bob", account_disabled=True)

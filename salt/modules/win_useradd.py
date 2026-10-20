@@ -81,6 +81,11 @@ def add(
     homedrive=None,
     profile=None,
     logonscript=None,
+    expiration_date=None,
+    account_disabled=None,
+    unlock_account=None,
+    password_never_expires=None,
+    disallow_change_password=None,
 ):
     """
     Add a user to the minion.
@@ -129,6 +134,43 @@ def add(
 
             Default is ``None``.
 
+        expiration_date (:obj:`date`, optional):
+            The date the account expires. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        account_disabled (:obj:`bool`, optional):
+            ``True`` disables the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        unlock_account (:obj:`bool`, optional):
+            ``True`` unlocks the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        password_never_expires (:obj:`bool`, optional):
+            ``True`` sets the password to never expire. See ``user.update``
+            for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        disallow_change_password (:obj:`bool`, optional):
+            ``True`` blocks the user from changing the password. See
+            ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -168,7 +210,17 @@ def add(
             )
         return exc.strerror
 
-    update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
+    update(
+        name=name,
+        homedrive=homedrive,
+        profile=profile,
+        fullname=fullname,
+        expiration_date=expiration_date,
+        account_disabled=account_disabled,
+        unlock_account=unlock_account,
+        password_never_expires=password_never_expires,
+        disallow_change_password=disallow_change_password,
+    )
 
     ret = chgroups(name, groups) if groups else True
 

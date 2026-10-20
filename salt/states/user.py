@@ -107,10 +107,19 @@ def _changes(
     allow_gid_change=False,
     password_lock=None,
     local=False,
+    win_password_never_expires=None,
+    win_disallow_change_password=None,
+    win_account_disabled=None,
+    win_unlock_account=None,
+    win_expiration_date=None,
 ):
     """
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 3008.5 to include support for windows password_never_expires,
+    disallow_change_password, account_disabled, unlock_account, and
+    expiration_date fields.
 
     Updated in 2015.8.0 to include support for windows homedrive, profile,
     logonscript, and description fields.
@@ -248,6 +257,38 @@ def _changes(
         change["win_logonscript"] = win_logonscript
     if win_description and lusr["description"] != win_description:
         change["win_description"] = win_description
+    # Booleans must use "is not None" (unlike the string fields above) since
+    # False is a meaningful, intentional value for these flags.
+    if (
+        win_password_never_expires is not None
+        and lusr.get("password_never_expires") != win_password_never_expires
+    ):
+        change["win_password_never_expires"] = win_password_never_expires
+    if (
+        win_disallow_change_password is not None
+        and lusr.get("disallow_change_password") != win_disallow_change_password
+    ):
+        change["win_disallow_change_password"] = win_disallow_change_password
+    if (
+        win_account_disabled is not None
+        and lusr.get("account_disabled") != win_account_disabled
+    ):
+        change["win_account_disabled"] = win_account_disabled
+    # win_useradd.update()'s unlock_account only supports unlocking (True);
+    # False/locking via this path is a documented no-op, so only emit a
+    # change when the account is currently locked and the desired state is
+    # True -- otherwise this state would never converge (flip-flop).
+    if win_unlock_account and lusr.get("account_locked"):
+        change["win_unlock_account"] = win_unlock_account
+    if win_expiration_date:
+        cur_expiration = lusr.get("expiration_date")
+        if win_expiration_date == "Never" or cur_expiration == "Never":
+            if win_expiration_date != cur_expiration:
+                change["win_expiration_date"] = win_expiration_date
+        elif salt.utils.dateutils.strftime(
+            cur_expiration
+        ) != salt.utils.dateutils.strftime(win_expiration_date):
+            change["win_expiration_date"] = win_expiration_date
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
@@ -332,6 +373,11 @@ def present(
     win_profile=None,
     win_logonscript=None,
     win_description=None,
+    win_password_never_expires=None,
+    win_disallow_change_password=None,
+    win_account_disabled=None,
+    win_unlock_account=None,
+    win_expiration_date=None,
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
@@ -562,6 +608,37 @@ def present(
         A brief description of the purpose of the users account.
 
         .. versionchanged:: 2015.8.0
+
+    win_password_never_expires (Windows Only)
+        ``True`` sets the password to never expire. ``False`` allows the
+        password to expire.
+
+        .. versionadded:: 3008.5
+
+    win_disallow_change_password (Windows Only)
+        ``True`` blocks the user from changing their own password. ``False``
+        allows the user to change the password.
+
+        .. versionadded:: 3008.5
+
+    win_account_disabled (Windows Only)
+        ``True`` disables the account. ``False`` enables it.
+
+        .. versionadded:: 3008.5
+
+    win_unlock_account (Windows Only)
+        ``True`` unlocks a locked-out account. ``False`` is ignored -- there
+        is no supported way to lock an account via this parameter.
+
+        .. versionadded:: 3008.5
+
+    win_expiration_date (Windows Only)
+        The date/time the account expires. Accepts any date/time string
+        parseable by Salt, or the literal string ``'Never'``. This is the
+        Windows ``acct_expires`` field and is unrelated to the POSIX
+        ``expire`` (shadow) parameter above.
+
+        .. versionadded:: 3008.5
     """
     # First check if a password is set. If password is set, check if
     # hash_password is True, then hash it.
@@ -713,6 +790,11 @@ def present(
             allow_gid_change,
             password_lock=password_lock,
             local=local,
+            win_password_never_expires=win_password_never_expires,
+            win_disallow_change_password=win_disallow_change_password,
+            win_account_disabled=win_account_disabled,
+            win_unlock_account=win_unlock_account,
+            win_expiration_date=win_expiration_date,
         )
     except CommandExecutionError as exc:
         ret["result"] = False
@@ -825,6 +907,33 @@ def present(
                 name=name, description=changes.pop("win_description")
             )
 
+        if "win_password_never_expires" in changes:
+            __salt__["user.update"](
+                name=name,
+                password_never_expires=changes.pop("win_password_never_expires"),
+            )
+
+        if "win_disallow_change_password" in changes:
+            __salt__["user.update"](
+                name=name,
+                disallow_change_password=changes.pop("win_disallow_change_password"),
+            )
+
+        if "win_account_disabled" in changes:
+            __salt__["user.update"](
+                name=name, account_disabled=changes.pop("win_account_disabled")
+            )
+
+        if "win_unlock_account" in changes:
+            __salt__["user.update"](
+                name=name, unlock_account=changes.pop("win_unlock_account")
+            )
+
+        if "win_expiration_date" in changes:
+            __salt__["user.update"](
+                name=name, expiration_date=changes.pop("win_expiration_date")
+            )
+
         # Do the changes that have "ch" functions for them, but skip changing
         # groups for now. Changing groups before changing the chgid could cause
         # unpredictable results, including failure to set the proper groups.
@@ -902,6 +1011,11 @@ def present(
             allow_gid_change=True,
             password_lock=password_lock,
             local=local,
+            win_password_never_expires=win_password_never_expires,
+            win_disallow_change_password=win_disallow_change_password,
+            win_account_disabled=win_account_disabled,
+            win_unlock_account=win_unlock_account,
+            win_expiration_date=win_expiration_date,
         )
         # allow_uid_change and allow_gid_change passed as True to avoid race
         # conditions where a uid/gid is modified outside of Salt. If an
@@ -977,6 +1091,11 @@ def present(
                 "homedrive": win_homedrive,
                 "profile": win_profile,
                 "logonscript": win_logonscript,
+                "expiration_date": win_expiration_date,
+                "account_disabled": win_account_disabled,
+                "unlock_account": win_unlock_account,
+                "password_never_expires": win_password_never_expires,
+                "disallow_change_password": win_disallow_change_password,
             }
         result = __salt__["user.add"](**params)
         if result is True:
