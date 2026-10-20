@@ -293,7 +293,7 @@ def ensure_cert_kwargs_compat(kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    3009,
+                    3010,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
                 )
                 kwargs[name] = kwargs.pop(long_name)
@@ -302,7 +302,7 @@ def ensure_cert_kwargs_compat(kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    3009,
+                    3010,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
                 )
                 kwargs[extname] = kwargs.pop(long_name)
@@ -946,7 +946,7 @@ def merge_signing_policy(policy, kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    3009,
+                    3010,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
                 )
                 kwargs[name] = kwargs.pop(long_name)
@@ -956,7 +956,7 @@ def merge_signing_policy(policy, kwargs):
         for long_name in long_names:
             if long_name in kwargs:
                 salt.utils.versions.warn_until(
-                    3009,
+                    3010,
                     f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
                 )
                 kwargs[extname] = kwargs.pop(long_name)
