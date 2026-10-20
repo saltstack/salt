@@ -2052,8 +2052,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 def _term_zmq_context(context):
     try:
         context.term()
-    except Exception:  # pylint: disable=broad-except
-        pass
+    except zmq.ZMQError as exc:
+        log.debug("Error terminating zmq context: %s", exc)
 
 
 def _finalize_zmq_context(context):
