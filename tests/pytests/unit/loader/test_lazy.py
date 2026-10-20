@@ -11,6 +11,7 @@ import salt.loader
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -42,6 +43,29 @@ def loader_dir(tmp_path):
         "mod_a.py", directory=tmp_path, contents=mod_contents
     ), pytest.helpers.temp_file("mod_b.py", directory=tmp_path, contents=mod_contents):
         yield str(tmp_path)
+
+
+def test_clean_sys_path_tolerates_shared_cache_race(loader_dir):
+    """
+    Regression test for #61734.
+
+    When several loaders run in one process and load modules concurrently --
+    e.g. a deltaproxy hosting many sub-proxy minions -- they share the global
+    ``sys.path_importer_cache``. ``importlib.invalidate_caches()``, called by
+    ``__clean_sys_path`` after each module load, can then raise ``KeyError``
+    (or ``RuntimeError`` if the mapping changed size mid-iteration) when another
+    loader already removed an entry it is walking. ``__clean_sys_path`` must
+    tolerate that rather than fail the module load that triggered the cleanup.
+    """
+    opts = {"optimization_order": [0]}
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    for exc in (
+        KeyError("/x"),
+        RuntimeError("dictionary changed size during iteration"),
+    ):
+        with patch("importlib.invalidate_caches", side_effect=exc):
+            # Must not propagate.
+            loader._LazyLoader__clean_sys_path()
 
 
 def test_loaders_have_uniq_context(loader_dir):
