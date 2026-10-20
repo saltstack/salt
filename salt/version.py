@@ -652,6 +652,21 @@ def __discover_version(saltstack_version):
                 # rebased to this branch's major.
                 "--match",
                 "v3008.*",
+                # Exclude computed / nightly-shaped tags (anything with `+`
+                # in the tag name, e.g. v3008.2+588.g02ea048903). These are
+                # emitted by the nightly publish workflow on salt-nightlies
+                # to give each nightly build a content-addressed release
+                # tag. If describe is allowed to match them, subsequent
+                # builds at the same or a later commit resolve their
+                # "nearest tag" to a nightly tag rather than the real
+                # release tag (v3008.2), and version derivation collapses
+                # to `<base>+<small-distance>.g<sha>` measured from the
+                # poison tag instead of from v3008.2. Concrete instance:
+                # nightly on master @ 2e5d1f521e produced "3008.2+0.g..."
+                # because a prior nightly publish had tagged that commit
+                # `v3008.2+699.g2e5d1f521e`.
+                "--exclude",
+                "*+*",
                 "--always",
                 "--candidates=150",
             ],

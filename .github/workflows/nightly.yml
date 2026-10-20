@@ -354,7 +354,7 @@ jobs:
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
         run: |
           git config --global user.name "Salt Project Packaging"
-          git config --global user.email saltproject-packaging@vmware.com
+          git config --global user.email saltproject.pdl@broadcom.com
 
       - name: Setup Pre-Commit
         if: ${{ startsWith(github.event.ref, 'refs/tags') == false }}
@@ -457,7 +457,7 @@ jobs:
     with:
       cache-seed: ${{ needs.prepare-workflow.outputs.cache-seed }}
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
-      relenv-version: "0.22.25"
+      relenv-version: "0.22.27"
       python-version: "3.14.7"
       ci-python-version: "3.14"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
@@ -475,14 +475,14 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.25"
+      relenv-version: "0.22.27"
       python-version: "3.14.7"
       ci-python-version: "3.14"
       source: "onedir"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
-      sign-macos-packages: true
+      sign-macos-packages: false
       sign-rpm-packages: true
       sign-deb-packages: true
       sign-windows-packages: false
@@ -498,14 +498,14 @@ jobs:
     with:
       salt-version: "${{ needs.prepare-workflow.outputs.salt-version }}"
       cache-prefix: ${{ needs.prepare-workflow.outputs.cache-seed }}
-      relenv-version: "0.22.25"
+      relenv-version: "0.22.27"
       python-version: "3.14.7"
       ci-python-version: "3.14"
       source: "src"
       matrix: ${{ toJSON(fromJSON(needs.prepare-workflow.outputs.config)['build-matrix']) }}
       linux_arm_runner: ${{ fromJSON(needs.prepare-workflow.outputs.config)['linux_arm_runner'] }}
       environment: nightly
-      sign-macos-packages: true
+      sign-macos-packages: false
       sign-rpm-packages: true
       sign-deb-packages: true
       sign-windows-packages: false

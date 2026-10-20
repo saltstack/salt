@@ -1296,7 +1296,17 @@ class Single:
                 f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
             )
             self.minion_opts["module_dirs"] = self.opts["module_dirs"]
-            self.minion_opts["__master_opts__"] = self.context["master_opts"]
+            # Note: __master_opts__ is intentionally NOT added here. It's a
+            # master-side-only convention consumed by the Python wrapper
+            # modules (salt/client/ssh/wrapper/*.py) while they run on the
+            # master -- nothing on the remote target reads it from its own
+            # minion config. self.context["master_opts"] is also mutated as
+            # nested Single/wrapper calls restore/adjust the master cachedir
+            # (see #69605, #68458), so embedding it here caused this
+            # (otherwise fixed-size) minion config to grow, unbounded, with
+            # every nested Single created during a single state run, until
+            # it exceeded the kernel's ARG_MAX and the ssh command failed
+            # with "Argument list too long" (#70186).
 
             # Re-serialize the minion config after updating relenv-specific paths
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
@@ -2165,9 +2175,22 @@ ARGS = {arguments}\n'''.format(
         log.debug("Regenerating extension modules tarball before command execution")
         self.mods = mod_data(self.fsclient)
 
-        # Deploy the fresh tarball to the remote system
-        log.debug("Deploying extension modules tarball to remote system")
-        self.deploy_ext()
+        # Deploy the fresh tarball only if the remote thin dir already exists;
+        # otherwise the subsequent shim invocation will trigger a full
+        # ``deploy()`` which uploads the thin (creating the dir) and then
+        # ``deploy_ext()`` using the regenerated ``self.mods`` from above.
+        # Skipping this when the dir is missing avoids an scp failure on
+        # OpenSSH 9+ clients, whose scp uses SFTP by default and refuses to
+        # upload into a non-existent remote directory.
+        if self.check_thin_dir():
+            log.debug("Deploying extension modules tarball to remote system")
+            self.deploy_ext()
+        else:
+            log.debug(
+                "Remote thin dir %s does not exist yet; deferring ext_mods "
+                "deployment to the full deploy() triggered by the shim.",
+                self.thin_dir,
+            )
 
         cmd_str = self._cmd_str()
         trace_carrier = {}

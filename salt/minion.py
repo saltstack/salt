@@ -636,6 +636,15 @@ def service_name():
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
 
 
+# The loaders a threaded job needs from one MinionBase.gen_modules() call. They
+# share that call's __context__ dict, so a job that looks up its function, runs it
+# through an executor and reads its retcode back using one generation is
+# unaffected by a sibling job rebuilding the shared minion attributes (#61830).
+ModuleGeneration = collections.namedtuple(
+    "ModuleGeneration", ("functions", "executors", "resource_loaders")
+)
+
+
 class MinionBase:
     def __init__(self, opts):
         # Ensure opts is OptsDict for mutate_key() and other OptsDict methods
@@ -673,15 +682,16 @@ class MinionBase:
         self.opts["resources"] = self._discover_resources()
 
         self.utils = salt.loader.utils(self.opts, context=context)
-        self.functions = salt.loader.minion_mods(
+        functions = salt.loader.minion_mods(
             self.opts, utils=self.utils, context=context
         )
+        self.functions = functions
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(
-            self.opts, functions=self.functions, context=context
+            self.opts, functions=functions, context=context
         )
         self.proxy = salt.loader.proxy(
-            self.opts, functions=self.functions, returners=self.returners
+            self.opts, functions=functions, returners=self.returners
         )
         # Load resource connection modules (salt/resource/*.py) and build
         # one execution-module loader per managed resource type.
@@ -740,20 +750,41 @@ class MinionBase:
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(
             self.opts,
-            functions=self.functions,
+            functions=functions,
             utils=self.utils,
             serializers=self.serializers,
             context=context,
         )
-        self.rend = salt.loader.render(
-            self.opts, functions=self.functions, context=context
-        )
+        self.rend = salt.loader.render(self.opts, functions=functions, context=context)
         #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
-        self.functions["sys.reload_modules"] = self.gen_modules
-        self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+        functions["sys.reload_modules"] = self._reload_modules
+        executors = salt.loader.executors(
+            self.opts, functions=functions, proxy=self.proxy, context=context
         )
+        self.executors = executors
+        # Return the loaders this call built so that a threaded job
+        # (multiprocessing=False) can run against them, rather than re-reading
+        # the shared self.functions/self.executors/self.resource_loaders
+        # attributes, which a sibling job's gen_modules() may have rebound by
+        # then. See issue #61830.
+        return ModuleGeneration(functions, executors, _new_resource_loaders)
+
+    def _reload_modules(self, initial_load=False, context=None):
+        """
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
+        """
+        # This is what sys.reload_modules is bound to. gen_modules() returns the
+        # rebuilt loaders, which are not serializable, so it cannot be bound
+        # directly: its return value would be put on the wire. Reload the
+        # modules and return None instead.
+        self.gen_modules(initial_load=initial_load, context=context)
 
     def _discover_resources(self):
         """
@@ -836,8 +867,14 @@ class MinionBase:
         Evaluate all of the configured beacons, grab the config again in case
         the pillar or grains changed
         """
-        if "config.merge" in functions:
-            b_conf = functions["config.merge"](
+        # Beacon config re-read is minion-internal machinery, not user
+        # dispatch: route ``config.merge`` through the unfiltered inner
+        # loader so it succeeds under a strict ``whitelist_modules`` that
+        # omits ``config``.  Falls back to ``functions`` for salt-ssh
+        # ``FunctionWrapper`` and plain-dict callers.
+        _config_loader = getattr(functions, "_dunder_salt", None) or functions
+        if "config.merge" in _config_loader:
+            b_conf = _config_loader["config.merge"](
                 "beacons", self.opts["beacons"], omit_opts=True
             )
             if b_conf:
@@ -1553,6 +1590,33 @@ class MinionManager(MinionBase):
                 if hasattr(minion, "destroy"):
                     minion.destroy()
             self.minions = []
+        # Close the local event publisher and event bus.  ``stop_async``
+        # (invoked from the SIGTERM signal handler) already does this,
+        # but ``destroy`` is *also* reached from
+        # ``cli.daemons.Minion.shutdown`` (KeyboardInterrupt / SaltSystemExit
+        # / early-exit ``shutdown(1)`` guards) and from ``__del__`` on GC.
+        # Without this the ``PublishServer`` graph created in ``_bind``
+        # (``event_publisher`` -> ``pub_sock`` SyncWrapper ->
+        # ``_TCPPubServerPublisher``) leaks at process exit, surfacing as
+        # the three-warning cascade in issue #70175.
+        if getattr(self, "event_publisher", None) is not None:
+            try:
+                self.event_publisher.close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Error closing event_publisher during MinionManager.destroy",
+                    exc_info=True,
+                )
+            self.event_publisher = None
+        if getattr(self, "event", None) is not None:
+            try:
+                self.event.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "Error destroying event during MinionManager.destroy",
+                    exc_info=True,
+                )
+            self.event = None
 
     def _create_minion_object(
         self,
@@ -1985,7 +2049,20 @@ class Minion(MinionBase):
             if hasattr(self.pub_channel, "close"):
                 self.pub_channel.close()
         if hasattr(self, "req_channel") and self.req_channel:
-            self.req_channel.close()
+            # Wait for the underlying transport's ``_send_recv`` task to
+            # drain its shutdown sentinel and release the socket
+            # reference before we drop our reference to the channel.
+            # Otherwise the Context stays alive on the task's coroutine
+            # locals and is finalized later from a plain ioloop
+            # callback, where pyzmq's ``Context.__del__`` can wedge in
+            # ``zmq_ctx_term()``.  ``close_async`` is available on
+            # ``AsyncReqChannel``; guard so this still works if a
+            # third-party channel subclass only exposes sync ``close``.
+            close_async = getattr(self.req_channel, "close_async", None)
+            if close_async is not None:
+                await close_async()
+            else:
+                self.req_channel.close()
             self.req_channel = None
 
         # Consider refactoring so that eval_master does not have a subtle side-effect on the contents of the opts array
@@ -2033,7 +2110,11 @@ class Minion(MinionBase):
                 pillarenv=self.opts.get("pillarenv"),
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
-            async_pillar.destroy()
+            # Async aclose awaits the transport's send/recv exit
+            # future before releasing the socket + context, avoiding
+            # the pyzmq Context.__del__ wedge that sync ``destroy``
+            # can leave behind (see PR-70316 trace).
+            await async_pillar.aclose()
             # _setup_core uses _load_modules only — unlike gen_modules it does not
             # run _discover_resources().  tune_in schedules _register_resources_with_master
             # right after connect; without this, the master registry gets {} until an
@@ -2065,7 +2146,15 @@ class Minion(MinionBase):
             )
 
         # add default scheduling jobs to the minions scheduler
-        if self.opts["mine_enabled"] and "mine.update" in self.functions:
+        # ``mine.update`` is Salt-internal machinery injected into every
+        # minion's scheduler as ``__mine_interval``; it is not user-facing
+        # dispatch, so route the presence check through the unfiltered
+        # inner loader.  Falls back to ``self.functions`` for salt-ssh
+        # ``FunctionWrapper`` and plain-dict callers.
+        _inner_functions = (
+            getattr(self.functions, "_dunder_salt", None) or self.functions
+        )
+        if self.opts["mine_enabled"] and "mine.update" in _inner_functions:
             self.schedule.add_job(
                 {
                     "__mine_interval": {
@@ -2212,6 +2301,7 @@ class Minion(MinionBase):
                 utils=self.utils,
                 notify=notify,
                 proxy=proxy,
+                loaded_base_name=self.loaded_base_name,
                 context=context,
             )
         returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
@@ -2951,18 +3041,34 @@ class Minion(MinionBase):
                 return Minion._thread_return(minion_instance, opts, data)
 
     def _execute_job_function(
-        self, function_name, function_args, executors, opts, data, functions=None
+        self,
+        function_name,
+        function_args,
+        executors,
+        opts,
+        data,
+        functions=None,
+        executor_loader=None,
     ):
         """
         Executes a function within a job given it's name, the args and the executors.
         It also checks if the function is allowed to run if 'blackout mode' is enabled.
 
-        ``functions`` defaults to ``self.functions`` but callers may pass a
-        different loader (e.g. a per-resource-type loader) to route execution
-        to the correct module set.
+        ``functions`` is the loader this job runs against and ``executor_loader``
+        the executors it runs through. They default to ``self.functions`` and
+        ``self.executors`` for callers that do not thread loaders. A threaded
+        job (multiprocessing: False) passes the loaders of the generation its
+        own gen_modules() call returned, so the func lookup, the retcode reset
+        and an executor that sets the retcode itself (such as sudo) all use the
+        generation it reads its retcode back from, rather than the shared
+        attributes a sibling job may have rebound (#61830). A resource job
+        passes that generation's per-resource-type loader to route execution to
+        the correct module set.
         """
         if functions is None:
             functions = self.functions
+        if executor_loader is None:
+            executor_loader = self.executors
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
@@ -3010,9 +3116,9 @@ class Minion(MinionBase):
 
         for name in executors:
             fname = f"{name}.execute"
-            if fname not in self.executors:
+            if fname not in executor_loader:
                 raise SaltInvocationError(f"Executor '{name}' is not available")
-            return_data = self.executors[fname](opts, data, func, args, kwargs)
+            return_data = executor_loader[fname](opts, data, func, args, kwargs)
             if return_data is not None:
                 return return_data
 
@@ -3049,7 +3155,7 @@ class Minion(MinionBase):
         # covers; recorded in the finally below.
         _exec_perf_start = time.perf_counter()
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3074,11 +3180,11 @@ class Minion(MinionBase):
             )
             allow_missing_funcs = any(
                 [
-                    minion_instance.executors[f"{executor}.allow_missing_func"](
+                    generation.executors[f"{executor}.allow_missing_func"](
                         function_name
                     )
                     for executor in executors
-                    if f"{executor}.allow_missing_func" in minion_instance.executors
+                    if f"{executor}.allow_missing_func" in generation.executors
                 ]
             )
             # Resolve which execution-module loader to use.  For resource
@@ -3090,7 +3196,7 @@ class Minion(MinionBase):
             resource_target = data.get("resource_target")
             if resource_target:
                 resource_type = resource_target["type"]
-                functions_to_use = minion_instance.resource_loaders.get(resource_type)
+                functions_to_use = generation.resource_loaders.get(resource_type)
                 if functions_to_use is None:
                     ret["return"] = (
                         f"No resource loader available for type '{resource_type}'. "
@@ -3131,7 +3237,7 @@ class Minion(MinionBase):
                 ret["retcode"] = salt.defaults.exitcodes.EX_OK
                 ret["success"] = True
             else:
-                functions_to_use = minion_instance.functions
+                functions_to_use = generation.functions
             if (
                 ret.get("retcode") is None
                 and functions_to_use is not None
@@ -3145,6 +3251,7 @@ class Minion(MinionBase):
                         opts,
                         data,
                         functions=functions_to_use,
+                        executor_loader=generation.executors,
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -3273,7 +3380,14 @@ class Minion(MinionBase):
                 # the seed dict with "'state.apply' is not available."
                 pass
             else:
-                docs = minion_instance.functions["sys.doc"](f"{function_name}*")
+                # Error-path documentation lookup: route through the
+                # unfiltered inner loader so ``sys.doc`` still resolves
+                # under a strict ``whitelist_modules`` that omits ``sys``.
+                _sys_loader = (
+                    getattr(minion_instance.functions, "_dunder_salt", None)
+                    or minion_instance.functions
+                )
+                docs = _sys_loader["sys.doc"](f"{function_name}*")
                 if docs:
                     docs[function_name] = minion_instance.functions.missing_fun_string(
                         function_name
@@ -3317,9 +3431,7 @@ class Minion(MinionBase):
                         "retcode": salt.defaults.exitcodes.EX_OK,
                         "out": "highstate",
                     }
-                    resource_loader = getattr(
-                        minion_instance, "resource_loaders", {}
-                    ).get(rtype)
+                    resource_loader = generation.resource_loaders.get(rtype)
 
                     if resource_loader is None:
                         per_resource_ret["return"] = (
@@ -3348,6 +3460,7 @@ class Minion(MinionBase):
                                 opts,
                                 data,
                                 functions=resource_loader,
+                                executor_loader=generation.executors,
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error(
@@ -3560,7 +3673,7 @@ class Minion(MinionBase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3617,14 +3730,18 @@ class Minion(MinionBase):
                     ret["success"][function_name] = False
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name,
+                        function_args,
+                        executors,
+                        opts,
+                        data,
+                        functions=generation.functions,
+                        executor_loader=generation.executors,
                     )
 
                     key = ind if multifunc_ordered else data["fun"][ind]
                     ret["return"][key] = return_data
-                    retcode = minion_instance.functions.pack["__context__"].get(
-                        "retcode", 0
-                    )
+                    retcode = generation.functions.pack["__context__"].get("retcode", 0)
                     if retcode == 0:
                         # No nonzero retcode in __context__ dunder. Check if return
                         # is a dictionary with a "result" or "success" key.
@@ -4262,6 +4379,23 @@ class Minion(MinionBase):
                 )
                 self.opts["pillar"] = new_pillar
                 self.functions.pack["__pillar__"] = self.opts["pillar"]
+                # The two-loader model (see ``salt.loader.minion_mods``)
+                # exposes an inner unfiltered loader on
+                # ``self.functions._dunder_salt`` that is the ``__salt__``
+                # packed into every loaded execution module.  PR-#70250
+                # routes minion-internal callsites (e.g. beacons'
+                # ``config.merge`` in ``process_beacons``, scheduler
+                # ``timezone.get_offset`` / ``config.merge``, sys.doc
+                # error-path lookups) through that inner loader so they
+                # succeed under a strict ``whitelist_modules``.  The inner
+                # loader has its own ``pack["__pillar__"]`` captured at
+                # loader-build time; without this mirror, ``config.merge``
+                # dispatched via the inner loader keeps reading the
+                # pre-refresh pillar, so pillar-injected beacons never
+                # activate (regression on ``test_pillar_refresh_pillar_beacons``).
+                _inner = getattr(self.functions, "_dunder_salt", None)
+                if _inner is not None and hasattr(_inner, "pack"):
+                    _inner.pack["__pillar__"] = self.opts["pillar"]
                 # Re-discover resources now that pillar has changed.  Must
                 # happen *after* opts["pillar"] is updated so that
                 # _discover_resources sees the new resource declarations (or
@@ -4269,7 +4403,9 @@ class Minion(MinionBase):
                 self.opts["resources"] = self._discover_resources()
                 await self._register_resources_with_master()
             finally:
-                async_pillar.destroy()
+                # See ``_post_master_init`` for why aclose is preferred
+                # over sync destroy on ioloop-owning callers.
+                await async_pillar.aclose()
         self.matchers_refresh()
         self.beacons_refresh()
         # Fire the completion event synchronously on the minion event bus.
@@ -4590,7 +4726,18 @@ class Minion(MinionBase):
                     if hasattr(self.pub_channel, "close"):
                         self.pub_channel.close()
                 if hasattr(self, "req_channel") and self.req_channel:
-                    self.req_channel.close()
+                    # See ``connect_master`` for why ``close_async`` is
+                    # preferred here over the sync ``close``:  the
+                    # transport's send/recv task must drain before we
+                    # drop our reference to the channel, or the
+                    # underlying ``zmq.Context`` gets finalized from a
+                    # later ioloop callback and can wedge in
+                    # ``zmq_ctx_term()``.
+                    close_async = getattr(self.req_channel, "close_async", None)
+                    if close_async is not None:
+                        await close_async()
+                    else:
+                        self.req_channel.close()
                     self.req_channel = None
 
                 # if eval_master finds a new master for us, self.connected

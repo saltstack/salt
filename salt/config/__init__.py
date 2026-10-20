@@ -352,6 +352,11 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_returners": list,
         # Tell the loader to only load modules in this list
         "whitelist_modules": list,
+        # State-loader counterpart to ``whitelist_modules``.  When set,
+        # only state modules whose name is in this list are loadable; an
+        # SLS that references any other state module fails compile with
+        # ``State '<mod>.<fun>' was not found in SLS ...``.
+        "whitelist_state_modules": list,
         # A list of additional directories to search for salt modules in
         "module_dirs": list,
         # A list of additional directories to search for salt returners in
@@ -1320,6 +1325,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "disable_modules": [],
         "disable_returners": [],
         "whitelist_modules": [],
+        "whitelist_state_modules": [],
         "module_dirs": [],
         "returner_dirs": [],
         "grains_dirs": [],
