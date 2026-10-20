@@ -3614,7 +3614,7 @@ class GitBase:
                     if provider not in self.git_providers:
                         continue
                     verify_func = getattr(self, f"verify_{provider}", None)
-                    if verify_func:
+                    if verify_func:  # pylint: disable=using-constant-test
                         if verify_func(quiet=True):
                             self.provider = provider
                             break
