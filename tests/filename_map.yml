@@ -188,6 +188,10 @@ salt/utils/(args|functools)\.py:
   - pytests.integration.modules.test_arg_kinds
   - pytests.integration.states.test_arg_kinds
 
+salt/utils/metrics.py:
+  - pytests.functional.utils.test_metrics_otlp_instances
+  - pytests.unit.utils.test_metrics
+
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 
