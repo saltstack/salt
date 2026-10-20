@@ -522,6 +522,30 @@ def test_fcontext_get_policy_hyphenated_path():
     assert ret["sel_type"] == "httpd_sys_content_t"
 
 
+@pytest.mark.parametrize(
+    "name,filetype,context",
+    (
+        ("/var/log/custom app/.*", "all files", "system_u:object_r:var_log_t:s0"),
+        ("/srv/my directory x/.*", "directory", "system_u:object_r:etc_t:s0"),
+        ("/srv/a  b   c", "regular file", "system_u:object_r:var_t:s0"),
+    ),
+)
+def test_fcontext_get_policy_filespec_with_whitespace(name, filetype, context):
+    """
+    The filespec is separated from the filetype and context by anchoring on
+    the end of the line, so whitespace inside the filespec (even a word that is
+    also a filetype description) must not be mistaken for a column separator
+    """
+    mock_cmd_run_all = _semanage_run_all(f"{name}    {filetype}    {context}\n")
+
+    with patch.dict(selinux.__salt__, {"cmd.run_all": mock_cmd_run_all}):
+        ret = selinux.fcontext_get_policy(name)
+
+    assert ret["filespec"] == name
+    assert ret["filetype"] == filetype
+    assert ret["sel_type"] == context.split(":")[2]
+
+
 def test_fcontext_get_policy_no_match_returns_none():
     mock_cmd_run_all = _semanage_run_all(
         "/var/www(/.*)?    all files    system_u:object_r:httpd_sys_content_t:s0\n"
