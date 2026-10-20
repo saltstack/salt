@@ -702,3 +702,26 @@ def test_user_present_windows_unlock_account_noop_when_not_locked(states, userna
     ret = states.user.present(name=username, win_unlock_account=True)
     assert ret.result is True
     assert ret.changes == {}
+
+
+@pytest.mark.skip_unless_on_linux(reason="user.present's shell param only applies on Linux/Unix")
+def test_user_present_shell_not_leaked_to_onlyif(modules, states, username):
+    """
+    Regression test for #59420: user.present's `shell` (login shell) must
+    never be forwarded as the shell to run onlyif/unless check commands in.
+
+    Before the fix, the onlyif check below was executed under /bin/false
+    (borrowed from the state's `shell` param), which always exits 1
+    regardless of its argument -- so the onlyif was treated as unmet, the
+    state was skipped, and the shell was never actually set.
+    """
+    ret = states.user.present(
+        name=username,
+        shell="/bin/false",
+        onlyif="/bin/true",
+    )
+    assert ret.result is True
+    assert ret.changes
+
+    user_info = modules.user.info(username)
+    assert user_info["shell"] == "/bin/false"
