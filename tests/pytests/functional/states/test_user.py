@@ -735,7 +735,9 @@ def test_user_present_windows_fullname_with_comma(states, username):
     assert "Unsupported char" not in ret.comment
 
 
-@pytest.mark.skip_unless_on_linux(reason="user.present's shell param only applies on Linux/Unix")
+@pytest.mark.skip_unless_on_linux(
+    reason="user.present's shell param only applies on Linux/Unix"
+)
 def test_user_present_shell_not_leaked_to_onlyif(modules, states, username):
     """
     Regression test for #59420: user.present's `shell` (login shell) must

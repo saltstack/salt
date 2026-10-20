@@ -736,9 +736,7 @@ def test_changes_win_unlock_account_asymmetry():
             user.__salt__,
             {
                 **dunder_salt_base,
-                "user.info": MagicMock(
-                    return_value=_windows_lusr(account_locked=True)
-                ),
+                "user.info": MagicMock(return_value=_windows_lusr(account_locked=True)),
             },
         ):
             ret = user._changes(
@@ -751,9 +749,7 @@ def test_changes_win_unlock_account_asymmetry():
             user.__salt__,
             {
                 **dunder_salt_base,
-                "user.info": MagicMock(
-                    return_value=_windows_lusr(account_locked=True)
-                ),
+                "user.info": MagicMock(return_value=_windows_lusr(account_locked=True)),
             },
         ):
             ret = user._changes(
@@ -783,7 +779,9 @@ def test_present_dispatches_windows_update_fields():
         user.__salt__, dunder_salt
     ), patch.dict(user.__opts__, {"test": False}), patch.object(
         user, "_changes", mock_changes
-    ), patch("salt.utils.platform.is_windows", return_value=True):
+    ), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
         user.present("bob")
         mock_update.assert_any_call(name="bob", account_disabled=True)
 
