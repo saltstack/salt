@@ -24,9 +24,6 @@ try:
 except ImportError:
     HAS_CRYPTOGRAPHY = False
 
-import salt.utils.dictupdate
-import salt.utils.files
-import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 log = logging.getLogger(__name__)
