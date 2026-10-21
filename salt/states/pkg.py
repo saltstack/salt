@@ -3666,7 +3666,7 @@ def mod_aggregate(low, chunks, running):
         return low
     is_sources = "sources" in low
     # use a dict instead of a set to maintain insertion order
-    pkgs = {}
+    pkgs: dict[str, set[str | None]] = {}
     for chunk in chunks:
         tag = __utils__["state.gen_tag"](chunk)
         if tag in running:
@@ -3703,10 +3703,10 @@ def mod_aggregate(low, chunks, running):
                     chunk["__agg__"] = True
     if pkgs:
         pkg_type = "sources" if is_sources else "pkgs"
-        low_pkgs = {}
+        low_pkgs: dict[str, set[str | None]] = {}
         _combine_pkgs(low_pkgs, low.get(pkg_type, []))
         for pkg, values in pkgs.items():
-            low_pkgs.setdefault(pkg, {None}).update(values)
+            low_pkgs.setdefault(pkg, set()).update(values)
         # the value is the version for pkgs and
         # the URI for sources
         low_pkgs_list = [
@@ -3718,13 +3718,13 @@ def mod_aggregate(low, chunks, running):
     return low
 
 
-def _combine_pkgs(pkgs_dict, additional_pkgs_list):
+def _combine_pkgs(pkgs_dict: dict[str, set[str | None]], additional_pkgs_list):
     for item in additional_pkgs_list:
         if isinstance(item, str):
             pkgs_dict.setdefault(item, {None})
         else:
-            for pkg, version in item:
-                pkgs_dict.setdefault(pkg, {None}).add(version)
+            for pkg, version in item.items():
+                pkgs_dict.setdefault(pkg, set()).add(version)
 
 
 def mod_watch(name, **kwargs):
