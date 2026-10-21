@@ -434,57 +434,29 @@ def test_orchestration_onchanges_and_prereq(
 def test_unknown_in_runner_event(
     runner_salt_run_cli,
     runner_salt_master,
-    salt_minion,
     salt_auth_account_m,
     runner_add_user,
     event_listener,
 ):
     """
-    Test to confirm that the ret event for the orchestration contains the
-    jid for the jobs spawned.
-    """
-    file_roots_base_dir = runner_salt_master.config["file_roots"]["base"][0]
-    test_top_file_contents = """
-    base:
-      '{minion_id}':
-        - {file_roots}
-    """.format(
-        minion_id=salt_minion.id, file_roots=file_roots_base_dir
-    )
-    test_init_state_contents = """
-    always-passes-with-any-kwarg:
-      test.nop:
-        - name: foo
-        - something: else
-        - foo: bar
-    always-passes:
-      test.succeed_without_changes:
-        - name: foo
-    always-changes-and-succeeds:
-      test.succeed_with_changes:
-        - name: foo
-    {{slspath}}:
-      test.nop
+    Runner and wheel jobs started by an orchestration run through eauth run as
+    the master's configured user, not as the eauth user (#70251), and the
+    runner jobs are attributed to the eauth user (#63148).
     """
     test_orch_contents = """
-    test_highstate:
-      salt.state:
-        - tgt: {minion_id}
-        - highstate: True
     test_runner_metasyntetic:
       salt.runner:
         - name: test.metasyntactic
         - locality: us
-    """.format(
-        minion_id=salt_minion.id
-    )
-    with runner_salt_master.state_tree.base.temp_file(
-        "top.sls", test_top_file_contents
-    ), runner_salt_master.state_tree.base.temp_file(
-        "init.sls", test_init_state_contents
-    ), runner_salt_master.state_tree.base.temp_file(
-        "orch.sls", test_orch_contents
-    ):
+    test_runner_opts_user:
+      salt.runner:
+        - name: config.get
+        - key: user
+    test_wheel_key_list:
+      salt.wheel:
+        - name: key.list_all
+    """
+    with runner_salt_master.state_tree.base.temp_file("orch.sls", test_orch_contents):
         ret = runner_salt_run_cli.run(
             "salt.cmd", "shadow.gen_password", salt_auth_account_m.password
         )
@@ -512,19 +484,35 @@ def test_unknown_in_runner_event(
             "orch",
         )
         assert not ret.stdout.startswith("Authentication failure")
+        assert ret.returncode == 0, ret
+        # The nested jobs must have run and succeeded. On a root master they
+        # used to drop privileges to the eauth user and fail (#70251).
+        jids = {}
+        for state_ret in ret.data["data"][runner_salt_master.id].values():
+            assert state_ret["result"] is True, state_ret
+            jids[state_ret["__id__"]] = state_ret["__jid__"]
 
-        expected_new_event_tag = "salt/run/*/new"
-        event_pattern = (runner_salt_master.id, expected_new_event_tag)
-        found_events = event_listener.get_events([event_pattern], after_time=start_time)
-
-        for event in found_events:
-            if event.data["fun"] == "runner.test.metasyntactic":
-                assert event.data["user"] == salt_auth_account_m.username
-
-        expected_ret_event_tag = "salt/run/*/ret"
-        event_pattern = (runner_salt_master.id, expected_ret_event_tag)
-        found_events = event_listener.get_events([event_pattern], after_time=start_time)
-
-        for event in found_events:
-            if event.data["fun"] == "runner.test.metasyntactic":
-                assert event.data["user"] == salt_auth_account_m.username
+        job_tags = {
+            "test_runner_metasyntetic": "salt/run/{}/{}",
+            "test_runner_opts_user": "salt/run/{}/{}",
+            "test_wheel_key_list": "salt/wheel/{}/{}",
+        }
+        patterns = [
+            (runner_salt_master.id, tag.format(jids[state_id], suffix))
+            for state_id, tag in job_tags.items()
+            for suffix in ("new", "ret")
+        ]
+        matched = event_listener.wait_for_events(
+            patterns, after_time=start_time, timeout=30
+        )
+        assert matched.found_all_events, f"missed={matched.missed}"
+        for event in matched:
+            if event.tag.endswith("/ret"):
+                assert event.data["success"] is True, event
+            if event.tag.startswith("salt/run/"):
+                # Attributed to the user that started the orchestration (#63148)
+                assert event.data["user"] == salt_auth_account_m.username, event
+            if event.data["fun"] == "runner.config.get" and event.tag.endswith("/ret"):
+                # The orchestration did not replace the master's user option
+                # with the eauth user.
+                assert event.data["return"] == runner_salt_master.config["user"]
