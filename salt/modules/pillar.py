@@ -23,6 +23,18 @@ __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
 
 
+def _resolve_unmask(unmask):
+    """
+    ``pillar_mask_output`` is a feature flag: with it off, nothing is masked
+    and ``unmask`` has no effect.
+    """
+    if not __opts__.get("pillar_mask_output", False):
+        return True
+    if unmask is None:
+        return not salt.utils.secret.mask_pillar.get()
+    return unmask
+
+
 def get(
     key,
     default=NOT_SET,
@@ -145,8 +157,7 @@ def get(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+    unmask = _resolve_unmask(unmask)
 
     if merge:
         if isinstance(default, dict):
@@ -299,15 +310,7 @@ def items(
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
-    if unmask is None:
-        # VCOPS-98852: pillar_mask_output only changes items()'s *default*
-        # when the caller didn't explicitly request masked/unmasked output —
-        # it does not disable masking elsewhere (pillar.get/item/raw/ext,
-        # no_log states, or the general output safety net keep their own
-        # existing behavior regardless of this option).
-        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
-            "pillar_mask_output", True
-        )
+    unmask = _resolve_unmask(unmask)
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -588,8 +591,7 @@ def item(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+    unmask = _resolve_unmask(unmask)
 
     try:
         for arg in args:
@@ -630,8 +632,7 @@ def raw(key=None, unmask=None):
 
         salt '*' pillar.raw key='roles'
     """
-    if unmask is None:
-        unmask = True
+    unmask = _resolve_unmask(True if unmask is None else unmask)
 
     if key:
         value = __pillar__.get(key, {})
@@ -717,8 +718,7 @@ def ext(external, pillar=None, unmask=None):
 
     ret = pillar_obj.compile_pillar()
 
-    if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+    unmask = _resolve_unmask(unmask)
 
     if unmask:
         return salt.utils.secret.expose(ret)

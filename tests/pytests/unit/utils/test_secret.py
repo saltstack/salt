@@ -448,3 +448,11 @@ def test_masked_nested_repr_respects_context_var():
     r = repr(d)
     assert secret.REDACT_PLACEHOLDER in r
     assert "host1" not in r
+
+
+def test_no_log_mask_does_not_depend_on_pillar_mask_output():
+    """``no_log: True`` is set per state, so it redacts whatever the pillar flag says."""
+    ret = {"name": "n", "comment": "secret", "changes": {"a": "b"}}
+    secret.no_log_mask(ret)
+    assert ret["comment"] == secret.REDACT_PLACEHOLDER
+    assert ret["changes"] == {"a": secret.REDACT_PLACEHOLDER}

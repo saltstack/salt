@@ -2888,6 +2888,42 @@ minion config file or via the CLI, it will override this option.
 
     pillarenv_from_saltenv: True
 
+.. conf_minion:: pillar_mask_output
+
+``pillar_mask_output``
+**********************
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+Feature flag for pillar masking in :py:func:`pillar.get
+<salt.modules.pillar.get>`, :py:func:`pillar.item
+<salt.modules.pillar.item>`, :py:func:`pillar.items
+<salt.modules.pillar.items>` and :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
+
+When ``False`` (the default), they return real values and the ``unmask``
+argument has no effect. When ``True``, they return masked values
+(``**********``) unless a caller passes ``unmask=True`` for a single call or
+state.
+
+.. versionchanged:: 3008.4
+    The default is now ``False``, and the option applies to ``pillar.get``,
+    ``pillar.item`` and ``pillar.ext`` too. Before, the default was ``True``
+    and the option only changed the default of ``pillar.items``.
+
+When ``False``, pillar masking is off: the pillar is not wrapped in the masked
+containers, so the ``repr()`` of ``__pillar__`` and the output safety net do not
+redact either, and the values returned by the functions above are plain data.
+
+This option does **not** change ``no_log``: a state with ``no_log: True``
+still has its ``name``, ``comment`` and ``changes`` redacted.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_minion:: pillar_raise_on_missing
 
 ``pillar_raise_on_missing``
