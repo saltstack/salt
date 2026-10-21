@@ -110,6 +110,14 @@ want to join.
 Reference Implementation
 ========================
 
+.. seealso::
+
+    For copy-pasteable 2-node and 3-node walkthroughs using the
+    isolated-filesystem mode, plus a complete HAProxy configuration
+    and the trade-offs of round-robin vs. sticky-session load
+    balancing in front of a cluster, see
+    :ref:`tutorial-master-cluster-reference`.
+
 Gluster: https://docs.gluster.org/en/main/Quick-Start-Guide/Quickstart/
 
 HAProxy:
