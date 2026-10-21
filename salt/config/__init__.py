@@ -730,9 +730,8 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
-        # When False, changes pillar.items()'s default (when the caller
-        # doesn't pass unmask=) to return unmasked pillar values. Does not
-        # affect pillar.get/item/raw/ext, no_log states, or general output.
+        # Feature flag for pillar masking. When False (default) nothing is
+        # masked and unmask= has no effect. Does not affect no_log states.
         "pillar_mask_output": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
@@ -1222,7 +1221,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_opts": False,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
-        "pillar_mask_output": True,
+        "pillar_mask_output": False,
         "pillar_includes_override_sls": False,
         # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
         # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
@@ -1713,7 +1712,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_safe_render_error": True,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
-        "pillar_mask_output": True,
+        "pillar_mask_output": False,
         "pillar_includes_override_sls": False,
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
