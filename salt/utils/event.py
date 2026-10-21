@@ -79,7 +79,6 @@ import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
-from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -892,7 +891,7 @@ class SaltEvent:
                 continue
             yield data
 
-    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
@@ -972,12 +971,6 @@ class SaltEvent:
                 await loop.run_in_executor(None, self.pusher.publish, msg)
             else:
                 await self.pusher.publish(msg)
-        if cb is not None:
-            warn_until(
-                3009,
-                "The cb argument to fire_event_async will be removed in 3009",
-            )
-            cb(None)
 
     def fire_event(self, data, tag, timeout=1000):
         """

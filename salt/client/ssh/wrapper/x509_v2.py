@@ -340,30 +340,20 @@ def create_certificate(
             **kwargs,
         )
 
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        kwargs["digest"] = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version", "serial_bits"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`. `text`, `version`, and `serial_bits` were ignored kwargs
+    # removed in the same release.
+    for removed in ("algorithm", "text", "version", "serial_bits"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
+            )
     kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     if "days_valid" not in kwargs and "not_after" not in kwargs:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
-            )
-            kwargs["days_valid"] = 365
-        except RuntimeError:
-            pass
+        # Default changed from 365 to 30 in 3009.0 (Potassium).
+        kwargs["days_valid"] = 30
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -535,25 +525,26 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Don't immediately break for the long form of name attributes
+    # Long-form name-attribute and extension aliases (e.g. ``commonName``
+    # for ``CN``, ``X509v3 Basic Constraints`` for ``basicConstraints``)
+    # were accepted with a deprecation warning through 3008.x and removed
+    # in 3009.0 (Potassium). Signing policies must use short names.
     for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form name "
+                    f"attribute `{long_name}` which was removed in 3009.0."
+                    f" Use the short name `{name}` instead."
                 )
-                policy[name] = policy.pop(long_name)
-
-    # Don't immediately break for the long form of extensions
     for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form extension "
+                    f"`{long_name}` which was removed in 3009.0. Use the "
+                    f"short name `{extname}` instead."
                 )
-                policy[extname] = policy.pop(long_name)
     return policy
 
 
