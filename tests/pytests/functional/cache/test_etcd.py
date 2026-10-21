@@ -19,15 +19,11 @@ pytestmark = [
 
 @pytest.fixture(
     scope="module",
-    params=(EtcdVersion.v2, EtcdVersion.v3_v2_mode),
+    params=(EtcdVersion.v3,),
     ids=etcd_version_ids,
 )
 def etcd_version(request):  # pylint: disable=function-redefined
-    # The only parameter is True because the salt cache does not use
-    # salt/utils/etcd_util.py and if coded for etcd v2
-    if request.param and not HAS_ETCD_V2:
-        pytest.skip("No etcd library installed")
-    if not request.param and not HAS_ETCD_V3:
+    if not HAS_ETCD_V3:
         pytest.skip("No etcd3 library installed")
     return request.param
 

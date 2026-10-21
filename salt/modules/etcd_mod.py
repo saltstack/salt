@@ -90,7 +90,7 @@ def __virtual__():
     """
     Only return if python-etcd is installed
     """
-    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+    if salt.utils.etcd_util.HAS_ETCD_V3:
         return __virtualname__
     return (
         False,

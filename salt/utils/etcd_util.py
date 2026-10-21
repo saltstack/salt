@@ -79,8 +79,6 @@ import salt.exceptions
 import salt.utils.msgpack
 from salt.exceptions import SaltException
 
-HAS_ETCD_V2 = False
-
 try:
     import etcd3
 

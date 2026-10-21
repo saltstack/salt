@@ -122,8 +122,7 @@ def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
     """
     Test the correct response when the profile is missing and we can't connect
     """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
-        # Only need to run this once
+    if etcd_port != 2379:
         with subtests.test("Test no profile and bad connection in get_"):
             assert etcd_mod.get_(f"{prefix}/1") is None
 
