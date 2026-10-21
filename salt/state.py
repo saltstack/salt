@@ -1414,11 +1414,16 @@ class State:
             # order for the newly installed package to be importable.
             try:
                 importlib.reload(site)
-            except RuntimeError:
-                log.error(
-                    "Error encountered during module reload. Modules were not reloaded."
-                )
-            except TypeError:
+            except (RuntimeError, TypeError, ImportError):
+                # ImportError (and its subclass ModuleNotFoundError) can occur
+                # when the salt-minion package upgrades itself in-place: the
+                # relenv onedir tree at /opt/saltstack/salt/lib/python<VER>/
+                # is replaced by dpkg/rpm while the running interpreter is
+                # still holding its old sys.path. importlib.reload(site)
+                # then walks the meta-path finders looking for site.py on
+                # disk under a path that no longer exists and raises
+                # ``ModuleNotFoundError: spec not found for the module
+                # 'site'``. See issue #69807.
                 log.error(
                     "Error encountered during module reload. Modules were not reloaded."
                 )
@@ -1465,7 +1470,64 @@ class State:
                 if "bin" in data["name"]:
                     self.module_refresh()
         elif data["state"] in ("pkg", "ports", "pip"):
+            if data["state"] == "pkg" and self._is_salt_self_upgrade(ret):
+                # A minion-driven upgrade of the salt package(s) has just
+                # replaced the running interpreter's sys.path root on disk.
+                # importlib.reload(site) inside module_refresh() would then
+                # fail with ``ModuleNotFoundError: spec not found for the
+                # module 'site'`` and abort the state run. Skip the reload;
+                # the running process's modules cannot be swapped in-place,
+                # and the documented FAQ ``cmd.run bg: True`` pattern is
+                # responsible for restarting the service after the state
+                # run completes. See issue #69807.
+                log.warning(
+                    "Skipping module refresh: the salt package(s) %s were "
+                    "just upgraded, so reloading modules in the running "
+                    "process is unsafe. Restart the salt-minion service "
+                    "(e.g. via the FAQ cmd.run bg:True pattern) to pick "
+                    "up the new code.",
+                    sorted(self._salt_packages_in_changes(ret)),
+                )
+                return
             self.module_refresh()
+
+    #: Package names that ship the running salt-minion / salt-master code
+    #: (deb + rpm names). When any of these appear in a ``pkg.installed``
+    #: ``ret["changes"]`` dict, the minion cannot safely reload its own
+    #: modules in-place: the underlying ``site.py`` and ``sys.path`` root
+    #: have just been replaced on disk by the package manager. See #69807.
+    _SALT_PACKAGE_NAMES = frozenset(
+        {
+            "salt",
+            "salt-api",
+            "salt-cloud",
+            "salt-common",
+            "salt-master",
+            "salt-minion",
+            "salt-ssh",
+            "salt-syndic",
+        }
+    )
+
+    def _salt_packages_in_changes(self, ret):
+        """
+        Return the set of salt package names present in ``ret["changes"]``.
+
+        The changes dict from ``pkg.installed`` maps *package name* to a
+        per-package change record (typically ``{"old": ..., "new": ...}``).
+        Only top-level keys are considered.
+        """
+        changes = ret.get("changes") or {}
+        if not isinstance(changes, dict):
+            return set()
+        return {name for name in changes if name in self._SALT_PACKAGE_NAMES}
+
+    def _is_salt_self_upgrade(self, ret):
+        """
+        Return ``True`` if ``ret["changes"]`` reports that at least one
+        salt package was installed / upgraded / removed. See #69807.
+        """
+        return bool(self._salt_packages_in_changes(ret))
 
     def verify_data(self, data):
         """
