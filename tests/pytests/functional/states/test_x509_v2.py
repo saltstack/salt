@@ -4,7 +4,6 @@ import shutil
 
 import pytest
 
-import salt.exceptions
 from tests.support.mock import patch
 
 try:
@@ -2583,21 +2582,19 @@ def test_certificate_managed_rejects_removed_kwargs(x509, cert_args, rsa_privkey
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
-    ):
-        x509.certificate_managed(**cert_args, **arg)
+    ret = x509.certificate_managed(**cert_args, **arg)
+    assert ret.result is False
+    assert "was removed in 3009.0" in ret.comment
 
 
 def test_certificate_managed_rejects_algorithm_kwarg(x509, cert_args, rsa_privkey):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError,
-        match="`algorithm` was removed in 3009.0.*Use `digest`",
-    ):
-        x509.certificate_managed(**cert_args, algorithm="sha512")
+    ret = x509.certificate_managed(**cert_args, algorithm="sha512")
+    assert ret.result is False
+    assert "`algorithm` was removed in 3009.0" in ret.comment
+    assert "Use `digest`" in ret.comment
 
 
 def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_privkey):
@@ -2605,11 +2602,9 @@ def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_p
     cert_args["days_remaining"] = 7
     cert_args["commonName"] = "success"
     cert_args["private_key"] = rsa_privkey
-    with pytest.raises(
-        salt.exceptions.CommandExecutionError,
-        match="`commonName` was removed in 3009.0",
-    ):
-        x509.certificate_managed(**cert_args)
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is False
+    assert "`commonName` was removed in 3009.0" in ret.comment
 
 
 def test_certificate_managed_rejects_long_extensions(x509, cert_args, rsa_privkey):
@@ -2617,57 +2612,45 @@ def test_certificate_managed_rejects_long_extensions(x509, cert_args, rsa_privke
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.raises(
-        salt.exceptions.CommandExecutionError,
-        match="`X509v3 Basic Constraints` was removed in 3009.0",
-    ):
-        x509.certificate_managed(**cert_args)
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is False
+    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
 def test_csr_managed_rejects_removed_kwargs(x509, arg, csr_args):
-    # ``text`` is rejected directly by the state; ``version`` is silently
-    # ignored by the state but rejected by the underlying execution module
-    # when the state calls it. Either way the state must not succeed.
     ret = x509.csr_managed(**csr_args, **arg)
     assert ret.result is False
-    assert "removed in 3009.0" in ret.comment
+    assert "was removed in 3009.0" in ret.comment
 
 
 def test_csr_managed_rejects_algorithm_kwarg(x509, csr_args):
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError,
-        match="`algorithm` was removed in 3009.0.*Use `digest`",
-    ):
-        x509.csr_managed(**csr_args, algorithm="sha512")
+    ret = x509.csr_managed(**csr_args, algorithm="sha512")
+    assert ret.result is False
+    assert "`algorithm` was removed in 3009.0" in ret.comment
+    assert "Use `digest`" in ret.comment
 
 
 def test_csr_managed_rejects_long_name_attributes(x509, csr_args):
     csr_args.pop("CN", None)
-    with pytest.raises(
-        salt.exceptions.CommandExecutionError,
-        match="`commonName` was removed in 3009.0",
-    ):
-        x509.csr_managed(**csr_args, commonName="deprecated_yo")
+    ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
+    assert ret.result is False
+    assert "`commonName` was removed in 3009.0" in ret.comment
 
 
 def test_csr_managed_rejects_long_extensions(x509, csr_args):
     csr_args["X509v3 Basic Constraints"] = "critical CA:FALSE"
-    with pytest.raises(
-        salt.exceptions.CommandExecutionError,
-        match="`X509v3 Basic Constraints` was removed in 3009.0",
-    ):
-        x509.csr_managed(**csr_args)
+    ret = x509.csr_managed(**csr_args)
+    assert ret.result is False
+    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
 
 
 def test_crl_managed_rejects_text_kwarg(x509, crl_args):
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError,
-        match="`text` was removed in 3009.0",
-    ):
-        x509.crl_managed(**crl_args, text=True)
+    ret = x509.crl_managed(**crl_args, text=True)
+    assert ret.result is False
+    assert "`text` was removed in 3009.0" in ret.comment
 
 
 def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
@@ -2678,8 +2661,9 @@ def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.raises(salt.exceptions.SaltInvocationError, match="flat list of"):
-        x509.crl_managed(**crl_args)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "flat list of" in ret.comment
 
 
 def test_crl_managed_rejects_old_style_reason(x509, crl_args):
@@ -2687,26 +2671,25 @@ def test_crl_managed_rejects_old_style_reason(x509, crl_args):
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.raises(salt.exceptions.SaltInvocationError, match="`reason` key"):
-        x509.crl_managed(**crl_args)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "`reason` key" in ret.comment
 
 
 @pytest.mark.parametrize(
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
 def test_private_key_managed_rejects_removed_kwargs(x509, arg, pk_args):
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
-    ):
-        x509.private_key_managed(**pk_args, **arg)
+    ret = x509.private_key_managed(**pk_args, **arg)
+    assert ret.result is False
+    assert "was removed in 3009.0" in ret.comment
 
 
 def test_private_key_managed_rejects_bits_kwarg(x509, pk_args):
-    with pytest.raises(
-        salt.exceptions.SaltInvocationError,
-        match="`bits` was removed in 3009.0.*Use `keysize`",
-    ):
-        x509.private_key_managed(**pk_args, bits=3072)
+    ret = x509.private_key_managed(**pk_args, bits=3072)
+    assert ret.result is False
+    assert "`bits` was removed in 3009.0" in ret.comment
+    assert "Use `keysize`" in ret.comment
 
 
 def _assert_cert_created_basic(
