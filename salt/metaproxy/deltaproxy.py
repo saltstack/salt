@@ -79,8 +79,8 @@ def attach_req_channel(proxy_minion, proxy_opts, io_loop):
     if auth is not None:
         proxy_minion.tok = auth.gen_token(b"salt")
     return proxy_minion.req_channel
-  
-  
+
+
 async def gather_subproxies(waitfor, ids):
     """
     Await every sub-proxy initialisation coroutine and return the results of

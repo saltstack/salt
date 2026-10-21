@@ -284,7 +284,8 @@ def test_attach_req_channel_without_auth_does_not_raise():
 
     assert proxy_minion.req_channel is channel
     assert not hasattr(proxy_minion, "tok")
-    
+
+
 # ---------------------------------------------------------------------------
 # parallel_startup must behave like serial startup
 # ---------------------------------------------------------------------------
