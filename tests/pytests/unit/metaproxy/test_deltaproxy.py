@@ -346,6 +346,8 @@ def test_subproxy_tune_in_starts_periodics_on_the_running_loop():
     assert calls == ["state_run"]
     queued()
     assert calls == ["state_run", "scheduler", "beacons", "periodic:cleanup"]
+
+
 def test_subproxy_post_master_init_gives_each_subproxy_its_own_loader_namespace(
     proxy_opts, fake_main_proxy, fake_main_utils
 ):
