@@ -556,3 +556,61 @@ def test_subproxy_post_master_init_sets_module_executors(
     assert sub is not None
     # thread_return reads this off the sub-proxy via getattr; it must be there.
     assert getattr(sub, "module_executors", None) == ["direct_call"]
+
+
+@pytest.mark.parametrize("deep_merge", [False, True])
+@pytest.mark.parametrize("merge_pillar_in_opts", [False, True])
+def test_post_master_init_pillar_proxy_block_wins_over_opts(
+    merge_pillar_in_opts, deep_merge
+):
+    """
+    The control proxy's proxytype and ids live in its pillar, so the pillar
+    ``proxy`` block must still win over a ``proxy`` block in its config when
+    ``proxy_merge_pillar_in_opts`` is off.  Gating the whole merge left
+    ``proxytype``/``ids`` from config in place, so no sub-proxy started.
+    Only the rest of the pillar is gated by the option.
+    """
+
+    class _StopAfterMerge(Exception):
+        pass
+
+    pillar = {
+        "proxy": {
+            "proxytype": "deltaproxy",
+            "ids": ["minion1", "minion2"],
+            "parallel_startup": True,
+        },
+        "n_marker": "FROM_PILLAR",
+    }
+    opts = {
+        "id": "control_proxy",
+        "proxy": {"proxytype": "dummy", "ids": ["minion1"], "only_in_opts": True},
+        "pillar": pillar,
+        "proxy_merge_pillar_in_opts": merge_pillar_in_opts,
+        "proxy_merge_pillar_in_opts_strategy": "smart",
+        "proxy_deep_merge_pillar_in_opts": deep_merge,
+        "proxy_mines_pillar": True,
+    }
+    # Stop at the first call after the merge; only the resulting opts matter.
+    fake_self = MagicMock(
+        connected=False,
+        opts=opts,
+        _load_modules=MagicMock(side_effect=_StopAfterMerge),
+    )
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        with pytest.raises(_StopAfterMerge):
+            loop.run_sync(lambda: deltaproxy.post_master_init(fake_self, "master"))
+    finally:
+        loop.close()
+
+    # Merged, not replaced, and ``ids`` is not doubled up.
+    assert fake_self.opts["proxy"] == {
+        "proxytype": "deltaproxy",
+        "ids": ["minion1", "minion2"],
+        "parallel_startup": True,
+        "only_in_opts": True,
+    }
+    # Inverse must-not: the rest of the pillar only reaches opts when asked.
+    assert ("n_marker" in fake_self.opts) is merge_pillar_in_opts

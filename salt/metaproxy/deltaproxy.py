@@ -145,6 +145,19 @@ async def post_master_init(self, master):
 
     if "proxy" not in self.opts:
         self.opts["proxy"] = self.opts["pillar"]["proxy"]
+    elif "proxy" in self.opts["pillar"] and not self.opts.get(
+        "proxy_merge_pillar_in_opts"
+    ):
+        # The control proxy's proxytype and ids are documented to live in its
+        # pillar, and deltaproxy has always let the pillar proxy block win over
+        # one in opts. Keep doing that for this key when the rest of the pillar
+        # is not merged below.
+        self.opts = salt.utils.dictupdate.merge(
+            self.opts,
+            {"proxy": copy.deepcopy(self.opts["pillar"]["proxy"])},
+            strategy=self.opts.get("proxy_merge_pillar_in_opts_strategy"),
+            merge_lists=self.opts.get("proxy_deep_merge_pillar_in_opts", False),
+        )
 
     if self.opts.get("proxy_merge_pillar_in_opts"):
         # Override proxy opts with pillar data when the user required. But do
