@@ -162,7 +162,7 @@ class Schedule:
             else:
                 self.returners = returners.loader.gen_functions()
         try:
-            self.time_offset = self.functions.get(
+            self.time_offset = self._dunder_salt.get(
                 "timezone.get_offset", lambda: "0000"
             )()
         except Exception:  # pylint: disable=W0703
@@ -189,12 +189,31 @@ class Schedule:
     def __getnewargs__(self):
         return self.opts, self.functions, self.returners, self.intervals, None
 
+    @property
+    def _dunder_salt(self):
+        """
+        Unfiltered execution-module loader for scheduler-internal helpers
+        (currently ``timezone.get_offset`` in ``__singleton_init__`` and
+        ``config.merge`` in ``option``).
+
+        The wire-filtered ``self.functions`` is what user-configured
+        scheduled jobs dispatch through and stays whitelist-gated.  The
+        inner unfiltered loader exposed by :func:`salt.loader.minion_mods`
+        at ``ret._dunder_salt`` is what scheduler bookkeeping must use so
+        it does not KeyError under a strict ``whitelist_modules`` that
+        omits ``config`` or ``timezone``.  Falls back to ``self.functions``
+        when the two-loader model is not in effect (e.g. salt-ssh
+        ``FunctionWrapper``, tests that pass a plain dict, or a
+        wire-loader built without the inner attribute for any reason).
+        """
+        return getattr(self.functions, "_dunder_salt", None) or self.functions
+
     def option(self, opt):
         """
         Return options merged from config and pillar
         """
-        if "config.merge" in self.functions:
-            return self.functions["config.merge"](opt, {}, omit_master=True)
+        if "config.merge" in self._dunder_salt:
+            return self._dunder_salt["config.merge"](opt, {}, omit_master=True)
         return self.opts.get(opt, {})
 
     def _get_schedule(
@@ -506,7 +525,19 @@ class Schedule:
             func = data["fun"]
         else:
             func = None
-        if func not in self.functions:
+        # Salt-internal scheduled jobs (``__``-prefix on the schedule
+        # key) resolve their function through the unfiltered inner
+        # loader; see ``Schedule.handle_func``.  Mirror the same
+        # selector on the pre-dispatch presence check so a Salt-
+        # internal job like ``__mine_interval`` doesn't emit a false
+        # "Invalid function" info log on every tick under a strict
+        # ``whitelist_modules`` that omits ``mine``.
+        _validate_functions = (
+            (getattr(self.functions, "_dunder_salt", None) or self.functions)
+            if name.startswith("__")
+            else self.functions
+        )
+        if func not in _validate_functions:
             log.info("Invalid function: %s in scheduled job %s.", func, name)
 
         if "name" not in data:
@@ -769,6 +800,23 @@ class Schedule:
 
         data_returner = data.get("returner", None)
 
+        # Salt-internal scheduled jobs use the ``__``-prefix convention on
+        # their schedule key (``__mine_interval``, ``__master_alive_*``,
+        # ``__master_failback``, ``__ping_master``) -- see
+        # ``salt.minion.Minion.setup_scheduler`` and the metaproxy analogs
+        # that inject these via ``self.schedule.add_job``.  Dispatch them
+        # through the unfiltered inner loader so they still fire under a
+        # strict ``whitelist_modules`` that omits ``mine`` / ``status`` /
+        # ``config``.  Operator-configured schedule entries stay on the
+        # wire-filtered outer loader so ``whitelist_modules`` remains an
+        # effective defense-in-depth gate on operator-controlled dispatch.
+        if data.get("name", "").startswith("__"):
+            dispatch_functions = (
+                getattr(self.functions, "_dunder_salt", None) or self.functions
+            )
+        else:
+            dispatch_functions = self.functions
+
         if not self.standalone:
             proc_fn = os.path.join(
                 salt.minion.get_proc_dir(self.opts["cachedir"]), ret["jid"]
@@ -810,10 +858,10 @@ class Schedule:
                 kwargs = copy.deepcopy(data["kwargs"])
                 ret["fun_args"].append(copy.deepcopy(kwargs))
 
-            if func not in self.functions:
-                ret["return"] = self.functions.missing_fun_string(func)
+            if func not in dispatch_functions:
+                ret["return"] = dispatch_functions.missing_fun_string(func)
                 salt.utils.error.raise_error(
-                    message=self.functions.missing_fun_string(func)
+                    message=dispatch_functions.missing_fun_string(func)
                 )
 
             if not self.standalone:
@@ -829,7 +877,7 @@ class Schedule:
 
             # if the func support **kwargs, lets pack in the pub data we have
             # TODO: pack the *same* pub data as a minion?
-            argspec = salt.utils.args.get_function_argspec(self.functions[func])
+            argspec = salt.utils.args.get_function_argspec(dispatch_functions[func])
             if argspec.keywords:
                 # this function accepts **kwargs, pack in the publish data
                 for key, val in ret.items():
@@ -858,7 +906,7 @@ class Schedule:
                     "__tag__": tag,
                     "__jid_event__": weakref.proxy(namespaced_event),
                 }
-                self_functions = copy.copy(self.functions)
+                self_functions = copy.copy(dispatch_functions)
                 salt.utils.lazy.verify_fun(self_functions, func)
 
                 # Inject some useful globals to *all* the function's global
@@ -873,11 +921,11 @@ class Schedule:
                         continue
                     completed_funcs.append(mod)
                     for global_key, value in func_globals.items():
-                        self.functions[mod_name].__globals__[global_key] = value
+                        dispatch_functions[mod_name].__globals__[global_key] = value
 
             self.functions.pack["__context__"]["retcode"] = 0
 
-            ret["return"] = self.functions[func](*args, **kwargs)
+            ret["return"] = dispatch_functions[func](*args, **kwargs)
 
             if not self.standalone:
                 # runners do not provide retcode
@@ -1525,7 +1573,20 @@ class Schedule:
             else:
                 func = None
 
-            if func not in self.functions:
+            # Salt-internal scheduled jobs (``__``-prefix on the schedule
+            # key) resolve their function through the unfiltered inner
+            # loader; see ``Schedule.handle_func``.  Mirror the same
+            # selector on this pre-dispatch presence check so a
+            # Salt-internal job like ``__mine_interval`` doesn't emit
+            # a false "Invalid function" info log at every 1Hz eval
+            # tick under a strict ``whitelist_modules`` that omits
+            # ``mine`` / ``status``.
+            _validate_functions = (
+                (getattr(self.functions, "_dunder_salt", None) or self.functions)
+                if job_name.startswith("__")
+                else self.functions
+            )
+            if func not in _validate_functions:
                 log.info("Invalid function: %s in scheduled job %s.", func, job_name)
 
             if "_next_fire_time" not in data:

@@ -2217,7 +2217,7 @@ class LocalClient:
             + str(self.opts["ret_port"])
         )
 
-        with salt.channel.client.AsyncReqChannel.factory(
+        async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:

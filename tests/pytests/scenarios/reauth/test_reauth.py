@@ -106,6 +106,13 @@ def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):
 
 
 def test_presence_events(salt_cli, salt_minion, salt_master, event_listener):
+    # ``test_reauth`` above tears the minion down at end (``stop_event.set()``
+    # -> ``minion_func`` finally -> ``salt_minion.terminate()``).  The
+    # package-scoped ``salt_minion`` fixture does not auto-restart, so
+    # this second test in the file runs against a dead minion.  Bring it
+    # back up before pinging.
+    if not salt_minion.is_running():
+        salt_minion.start()
     # On slow runners (FIPS/Arm64 in particular) the first ping after
     # master+minion startup can exceed the factory-level 30 s CLI timeout
     # while the minion finishes auth/reauth and the presence machinery

@@ -1225,7 +1225,7 @@ class AsyncAuth:
             acceptance_wait_time_max = acceptance_wait_time
         creds = None
 
-        with salt.channel.client.AsyncReqChannel.factory(
+        async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
             error = None
@@ -1407,7 +1407,19 @@ class AsyncAuth:
                 )
         finally:
             if close_channel:
-                channel.close()
+                # Prefer ``close_async`` when the channel exposes it
+                # (``AsyncReqChannel`` does) so the underlying transport's
+                # ``_send_recv`` task drains its shutdown sentinel and
+                # releases the socket ref before we drop our reference.
+                # The sync ``close`` fallback keeps compatibility with
+                # third-party channel subclasses that predate
+                # ``close_async``.  See PR-70316 for the wedge this
+                # ordering avoids.
+                close_async = getattr(channel, "close_async", None)
+                if close_async is not None:
+                    await close_async()
+                else:
+                    channel.close()
         return self.handle_signin_response(sign_in_payload, payload)
 
     def handle_signin_response(self, sign_in_payload, payload):
