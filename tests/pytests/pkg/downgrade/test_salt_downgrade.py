@@ -146,6 +146,12 @@ def test_salt_downgrade_minion(salt_call_cli, install_salt, salt_master, salt_mi
     downgraded = packaging.version.parse(ret.stdout.strip().split()[1])
     artifact_ver = packaging.version.parse(install_salt.artifact_version)
     prev_ver = packaging.version.parse(install_salt.prev_version)
+    if downgraded == artifact_ver:
+        pytest.skip(
+            f"Downgrade to {install_salt.prev_version} could not be performed: "
+            f"no previous version found in the package repository for this platform. "
+            f"This is expected for new OS platforms on their first Salt release."
+        )
     assert downgraded < artifact_ver
     # Package indexes may not retain every patch; ``yum``/``dnf``/``apt`` can
     # install a newer patch on the same minor line.  Still require the floor

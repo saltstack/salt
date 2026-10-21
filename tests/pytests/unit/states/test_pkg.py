@@ -467,7 +467,7 @@ def test_mod_aggregate():
             "__sls__": "47628",
             "__env __": "base",
             "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
+            "pkgs": ["byobu", {"tput": "1.0.1"}],
             "aggregate": True,
             "order": 10002,
             "fun": "installed",
@@ -552,7 +552,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", {"tput": "1.0.1"}, "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,
@@ -999,6 +999,51 @@ def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
     assert ret["changes"] == {
         pkg_name: {"old": "1:1.3.dfsg-3.1ubuntu2", "new": pkg_version},
     }
+
+
+def test_installed_recognizes_unversioned_native_multiarch_package():
+    """
+    An installed native-arch package must not be targeted again when APT
+    reports its normalized name without the explicit architecture suffix.
+    """
+    pkg_names = ["libnvidia-container-tools", "libnvidia-container1:amd64"]
+    installed = {
+        "libnvidia-container-tools": ["1.20.0-1"],
+        "libnvidia-container1": ["1.20.0-1"],
+    }
+    install_mock = MagicMock()
+    salt_dict = {
+        "pkg.install": install_mock,
+        "pkg.list_pkgs": MagicMock(
+            side_effect=lambda purge_desired=False, **_kwargs: (
+                {} if purge_desired else installed
+            )
+        ),
+        "pkg.normalize_name": lambda pkg: (
+            pkg.rsplit(":", 1)[0] if pkg.endswith(":amd64") else pkg
+        ),
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg_resource.__salt__, salt_dict
+    ), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+    ), patch.dict(
+        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ):
+        ret = pkg.installed(
+            "test_install",
+            pkgs=pkg_names,
+            skip_suggestions=True,
+            update_holds=True,
+        )
+
+    install_mock.assert_not_called()
+    assert ret["result"] is True, ret
+    assert ret["changes"] == {}
+    assert "already installed" in ret["comment"]
 
 
 def test_verify_install_normalizes_debian_multiarch_names():
@@ -1512,7 +1557,10 @@ def test_yumpkg_group_installed_with_repo_options(
         assert not ret["changes"]
         expected = [yumpkg._yum(), "--quiet"]
         expected.extend(expected_cli_options)
-        expected.extend(("groupinfo", name))
+        if yumpkg._yum() == "dnf5":
+            expected.extend(("group", "info", name))
+        else:
+            expected.extend(("groupinfo", name))
         run_stdout.assert_called_once_with(
             expected,
             output_loglevel="trace",

@@ -1066,7 +1066,15 @@ class Master(SMaster):
         # registered exactly once, in the parent — registering them in
         # MWorker children would over-count.  Workers call configure
         # again in ``MWorker.run`` but skip the observables.
-        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        # Give the parent a stable name for ``service.instance.id``; each
+        # MWorker names itself after its process in ``MWorker.run``.
+        salt.utils.metrics.configure(
+            {
+                **self.opts,
+                "__role": "master",
+                "__metrics_instance": {"id": "Master"},
+            }
+        )
         # Cross-process counter for "MWorker payloads in flight".  Created
         # here so all forked workers inherit the same shared memory.  Stashed
         # at module level so ``MWorker._handle_payload`` can read it without
@@ -2224,7 +2232,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Start a Master Worker
         """
         salt.utils.tracing.configure(self.opts)
-        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        salt.utils.metrics.configure(
+            {
+                **self.opts,
+                "__role": "master",
+                "__metrics_instance": {"id": self.name},
+            }
+        )
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
