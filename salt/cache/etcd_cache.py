@@ -19,9 +19,10 @@ Etcd installed. This can be easily installed with pip:
 
 .. note::
 
-    While etcd API v3 has been implemented in other places within salt,
-    etcd_cache does not support it at this time due to fundamental differences in
-    how the versions are designed and v3 not being compatible with the cache API.
+    This module uses the etcd v2 API. For the etcd v3 API, use
+    :mod:`salt.cache.etcd3_cache <salt.cache.etcd3_cache>` (``cache: etcd3``)
+    instead. etcd 3.4 and later disable the v2 API by default, and etcd 3.6
+    removed the option to enable it.
 
 Optionally, depending on the Etcd agent configuration, the following values
 could be set in the master config. These are the defaults:
