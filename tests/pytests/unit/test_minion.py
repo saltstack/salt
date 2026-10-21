@@ -175,6 +175,13 @@ def test_send_req_fires_completion_event(event, minion_opts):
                 minion.destroy()
 
 
+@pytest.mark.no_blocking(
+    reason="Minion.__init__() → start_engines() runs the engine-bootstrap "
+    "Handle synchronously (see salt/engines/__init__.py). The 50-115 ms "
+    "cost is inherent to the sync bootstrap path being exercised, not a "
+    "handler regression. Container-image drift on salt-ci-containers "
+    "(2026-08-31 rebuild) tipped the runtime just past the 50 ms budget."
+)
 async def test_send_req_async_regression_62453(minion_opts):
 
     class MockEvent:
