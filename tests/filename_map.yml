@@ -55,12 +55,6 @@ salt/modules/ansiblegate.py:
   - pytests.functional.modules.test_ansiblegate
   - pytests.unit.modules.test_ansiblegate
 
-salt/modules/*apache.py:
-  - pytests.unit.states.apache.test_apache
-  - pytests.unit.states.apache.test_conf
-  - pytests.unit.states.apache.test_module
-  - pytests.unit.states.apache.test_site
-
 salt/platform/win.py:
   - pytests.unit.platform.test_win
 
@@ -116,7 +110,6 @@ salt/cache/*:
   - pytests.unit.cache.test_cache
   - pytests.unit.cache.test_memcache
   - pytests.functional.cache.test_consul
-  - pytests.functional.cache.test_etcd
   - pytests.functional.cache.test_localfs
   - pytests.functional.cache.test_memcache
   - pytests.functional.cache.test_mysql
