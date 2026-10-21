@@ -928,6 +928,40 @@ def test_query():
     _test_call(mysql.query, "SELECT * FROM testdb", "testdb", "SELECT * FROM testdb")
 
 
+def test_query_keeps_parameter_encoders():
+    """
+    ``query`` leaves result values as strings by overriding the result
+    decoders, which are keyed by integer field type. The encoders keyed by
+    Python type must be left alone because pymysql uses the same ``conv``
+    mapping to escape values such as the ``SET AUTOCOMMIT`` argument.
+    """
+    connect_mock = MagicMock()
+    with patch.object(mysql, "_connect", connect_mock):
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            mysql.query("testdb", "SELECT * FROM testdb")
+    conv = connect_mock.call_args.kwargs["connection_conv"]
+    original = mysql.MySQLdb.converters.conversions
+    assert set(conv) == set(original)
+    for key, value in conv.items():
+        if not isinstance(key, int):
+            assert value is original[key]
+
+
+@pytest.mark.skipif(not HAS_PYMYSQL, reason="Could not import pymysql")
+def test_query_conv_can_escape_parameters():
+    """
+    The ``conv`` mapping passed to the connection must still be able to
+    escape a boolean, like pymysql does when it sets the autocommit mode.
+    """
+    connect_mock = MagicMock()
+    with patch.object(mysql, "_connect", connect_mock):
+        with patch.dict(mysql.__salt__, {"config.option": MagicMock()}):
+            mysql.query("testdb", "SELECT * FROM testdb")
+    conv = connect_mock.call_args.kwargs["connection_conv"]
+    encoders = {k: v for k, v in conv.items() if not isinstance(k, int)}
+    assert pymysql.converters.escape_item(False, "utf8", mapping=encoders) == "0"
+
+
 @pytest.mark.skipif(not HAS_PYMYSQL, reason="Could not import pymysql")
 def test_query_error():
     connect_mock = MagicMock()
