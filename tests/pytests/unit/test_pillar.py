@@ -17,6 +17,7 @@ import pytest
 import salt.config
 import salt.exceptions
 import salt.fileclient
+import salt.utils.secret
 import salt.utils.stringutils
 from salt.utils.files import fopen
 from tests.support.mock import ANY, MagicMock, call, patch
@@ -1368,6 +1369,68 @@ def test_compile_pillar_cache(master_opts):
         assert pillar.cache.storage == expected_cache
 
 
+def test_compile_pillar_stores_pillar_by_minion_id_for_targeting(master_opts, grains):
+    """
+    With a ``pillarenv`` the cache key is ``<id>:<pillarenv>``, but targeting
+    (-I, -J) fetches the ``pillar`` bank by plain minion id.
+    """
+    master_opts.update({"pillar_cache": False, "minion_data_cache": True})
+    pillar = salt.pillar.PillarCache(
+        master_opts, grains, "mocked_minion", "fake_env", pillarenv="base"
+    )
+    with patch("salt.pillar.Pillar.compile_pillar", return_value={"foo": "bar"}):
+        pillar.compile_pillar()
+    assert pillar.cache.fetch("pillar", "mocked_minion") == {"foo": "bar"}
+
+
+@pytest.mark.parametrize(
+    "pillar_cache,minion_data_cache",
+    [(True, True), (True, False), (False, False)],
+)
+def test_compile_pillar_skips_plain_id_key(
+    master_opts, grains, pillar_cache, minion_data_cache
+):
+    """
+    The plain minion id key is only written for targeting: not without
+    ``minion_data_cache``, and not with ``pillar_cache``, where it is also the
+    compile cache key.
+    """
+    master_opts.update(
+        {"pillar_cache": pillar_cache, "minion_data_cache": minion_data_cache}
+    )
+    pillar = salt.pillar.PillarCache(
+        master_opts, grains, "mocked_minion", "fake_env", pillarenv="base"
+    )
+    with patch(
+        "salt.pillar.Pillar.compile_pillar", return_value={"foo": "bar"}
+    ), patch.object(pillar.cache, "fetch", return_value=None), patch.object(
+        pillar.cache, "store"
+    ) as store_mock:
+        pillar.compile_pillar()
+    store_mock.assert_called_once_with("pillar", "mocked_minion:base", {"foo": "bar"})
+
+
+def test_compile_pillar_cache_not_overwritten_by_another_pillarenv(master_opts, grains):
+    """
+    With ``pillar_cache``, a request for one pillarenv must not change what a
+    later request without a pillarenv gets (all environments).
+    """
+    master_opts.update({"pillar_cache": True, "minion_data_cache": True})
+    all_envs = {"from_base": 1, "from_dev": 2}
+    compiled = {None: all_envs, "base": {"from_base": 1}}
+
+    def request(env):
+        pillar = salt.pillar.PillarCache(
+            master_opts, grains, "mocked_minion", "fake_env", pillarenv=env
+        )
+        with patch("salt.pillar.Pillar.compile_pillar", return_value=compiled[env]):
+            return pillar.compile_pillar()
+
+    assert request(None) == all_envs
+    assert request("base") == {"from_base": 1}
+    assert request(None) == all_envs
+
+
 def test_compile_pillar_disk_cache(master_opts, grains):
     master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
 
@@ -1418,6 +1481,34 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
         # Assert all calls match the pattern
         store_mock.assert_has_calls(expected_stores, any_order=False)
+
+
+@pytest.mark.parametrize("flag,masked", [(True, True), (False, False)])
+def test_remote_pillar_wraps_pillar_only_when_masking_is_on(
+    grains, tmp_pki, flag, masked
+):
+    opts = salt.config.minion_config(None)
+    opts.update(
+        {
+            "pki_dir": tmp_pki,
+            "id": "minion",
+            "master_uri": "tcp://127.0.0.1:4505",
+            "__role": "minion",
+            "keysize": 2048,
+            "saltenv": "base",
+            "pillarenv": "base",
+            "pillar_mask_output": flag,
+        }
+    )
+    pillar = salt.pillar.RemotePillar(opts, grains, "mocked-minion", "dev")
+
+    pillar.channel.crypted_transfer_decode_dictentry = MagicMock(
+        return_value={"password": "hunter2"}
+    )
+    ret = pillar.compile_pillar()
+    assert ret == {"password": "hunter2"}
+    assert isinstance(ret, salt.utils.secret.MaskedDict) is masked
+    assert ("hunter2" not in repr(ret)) is masked
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
