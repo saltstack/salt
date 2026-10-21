@@ -14,8 +14,8 @@ import pytest
 import salt.utils.files
 from tests.support.mock import patch
 
-pytest.importorskip("nacl.public")
-pytest.importorskip("nacl.secret")
+pytest.importorskip("nacl.public", exc_type=ImportError)
+pytest.importorskip("nacl.secret", exc_type=ImportError)
 
 import salt.utils.nacl as nacl
 
