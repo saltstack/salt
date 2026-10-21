@@ -102,17 +102,14 @@ def orchestrate(
        salt-run state.orchestrate webserver pillar_enc=gpg pillar="$(cat somefile.json)"
 
     """
-
+    # The user that started this job. It goes to the state run as
+    # orchestration_user and is not written to __opts__["user"], which is the
+    # master's configured user (#70251).
     try:
-        orig_user = __opts__["user"]
-        __opts__["user"] = __user__
-        log.debug(
-            "changed opts user from original '%s' to global user '%s'",
-            orig_user,
-            __user__,
-        )
+        orchestration_user = __user__
     except NameError:
         log.debug("unable to find global user __user__")
+        orchestration_user = None
 
     if pillar is not None and not isinstance(pillar, dict):
         raise SaltInvocationError("Pillar data must be formatted as a dictionary")
@@ -136,6 +133,7 @@ def orchestrate(
         pillar_enc=pillar_enc,
         __pub_jid=orchestration_jid,
         orchestration_jid=orchestration_jid,
+        orchestration_user=orchestration_user,
     )
     ret = {"data": {minion.opts["id"]: running}, "outputter": "highstate"}
     res = __utils__["state.check_result"](ret["data"])
