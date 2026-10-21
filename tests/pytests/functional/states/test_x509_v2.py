@@ -10,7 +10,6 @@ from tests.support.mock import patch
 try:
     import cryptography
     import cryptography.x509 as cx509
-    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
     from cryptography.hazmat.primitives.serialization import (
         load_der_private_key,
@@ -2580,9 +2579,7 @@ def test_pem_managed_newline_fix_no_changes(x509, ca_cert, tmp_path):
 
 
 @pytest.mark.parametrize("arg", [{"version": 3}, {"serial_bits": 64}, {"text": True}])
-def test_certificate_managed_rejects_removed_kwargs(
-    x509, cert_args, rsa_privkey, arg
-):
+def test_certificate_managed_rejects_removed_kwargs(x509, cert_args, rsa_privkey, arg):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
@@ -2603,9 +2600,7 @@ def test_certificate_managed_rejects_algorithm_kwarg(x509, cert_args, rsa_privke
         x509.certificate_managed(**cert_args, algorithm="sha512")
 
 
-def test_certificate_managed_rejects_long_name_attributes(
-    x509, cert_args, rsa_privkey
-):
+def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_privkey):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["commonName"] = "success"
