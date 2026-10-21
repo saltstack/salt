@@ -1126,6 +1126,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The port to be used when checking if a master is connected to a
         # minion
         "remote_minions_port": int,
+        # Record when each authenticated minion was last seen so that presence
+        # detection also works for minions whose connecting address does not
+        # match the addresses in their grains (NAT, internet-facing minions)
+        "presence_id_tracking": bool,
+        # Seconds a minion is considered present after it was last seen
+        "presence_id_ttl": int,
         # pass renderer: Fetch secrets only for the template variables matching the prefix
         "pass_variable_prefix": str,
         # pass renderer: Whether to error out when unable to fetch a secret
@@ -1943,6 +1949,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "use_os_truststore": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
+        "presence_id_tracking": False,
+        "presence_id_ttl": 600,
         "pass_variable_prefix": "",
         "pass_strict_fetch": False,
         "pass_gnupghome": "",
