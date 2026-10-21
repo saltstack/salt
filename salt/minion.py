@@ -464,11 +464,19 @@ def _terminate_subprocess_list(subprocess_list, signum, grace_seconds=2.0):
 
     if not salt.utils.platform.is_windows():
         for proc in procs:
+            # With ``multiprocessing: False`` the entries are
+            # ``threading.Thread`` objects, which have no ``pid`` and cannot be
+            # signalled.  Reading ``.pid`` there raises ``AttributeError``,
+            # which is not an ``OSError``, so it escaped and aborted the whole
+            # teardown before ``destroy()`` ever ran.
+            pid = getattr(proc, "pid", None)
+            if pid is None:
+                continue
             try:
-                os.kill(proc.pid, signum)
+                os.kill(pid, signum)
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    log.warning("Failed to signal job child pid %s: %s", proc.pid, exc)
+                    log.warning("Failed to signal job child pid %s: %s", pid, exc)
 
     deadline = time.time() + grace_seconds
     for proc in procs:
@@ -636,6 +644,15 @@ def service_name():
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
 
 
+# The loaders a threaded job needs from one MinionBase.gen_modules() call. They
+# share that call's __context__ dict, so a job that looks up its function, runs it
+# through an executor and reads its retcode back using one generation is
+# unaffected by a sibling job rebuilding the shared minion attributes (#61830).
+ModuleGeneration = collections.namedtuple(
+    "ModuleGeneration", ("functions", "executors", "resource_loaders")
+)
+
+
 class MinionBase:
     def __init__(self, opts):
         # Ensure opts is OptsDict for mutate_key() and other OptsDict methods
@@ -673,15 +690,16 @@ class MinionBase:
         self.opts["resources"] = self._discover_resources()
 
         self.utils = salt.loader.utils(self.opts, context=context)
-        self.functions = salt.loader.minion_mods(
+        functions = salt.loader.minion_mods(
             self.opts, utils=self.utils, context=context
         )
+        self.functions = functions
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(
-            self.opts, functions=self.functions, context=context
+            self.opts, functions=functions, context=context
         )
         self.proxy = salt.loader.proxy(
-            self.opts, functions=self.functions, returners=self.returners
+            self.opts, functions=functions, returners=self.returners
         )
         # Load resource connection modules (salt/resource/*.py) and build
         # one execution-module loader per managed resource type.
@@ -740,20 +758,41 @@ class MinionBase:
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(
             self.opts,
-            functions=self.functions,
+            functions=functions,
             utils=self.utils,
             serializers=self.serializers,
             context=context,
         )
-        self.rend = salt.loader.render(
-            self.opts, functions=self.functions, context=context
-        )
+        self.rend = salt.loader.render(self.opts, functions=functions, context=context)
         #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
-        self.functions["sys.reload_modules"] = self.gen_modules
-        self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+        functions["sys.reload_modules"] = self._reload_modules
+        executors = salt.loader.executors(
+            self.opts, functions=functions, proxy=self.proxy, context=context
         )
+        self.executors = executors
+        # Return the loaders this call built so that a threaded job
+        # (multiprocessing=False) can run against them, rather than re-reading
+        # the shared self.functions/self.executors/self.resource_loaders
+        # attributes, which a sibling job's gen_modules() may have rebound by
+        # then. See issue #61830.
+        return ModuleGeneration(functions, executors, _new_resource_loaders)
+
+    def _reload_modules(self, initial_load=False, context=None):
+        """
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
+        """
+        # This is what sys.reload_modules is bound to. gen_modules() returns the
+        # rebuilt loaders, which are not serializable, so it cannot be bound
+        # directly: its return value would be put on the wire. Reload the
+        # modules and return None instead.
+        self.gen_modules(initial_load=initial_load, context=context)
 
     def _discover_resources(self):
         """
@@ -2270,6 +2309,7 @@ class Minion(MinionBase):
                 utils=self.utils,
                 notify=notify,
                 proxy=proxy,
+                loaded_base_name=self.loaded_base_name,
                 context=context,
             )
         returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
@@ -3009,18 +3049,34 @@ class Minion(MinionBase):
                 return Minion._thread_return(minion_instance, opts, data)
 
     def _execute_job_function(
-        self, function_name, function_args, executors, opts, data, functions=None
+        self,
+        function_name,
+        function_args,
+        executors,
+        opts,
+        data,
+        functions=None,
+        executor_loader=None,
     ):
         """
         Executes a function within a job given it's name, the args and the executors.
         It also checks if the function is allowed to run if 'blackout mode' is enabled.
 
-        ``functions`` defaults to ``self.functions`` but callers may pass a
-        different loader (e.g. a per-resource-type loader) to route execution
-        to the correct module set.
+        ``functions`` is the loader this job runs against and ``executor_loader``
+        the executors it runs through. They default to ``self.functions`` and
+        ``self.executors`` for callers that do not thread loaders. A threaded
+        job (multiprocessing: False) passes the loaders of the generation its
+        own gen_modules() call returned, so the func lookup, the retcode reset
+        and an executor that sets the retcode itself (such as sudo) all use the
+        generation it reads its retcode back from, rather than the shared
+        attributes a sibling job may have rebound (#61830). A resource job
+        passes that generation's per-resource-type loader to route execution to
+        the correct module set.
         """
         if functions is None:
             functions = self.functions
+        if executor_loader is None:
+            executor_loader = self.executors
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
@@ -3068,9 +3124,9 @@ class Minion(MinionBase):
 
         for name in executors:
             fname = f"{name}.execute"
-            if fname not in self.executors:
+            if fname not in executor_loader:
                 raise SaltInvocationError(f"Executor '{name}' is not available")
-            return_data = self.executors[fname](opts, data, func, args, kwargs)
+            return_data = executor_loader[fname](opts, data, func, args, kwargs)
             if return_data is not None:
                 return return_data
 
@@ -3107,7 +3163,7 @@ class Minion(MinionBase):
         # covers; recorded in the finally below.
         _exec_perf_start = time.perf_counter()
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3132,11 +3188,11 @@ class Minion(MinionBase):
             )
             allow_missing_funcs = any(
                 [
-                    minion_instance.executors[f"{executor}.allow_missing_func"](
+                    generation.executors[f"{executor}.allow_missing_func"](
                         function_name
                     )
                     for executor in executors
-                    if f"{executor}.allow_missing_func" in minion_instance.executors
+                    if f"{executor}.allow_missing_func" in generation.executors
                 ]
             )
             # Resolve which execution-module loader to use.  For resource
@@ -3148,7 +3204,7 @@ class Minion(MinionBase):
             resource_target = data.get("resource_target")
             if resource_target:
                 resource_type = resource_target["type"]
-                functions_to_use = minion_instance.resource_loaders.get(resource_type)
+                functions_to_use = generation.resource_loaders.get(resource_type)
                 if functions_to_use is None:
                     ret["return"] = (
                         f"No resource loader available for type '{resource_type}'. "
@@ -3189,7 +3245,7 @@ class Minion(MinionBase):
                 ret["retcode"] = salt.defaults.exitcodes.EX_OK
                 ret["success"] = True
             else:
-                functions_to_use = minion_instance.functions
+                functions_to_use = generation.functions
             if (
                 ret.get("retcode") is None
                 and functions_to_use is not None
@@ -3203,6 +3259,7 @@ class Minion(MinionBase):
                         opts,
                         data,
                         functions=functions_to_use,
+                        executor_loader=generation.executors,
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -3382,9 +3439,7 @@ class Minion(MinionBase):
                         "retcode": salt.defaults.exitcodes.EX_OK,
                         "out": "highstate",
                     }
-                    resource_loader = getattr(
-                        minion_instance, "resource_loaders", {}
-                    ).get(rtype)
+                    resource_loader = generation.resource_loaders.get(rtype)
 
                     if resource_loader is None:
                         per_resource_ret["return"] = (
@@ -3413,6 +3468,7 @@ class Minion(MinionBase):
                                 opts,
                                 data,
                                 functions=resource_loader,
+                                executor_loader=generation.executors,
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error(
@@ -3625,7 +3681,7 @@ class Minion(MinionBase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3682,14 +3738,18 @@ class Minion(MinionBase):
                     ret["success"][function_name] = False
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name,
+                        function_args,
+                        executors,
+                        opts,
+                        data,
+                        functions=generation.functions,
+                        executor_loader=generation.executors,
                     )
 
                     key = ind if multifunc_ordered else data["fun"][ind]
                     ret["return"][key] = return_data
-                    retcode = minion_instance.functions.pack["__context__"].get(
-                        "retcode", 0
-                    )
+                    retcode = generation.functions.pack["__context__"].get("retcode", 0)
                     if retcode == 0:
                         # No nonzero retcode in __context__ dunder. Check if return
                         # is a dictionary with a "result" or "success" key.
@@ -5392,6 +5452,7 @@ class Minion(MinionBase):
         if (
             tgt_type == "glob"
             and isinstance(tgt, str)
+            and tgt != self.opts.get("id")
             and not any(c in tgt for c in ("*", "?", "["))
         ):
             resources = self.opts.get("resources", {})
@@ -6427,6 +6488,27 @@ class ProxyMinion(Minion):
         """
         mp_call = _metaproxy_call(self.opts, "tune_in")
         return mp_call(self, start)
+
+    def destroy(self):
+        """
+        Tear down the proxy minion.
+
+        A deltaproxy holds its sub-proxies in ``deltaproxy_objs``, and each of
+        them owns its own ``req_channel``, schedule, beacons and periodic
+        callbacks.  Nothing used to tear those down, so every stop or restart
+        abandoned them.  Destroy the sub-proxies first, then this minion.
+        """
+        subproxies = getattr(self, "deltaproxy_objs", None) or {}
+        for minion_id, _minion in list(subproxies.items()):
+            try:
+                _minion.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Unable to tear down sub proxy %s", minion_id, exc_info=True
+                )
+        if subproxies:
+            subproxies.clear()
+        super().destroy()
 
     def _target_load(self, load):
         """

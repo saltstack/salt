@@ -1,12 +1,15 @@
 import logging
+import os
 import os.path
 import shutil
 import socket
 import threading
+import warnings
 
 import pytest
 
 import salt.config
+import salt.loader
 import salt.modules.network as networkmod
 import salt.utils.path
 from salt._compat import ipaddress
@@ -256,7 +259,164 @@ def test_arp():
         networkmod.__salt__,
         {"cmd.run": MagicMock(return_value="A,B,C,D\nE,F,G,H\n")},
     ), patch("salt.utils.path.which", MagicMock(return_value="")):
-        assert networkmod.arp() == {}
+        assert networkmod.arp(expand=False) == {}
+
+
+def test_arp_expand_linux():
+    """
+    arp(expand=True) returns one entry dict per arp -an line, preserving
+    multiple IP addresses that share a MAC address, with the interface
+    parsed from the "on" token. arp -an does not report a neighbour state.
+    """
+    arp_out = (
+        "? (203.0.113.1) at 00:00:5e:00:53:01 [ether] on eth0\n"
+        "? (203.0.113.9) at 00:00:5e:00:53:01 [ether] on eth1\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": None,
+            },
+            {
+                "ip": "203.0.113.9",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth1",
+                "state": None,
+            },
+        ]
+
+
+def test_arp_expand_sunos():
+    """
+    arp(expand=True) parses the SunOS netstat-style table, taking the
+    device from the first column and skipping the header lines.
+    """
+    arp_out = (
+        "Net to Media Table: IPv4\n"
+        "Device   IP Address       Mask      Flags      Phys Addr\n"
+        "------ ----------------- --------- ---------- -----------------\n"
+        "e1000g0 203.0.113.1 255.255.255.255 o 00:00:5e:00:53:01\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "SunOS"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "e1000g0",
+                "state": None,
+            },
+        ]
+
+
+def test_arp_expand_openbsd():
+    """
+    arp(expand=True) parses the OpenBSD table, taking the device from the
+    Netif column and skipping the header and incomplete entries.
+    """
+    arp_out = (
+        "Host Ethernet Address Netif Expire Flags\n"
+        "203.0.113.1 00:00:5e:00:53:01 em0 19m56s\n"
+        "203.0.113.9 (incomplete) em0 expired\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "OpenBSD"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "em0",
+                "state": None,
+            },
+        ]
+
+
+def test_arp_expand_aix():
+    """
+    arp(expand=True) parses the AIX table; AIX arp -an does not report the
+    interface, so dev is None.
+    """
+    arp_out = (
+        "? (203.0.113.1) at 0:0:5e:0:53:1 [ethernet] stored in bucket 4\n"
+        "? (203.0.113.9) at (incomplete) stored in bucket 5\n"
+        "There are 2 entries in the arp table.\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "AIX"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "0:0:5e:0:53:1",
+                "dev": None,
+                "state": None,
+            },
+        ]
+
+
+def test_arp_skips_incomplete_entries():
+    """
+    Unresolved arp -an entries carry an <incomplete> placeholder instead of
+    a MAC; they are excluded from both return shapes rather than reported
+    with the placeholder as the MAC.
+    """
+    arp_out = (
+        "? (203.0.113.1) at 00:00:5e:00:53:01 [ether] on eth0\n"
+        "? (203.0.113.99) at <incomplete> on eth0\n"
+        "? (203.0.113.98) at (incomplete) on em0 expired [ethernet]\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        assert networkmod.arp(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": None,
+            },
+        ]
+        assert networkmod.arp(expand=False) == {"00:00:5e:00:53:01": "203.0.113.1"}
+
+
+def test_arp_default_warns_and_collapses():
+    """
+    Calling arp() without expand emits the deprecation warning and returns
+    the legacy flat mapping, in which entries sharing a MAC collapse to the
+    last one parsed.
+    """
+    arp_out = (
+        "? (203.0.113.1) at 00:00:5e:00:53:01 [ether] on eth0\n"
+        "? (203.0.113.9) at 00:00:5e:00:53:01 [ether] on eth0\n"
+    )
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        with pytest.warns(DeprecationWarning, match="network.arp"):
+            result = networkmod.arp()
+    assert result == {"00:00:5e:00:53:01": "203.0.113.9"}
+
+
+def test_arp_expand_false_does_not_warn():
+    """
+    Passing expand=False explicitly keeps the legacy shape without emitting
+    the deprecation warning.
+    """
+    arp_out = "? (203.0.113.1) at 00:00:5e:00:53:01 [ether] on eth0\n"
+    with patch.dict(networkmod.__grains__, {"kernel": "Linux"}), patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=arp_out)}
+    ), patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/arp")):
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            result = networkmod.arp(expand=False)
+    assert result == {"00:00:5e:00:53:01": "203.0.113.1"}
 
 
 def test_interfaces():
@@ -820,8 +980,63 @@ fe80::825:63ff:fe2d:19be dev eth0 lladdr 0a:25:63:2d:19:be router STALE
     with patch.dict(
         networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_ipv4_neighbor)}
     ):
-        result = networkmod.ip_neighs()
+        result = networkmod.ip_neighs(expand=False)
         assert result == expected
+
+
+@pytest.mark.skip_on_windows(reason="ip neigh not available in Windows")
+def test_ip_neighs_expand():
+    """
+    ip_neighs(expand=True) returns entry dicts carrying the interface and
+    neighbour state, preserving multiple IPv4 addresses that share a MAC.
+    Unresolved entries are excluded even when a flag token such as
+    extern_learn pads them to five fields.
+    """
+    mock_ipv4_neighbor = """203.0.113.1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE
+203.0.113.9 dev eth0 lladdr 00:00:5e:00:53:01 STALE
+203.0.113.42 dev eth1 lladdr 00:00:5e:00:53:2a DELAY
+203.0.113.66 dev eth0 FAILED
+203.0.113.99 dev eth0 extern_learn FAILED
+2001:db8::1 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
+    """
+    with patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_ipv4_neighbor)}
+    ):
+        assert networkmod.ip_neighs(expand=True) == [
+            {
+                "ip": "203.0.113.1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "203.0.113.9",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": "STALE",
+            },
+            {
+                "ip": "203.0.113.42",
+                "mac": "00:00:5e:00:53:2a",
+                "dev": "eth1",
+                "state": "DELAY",
+            },
+        ]
+
+
+@pytest.mark.skip_on_windows(reason="ip neigh not available in Windows")
+def test_ip_neighs_default_warns():
+    """
+    Calling ip_neighs() without expand emits the deprecation warning and
+    returns the legacy flat mapping.
+    """
+    mock_neighbor = "203.0.113.1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE"
+    with patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_neighbor)}
+    ):
+        with pytest.warns(DeprecationWarning, match="network.ip_neighs"):
+            result = networkmod.ip_neighs()
+    assert result == {"00:00:5e:00:53:01": "203.0.113.1"}
 
 
 @pytest.mark.skip_on_windows(reason="ip neigh not available in Windows")
@@ -840,5 +1055,70 @@ fe80::825:63ff:fe2d:19be dev eth0 lladdr 0a:25:63:2d:19:be router STALE
     with patch.dict(
         networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_ipv6_neighbor)}
     ):
-        result = networkmod.ip_neighs6()
+        result = networkmod.ip_neighs6(expand=False)
         assert result == expected
+
+
+@pytest.mark.skip_on_windows(reason="ip neigh not available in Windows")
+def test_ip_neighs6_expand():
+    """
+    ip_neighs6(expand=True) preserves the link-local and global addresses a
+    host holds on the same MAC, which the legacy flat mapping collapses to a
+    single arbitrary entry. An unresolved router entry (no lladdr, but
+    padded to five fields by the router flag) is excluded.
+    """
+    mock_ipv6_neighbor = """2001:db8::1 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
+fe80::200:5eff:fe00:5301 dev eth0 lladdr 00:00:5e:00:53:01 router REACHABLE
+2001:db8::52 dev eth0 lladdr 00:00:5e:00:53:52 REACHABLE
+fe80::200:5eff:fe00:5352 dev eth0 lladdr 00:00:5e:00:53:52 STALE
+fe80::dead dev eth0 router FAILED
+203.0.113.1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE
+    """
+    with patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_ipv6_neighbor)}
+    ):
+        expanded = networkmod.ip_neighs6(expand=True)
+        assert expanded == [
+            {
+                "ip": "2001:db8::1",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "fe80::200:5eff:fe00:5301",
+                "mac": "00:00:5e:00:53:01",
+                "dev": "eth0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "2001:db8::52",
+                "mac": "00:00:5e:00:53:52",
+                "dev": "eth0",
+                "state": "REACHABLE",
+            },
+            {
+                "ip": "fe80::200:5eff:fe00:5352",
+                "mac": "00:00:5e:00:53:52",
+                "dev": "eth0",
+                "state": "STALE",
+            },
+        ]
+        # The legacy shape drops half of these neighbours.
+        flat = networkmod.ip_neighs6(expand=False)
+        assert len(flat) == 2
+
+
+@pytest.mark.skip_on_windows(reason="ip neigh not available in Windows")
+def test_ip_neighs6_default_warns():
+    """
+    Calling ip_neighs6() without expand emits the deprecation warning and
+    returns the legacy flat mapping.
+    """
+    mock_neighbor = "2001:db8::1 dev eth0 lladdr 00:00:5e:00:53:01 REACHABLE"
+    with patch.dict(
+        networkmod.__salt__, {"cmd.run": MagicMock(return_value=mock_neighbor)}
+    ):
+        with pytest.warns(DeprecationWarning, match="network.ip_neighs6"):
+            result = networkmod.ip_neighs6()
+    assert result == {"00:00:5e:00:53:01": "2001:db8::1"}

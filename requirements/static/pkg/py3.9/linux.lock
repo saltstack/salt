@@ -148,9 +148,7 @@ opentelemetry-semantic-conventions==0.62b1
 packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.4.0
-    # via
-    #   python-discovery
-    #   virtualenv
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
 prometheus-client==0.25.0
@@ -187,7 +185,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -248,7 +246,7 @@ urllib3==1.26.20
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.0
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt

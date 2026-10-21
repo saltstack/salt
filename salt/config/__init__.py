@@ -1126,6 +1126,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The port to be used when checking if a master is connected to a
         # minion
         "remote_minions_port": int,
+        # Record when each authenticated minion was last seen so that presence
+        # detection also works for minions whose connecting address does not
+        # match the addresses in their grains (NAT, internet-facing minions)
+        "presence_id_tracking": bool,
+        # Seconds a minion is considered present after it was last seen
+        "presence_id_ttl": int,
         # pass renderer: Fetch secrets only for the template variables matching the prefix
         "pass_variable_prefix": str,
         # pass renderer: Whether to error out when unable to fetch a secret
@@ -1943,6 +1949,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "use_os_truststore": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
+        "presence_id_tracking": False,
+        "presence_id_ttl": 600,
         "pass_variable_prefix": "",
         "pass_strict_fetch": False,
         "pass_gnupghome": "",
@@ -2413,10 +2421,30 @@ def _append_domain(opts):
     return "{0[id]}.{0[append_domain]}".format(opts)
 
 
+# Cache of parsed configuration files keyed by path. Each entry is a
+# ``(cache_key, conf_opts)`` tuple where ``cache_key`` is the file's
+# ``(st_mtime_ns, st_size)``. The same configuration file is read many times
+# while a daemon starts up (see #59807); parsing it once and reusing the result
+# avoids that redundant disk I/O and YAML parsing. Callers always receive a deep
+# copy so mutating the returned dict cannot corrupt the cache, and a changed
+# file (different mtime or size, e.g. a reload) is re-read.
+_conf_file_cache = {}
+
+
 def _read_conf_file(path):
     """
     Read in a config file from a given path and process it into a dictionary
     """
+    try:
+        _stat = os.stat(path)
+        cache_key = (_stat.st_mtime_ns, _stat.st_size)
+    except OSError:
+        cache_key = None
+    if cache_key is not None:
+        cached = _conf_file_cache.get(path)
+        if cached is not None and cached[0] == cache_key:
+            return deepcopy(cached[1])
+
     log.debug("Reading configuration from %s", path)
     append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:
@@ -2454,6 +2482,13 @@ def _read_conf_file(path):
             conf_opts["id"] = str(conf_opts["id"])
         else:
             conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
+
+    # Cache the successful parse so repeated reads of the same unchanged file
+    # reuse it. The rename-on-YAMLError case is skipped: it has moved the file
+    # out from under ``path``, so the stat taken above no longer describes it.
+    if cache_key is not None and not append_file_suffix_YAMLError:
+        _conf_file_cache[path] = (cache_key, conf_opts)
+        return deepcopy(conf_opts)
     return conf_opts
 
 

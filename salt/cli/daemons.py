@@ -352,6 +352,17 @@ class Minion(
             try:
                 self._real_start()
             except SaltClientError as exc:
+                # The minion lost its master connection and tune_in()
+                # returned without ever going through shutdown(). Destroy
+                # the MinionManager's resources (event_publisher, event,
+                # minions) deterministically here -- both before retrying
+                # and before falling through to the final break/return --
+                # instead of leaving them for __del__'s GC-time safety net,
+                # which is what logs the "unclosed publish server"/
+                # "unclosed SyncWrapper"/"unclosed publisher client"
+                # warnings. See #70175.
+                if hasattr(self.minion, "destroy"):
+                    self.minion.destroy()
                 # Restart for multi_master failover when daemonized
                 if self.options.daemon:
                     continue
@@ -434,8 +445,17 @@ class ProxyMinion(
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.stop(signum, super()._handle_signals)
-        super()._handle_signals(signum, sigframe)
+        if hasattr(self.minion, "stop"):
+            # ``stop`` only *schedules* ``stop_async`` on the io_loop and hands
+            # it the parent handler to run once the graceful shutdown is done.
+            # Calling the parent handler here as well exits the process
+            # immediately, so the io_loop never gets to run ``stop_async`` --
+            # Python reports it as "coroutine 'MinionManager.stop_async' was
+            # never awaited" -- and nothing is torn down or flushed.  This
+            # mirrors what ``Minion._handle_signals`` above already does.
+            self.minion.stop(signum, super()._handle_signals)
+        else:
+            super()._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
     def prepare(self):
