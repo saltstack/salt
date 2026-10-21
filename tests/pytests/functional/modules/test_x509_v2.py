@@ -9,7 +9,6 @@ import salt.exceptions
 try:
     import cryptography
     import cryptography.x509 as cx509
-    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.serialization import (
         load_pem_private_key,
         pkcs7,
@@ -1746,7 +1745,10 @@ def test_create_certificate_rejects_algorithm_kwarg(x509, rsa_privkey):
 
 
 def test_create_certificate_rejects_long_name_attributes(x509, rsa_privkey):
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="`commonName` was removed in 3009.0"):
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError,
+        match="`commonName` was removed in 3009.0",
+    ):
         x509.create_certificate(
             signing_private_key=rsa_privkey, days_valid=1, commonName="success"
         )
@@ -1755,11 +1757,10 @@ def test_create_certificate_rejects_long_name_attributes(x509, rsa_privkey):
 def test_create_certificate_rejects_long_extensions(x509, rsa_privkey):
     kwarg = {"X509v3 Basic Constraints": "critical CA:TRUE, pathlen:1"}
     with pytest.raises(
-        salt.exceptions.CommandExecutionError, match="`X509v3 Basic Constraints` was removed in 3009.0"
+        salt.exceptions.CommandExecutionError,
+        match="`X509v3 Basic Constraints` was removed in 3009.0",
     ):
-        x509.create_certificate(
-            signing_private_key=rsa_privkey, days_valid=1, **kwarg
-        )
+        x509.create_certificate(signing_private_key=rsa_privkey, days_valid=1, **kwarg)
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
@@ -1779,21 +1780,28 @@ def test_create_csr_rejects_algorithm_kwarg(x509, rsa_privkey):
 
 
 def test_create_csr_rejects_long_name_attributes(x509, rsa_privkey):
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="`commonName` was removed in 3009.0"):
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError,
+        match="`commonName` was removed in 3009.0",
+    ):
         x509.create_csr(private_key=rsa_privkey, commonName="success")
 
 
 def test_create_csr_rejects_long_extensions(x509, rsa_privkey):
     kwarg = {"X509v3 Basic Constraints": "critical CA:FALSE"}
     with pytest.raises(
-        salt.exceptions.CommandExecutionError, match="`X509v3 Basic Constraints` was removed in 3009.0"
+        salt.exceptions.CommandExecutionError,
+        match="`X509v3 Basic Constraints` was removed in 3009.0",
     ):
         x509.create_csr(private_key=rsa_privkey, **kwarg)
 
 
 def test_create_crl_rejects_text_kwarg(x509, crl_args):
     crl_args["days_valid"] = 7
-    with pytest.raises(salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments.*text"):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError,
+        match="Unrecognized keyword arguments.*text",
+    ):
         x509.create_crl(**crl_args, text=True)
 
 
@@ -1820,12 +1828,17 @@ def test_create_crl_rejects_old_style_reason(x509, crl_args):
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
 def test_create_private_key_rejects_removed_kwargs(x509, arg, crl_args):
-    with pytest.raises(salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments"
+    ):
         x509.create_private_key(**arg)
 
 
 def test_create_private_key_rejects_bits_kwarg(x509):
-    with pytest.raises(salt.exceptions.SaltInvocationError, match="Unrecognized keyword arguments.*bits"):
+    with pytest.raises(
+        salt.exceptions.SaltInvocationError,
+        match="Unrecognized keyword arguments.*bits",
+    ):
         x509.create_private_key(bits=3072)
 
 
@@ -1835,13 +1848,17 @@ def test_get_public_key_rejects_asobj_kwarg(x509, rsa_privkey):
 
 
 def test_get_signing_policy_rejects_long_names(x509):
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="long-form name attribute `commonName`"):
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError,
+        match="long-form name attribute `commonName`",
+    ):
         x509.get_signing_policy("testdeprecatednamepolicy")
 
 
 def test_get_signing_policy_rejects_long_exts(x509):
     with pytest.raises(
-        salt.exceptions.CommandExecutionError, match="long-form extension `X509v3 Basic Constraints`"
+        salt.exceptions.CommandExecutionError,
+        match="long-form extension `X509v3 Basic Constraints`",
     ):
         x509.get_signing_policy("testdeprecatedextpolicy")
 
