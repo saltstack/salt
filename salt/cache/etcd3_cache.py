@@ -204,15 +204,16 @@ def _init_client():
     path_prefix = "/" + stripped
 
     profile = __opts__.get("etcd.cache_profile")
-    # Resolve the (optionally profile-scoped) etcd config and force the v3
-    # client regardless of the deprecated ``etcd.require_v2`` flag, so the
-    # user does not have to set a "require v2" option to use the v3 cache.
+    # Resolve the (optionally profile-scoped) etcd config. ``etcd.require_v2``
+    # was removed in 3009.0; strip any lingering value from the resolved conf
+    # so ``get_conn`` (which rejects ``require_v2: True``) is not tripped by
+    # stale user config for the inherently-v3 cache.
     conf = dict(
         salt.utils.etcd_util._get_etcd_opts(  # pylint: disable=protected-access
             __opts__, profile
         )
     )
-    conf["etcd.require_v2"] = False
+    conf.pop("etcd.require_v2", None)
     log.info(
         "etcd3 cache: initializing client (path_prefix=%s, profile=%s)",
         path_prefix,

@@ -24,13 +24,11 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
-In order to choose whether to use etcd API v2 or v3, you can put the following
-configuration option in the same place as your etcd configuration.  This option
-defaults to true, meaning you will use v2 unless you specify otherwise.
+.. versionchanged:: 3009.0
 
-.. code-block:: yaml
-
-    etcd.require_v2: True
+    The etcd v2 API was removed. Only the v3 API is supported; the
+    ``etcd.require_v2`` option is no longer accepted and setting it to
+    ``True`` raises a ``CommandExecutionError``.
 
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
