@@ -65,6 +65,37 @@ def test_connected_ids_remote_minions():
         assert ret == {minion2, minion}
 
 
+@pytest.mark.parametrize(
+    "record,expected",
+    [
+        ({"ts": 1000.0}, True),
+        ({"ts": 1000}, True),
+        ({"ts": 941.0}, True),  # 59s old, ttl is 60
+        ({"ts": 940.0}, False),  # exactly ttl old
+        ({"ts": 100.0}, False),
+        ({"ts": 1030.0}, True),  # written by a host with a faster clock
+        ({}, False),
+        ({"ts": None}, False),
+        ({"ts": "1000"}, False),
+        ({"ts": True}, False),
+        ("garbage", False),
+        (None, False),
+    ],
+)
+def test_presence_is_fresh(record, expected):
+    assert salt.utils.minions.presence_is_fresh(record, 60, now=1000.0) is expected
+
+
+def test_presence_id_tracking_defaults():
+    """
+    Presence tracking is opt-in and must be a documented, validated option.
+    """
+    assert salt.config.DEFAULT_MASTER_OPTS["presence_id_tracking"] is False
+    assert salt.config.DEFAULT_MASTER_OPTS["presence_id_ttl"] == 600
+    assert salt.config.VALID_OPTS["presence_id_tracking"] is bool
+    assert salt.config.VALID_OPTS["presence_id_ttl"] is int
+
+
 # These validate_tgt tests make the assumption that CkMinions.check_minions is
 # correct. In other words, these tests are only worthwhile if check_minions is
 # also correct.

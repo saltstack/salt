@@ -14,7 +14,9 @@ import tornado.concurrent
 import tornado.gen
 import tornado.ioloop
 
+import salt.loader.lazy
 import salt.metaproxy.deltaproxy as deltaproxy
+import salt.minion
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -133,8 +135,9 @@ def _make_subproxy_patches(per_minion_grains):
         return functions, returners, {}, executors
 
     class _FakeProxyMinion:
-        def __init__(self, opts):
+        def __init__(self, opts, loaded_base_name=None):
             self.opts = opts
+            self.loaded_base_name = loaded_base_name
             self.subprocess_list = MagicMock()
             self.connected = False
 
@@ -229,3 +232,224 @@ def test_subproxy_post_master_init_packs_per_minion_grains(
     # control proxy stores the right grains in ``self.deltaproxy_opts``.
     assert result1["proxy_opts"]["grains"]["serial_number"] == "SN-AAA-001"
     assert result2["proxy_opts"]["grains"]["serial_number"] == "SN-BBB-002"
+
+
+# ---------------------------------------------------------------------------
+# parallel_startup must behave like serial startup
+# ---------------------------------------------------------------------------
+
+
+def test_gather_subproxies_skips_the_one_that_failed():
+    """
+    One sub-proxy failing to initialise must not take the others down.
+
+    A bad ``proxytype`` makes the proxy loader raise ``KeyError`` on
+    ``<proxytype>.init``.  Before the fix that exception propagated out of
+    ``asyncio.gather`` and aborted the control proxy's ``post_master_init``,
+    killing the salt-proxy daemon and every healthy sub-proxy with it, while
+    the non-parallel branch skipped the failure and carried on.
+    """
+
+    async def _ok(value):
+        return value
+
+    async def _boom():
+        raise KeyError("nosuchproxytype_xyz.init")
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        collected = loop.run_sync(
+            lambda: deltaproxy.gather_subproxies(
+                [_ok("A"), _boom(), _ok("C")],
+                ["minionA", "minionB", "minionC"],
+            )
+        )
+    finally:
+        loop.close()
+
+    # The healthy sub-proxies survive and the failure is dropped, rather than
+    # the whole coroutine raising.
+    assert collected == ["A", "C"]
+
+
+def test_gather_subproxies_passes_everything_through_when_all_succeed():
+    """
+    Inverse of the above: with no failures nothing may be dropped or
+    reordered, so the skip path cannot silently eat healthy sub-proxies.
+    """
+
+    async def _ok(value):
+        return value
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        collected = loop.run_sync(
+            lambda: deltaproxy.gather_subproxies(
+                [_ok("A"), _ok("B"), _ok("C")],
+                ["minionA", "minionB", "minionC"],
+            )
+        )
+    finally:
+        loop.close()
+
+    assert collected == ["A", "B", "C"]
+
+
+def test_subproxy_tune_in_starts_periodics_on_the_running_loop():
+    """
+    ``PeriodicCallback.start()`` binds to ``IOLoop.current()``.  Under
+    ``parallel_startup`` ``subproxy_tune_in`` runs on a ThreadPoolExecutor
+    worker whose current asyncio loop is a throwaway that is never run, so
+    starting the timers inline bound every one of them to a dead loop and the
+    sub-proxy silently got no schedule, no beacons and no subprocess cleanup.
+
+    The registration must therefore be handed to the sub-proxy's own
+    ``io_loop`` instead of being run inline.
+    """
+    calls = []
+
+    class _FakeSubProxy:
+        def __init__(self):
+            self.io_loop = MagicMock()
+
+        def setup_scheduler(self):
+            calls.append("scheduler")
+
+        def setup_beacons(self):
+            calls.append("beacons")
+
+        def add_periodic_callback(self, name, method):
+            calls.append(f"periodic:{name}")
+
+        def cleanup_subprocesses(self):
+            pass
+
+        def _state_run(self):
+            calls.append("state_run")
+
+    proxy_minion = _FakeSubProxy()
+    deltaproxy.subproxy_tune_in(proxy_minion)
+
+    # Inverse must-not: none of the periodic registrations may happen inline,
+    # because inline means "bound to whatever loop this thread happens to
+    # have", which is the dead one under parallel_startup.
+    assert "scheduler" not in calls
+    assert "beacons" not in calls
+    assert "periodic:cleanup" not in calls
+
+    # They must instead be queued onto the sub-proxy's own loop, thread-safely.
+    assert proxy_minion.io_loop.call_soon_threadsafe.called
+    queued = proxy_minion.io_loop.call_soon_threadsafe.call_args[0][0]
+
+    # And running what was queued must perform all three registrations.
+    # ``_state_run`` still happens inline, so it lands ahead of them.
+    assert calls == ["state_run"]
+    queued()
+    assert calls == ["state_run", "scheduler", "beacons", "periodic:cleanup"]
+
+
+def test_subproxy_post_master_init_gives_each_subproxy_its_own_loader_namespace(
+    proxy_opts, fake_main_proxy, fake_main_utils
+):
+    """
+    Regression test for #70144.
+
+    Every sub-proxy must be built with its own ``loaded_base_name`` so the
+    loader gives it distinct module objects.  Sharing one namespace makes the
+    loader hand every sub-proxy the *same* execution-module objects, so
+    whichever sub-proxy packs a module last owns that module's ``__opts__``
+    for the life of the process.  On a proxy running ``multiprocessing:
+    False`` that made every later SLS render resolve grains/pillar/``id``
+    from the wrong sub-proxy until the deltaproxy was restarted.
+    """
+    per_minion_grains = {
+        "minion1": {"serial_number": "SN-AAA-001", "id": "minion1"},
+        "minion2": {"serial_number": "SN-BBB-002", "id": "minion2"},
+    }
+    p = _make_subproxy_patches(per_minion_grains)
+
+    loop = tornado.ioloop.IOLoop()
+    with patch.object(
+        deltaproxy.salt.config, "proxy_config", p["proxy_config"]
+    ), patch.object(
+        deltaproxy.salt.pillar, "get_async_pillar", p["get_pillar"]
+    ), patch.object(
+        deltaproxy.salt.loader, "grains", p["grains"]
+    ), patch.object(
+        deltaproxy.salt.loader, "proxy", p["proxy_loader"]
+    ), patch.object(
+        deltaproxy.salt.loader, "utils", p["utils_loader"]
+    ), patch.object(
+        deltaproxy, "ProxyMinion", p["proxy_minion_cls"]
+    ), patch.object(
+        deltaproxy.salt.minion, "get_proc_dir", p["get_proc_dir"]
+    ), patch.object(
+        deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
+    ):
+        try:
+            result1 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+            result2 = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion2", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+        finally:
+            loop.close()
+
+    sub1 = result1["proxy_minion"]
+    sub2 = result2["proxy_minion"]
+
+    # Each sub-proxy is namespaced by its own minion id.
+    assert sub1.loaded_base_name == f"minion1.{salt.loader.lazy.LOADED_BASE_NAME}"
+    assert sub2.loaded_base_name == f"minion2.{salt.loader.lazy.LOADED_BASE_NAME}"
+
+    # Inverse must-not: the two sub-proxies must never share a namespace, and
+    # neither may fall back to the global default that caused #70144.
+    assert sub1.loaded_base_name != sub2.loaded_base_name
+    assert sub1.loaded_base_name is not None
+    assert sub2.loaded_base_name is not None
+    assert salt.loader.lazy.LOADED_BASE_NAME not in (
+        sub1.loaded_base_name.split(".")[0],
+        sub2.loaded_base_name.split(".")[0],
+    )
+
+
+def test_load_modules_forwards_loaded_base_name_to_minion_mods(minion_opts):
+    """
+    Regression test for #70144.
+
+    ``subproxy_post_master_init`` handing each sub-proxy a ``loaded_base_name``
+    only isolates them if ``_load_modules`` actually forwards it to
+    ``salt.loader.minion_mods``.  The non-multimaster branch used to drop it,
+    which left every sub-proxy back in the shared default namespace.
+    """
+    minion_opts["grains"] = {}
+    minion = salt.minion.Minion(
+        minion_opts,
+        loaded_base_name="sub1.salt.loaded",
+        io_loop=tornado.ioloop.IOLoop(),
+    )
+    try:
+        with patch.object(
+            salt.loader, "minion_mods", return_value={}
+        ) as minion_mods_mock, patch.object(
+            salt.loader, "returners", return_value={}
+        ), patch.object(
+            salt.loader, "executors", return_value={}
+        ), patch.object(
+            salt.loader, "utils", return_value={}
+        ), patch.object(
+            salt.loader, "grains", return_value={}
+        ):
+            minion._load_modules(grains={})
+
+        assert minion_mods_mock.called
+        assert (
+            minion_mods_mock.call_args.kwargs["loaded_base_name"] == "sub1.salt.loaded"
+        )
+    finally:
+        minion.destroy()

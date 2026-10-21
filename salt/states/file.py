@@ -4267,7 +4267,7 @@ def directory(
     Because ``cmd.run`` has no way of communicating that it's creating a file,
     ``will_always_clean`` will remove the newly created file. Of course, every
     time the states run the same thing will happen - the
-    ``silly_way_of_creating_a_file`` will crete the file and
+    ``silly_way_of_creating_a_file`` will create the file and
     ``will_always_clean`` will always remove it. Over and over again, no matter
     how many times you run it.
 
@@ -4649,9 +4649,6 @@ def directory(
             file_mode = None
             dir_mode = None
 
-        if "silent" in recurse_set:
-            ret["changes"] = {"recursion": "Changes silenced"}
-
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
 
@@ -4699,6 +4696,9 @@ def directory(
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
                             errors.append(exc.strerror)
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)

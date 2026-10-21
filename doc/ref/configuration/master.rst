@@ -1022,6 +1022,72 @@ to True.
 
     remote_minions_port: 2222
 
+.. conf_master:: presence_id_tracking
+
+``presence_id_tracking``
+------------------------
+
+.. versionadded:: 3008.5
+
+Default: False
+
+By default a minion is considered present when the address it is connected
+from, as seen by the master on the publish port, is one of the addresses in its
+cached grains. A minion connecting from a different address, for example behind
+NAT or over the internet, is never detected this way and is missing from
+presence events and from ``manage.present``, ``manage.not_present`` and the
+related ``manage`` runner functions (see :issue:`58592`).
+
+When this option is enabled, the master also records the time of every
+authenticated request it receives from an accepted minion. Minions seen within
+the last :conf_master:`presence_id_ttl` seconds are reported as present in
+addition to the ones found by address. The ``manage.status``, ``manage.up`` and
+``manage.down`` functions send a ping to the minions and are not affected.
+
+Only requests using the current authentication protocol, in which the minion's
+id is bound to its session and signed with its accepted key, are recorded. This
+is the default (see :conf_master:`minimum_auth_version`).
+
+.. important::
+
+    A minion that is idle sends no requests to the master. To keep an idle
+    minion present, set :conf_minion:`ping_interval` (in minutes) on the minion
+    so that it periodically contacts the master.
+
+.. note::
+
+    A minion that stopped sending requests is reported as present until its
+    last record is older than :conf_master:`presence_id_ttl`, rather than as
+    soon as its connection drops. Presence events with lost minions and
+    ``manage.not_present`` are delayed accordingly.
+
+    Records are stored in the master cache, so masters sharing a cache (for
+    example in a cluster or with an external cache driver) share the presence
+    information.
+
+.. code-block:: yaml
+
+    presence_id_tracking: True
+
+.. conf_master:: presence_id_ttl
+
+``presence_id_ttl``
+-------------------
+
+.. versionadded:: 3008.5
+
+Default: ``600``
+
+The number of seconds a minion is reported as present after it was last seen
+when :conf_master:`presence_id_tracking` is enabled. Last seen times are
+recorded at most once per half of this value, so set it to at least three times
+the :conf_minion:`ping_interval` of the minions, converted to seconds, to avoid
+minions flapping between present and absent.
+
+.. code-block:: yaml
+
+    presence_id_ttl: 600
+
 
 .. conf_master:: ping_on_rotate
 

@@ -181,14 +181,15 @@ salt/(utils|renderers)/jinja\.py:
   - integration.states.test_renderers
 
 salt/utils/metrics.py:
+  - pytests.functional.utils.test_metrics_otlp_instances
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
   - pytests.unit.utils.test_metrics
   - pytests.unit.utils.test_metrics_prometheus
-  - pytests.functional.utils.test_metrics_prometheus_multiprocess
 
 salt/utils/metrics_prometheus.py:
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
   - pytests.unit.utils.test_metrics
   - pytests.unit.utils.test_metrics_prometheus
-  - pytests.functional.utils.test_metrics_prometheus_multiprocess
 
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
