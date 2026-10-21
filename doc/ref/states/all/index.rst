@@ -12,10 +12,6 @@ state modules
 
     alias
     ansiblegate
-    apache
-    apache_conf
-    apache_module
-    apache_site
     archive
     at
     beacon
