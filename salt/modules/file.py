@@ -2688,7 +2688,7 @@ def replace(
             cpattern,
             repl_str.replace("\\", "\\\\") if backslash_literal else repl_str,
             orig_contents,
-            count,
+            count=count,
         )
 
         found = nrepl > 0
@@ -2845,7 +2845,7 @@ def replace(
                     cpattern,
                     repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                     r_data,
-                    count,
+                    count=count,
                 )
 
                 # found anything? (even if no change)
@@ -2904,7 +2904,7 @@ def replace(
                             cpattern,
                             repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
                             r_data,
-                            count,
+                            count=count,
                         )
                         try:
                             w_file.write(salt.utils.stringutils.to_str(result))

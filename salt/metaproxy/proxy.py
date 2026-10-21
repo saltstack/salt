@@ -414,6 +414,12 @@ def thread_return(cls, minion_instance, opts, data):
         fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
+    # Own the loaders for the length of this job so the func lookup, the
+    # executor, the retcode reset and the retcode read all resolve against the
+    # same generation, even if a concurrent sys.reload_modules rebinds
+    # minion_instance.functions and minion_instance.executors. See #61830.
+    functions = minion_instance.functions
+    executor_loader = minion_instance.executors
     executors = (
         data.get("module_executors")
         or getattr(minion_instance, "module_executors", [])
@@ -421,12 +427,12 @@ def thread_return(cls, minion_instance, opts, data):
     )
     allow_missing_funcs = any(
         [
-            minion_instance.executors[f"{executor}.allow_missing_func"](function_name)
+            executor_loader[f"{executor}.allow_missing_func"](function_name)
             for executor in executors
-            if f"{executor}.allow_missing_func" in minion_instance.executors
+            if f"{executor}.allow_missing_func" in executor_loader
         ]
     )
-    if function_name in minion_instance.functions or allow_missing_funcs is True:
+    if function_name in functions or allow_missing_funcs is True:
         try:
             minion_blackout_violation = False
             if minion_instance.connected and minion_instance.opts["pillar"].get(
@@ -458,14 +464,14 @@ def thread_return(cls, minion_instance, opts, data):
                     "saltutil.refresh_pillar allowed in blackout mode."
                 )
 
-            if function_name in minion_instance.functions:
-                func = minion_instance.functions[function_name]
+            if function_name in functions:
+                func = functions[function_name]
                 args, kwargs = salt.minion.load_args_and_kwargs(func, data["arg"], data)
             else:
                 # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
                 func = function_name
                 args, kwargs = data["arg"], data
-            minion_instance.functions.pack["__context__"]["retcode"] = 0
+            functions.pack["__context__"]["retcode"] = 0
             if isinstance(executors, str):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
@@ -479,11 +485,9 @@ def thread_return(cls, minion_instance, opts, data):
 
             for name in executors:
                 fname = f"{name}.execute"
-                if fname not in minion_instance.executors:
+                if fname not in executor_loader:
                     raise SaltInvocationError(f"Executor '{name}' is not available")
-                return_data = minion_instance.executors[fname](
-                    opts, data, func, args, kwargs
-                )
+                return_data = executor_loader[fname](opts, data, func, args, kwargs)
                 if return_data is not None:
                     break
 
@@ -505,7 +509,7 @@ def thread_return(cls, minion_instance, opts, data):
             else:
                 ret["return"] = return_data
 
-            retcode = minion_instance.functions.pack["__context__"].get(
+            retcode = functions.pack["__context__"].get(
                 "retcode", salt.defaults.exitcodes.EX_OK
             )
             if retcode == salt.defaults.exitcodes.EX_OK:
@@ -666,6 +670,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
     else:
         ret = {"return": {}, "retcode": {}, "success": {}}
 
+    # Own the loader for the length of this job so every func's lookup, retcode
+    # reset and retcode read resolve against the same generation, even if a
+    # concurrent sys.reload_modules rebinds minion_instance.functions. See #61830.
+    functions = minion_instance.functions
     for ind in range(0, num_funcs):
         if not multifunc_ordered:
             ret["success"][data["fun"][ind]] = False
@@ -699,15 +707,15 @@ def thread_multi_return(cls, minion_instance, opts, data):
                     "saltutil.refresh_pillar allowed in blackout mode."
                 )
 
-            func = minion_instance.functions[data["fun"][ind]]
+            func = functions[data["fun"][ind]]
 
             args, kwargs = salt.minion.load_args_and_kwargs(
                 func, data["arg"][ind], data
             )
-            minion_instance.functions.pack["__context__"]["retcode"] = 0
+            functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
             ret["return"][key] = func(*args, **kwargs)
-            retcode = minion_instance.functions.pack["__context__"].get("retcode", 0)
+            retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return
                 # is a dictionary with a "result" or "success" key.

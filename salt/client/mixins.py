@@ -383,6 +383,12 @@ class SyncClientMixin(ClientStateMixin):
                     fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
 
                 func = self.functions[fun]
+                # Reset retcode so a value set by a previous call on a
+                # reused client (e.g. the master's ClearFuncs.wheel_, one
+                # per MWorker, or a cached reactor client) cannot leak into
+                # this call -- low() otherwise never clears it.
+                if isinstance(self.context, dict):
+                    self.context["retcode"] = 0
                 try:
                     data["return"] = func(*args, **kwargs)
                 except TypeError as exc:
@@ -401,7 +407,7 @@ class SyncClientMixin(ClientStateMixin):
                     data["success"] = salt.utils.state.check_result(
                         data["return"]["data"]
                     )
-            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
+            except Exception as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
                 else:
