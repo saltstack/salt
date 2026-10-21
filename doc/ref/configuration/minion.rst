@@ -383,6 +383,12 @@ Set the number of attempts to perform when resolving
 the master hostname if name resolution fails.
 By default the minion will retry indefinitely.
 
+This bounds the retry loop of the main minion process. Forked per-job worker
+processes always fail fast on an unresolvable master (as if ``retry_dns_count``
+were ``0``) regardless of this setting, so a bad or removed master name cannot
+cause hung worker processes to accumulate. An explicit ``retry_dns_count`` is
+still honored inside workers.
+
 .. code-block:: yaml
 
     retry_dns_count: 3
