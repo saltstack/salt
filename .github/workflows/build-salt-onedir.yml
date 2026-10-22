@@ -167,7 +167,7 @@ jobs:
       max-parallel: 2
       matrix:
         include: ${{ fromJSON(inputs.matrix)['windows'] }}
-    runs-on: windows-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
     env:
       PIP_INDEX_URL: https://pypi.org/simple
       USE_S3_CACHE: 'false'
@@ -195,6 +195,28 @@ jobs:
         uses: ./.github/actions/setup-salt-version
         with:
           salt-version: "${{ inputs.salt-version }}"
+
+      # TEMPORARY: arm64 has no released relenv build to fetch yet (see
+      # setup-relenv), so this job compiles CPython from source here
+      # instead, which needs the VC++ toolchain present. Remove alongside
+      # the setup-relenv arm64 branch once a real release exists.
+      - name: Install VS Build Tools
+        if: ${{ matrix.arch == 'arm64' }}
+        shell: pwsh
+        run: |
+          pkg\windows\install_vs_buildtools.ps1 -CICD
+
+      - name: Install ARM64 VC++ Tools
+        if: ${{ matrix.arch == 'arm64' }}
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -property installationPath
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          & $installer modify --installPath "$vsPath" `
+            --add Microsoft.VisualStudio.Component.VC.Tools.ARM64 `
+            --quiet --norestart --nocache
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Setup Relenv
         id: setup-relenv

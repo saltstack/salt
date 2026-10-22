@@ -257,14 +257,23 @@ if ( ! $SkipInstall ) {
       New-Item -Path .\doc\man\salt-cp.1 -Type File -Force | Out-Null
       New-Item -Path .\doc\man\salt-minion.1 -Type File -Force | Out-Null
   }
+  # Start-Process -WindowStyle Hidden discards pip's output entirely, so a
+  # failure here used to show only "Failed" with no indication of why.
+  # Push-Location/call-operator streams pip's real output to the log
+  # instead, and $LASTEXITCODE lets us fail on the actual pip error
+  # rather than only inferring failure from a missing salt-minion.exe.
+  Push-Location "$PROJECT_DIR"
   try {
       $env:RELENV_PIP_DIR = "yes"
-      Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", $InstallPath `
-                -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+      & "$SCRIPTS_DIR\pip3.exe" install $InstallPath
+      $pipExitCode = $LASTEXITCODE
   } finally {
       Remove-Item env:\RELENV_PIP_DIR
+      Pop-Location
+  }
+  if ( $pipExitCode -ne 0 ) {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
   }
   if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
       Write-Result "Success" -ForegroundColor Green
