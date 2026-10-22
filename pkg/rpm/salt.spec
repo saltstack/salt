@@ -41,7 +41,7 @@
 
 Name:    salt
 Version: 3008.3
-Release: 0
+Release: 1
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
 License: ASL 2.0
@@ -1355,6 +1355,13 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Thu Oct 22 2026 Salt Project <saltproject.pdl@broadcom.com> - 3008.3-1
+
+# Security
+
+- Upgraded certifi to 2026.10.19 and the packaged pip to 26.2.2 for the eMudhra/emSign CA incident (intermediates found to have critically weak EC private keys). [#70465](https://github.com/saltstack/salt/issues/70465)
+
+
 * Wed Sep 30 2026 Salt Project <saltproject.pdl@broadcom.com> - 3008.3
 
 # Removed
