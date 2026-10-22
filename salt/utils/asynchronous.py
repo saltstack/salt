@@ -81,7 +81,6 @@ class SyncWrapper:
         async_methods=None,
         close_methods=None,
         loop_kwarg=None,
-        timeout=None,
     ):
         self.asyncio_loop = asyncio.new_event_loop()
         self.io_loop = tornado.ioloop.IOLoop(
@@ -96,7 +95,6 @@ class SyncWrapper:
         if close_methods is None:
             close_methods = []
         self.loop_kwarg = loop_kwarg
-        self.timeout = timeout
         self.cls = cls
         # Record creating pid so a forked child that inherits this wrapper via
         # copy-on-write does NOT touch (close) or warn on the wrapped ``obj`` +
@@ -286,16 +284,7 @@ class SyncWrapper:
                 args=(key, args, kwargs, results, self.asyncio_loop),
             )
             thread.start()
-            thread.join(self.timeout)
-            if thread.is_alive():
-                # The wrapped coroutine did not finish within ``timeout``
-                # seconds.  Raise instead of joining forever: an unbounded
-                # join here turned any stuck event-bus publish into a
-                # permanent, silent MWorker deadlock (see #69824).
-                raise TimeoutError(
-                    f"SyncWrapper call {key!r} did not complete within "
-                    f"{self.timeout} seconds"
-                )
+            thread.join()
             if results[0]:
                 return results[1]
             else:
