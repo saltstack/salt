@@ -820,11 +820,15 @@ def query(database, query, **connection_args):
     # I don't think it handles multiple queries at once, so adding "commit"
     # might not work.
 
-    # The following 3 lines stops MySQLdb from converting the MySQL results
-    # into Python objects. It leaves them as strings.
+    # The following lines stop MySQLdb from converting the MySQL results
+    # into Python objects. It leaves them as strings. Only the decoders, which
+    # are keyed by integer field type, are overridden. The encoders, which are
+    # keyed by Python type, are also used to escape values sent to the server
+    # and must be left alone.
     orig_conv = MySQLdb.converters.conversions
-    conv_iter = iter(orig_conv)
-    conv = dict(zip(conv_iter, [str] * len(orig_conv)))
+    conv = {
+        key: str if isinstance(key, int) else value for key, value in orig_conv.items()
+    }
 
     # some converters are lists, do not break theses
     conv_mysqldb = {"MYSQLDB": True}

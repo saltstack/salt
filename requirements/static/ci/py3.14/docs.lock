@@ -2,11 +2,11 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/ci/docs.txt --python-platform=linux --python-version=3.14 --constraint requirements/constraints.txt --no-emit-index-url --unsafe-package=setuptools -c=requirements/static/ci/py3.14/linux.lock -o=requirements/static/ci/py3.14/docs.lock
 accessible-pygments==0.0.5
     # via pydata-sphinx-theme
-aiohappyeyeballs==2.6.1
+aiohappyeyeballs==2.7.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -16,7 +16,7 @@ aiosignal==1.4.0
     #   aiohttp
 alabaster==1.0.0
     # via sphinx
-annotated-doc==0.0.4
+annotated-doc==0.0.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   typer
@@ -35,17 +35,17 @@ babel==2.17.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.6.17
+certifi==2026.7.22
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   cryptography
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -60,16 +60,16 @@ cherrypy==18.10.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/docs.txt
-croniter==6.2.2
+croniter==6.2.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-cryptography==50.0.1
+cryptography==50.0.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.0
+distlib==0.4.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   virtualenv
@@ -81,7 +81,7 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==4.0.12
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -101,11 +101,11 @@ gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-googleapis-common-protos==1.75.0
+googleapis-common-protos==1.75.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-idna==3.18
+idna==3.20
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -113,7 +113,7 @@ idna==3.18
     #   yarl
 imagesize==1.4.1
     # via sphinx
-importlib-metadata==9.0.0
+importlib-metadata==9.0.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -121,19 +121,21 @@ jaraco-collections==5.2.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   cherrypy
+    #   tempora
 jaraco-context==6.1.2
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.4.0
+    #   tempora
+jaraco-functools==4.6.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -161,7 +163,7 @@ markdown-it-py==4.2.0
     #   mdit-py-plugins
     #   myst-docutils
     #   rich
-markupsafe==3.0.3
+markupsafe==3.0.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -181,7 +183,7 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.2.1
+msgpack==1.2.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -193,38 +195,48 @@ multidict==6.7.0
     #   yarl
 myst-docutils==5.0.0
     # via -r requirements/static/ci/docs.txt
-opentelemetry-api==1.42.1
+opentelemetry-api==1.45.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-http-transport==0.66b0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-common==0.66b0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.45.0
+    # via
+    #   -c requirements/static/ci/py3.14/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.45.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.66b0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.45.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.45.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-common
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.66b0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-sdk
@@ -234,7 +246,7 @@ packaging==24.0
     #   -r requirements/base.txt
     #   sphinx
     #   virtualenv
-platformdirs==4.5.1
+platformdirs==4.12.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   virtualenv
@@ -242,11 +254,11 @@ portend==3.2.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   cherrypy
-prometheus-client==0.25.0
+prometheus-client==0.26.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   opentelemetry-exporter-prometheus
-propcache==0.4.1
+propcache==0.5.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   aiohttp
@@ -269,7 +281,7 @@ pycparser==3.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   cffi
-pycryptodomex==3.23.0
+pycryptodomex==3.24.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -278,7 +290,7 @@ pydata-sphinx-theme==0.18.0
     # via -r requirements/static/ci/docs.txt
 pyenchant==3.3.0
     # via sphinxcontrib-spelling
-pygments==2.20.0
+pygments==2.21.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   accessible-pygments
@@ -299,7 +311,7 @@ python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   virtualenv
-python-gnupg==0.5.6
+python-gnupg==0.5.7
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -308,7 +320,7 @@ pyyaml==6.0.3
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   myst-docutils
-pyzmq==27.1.0
+pyzmq==27.2.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/zeromq.txt
@@ -317,7 +329,6 @@ requests==2.34.2
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   apache-libcloud
-    #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
     #   sphinxcontrib-spelling
 rich==15.0.0
@@ -326,7 +337,7 @@ rich==15.0.0
     #   typer
 roman-numerals==4.1.0
     # via sphinx
-setproctitle==1.3.7
+setproctitle==1.3.8
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -338,7 +349,7 @@ six==1.17.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   python-dateutil
-smmap==5.0.2
+smmap==5.0.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   gitdb
@@ -368,7 +379,7 @@ sphinxcontrib-serializinghtml==2.0.0
     # via sphinx
 sphinxcontrib-spelling==8.0.2
     # via -r requirements/static/ci/docs.txt
-tempora==5.8.1
+tempora==5.13.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   portend
@@ -384,7 +395,7 @@ truststore==0.10.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-typer==0.26.7
+typer==0.27.3
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   typer-slim
@@ -392,7 +403,7 @@ typer-slim==0.24.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   jaraco-text
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   beautifulsoup4
@@ -401,22 +412,24 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pydata-sphinx-theme
+    #   tempora
 uc-micro-py==1.0.3
     # via linkify-it-py
 urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.14.5
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-xxhash==3.7.0
+xxhash==4.0.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-yarl==1.22.0
+yarl==1.25.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   aiohttp
@@ -424,7 +437,7 @@ zc-lockfile==4.0
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   cherrypy
-zipp==4.1.0
+zipp==4.1.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
