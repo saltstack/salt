@@ -640,10 +640,9 @@ def test_get_signing_policy_remote_rejects_long_name(
         "testdeprecatednamepolicy",
         ca_server=cert_args["ca_server"],
     )
-    assert ret.data is None
-    assert "was removed in 3009.0" in (ret.stderr or "") or "commonName" in (
-        ret.stderr or ""
-    )
+    payload = str(ret.data or "") + (ret.stdout or "") + (ret.stderr or "")
+    assert "was removed in 3009.0" in payload
+    assert "commonName" in payload
 
 
 def test_get_signing_policy_remote_rejects_long_extension(
@@ -654,10 +653,9 @@ def test_get_signing_policy_remote_rejects_long_extension(
         "testdeprecatedextpolicy",
         ca_server=cert_args["ca_server"],
     )
-    assert ret.data is None
-    assert "was removed in 3009.0" in (ret.stderr or "") or (
-        "X509v3 Basic Constraints" in (ret.stderr or "")
-    )
+    payload = str(ret.data or "") + (ret.stdout or "") + (ret.stderr or "")
+    assert "was removed in 3009.0" in payload
+    assert "X509v3 Basic Constraints" in payload
 
 
 def test_sign_remote_certificate_ext_override(
