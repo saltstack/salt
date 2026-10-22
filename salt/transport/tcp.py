@@ -7,6 +7,7 @@ Wire protocol: "len(payload) msgpack({'head': SOMEHEADER, 'body': SOMEBODY})"
 
 import asyncio
 import asyncio.exceptions
+import datetime
 import errno
 import inspect
 import logging
@@ -24,6 +25,7 @@ import weakref
 
 import tornado
 import tornado.concurrent
+import tornado.gen
 import tornado.iostream
 import tornado.netutil
 import tornado.tcpclient
@@ -2317,10 +2319,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.pub_sock.connect(timeout=timeout)
 
     async def publish(
-        self, payload, **kwargs
+        self, payload, timeout=None, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
+
+        :param int timeout: Upper bound in seconds for the send on the
+                            local publish channel. A wedged pull side
+                            raises ``TimeoutError`` to the caller instead
+                            of blocking it forever (#69824).
         """
         # LTS default: sync publish path preserved; async-context bypass is
         # opt-in via ``master_async_mworker``. The bypass exists to avoid a
@@ -2334,7 +2341,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not async_mworker:
             if not self.pub_sock:
                 self.connect()
-            self.pub_sock.send(payload)
+            self.pub_sock.send(payload, timeout=timeout)
             return
         # PATCH: avoid the nested-SyncWrapper deadlock in the
         # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
@@ -2417,7 +2424,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pub, lock = entry
             async with lock:
                 try:
-                    await pub.send(payload)
+                    await pub.send(payload, timeout=timeout)
                 except tornado.iostream.StreamClosedError:
                     # PATCH: puller closed on us mid-send.  Drop the
                     # cached publisher and rebuild once so the next call
@@ -2451,11 +2458,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     )
                     await pub.connect()
                     per_loop[loop] = (pub, lock)
-                    await pub.send(payload)
+                    await pub.send(payload, timeout=timeout)
             return
         if not self.pub_sock:
             self.connect()
-        self.pub_sock.send(payload)
+        self.pub_sock.send(payload, timeout=timeout)
 
     def close(self):
         self._closing = True
@@ -2891,12 +2898,31 @@ class _TCPPubServerPublisher:
         If the socket is not currently connected, a connection will be established.
 
         :param dict msg: The message to be sent
-        :param int timeout: Timeout when sending message (Currently unimplemented)
+        :param int timeout: Timeout in seconds when sending the message. A
+                            write that does not complete within ``timeout``
+                            raises ``TimeoutError`` to the caller instead of
+                            waiting forever (#69824).
         """
         if not self.connected():
             await self.connect()
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        await self.stream.write(pack)
+        # FIXME tries unimplemented
+        if timeout is None:
+            await self.stream.write(pack)
+            return
+        try:
+            await tornado.gen.with_timeout(
+                datetime.timedelta(seconds=timeout),
+                self.stream.write(pack),
+            )
+        except tornado.util.TimeoutError as exc:
+            # Normalize to the builtin ``TimeoutError``: tornado raises
+            # ``asyncio.TimeoutError`` here, which is only the builtin on
+            # Python >= 3.11. Callers must see one exception type on every
+            # supported Python.
+            raise TimeoutError(
+                f"send did not complete within {timeout} seconds"
+            ) from exc
 
 
 class RequestClient(salt.transport.base.RequestClient):
