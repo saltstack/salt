@@ -13,7 +13,7 @@ import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
 import salt.utils.functools
-import salt.utils.secret
+import salt.utils.secret as secret
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM, NOT_SET
 from salt.exceptions import CommandExecutionError
@@ -29,12 +29,12 @@ def _pillar_result(value, unmask):
     and ``unmask`` has no effect.
     """
     if not __opts__.get("pillar_mask_output", False):
-        return salt.utils.secret.expose(value)
+        return secret.expose(value)
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        unmask = not secret.mask_pillar.get()
     if unmask:
-        return salt.utils.secret.expose(value)
-    return salt.utils.secret.serial(value)
+        return secret.expose(value)
+    return secret.serial(value)
 
 
 def get(
@@ -849,7 +849,7 @@ def filter_by(lookup_dict, pillar, merge=None, default="default", base=None):
     ret = salt.utils.data.filter_by(
         lookup_dict=lookup_dict,
         lookup=pillar,
-        traverse=salt.utils.secret.expose(__pillar__),
+        traverse=secret.expose(__pillar__),
         merge=merge,
         default=default,
         base=base,
