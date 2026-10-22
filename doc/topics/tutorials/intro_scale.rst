@@ -67,6 +67,8 @@ will then wait `acceptance_wait_time` to retry. If `acceptance_wait_time_max` is
 set then the Minion will increase its wait time by the `acceptance_wait_time` each
 subsequent retry until reaching `acceptance_wait_time_max`.
 
+.. _too-many-minions-re-authing:
+
 Too many minions re-authing
 ---------------------------
 
@@ -76,10 +78,11 @@ and parameters are frequently changed in the Salt Master's configuration
 file(s).
 
 The Salt Master generates a new AES key to encrypt its publications at certain
-events such as a Master restart or the removal of a Minion key.  If you are
-encountering this problem of too many minions re-authing against the Master,
-you will need to recalibrate your setup to reduce the rate of events like a
-Master restart or Minion key removal (``salt-key -d``).
+events such as a Master restart or the removal/rejection of a Minion key.  If
+you are encountering this problem of too many minions re-authing against the
+Master, you will need to recalibrate your setup to reduce the rate of events
+like a Master restart, Minion key removal (``salt-key -d``) or Minion key
+rejection (``salt-key -r``).
 
 When the Master generates a new AES key, the minions aren't notified of this
 but will discover it on the next pub job they receive. When the Minion
