@@ -44,7 +44,7 @@ def cachedir_tree(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def pillar_cache_dir(cachedir_tree):
-    pillar_cache_dir = cachedir_tree / "pillar"
+    pillar_cache_dir = cachedir_tree / "pillar_compile"
     pillar_cache_dir.mkdir()
     return pillar_cache_dir
 
