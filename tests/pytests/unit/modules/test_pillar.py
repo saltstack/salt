@@ -252,6 +252,40 @@ def test_pillar_get_returns_real_values_by_default():
         assert pillarmod.get(key="pin") == 1234
 
 
+def test_unmasked_results_remove_nested_wrappers_before_output():
+    compiled = secret.hide(
+        {"nested": {"children": [{"password": "hunter2"}]}}, mask_repr=False
+    )
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar.return_value = compiled
+    grains = MagicMock()
+    grains.value.return_value = {}
+    with patch("salt.pillar.get_pillar", return_value=pillar_obj), patch.dict(
+        pillarmod.__pillar__, compiled
+    ), patch.dict(
+        pillarmod.__opts__,
+        {
+            "id": "minion",
+            "saltenv": "base",
+            "pillarenv": None,
+            "pillar_mask_output": False,
+        },
+    ), patch.object(
+        pillarmod, "__grains__", grains, create=True
+    ):
+        results = [
+            pillarmod.get("nested"),
+            pillarmod.get("nested", default={}, merge=True),
+            pillarmod.item("nested"),
+            pillarmod.items(),
+            pillarmod.ext({}),
+            pillarmod.raw(),
+        ]
+    for result in results:
+        assert "hunter2" in repr(result)
+        assert secret.mask_output(result) == result
+
+
 def test_pillar_get_default_merge_regression_39062():
     """
     Confirm that we do not raise an exception if default is None and
