@@ -279,8 +279,9 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        if self.opts.get("pillar_mask_output", False):
-            ret_pillar = salt.utils.secret.hide(ret_pillar)
+        ret_pillar = salt.utils.secret.hide(
+            ret_pillar, mask_repr=self.opts.get("pillar_mask_output", False)
+        )
         return ret_pillar
 
     async def aclose(self):
@@ -418,8 +419,9 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        if self.opts.get("pillar_mask_output", False):
-            ret_pillar = salt.utils.secret.hide(ret_pillar)
+        ret_pillar = salt.utils.secret.hide(
+            ret_pillar, mask_repr=self.opts.get("pillar_mask_output", False)
+        )
         return ret_pillar
 
     def destroy(self):

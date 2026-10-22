@@ -2913,9 +2913,10 @@ state.
     ``pillar.item`` and ``pillar.ext`` too. Before, the default was ``True``
     and the option only changed the default of ``pillar.items``.
 
-When ``False``, pillar masking is off: the pillar is not wrapped in the masked
-containers, so the ``repr()`` of ``__pillar__`` and the output safety net do not
-redact either, and the values returned by the functions above are plain data.
+When ``False``, ``repr()`` and ``str()`` of received pillar containers show real
+values, and the functions above return plain data. Pillar containers remain
+wrapped so the general output safety net still redacts them, independently of
+this option and the render context.
 
 This option does **not** change ``no_log``: a state with ``no_log: True``
 still has its ``name``, ``comment`` and ``changes`` redacted.
