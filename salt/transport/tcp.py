@@ -862,7 +862,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         payload = self.decode_payload(payload)
         reply = await self.message_handler(payload)
         # XXX Handle StreamClosedError
