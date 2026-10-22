@@ -48,30 +48,31 @@ def _set_pip_constraint_env(env: dict[str, str]) -> None:
 
 def _download_pip_wheel(ctx: Context) -> pathlib.Path:
     """
-    Download pip==26.2 into a temporary directory and return the path to
+    Download pip==26.2.2 into a temporary directory and return the path to
     the wheel. The result is cached for the lifetime of the current process
     so subsequent calls are free.
 
-    pip 26.2 vendors urllib3 2.7.0, which already contains upstream fixes
+    pip 26.2.2 vendors urllib3 2.7.0, which already contains upstream fixes
     for CVE-2025-66418, CVE-2026-21441, and CVE-2026-44432 -- no patching
-    is needed.
+    is needed. pip 26.2.2 also fixes trusting the compromised eMudhra/emSign
+    root CA bundled in older pip releases.
     """
     global _DOWNLOADED_PIP_WHEEL
     if _DOWNLOADED_PIP_WHEEL is not None:
         return _DOWNLOADED_PIP_WHEEL
 
     tmpdir = pathlib.Path(tempfile.mkdtemp(prefix="salt-pip-download-"))
-    ctx.info("Downloading pip==26.2 ...")
+    ctx.info("Downloading pip==26.2.2 ...")
     # Drop PIP_CONSTRAINT for this single call: requirements/constraints.txt
     # pins pip to an older version for the dev/lint tooling venvs, which
-    # would conflict with explicitly requesting pip==26.2 here.
+    # would conflict with explicitly requesting pip==26.2.2 here.
     download_env = {k: v for k, v in os.environ.items() if k != "PIP_CONSTRAINT"}
     ctx.run(
         sys.executable,
         "-m",
         "pip",
         "download",
-        "pip==26.2",
+        "pip==26.2.2",
         "--no-deps",
         "--dest",
         str(tmpdir),
@@ -828,7 +829,7 @@ def onedir_dependencies(
         "install",
         "--force-reinstall",
         "--no-deps",
-        "pip==26.2",
+        "pip==26.2.2",
         env=pip_env,
     )
     ctx.run(

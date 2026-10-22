@@ -8,7 +8,9 @@ apache-libcloud>=3.9.1; python_version >= '3.10'
 # attrs and charset-normalizer are pulled in transitively by aiohttp/requests.
 # Explicit floors on py>=3.10 keep them at the current CVE-patched line.
 attrs>=26.1.0; python_version >= '3.10'
-certifi>=2026.5.20
+# certifi>=2026.10.19 drops the eMudhra/emSign root CA after its intermediates
+# were found to have critically weak EC private keys.
+certifi>=2026.10.19
 cffi>=2.0.0
 charset-normalizer>=3.4.7; python_version >= '3.10'
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
