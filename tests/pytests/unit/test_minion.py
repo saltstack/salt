@@ -3416,6 +3416,8 @@ def test_proxy_minion_destroy_without_subproxies(minion_opts):
         proxy.destroy()
 
     assert parent_destroy.called
+
+
 def test_terminate_subprocess_list_tolerates_thread_entries():
     """
     With ``multiprocessing: False`` the entries in ``SubprocessList`` are
