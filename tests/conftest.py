@@ -10,6 +10,7 @@ import re
 import shutil
 import signal
 import stat
+import subprocess
 import sys
 import threading
 import time
@@ -1256,8 +1257,11 @@ def salt_syndic_master_factory(
 def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
     # The syndic subscribes to the master of masters on its own master's
     # publish_port, so both masters need the same publish_port, and the
-    # syndic's master listens on another address.
+    # syndic's master listens on another address. The syndic's config goes
+    # in its master's master.d, so the master picks these up too.
     interface = "127.0.0.2"
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", interface, "up"])
     publish_port = salt_syndic_master_factory.config["publish_port"]
     config_defaults = {
         "transport": salt_syndic_master_factory.config["transport"],
@@ -1266,8 +1270,6 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
     }
     config_overrides = {"log_level_logfile": "info"}
     master_overrides = {
-        "interface": interface,
-        "publish_port": publish_port,
         "fips_mode": FIPS_TESTRUN,
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
