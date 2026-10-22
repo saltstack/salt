@@ -62,7 +62,7 @@ class KeyCLI:
 
     def destroy(self):
         """
-        Release the ``WheelClient`` this ``KeyCLI`` is holding.
+        Release resources this ``KeyCLI`` is holding.
 
         Without this, exiting ``salt-key`` drops the last reference to
         ``self.client`` (a :class:`salt.wheel.WheelClient`) and its
@@ -70,9 +70,16 @@ class KeyCLI:
         via :func:`salt.utils.resource_warnings.warn_until_close` -- once
         as a Python ``ResourceWarning`` (filtered by default) and once
         as a ``log.warning`` record that reaches stdout/stderr, breaking
-        consumers that parse ``salt-key --out json``. Called
-        automatically by the context-manager protocol.
+        consumers that parse ``salt-key --out json``. The local ``Key``
+        event bus is also closed here so Python 3.11 does not print
+        ``Exception ignored in: BaseEventLoop.__del__`` during
+        interpreter shutdown. Called automatically by the
+        context-manager protocol.
         """
+        if not self.opts.get("eauth"):
+            key = getattr(self, "key", None)
+            if key is not None and not isinstance(key, type):
+                key.destroy()
         client = getattr(self, "client", None)
         if client is not None:
             try:
@@ -980,8 +987,14 @@ class Key:
 
         return self.finger("*", hash_type=hash_type)
 
+    def destroy(self):
+        event = self.__dict__.get("event")
+        if event is not None:
+            event.destroy()
+            self.__dict__.pop("event", None)
+
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        self.event.destroy()
+        self.destroy()
