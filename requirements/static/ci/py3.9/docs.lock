@@ -306,6 +306,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   croniter
+    #   tempora
 python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
