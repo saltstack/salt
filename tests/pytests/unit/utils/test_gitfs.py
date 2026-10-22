@@ -435,3 +435,89 @@ def test_find_file_subdir(tmp_path):
     gitfs.cache_root = str(root)
     ret = gitfs.find_file("foo/init.sls")
     assert ret == {"path": "", "rel": ""}
+
+
+class _ProviderStub:
+    """
+    Minimal stand-in for a GitProvider subclass during __init__(), i.e.
+    *before* init_remote() has set ``self.repo``. ``role`` and ``id`` are
+    already set at that point and are used for logging. We call the real
+    ``GitProvider.fetch_request_check`` unbound on it so the guard is
+    tested in isolation, independent of pygit2/GitPython being installed.
+    """
+
+    def __init__(self, working_dir):
+        self._salt_working_dir = str(working_dir)
+        self.role = "gitfs"
+        self.id = "https://example.com/repo.git"
+        self.fetch = MagicMock(return_value=True)
+
+
+@pytest.fixture
+def fetch_request_file(tmp_path):
+    working_dir = tmp_path / "working_dir"
+    working_dir.mkdir()
+    request = working_dir / "fetch_request"
+    request.touch()
+    return working_dir, request
+
+
+def test_fetch_request_check_before_init_remote_does_not_fetch(fetch_request_file):
+    """
+    Regression test for #70081: a leftover fetch_request file processed
+    during GitProvider.__init__() (before self.repo exists) must neither
+    raise an AttributeError nor trigger a fetch, and the request file must
+    be preserved so the later call from checkout() can process it.
+    """
+    working_dir, request = fetch_request_file
+    provider = _ProviderStub(working_dir)
+    assert not hasattr(provider, "repo")
+
+    ret = salt.utils.gitfs.GitProvider.fetch_request_check(provider)
+
+    assert ret is False
+    provider.fetch.assert_not_called()
+    assert request.exists()
+
+
+def test_fetch_request_check_before_init_remote_repo_none(fetch_request_file):
+    """
+    Same as above, but with ``repo`` present and set to None.
+    """
+    working_dir, request = fetch_request_file
+    provider = _ProviderStub(working_dir)
+    provider.repo = None
+
+    ret = salt.utils.gitfs.GitProvider.fetch_request_check(provider)
+
+    assert ret is False
+    provider.fetch.assert_not_called()
+    assert request.exists()
+
+
+def test_fetch_request_check_after_init_remote_fetches(fetch_request_file):
+    """
+    Once self.repo is initialized, a pending fetch_request is processed:
+    the file is removed and fetch() is called.
+    """
+    working_dir, request = fetch_request_file
+    provider = _ProviderStub(working_dir)
+    provider.repo = MagicMock()
+
+    ret = salt.utils.gitfs.GitProvider.fetch_request_check(provider)
+
+    assert ret is True
+    provider.fetch.assert_called_once()
+    assert not request.exists()
+
+
+def test_fetch_request_check_without_request_file(tmp_path):
+    """
+    No fetch_request file: nothing happens, regardless of repo state.
+    """
+    provider = _ProviderStub(tmp_path)
+
+    ret = salt.utils.gitfs.GitProvider.fetch_request_check(provider)
+
+    assert ret is False
+    provider.fetch.assert_not_called()
