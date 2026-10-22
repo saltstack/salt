@@ -20,7 +20,7 @@ import salt.fileclient
 import salt.utils.secret
 import salt.utils.stringutils
 from salt.utils.files import fopen
-from tests.support.mock import ANY, MagicMock, call, patch
+from tests.support.mock import ANY, AsyncMock, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -1421,10 +1421,8 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         store_mock.assert_has_calls(expected_stores, any_order=False)
 
 
-@pytest.mark.parametrize("flag,masked", [(True, True), (False, False)])
-def test_remote_pillar_wraps_pillar_only_when_masking_is_on(
-    grains, tmp_pki, flag, masked
-):
+@pytest.mark.parametrize("flag", [True, False])
+def test_remote_pillar_preserves_wrapping_and_controls_repr(grains, tmp_pki, flag):
     opts = salt.config.minion_config(None)
     opts.update(
         {
@@ -1444,9 +1442,33 @@ def test_remote_pillar_wraps_pillar_only_when_masking_is_on(
         return_value={"password": "hunter2"}
     )
     ret = pillar.compile_pillar()
+    pillar.destroy()
     assert ret == {"password": "hunter2"}
-    assert isinstance(ret, salt.utils.secret.MaskedDict) is masked
-    assert ("hunter2" not in repr(ret)) is masked
+    assert isinstance(ret, salt.utils.secret.MaskedDict)
+    assert ("hunter2" not in repr(ret)) is flag
+    assert ("hunter2" not in str(ret)) is flag
+    assert salt.utils.secret.mask_output(ret) == {"password": "**********"}
+
+
+@pytest.mark.parametrize("flag", [True, False])
+async def test_async_remote_pillar_preserves_wrapping_and_controls_repr(grains, flag):
+    opts = salt.config.minion_config(None)
+    opts["pillar_mask_output"] = flag
+    channel = MagicMock()
+    channel.crypted_transfer_decode_dictentry = AsyncMock(
+        return_value={"password": "hunter2"}
+    )
+    channel.close_async = AsyncMock()
+    with patch("salt.channel.client.AsyncReqChannel.factory", return_value=channel):
+        pillar = salt.pillar.AsyncRemotePillar(opts, grains, "minion", "base")
+    try:
+        ret = await pillar.compile_pillar()
+    finally:
+        await pillar.aclose()
+    assert isinstance(ret, salt.utils.secret.MaskedDict)
+    assert ("hunter2" not in repr(ret)) is flag
+    assert ("hunter2" not in str(ret)) is flag
+    assert salt.utils.secret.mask_output(ret) == {"password": "**********"}
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):

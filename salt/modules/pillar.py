@@ -25,8 +25,8 @@ log = logging.getLogger(__name__)
 
 def _pillar_result(value, unmask):
     """
-    ``pillar_mask_output`` is a feature flag: with it off, nothing is masked
-    and ``unmask`` has no effect.
+    With ``pillar_mask_output`` disabled, return real values regardless of
+    ``unmask``.
     """
     if not __opts__.get("pillar_mask_output", False):
         return secret.expose(value)
