@@ -52,3 +52,8 @@ junos-eznc < 2.7; python_version == "3.11"
 # env, so capping Cython here keeps the pyzmq wheel compiling until pyzmq
 # ships a Cython 3.3-compatible release.
 Cython < 3.3
+# opentelemetry updated support for protobuf 7.x in the 1.43 release. We need
+# to make sure it updates to at least the version of protobuf that has fixed
+# CVE-2026-8994. protobuf 7 doesn't support python 3.9.
+protobuf < 7.0 ; python_version == "3.9"
+protobuf >= 7.34.1 ; python_version >= "3.10"
