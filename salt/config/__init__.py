@@ -730,8 +730,8 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
-        # Feature flag for pillar masking. When False (default) nothing is
-        # masked and unmask= has no effect. Does not affect no_log states.
+        # Feature flag for pillar function results and repr/str masking.
+        # Does not affect the output safety net or no_log states.
         "pillar_mask_output": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
