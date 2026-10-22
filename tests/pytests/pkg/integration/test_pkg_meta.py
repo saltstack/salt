@@ -1,3 +1,5 @@
+import pathlib
+import re
 import subprocess
 
 import packaging
@@ -41,8 +43,28 @@ def artifact_version(install_salt):
 
 
 @pytest.fixture
-def package(artifact_version, pkg_arch):
-    name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
+def package(install_salt, artifact_version, pkg_arch):
+    """
+    Return the path to the RPM package to inspect.
+
+    Scans ``install_salt.pkgs`` for a filename matching
+    ``salt-<version>-<release>.<arch>.rpm`` so patch releases (release > 0)
+    match the real file from ``install_salt.pkgs`` instead of string-building.
+    """
+    rpm_re = re.compile(
+        rf"^salt-\d.*-\d+\.{re.escape(pkg_arch)}\.rpm$",
+        re.IGNORECASE,
+    )
+    for pkg_path in install_salt.pkgs:
+        path = pathlib.Path(pkg_path)
+        if rpm_re.match(path.name):
+            return path
+    _parsed = packaging.version.parse(artifact_version)
+    if _parsed.post is not None:
+        _base = ".".join(str(p) for p in _parsed.release)
+        name = f"salt-{_base}-{_parsed.post}.{pkg_arch}.rpm"
+    else:
+        name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
     return ARTIFACTS_DIR / name
 
 
