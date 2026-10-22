@@ -537,6 +537,10 @@ class SaltEvent:
                         self.node,
                         self.opts,
                     ),
+                    # Bound the event-bus publish: a write that never
+                    # resolves must surface as an error instead of
+                    # silently deadlocking the caller forever (#69824).
+                    timeout=60,
                 )
             try:
                 self.pusher.connect(timeout=timeout)
