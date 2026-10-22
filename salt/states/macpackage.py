@@ -60,6 +60,10 @@ def installed(
     Install a Mac OS Package from a pkg or dmg file, if given a dmg file it
     will first be mounted in a temporary location
 
+    In test mode, report pending installations without installing packages or
+    copying applications. Disk images are mounted read-only to inspect their
+    contents, then unmounted before returning, including in test mode.
+
     name
         The pkg or dmg file to install
 
@@ -187,6 +191,14 @@ def installed(
                 if len(pkg_ids) == len(found):
                     return ret
 
+        if __opts__["test"]:
+            if app and not installing:
+                return ret
+            ret["result"] = None
+            ret["comment"] += f"{name} would be installed"
+            ret["changes"]["installed"] = installing
+            return ret
+
         if app:
 
             def failed_pkg(f_pkg):
@@ -232,9 +244,12 @@ def installed(
     finally:
         if dmg:
             # Unmount to be kind
-            out = __salt__["macpackage.unmount"](mount_point)
+            out = __salt__["macpackage.unmount"](mount_point, return_status=True)
             # If unmount succeeded cleanup mount point
             if out["retcode"] == 0:
                 shutil.rmtree(mount_point)
+            else:
+                ret["result"] = False
+                ret["comment"] += f". Failed to unmount {mount_point}"
 
     return ret
