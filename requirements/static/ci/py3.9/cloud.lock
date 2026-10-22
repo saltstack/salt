@@ -493,6 +493,7 @@ packaging==26.2
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   pytest
 paramiko==5.0.0
     # via
