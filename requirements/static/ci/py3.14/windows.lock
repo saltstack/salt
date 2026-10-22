@@ -49,7 +49,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.10.19
     # via
     #   -c requirements/static/pkg/py3.14/windows.lock
     #   -r requirements/base.txt
