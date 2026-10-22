@@ -175,6 +175,7 @@ python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   croniter
+    #   tempora
 python-discovery==1.6.1
     # via virtualenv
 python-gnupg==0.5.7
