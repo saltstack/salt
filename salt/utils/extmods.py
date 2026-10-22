@@ -68,6 +68,11 @@ def sync(
         saltenv = saltenv.split(",")
     ret = []
     remote = set()
+    # relpath -> saltenv it was last copied from. All saltenvs share a single
+    # flat destination directory, so syncing more than one saltenv means the
+    # last one wins for any module name they have in common. Track it so the
+    # collision is at least visible in the logs.
+    synced_from = {}
     source = salt.utils.url.create("_" + form)
     mod_dir = os.path.join(opts["extension_modules"], f"{form}")
     touched = False
@@ -117,6 +122,20 @@ def sync(
                         ):
                             continue
                         remote.add(relpath)
+                        if synced_from.get(relpath, sub_env) != sub_env:
+                            log.warning(
+                                "Custom %s '%s' exists in more than one of the "
+                                "saltenvs being synced (%s); the copy from "
+                                "saltenv '%s' overwrites the one from saltenv "
+                                "'%s' in %s",
+                                form,
+                                relname,
+                                ", ".join(saltenv),
+                                sub_env,
+                                synced_from[relpath],
+                                mod_dir,
+                            )
+                        synced_from[relpath] = sub_env
                         dest = os.path.join(mod_dir, relpath)
                         log.info("Copying '%s' to '%s'", fn_, dest)
                         if os.path.isfile(dest):
