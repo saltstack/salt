@@ -7,6 +7,7 @@ from collections import OrderedDict
 import pytest
 
 import salt.states.test as test
+import salt.utils.secret
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
@@ -435,6 +436,26 @@ def test_check_pillar_present():
     pillar_mock = MagicMock(return_value=pillar_return)
     with patch.dict(test.__salt__, {"pillar.get": pillar_mock}):
         assert test.check_pillar("salt", present="my_pillar") == ret
+
+
+def test_check_pillar_unmasks_value_for_type_check():
+    """Type checks use the pillar value without exposing it in the return."""
+    pillar_value = 987654321
+
+    def pillar_get(key, default=None, unmask=None):
+        if key != "my_pillar":
+            return default
+        if unmask:
+            return pillar_value
+        return salt.utils.secret.REDACT_PLACEHOLDER
+
+    pillar_mock = MagicMock(side_effect=pillar_get)
+    with patch.dict(test.__salt__, {"pillar.get": pillar_mock}):
+        ret = test.check_pillar("salt", integer="my_pillar")
+
+    assert ret == {"name": "salt", "changes": {}, "result": True, "comment": ""}
+    assert str(pillar_value) not in repr(ret)
+    pillar_mock.assert_called_once_with("my_pillar", None, unmask=True)
 
 
 def test_check_pillar_string():
