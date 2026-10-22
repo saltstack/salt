@@ -357,3 +357,64 @@ def test_state_running(
             time.sleep(1)
         else:
             pytest.fail("state.pkg is still reported as running")
+
+
+@pytest.fixture(params=[False, True], ids=["no_custom_grains", "custom_grains"])
+def recurse_sls(request, base_env_state_tree_root_dir):
+    """
+    A state tree with a directory for ``file.recurse``, optionally alongside a
+    ``_grains`` directory, since a salt-ssh target runs ``salt-call --local``
+    which, for a masterless minion, syncs ``_grains`` while starting up.
+    """
+    root = pathlib.Path(base_env_state_tree_root_dir)
+    sls_dir = root / "ssh_recurse"
+    files_dir = sls_dir / "files" / "a_dir"
+    dest = pathlib.Path(RUNTIME_VARS.TMP) / "ssh_recurse_dest"
+    created = [sls_dir]
+    try:
+        files_dir.mkdir(parents=True)
+        (files_dir / "a.txt").write_text("a\n")
+        (files_dir / "b.txt").write_text("b\n")
+        (sls_dir / "init.sls").write_text(
+            textwrap.dedent(
+                f"""
+                recurse_dir:
+                  file.recurse:
+                    - name: {dest}
+                    - source: salt://ssh_recurse/files/a_dir
+                """
+            )
+        )
+        if request.param:
+            grains_dir = root / "_grains"
+            grains_dir.mkdir(exist_ok=True)
+            (grains_dir / "ssh_recurse_grain.py").write_text(
+                'def main():\n    return {"ssh_recurse_grain": "yes"}\n'
+            )
+            created.append(grains_dir / "ssh_recurse_grain.py")
+        yield dest
+    finally:
+        shutil.rmtree(dest, ignore_errors=True)
+        for path in created:
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                path.unlink(missing_ok=True)
+
+
+def test_state_file_recurse_from_salt_url(salt_ssh_cli, recurse_sls):
+    """
+    ``file.recurse`` finds its ``salt://`` source on a salt-ssh target.
+
+    Regression test for https://github.com/saltstack/salt/issues/65882, where
+    syncing ``_grains`` while the target minion started cleared the file cache
+    that the state tarball had just been extracted to.
+    """
+    ret = salt_ssh_cli.run("state.sls", "ssh_recurse")
+    data = _assert_state_dict(ret)
+    assert all(item["result"] is True for item in data.values()), data
+
+    for name in ("a.txt", "b.txt"):
+        exists = salt_ssh_cli.run("file.file_exists", str(recurse_sls / name))
+        assert exists.returncode == 0
+        assert exists.data is True

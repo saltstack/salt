@@ -202,6 +202,44 @@ def _interruptible_sleep(duration, abort_event, chunk=1.0):
 # 6. Handle publications
 
 
+def _sync_grains(opts):
+    """
+    Sync custom grains from ``salt://_grains`` when the minion uses the local
+    file client.
+
+    Custom grains can be referenced from pillar. Pillar is compiled before the
+    minion has had a chance to run ``saltutil.sync_grains``, so without this
+    the custom grains are missing and pillar rendering fails. A minion that
+    gets its files from a master is not affected: the sync runs against the
+    master once the minion has connected.
+
+    Every environment in ``file_roots`` is synced. ``saltutil.sync_grains``
+    would use the environments from the top file, which cannot be determined
+    before pillar is available, and syncing only ``base`` would let
+    ``clean_dynamic_modules`` remove grains previously synced from other
+    environments.
+
+    A failure here is logged and otherwise ignored so it cannot prevent the
+    minion from starting.
+    """
+    if opts.get("file_client", "remote") != "local":
+        return
+
+    file_roots = opts.get("file_roots") or {}
+    saltenv = ["base"] + sorted(env for env in file_roots if env != "base")
+    try:
+        salt.utils.extmods.sync(
+            opts,
+            "grains",
+            saltenv=saltenv,
+            extmod_whitelist=opts.get("extmod_whitelist") or {},
+            extmod_blacklist=opts.get("extmod_blacklist") or {},
+            force_local=True,
+        )
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error("Failed to sync custom grains: %s", exc)
+
+
 def resolve_dns(opts, fallback=True):
     """
     Resolves the master_ip and master_uri options
@@ -1331,6 +1369,7 @@ class SMinion(MinionBase):
         # We need to call super().__init__ first to get the OptsDict conversion
         super().__init__(opts)
 
+        _sync_grains(self.opts)
         new_grains = salt.loader.grains(self.opts)
         self.opts.mutate_key("grains", new_grains)
 
@@ -1923,6 +1962,9 @@ class Minion(MinionBase):
         # post_master_init
         if not salt.utils.platform.is_proxy():
             if load_grains:
+                # With ``file_client: local`` the pillar is compiled from
+                # these grains, so custom grains must be synced first.
+                _sync_grains(self.opts)
                 new_grains = salt.loader.grains(opts)
                 self.opts.mutate_key("grains", new_grains)
         else:
