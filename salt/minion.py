@@ -104,11 +104,20 @@ try:
 except ImportError:
     HAS_RESOURCE = False
 
-try:
-    import salt.utils.win_functions
+# Deferred: only pull in salt.utils.win_functions (+ ctypes/pywin32/etc.)
+# on Windows.  ``salt.utils.win_functions`` is importable on Linux too
+# (its inner ``import win32...`` block falls through and it exports
+# ``HAS_WIN32 = False``), so previously every minion process paid the
+# module + transitive cost even though the only use-site
+# (``enable_ctrl_logoff_handler`` below) is Windows-only.
+if sys.platform == "win32":
+    try:
+        import salt.utils.win_functions
 
-    HAS_WIN_FUNCTIONS = True
-except ImportError:
+        HAS_WIN_FUNCTIONS = True
+    except ImportError:
+        HAS_WIN_FUNCTIONS = False
+else:
     HAS_WIN_FUNCTIONS = False
 
 

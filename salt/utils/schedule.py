@@ -37,7 +37,6 @@ import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
-import salt.utils.master
 import salt.utils.minion
 import salt.utils.platform
 import salt.utils.process
@@ -261,7 +260,17 @@ class Schedule:
         if "jid_include" not in data or data["jid_include"]:
             jobcount = 0
             if self.opts["__role"] == "master":
-                current_jobs = salt.utils.master.get_running_jobs(self.opts)
+                # Deferred: keep salt.utils.master + its transitive imports
+                # (~few MB on the minion side) out of the daemon baseline.
+                # This branch only runs on master-role processes.  Use ``as``
+                # alias so this function-local binding does NOT shadow the
+                # top-level ``salt`` name used by the else branch and
+                # elsewhere in this method.
+                from salt.utils import (  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+                    master as _master,
+                )
+
+                current_jobs = _master.get_running_jobs(self.opts)
             else:
                 current_jobs = salt.utils.minion.running(self.opts)
             for job in current_jobs:

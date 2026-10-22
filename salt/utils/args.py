@@ -14,7 +14,6 @@ from collections import namedtuple
 import salt.utils.data
 import salt.utils.jid
 import salt.utils.versions
-import salt.utils.win_functions
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
 
@@ -275,6 +274,10 @@ def shlex_split(s, **kwargs):
     """
     if isinstance(s, str):
         if sys.platform == "win32":
+            # Deferred: keep salt.utils.win_functions (+ transitive win_reg
+            # etc.) off non-Windows minions.  Only shlex_split needs it here.
+            import salt.utils.win_functions  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
             return salt.utils.win_functions.shlex_split(s)
         else:
             return shlex.split(s, **kwargs)

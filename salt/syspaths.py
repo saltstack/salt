@@ -19,7 +19,6 @@ import os.path
 import sys
 
 import salt.utils.platform
-import salt.utils.win_reg
 
 if salt.utils.platform.is_junos():
     __PLATFORM = "junos"
@@ -96,6 +95,10 @@ def _get_windows_root_dir():
     # This key will be created by the NullSoft installer
     # If salt is currently installed in C:\salt and the user performs an
     # upgrade, then this key will be set to C:\salt
+    # Deferred: keep salt.utils.win_reg (+ registry/dacl transitive
+    # imports) off non-Windows minions.  Windows-only path.
+    import salt.utils.win_reg  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
     root_dir = salt.utils.win_reg.read_value(
         hive="HKLM", key="SOFTWARE\\Salt Project\\salt", vname="root_dir"
     )
