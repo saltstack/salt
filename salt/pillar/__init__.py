@@ -1533,17 +1533,6 @@ class PillarCache(Pillar):
             pillar_data = super().compile_pillar(*args, **kwargs)
 
             self.cache.store("pillar", self.pillar_key, pillar_data)
-            if (
-                self.opts["minion_data_cache"]
-                and not self.opts["pillar_cache"]
-                and self.pillar_key != self.minion_id
-            ):
-                # Targeting (-I, -J) reads this bank by plain minion id. With
-                # pillar_cache the plain id is also the compile cache key when
-                # there is no pillarenv, so it must not be overwritten with the
-                # pillar of a single pillarenv. Known issue: with pillar_cache
-                # enabled, targeting still misses minions that use a pillarenv.
-                self.cache.store("pillar", self.minion_id, pillar_data)
 
         # we dont want the pillar_override baked into the cached compile_pillar from above
         if self.pillar_override:

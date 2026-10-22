@@ -1369,68 +1369,6 @@ def test_compile_pillar_cache(master_opts):
         assert pillar.cache.storage == expected_cache
 
 
-def test_compile_pillar_stores_pillar_by_minion_id_for_targeting(master_opts, grains):
-    """
-    With a ``pillarenv`` the cache key is ``<id>:<pillarenv>``, but targeting
-    (-I, -J) fetches the ``pillar`` bank by plain minion id.
-    """
-    master_opts.update({"pillar_cache": False, "minion_data_cache": True})
-    pillar = salt.pillar.PillarCache(
-        master_opts, grains, "mocked_minion", "fake_env", pillarenv="base"
-    )
-    with patch("salt.pillar.Pillar.compile_pillar", return_value={"foo": "bar"}):
-        pillar.compile_pillar()
-    assert pillar.cache.fetch("pillar", "mocked_minion") == {"foo": "bar"}
-
-
-@pytest.mark.parametrize(
-    "pillar_cache,minion_data_cache",
-    [(True, True), (True, False), (False, False)],
-)
-def test_compile_pillar_skips_plain_id_key(
-    master_opts, grains, pillar_cache, minion_data_cache
-):
-    """
-    The plain minion id key is only written for targeting: not without
-    ``minion_data_cache``, and not with ``pillar_cache``, where it is also the
-    compile cache key.
-    """
-    master_opts.update(
-        {"pillar_cache": pillar_cache, "minion_data_cache": minion_data_cache}
-    )
-    pillar = salt.pillar.PillarCache(
-        master_opts, grains, "mocked_minion", "fake_env", pillarenv="base"
-    )
-    with patch(
-        "salt.pillar.Pillar.compile_pillar", return_value={"foo": "bar"}
-    ), patch.object(pillar.cache, "fetch", return_value=None), patch.object(
-        pillar.cache, "store"
-    ) as store_mock:
-        pillar.compile_pillar()
-    store_mock.assert_called_once_with("pillar", "mocked_minion:base", {"foo": "bar"})
-
-
-def test_compile_pillar_cache_not_overwritten_by_another_pillarenv(master_opts, grains):
-    """
-    With ``pillar_cache``, a request for one pillarenv must not change what a
-    later request without a pillarenv gets (all environments).
-    """
-    master_opts.update({"pillar_cache": True, "minion_data_cache": True})
-    all_envs = {"from_base": 1, "from_dev": 2}
-    compiled = {None: all_envs, "base": {"from_base": 1}}
-
-    def request(env):
-        pillar = salt.pillar.PillarCache(
-            master_opts, grains, "mocked_minion", "fake_env", pillarenv=env
-        )
-        with patch("salt.pillar.Pillar.compile_pillar", return_value=compiled[env]):
-            return pillar.compile_pillar()
-
-    assert request(None) == all_envs
-    assert request("base") == {"from_base": 1}
-    assert request(None) == all_envs
-
-
 def test_compile_pillar_disk_cache(master_opts, grains):
     master_opts.update({"pillar_cache_ttl": 3600, "pillar_cache": True})
 
