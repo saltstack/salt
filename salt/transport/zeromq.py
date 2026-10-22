@@ -1538,6 +1538,26 @@ class AsyncReqMessageClient:
                     send_recv_running = False
                     break
 
+                if future.done():
+                    # The caller already abandoned this request: send() arms
+                    # _timeout_message(), which completes the future when the
+                    # caller's timeout expires. The reply can no longer be
+                    # delivered to anyone, so drop the request instead of
+                    # spending a round trip on it.
+                    #
+                    # Without this, self._queue grows without bound. Before
+                    # 145a06e in-flight requests were tracked in
+                    # self._send_future_map, a dict, so a timed-out entry was
+                    # removed by key. A Queue has no removal-from-middle and
+                    # self._queue has no maxsize, so an abandoned entry stays
+                    # queued -- pinning its serialized payload -- until the
+                    # drain loop reaches it. A REQ socket permits one
+                    # request/reply in flight and _send_recv() restarts on
+                    # every reconnect, so under sustained load the enqueue rate
+                    # outruns the drain rate and it never does.
+                    log.trace("Dropping request whose caller already timed out")
+                    continue
+
                 try:
                     yield socket.send(message)
                 except zmq.eventloop.future.CancelledError as exc:
@@ -2496,6 +2516,23 @@ class RequestClient(salt.transport.base.RequestClient):
                     log.trace("Received send/recv shutdown sentinal")
                     send_recv_running = False
                     break
+
+                if future.done():
+                    # The caller already abandoned this request: send() arms
+                    # _timeout_message(), which completes the future when the
+                    # caller's timeout expires. The reply can no longer be
+                    # delivered to anyone, so drop the request instead of
+                    # spending a round trip on it.
+                    #
+                    # A Queue has no removal-from-middle and this queue has
+                    # no maxsize, so without this drop an abandoned entry
+                    # stays queued -- pinning its serialized payload -- until
+                    # the drain loop reaches it. A REQ socket permits one
+                    # request/reply in flight, so under sustained load the
+                    # enqueue rate outruns the drain rate and the queue
+                    # grows without bound. See #68660.
+                    log.trace("Dropping request whose caller already timed out")
+                    continue
 
                 try:
                     # Wait for socket to be ready for sending
