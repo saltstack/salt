@@ -190,7 +190,9 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
     # create faked path for cache
     with pytest.helpers.temp_directory() as temp_path:
         opts = temp_salt_minion.config.copy()
-        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile = (
+            Path(str(temp_path)) / "pillar_compile" / f"{temp_salt_minion.id}.p"
+        )
         tmp_cachefile.parent.mkdir(parents=True)
         tmp_cachefile.touch()
         assert tmp_cachefile.exists()
@@ -215,7 +217,9 @@ def test_pillar_get_cache_disk(temp_salt_minion, caplog):
 def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
     with pytest.helpers.temp_directory() as temp_path:
         opts = temp_salt_minion.config.copy()
-        tmp_cachefile = Path(str(temp_path)) / "pillar" / f"{temp_salt_minion.id}.p"
+        tmp_cachefile = (
+            Path(str(temp_path)) / "pillar_compile" / f"{temp_salt_minion.id}.p"
+        )
         tmp_cachefile.parent.mkdir(parents=True)
         tmp_cachefile.touch()
         assert tmp_cachefile.exists()
@@ -240,7 +244,7 @@ def test_pillar_fetch_pillar_override_skipped(temp_salt_minion, caplog):
         fresh_pillar = pillar.compile_pillar()
         assert "inline_pillar" in fresh_pillar
 
-        pillar_cache = pillar.cache.fetch("pillar", f"{temp_salt_minion.id}:base")
+        pillar_cache = pillar.cached_pillar()
         assert "inline_pillar" not in pillar_cache
 
 

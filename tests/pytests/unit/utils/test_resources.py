@@ -7,7 +7,7 @@ import logging
 import pytest
 
 import salt.utils.resources
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 def test_resource_pillar_key_default():
@@ -45,30 +45,19 @@ def test_pillar_resources_tree_wrong_type():
     assert salt.utils.resources.pillar_resources_tree(opts) == {}
 
 
-def test_bare_resource_id_in_cache_pillar_separate_cache_driver():
-    """Pillar bank follows ``pillar.cache_driver``, not only the default cache."""
-    pillar_cache = MagicMock()
-    pillar_cache.list.return_value = ["minion-2"]
-    pillar_cache.fetch.return_value = {
-        "resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}
-    }
-
-    grains_cache = MagicMock()
-    grains_cache.list.return_value = []
-
-    def fake_factory(opts, **kwargs):
-        if kwargs.get("driver") == "pillar_redis":
-            return pillar_cache
-        return grains_cache
-
+def test_bare_resource_id_in_cache_uses_snapshot_backend():
+    """Compilation backend settings must not redirect minion snapshot reads."""
+    cache = MagicMock()
+    cache.list.return_value = ["minion-2"]
+    cache.fetch.return_value = {"resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}}
     opts = {"minion_data_cache": True, "pillar.cache_driver": "pillar_redis"}
-    with patch("salt.cache.factory", side_effect=fake_factory):
+    with patch("salt.cache.factory", return_value=cache) as factory:
         assert salt.utils.resources.bare_resource_id_in_minion_data_cache(
             opts, "m2-dummy2"
         )
-    pillar_cache.list.assert_called_once_with("pillar")
-    # Short-circuit once pillar matches; grains are not scanned.
-    grains_cache.list.assert_not_called()
+    factory.assert_called_once_with(opts)
+    cache.list.assert_called_once_with("grains")
+    cache.fetch.assert_called_once_with("pillar", "minion-2")
 
 
 def test_bare_resource_id_in_cache_reuses_passed_cache_for_grains():
@@ -93,3 +82,17 @@ def test_bare_resource_id_in_cache_reuses_passed_cache_for_grains():
     assert salt.utils.resources.bare_resource_id_in_minion_data_cache(
         opts, "m2-dummy2", cache=shared
     )
+
+
+def test_bare_resource_id_ignores_legacy_environment_entries():
+    cache = MagicMock()
+    cache.list.return_value = ["minion-1"]
+    cache.fetch.return_value = {}
+    assert not salt.utils.resources.bare_resource_id_in_minion_data_cache(
+        {"minion_data_cache": True}, "only-in-dev", cache=cache
+    )
+    cache.list.assert_called_once_with("grains")
+    assert cache.fetch.call_args_list == [
+        call("pillar", "minion-1"),
+        call("grains", "minion-1"),
+    ]

@@ -71,10 +71,9 @@ def bare_resource_id_in_minion_data_cache(opts, resource_id, cache=None):
 
     :param cache:
         Optional :class:`salt.cache.Cache` from the caller (e.g. ``CkMinions``
-        already constructs one). Pillar entries may live under a separate
-        backend when :conf_master:`pillar.cache_driver` is set; that driver is
-        always used for ``bank="pillar"`` reads. Grains use ``cache`` (or a
-        newly created default cache handle when ``cache`` is omitted).
+        already constructs one). Pillar and grains snapshots use the default
+        cache backend. The :conf_master:`pillar.cache_driver` option only
+        selects the backend for the separate compilation cache.
     """
     if not opts.get("minion_data_cache") or not resource_id:
         return False
@@ -82,20 +81,16 @@ def bare_resource_id_in_minion_data_cache(opts, resource_id, cache=None):
         import salt.cache
 
         grains_cache = cache if cache is not None else salt.cache.factory(opts)
-        pillar_driver = opts.get("pillar.cache_driver")
-        pillar_cache = (
-            salt.cache.factory(opts, driver=pillar_driver)
-            if pillar_driver
-            else grains_cache
-        )
         rk = resource_pillar_key(opts)
         try:
-            p_keys = pillar_cache.list("pillar")
+            minion_ids = list(grains_cache.list("grains"))
         except Exception:  # pylint: disable=broad-except
-            p_keys = []
-        for mid in p_keys:
+            minion_ids = []
+        # Legacy compilation entries may still exist in the pillar bank.
+        # Only inspect snapshots keyed by an actual minion id.
+        for mid in minion_ids:
             try:
-                data = pillar_cache.fetch("pillar", mid) or {}
+                data = grains_cache.fetch("pillar", mid) or {}
             except Exception:  # pylint: disable=broad-except
                 continue
             if not isinstance(data, dict):
@@ -105,11 +100,7 @@ def bare_resource_id_in_minion_data_cache(opts, resource_id, cache=None):
             if resource_id in ids:
                 return True
 
-        try:
-            g_keys = grains_cache.list("grains")
-        except Exception:  # pylint: disable=broad-except
-            g_keys = []
-        for mid in g_keys:
+        for mid in minion_ids:
             try:
                 data = grains_cache.fetch("grains", mid) or {}
             except Exception:  # pylint: disable=broad-except

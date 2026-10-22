@@ -1345,7 +1345,9 @@ def test_compile_pillar_cache(master_opts):
     ):
         # Run once for pillarenv base
         pillar.compile_pillar()
-        expected_cache = {("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}]}
+        expected_cache = {
+            ("pillar_compile", "mocked_minion:base"): [ANY, 3600, {"foo": "bar"}]
+        }
         assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv base
@@ -1358,8 +1360,8 @@ def test_compile_pillar_cache(master_opts):
         # Run once for pillarenv dev
         pillar.compile_pillar()
         expected_cache = {
-            ("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}],
-            ("pillar", "mocked_minion:dev"): [ANY, None, {"foo": "baz"}],
+            ("pillar_compile", "mocked_minion:base"): [ANY, 3600, {"foo": "bar"}],
+            ("pillar_compile", "mocked_minion:dev"): [ANY, 3600, {"foo": "baz"}],
         }
         assert pillar.cache.storage == expected_cache
 
@@ -1402,18 +1404,18 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         pillar.compile_pillar()
 
         expected_fetches = [
-            call("pillar", "mocked_minion:base"),
-            call("pillar", "mocked_minion:base"),
-            call("pillar", "mocked_minion:dev"),
-            call("pillar", "mocked_minion:dev"),
+            call("pillar_compile", "mocked_minion:base"),
+            call("pillar_compile", "mocked_minion:base"),
+            call("pillar_compile", "mocked_minion:dev"),
+            call("pillar_compile", "mocked_minion:dev"),
         ]
 
         # Assert all calls match the pattern
         fetch_mock.assert_has_calls(expected_fetches, any_order=False)
 
         expected_stores = [
-            call("pillar", "mocked_minion:base", {"foo": "bar"}),
-            call("pillar", "mocked_minion:dev", {"foo": "baz"}),
+            call("pillar_compile", "mocked_minion:base", {"foo": "bar"}, expires=3600),
+            call("pillar_compile", "mocked_minion:dev", {"foo": "baz"}, expires=3600),
         ]
 
         # Assert all calls match the pattern
