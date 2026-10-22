@@ -23,16 +23,18 @@ __proxyenabled__ = ["*"]
 log = logging.getLogger(__name__)
 
 
-def _resolve_unmask(unmask):
+def _pillar_result(value, unmask):
     """
     ``pillar_mask_output`` is a feature flag: with it off, nothing is masked
     and ``unmask`` has no effect.
     """
     if not __opts__.get("pillar_mask_output", False):
-        return True
+        return salt.utils.secret.expose(value)
     if unmask is None:
-        return not salt.utils.secret.mask_pillar.get()
-    return unmask
+        unmask = not salt.utils.secret.mask_pillar.get()
+    if unmask:
+        return salt.utils.secret.expose(value)
+    return salt.utils.secret.serial(value)
 
 
 def get(
@@ -157,8 +159,6 @@ def get(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    unmask = _resolve_unmask(unmask)
-
     if merge:
         if isinstance(default, dict):
             ret = salt.utils.data.traverse_dict_and_list(
@@ -169,9 +169,7 @@ def get(
                 merged = salt.utils.dictupdate.update(
                     default, ret, merge_lists=opt_merge_lists
                 )
-                if unmask:
-                    return salt.utils.secret.expose(merged)
-                return salt.utils.secret.serial(merged)
+                return _pillar_result(merged, unmask)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a dict, but the returned "
@@ -188,9 +186,7 @@ def get(
             if isinstance(ret, list):
                 default = copy.deepcopy(default)
                 default.extend([x for x in ret if x not in default])
-                if unmask:
-                    return salt.utils.secret.expose(default)
-                return salt.utils.secret.serial(default)
+                return _pillar_result(default, unmask)
             else:
                 log.error(
                     "pillar.get: Default (%s) is a list, but the returned "
@@ -212,9 +208,7 @@ def get(
     if ret is KeyError:
         raise KeyError(f"Pillar key not found: {key}")
 
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return _pillar_result(ret, unmask)
 
 
 def items(
@@ -310,11 +304,7 @@ def items(
         pillarenv=pillarenv,
     )
     ret = pillar.compile_pillar()
-    unmask = _resolve_unmask(unmask)
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    else:
-        return salt.utils.secret.serial(ret)
+    return _pillar_result(ret, unmask)
 
 
 # Allow pillar.data to also be used to return pillar data
@@ -591,8 +581,6 @@ def item(
         else items(saltenv=saltenv, pillarenv=pillarenv)
     )
 
-    unmask = _resolve_unmask(unmask)
-
     try:
         for arg in args:
             ret[arg] = salt.utils.data.traverse_dict_and_list(
@@ -601,10 +589,7 @@ def item(
     except KeyError:
         pass
 
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    else:
-        return salt.utils.secret.serial(ret)
+    return _pillar_result(ret, unmask)
 
 
 def raw(key=None, unmask=None):
@@ -632,16 +617,15 @@ def raw(key=None, unmask=None):
 
         salt '*' pillar.raw key='roles'
     """
-    unmask = _resolve_unmask(True if unmask is None else unmask)
+    if unmask is None:
+        unmask = True
 
     if key:
         value = __pillar__.get(key, {})
     else:
         value = dict(__pillar__)
 
-    if unmask:
-        return salt.utils.secret.expose(value)
-    return salt.utils.secret.serial(value)
+    return _pillar_result(value, unmask)
 
 
 def ext(external, pillar=None, unmask=None):
@@ -718,11 +702,7 @@ def ext(external, pillar=None, unmask=None):
 
     ret = pillar_obj.compile_pillar()
 
-    unmask = _resolve_unmask(unmask)
-
-    if unmask:
-        return salt.utils.secret.expose(ret)
-    return salt.utils.secret.serial(ret)
+    return _pillar_result(ret, unmask)
 
 
 def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
