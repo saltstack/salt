@@ -147,7 +147,15 @@ def debian(
     env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
     ctx.run("ln", "-sf", "pkg/debian/", ".")
-    ctx.run("debuild", *env_args, "-uc", "-us", env=env)
+    debuild_flags = ["-uc", "-us"]
+    try:
+        import packaging.version as _pv
+
+        if _pv.parse(os.environ.get("SALT_VERSION", "")).post is not None:
+            debuild_flags.insert(0, "-b")
+    except Exception:
+        pass
+    ctx.run("debuild", *env_args, *debuild_flags, env=env)
 
     ctx.info("Done")
 
