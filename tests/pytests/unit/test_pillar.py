@@ -1422,7 +1422,7 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
 
 @pytest.mark.parametrize("flag", [True, False])
-def test_remote_pillar_preserves_wrapping_and_controls_repr(grains, tmp_pki, flag):
+def test_remote_pillar_wraps_only_when_masking_enabled(grains, tmp_pki, flag):
     opts = salt.config.minion_config(None)
     opts.update(
         {
@@ -1444,14 +1444,16 @@ def test_remote_pillar_preserves_wrapping_and_controls_repr(grains, tmp_pki, fla
     ret = pillar.compile_pillar()
     pillar.destroy()
     assert ret == {"password": "hunter2"}
-    assert isinstance(ret, salt.utils.secret.MaskedDict)
+    assert isinstance(ret, salt.utils.secret.MaskedDict) is flag
     assert ("hunter2" not in repr(ret)) is flag
     assert ("hunter2" not in str(ret)) is flag
-    assert salt.utils.secret.mask_output(ret) == {"password": "**********"}
+    assert salt.utils.secret.mask_output(ret) == {
+        "password": "**********" if flag else "hunter2"
+    }
 
 
 @pytest.mark.parametrize("flag", [True, False])
-async def test_async_remote_pillar_preserves_wrapping_and_controls_repr(grains, flag):
+async def test_async_remote_pillar_wraps_only_when_masking_enabled(grains, flag):
     opts = salt.config.minion_config(None)
     opts["pillar_mask_output"] = flag
     channel = MagicMock()
@@ -1465,10 +1467,12 @@ async def test_async_remote_pillar_preserves_wrapping_and_controls_repr(grains, 
         ret = await pillar.compile_pillar()
     finally:
         await pillar.aclose()
-    assert isinstance(ret, salt.utils.secret.MaskedDict)
+    assert isinstance(ret, salt.utils.secret.MaskedDict) is flag
     assert ("hunter2" not in repr(ret)) is flag
     assert ("hunter2" not in str(ret)) is flag
-    assert salt.utils.secret.mask_output(ret) == {"password": "**********"}
+    assert salt.utils.secret.mask_output(ret) == {
+        "password": "**********" if flag else "hunter2"
+    }
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
