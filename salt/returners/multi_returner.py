@@ -15,8 +15,12 @@ CONFIG_KEY = "multi_returner"
 # cache of the master mininon for this returner
 MMINION = None
 
+# ``__opts__`` is injected into this module's namespace by the salt loader at
+# load time. The guarded declaration below only serves static analysis (the
+# ``TYPE_CHECKING`` branch never runs, so no runtime binding is created); the
+# ``= {}`` placeholder makes it count as a definition for ruff as well.
 if TYPE_CHECKING:
-    __opts__: dict[str, Any]
+    __opts__: dict[str, Any] = {}
 
 
 def _mminion():
@@ -64,6 +68,10 @@ def returner(load):
 def save_load(jid, clear_load, minions=None):
     """
     Write load to all returners in multi_returner
+
+    Loads whose ``cmd`` is ``_return`` are skipped for ``local_cache`` only,
+    so a minion return does not overwrite the master's dispatch-time load;
+    every other returner receives all loads.
     """
     for returner_ in __opts__[CONFIG_KEY]:
         if returner_ == "local_cache":
@@ -73,9 +81,9 @@ def save_load(jid, clear_load, minions=None):
         _mminion().returners[f"{returner_}.save_load"](jid, clear_load, minions)
 
 
-def save_minions(jid, minions, syndic_id=None):  # pylint: disable=unused-argument
+def save_minions(jid, minions, syndic_id=None):
     """
-    Included for API consistency
+    Write the minion list to all returners in multi_returner that support it
     """
     for returner_ in __opts__[CONFIG_KEY]:
         fstr = f"{returner_}.save_minions"
@@ -118,16 +126,22 @@ def get_jids():
 
 def get_jids_filter(count, filter_find_job=True):
     """
-    Return a list of all jobs information filtered by the given criteria.
+    Return a list of the most recent jobs from all returners in
+    multi_returner, deduplicated by jid and capped at ``count``.
+
     :param int count: show not more than the count of most recent jobs
-    :param bool filter_find_jobs: filter out 'saltutil.find_job' jobs
+    :param bool filter_find_job: filter out 'saltutil.find_job' jobs
     """
-    ret = {}
+    merged = {}
     for returner_ in __opts__[CONFIG_KEY]:
         fstr = f"{returner_}.get_jids_filter"
         if fstr in _mminion().returners:
-            ret.update(_mminion().returners[fstr](count, filter_find_job))
-    return ret
+            for job in _mminion().returners[fstr](count, filter_find_job):
+                merged[job["JID"]] = job
+
+    if count <= 0:
+        return []
+    return [merged[jid] for jid in sorted(merged)[-count:]]
 
 
 def clean_old_jobs():
@@ -150,6 +164,22 @@ def update_endtime(jid, time):
         fstr = f"{returner_}.update_endtime"
         if fstr in _mminion().returners:
             _mminion().returners[fstr](jid, time)
+
+
+def get_endtime(jid):
+    """
+    Return the end time for a given job
+
+    Returns the first end time found in the configured returners (in
+    configuration order), or False when no returner has one
+    """
+    for returner_ in __opts__[CONFIG_KEY]:
+        fstr = f"{returner_}.get_endtime"
+        if fstr in _mminion().returners:
+            endtime = _mminion().returners[fstr](jid)
+            if endtime:
+                return endtime
+    return False
 
 
 def save_reg(data):
