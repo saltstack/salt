@@ -9,7 +9,6 @@ from tests.support.mock import patch
 try:
     import cryptography
     import cryptography.x509 as cx509
-    from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, rsa
     from cryptography.hazmat.primitives.serialization import (
         load_der_private_key,
@@ -2572,117 +2571,89 @@ def test_pem_managed_newline_fix_no_changes(x509, ca_cert, tmp_path):
     assert tgt.read_text() == ca_cert
 
 
-# Deprecated arguments
+# Removed-in-3009.0 (Potassium) kwargs and signing-policy aliases.
+# The deprecation warnings for these were emitted through 3007.x and
+# 3008.x; the compat shims were dropped in 3009.0, so each of the
+# following must now raise rather than silently accept.
 
 
 @pytest.mark.parametrize("arg", [{"version": 3}, {"serial_bits": 64}, {"text": True}])
-def test_certificate_managed_should_not_fail_with_removed_args(
-    x509, cert_args, rsa_privkey, arg
-):
+def test_certificate_managed_rejects_removed_kwargs(x509, cert_args, rsa_privkey, arg):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
-        ret = x509.certificate_managed(**cert_args, **arg)
-    assert ret.result is True
-    cert = _get_cert(cert_args["name"])
-    assert cert.subject.rfc4514_string() == "CN=success"
+    ret = x509.certificate_managed(**cert_args, **arg)
+    assert ret.result is False
+    assert "was removed in 3009.0" in ret.comment
 
 
-def test_certificate_managed_warns_about_algorithm_renaming(
-    x509, cert_args, rsa_privkey
-):
+def test_certificate_managed_rejects_algorithm_kwarg(x509, cert_args, rsa_privkey):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
-        ret = x509.certificate_managed(**cert_args, algorithm="sha512")
-    assert ret.result is True
-    cert = _get_cert(cert_args["name"])
-    assert isinstance(cert.signature_hash_algorithm, hashes.SHA512)
+    ret = x509.certificate_managed(**cert_args, algorithm="sha512")
+    assert ret.result is False
+    assert "`algorithm` was removed in 3009.0" in ret.comment
+    assert "Use `digest`" in ret.comment
 
 
-def test_certificate_managed_warns_about_long_name_attributes(
-    x509, cert_args, rsa_privkey
-):
+def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_privkey):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["commonName"] = "success"
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
-        ret = x509.certificate_managed(**cert_args)
-    assert ret.result is True
-    cert = _get_cert(cert_args["name"])
-    assert cert.subject.rfc4514_string() == "CN=success"
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is False
+    assert "`commonName` was removed in 3009.0" in ret.comment
 
 
-def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_privkey):
+def test_certificate_managed_rejects_long_extensions(x509, cert_args, rsa_privkey):
     cert_args["X509v3 Basic Constraints"] = "critical CA:TRUE, pathlen:1"
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
-        ret = x509.certificate_managed(**cert_args)
-    assert ret.result is True
-    cert = _get_cert(cert_args["name"])
-    assert len(cert.extensions) == 1
-    assert isinstance(cert.extensions[0].value, cx509.BasicConstraints)
-    assert cert.extensions[0].critical
-    assert cert.extensions[0].value.ca
-    assert cert.extensions[0].value.path_length == 1
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is False
+    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
-def test_csr_managed_should_not_fail_with_removed_args(x509, arg, csr_args):
-    with pytest.warns(DeprecationWarning):
-        ret = x509.csr_managed(**csr_args, **arg)
-    assert ret.result is True
-    csr = _get_csr(csr_args["name"])
-    assert csr.subject.rfc4514_string() == "CN=success"
+def test_csr_managed_rejects_removed_kwargs(x509, arg, csr_args):
+    ret = x509.csr_managed(**csr_args, **arg)
+    assert ret.result is False
+    assert "was removed in 3009.0" in ret.comment
 
 
-def test_csr_managed_warns_about_algorithm_renaming(x509, csr_args):
-    with pytest.warns(DeprecationWarning):
-        ret = x509.csr_managed(**csr_args, algorithm="sha512")
-    assert ret.result is True
-    csr = _get_csr(csr_args["name"])
-    assert isinstance(csr.signature_hash_algorithm, hashes.SHA512)
+def test_csr_managed_rejects_algorithm_kwarg(x509, csr_args):
+    ret = x509.csr_managed(**csr_args, algorithm="sha512")
+    assert ret.result is False
+    assert "`algorithm` was removed in 3009.0" in ret.comment
+    assert "Use `digest`" in ret.comment
 
 
-def test_csr_managed_warns_about_long_name_attributes(x509, csr_args):
+def test_csr_managed_rejects_long_name_attributes(x509, csr_args):
     csr_args.pop("CN", None)
-    with pytest.warns(DeprecationWarning):
-        ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
-    assert ret.result is True
-    csr = _get_csr(csr_args["name"])
-    assert csr.subject.rfc4514_string() == "CN=deprecated_yo"
+    ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
+    assert ret.result is False
+    assert "`commonName` was removed in 3009.0" in ret.comment
 
 
-def test_csr_managed_warns_about_long_extensions(x509, csr_args):
+def test_csr_managed_rejects_long_extensions(x509, csr_args):
     csr_args["X509v3 Basic Constraints"] = "critical CA:FALSE"
-    with pytest.warns(DeprecationWarning):
-        ret = x509.csr_managed(**csr_args)
-    assert ret.result is True
-    csr = _get_csr(csr_args["name"])
-    assert len(csr.extensions) == 1
-    assert isinstance(csr.extensions[0].value, cx509.BasicConstraints)
-    assert csr.extensions[0].critical
-    assert csr.extensions[0].value.ca is False
-    assert csr.extensions[0].value.path_length is None
+    ret = x509.csr_managed(**csr_args)
+    assert ret.result is False
+    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
 
 
-@pytest.mark.parametrize("arg", [{"text": True}])
-def test_crl_managed_should_not_fail_with_removed_args(x509, arg, crl_args):
+def test_crl_managed_rejects_text_kwarg(x509, crl_args):
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
-        ret = x509.crl_managed(**crl_args, **arg)
-    assert ret.result is True
-    crl = _get_crl(crl_args["name"])
-    assert len(crl) == 0
+    ret = x509.crl_managed(**crl_args, text=True)
+    assert ret.result is False
+    assert "`text` was removed in 3009.0" in ret.comment
 
 
-def test_crl_managed_should_recognize_old_style_revoked(x509, crl_args, crl_revoked):
+def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
     revoked = [
         {f"key_{i}": [{"serial_number": rev["serial_number"]}]}
         for i, rev in enumerate(crl_revoked)
@@ -2690,68 +2661,35 @@ def test_crl_managed_should_recognize_old_style_revoked(x509, crl_args, crl_revo
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
-        ret = x509.crl_managed(**crl_args)
-    assert ret.result is True
-    crl = _get_crl(crl_args["name"])
-    assert len(crl) == len(crl_revoked)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "flat list of" in ret.comment
 
 
-@pytest.mark.usefixtures("existing_crl_rev")
-def test_crl_managed_should_recognize_old_style_revoked_for_change_detection(
-    x509, crl_args, crl_revoked
-):
-    revoked = [
-        {
-            f"key_{i}": [
-                {"serial_number": rev["serial_number"]},
-                {"extensions": rev["extensions"]},
-            ]
-        }
-        for i, rev in enumerate(crl_revoked)
-    ]
+def test_crl_managed_rejects_old_style_reason(x509, crl_args):
+    revoked = [{"serial_number": "01337A", "reason": "keyCompromise"}]
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
-        ret = x509.crl_managed(**crl_args)
-    assert ret.result is True
-    assert not ret.changes
-
-
-def test_crl_managed_should_recognize_old_style_reason(x509, crl_args):
-    revoked = [{"key_1": [{"serial_number": "01337A"}, {"reason": "keyCompromise"}]}]
-    crl_args["revoked"] = revoked
-    crl_args["days_remaining"] = 3
-    crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
-        ret = x509.crl_managed(**crl_args)
-    assert ret.result is True
-    crl = _get_crl(crl_args["name"])
-    assert len(crl) == 1
-    rev = crl.get_revoked_certificate_by_serial_number(78714)
-    assert rev
-    assert rev.extensions
-    assert len(rev.extensions) == 1
-    assert isinstance(rev.extensions[0].value, cx509.CRLReason)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "`reason` key" in ret.comment
 
 
 @pytest.mark.parametrize(
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
-def test_private_key_managed_should_not_fail_with_removed_args(x509, arg, pk_args):
-    with pytest.warns(DeprecationWarning):
-        ret = x509.private_key_managed(**pk_args, **arg)
-    assert ret.result is True
-    assert _get_privkey(pk_args["name"])
+def test_private_key_managed_rejects_removed_kwargs(x509, arg, pk_args):
+    ret = x509.private_key_managed(**pk_args, **arg)
+    assert ret.result is False
+    assert "was removed in 3009.0" in ret.comment
 
 
-def test_private_key_managed_warns_about_bits_renaming(x509, pk_args):
-    with pytest.warns(DeprecationWarning):
-        ret = x509.private_key_managed(**pk_args, bits=3072)
-    assert ret.result is True
-    pk = _get_privkey(pk_args["name"])
-    assert pk.key_size == 3072
+def test_private_key_managed_rejects_bits_kwarg(x509, pk_args):
+    ret = x509.private_key_managed(**pk_args, bits=3072)
+    assert ret.result is False
+    assert "`bits` was removed in 3009.0" in ret.comment
+    assert "Use `keysize`" in ret.comment
 
 
 def _assert_cert_created_basic(

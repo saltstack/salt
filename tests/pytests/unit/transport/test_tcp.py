@@ -125,18 +125,6 @@ def _fake_crypticle():
         yield fake_crypticle
 
 
-@pytest.fixture
-def _squash_exepected_message_client_warning():
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="MessageClient has been deprecated and will be removed.",
-            category=DeprecationWarning,
-            module="salt.transport.tcp",
-        )
-        yield
-
-
 @attr.s(frozen=True, slots=True)
 class ClientSocket:
     listen_on = attr.ib(init=False, default="127.0.0.1")
@@ -457,7 +445,6 @@ async def test_tcppubserverpublisher_close_resolves_connecting_future_69187(io_l
                 await asyncio.sleep(0.05)
 
 
-@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_cleanup_on_close(client_socket, temp_salt_master):
     """
     test message client cleanup on close
@@ -507,7 +494,7 @@ async def test_async_tcp_pub_channel_connect_publish_port(
         acceptance_wait_time_max=5,
     )
     patch_auth = MagicMock(return_value=True)
-    transport = MagicMock(spec=salt.transport.tcp.TCPPubClient)
+    transport = MagicMock(spec=salt.transport.tcp.PublishClient)
     transport.connect = MagicMock()
     future = asyncio.Future()
     transport.connect.return_value = future
@@ -708,7 +695,6 @@ def salt_message_client(io_loop):
 #    assert message_id_2 not in salt_message_client.send_timeout_map
 
 
-@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def test_timeout_message_unknown_future(salt_message_client):
     #    # test we don't fail on unknown message_id
     #    salt_message_client.timeout_message(-1, "message")
@@ -726,7 +712,6 @@ def test_timeout_message_unknown_future(salt_message_client):
     assert message_id not in salt_message_client.send_future_map
 
 
-@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def xtest_client_reconnect_backoff(client_socket):
     opts = {"tcp_reconnect_backoff": 5}
 
@@ -816,15 +801,12 @@ async def test_mixin_should_use_correct_path_when_syndic():
         assert mock.call_args_list[0][0][0] == expected_pubkey_path
 
 
-@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 def test_presence_events_callback_passed(temp_salt_master, salt_message_client):
     opts = dict(temp_salt_master.config.copy(), transport="tcp", presence_events=True)
     channel = salt.channel.server.PubServerChannel.factory(opts)
-    channel.transport = salt.transport.tcp.TCPPublishServer(opts)
+    channel.transport = salt.transport.tcp.PublishServer(opts)
     mock_publish_daemon = MagicMock()
-    with patch(
-        "salt.transport.tcp.TCPPublishServer.publish_daemon", mock_publish_daemon
-    ):
+    with patch("salt.transport.tcp.PublishServer.publish_daemon", mock_publish_daemon):
         channel._publish_daemon()
         mock_publish_daemon.assert_called_with(
             channel.publish_payload,
@@ -869,7 +851,9 @@ async def test_presence_removed_on_stream_closed():
 
 async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
-    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+    with salt.transport.tcp.PublishClient(
+        minion_opts, io_loop, path=tmp_path
+    ) as client:
         ret = client._decode_messages(dmsg)
         assert ret == dmsg
 
@@ -877,13 +861,15 @@ async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
 async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     msg = salt.payload.dumps(dmsg)
-    with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
+    with salt.transport.tcp.PublishClient(
+        minion_opts, io_loop, path=tmp_path
+    ) as client:
         ret = client._decode_messages(msg)
         assert ret == dmsg
 
 
 def test_tcp_pub_client_close(minion_opts, io_loop, tmp_path):
-    client = salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path)
+    client = salt.transport.tcp.PublishClient(minion_opts, io_loop, path=tmp_path)
 
     stream = MagicMock()
 
@@ -1144,7 +1130,6 @@ async def test_salt_message_server_exception(master_opts, io_loop):
     stream.close.assert_called_once()
 
 
-@pytest.mark.usefixtures("_squash_exepected_message_client_warning")
 async def test_message_client_stream_return_exception(minion_opts, io_loop):
     msg = {"foo": "bar"}
     payload = salt.transport.frame.frame_msg(msg)
@@ -1173,7 +1158,7 @@ async def test_message_client_stream_return_exception(minion_opts, io_loop):
 
 def test_tcp_pub_server_pre_fork(master_opts):
     process_manager = MagicMock()
-    server = salt.transport.tcp.TCPPublishServer(master_opts)
+    server = salt.transport.tcp.PublishServer(master_opts)
     server.pre_fork(process_manager)
 
 
