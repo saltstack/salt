@@ -4,12 +4,12 @@ import salt.version
 from salt.utils.decorators.extension_deprecation import extension_deprecation_message
 
 
-@extension_deprecation_message(3009, "salt_mod", "http://www.example.com")
+@extension_deprecation_message(3010, "salt_mod", "http://www.example.com")
 def salt_func():
     return True
 
 
-@extension_deprecation_message(3009, "salt_mod", "http://www.example.com")
+@extension_deprecation_message(3010, "salt_mod", "http://www.example.com")
 def get_configured_provider():
     return True
 
@@ -24,7 +24,7 @@ def test_extension_deprecation(monkeypatch):
     monkeypatch.setattr(salt.version, "__version_info__", (3008, 3))
     expected_deprecation_message = (
         "The 'salt_mod' functionality in Salt has been deprecated and "
-        "its functionality will be removed in version 3009.0 (Potassium) "
+        "its functionality will be removed in version 3010.0 (Calcium) "
         "in favor of the saltext.salt_mod Salt Extension. (http://www.example.com)"
     )
     with warnings.catch_warnings(record=True) as catch_warnings:

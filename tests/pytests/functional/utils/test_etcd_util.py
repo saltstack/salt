@@ -5,7 +5,7 @@ import time
 
 import pytest
 
-from salt.utils.etcd_util import EtcdClient, EtcdClientV3, get_conn
+from salt.utils.etcd_util import EtcdClientV3, get_conn
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 pytest.importorskip("docker")
@@ -45,14 +45,11 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recurse=True)
 
 
-def test_etcd_client_creation(minion_opts, profile_name, etcd_version):
+def test_etcd_client_creation(minion_opts, profile_name):
     """
     Client creation using client classes, just need to assert no errors.
     """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-        EtcdClient(minion_opts, profile=profile_name)
-    else:
-        EtcdClientV3(minion_opts, profile=profile_name)
+    EtcdClientV3(minion_opts, profile=profile_name)
 
 
 def test_etcd_client_creation_with_get_conn(minion_opts, profile_name):
@@ -85,11 +82,7 @@ def test_simple_operations(etcd_client, prefix):
     assert not etcd_client.get(f"{prefix}/mtg", recurse=True)
 
 
-def test_simple_operations_with_raw_keys_and_values(
-    minion_opts, profile_name, prefix, etcd_version
-):
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-        pytest.skip("Not testing with raw keys using v2")
+def test_simple_operations_with_raw_keys_and_values(minion_opts, profile_name, prefix):
     modified_opts = copy.deepcopy(minion_opts)
     modified_opts[profile_name]["etcd.raw_keys"] = True
     modified_opts[profile_name]["etcd.raw_values"] = True
@@ -140,7 +133,7 @@ def test_get(subtests, etcd_client, prefix):
         assert etcd_client.get(f"{prefix}/get-test/key2", recurse=True) == expected
 
 
-def test_read(subtests, etcd_client, prefix, etcd_version):
+def test_read(subtests, etcd_client, prefix):
     """
     Test that we are able to read and wait.
     """
@@ -154,10 +147,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
     ):
         result = etcd_client.read(f"{prefix}/read/1")
         assert result
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            assert result.value == "one"
-        else:
-            assert result.pop().value == "one"
+        assert result.pop().value == "one"
 
     # Recursive read test
     with subtests.test(
@@ -174,19 +164,12 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
 
         result = etcd_client.read(f"{prefix}/read", recurse=True)
         assert result
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            assert result.children
-        else:
-            assert len(result) > 1
+        assert len(result) > 1
 
         result_dict = {}
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            for child in result.children:
+        for child in result:
+            if child.key != f"{prefix}/read":
                 result_dict[child.key] = child.value
-        else:
-            for child in result:
-                if child.key != f"{prefix}/read":
-                    result_dict[child.key] = child.value
         assert result_dict == expected
 
     # Wait for an update
@@ -230,10 +213,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
         "updates should be able to be caught after an index by waiting in read"
     ):
         return_list = []
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            last_modified = modified.modifiedIndex
-        else:
-            last_modified = modified.mod_revision
+        last_modified = modified.mod_revision
 
         def wait_func_3(return_list):
             return_list.append(
@@ -257,10 +237,7 @@ def test_read(subtests, etcd_client, prefix, etcd_version):
     # Wait for an update after last modification, recursively
     with subtests.test("nested updates after index should be catchable"):
         return_list = []
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            last_modified = modified.modifiedIndex
-        else:
-            last_modified = modified.mod_revision
+        last_modified = modified.mod_revision
 
         def wait_func_4(return_list):
             return_list.append(
@@ -362,29 +339,6 @@ def test_write_file(subtests, etcd_client, prefix):
         assert etcd_client.get(f"{prefix}/write/ttl_key") is None
 
 
-def test_write_directory(subtests, etcd_client, prefix, etcd_version):
-    """
-    Test solely writing directories
-    """
-    if etcd_version != EtcdVersion.v2:
-        pytest.skip("write_directory is not defined for etcd v3")
-
-    with subtests.test("we should be able to create a non-existent directory"):
-        assert etcd_client.write_directory(f"{prefix}/write_dir/dir1", None)
-        assert etcd_client.get(f"{prefix}/write_dir/dir1") is None
-
-    with subtests.test("writing an already existent directory should return True"):
-        assert etcd_client.write_directory(f"{prefix}/write_dir/dir1", None)
-        assert etcd_client.get(f"{prefix}/write_dir/dir1") is None
-
-    with subtests.test("we should be able to write to a new directory"):
-        assert (
-            etcd_client.write_file(f"{prefix}/write_dir/dir1/key1", "value1")
-            == "value1"
-        )
-        assert etcd_client.get(f"{prefix}/write_dir/dir1/key1") == "value1"
-
-
 def test_ls(subtests, etcd_client, prefix):
     """
     Test listing top level contents
@@ -412,7 +366,7 @@ def test_ls(subtests, etcd_client, prefix):
 
 
 @pytest.mark.parametrize("func", ("rm", "delete"))
-def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
+def test_rm_and_delete(subtests, etcd_client, prefix, func):
     """
     Ensure we can remove keys using rm
     """
@@ -425,12 +379,6 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
         etcd_client.set(f"{prefix}/rm/key1", "value1")
         assert func(f"{prefix}/rm/key1")
         assert etcd_client.get(f"{prefix}/rm/key1") is None
-
-    with subtests.test("we should be able to remove an empty directory"):
-        if etcd_version == EtcdVersion.v2:
-            etcd_client.write_directory(f"{prefix}/rm/dir1", None)
-            assert func(f"{prefix}/rm/dir1", recurse=True)
-            assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) is None
 
     with subtests.test("we should be able to remove a directory with keys"):
         updated = {
@@ -465,7 +413,7 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
         assert etcd_client.get(f"{prefix}/rm/dir1/rm-1") == "value-1"
 
 
-def test_tree(subtests, etcd_client, prefix, etcd_version):
+def test_tree(subtests, etcd_client, prefix):
     """
     Tree should return a dictionary representing what is downstream of the prefix.
     """
@@ -476,20 +424,12 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
         etcd_client.set(f"{prefix}/1", "one")
         assert etcd_client.tree(f"{prefix}/1") == {"1": "one"}
 
-    with subtests.test("the tree of an empty directory should be empty"):
-        if etcd_version == EtcdVersion.v2:
-            etcd_client.write_directory(f"{prefix}/2", None)
-            assert etcd_client.tree(f"{prefix}/2") == {}
-
     with subtests.test("we should be able to recieve the tree of a directory"):
         etcd_client.set(f"{prefix}/3/4", "three/four")
         expected = {
             "1": "one",
-            "2": {},
             "3": {"4": "three/four"},
         }
-        if etcd_version != EtcdVersion.v2:
-            expected.pop("2")
         assert etcd_client.tree(prefix) == expected
 
     with subtests.test("we should be able to recieve the tree of an outer directory"):

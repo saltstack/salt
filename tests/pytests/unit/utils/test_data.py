@@ -11,7 +11,6 @@ import pytest
 import salt.utils.data
 import salt.utils.stringutils
 from salt.exceptions import SaltException
-from salt.utils.odict import OrderedDict as SaltOrderedDict
 from tests.support.mock import patch
 from tests.support.unit import LOREM_IPSUM
 

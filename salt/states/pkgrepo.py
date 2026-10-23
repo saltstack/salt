@@ -120,7 +120,6 @@ import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
 import salt.utils.stringutils
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -356,10 +355,14 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         this argument.
 
 
-    allow_insecure_key : True
+    allow_insecure_key : False
         Whether to allow an insecure (e.g. http vs. https) key_url.
 
         .. versionadded:: 3006.0
+
+        .. versionchanged:: 3009.0
+
+            The default was changed from ``True`` to ``False``.
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -406,21 +409,14 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    # To be changed in version 3009: default to False and still log a warning
-    allow_insecure_key = kwargs.pop("allow_insecure_key", True)
+    allow_insecure_key = kwargs.pop("allow_insecure_key", False)
     key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
-    if key_is_insecure:
-        if allow_insecure_key:
-            salt.utils.versions.warn_until(
-                3009,
-                "allow_insecure_key will default to False starting in salt 3008.",
-            )
-        else:
-            ret["result"] = False
-            ret["comment"] = (
-                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
-            )
-            return ret
+    if key_is_insecure and not allow_insecure_key:
+        ret["result"] = False
+        ret["comment"] = (
+            "Cannot have 'key_url' using http with 'allow_insecure_key' set to False"
+        )
+        return ret
 
     kwargs["name"] = repo = name
 

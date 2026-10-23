@@ -135,10 +135,10 @@ def test_warn_until_accepts_saltversion_target():
     ``TypeError: unhashable type: 'SaltVersion'`` before the function
     body even runs. Regression test for the CI failure on the initial
     landing of the memoize change."""
-    # POTASSIUM is well in the future relative to 3008.x so warn_until
+    # CALCIUM is well in the future relative to 3009.x so warn_until
     # won't fire the "past release" branch when _version_info_ is set to
     # the current running version.
-    future_saltversion = salt.version.SaltVersionsInfo.POTASSIUM
+    future_saltversion = salt.version.SaltVersionsInfo.CALCIUM
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # Should not raise TypeError; the SaltVersion branch handles it.

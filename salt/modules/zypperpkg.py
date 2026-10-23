@@ -1361,12 +1361,9 @@ def mod_repo(repo, **kwargs):
         cmd_opt.append("--priority={}".format(kwargs.get("priority", DEFAULT_PRIORITY)))
 
     if "humanname" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "Passing 'humanname' to 'mod_repo' is deprecated, slated "
-            "for removal in {version}. Please use 'name' instead.",
+        raise SaltInvocationError(
+            "The `humanname` kwarg was removed in 3009.0. Use `name` instead."
         )
-        cmd_opt.append("--name='{}'".format(kwargs.get("humanname")))
 
     if "name" in kwargs:
         cmd_opt.append("--name")
