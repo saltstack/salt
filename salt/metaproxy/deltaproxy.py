@@ -23,6 +23,7 @@ import salt.crypt
 import salt.defaults.exitcodes
 import salt.engines
 import salt.loader
+import salt.loader.lazy
 import salt.minion
 import salt.payload
 import salt.pillar
@@ -57,6 +58,54 @@ from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
 log = logging.getLogger(__name__)
+
+
+def attach_req_channel(proxy_minion, proxy_opts, io_loop):
+    """
+    Give a sub-proxy its request channel, and the token that goes with it.
+
+    A sub-proxy is constructed directly rather than going through
+    ``connect_master``, which is where an ordinary minion picks up
+    ``self.tok``.  Without it every read of ``self.tok`` raises
+    ``AttributeError`` -- in practice from
+    ``_register_resources_with_master``, which ``pillar_refresh`` calls, so a
+    sub-proxy's resources never reach the master.  Derive the token from the
+    channel's auth the same way ``connect_master`` does.
+    """
+    proxy_minion.req_channel = salt.channel.client.AsyncReqChannel.factory(
+        proxy_opts, io_loop=io_loop
+    )
+    auth = getattr(proxy_minion.req_channel, "auth", None)
+    if auth is not None:
+        proxy_minion.tok = auth.gen_token(b"salt")
+    return proxy_minion.req_channel
+
+
+async def gather_subproxies(waitfor, ids):
+    """
+    Await every sub-proxy initialisation coroutine and return the results of
+    the ones that succeeded.
+
+    A sub-proxy that fails to initialise must not stop its siblings from
+    loading.  Without ``return_exceptions=True`` a single bad ``proxytype``
+    raises ``KeyError`` out of the proxy loader, propagates through
+    ``asyncio.gather``, and aborts the control proxy's ``post_master_init``,
+    which kills the salt-proxy daemon and takes every healthy sub-proxy down
+    with it.  The non-parallel startup path has always caught per sub-proxy
+    and carried on; this keeps the parallel path equivalent.
+    """
+    results = await asyncio.gather(*waitfor, return_exceptions=True)
+    collected = []
+    for _id, result in zip(ids, results):
+        if isinstance(result, BaseException):
+            log.error(
+                "An exception occured during initialization for %s, skipping: %s",
+                _id,
+                result,
+            )
+            continue
+        collected.append(result)
+    return collected
 
 
 async def post_master_init(self, master):
@@ -358,11 +407,7 @@ async def post_master_init(self, master):
                 )
             )
 
-        try:
-            results = await asyncio.gather(*waitfor)
-        except Exception as exc:  # pylint: disable=broad-except
-            log.error("Errors loading sub proxies: %s", exc)
-            raise
+        results = await gather_subproxies(waitfor, self.opts["proxy"].get("ids", []))
 
         _failed = self.opts["proxy"].get("ids", [])[:]
         for sub_proxy_data in results:
@@ -375,10 +420,10 @@ async def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[minion_id].req_channel = (
-                        salt.channel.client.AsyncReqChannel.factory(
-                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
-                        )
+                    attach_req_channel(
+                        self.deltaproxy_objs[minion_id],
+                        sub_proxy_data["proxy_opts"],
+                        self.io_loop,
                     )
     else:
         log.debug("Initiating non-parallel startup for proxies")
@@ -402,10 +447,10 @@ async def post_master_init(self, master):
                 self.deltaproxy_objs[minion_id] = sub_proxy_data["proxy_minion"]
 
                 if self.deltaproxy_opts[minion_id] and self.deltaproxy_objs[minion_id]:
-                    self.deltaproxy_objs[minion_id].req_channel = (
-                        salt.channel.client.AsyncReqChannel.factory(
-                            sub_proxy_data["proxy_opts"], io_loop=self.io_loop
-                        )
+                    attach_req_channel(
+                        self.deltaproxy_objs[minion_id],
+                        sub_proxy_data["proxy_opts"],
+                        self.io_loop,
                     )
 
     if _failed:
@@ -466,7 +511,15 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         }
     )
 
-    _proxy_minion = ProxyMinion(proxyopts)
+    # Give every sub-proxy its own loader namespace.  Without this, all
+    # sub-proxies in a deltaproxy share one module namespace, so the loader
+    # hands them the *same* module objects and whichever sub-proxy packs a
+    # module last owns its ``__opts__`` for the life of the process.  See
+    # #70144.
+    _proxy_minion = ProxyMinion(
+        proxyopts,
+        loaded_base_name=f"{minion_id}.{salt.loader.lazy.LOADED_BASE_NAME}",
+    )
     _proxy_minion.proc_dir = salt.minion.get_proc_dir(proxyopts["cachedir"], uid=uid)
 
     # And load the modules
@@ -650,6 +703,12 @@ def thread_return(cls, minion_instance, opts, data):
         fp_.write(salt.payload.dumps(sdata))
     ret = {"success": False}
     function_name = data["fun"]
+    # Own the loaders for the length of this job so the func lookup, the
+    # executor, the retcode reset and the retcode read all resolve against the
+    # same generation, even if a concurrent sys.reload_modules rebinds
+    # minion_instance.functions and minion_instance.executors. See #61830.
+    functions = minion_instance.functions
+    executor_loader = minion_instance.executors
     executors = (
         data.get("module_executors")
         or getattr(minion_instance, "module_executors", [])
@@ -657,12 +716,12 @@ def thread_return(cls, minion_instance, opts, data):
     )
     allow_missing_funcs = any(
         [
-            minion_instance.executors[f"{executor}.allow_missing_func"](function_name)
+            executor_loader[f"{executor}.allow_missing_func"](function_name)
             for executor in executors
-            if f"{executor}.allow_missing_func" in minion_instance.executors
+            if f"{executor}.allow_missing_func" in executor_loader
         ]
     )
-    if function_name in minion_instance.functions or allow_missing_funcs is True:
+    if function_name in functions or allow_missing_funcs is True:
         try:
             minion_blackout_violation = False
             if minion_instance.connected and minion_instance.opts["pillar"].get(
@@ -694,15 +753,15 @@ def thread_return(cls, minion_instance, opts, data):
                     "saltutil.refresh_pillar allowed in blackout mode."
                 )
 
-            if function_name in minion_instance.functions:
-                func = minion_instance.functions[function_name]
+            if function_name in functions:
+                func = functions[function_name]
                 args, kwargs = salt.minion.load_args_and_kwargs(func, data["arg"], data)
             else:
                 # only run if function_name is not in minion_instance.functions and allow_missing_funcs is True
                 func = function_name
                 args, kwargs = data["arg"], data
-            minion_instance.functions.pack["__context__"]["retcode"] = 0
-            minion_instance.functions.pack["__opts__"] = opts
+            functions.pack["__context__"]["retcode"] = 0
+            functions.pack["__opts__"] = opts
             if isinstance(executors, str):
                 executors = [executors]
             elif not isinstance(executors, list) or not executors:
@@ -717,12 +776,10 @@ def thread_return(cls, minion_instance, opts, data):
 
             for name in executors:
                 fname = f"{name}.execute"
-                if fname not in minion_instance.executors:
+                if fname not in executor_loader:
                     raise SaltInvocationError(f"Executor '{name}' is not available")
 
-                return_data = minion_instance.executors[fname](
-                    opts, data, func, args, kwargs
-                )
+                return_data = executor_loader[fname](opts, data, func, args, kwargs)
                 if return_data is not None:
                     break
 
@@ -744,7 +801,7 @@ def thread_return(cls, minion_instance, opts, data):
             else:
                 ret["return"] = return_data
 
-            retcode = minion_instance.functions.pack["__context__"].get(
+            retcode = functions.pack["__context__"].get(
                 "retcode", salt.defaults.exitcodes.EX_OK
             )
             if retcode == salt.defaults.exitcodes.EX_OK:
@@ -911,6 +968,10 @@ def thread_multi_return(cls, minion_instance, opts, data):
     else:
         ret = {"return": {}, "retcode": {}, "success": {}}
 
+    # Own the loader for the length of this job so every func's lookup, retcode
+    # reset and retcode read resolve against the same generation, even if a
+    # concurrent sys.reload_modules rebinds minion_instance.functions. See #61830.
+    functions = minion_instance.functions
     for ind in range(0, num_funcs):
         if not multifunc_ordered:
             ret["success"][data["fun"][ind]] = False
@@ -944,15 +1005,15 @@ def thread_multi_return(cls, minion_instance, opts, data):
                     "saltutil.refresh_pillar allowed in blackout mode."
                 )
 
-            func = minion_instance.functions[data["fun"][ind]]
+            func = functions[data["fun"][ind]]
 
             args, kwargs = salt.minion.load_args_and_kwargs(
                 func, data["arg"][ind], data
             )
-            minion_instance.functions.pack["__context__"]["retcode"] = 0
+            functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
             ret["return"][key] = func(*args, **kwargs)
-            retcode = minion_instance.functions.pack["__context__"].get("retcode", 0)
+            retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return
                 # is a dictionary with a "result" or "success" key.
@@ -1178,15 +1239,34 @@ def threaded_subproxy_tune_in(proxy_minion):
     """
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    return subproxy_tune_in(proxy_minion)
+    try:
+        return subproxy_tune_in(proxy_minion)
+    finally:
+        # The worker thread is about to go away.  Drop the throwaway loop
+        # instead of leaking its file descriptors for the life of the
+        # process, once per sub-proxy.
+        asyncio.set_event_loop(None)
+        loop.close()
 
 
 def subproxy_tune_in(proxy_minion, start=True):
     """
     Tunein sub proxy minions
     """
-    proxy_minion.setup_scheduler()
-    proxy_minion.setup_beacons()
-    proxy_minion.add_periodic_callback("cleanup", proxy_minion.cleanup_subprocesses)
+
+    def _start_periodics():
+        proxy_minion.setup_scheduler()
+        proxy_minion.setup_beacons()
+        proxy_minion.add_periodic_callback("cleanup", proxy_minion.cleanup_subprocesses)
+
+    # ``PeriodicCallback.start()`` binds to ``IOLoop.current()``.  Under
+    # ``parallel_startup`` this function runs on a ThreadPoolExecutor worker
+    # whose current loop is a throwaway that is never run, so starting the
+    # timers here would bind every one of them to a dead loop and the
+    # sub-proxy would silently get no schedule, no beacons and no subprocess
+    # cleanup.  Hand the registration to the sub-proxy's own io_loop -- the
+    # loop that is actually run -- via the thread-safe
+    # ``call_soon_threadsafe``, so the timers bind to that loop instead.
+    proxy_minion.io_loop.call_soon_threadsafe(_start_periodics)
     proxy_minion._state_run()
     return proxy_minion

@@ -824,7 +824,7 @@ typing-extensions==4.14.1
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   referencing
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock

@@ -467,7 +467,7 @@ def test_mod_aggregate():
             "__sls__": "47628",
             "__env __": "base",
             "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
+            "pkgs": ["byobu", {"tput": "1.0.1"}],
             "aggregate": True,
             "order": 10002,
             "fun": "installed",
@@ -552,7 +552,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", {"tput": "1.0.1"}, "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,
