@@ -2901,7 +2901,7 @@ minion config file or via the CLI, it will override this option.
 .. conf_minion:: pillar_mask_output
 
 ``pillar_mask_output``
-**********************
+----------------------
 
 .. versionadded:: 3008.3
 
