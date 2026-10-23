@@ -101,37 +101,32 @@ for D in (SafeOrderedDumper, OrderedDumper):
     D.add_representer(OptsDict, represent_optsdict)
     D.add_representer(DictProxy, represent_dictproxy)
     D.add_representer(ListProxy, represent_listproxy)
-    # Pillar containers are wrapped in MaskedDict / MaskedList for repr redaction;
-    # they are still plain dict / list at the data level, so dump them as such
-    # instead of falling through to represent_undefined (which would emit NULL).
-    D.add_representer(MaskedDict, yaml.representer.SafeRepresenter.represent_dict)
-    D.add_representer(MaskedList, yaml.representer.SafeRepresenter.represent_list)
 del D
 
 IndentedSafeOrderedDumper.add_representer(OrderedDict, represent_ordereddict)
 IndentedSafeOrderedDumper.add_representer(HashableOrderedDict, represent_ordereddict)
-IndentedSafeOrderedDumper.add_representer(
-    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
-)
-IndentedSafeOrderedDumper.add_representer(
-    MaskedList, yaml.representer.SafeRepresenter.represent_list
-)
-
-# Also register with base YAML dumpers for salt.utils.yaml.dump()
+# Register proxy types with base YAML dumpers for salt.utils.yaml.dump().
 yaml.Dumper.add_representer(OptsDict, represent_optsdict)
 yaml.SafeDumper.add_representer(OptsDict, represent_optsdict)
 yaml.Dumper.add_representer(DictProxy, represent_dictproxy)
 yaml.SafeDumper.add_representer(DictProxy, represent_dictproxy)
 yaml.Dumper.add_representer(ListProxy, represent_listproxy)
 yaml.SafeDumper.add_representer(ListProxy, represent_listproxy)
-yaml.Dumper.add_representer(MaskedDict, yaml.representer.SafeRepresenter.represent_dict)
-yaml.SafeDumper.add_representer(
-    MaskedDict, yaml.representer.SafeRepresenter.represent_dict
-)
-yaml.Dumper.add_representer(MaskedList, yaml.representer.SafeRepresenter.represent_list)
-yaml.SafeDumper.add_representer(
-    MaskedList, yaml.representer.SafeRepresenter.represent_list
-)
+# Both repr modes contain plain dict/list data. Register the base types for
+# their subclasses too, so YAML can serialize received pillar in either mode.
+for dumper in (
+    OrderedDumper,
+    SafeOrderedDumper,
+    IndentedSafeOrderedDumper,
+    yaml.Dumper,
+    yaml.SafeDumper,
+):
+    dumper.add_multi_representer(
+        MaskedDict, yaml.representer.SafeRepresenter.represent_dict
+    )
+    dumper.add_multi_representer(
+        MaskedList, yaml.representer.SafeRepresenter.represent_list
+    )
 
 
 def get_dumper(dumper_name):

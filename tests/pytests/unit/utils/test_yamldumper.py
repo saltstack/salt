@@ -4,6 +4,8 @@
 
 from collections import OrderedDict, defaultdict
 
+import salt.utils.secret
+import salt.utils.yaml
 import salt.utils.yamldumper
 from salt.utils.context import NamespacedDictWrapper
 from salt.utils.datastructures import HashableOrderedDict
@@ -121,3 +123,19 @@ def test_yaml_hashable_ordered_dict_dump():
         salt.utils.yamldumper.dump(data, Dumper=salt.utils.yamldumper.OrderedDumper)
         == exp_yaml
     )
+
+
+def test_pillar_repr_modes_dump_as_plain_data():
+    data = {"nested": [{"password": "hunter2"}]}
+    dumpers = (
+        salt.utils.yamldumper.OrderedDumper,
+        salt.utils.yamldumper.SafeOrderedDumper,
+        salt.utils.yamldumper.IndentedSafeOrderedDumper,
+        salt.utils.yamldumper.yaml.Dumper,
+        salt.utils.yamldumper.yaml.SafeDumper,
+    )
+    for mask_repr in (False, True):
+        wrapped = salt.utils.secret.hide(data, mask_repr=mask_repr)
+        for dumper in dumpers:
+            output = salt.utils.yamldumper.dump(wrapped, Dumper=dumper)
+            assert salt.utils.yaml.safe_load(output) == data
