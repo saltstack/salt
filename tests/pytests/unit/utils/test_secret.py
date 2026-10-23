@@ -4,6 +4,8 @@ Tests for salt.utils.secret (MaskedDict, MaskedList, hide/expose/serial/mask_out
 
 import copy
 
+import pytest
+
 import salt.utils.secret as secret
 
 # ---------------------------------------------------------------------------
@@ -448,3 +450,51 @@ def test_masked_nested_repr_respects_context_var():
     r = repr(d)
     assert secret.REDACT_PLACEHOLDER in r
     assert "host1" not in r
+
+
+def test_no_log_mask_does_not_depend_on_pillar_mask_output():
+    """``no_log: True`` is set per state, so it redacts whatever the pillar flag says."""
+    ret = {"name": "n", "comment": "secret", "changes": {"a": "b"}}
+    secret.no_log_mask(ret)
+    assert ret["comment"] == secret.REDACT_PLACEHOLDER
+    assert ret["changes"] == {"a": secret.REDACT_PLACEHOLDER}
+
+
+@pytest.fixture
+def repr_masking():
+    secret.set_repr_masking(True)
+    yield secret.set_repr_masking
+    secret.set_repr_masking(True)
+
+
+@pytest.mark.parametrize(
+    "value", [{"a": {"b": ["hunter2"]}}, ["hunter2", {"password": "hunter2"}]]
+)
+def test_repr_masking_switch_only_changes_repr_and_str(repr_masking, value):
+    hidden = secret.hide(value)
+    assert "hunter2" not in repr(hidden)
+    repr_masking(False)
+    assert "hunter2" in repr(hidden)
+    assert "hunter2" in str(hidden)
+    # The wrapping, and so the output safety net, does not depend on it.
+    assert "hunter2" not in repr(secret.mask_output(hidden))
+    assert "hunter2" not in repr(secret.serial(hidden))
+    repr_masking(True)
+    assert "hunter2" not in repr(hidden)
+
+
+def test_repr_masking_switch_still_defers_to_render_context(repr_masking):
+    hidden = secret.hide({"password": "hunter2"})
+    token = secret.mask_pillar.set(False)
+    try:
+        assert "hunter2" in repr(hidden)
+    finally:
+        secret.mask_pillar.reset(token)
+    assert "hunter2" not in repr(hidden)
+
+
+def test_expose_removes_masked_children_inside_plain_containers():
+    value = {"nested": [secret.hide({"password": "hunter2"})]}
+    result = secret.expose(value)
+    assert type(result["nested"][0]) is dict
+    assert secret.mask_output(result) == {"nested": [{"password": "hunter2"}]}

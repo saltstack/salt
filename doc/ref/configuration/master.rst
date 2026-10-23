@@ -5188,21 +5188,35 @@ Recursively merge lists by aggregating them instead of replacing them.
 
 .. versionadded:: 3008.3
 
-Default: ``True``
+Default: ``False``
 
-Changes the *default* behavior of :py:func:`pillar.items
-<salt.modules.pillar.items>` when a caller doesn't explicitly pass
-``unmask``. When ``True`` (the default), ``pillar.items`` returns masked
-values (``**********``) by default, matching :py:func:`pillar.get
-<salt.modules.pillar.get>` and friends. Set to ``False`` to make
-``pillar.items`` default to returning real, unmasked values instead —
-useful for sites relying on the pre-masking ``pillar.items`` behavior.
+Feature flag for pillar masking in :py:func:`pillar.get
+<salt.modules.pillar.get>`, :py:func:`pillar.item
+<salt.modules.pillar.item>`, :py:func:`pillar.items
+<salt.modules.pillar.items>` and :py:func:`pillar.ext
+<salt.modules.pillar.ext>`.
 
-This option does **not** disable pillar masking elsewhere: ``pillar.get``,
-``pillar.item``, ``pillar.raw``, ``pillar.ext``, ``no_log`` state output,
-and the general CLI output safety net are unaffected and keep redacting by
-default regardless of this setting. Callers of ``pillar.items`` can always
-override the default explicitly with ``unmask=True``/``unmask=False``.
+When ``False`` (the default), they return real values and the ``unmask``
+argument has no effect. When ``True``, they return masked values
+(``**********``) unless a caller passes ``unmask=True`` for a single call or
+state.
+
+.. versionchanged:: 3008.4
+    The default is now ``False``, and the option applies to ``pillar.get``,
+    ``pillar.item`` and ``pillar.ext`` too. Before, the default was ``True``
+    and the option only changed the default of ``pillar.items``.
+
+When ``False``, ``repr()`` and ``str()`` of received pillar containers show real
+values, and the functions above return plain data. Pillar containers remain
+wrapped so the general output safety net still redacts them, independently of
+this option and the render context.
+
+This option does **not** change ``no_log``: a state with ``no_log: True``
+still has its ``name``, ``comment`` and ``changes`` redacted.
+
+The option is read by the process that runs the code, so set it in the
+:conf_minion:`minion <pillar_mask_output>` configuration for the minions. The
+master setting only applies to what the master itself runs, such as salt-ssh.
 
 .. code-block:: yaml
 

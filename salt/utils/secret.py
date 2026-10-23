@@ -43,6 +43,18 @@ mask_pillar: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "mask_pillar", default=True
 )
 
+# Whether repr() and str() of the masked containers redact their values. It is
+# set once per process from ``pillar_mask_output``. It does not affect
+# serial() or mask_output(), which only depend on a value being wrapped.
+_repr_masking: bool = True
+
+
+def set_repr_masking(enabled):
+    """Turn redaction in repr() and str() of masked containers on or off."""
+    global _repr_masking  # pylint: disable=global-statement
+    _repr_masking = bool(enabled)
+
+
 REDACT_PLACEHOLDER = "**********"
 
 
@@ -118,12 +130,12 @@ class MaskedDict(dict):
             self[k] = v
 
     def __repr__(self):
-        if not mask_pillar.get():
+        if not (_repr_masking and mask_pillar.get()):
             return dict.__repr__(self)
         return _masked_repr(self)
 
     def __str__(self):
-        if not mask_pillar.get():
+        if not (_repr_masking and mask_pillar.get()):
             return dict.__repr__(self)
         return _masked_repr(self)
 
@@ -189,12 +201,12 @@ class MaskedList(list):
         return MaskedList(list.__imul__(self, other))
 
     def __repr__(self):
-        if not mask_pillar.get():
+        if not (_repr_masking and mask_pillar.get()):
             return list.__repr__(self)
         return _masked_repr(self)
 
     def __str__(self):
-        if not mask_pillar.get():
+        if not (_repr_masking and mask_pillar.get()):
             return list.__repr__(self)
         return _masked_repr(self)
 
@@ -226,10 +238,11 @@ def hide(value):
 def expose(value, _seen=None):
     """Recursively unwrap MaskedDict / MaskedList to plain Python types.
 
+    Also traverse plain containers, which may contain nested masked values.
     Use at ``unmask=True`` pillar output boundaries so callers receive the
     real values (e.g. ``pillar.get(key, unmask=True)``).
     """
-    if isinstance(value, MaskedDict):
+    if isinstance(value, dict):
         if _seen is None:
             _seen = set()
         vid = id(value)
@@ -240,7 +253,7 @@ def expose(value, _seen=None):
             return {k: expose(v, _seen) for k, v in dict.items(value)}
         finally:
             _seen.discard(vid)
-    if isinstance(value, MaskedList):
+    if isinstance(value, list):
         if _seen is None:
             _seen = set()
         vid = id(value)

@@ -191,6 +191,12 @@ class RemotePillarMixin:
         log.trace("ext_pillar_extra_data = %s", extra_data)
         return extra_data
 
+    def _hide(self, ret_pillar):
+        # The wrapping is what the output safety net relies on, so it always
+        # applies. The flag only decides whether repr() and str() redact.
+        salt.utils.secret.set_repr_masking(self.opts.get("pillar_mask_output", False))
+        return salt.utils.secret.hide(ret_pillar)
+
     def validate_return(self, data):
         if not isinstance(data, dict):
             msg = "Got a bad pillar from master, type {}, expecting dict: {}".format(
@@ -279,8 +285,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(ret_pillar)
-        return ret_pillar
+        return self._hide(ret_pillar)
 
     async def aclose(self):
         """Async-aware teardown.
@@ -417,7 +422,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        return salt.utils.secret.hide(ret_pillar)
+        return self._hide(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
