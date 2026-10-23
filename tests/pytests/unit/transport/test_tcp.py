@@ -24,6 +24,70 @@ pytestmark = [
 ]
 
 
+async def test_request_client_close_resolves_pending_reply():
+    received = asyncio.Event()
+    disconnected = asyncio.Event()
+
+    async def handle(reader, writer):
+        try:
+            await reader.read(4096)
+            received.set()
+            await reader.read()
+        finally:
+            writer.close()
+            await writer.wait_closed()
+            disconnected.set()
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    client = salt.transport.tcp.RequestClient(
+        {"master_uri": f"tcp://127.0.0.1:{port}"}, asyncio.get_running_loop()
+    )
+    request = asyncio.create_task(client.send({"probe": True}, timeout=None))
+    reader_task = None
+    try:
+        await asyncio.wait_for(received.wait(), timeout=5)
+        reader_task = client.task
+        client.close()
+        with pytest.raises(tornado.iostream.StreamClosedError):
+            await asyncio.wait_for(request, timeout=1)
+        assert client.send_future_map == {}
+        await asyncio.wait_for(disconnected.wait(), timeout=5)
+    finally:
+        client.close()
+        request.cancel()
+        await asyncio.gather(request, return_exceptions=True)
+        if reader_task is not None:
+            await asyncio.gather(reader_task, return_exceptions=True)
+        client._tcp_client.close()
+        server.close()
+        await server.wait_closed()
+
+
+async def test_request_client_close_preserves_finished_replies():
+    loop = asyncio.get_running_loop()
+    client = salt.transport.tcp.RequestClient(
+        {"master_uri": "tcp://127.0.0.1:4506"}, loop
+    )
+    pending = loop.create_future()
+    completed = loop.create_future()
+    completed.set_result("reply")
+    cancelled = loop.create_future()
+    cancelled.cancel()
+    client.send_future_map.update({1: pending, 2: completed, 3: cancelled})
+    try:
+        client.close()
+        client.close()
+        assert isinstance(pending.exception(), tornado.iostream.StreamClosedError)
+        assert completed.result() == "reply"
+        assert cancelled.cancelled()
+        assert client.send_future_map == {}
+        client.timeout_message(1, "expired")
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
 @pytest.fixture
 def _fake_keys():
     with patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
