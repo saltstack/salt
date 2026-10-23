@@ -148,6 +148,11 @@ class RemotePillarMixin:
     Common remote pillar functionality
     """
 
+    def _hide(self, ret_pillar):
+        return salt.utils.secret.hide(
+            ret_pillar, mask_repr=self.opts.get("pillar_mask_output", False)
+        )
+
     def get_ext_pillar_extra_minion_data(self, opts):
         """
         Returns the extra data from the minion's opts dict (the config file).
@@ -279,10 +284,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(
-            ret_pillar, mask_repr=self.opts.get("pillar_mask_output", False)
-        )
-        return ret_pillar
+        return self._hide(ret_pillar)
 
     async def aclose(self):
         """Async-aware teardown.
@@ -419,10 +421,7 @@ class RemotePillar(RemotePillarMixin):
             log.exception("Exception getting pillar:")
             raise SaltClientError("Exception getting pillar.")
         self.validate_return(ret_pillar)
-        ret_pillar = salt.utils.secret.hide(
-            ret_pillar, mask_repr=self.opts.get("pillar_mask_output", False)
-        )
-        return ret_pillar
+        return self._hide(ret_pillar)
 
     def destroy(self):
         if hasattr(self, "_closing") and self._closing:
