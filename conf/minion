@@ -965,12 +965,11 @@
 #
 #return: mysql
 #
-#return: mysql,slack,redis
+#return: mysql,redis
 #
 #return:
 #  - mysql
 #  - hipchat
-#  - slack
 
 
 ######    Miscellaneous  settings     ######
