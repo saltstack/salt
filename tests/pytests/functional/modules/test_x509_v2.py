@@ -1718,6 +1718,24 @@ def test_read_certificates(x509, cert_exts, cert_exts_read, tmp_path):
     assert res == {str(cert): cert_exts_read}
 
 
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_create_certificate_default_validity(
+    x509, rsa_privkey, monkeypatch, raise_deprecations
+):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    cert = _get_cert(x509.create_certificate(signing_private_key=rsa_privkey))
+    assert cert.not_valid_after_utc - cert.not_valid_before_utc == datetime.timedelta(
+        days=30
+    )
+
+
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_create_crl_default_validity(x509, crl_args, monkeypatch, raise_deprecations):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    crl = cx509.load_pem_x509_crl(x509.create_crl(**crl_args).encode())
+    assert crl.next_update_utc - crl.last_update_utc == datetime.timedelta(days=7)
+
+
 # Removed-in-3009.0 (Potassium) kwargs and signing-policy aliases.
 # The deprecation warnings for these were emitted through 3007.x and
 # 3008.x; the compat shims were dropped in 3009.0, so each of the

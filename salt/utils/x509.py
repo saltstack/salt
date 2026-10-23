@@ -20,7 +20,6 @@ from cryptography.x509.oid import SubjectInformationAccessOID
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 try:
@@ -478,7 +477,7 @@ def build_crl(
     signing_cert=None,
     signing_private_key_passphrase=None,
     include_expired=False,
-    days_valid=100,
+    days_valid=7,
     extensions=None,
 ):
     """
@@ -940,6 +939,7 @@ def merge_signing_policy(policy, kwargs):
         return kwargs
     # ensure we don't modify data that is used elsewhere
     policy = copy.deepcopy(policy)
+    ensure_cert_kwargs_compat(policy)
 
     # Long-form name-attribute and extension aliases were accepted with a
     # deprecation warning through 3008.x and removed in 3009.0 (Potassium);

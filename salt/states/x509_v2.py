@@ -18,6 +18,12 @@ Manage X.509 certificates
 Configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
 
+.. versionchanged:: 3009.0
+
+    Deprecated arguments and legacy X.509 input formats are no longer
+    accepted. See :ref:`x509-migration-3009` for replacements and changes
+    to the default validity and renewal periods.
+
 For the list of breaking changes versus the previous ``x509`` modules,
 please also refer to the :ref:`execution module docs <x509-setup>`.
 
@@ -210,8 +216,6 @@ __virtualname__ = "x509"
 def __virtual__():
     if not HAS_CRYPTOGRAPHY:
         return (False, "Could not load cryptography")
-    if not __opts__["features"].get("x509_v2", True):
-        return (False, "x509_v2 modules were explicitly disabled in `features:x509_v2`")
     return __virtualname__
 
 
@@ -257,7 +261,7 @@ def certificate_managed(
     days_remaining
         The certificate will be recreated once the remaining certificate validity
         period is less than this number of days.
-        Defaults to ``90`` (until v3009) or ``7`` (from v3009 onwards).
+        Defaults to ``7``.
 
     ca_server
         Request a remotely signed certificate from ca_server. For this to
@@ -373,7 +377,7 @@ def certificate_managed(
     days_valid
         If ``not_after`` is unspecified, the number of days from the time of issuance
         the certificate should be valid for.
-        Defaults to ``365`` (until v3009) or ``30`` (from v3009 onwards).
+        Defaults to ``30``.
 
     pkcs12_passphrase
         When encoding a certificate as ``pkcs12``, encrypt it with this passphrase.
@@ -662,7 +666,7 @@ def crl_managed(
     days_remaining
         The certificate revocation list will be recreated once the remaining
         CRL validity period is less than this number of days.
-        Defaults to ``30`` (until v3009) or ``3`` (from v3009 onwards).
+        Defaults to ``3``.
         Set to 0 to disable automatic renewal without anything changing.
 
     signing_cert
@@ -676,7 +680,7 @@ def crl_managed(
 
     days_valid
         The number of days that the CRL should be valid for. This sets the ``Next Update``
-        field in the CRL. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
+        field in the CRL. Defaults to ``7``.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:

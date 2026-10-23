@@ -1,6 +1,7 @@
 import base64
 import pathlib
 import shutil
+from datetime import timedelta
 
 import pytest
 
@@ -2571,6 +2572,33 @@ def test_pem_managed_newline_fix_no_changes(x509, ca_cert, tmp_path):
     assert tgt.read_text() == ca_cert
 
 
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_certificate_managed_defaults(
+    x509, cert_args, rsa_privkey, monkeypatch, raise_deprecations
+):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    cert_args["private_key"] = rsa_privkey
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
+    cert = _get_cert(cert_args["name"])
+    assert cert.not_valid_after_utc - cert.not_valid_before_utc == timedelta(days=30)
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
+    assert not ret.changes
+
+
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_crl_managed_defaults(x509, crl_args, monkeypatch, raise_deprecations):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is True
+    crl = _get_crl(crl_args["name"])
+    assert crl.next_update_utc - crl.last_update_utc == timedelta(days=7)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is True
+    assert not ret.changes
+
+
 # Removed-in-3009.0 (Potassium) kwargs and signing-policy aliases.
 # The deprecation warnings for these were emitted through 3007.x and
 # 3008.x; the compat shims were dropped in 3009.0, so each of the
@@ -2656,6 +2684,27 @@ def test_crl_managed_rejects_text_kwarg(x509, crl_args):
 def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
     revoked = [
         {f"key_{i}": [{"serial_number": rev["serial_number"]}]}
+        for i, rev in enumerate(crl_revoked)
+    ]
+    crl_args["revoked"] = revoked
+    crl_args["days_remaining"] = 3
+    crl_args["days_valid"] = 7
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "flat list of" in ret.comment
+
+
+@pytest.mark.usefixtures("existing_crl_rev")
+def test_crl_managed_rejects_old_style_revoked_for_change_detection(
+    x509, crl_args, crl_revoked
+):
+    revoked = [
+        {
+            f"key_{i}": [
+                {"serial_number": rev["serial_number"]},
+                {"extensions": rev["extensions"]},
+            ]
+        }
         for i, rev in enumerate(crl_revoked)
     ]
     crl_args["revoked"] = revoked

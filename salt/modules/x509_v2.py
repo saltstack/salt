@@ -126,8 +126,15 @@ or compound matcher (for the latter, see the notes above).
       with the items taken from the signing policy having priority.
 
 
-Breaking changes versus the previous ``x509`` modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _x509-migration-3009:
+
+Migration from older x509 modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following changes were introduced by the cryptography-based
+``x509_v2`` modules, available since Salt 3006.0 and the default since
+Salt 3008.0:
+
 * The ``public_key`` parameter to ``x509.certificate_managed`` (and corresponding
   ``x509.create_certificate``) used to accept a private key.
   The new modules require an actual public key if this parameter is specified.
@@ -160,19 +167,76 @@ Breaking changes versus the previous ``x509`` modules
       ca_server:
         - match.compound_matches
 
-Note that when a ``ca_server`` is involved, both peers must use the updated module version.
+When using remote signing with ``ca_server``, both the requesting minion
+and the CA minion must use the ``x509_v2`` implementation.
 
-Revert to old modules
-~~~~~~~~~~~~~~~~~~~~~
-Until they are removed, you can still revert to the deprecated ``x509`` modules
-by setting the following minion configuration value:
+The remaining compatibility behavior was removed in Salt 3009:
 
-.. code-block:: yaml
+.. versionchanged:: 3009.0
 
-    # /etc/salt/minion.d/x509.conf
+    Removed compatibility with deprecated arguments, attribute and extension
+    names, and CRL entry formats. The announced validity and renewal defaults
+    now apply unconditionally.
 
-    features:
-      x509_v2: false
+The original M2Crypto-based execution and state modules have been removed.
+The cryptography-based ``x509_v2`` modules are now the only implementation
+of ``x509``. Remove ``features: {x509_v2: false}`` from minion configuration;
+it no longer selects the old implementation.
+
+These changes apply to the ``x509_v2`` execution and state modules, exposed as
+``x509``, and to the Salt SSH wrapper. Update requests, state declarations,
+and signing policies that use the removed forms:
+
+* Use ``digest`` instead of ``algorithm`` when creating certificates or CSRs.
+* Use ``keysize`` instead of ``bits`` when creating or managing private keys.
+* Remove obsolete arguments: ``text``, ``version``, and ``serial_bits`` for
+  certificates; ``text`` and ``version`` for CSRs; ``text`` for CRLs; and
+  ``cipher``, ``verbose``, and ``text`` for private keys. These arguments are
+  rejected instead of being ignored.
+* Remove ``asObj`` from calls to ``x509.get_public_key``. The function returns
+  a PEM-encoded public key.
+* Use canonical attribute names, such as ``CN`` instead of ``commonName`` and
+  ``O`` instead of ``organizationName``. Use canonical extension names, such
+  as ``basicConstraints`` instead of ``X509v3 Basic Constraints`` and
+  ``issuerAltName`` instead of the misspelled ``issuserAltName``. This also
+  applies to attributes and extensions in signing policies.
+* Specify revoked certificates as a simple list of dictionaries, rather than
+  a mapping containing a list of individual fields. Move the legacy
+  ``reason`` field into ``extensions:CRLReason``. For example:
+
+  .. code-block:: yaml
+
+      revoked:
+        - certificate: /etc/pki/certs/revoked.crt
+          extensions:
+            CRLReason: keyCompromise
+
+The default validity and renewal periods have changed:
+
+.. list-table:: Default periods in days
+   :header-rows: 1
+
+   * - Parameter
+     - Before Salt 3009
+     - Salt 3009
+   * - Certificate ``days_valid``
+     - 365
+     - 30
+   * - Certificate state ``days_remaining``
+     - 90
+     - 7
+   * - CRL ``days_valid``
+     - 100
+     - 7
+   * - CRL state ``days_remaining``
+     - 30
+     - 3
+
+Set these parameters explicitly if your deployment requires different
+periods. A certificate's explicit ``not_after`` takes precedence over
+``days_valid``. ``days_remaining`` controls when the corresponding state
+renews an existing certificate or CRL.
+
 
 .. _x509-setup:
 """
@@ -198,7 +262,6 @@ except ImportError:
 
 from collections import OrderedDict
 
-import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.stringutils
@@ -891,7 +954,7 @@ def create_crl(
 
     days_valid
         The number of days the CRL should be valid for. This sets the ``Next Update``
-        field. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
+        field. Defaults to ``7``.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:

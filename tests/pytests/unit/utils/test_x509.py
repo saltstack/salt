@@ -1975,3 +1975,23 @@ def test_build_crl_accounts_for_local_time_zone(ca_key, ca_cert):
         assert crl.last_update_utc == curr_time_utc
     except AttributeError:
         assert crl.last_update == curr_time_utc_naive
+
+
+@pytest.mark.parametrize(
+    "alias, canonical, value",
+    [
+        ("commonName", "CN", "policy-name"),
+        ("X509v3 Basic Constraints", "basicConstraints", "critical CA:FALSE"),
+    ],
+)
+def test_merge_signing_policy_rejects_legacy_policy_names(alias, canonical, value):
+    """Reject legacy names in the policy before merging them into a request."""
+    policy = {alias: value}
+    kwargs = {"CN": "request-name"}
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError,
+        match=f"Use the short name `{canonical}` instead",
+    ):
+        x509.merge_signing_policy(policy, kwargs)
+    assert policy == {alias: value}
+    assert kwargs == {"CN": "request-name"}

@@ -7,6 +7,12 @@ Manage X.509 certificates
 General configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
 
+.. versionchanged:: 3009.0
+
+    Deprecated arguments and legacy X.509 input formats are no longer
+    accepted. See :ref:`x509-migration-3009` for replacements and changes
+    to the default validity and renewal periods.
+
 .. note::
 
     Compound matching allowed callers is **not supported** with salt-ssh
