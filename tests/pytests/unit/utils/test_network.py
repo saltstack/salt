@@ -1,6 +1,7 @@
 import logging
 import socket
 import textwrap
+import warnings
 
 import pytest
 
@@ -1754,3 +1755,51 @@ def test_cidr_merge_span(value, expected):
 )
 def test_slaac(value, mac, expected):
     assert network.slaac(value, mac) == expected
+
+
+def test_neighs_flatten_maps_mac_to_ip():
+    """
+    neighs_flatten collapses neighbour entry dicts into the legacy
+    ``{mac: ip}`` mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.2", "mac": "00:00:5e:00:53:02", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {
+        "00:00:5e:00:53:01": "203.0.113.1",
+        "00:00:5e:00:53:02": "203.0.113.2",
+    }
+
+
+def test_neighs_flatten_last_wins_on_duplicate_mac():
+    """
+    When several entries share a MAC address the last one parsed wins,
+    matching the historical lossy behaviour of the flat mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.9", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {"00:00:5e:00:53:01": "203.0.113.9"}
+
+
+def test_neigh_expand_warning_returns_expand_when_set():
+    """
+    neigh_expand_warning returns an explicit expand value unchanged and does
+    not emit a deprecation warning.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert network.neigh_expand_warning("network.arp", True) is True
+        assert network.neigh_expand_warning("network.arp", False) is False
+
+
+def test_neigh_expand_warning_none_warns_and_returns_false():
+    """
+    When expand is not supplied, neigh_expand_warning emits the deprecation
+    warning and falls back to the legacy (False) shape.
+    """
+    with pytest.warns(DeprecationWarning, match="network.arp"):
+        result = network.neigh_expand_warning("network.arp", None)
+    assert result is False

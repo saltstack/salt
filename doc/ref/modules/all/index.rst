@@ -238,7 +238,6 @@ execution modules
     useradd
     vagrant
     virtualenv_mod
-    vsphere
     webutil
     win_appx
     win_auditpol

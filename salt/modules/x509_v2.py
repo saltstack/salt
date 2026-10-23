@@ -572,7 +572,20 @@ def create_certificate(
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
     """
-    x509util.validate_cert_kwargs(kwargs)
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`. `text`, `version`, and `serial_bits` were ignored kwargs
+    # removed in the same release.
+    for removed in ("algorithm", "text", "version", "serial_bits"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
+            )
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+
+    if "days_valid" not in kwargs and "not_after" not in kwargs:
+        # Default changed from 365 to 30 in 3009.0 (Potassium).
+        kwargs["days_valid"] = 30
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -1000,6 +1013,8 @@ def create_crl(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
+    # `text` was ignored (compat with the pre-x509_v2 module). Removed in
+    # 3009.0 (Potassium); unknown kwargs are rejected.
     if kwargs:
         unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
         if unknown:
@@ -1008,9 +1023,26 @@ def create_crl(
             )
 
     if days_valid is None:
+        # Default changed from 100 to 7 in 3009.0 (Potassium).
         days_valid = 7
 
-    x509util.validate_revoked(revoked)
+    # ``revoked`` must be a flat list of dicts and must spell the revocation
+    # reason via ``extensions:CRLReason``. The dict-of-key-to-list wrapper
+    # and the top-level ``reason`` key were accepted (with a deprecation
+    # warning) through 3008.x; both were removed in 3009.0 (Potassium).
+    for rev in revoked:
+        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
+            raise SaltInvocationError(
+                "Revoked certificates must be specified as a flat list of "
+                "dicts. The {<key>: [<dict>, ...]} wrapper is no longer "
+                "accepted (removed in 3009.0)."
+            )
+        if "reason" in rev:
+            raise SaltInvocationError(
+                "The top-level `reason` key for revoked certificates is no "
+                "longer accepted (removed in 3009.0). Specify the reason "
+                "via `extensions:CRLReason` instead."
+            )
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1150,7 +1182,16 @@ def create_csr(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    x509util.validate_cert_kwargs(kwargs)
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`. `text` and `version` were ignored kwargs removed in the
+    # same release.
+    for removed in ("algorithm", "text", "version"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
+            )
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1285,6 +1326,9 @@ def create_private_key(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
+    # `bits` was deprecated in 3007.0 and removed in 3009.0 (Potassium); use
+    # `keysize`. `cipher`, `verbose`, and `text` were ignored kwargs removed
+    # in the same release.
     unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
     if unknown:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
@@ -1599,6 +1643,7 @@ def get_public_key(key, passphrase=None):
     passphrase
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
+    # `asObj` was deprecated in 3007.0 and removed in 3009.0 (Potassium).
     try:
         return x509util.to_pem(x509util.load_pubkey(key)).decode()
     except (CommandExecutionError, SaltInvocationError):
@@ -1675,7 +1720,26 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    x509util.validate_cert_kwargs(policy)
+    # Long-form name-attribute and extension aliases (e.g. ``commonName``
+    # for ``CN``, ``X509v3 Basic Constraints`` for ``basicConstraints``)
+    # were accepted with a deprecation warning through 3008.x and removed
+    # in 3009.0 (Potassium). Signing policies must use short names.
+    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in policy:
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form name "
+                    f"attribute `{long_name}` which was removed in 3009.0."
+                    f" Use the short name `{name}` instead."
+                )
+    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
+        for long_name in long_names:
+            if long_name in policy:
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form extension "
+                    f"`{long_name}` which was removed in 3009.0. Use the "
+                    f"short name `{extname}` instead."
+                )
     return policy
 
 

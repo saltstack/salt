@@ -31,7 +31,6 @@ from datetime import datetime
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
-import salt.utils.versions
 import salt.utils.win_reg
 import salt.utils.win_runas
 import salt.utils.winapi
@@ -465,23 +464,6 @@ def delete(name, purge=False, force=False):
         return exc.strerror
 
     return True
-
-
-def getUserSid(username):
-    """
-    Deprecated function. Please use get_user_sid instead
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' user.get_user_sid jsnuffy
-    """
-    salt.utils.versions.warn_until(
-        version=3009,
-        message="'getUserSid' is being deprecated. Please use get_user_sid instead",
-    )
-    return get_user_sid(username)
 
 
 def get_user_sid(username):

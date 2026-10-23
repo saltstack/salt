@@ -400,13 +400,22 @@ def certificate_managed(
         :py:func:`x509.create_certificate <salt.modules.x509_v2.create_certificate>`
         for an overview.
     """
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`.
+    if "algorithm" in kwargs:
+        raise SaltInvocationError(
+            "Keyword argument `algorithm` was removed in 3009.0. "
+            "Use `digest` instead."
+        )
     if days_valid is None and not_after is None:
+        # Default changed from 365 to 30 in 3009.0 (Potassium).
         days_valid = 30
 
     if days_remaining is None:
+        # Default changed from 90 to 7 in 3009.0 (Potassium).
         days_remaining = 7
 
-    x509util.validate_cert_kwargs(kwargs)
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     ret = {
         "name": name,
@@ -715,13 +724,38 @@ def crl_managed(
             - extensions:
                 cRLNumber: auto
     """
+    # `text` was ignored (compat with the pre-x509_v2 module). Removed in
+    # 3009.0 (Potassium).
+    if "text" in kwargs:
+        raise SaltInvocationError(
+            "Keyword argument `text` was removed in 3009.0. Remove it from the call."
+        )
+
     if days_valid is None:
+        # Default changed from 100 to 7 in 3009.0 (Potassium).
         days_valid = 7
 
     if days_remaining is None:
+        # Default changed from 30 to 3 in 3009.0 (Potassium).
         days_remaining = 3
 
-    x509util.validate_revoked(revoked)
+    # ``revoked`` must be a flat list of dicts and must spell the revocation
+    # reason via ``extensions:CRLReason``. The dict-of-key-to-list wrapper
+    # and the top-level ``reason`` key were accepted (with a deprecation
+    # warning) through 3008.x; both were removed in 3009.0 (Potassium).
+    for rev in revoked:
+        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
+            raise SaltInvocationError(
+                "Revoked certificates must be specified as a flat list of "
+                "dicts. The {<key>: [<dict>, ...]} wrapper is no longer "
+                "accepted (removed in 3009.0)."
+            )
+        if "reason" in rev:
+            raise SaltInvocationError(
+                "The top-level `reason` key for revoked certificates is no "
+                "longer accepted (removed in 3009.0). Specify the reason "
+                "via `extensions:CRLReason` instead."
+            )
 
     ret = {
         "name": name,
@@ -957,7 +991,14 @@ def csr_managed(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    x509util.validate_cert_kwargs(kwargs)
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`.
+    if "algorithm" in kwargs:
+        raise SaltInvocationError(
+            "Keyword argument `algorithm` was removed in 3009.0. "
+            "Use `digest` instead."
+        )
+    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     ret = {
         "name": name,
@@ -1214,6 +1255,16 @@ def private_key_managed(
               - x509: /etc/pki/www.crt
         {%- endif %}
     """
+    # `bits` was deprecated in 3007.0 and removed in 3009.0 (Potassium); use
+    # `keysize`. `cipher`, `verbose`, and `text` were ignored kwargs removed
+    # in the same release.
+    for removed in ("bits", "cipher", "verbose", "text"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `keysize` instead.' if removed == 'bits' else 'Remove it from the call.'}"
+            )
+
     ret = {
         "name": name,
         "changes": {},

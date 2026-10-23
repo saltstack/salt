@@ -88,15 +88,6 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
     with subtests.test(
         "We should be able to create an empty directory and set values in it"
     ):
-        if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode):
-            expected = {
-                "name": f"{prefix}/2",
-                "comment": "New directory created",
-                "result": True,
-                "changes": {f"{prefix}/2": "Created"},
-            }
-            assert etcd_state.directory(f"{prefix}/2", profile=profile_name) == expected
-
         expected = {
             "name": f"{prefix}/2/3",
             "comment": "New key created",
@@ -122,8 +113,7 @@ def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
     """
     Test the correct response when the profile is missing and we can't connect
     """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
-        # Only need to run this once
+    if etcd_port != 2379:
         with subtests.test("Test no profile and bad connection in set_"):
             ret = etcd_state.set_(f"{prefix}/1", "one")
             assert not ret["result"]
