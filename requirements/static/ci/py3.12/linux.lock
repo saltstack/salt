@@ -596,10 +596,6 @@ six==1.16.0
     #   rfc3339-validator
     #   transitions
     #   vcert
-slack-bolt==1.18.0
-    # via -r requirements/static/ci/linux.txt
-slack-sdk==3.21.3
-    # via slack-bolt
 smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.12/linux.lock
