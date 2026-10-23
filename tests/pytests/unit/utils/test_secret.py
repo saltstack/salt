@@ -468,7 +468,8 @@ def test_no_log_mask_does_not_depend_on_pillar_mask_output():
 )
 def test_repr_flag_does_not_disable_output_safety_net(enabled, context, value):
     wrapped = secret.hide(value, mask_repr=enabled)
-    assert type(wrapped) in (secret.MaskedDict, secret.MaskedList)
+    assert isinstance(wrapped, (secret.MaskedDict, secret.MaskedList))
+    assert type(wrapped)._repr_masked is enabled
     token = secret.mask_pillar.set(context)
     try:
         for formatted in (repr(wrapped), str(wrapped)):
