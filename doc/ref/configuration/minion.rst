@@ -2919,8 +2919,9 @@ containers are wrapped for display masking. An explicit call to
 ``salt.utils.secret.hide()`` still wraps and masks its input regardless of this
 option.
 
-This option does **not** change ``no_log``: a state with ``no_log: True``
-still has its ``name``, ``comment`` and ``changes`` redacted.
+This option does **not** change ``no_log``. It is an explicit per-state
+setting rather than pillar masking, so a state with ``no_log: True`` still has
+its ``name``, ``comment`` and ``changes`` redacted.
 
 .. code-block:: yaml
 
