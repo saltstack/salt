@@ -253,9 +253,7 @@ def test_pillar_get_returns_real_values_by_default():
 
 
 def test_unmasked_results_remove_nested_wrappers_before_output():
-    compiled = secret.hide(
-        {"nested": {"children": [{"password": "hunter2"}]}}, mask_repr=False
-    )
+    compiled = secret.hide({"nested": {"children": [{"password": "hunter2"}]}})
     pillar_obj = MagicMock()
     pillar_obj.compile_pillar.return_value = compiled
     grains = MagicMock()
