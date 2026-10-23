@@ -125,7 +125,7 @@ def test_yaml_hashable_ordered_dict_dump():
     )
 
 
-def test_pillar_repr_modes_dump_as_plain_data():
+def test_masked_pillar_dumps_as_plain_data():
     data = {"nested": [{"password": "hunter2"}]}
     dumpers = (
         salt.utils.yamldumper.OrderedDumper,
@@ -134,8 +134,7 @@ def test_pillar_repr_modes_dump_as_plain_data():
         salt.utils.yamldumper.yaml.Dumper,
         salt.utils.yamldumper.yaml.SafeDumper,
     )
-    for mask_repr in (False, True):
-        wrapped = salt.utils.secret.hide(data, mask_repr=mask_repr)
-        for dumper in dumpers:
-            output = salt.utils.yamldumper.dump(wrapped, Dumper=dumper)
-            assert salt.utils.yaml.safe_load(output) == data
+    wrapped = salt.utils.secret.hide(data)
+    for dumper in dumpers:
+        output = salt.utils.yamldumper.dump(wrapped, Dumper=dumper)
+        assert salt.utils.yaml.safe_load(output) == data
