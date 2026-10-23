@@ -908,13 +908,23 @@ class PoolRoutingChannel:
             pool_opts["pool_name"] = pool_name
             # Disable worker pools for internal routing to avoid circular dependency
             pool_opts["worker_pools_enabled"] = False
+            # The router -> MWorker hop is a local IPC (unix socket or loopback
+            # TCP) link.  It must not inherit the external ``ssl`` settings:
+            # the RequestClient side never wraps IPC sockets in TLS, so a
+            # TLS-wrapped pool RequestServer fails every request with
+            # ``WRONG_VERSION_NUMBER`` and no minion can get past _auth.
+            pool_opts["ssl"] = None
 
             # Configure IPC for this pool
             if pool_opts.get("ipc_mode") == "tcp":
-                # TCP IPC mode: use unique port per pool
+                # TCP IPC mode: use unique port per pool.  The router connects
+                # to 127.0.0.1 (see post_fork), so bind there too: without TLS
+                # this endpoint must never be reachable on ``interface``.
                 base_port = pool_opts.get("tcp_master_workers", 4515)
                 port_offset = zlib.adler32(pool_name.encode()) % 1000
                 pool_opts["ret_port"] = base_port + port_offset
+                pool_opts["interface"] = "127.0.0.1"
+                pool_opts["ipv6"] = False
                 log.info(
                     "Pool '%s' RequestServer using TCP IPC on port %d",
                     pool_name,
@@ -1075,6 +1085,8 @@ class PoolRoutingChannel:
             pool_opts["pool_name"] = pool_name
             # Disable worker pools for internal routing to avoid circular dependency
             pool_opts["worker_pools_enabled"] = False
+            # Local IPC hop to the pool RequestServer: plaintext, see pre_fork.
+            pool_opts["ssl"] = None
 
             if pool_opts.get("ipc_mode") == "tcp":
                 # TCP IPC: connect to pool's port
@@ -1478,10 +1490,16 @@ class PubServerChannel:
 
     def __setstate__(self, state):
         self.opts = state["opts"]
-        self.state = state["presence_events"]
+        self.presence_events = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        # ``presence_callback`` (TCP transport) verifies each subscriber's
+        # token with ``aes_funcs``.  When the publish daemon is started with
+        # the ``spawn``/``forkserver`` start method this object travels
+        # through pickle, so it has to be rebuilt here or every subscriber is
+        # dropped with ``AttributeError`` and no job is ever delivered.
+        self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
