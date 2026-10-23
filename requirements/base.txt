@@ -59,7 +59,7 @@ msgpack>=1.2.0; python_version >= '3.10'
 # `/` parameter syntax which is a SyntaxError on Python <3.8. Keep at
 # 24.0 to preserve salt-ssh compatibility against legacy target
 # Pythons; salt 3006.x still promises this matrix.
-packaging==24.0
+packaging>=24.0
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x
