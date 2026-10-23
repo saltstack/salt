@@ -5206,10 +5206,11 @@ state.
     ``pillar.item`` and ``pillar.ext`` too. Before, the default was ``True``
     and the option only changed the default of ``pillar.items``.
 
-When ``False``, ``repr()`` and ``str()`` of received pillar containers show real
-values, and the functions above return plain data. Pillar containers remain
-wrapped so the general output safety net still redacts them, independently of
-this option and the render context.
+When ``False``, received pillar containers are left as plain dicts and lists,
+so ``repr()`` and ``str()`` show real values. When ``True``, received pillar
+containers are wrapped for display masking. An explicit call to
+``salt.utils.secret.hide()`` still wraps and masks its input regardless of this
+option.
 
 This option does **not** change ``no_log``: a state with ``no_log: True``
 still has its ``name``, ``comment`` and ``changes`` redacted.
