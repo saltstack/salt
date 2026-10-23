@@ -7,6 +7,13 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3006.29 (2026-10-23)
+
+
+### Security
+
+- Upgraded certifi to 2026.10.19 and the packaged pip to 26.2.2 for the eMudhra/emSign CA incident (intermediates found to have critically weak EC private keys). [#70465](https://github.com/saltstack/salt/issues/70465)
+
 ## 3006.28 (2026-09-30)
 
 
