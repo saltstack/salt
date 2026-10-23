@@ -658,15 +658,6 @@ class PublishClient(salt.transport.base.PublishClient):
         self.close()
 
 
-class TCPPubClient(PublishClient):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPPubClient has been deprecated, use PublishClient instead.",
-        )
-        super().__init__(*args, **kwargs)
-
-
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
     """
     Tornado based TCP Request/Reply Server
@@ -885,15 +876,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         return None
 
 
-class TCPReqServer(RequestServer):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPReqServer has been deprecated, use RequestServer instead.",
-        )
-        super().__init__(*args, **kwargs)
-
-
 class SaltMessageServer(tornado.tcpserver.TCPServer):
     """
     Raw TCP server which will receive all of the TCP streams and re-assemble
@@ -1072,10 +1054,6 @@ class MessageClient:
         source_ip=None,
         source_port=None,
     ):
-        salt.utils.versions.warn_until(
-            3009,
-            "MessageClient has been deprecated and will be removed.",
-        )
         self.opts = opts
         self.host = host
         self.port = port
@@ -2593,15 +2571,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # pylint: enable=W1701
 
 
-class TCPPublishServer(PublishServer):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPPublishServer has been deprecated, use PublishServer instead.",
-        )
-        super().__init__(*args, **kwargs)
-
-
 class _TCPPubServerPublisher:
     """
     Client half of the local publish channel used for the Salt event bus.
@@ -3125,12 +3094,3 @@ class RequestClient(salt.transport.base.RequestClient):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-
-class TCPReqClient(RequestClient):
-    def __init__(self, *args, **kwargs):  # pylint: disable=W0231
-        salt.utils.versions.warn_until(
-            3009,
-            "TCPReqClient has been deprecated, use RequestClient instead.",
-        )
-        super().__init__(*args, **kwargs)

@@ -20,7 +20,6 @@ from datetime import datetime
 
 import salt.utils.files
 import salt.utils.platform
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
@@ -46,7 +45,6 @@ def write(
     key_separator=None,
     dict_merge=False,
     array_add=False,
-    type=None,
 ):
     """
     Write a default to the system
@@ -97,11 +95,6 @@ def write(
 
         Useful when writing values such as dates or binary data.
 
-    type
-        Deprecated! Use vtype instead
-        type collides with Python's built-in type() function
-        This parameter will be removed in 3009
-
     user
         The user to write the defaults to
 
@@ -124,18 +117,6 @@ def write(
         IndexError: When the key is not a valid array index
 
     """
-    if type is not None:
-        salt.utils.versions.warn_until(
-            3009,
-            "The 'type' argument in macdefaults.write is deprecated. Use 'vtype' instead.",
-        )
-        if vtype is None:
-            vtype = type
-        else:
-            log.warning(
-                "The 'vtype' argument in macdefaults.write takes precedence over 'type'."
-            )
-
     plist = _load_plist(domain, user=user) or {}
     keys = [key] if key_separator is None else key.split(key_separator)
     last_key = keys[-1]
