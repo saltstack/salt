@@ -159,9 +159,7 @@ opentelemetry-sdk==1.42.1
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.63b1
     # via opentelemetry-sdk
-packaging==24.0 ; python_full_version >= '3.11'
-    # via -r requirements/base.txt
-packaging==26.2 ; python_full_version < '3.11'
+packaging==26.2
     # via -r requirements/base.txt
 platformdirs==4.5.1
     # via
