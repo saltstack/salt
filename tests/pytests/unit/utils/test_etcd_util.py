@@ -22,15 +22,6 @@ def _skip_without_etcd3():
         pytest.skip("No etcd3 library installed")
 
 
-def test_get_conn_rejects_require_v2():
-    """
-    ``etcd.require_v2: True`` was supported until 3009.0. It must now raise
-    rather than silently fall back to v3.
-    """
-    with pytest.raises(salt.exceptions.CommandExecutionError, match="3009.0"):
-        etcd_util.get_conn({"etcd.require_v2": True})
-
-
 def test_read(client_name):
     """
     Test to make sure we interact with etcd correctly
@@ -327,3 +318,38 @@ def test_expand(client_name):
         }
 
         assert client._expand(some_data) == result
+
+
+def test_get_conn_defaults_to_v3():
+    with patch.object(etcd_util, "EtcdClientV3") as client_class:
+        assert etcd_util.get_conn({}) is client_class.return_value
+        client_class.assert_called_once_with({}, has_etcd_opts=True)
+
+
+def test_get_conn_accepts_explicit_v3_profile():
+    profile = {"etcd.require_v2": False, "etcd.host": "etcd.example"}
+    with patch.object(etcd_util, "EtcdClientV3") as client_class:
+        client = etcd_util.get_conn({"cluster": profile}, profile="cluster")
+        assert client is client_class.return_value
+        client_class.assert_called_once_with(profile, has_etcd_opts=True)
+
+
+@pytest.mark.parametrize("profile", [None, "cluster"])
+def test_get_conn_rejects_v2(profile):
+    config = {"etcd.require_v2": True}
+    opts = config if profile is None else {profile: config}
+    with patch.object(etcd_util, "EtcdClientV3") as client_class:
+        with pytest.raises(
+            salt.exceptions.CommandExecutionError, match="removed in 3009.0"
+        ):
+            etcd_util.get_conn(opts, profile=profile)
+        client_class.assert_not_called()
+
+
+def test_v3_constructor_defaults_to_v3():
+    with patch.object(etcd_util, "HAS_ETCD_V3", True), patch.object(
+        etcd_util, "etcd3", create=True
+    ) as library:
+        client = etcd_util.EtcdClientV3({})
+        assert client.client is library.Client.return_value
+        library.Client.assert_called_once_with(host="127.0.0.1", port=2379, verify=None)

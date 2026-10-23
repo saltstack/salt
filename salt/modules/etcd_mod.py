@@ -1,7 +1,7 @@
 """
 Execution module to work with etcd
 
-:depends:  - python-etcd or etcd3-py
+:depends:  - etcd3-py
 
 Configuration
 -------------
@@ -88,7 +88,7 @@ __func_alias__ = {"get_": "get", "set_": "set", "rm_": "rm", "ls_": "ls"}
 
 def __virtual__():
     """
-    Only return if python-etcd is installed
+    Only return if etcd3-py is installed
     """
     if salt.utils.etcd_util.HAS_ETCD_V3:
         return __virtualname__

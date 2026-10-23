@@ -56,9 +56,7 @@ def confirm_container_started(timeout_at, container):
                     # etcd >= v3
                     break
             except ValueError:
-                # etcd v2
-                if "etcd 2." in response.text:
-                    break
+                pass
         except requests.exceptions.ConnectionError:
             pass
         time.sleep(sleeptime)

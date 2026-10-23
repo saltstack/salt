@@ -50,8 +50,8 @@ the name of a profile to be used.
 
 .. code-block:: python
 
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.get_conn(__opts__, profile='my_etcd_config')
+    import salt.utils.etcd_util
+    client = salt.utils.etcd_util.get_conn(__opts__, profile='my_etcd_config')
 
 You may also use the newer syntax and bypass the generator function.
 
@@ -60,8 +60,8 @@ V3 API
 
 .. code-block:: python
 
-    import salt.utils.etcd_utils
-    client = salt.utils.etcd_utils.EtcdClientV3(__opts__, profile='my_etcd_config')
+    import salt.utils.etcd_util
+    client = salt.utils.etcd_util.EtcdClientV3(__opts__, profile='my_etcd_config')
 
 It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
