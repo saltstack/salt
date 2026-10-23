@@ -238,7 +238,6 @@ execution modules
     useradd
     vagrant
     virtualenv_mod
-    vsphere
     webutil
     win_appx
     win_auditpol
@@ -280,7 +279,6 @@ execution modules
     win_wua
     win_wusa
     winrepo
-    x509
     x509_v2
     xfs
     xml

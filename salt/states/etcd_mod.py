@@ -29,8 +29,11 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
-Only etcd API v3 is supported. Explicitly requesting API v2 with
-``etcd.require_v2: True`` raises an error.
+.. versionchanged:: 3009.0
+
+    The etcd v2 API was removed. Only the v3 API is supported; the
+    ``etcd.require_v2`` option is no longer accepted and setting it to
+    ``True`` raises a ``CommandExecutionError``.
 
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
@@ -160,10 +163,7 @@ __func_alias__ = {
 try:
     import salt.utils.etcd_util  # pylint: disable=W0611
 
-    if salt.utils.etcd_util.HAS_ETCD_V3:
-        HAS_LIBS = True
-    else:
-        HAS_LIBS = False
+    HAS_LIBS = salt.utils.etcd_util.HAS_ETCD_V3
 except ImportError:
     HAS_LIBS = False
 

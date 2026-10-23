@@ -55,12 +55,6 @@ salt/modules/ansiblegate.py:
   - pytests.functional.modules.test_ansiblegate
   - pytests.unit.modules.test_ansiblegate
 
-salt/modules/*apache.py:
-  - pytests.unit.states.apache.test_apache
-  - pytests.unit.states.apache.test_conf
-  - pytests.unit.states.apache.test_module
-  - pytests.unit.states.apache.test_site
-
 salt/platform/win.py:
   - pytests.unit.platform.test_win
 
@@ -181,6 +175,10 @@ salt/utils/decorators/*:
 salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
+
+salt/utils/metrics.py:
+  - pytests.functional.utils.test_metrics_otlp_instances
+  - pytests.unit.utils.test_metrics
 
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher

@@ -19,12 +19,11 @@ may be passed in. The following configurations are both valid:
     etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
     etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
     etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
-    etcd.require_v2: False # API v2 is no longer supported
-    etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
-    etcd.encode_values: True # Optional (v3 ONLY); defaults to True
-    etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
-    etcd.raw_values: False # Optional (v3 ONLY); defaults to False
-    etcd.unicode_errors: "surrogateescape" # Optional (v3 ONLY); defaults to "surrogateescape"
+    etcd.encode_keys: False # Optional; defaults to False
+    etcd.encode_values: True # Optional; defaults to True
+    etcd.raw_keys: False # Optional; defaults to False
+    etcd.raw_values: False # Optional; defaults to False
+    etcd.unicode_errors: "surrogateescape" # Optional; defaults to "surrogateescape"
 
     # One or more profiles defined
     my_etcd_config:
@@ -35,12 +34,11 @@ may be passed in. The following configurations are both valid:
       etcd.ca: /path/to/your/ca_cert/ca.pem # Optional
       etcd.client_key: /path/to/your/client_key/client-key.pem # Optional; requires etcd.ca and etcd.client_cert to be set
       etcd.client_cert: /path/to/your/client_cert/client.pem # Optional; requires etcd.ca and etcd.client_key to be set
-      etcd.require_v2: False # API v2 is no longer supported
-      etcd.encode_keys: False # Optional (v3 ONLY); defaults to False
-      etcd.encode_values: True # Optional (v3 ONLY); defaults to True
-      etcd.raw_keys: False # Optional (v3 ONLY); defaults to False
-      etcd.raw_values: False # Optional (v3 ONLY); defaults to False
-      etcd.unicode_errors: "surrogateescape" # Optional (v3 ONLY); defaults to "surrogateescape"
+      etcd.encode_keys: False # Optional; defaults to False
+      etcd.encode_values: True # Optional; defaults to True
+      etcd.raw_keys: False # Optional; defaults to False
+      etcd.raw_values: False # Optional; defaults to False
+      etcd.unicode_errors: "surrogateescape" # Optional; defaults to "surrogateescape"
 
 Encoding keys for etcd v3 allows a differentiation within etcd between byte and string keys.
 It is worth noting that if you chose to encode keys, due to the way encoding pre-etcd with msgpack works,
@@ -68,12 +66,17 @@ V3 API
 It should be noted that some usages of etcd require a profile to be specified,
 rather than top-level configurations. This being the case, it is better to
 always use a named configuration profile, as shown above.
+
+.. versionchanged:: 3009.0
+
+    The etcd v2 API client (``EtcdClient``) and the ``etcd.require_v2`` option
+    were removed. ``get_conn`` now always returns an :class:`EtcdClientV3`.
 """
 
 import logging
 
+import salt.exceptions
 import salt.utils.msgpack
-import salt.utils.versions
 from salt.exceptions import SaltException
 
 try:
@@ -349,11 +352,6 @@ class EtcdClientV3(EtcdBase):
 
         super().__init__(opts, **kwargs)
 
-        if self.conf.get("etcd.require_v2", False):
-            raise IncompatibleEtcdRequirements(
-                "etcd API v2 support was removed in Salt 3009. Use etcd API v3."
-            )
-
         self.encode_keys = encode_keys or self.conf.get("etcd.encode_keys", False)
         self.encode_values = encode_values or self.conf.get("etcd.encode_values", True)
         self.raw_keys = raw_keys or self.conf.get("etcd.raw_keys", False)
@@ -405,14 +403,10 @@ class EtcdClientV3(EtcdBase):
         return kv
 
     def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
-        index = kwargs.pop("index", None)
-        if index is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The index kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use start_revision instead.",
+        if "index" in kwargs:
+            raise salt.exceptions.SaltInvocationError(
+                "The `index` kwarg was removed in 3009.0. Use `start_revision` instead."
             )
-            start_revision = index
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
 
@@ -450,22 +444,14 @@ class EtcdClientV3(EtcdBase):
         start_revision=None,
         **kwargs,
     ):
-        recursive = kwargs.pop("recursive", None)
-        wait_index = kwargs.pop("waitIndex", None)
-        if recursive is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The recursive kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use recurse instead.",
+        if "recursive" in kwargs:
+            raise salt.exceptions.SaltInvocationError(
+                "The `recursive` kwarg was removed in 3009.0. Use `recurse` instead."
             )
-            recurse = recursive
-        if wait_index is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The waitIndex kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use start_revision instead.",
+        if "waitIndex" in kwargs:
+            raise salt.exceptions.SaltInvocationError(
+                "The `waitIndex` kwarg was removed in 3009.0. Use `start_revision` instead."
             )
-            start_revision = wait_index
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
 
@@ -555,14 +541,10 @@ class EtcdClientV3(EtcdBase):
         return {path: ret}
 
     def delete(self, key, recurse=False, **kwargs):
-        recursive = kwargs.pop("recursive", None)
-        if recursive is not None:
-            salt.utils.versions.warn_until(
-                3009,
-                "The recursive kwarg has been deprecated, and will be removed "
-                "in the Argon release. Please use recurse instead.",
+        if "recursive" in kwargs:
+            raise salt.exceptions.SaltInvocationError(
+                "The `recursive` kwarg was removed in 3009.0. Use `recurse` instead."
             )
-            recurse = recursive
 
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
@@ -647,14 +629,13 @@ def get_conn(opts, profile=None, **kwargs):
 
     conf = _get_etcd_opts(opts, profile=profile)
 
-    if conf.get("etcd.require_v2", False):
-        raise IncompatibleEtcdRequirements(
-            "etcd API v2 support was removed in Salt 3009. Use etcd API v3."
+    if conf.get("etcd.require_v2") is True:
+        raise salt.exceptions.CommandExecutionError(
+            "etcd API v2 was removed in 3009.0. Set `etcd.require_v2: False` "
+            "or remove the key."
         )
-    client = EtcdClientV3(conf, has_etcd_opts=True, **kwargs)
-    log.debug("etcd_util will be attempting to use etcd API v3: etcd3-py")
 
-    return client
+    return EtcdClientV3(conf, has_etcd_opts=True, **kwargs)
 
 
 def tree(client, path):

@@ -6,15 +6,20 @@
 
 import pytest
 
+import salt.exceptions
 import salt.utils.etcd_util as etcd_util
 from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture(scope="module")
 def client_name():
+    return "etcd3.Client"
+
+
+@pytest.fixture(autouse=True)
+def _skip_without_etcd3():
     if not etcd_util.HAS_ETCD_V3:
         pytest.skip("No etcd3 library installed")
-    return "etcd3.Client"
 
 
 def test_read(client_name):
@@ -24,6 +29,7 @@ def test_read(client_name):
     with patch(client_name, autospec=True) as mock:
         etcd_client = mock.return_value
         client = etcd_util.get_conn({"etcd.encode_values": False})
+
         etcd_return = MagicMock(kvs=[MagicMock(value="salt")])
         etcd_client.range.return_value = etcd_return
         assert client.read("/salt") == etcd_return.kvs
@@ -40,6 +46,42 @@ def test_read(client_name):
 
             watcher_mock.watch_once.side_effect = Exception
             assert client.read("salt", True, True, 10, 5) is None
+
+
+def test_read_rejects_recursive_kwarg(client_name):
+    with patch(client_name, autospec=True):
+        client = etcd_util.get_conn({"etcd.encode_values": False})
+        with pytest.raises(
+            salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
+        ):
+            client.read("/salt", recursive=True)
+
+
+def test_read_rejects_waitindex_kwarg(client_name):
+    with patch(client_name, autospec=True):
+        client = etcd_util.get_conn({"etcd.encode_values": False})
+        with pytest.raises(
+            salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
+        ):
+            client.read("/salt", waitIndex=5)
+
+
+def test_watch_rejects_index_kwarg(client_name):
+    with patch(client_name, autospec=True):
+        client = etcd_util.get_conn({"etcd.encode_values": False})
+        with pytest.raises(
+            salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
+        ):
+            client.watch("/salt", index=5)
+
+
+def test_delete_rejects_recursive_kwarg(client_name):
+    with patch(client_name, autospec=True):
+        client = etcd_util.get_conn({"etcd.encode_values": False})
+        with pytest.raises(
+            salt.exceptions.SaltInvocationError, match="was removed in 3009.0"
+        ):
+            client.delete("/salt", recursive=True)
 
 
 def test_get(client_name):
@@ -112,7 +154,7 @@ def test_write(client_name):
 
 
 def test_flatten(client_name):
-    with patch(client_name, autospec=True) as mock:
+    with patch(client_name, autospec=True):
         client = etcd_util.get_conn({"etcd.encode_values": False})
         some_data = {
             "/x/y/a": "1",
@@ -152,7 +194,7 @@ def test_flatten(client_name):
 
 
 def test_update(client_name):
-    with patch(client_name, autospec=True) as mock:
+    with patch(client_name, autospec=True):
         client = etcd_util.get_conn({"etcd.encode_values": False})
         some_data = {
             "/x/y/a": "1",
@@ -187,6 +229,8 @@ def test_update(client_name):
                 return result.get(key, None)
 
             write_mock.side_effect = write_return
+            # v3 skips directory entries (they don't exist in v3), so we pop
+            # the directory entry from the expected result.
             result.pop("/test/d")
             assert client.update(some_data, path="/test") == result
             client._flatten.assert_called_with(some_data, "/test")
@@ -255,8 +299,7 @@ def test_watch(client_name):
 
 
 def test_expand(client_name):
-
-    with patch(client_name, autospec=True) as mock:
+    with patch(client_name, autospec=True):
         client = etcd_util.get_conn({"etcd.encode_values": False})
 
         some_data = {
@@ -297,7 +340,7 @@ def test_get_conn_rejects_v2(profile):
     opts = config if profile is None else {profile: config}
     with patch.object(etcd_util, "EtcdClientV3") as client_class:
         with pytest.raises(
-            etcd_util.IncompatibleEtcdRequirements, match="removed in Salt 3009"
+            salt.exceptions.CommandExecutionError, match="removed in 3009.0"
         ):
             etcd_util.get_conn(opts, profile=profile)
         client_class.assert_not_called()
@@ -310,14 +353,3 @@ def test_v3_constructor_defaults_to_v3():
         client = etcd_util.EtcdClientV3({})
         assert client.client is library.Client.return_value
         library.Client.assert_called_once_with(host="127.0.0.1", port=2379, verify=None)
-
-
-def test_v3_constructor_rejects_v2():
-    with patch.object(etcd_util, "HAS_ETCD_V3", True), patch.object(
-        etcd_util, "etcd3", create=True
-    ) as library:
-        with pytest.raises(
-            etcd_util.IncompatibleEtcdRequirements, match="removed in Salt 3009"
-        ):
-            etcd_util.EtcdClientV3({"etcd.require_v2": True})
-        library.Client.assert_not_called()

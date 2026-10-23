@@ -45,7 +45,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recurse=True)
 
 
-def test_etcd_client_creation(minion_opts, profile_name, etcd_version):
+def test_etcd_client_creation(minion_opts, profile_name):
     """
     Client creation using client classes, just need to assert no errors.
     """
@@ -82,9 +82,7 @@ def test_simple_operations(etcd_client, prefix):
     assert not etcd_client.get(f"{prefix}/mtg", recurse=True)
 
 
-def test_simple_operations_with_raw_keys_and_values(
-    minion_opts, profile_name, prefix, etcd_version
-):
+def test_simple_operations_with_raw_keys_and_values(minion_opts, profile_name, prefix):
     modified_opts = copy.deepcopy(minion_opts)
     modified_opts[profile_name]["etcd.raw_keys"] = True
     modified_opts[profile_name]["etcd.raw_values"] = True
@@ -135,7 +133,7 @@ def test_get(subtests, etcd_client, prefix):
         assert etcd_client.get(f"{prefix}/get-test/key2", recurse=True) == expected
 
 
-def test_read(subtests, etcd_client, prefix, etcd_version):
+def test_read(subtests, etcd_client, prefix):
     """
     Test that we are able to read and wait.
     """
@@ -300,6 +298,7 @@ def test_update(subtests, etcd_client, prefix):
             etcd_client.get(f"{prefix}/read-4", recurse=True)
             == updated[prefix]["read-4"]
         )
+
     with subtests.test("we should be able to prepend a path within update"):
         updated = {
             "1": "path updated one",
@@ -323,12 +322,14 @@ def test_write_file(subtests, etcd_client, prefix):
     ):
         assert etcd_client.write_file(f"{prefix}/write/key_1", "value_1") == "value_1"
         assert etcd_client.get(f"{prefix}/write/key_1") == "value_1"
+
     with subtests.test("we should be able to write a single value for an existent key"):
         assert (
             etcd_client.write_file(f"{prefix}/write/key_1", "new_value_1")
             == "new_value_1"
         )
         assert etcd_client.get(f"{prefix}/write/key_1") == "new_value_1"
+
     with subtests.test("we should be able to write a single value with a ttl"):
         assert (
             etcd_client.write_file(f"{prefix}/write/ttl_key", "new_value_2", ttl=5)
@@ -344,6 +345,7 @@ def test_ls(subtests, etcd_client, prefix):
     """
     with subtests.test("ls on a non-existent directory should return an empty dict"):
         assert not etcd_client.ls(f"{prefix}/ls")
+
     with subtests.test(
         "ls should list the top level keys and values at the given path"
     ):
@@ -364,13 +366,15 @@ def test_ls(subtests, etcd_client, prefix):
 
 
 @pytest.mark.parametrize("func", ("rm", "delete"))
-def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
+def test_rm_and_delete(subtests, etcd_client, prefix, func):
     """
     Ensure we can remove keys using rm
     """
     func = getattr(etcd_client, func)
+
     with subtests.test("removing a non-existent key should do nothing"):
         assert func(f"{prefix}/rm/key1") is None
+
     with subtests.test("we should be able to remove an existing key"):
         etcd_client.set(f"{prefix}/rm/key1", "value1")
         assert func(f"{prefix}/rm/key1")
@@ -391,6 +395,7 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
         assert func(f"{prefix}/rm/dir1", recurse=True)
         assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) is None
         assert etcd_client.get(f"{prefix}/rm/dir1/rm-1", recurse=True) is None
+
     with subtests.test("removing a directory without recursion should do nothing"):
         updated = {
             "dir1": {
@@ -408,12 +413,13 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func, etcd_version):
         assert etcd_client.get(f"{prefix}/rm/dir1/rm-1") == "value-1"
 
 
-def test_tree(subtests, etcd_client, prefix, etcd_version):
+def test_tree(subtests, etcd_client, prefix):
     """
     Tree should return a dictionary representing what is downstream of the prefix.
     """
     with subtests.test("the tree of a non-existent key should be None"):
         assert etcd_client.tree(prefix) is None
+
     with subtests.test("the tree of an file should be {key: value}"):
         etcd_client.set(f"{prefix}/1", "one")
         assert etcd_client.tree(f"{prefix}/1") == {"1": "one"}
@@ -425,6 +431,7 @@ def test_tree(subtests, etcd_client, prefix, etcd_version):
             "3": {"4": "three/four"},
         }
         assert etcd_client.tree(prefix) == expected
+
     with subtests.test("we should be able to recieve the tree of an outer directory"):
         etcd_client.set(f"{prefix}/5/6/7", "five/six/seven")
         expected = {
@@ -442,8 +449,10 @@ def test_watch(subtests, etcd_client, prefix):
         },
     }
     etcd_client.update(updated, path=f"{prefix}/watch")
+
     with subtests.test("watching an invalid key should timeout and return None"):
         assert etcd_client.watch(f"{prefix}/invalid", timeout=3) is None
+
     with subtests.test(
         "watching an valid key with no changes should timeout and return None"
     ):
