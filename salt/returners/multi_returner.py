@@ -69,16 +69,20 @@ def save_load(jid, clear_load, minions=None):
     """
     Write load to all returners in multi_returner
 
-    Loads whose ``cmd`` is ``_return`` are skipped for ``local_cache`` only,
-    so a minion return does not overwrite the master's dispatch-time load;
-    every other returner receives all loads.
+    Preserve an existing local_cache load when ``cmd`` is ``_return``;
+    save it if missing. Other returners always receive the load.
     """
+    returners = _mminion().returners
+    if not returners:
+        return
     for returner_ in __opts__[CONFIG_KEY]:
-        if returner_ == "local_cache":
-            cmd = clear_load.get("cmd")
-            if cmd == "_return":
-                continue
-        _mminion().returners[f"{returner_}.save_load"](jid, clear_load, minions)
+        if (
+            returner_ == "local_cache"
+            and clear_load.get("cmd") == "_return"
+            and returners[f"{returner_}.get_load"](jid)
+        ):
+            continue
+        returners[f"{returner_}.save_load"](jid, clear_load, minions)
 
 
 def save_minions(jid, minions, syndic_id=None):

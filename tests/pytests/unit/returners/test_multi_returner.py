@@ -4,6 +4,7 @@ Regression tests for multi_returner dispatch and real job-cache aggregation.
 
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -13,7 +14,8 @@ import salt.returners.multi_returner as multi_returner
 import salt.returners.salt_cache as salt_cache
 import salt.utils.files
 import salt.utils.jid
-from tests.support.mock import MagicMock, patch
+import salt.utils.job
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -54,7 +56,7 @@ def reset_mminion_cache():
 @pytest.fixture
 def mock_returners():
     """Only replace the loader container; tests supply its callable entries."""
-    returners = {}
+    returners: dict[str, Any] = {}
     with patch.object(
         multi_returner, "_mminion", return_value=SimpleNamespace(returners=returners)
     ):
@@ -82,7 +84,11 @@ def real_returners(mock_returners):
 
 
 @pytest.mark.parametrize("cmd", ["_return", "publish", None])
-def test_save_load_dispatches_and_forwards_minions(mock_returners, cmd):
+@pytest.mark.parametrize("existing", [{"fun": "test.ping"}, {}, None])
+@pytest.mark.parametrize("minions", [None, [], ["minion-1", "minion-2"]])
+def test_save_load_dispatches_and_forwards_minions(
+    mock_returners, cmd, existing, minions
+):
     local_save = MagicMock()
     other_save = MagicMock()
     mock_returners.update(
@@ -91,29 +97,75 @@ def test_save_load_dispatches_and_forwards_minions(mock_returners, cmd):
     load = {"jid": "20260622000000000010", "tgt": "*"}
     if cmd is not None:
         load["cmd"] = cmd
-    minions = ["minion-1", "minion-2"]
+    local_get = MagicMock(return_value=existing)
+    query = MagicMock(side_effect=AssertionError("unexpected backend/merged query"))
+    mock_returners.update(
+        {
+            "local_cache.get_load": local_get,
+            "salt_cache.get_load": query,
+            "multi_returner.get_load": query,
+        }
+    )
     with patch.dict(
         multi_returner.__opts__,
         {multi_returner.CONFIG_KEY: ["local_cache", "salt_cache"]},
     ):
         multi_returner.save_load(load["jid"], load, minions=minions)
     if cmd == "_return":
+        local_get.assert_called_once_with(load["jid"])
+    else:
+        local_get.assert_not_called()
+    if cmd == "_return" and existing:
         local_save.assert_not_called()
     else:
         local_save.assert_called_once_with(load["jid"], load, minions)
     other_save.assert_called_once_with(load["jid"], load, minions)
+    query.assert_not_called()
 
 
 def test_save_load_forwards_default_minions(mock_returners):
     save = MagicMock()
     mock_returners["salt_cache.save_load"] = save
+    query = MagicMock(side_effect=AssertionError("local_cache is not configured"))
+    mock_returners["local_cache.get_load"] = query
     load = {"cmd": "_return"}
     with patch.dict(
         multi_returner.__opts__,
-        {multi_returner.CONFIG_KEY: ["local_cache", "salt_cache"]},
+        {multi_returner.CONFIG_KEY: ["salt_cache"]},
     ):
         multi_returner.save_load("jid", load)
     save.assert_called_once_with("jid", load, None)
+    query.assert_not_called()
+
+
+@pytest.mark.parametrize("failure", [KeyError("get_load"), RuntimeError("get_load")])
+@pytest.mark.parametrize("local_first", [False, True])
+def test_save_load_read_failure_propagates_without_overwriting(
+    mock_returners, failure, local_first
+):
+    calls = MagicMock()
+    calls.get_load.side_effect = failure
+    mock_returners.update(
+        {
+            "local_cache.get_load": calls.get_load,
+            "local_cache.save_load": calls.local_save,
+            "salt_cache.save_load": calls.other_save,
+            "unsupported.save_load": calls.later_save,
+        }
+    )
+    members = (
+        ["local_cache", "salt_cache", "unsupported"]
+        if local_first
+        else ["salt_cache", "local_cache", "unsupported"]
+    )
+    load = {"cmd": "_return"}
+    with patch.dict(multi_returner.__opts__, {multi_returner.CONFIG_KEY: members}):
+        with pytest.raises(type(failure), match="get_load"):
+            multi_returner.save_load("jid", load)
+    expected = [] if local_first else [call.other_save("jid", load, None)]
+    assert calls.mock_calls == expected + [call.get_load("jid")]
+    calls.local_save.assert_not_called()
+    calls.later_save.assert_not_called()
 
 
 @pytest.mark.parametrize("count", [2, 3])
@@ -254,7 +306,9 @@ def test_load_reg_without_implementors(mock_returners):
     assert multi_returner.load_reg() is None
 
 
-def test_save_load_real_local_cache_not_overwritten_by_return_load(real_returners):
+def test_store_job_real_local_cache_not_overwritten_by_return_load(
+    real_returners, mock_returners
+):
     jid = "20260622000000000010"
     publish = {
         "jid": jid,
@@ -268,15 +322,37 @@ def test_save_load_real_local_cache_not_overwritten_by_return_load(real_returner
     multi_returner.save_load(jid, publish, minions=["minion-1"])
     return_load = {
         "jid": jid,
-        "cmd": "_return",
         "id": "minion-1",
         "return": "ok",
         "retcode": 0,
         "success": True,
     }
-    multi_returner.save_load(jid, return_load)
+    return_load["cmd"] = "_return"
+    for function in ("save_load", "get_load", "returner"):
+        mock_returners[f"multi_returner.{function}"] = getattr(multi_returner, function)
+    mock_returners["multi_returner.prep_jid"] = local_cache.prep_jid
+    mock_returners["local_cache.returner"] = local_cache.returner
+    other_return = MagicMock()
+    mock_returners["salt_cache.returner"] = other_return
+    opts = dict(
+        local_cache.__dict__["__opts__"],
+        master_job_cache="multi_returner",
+        pki_dir=str(Path(local_cache.__dict__["__opts__"]["cachedir"]) / "pki"),
+        multi_returner=["local_cache", "salt_cache"],
+        job_cache=True,
+        ext_job_cache="",
+    )
+    salt.utils.job.store_job(
+        opts, return_load, mminion=SimpleNamespace(returners=mock_returners)
+    )
     assert local_cache.get_load(jid) == dict(publish, Minions=["minion-1"])
     assert salt_cache.get_load(jid) == dict(return_load, Minions=["minion-1"])
+    assert local_cache.get_jid(jid)["minion-1"] == {
+        "return": "ok",
+        "retcode": 0,
+        "success": True,
+    }
+    other_return.assert_called_once_with(return_load)
 
 
 @pytest.fixture
@@ -334,7 +410,7 @@ def test_save_minions_real_persists_minion_list(real_returners):
     multi_returner.save_minions(jid, ["m-c"], syndic_id="syndic-1")
     assert local_cache.get_load(jid)["Minions"] == ["m-a", "m-b", "m-c"]
     assert salt_cache.get_load(jid)["Minions"] == ["m-a", "m-b", "m-c"]
-    opts = local_cache.__opts__
+    opts = local_cache.__dict__["__opts__"]
     job_dir = Path(
         salt.utils.jid.jid_dir(
             jid, str(Path(opts["cachedir"]) / "jobs"), opts["hash_type"]
