@@ -2,8 +2,6 @@
 Runner to manage Windows software repo
 """
 
-# WARNING: Any modules imported here must also be added to
-# salt/modules/win_repo.py
 
 
 import logging
