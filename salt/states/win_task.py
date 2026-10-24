@@ -65,6 +65,7 @@ OPTIONAL_CONDITIONS_PARTS = {
 
 OPTIONAL_SETTINGS_PARTS = {
     "allow_demand_start": True,
+    "compatibility": 2,
     "delete_after": False,
     "execution_time_limit": "3 days",
     "force_stop": True,
