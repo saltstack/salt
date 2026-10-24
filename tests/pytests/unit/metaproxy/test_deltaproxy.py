@@ -115,6 +115,9 @@ def _make_subproxy_patches(per_minion_grains):
             items={
                 f"{proxytype}.init": MagicMock(return_value=True),
                 f"{proxytype}.shutdown": MagicMock(return_value=True),
+                f"{proxytype}.module_executors": MagicMock(
+                    return_value=["direct_call"]
+                ),
             }
         )
 
@@ -627,3 +630,109 @@ def test_thread_return_does_not_write_returners_back_into_the_shared_load(tmp_pa
     }
     deltaproxy.thread_return(ProxyMinion, minion_instance, bare, shared_load)
     assert shared_load["ret"] == ""
+
+
+def test_subproxy_post_master_init_sets_module_executors(
+    proxy_opts, fake_main_proxy, fake_main_utils
+):
+    """
+    A proxymodule may declare the executors its functions must run through.
+    ``post_master_init`` reads that for the control proxy, but sub-proxies never
+    had it set, so ``thread_return`` fell through to the opts default and the
+    proxymodule's declaration was silently ignored for every sub-proxy.
+    """
+    per_minion_grains = {
+        "minion1": {"serial_number": "SN-AAA-001", "id": "minion1"},
+        "minion2": {"serial_number": "SN-BBB-002", "id": "minion2"},
+    }
+    p = _make_subproxy_patches(per_minion_grains)
+
+    loop = tornado.ioloop.IOLoop()
+    with patch.object(
+        deltaproxy.salt.config, "proxy_config", p["proxy_config"]
+    ), patch.object(
+        deltaproxy.salt.pillar, "get_async_pillar", p["get_pillar"]
+    ), patch.object(
+        deltaproxy.salt.loader, "grains", p["grains"]
+    ), patch.object(
+        deltaproxy.salt.loader, "proxy", p["proxy_loader"]
+    ), patch.object(
+        deltaproxy.salt.loader, "utils", p["utils_loader"]
+    ), patch.object(
+        deltaproxy, "ProxyMinion", p["proxy_minion_cls"]
+    ), patch.object(
+        deltaproxy.salt.minion, "get_proc_dir", p["get_proc_dir"]
+    ), patch.object(
+        deltaproxy.salt.utils.schedule, "Schedule", p["schedule"]
+    ):
+        try:
+            result = loop.run_sync(
+                lambda: deltaproxy.subproxy_post_master_init(
+                    "minion1", 0, proxy_opts, fake_main_proxy, fake_main_utils
+                )
+            )
+        finally:
+            loop.close()
+
+    sub = result["proxy_minion"]
+    assert sub is not None
+    # thread_return reads this off the sub-proxy via getattr; it must be there.
+    assert getattr(sub, "module_executors", None) == ["direct_call"]
+
+
+@pytest.mark.parametrize("deep_merge", [False, True])
+@pytest.mark.parametrize("merge_pillar_in_opts", [False, True])
+def test_post_master_init_pillar_proxy_block_wins_over_opts(
+    merge_pillar_in_opts, deep_merge
+):
+    """
+    The control proxy's proxytype and ids live in its pillar, so the pillar
+    ``proxy`` block must still win over a ``proxy`` block in its config when
+    ``proxy_merge_pillar_in_opts`` is off.  Gating the whole merge left
+    ``proxytype``/``ids`` from config in place, so no sub-proxy started.
+    Only the rest of the pillar is gated by the option.
+    """
+
+    class _StopAfterMerge(Exception):
+        pass
+
+    pillar = {
+        "proxy": {
+            "proxytype": "deltaproxy",
+            "ids": ["minion1", "minion2"],
+            "parallel_startup": True,
+        },
+        "n_marker": "FROM_PILLAR",
+    }
+    opts = {
+        "id": "control_proxy",
+        "proxy": {"proxytype": "dummy", "ids": ["minion1"], "only_in_opts": True},
+        "pillar": pillar,
+        "proxy_merge_pillar_in_opts": merge_pillar_in_opts,
+        "proxy_merge_pillar_in_opts_strategy": "smart",
+        "proxy_deep_merge_pillar_in_opts": deep_merge,
+        "proxy_mines_pillar": True,
+    }
+    # Stop at the first call after the merge; only the resulting opts matter.
+    fake_self = MagicMock(
+        connected=False,
+        opts=opts,
+        _load_modules=MagicMock(side_effect=_StopAfterMerge),
+    )
+
+    loop = tornado.ioloop.IOLoop()
+    try:
+        with pytest.raises(_StopAfterMerge):
+            loop.run_sync(lambda: deltaproxy.post_master_init(fake_self, "master"))
+    finally:
+        loop.close()
+
+    # Merged, not replaced, and ``ids`` is not doubled up.
+    assert fake_self.opts["proxy"] == {
+        "proxytype": "deltaproxy",
+        "ids": ["minion1", "minion2"],
+        "parallel_startup": True,
+        "only_in_opts": True,
+    }
+    # Inverse must-not: the rest of the pillar only reaches opts when asked.
+    assert ("n_marker" in fake_self.opts) is merge_pillar_in_opts
