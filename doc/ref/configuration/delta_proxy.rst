@@ -6,15 +6,15 @@
 Delta proxy minions
 ===================
 
-Welcome to the delta proxy minion installation guide. This installation
-guide explains the process for installing and using delta proxy minion
-which is available beginning in version 3004.
+Welcome to the delta proxy minion installation guide. This guide explains
+the process for installing and using delta proxy minions, which are available
+beginning in Salt version 3004.
 
-This guide is intended for system and network administrators with the general
-knowledge and experience required in the field. This guide is also intended for
-users that have ideally already tested and used standard Salt proxy minions in
-their environment before deciding to move to a delta proxy minion environment.
-See `Salt proxy minions <https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_ for more information.
+This guide is intended for system and network administrators with general
+knowledge and experience in the field. It is also intended for users who have
+already tested and used standard Salt proxy minions in their environment before
+moving to a delta proxy minion environment. For more information about standard
+proxy minions, see `Salt proxy minions <https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_.
 
 .. Note::
     If you have not used standard Salt proxy minions before, consider testing
@@ -24,7 +24,7 @@ See `Salt proxy minions <https://docs.saltproject.io/en/latest/topics/proxyminio
 Proxy minions vs. delta proxy minions
 =====================================
 Salt can target network devices through `Salt proxy minions
-<https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_,
+<https://docs.saltproject.io/en/latest/topics/proxyminion/index.html>`_.
 Proxy minions allow you to control network devices that, for whatever reason,
 cannot run the standard Salt minion. Examples include:
 
@@ -33,17 +33,18 @@ cannot run the standard Salt minion. Examples include:
 * Devices that could run a minion but will not for security reasons
 
 A proxy minion acts as an intermediary between the Salt master and the
-device it represents. The proxy minion runs on the Salt master and then
-translates commands from the Salt master to the device as needed.
+device it represents. The proxy minion process runs on a machine with network
+access to the managed device and translates commands from the Salt master
+to the device as needed.
 
-By acting as an intermediary for the actual minion, proxy minions eliminate
-the need to establish a constant connection from a Salt master to a minion. Proxy
-minions generally only open a connection to the actual minion when necessary.
+By acting as an intermediary, proxy minions eliminate the need to establish
+a constant connection from the Salt master to the managed device. Proxy
+minions generally only open a connection to the managed device when necessary
+to execute commands.
 
-Proxy minions also reduce the amount of CPU or memory the minion must spend
-checking for commands from the Salt master. Proxy minions use the Salt master's CPU
-or memory to check for commands. The actual minion only needs to use CPU or
-memory to run commands when needed.
+Proxy minions also reduce the computational load on managed devices.
+The proxy minion handles communication with the Salt master, while the
+managed device only needs to respond to commands when they are executed.
 
 .. Note::
     For more information about Salt proxy minions, see:
@@ -57,16 +58,16 @@ memory to run commands when needed.
 
 When delta proxy minions are needed
 -----------------------------------
-Normally, you would create a separate instance of proxy minion for each device
+Normally, you would create a separate instance of a proxy minion for each device
 that needs to be managed. However, this doesn't always scale well if you have
-thousands of devices. Running several thousand proxy minions can require a lot
-of memory and CPU.
+thousands of devices. Running several thousand proxy minions can require significant
+amounts of memory and CPU resources.
 
-A delta proxy minion can solve this problem: it makes it possible to run one
-minion that acts as the intermediary between the Salt master and the many network
-devices it can represent. In this scenario, one device (the delta proxy minion
-on the Salt master) runs several proxies. This configuration boosts performance and
-improves the overall scalability of the network.
+A delta proxy minion can solve this scaling problem by allowing a single
+proxy minion process to manage multiple network devices. In this scenario,
+one delta proxy minion process acts as the intermediary between the Salt master
+and many network devices. This configuration reduces resource usage and
+improves the overall scalability of your network management infrastructure.
 
 
 Key terms
@@ -91,28 +92,28 @@ guide:
       data back to the Salt master as needed.
 
   * - proxy minion
-    - A Salt master that is running the proxy-minion service. The proxy minion
-      acts as an intermediary between the Salt master and the device it represents.
-      The proxy minion runs on the Salt master and then translates commands from
-      the Salt master to the device. A separate instance of proxy minion is
-      needed for each device that is managed.
+    - A proxy process that acts as an intermediary between the Salt master and
+      a network device it represents. The proxy minion runs on a machine with
+      network access to the managed device and translates commands from the
+      Salt master to the device. A separate proxy minion process is needed for
+      each device that is managed.
 
   * - delta proxy minion
-    - A Salt master that is running the delta proxy-minion service. The
-      delta proxy minion acts as the intermediary between the Salt master and the
-      many network devices it can represent. Only one instance of the delta
-      proxy service is needed to run several proxies.
+    - A single proxy process that can manage multiple network devices
+      simultaneously. The delta proxy minion acts as the intermediary between
+      the Salt master and many network devices. Only one instance of the delta
+      proxy service is needed to manage multiple devices.
 
   * - control proxy
-    - The control proxy runs on the Salt master. It manages a list of devices and
-      issues commands to the network devices it represents. The Salt master needs
-      at least one control proxy, but it is possible to have more than one
-      control proxy, each managing a different set of devices.
+    - The control proxy component within a delta proxy minion that manages a
+      list of devices and issues commands to the network devices it represents.
+      You can have one or more control proxies, each managing a different set
+      of devices.
 
   * - managed device
-    - A device (such as Netmiko) that is managed by proxy minions or by a
-      control proxy minion. The proxy minion or control proxy only creates
-      a connection to the actual minion it needs to issue a command.
+    - A network device (such as one managed through Netmiko) that is controlled
+      by proxy minions or by a delta proxy minion. The proxy only creates
+      a connection to the managed device when it needs to execute a command.
 
   * - pillar file
     - Pillars are structures of data (files) defined on the Salt master and passed
@@ -135,12 +136,11 @@ Before you start
 ----------------
 Before installing the delta proxy minion, ensure that:
 
-* Your network device and firmware are supported.
-* The Salt master that is acting as the control proxy minion has network
-  access to the devices it is managing.
+* Your network devices and firmware are supported.
+* The machine where you will run the delta proxy minion has network
+  access to the devices it will be managing.
 * You have installed, configured, and tested standard Salt proxy minions in
-  your environment before introducing delta proxy minions into your
-  environment.
+  your environment before introducing delta proxy minions.
 
 
 Install or upgrade Salt
@@ -192,14 +192,19 @@ To create this configuration:
 
    .. code-block:: yaml
 
-       # Use delta proxy metaproxy
+       # Use delta proxy metaproxy (REQUIRED)
        metaproxy: deltaproxy
 
-       # Disable the FQDNS grain
+       # Disable the FQDNS grain (RECOMMENDED)
        enable_fqdns_grains: False
 
-       # Enabled multprocessing
+       # Enable multiprocessing (RECOMMENDED)
        multiprocessing: True
+
+   .. Important::
+       The ``metaproxy: deltaproxy`` configuration option is **required** for
+       delta proxy minions to function correctly. Without this setting, Salt
+       will use the standard proxy service instead of the delta proxy service.
 
    .. Note::
        See the following section about `delta proxy configuration options`_ for
@@ -257,22 +262,38 @@ file on the Salt master. To create this file:
 #. Navigate to the ``/srv/pillar`` directory.
 
 #. In this directory create a new pillar file for a minion. For example,
-   ``my_managed_device_pillar_file_01.sls``.
+   ``switch01.sls``.
 
 #. Open the new file in your preferred editor and add the necessary
    configuration information for that minion and your environment. The
-   following is an example pillar file for a Netmiko device:
+   following is an example pillar file for a dummy proxy device (useful for
+   testing delta proxy functionality):
+
+   .. code-block:: yaml
+
+       proxy:
+         proxytype: dummy
+         host: 192.0.2.10
+         username: admin
+         password: secret123
+
+   For production environments with real network devices, you might use
+   a Netmiko device instead:
 
    .. code-block:: yaml
 
        proxy:
          proxytype: netmiko
          device_type: arista_eos
-         host: 192.0.2.1
+         host: 192.0.2.10
          username: myusername
          password: mypassword
          always_alive: True
 
+   .. Note::
+      The dummy proxy type is excellent for testing and learning about delta
+      proxy functionality without requiring actual network hardware. For
+      production deployments, use the appropriate proxy type for your devices.
 
    .. Note::
       The available configuration options vary depending on the proxy type (in
@@ -282,6 +303,8 @@ file on the Salt master. To create this file:
 
       * `Salt proxy modules
         <https://docs.saltproject.io/en/latest/ref/proxy/all/index.html#all-salt-proxy>`_
+      * `Dummy Salt proxy module
+        <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.dummy.html#module-salt.proxy.dummy>`_
       * `Netmiko Salt proxy module
         <https://docs.saltproject.io/en/latest/ref/proxy/all/salt.proxy.netmiko_px.html#module-salt.proxy.netmiko_px>`_
 
@@ -295,12 +318,34 @@ file on the Salt master. To create this file:
 
    .. code-block:: yaml
 
-       my_managed_device_minion_ID:
-         - my_managed_device_pillar_file_01
+       switch01:
+         - switch01
 
 #. Repeat the previous steps for each minion that needs to be managed.
+   For example, create ``switch02.sls`` and ``switch03.sls`` with similar
+   configuration but different IP addresses:
 
-You've now created the pillar file for the minions that will be managed by the
+   ``switch02.sls``:
+
+   .. code-block:: yaml
+
+       proxy:
+         proxytype: dummy
+         host: 192.0.2.11
+         username: admin
+         password: secret123
+
+   ``switch03.sls``:
+
+   .. code-block:: yaml
+
+       proxy:
+         proxytype: dummy
+         host: 192.0.2.12
+         username: admin
+         password: secret123
+
+You've now created the pillar files for all the minions that will be managed by the
 delta proxy minion and you have referenced these files in the top file.
 Proceed to the next section.
 
@@ -321,7 +366,7 @@ To create a control proxy configuration file:
 
 #. On the Salt master, navigate to the ``/srv/pillar`` directory. In this
    directory, create a new proxy configuration file. Give this file a
-   descriptive name, such as ``control_proxy_01_configuration.sls``.
+   descriptive name, such as ``deltaproxy_control.sls``.
 
 #. Open the file in your preferred editor and add a list of the minion IDs for
    each device that needs to be managed. For example:
@@ -331,40 +376,35 @@ To create a control proxy configuration file:
        proxy:
          proxytype: deltaproxy
          ids:
-           - my_managed_device_01
-           - my_managed_device_02
-           - my_managed_device_03
+           - switch01
+           - switch02
+           - switch03
 
 #. Save the file.
 
 #. In an editor, open the top file: ``/srv/pillar/top.sls``.
 
-#. Add a section to the top file that indicates references the delta proxy
+#. Add a section to the top file that references the delta proxy
    control proxy. For example:
 
    .. code-block:: yaml
 
        base:
-         my_managed_device_minion_01:
-           - my_managed_device_pillar_file_01
-         my_managed_device_minion_02:
-           - my_managed_device_pillar_file_02
-         my_managed_device_minion_03:
-           - my_managed_device_pillar_file_03
-         delta_proxy_control:
-           - control_proxy_01_configuration
+         switch01:
+           - switch01
+         switch02:
+           - switch02
+         switch03:
+           - switch03
+         deltaproxy_control:
+           - deltaproxy_control
 
 #. Repeat the previous steps for each control proxy if needed.
 
-#. In an editor, open the proxy config file: ``/etc/salt/proxy``.
-   Add a section for metaproxy and set it's value to deltaproxy.
-
-   .. code-block:: yaml
-
-        metaproxy: deltaproxy
-
-
-
+.. Note::
+    The ``metaproxy`` setting was already configured in the ``/etc/salt/proxy``
+    file during the `Configure the master to use delta proxy`_ step, so no
+    additional configuration is needed.
 
 Now that you have created the necessary configurations, proceed to the next
 section.
@@ -387,31 +427,80 @@ working correctly.
 To start a single instance of a delta proxy minion and test that it is
 configured correctly:
 
-#. In the terminal for the Salt master, run the following command, replacing the
-   placeholder text with the actual minion ID:
+#. In the terminal for the Salt master, run the following command:
 
    .. code-block:: bash
 
-       sudo salt-proxy --proxyid=<control_proxy_id>
+       sudo salt-proxy --proxyid=deltaproxy_control
 
 
-#. To test the delta proxy minion, run the following ``test.version`` command
-   on the Salt master and target a specific minion. For example:
+#. To test the delta proxy minion, run the following commands to verify that
+   each managed device is accessible through the delta proxy:
 
-   .. code-block:: bash
-
-       salt my_managed_device_minion_ID test.version
-
-   This command returns an output similar to the following:
+   Test connectivity to a single device:
 
    .. code-block:: bash
 
-       local:
-           3004
+       salt switch01 test.ping
+
+   This command returns:
+
+   .. code-block:: bash
+
+       switch01:
+           True
+
+   Test all managed devices at once:
+
+   .. code-block:: bash
+
+       salt 'switch*' test.ping
+
+   This command returns:
+
+   .. code-block:: bash
+
+       switch01:
+           True
+       switch02:
+           True
+       switch03:
+           True
+
+   Check the Salt version on all devices:
+
+   .. code-block:: bash
+
+       salt 'switch*' test.version
+
+   Verify that each device has its own configuration:
+
+   .. code-block:: bash
+
+       salt 'switch*' pillar.get proxy:host
+
+   This command shows that each device has its own unique IP address:
+
+   .. code-block:: bash
+
+       switch01:
+           192.0.2.10
+       switch02:
+           192.0.2.11
+       switch03:
+           192.0.2.12
+
+   Test the control proxy directly:
+
+   .. code-block:: bash
+
+       salt deltaproxy_control test.ping
+       salt deltaproxy_control pillar.get proxy:ids
 
 After you've successfully started the delta proxy minions and verified that
 they are working correctly, you can now use these minions the same as standard
-proxy minions.
+proxy minions. The delta proxy system allows you to manage multiple devices
+through a single proxy process, making it ideal for large-scale deployments.
 
 .. _delta-proxy-additional-resources:
 
