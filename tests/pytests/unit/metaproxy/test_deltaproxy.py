@@ -507,7 +507,6 @@ def test_load_modules_forwards_loaded_base_name_to_minion_mods(minion_opts):
         minion.destroy()
 
 
-<<<<<<< HEAD
 # ---------------------------------------------------------------------------
 # job dispatch: no double-fork, and no process-title pollution
 # ---------------------------------------------------------------------------
@@ -517,24 +516,12 @@ def _run_thread_return(tmp_path, multiprocessing):
     """
     Drive ``deltaproxy.thread_return`` far enough to cover the process setup at
     the top of the function, and report what it did to the process.
-=======
-def test_thread_return_does_not_write_returners_back_into_the_shared_load(tmp_path):
-    """
-    ``handle_payload`` hands the *same* publish-load dict to the control proxy
-    and to every sub-proxy the job matched.  ``thread_return`` used to merge
-    ``opts["return"]`` back into ``data["ret"]``, so with
-    ``multiprocessing: False`` -- where those all run as threads in one process
-    -- one sub-proxy's returner configuration leaked onto its siblings, and a
-    sub-proxy with no returner configured sent its job return to another
-    sub-proxy's returner.
->>>>>>> a4ebe24e610 (Keep a sub-proxy's returner config out of the shared load (#70219))
     """
     proc_dir = tmp_path / "proc"
     proc_dir.mkdir()
 
     minion_instance = MagicMock()
     minion_instance.proc_dir = str(proc_dir)
-<<<<<<< HEAD
 
     opts = {
         "multiprocessing": multiprocessing,
@@ -543,22 +530,10 @@ def test_thread_return_does_not_write_returners_back_into_the_shared_load(tmp_pa
         "module_executors": ["direct_call"],
     }
     data = {"jid": "20260101000000000001", "fun": "test.ping", "arg": [], "ret": ""}
-=======
-    minion_instance.connected = False
-
-    # The one shared dict, exactly as the fan-out passes it around.
-    shared_load = {
-        "jid": "20260101000000000002",
-        "fun": "test.ping",
-        "arg": [],
-        "ret": "",
-    }
->>>>>>> a4ebe24e610 (Keep a sub-proxy's returner config out of the shared load (#70219))
 
     class ProxyMinion:
         """Stand-in for the class deltaproxy names in the process title."""
 
-<<<<<<< HEAD
     with patch("salt.utils.process.appendproctitle") as appendproctitle, patch(
         "salt.utils.process.daemonize_if"
     ) as daemonize_if:
@@ -602,7 +577,36 @@ def test_thread_return_still_sets_proctitle_when_forking(tmp_path):
     """
     appendproctitle, _ = _run_thread_return(tmp_path, multiprocessing=True)
     assert appendproctitle.called
-=======
+
+
+def test_thread_return_does_not_write_returners_back_into_the_shared_load(tmp_path):
+    """
+    ``handle_payload`` hands the *same* publish-load dict to the control proxy
+    and to every sub-proxy the job matched.  ``thread_return`` used to merge
+    ``opts["return"]`` back into ``data["ret"]``, so with
+    ``multiprocessing: False`` -- where those all run as threads in one process
+    -- one sub-proxy's returner configuration leaked onto its siblings, and a
+    sub-proxy with no returner configured sent its job return to another
+    sub-proxy's returner.
+    """
+    proc_dir = tmp_path / "proc"
+    proc_dir.mkdir()
+
+    minion_instance = MagicMock()
+    minion_instance.proc_dir = str(proc_dir)
+    minion_instance.connected = False
+
+    # The one shared dict, exactly as the fan-out passes it around.
+    shared_load = {
+        "jid": "20260101000000000002",
+        "fun": "test.ping",
+        "arg": [],
+        "ret": "",
+    }
+
+    class ProxyMinion:
+        """Stand-in for the class deltaproxy names in the process title."""
+
     configured = {
         "multiprocessing": False,
         "id": "minion1",
@@ -623,4 +627,3 @@ def test_thread_return_still_sets_proctitle_when_forking(tmp_path):
     }
     deltaproxy.thread_return(ProxyMinion, minion_instance, bare, shared_load)
     assert shared_load["ret"] == ""
->>>>>>> a4ebe24e610 (Keep a sub-proxy's returner config out of the shared load (#70219))
