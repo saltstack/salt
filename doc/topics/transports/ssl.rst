@@ -36,8 +36,8 @@ master configuration file:
 A more complex setup looks like this, on the Salt Master add the ``ssl``
 option to the master's configuration file. In this example the Salt Master will
 require valid client side certificates from Minions by setting ``cert_reqs`` to
-``CERT_REQUIRED``. The Salt Master will also check a certificate revocation list
-if one is provided in ``verify_locations``:
+``CERT_REQUIRED``. The Salt Master will also check the certificate revocation
+list named by ``crlfile`` (see :ref:`tls-certificate-revocation`):
 
 .. code-block:: yaml
 
@@ -48,9 +48,7 @@ if one is provided in ``verify_locations``:
       verify_locations:
         - <path_to_ca_cert>
         - capath: <directory_of_certs>
-        - cafile: <path_to_crl>
-      verify_flags:
-        - VERIFY_CRL_CHECK_CHAIN
+      crlfile: <path_to_crl>
 
 
 The minimal `ssl` option in the minion configuration file looks like this:
@@ -71,6 +69,253 @@ A Minion can be configured to present a client certificate to the master like th
 
 Specific options can be sent to the minion also, as defined in the Python
 `ssl.wrap_socket` function.
+
+.. _tls-custom-pki:
+
+Using a custom (enterprise) PKI
+===============================
+
+.. versionchanged:: 3008.4
+
+Mutual TLS with certificates issued by an internal certificate authority works
+with the ``tcp`` and ``ws`` transports.  The following rules apply:
+
+**Trust anchors are exclusive.**  When ``ca_certs`` or ``verify_locations`` is
+configured, those certificates are the *only* trust anchors.  Python's default
+trust store (the system store or the bundled ``certifi`` CAs) is not consulted
+in addition, so a publicly trusted CA can never issue a certificate that the
+master accepts from a minion or that a minion accepts from a master.  To trust
+the operating system store instead, leave ``ca_certs``/``verify_locations``
+unset and enable ``use_os_truststore``.
+
+**Intermediate CAs.**  Put the full issuing chain (leaf first, then every
+intermediate) in ``certfile`` so the peer can build a path to the root in
+``ca_certs``.  If only the intermediate is distributed as the trust anchor, add
+``VERIFY_X509_PARTIAL_CHAIN`` to ``verify_flags``:
+
+.. code-block:: yaml
+
+    ssl:
+      certfile: /etc/pki/tls/certs/salt-minion.chain.crt   # leaf + intermediates
+      keyfile: /etc/pki/tls/private/salt-minion.key
+      ca_certs: /etc/pki/tls/certs/corp-issuing-ca.crt     # intermediate only
+      cert_reqs: CERT_REQUIRED
+      verify_flags:
+        - VERIFY_X509_PARTIAL_CHAIN
+
+**Hostname verification uses the configured master name.**  Minions resolve
+``master`` to an IP address before connecting.  The TLS layer nevertheless
+verifies the master certificate against the *configured* ``master`` hostname,
+so the certificate only needs a DNS Subject Alternative Name for that name; an
+IP SAN is required only when ``master`` is itself an IP address.  When the
+name the certificate carries differs from the address Salt connects to (load
+balancers, split DNS, the master-local ``salt``/``salt-run``/``salt-api``
+clients, which connect to ``interface`` and have no ``master`` setting), pin
+the expected name:
+
+.. code-block:: yaml
+
+    ssl:
+      server_hostname: salt-master.corp.example
+
+.. note::
+    Upgrade note: releases before 3008.4 verified the master certificate
+    against the *resolved IP address*.  A deployment whose master certificate
+    carries only an IP SAN while minions use ``master: <hostname>`` keeps
+    working by pinning that IP on the minions (``ssl.server_hostname:
+    <master ip>``) or by reissuing the certificate with a DNS SAN.
+
+**Key usage.**  Minion certificates need the ``clientAuth`` extended key usage;
+the master certificate needs ``serverAuth``.  Master-local tooling (``salt``,
+``salt-run``, ``salt-api``, the ``salt-master`` maintenance processes) connects
+to the master's own request server as a TLS *client*.  By default it presents
+``certfile``, which therefore also needs ``clientAuth`` and a SAN covering the
+``interface`` address.  With a strict PKI profile that issues ``serverAuth``-only
+server certificates, give the master a dedicated client certificate instead:
+
+.. code-block:: yaml
+
+    ssl:
+      certfile: /etc/pki/tls/certs/salt-master.chain.crt      # serverAuth
+      keyfile: /etc/pki/tls/private/salt-master.key
+      client_certfile: /etc/pki/tls/certs/salt-master-client.chain.crt  # clientAuth
+      client_keyfile: /etc/pki/tls/private/salt-master-client.key
+      server_hostname: salt-master.corp.example
+      ca_certs: /etc/pki/tls/certs/corp-root.crt
+      cert_reqs: CERT_REQUIRED
+
+``client_certfile``/``client_keyfile`` are only used for outgoing (client side)
+connections and fall back to ``certfile``/``keyfile`` when unset.  They may also
+be set on minions.
+
+**Worker pools.**  The internal link between the master's request router and
+its worker pools is a local IPC connection and is never wrapped in TLS, so
+mutual TLS works with the default ``worker_pools_enabled: True``.
+
+.. _tls-certificate-rotation:
+
+Certificate rotation
+--------------------
+
+.. versionadded:: 3008.4
+
+Rotated certificates are picked up without restarting ``salt-master`` or
+``salt-minion``.  Every ``reload_interval`` seconds (default 60; ``0``
+disables the background poll) the daemons compare the files named in ``ssl``
+-- ``certfile``, ``keyfile``, ``client_certfile``, ``client_keyfile``,
+``ca_certs``, the ``verify_locations`` files and directories and the
+``crlfile`` CRLs -- with what is loaded.  Clients always re-check before opening a new connection, whatever
+the interval.  The files are copied to a private directory first and the copy
+is what gets validated and loaded, so a rotation tool rewriting the originals
+mid-check cannot get unvalidated material served.
+
+New material is *validated before it is adopted*:
+
+* the certificate and key must load and belong together;
+* the certificate must be valid for the current time;
+* when verification is enabled (``cert_reqs`` other than ``CERT_NONE``, the
+  default for the master and the documented mutual-TLS setup) the certificate
+  must chain to the configured trust anchors and carry the right extended key
+  usage for its role (``serverAuth`` for ``certfile`` on the master,
+  ``clientAuth`` for minion certificates and ``client_certfile``).  A
+  time-valid *self-signed* certificate is accepted only when verification is
+  disabled.
+
+The chain check verifies the daemon's *own* certificate against the anchors
+it uses for *peers*, which assumes one PKI issues both.  Deployments with
+separate server and client CAs (the master trusts the client CA, minions
+trust the server CA) must set ``reload_verify_chain: False``: rotation then
+still requires a matching key and a time-valid certificate, but no chain
+verification.
+
+The files are validated from a private snapshot (a ``0700`` directory of
+``0600`` copies under the system temporary directory) so the bytes checked are
+the bytes loaded; the snapshot is removed after every check, and only a process
+killed mid-check can leave one behind.
+
+Material that fails these checks is logged at ERROR level once and ignored;
+the certificate already in use stays active until the files change again.
+Rotate the key and the certificate as a pair (write both, then move them into
+place) -- a half-written rotation is simply rejected until the pair matches.
+
+Listening sockets keep serving while the certificate is swapped underneath
+them, so no connection is dropped.  Clients use the new certificate on their
+next connection.  Trust anchors *added* to ``ca_certs`` take effect on the
+master immediately; anchors *removed* from it stay trusted by a running master
+until restart (OpenSSL cannot unload certificates from a live store) -- the
+master logs a warning whenever the anchor set changes on rotation so that a
+retired or compromised CA is not assumed gone.  Minions rebuild their context,
+so removals apply to them at the next connection.
+
+A rotated *server* certificate is checked for chain, validity and purpose; its
+*name* is checked only against a pinned ``ssl.server_hostname`` (the daemon
+cannot know which name its peers verify, and a name read from the certificate
+itself would match trivially).  Pin the name on the master so a certificate
+issued for the wrong host is rejected at rotation rather than discovered by
+every minion at its next connection.
+
+.. code-block:: yaml
+
+    ssl:
+      certfile: /etc/pki/tls/certs/salt-master.chain.crt
+      keyfile: /etc/pki/tls/private/salt-master.key
+      ca_certs: /etc/pki/tls/certs/corp-root.crt
+      cert_reqs: CERT_REQUIRED
+      reload_interval: 30
+      reload_verify_chain: True
+
+.. _tls-certificate-revocation:
+
+Certificate revocation
+----------------------
+
+.. versionadded:: 3008.4
+
+``crlfile`` names one PEM file, or a list of PEM files, holding certificate
+revocation lists (a file may hold several CRLs; one CRL per issuing CA is the
+usual layout).  A ``crlfile`` must contain PEM encoded CRLs and nothing else:
+a file that also holds a certificate or any other data is refused (the daemon
+does not start, and a refresh like that is rejected), so the file written by
+a CRL refresh job can never add a trust anchor.  Only the parsed CRLs are
+handed to OpenSSL.  When it is set the CRLs are loaded into the TLS context and
+``VERIFY_CRL_CHECK_LEAF`` is enabled, so a peer whose certificate is listed
+is refused during the TLS handshake.  It works on both sides: on the master
+it checks minion (client) certificates, on a minion it checks the master
+certificate.  The master-local clients (``salt``, ``salt-run``, ``salt-api``)
+read the master's ``ssl`` settings and verify the master's own certificate
+with the same CRLs, so on the master ``crlfile`` must also cover the CA that
+issued ``certfile``.  ``verify_flags`` adds to it; ``VERIFY_CRL_CHECK_CHAIN`` checks
+every certificate of the chain and then needs a current CRL for every CA in
+it, root included.
+
+.. code-block:: yaml
+
+    ssl:
+      certfile: /etc/pki/tls/certs/salt-master.chain.crt
+      keyfile: /etc/pki/tls/private/salt-master.key
+      ca_certs: /etc/pki/tls/certs/corp-root.crt
+      cert_reqs: CERT_REQUIRED
+      crlfile: /etc/pki/tls/crl/corp-issuing-ca.crl.pem
+      # or several CRLs, and the whole chain checked:
+      # crlfile:
+      #   - /etc/pki/tls/crl/corp-root-ca.crl.pem
+      #   - /etc/pki/tls/crl/corp-issuing-ca.crl.pem
+      # verify_flags:
+      #   - VERIFY_CRL_CHECK_CHAIN
+
+CRL checking fails closed: once enabled, a peer certificate is refused when
+no current CRL from its issuer is loaded ("unable to get certificate CRL")
+or when that CRL has passed its ``nextUpdate`` ("CRL has expired").  Keep the
+CRLs refreshed well before ``nextUpdate``.
+
+CRLs are typically refreshed every few hours by an external job; the daemons
+pick a refreshed ``crlfile`` up without a restart, with the same polling and
+validation as :ref:`certificate rotation <tls-certificate-rotation>`.  A
+refreshed CRL is adopted only when it parses, is current (``thisUpdate`` <=
+now <= ``nextUpdate``), is signed by its issuer and is newer (later
+``thisUpdate``) than the current CRL in use for the same CA.  The signature
+check is mandatory, so the certificate of every CA that signs a configured
+CRL must be available to the daemon: in ``ca_certs``, in a
+``verify_locations`` file or ``capath`` directory, or in its own
+``certfile`` chain.  For a CRL issued by an intermediate CA that peers send
+in their chain, add the intermediate certificate to ``verify_locations``.
+
+A refreshed CRL that fails these checks is logged at ERROR level once and the
+*last good CRL stays in use*, exactly like a rejected certificate rotation.
+Keeping the last good CRL never extends it past its ``nextUpdate``: when it
+expires without a valid replacement every peer of that CA is refused, and
+that is logged at ERROR level as well.  A CRL whose ``thisUpdate`` is still
+in the future (clock skew between the CA and the host) is re-checked at every
+poll and adopted as soon as it is valid.  Write a refreshed CRL to a
+temporary file and rename it into place.
+
+CRLs and certificates are validated independently: a valid certificate
+rotation is adopted together with the CRL in use even while a CRL refresh is
+being rejected, and a valid CRL refresh is adopted while a certificate
+rotation is being rejected.  A rotated certificate that a CRL in use revokes
+is rejected; a refreshed CRL that revokes the daemon's current certificate is
+adopted and logged at ERROR level (rotate the certificate).  The validation of the daemon's own rotated certificate does not
+apply the OpenSSL CRL *check* (the CRLs are for the peers and need not cover
+the daemon's own CA); revocation of the daemon's own certificate is checked
+by serial number instead.
+
+A refreshed CRL is added to the running TLS context, where the most recent
+current CRL of each CA is the one used.  Superseded CRLs stay in memory until
+the daemon restarts, so memory grows by about the size of the CRL with every
+refresh: a 100 KB CRL refreshed every four hours adds about 600 KB a day, a
+few KB CRL a negligible amount.  Only CRLs that actually changed are added.
+
+A refused handshake is logged by the master once per peer address and reason
+per hour, with a hint, rather than once per connection attempt: a revoked
+minion logs a WARNING naming its address, a problem with the master's own CRL
+setup (missing, expired or not yet valid CRL, bad CRL signature) an ERROR.
+The ``ws`` transport cannot see the peer address at that point and logs the
+reason without it.
+
+Loading a CRL through ``verify_locations`` together with a
+``VERIFY_CRL_CHECK_*`` flag still works, but such CRLs are treated as trust
+anchors: they are not validated on reload and, on the master, every refresh logs the
+"trust anchors changed" warning.  Use ``crlfile`` instead.
 
 .. _tls-encryption-optimization:
 
