@@ -783,6 +783,7 @@ def get_source_sum(
     keyring=None,
     gnupghome=None,
     sig_backend="gpg",
+    http_params=None,
 ):
     """
     .. versionadded:: 2016.11.0
@@ -899,7 +900,7 @@ def get_source_sum(
             proto = urllib.parse.urlparse(source_hash).scheme
             if proto in salt.utils.files.VALID_PROTOS:
                 hash_fn = __salt__["cp.cache_file"](
-                    source_hash, saltenv, verify_ssl=verify_ssl
+                    source_hash, saltenv, verify_ssl=verify_ssl, http_params=http_params
                 )
                 if not hash_fn:
                     raise CommandExecutionError(
@@ -4722,7 +4723,7 @@ def set_selinux_context(
         return ret
 
 
-def source_list(source, source_hash, saltenv):
+def source_list(source, source_hash, saltenv, http_params=None):
     """
     Check the source list and return the source to use
 
@@ -4780,7 +4781,7 @@ def source_list(source, source_hash, saltenv):
                         break
                 elif proto.startswith("http") or proto == "ftp":
                     query_res = salt.utils.http.query(
-                        single_src, method="HEAD", decode_body=False
+                        single_src, method="HEAD", decode_body=False, **http_params
                     )
                     if "error" not in query_res:
                         ret = (single_src, single_hash)
@@ -4924,6 +4925,7 @@ def get_managed(
     ignore_whitespace=False,
     ignore_comment_characters=None,
     sig_backend="gpg",
+    http_params=None,
     **kwargs,
 ):
     """
@@ -5139,6 +5141,7 @@ def get_managed(
                             keyring=keyring,
                             gnupghome=gnupghome,
                             sig_backend=sig_backend,
+                            http_params=http_params,
                         )
                     except CommandExecutionError as exc:
                         return "", {}, f"Unable to manage file: {exc.strerror}"
@@ -5180,6 +5183,7 @@ def get_managed(
                     source_hash=source_sum.get("hsum"),
                     verify_ssl=verify_ssl,
                     use_etag=use_etag,
+                    http_params=http_params,
                 )
             except Exception as exc:  # pylint: disable=broad-except
                 # A 404 or other error code may raise an exception, catch it
@@ -5826,6 +5830,7 @@ def check_managed(
     setype=None,
     serange=None,
     follow_symlinks=False,
+    http_params=None,
     **kwargs,
 ):
     """
@@ -5867,6 +5872,7 @@ def check_managed(
             context,
             defaults,
             skip_verify,
+            http_params,
             **kwargs,
         )
         if comments:
@@ -5929,6 +5935,7 @@ def check_managed_changes(
     ignore_whitespace=False,
     ignore_comment_characters=None,
     new_file_diff=False,
+    http_params=None,
     **kwargs,
 ):
     """
@@ -5997,7 +6004,7 @@ def check_managed_changes(
     """
     # If the source is a list then find which file exists
     source, source_hash = source_list(
-        source, source_hash, saltenv  # pylint: disable=W0633
+        source, source_hash, saltenv, http_params  # pylint: disable=W0633
     )
 
     sfn = ""
@@ -6023,6 +6030,7 @@ def check_managed_changes(
             ignore_ordering=ignore_ordering,
             ignore_whitespace=ignore_whitespace,
             ignore_comment_characters=ignore_comment_characters,
+            http_params=http_params,
             **kwargs,
         )
 
@@ -6592,6 +6600,7 @@ def manage_file(
     ignore_comment_characters=None,
     new_file_diff=False,
     sig_backend="gpg",
+    http_params=None,
     **kwargs,
 ):
     """
@@ -6970,7 +6979,11 @@ def manage_file(
         ):
             if not sfn:
                 sfn = __salt__["cp.cache_file"](
-                    source, saltenv, verify_ssl=verify_ssl, use_etag=use_etag
+                    source,
+                    saltenv,
+                    verify_ssl=verify_ssl,
+                    use_etag=use_etag,
+                    http_params=http_params,
                 )
             if not sfn:
                 return _error(ret, f"Source file '{source}' not found")
@@ -7243,7 +7256,9 @@ def manage_file(
         if source:
             # Apply the new file
             if not sfn:
-                sfn = __salt__["cp.cache_file"](source, saltenv, verify_ssl=verify_ssl)
+                sfn = __salt__["cp.cache_file"](
+                    source, saltenv, verify_ssl=verify_ssl, http_params=http_params
+                )
             if not sfn:
                 return _error(ret, f"Source file '{source}' not found")
             # If the downloaded file came from a non salt server source verify
