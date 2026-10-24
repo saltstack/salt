@@ -16,7 +16,7 @@ def match(tgt, opts=None, minion_id=None):
         opts = __opts__
     if not minion_id:
         minion_id = opts.get("minion_id", opts["id"])
-    if not isinstance(tgt, str):
+    if not isinstance(tgt, str) or minion_id is None:
         return False
 
     return fnmatch.fnmatch(minion_id, tgt)
