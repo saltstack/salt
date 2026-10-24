@@ -83,8 +83,34 @@ def latest_available():
     if result == "":
         return latest_installed()
 
-    version = re.match(r"^(\d+\.\d+\.\d+)\.(\d+)", result)
-    return f"{version.group(1)}-{version.group(2)}-{_kernel_type()}"
+    # Updated regex to handle modern Debian/Ubuntu version formats:
+    # - Debian: "6.1.147-1" -> (6.1, 147, 1)
+    # - Ubuntu: "6.8.0-45-generic" -> (6.8, 0, 45-generic)
+    version = re.match(r"^(\d+\.\d+)\.(\d+)[-.](.+)", result)
+    if not version:
+        # Fallback: if regex fails, return the latest installed version
+        return latest_installed()
+
+    # Extract version components: major.minor, patch, build/suffix
+    major_minor = version.group(1)  # e.g., "6.1" or "6.8"
+    patch = version.group(2)  # e.g., "147" or "0"
+    suffix = version.group(3)  # e.g., "1" or "45-generic"
+
+    # For simple Debian format like "6.1.147-1", suffix is just build number
+    # For Ubuntu format like "6.8.0-45-generic", extract build number from suffix
+    if re.match(r"^\d+$", suffix):
+        # Simple case: suffix is just a build number (Debian format)
+        return f"{major_minor}.{patch}-{suffix}-{_kernel_type()}"
+    else:
+        # Complex case: suffix contains build number and kernel type (Ubuntu format)
+        # Extract the first number from the suffix as build number
+        build_match = re.match(r"^(\d+)", suffix)
+        if build_match:
+            build_num = build_match.group(1)
+            return f"{major_minor}.{patch}-{build_num}-{_kernel_type()}"
+        else:
+            # Fallback: use the original suffix
+            return f"{major_minor}.{patch}-{suffix}-{_kernel_type()}"
 
 
 def latest_installed():
