@@ -1437,15 +1437,26 @@ class GitPython(GitProvider):
 
         # 'origin/' + tgt_ref ==> matches a branch head
         # 'tags/' + tgt_ref + '@{commit}' ==> matches tag's commit
+        # Bare tgt_ref ==> matches a commit SHA (full or short). This mirrors
+        # the behavior of ``gitfs_remotes`` which already accepts a commit SHA
+        # in place of a branch name. See issue #64199.
         checkout_refs = [
             ("origin/" + tgt_ref, False),
             ("tags/" + tgt_ref, False),
         ]
+        if "sha" in getattr(
+            self, "ref_types", ["branch", "tag", "sha"]
+        ) and salt.utils.stringutils.is_hex(tgt_ref):
+            checkout_refs.append((tgt_ref, False))
         if self.fallback:
             checkout_refs += [
                 ("origin/" + self.fallback, True),
                 ("tags/" + self.fallback, True),
             ]
+            if "sha" in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) and salt.utils.stringutils.is_hex(self.fallback):
+                checkout_refs.append((self.fallback, True))
         for checkout_ref, fallback in checkout_refs:
             try:
                 target_sha = self.repo.rev_parse(checkout_ref).hexsha
@@ -1837,8 +1848,26 @@ class Pygit2(GitProvider):
                     )
             return False
 
+        def _ref_resolves_to_sha(ref):
+            """Return True if ``ref`` looks like a commit SHA that is
+            present in the local repository (full or short)."""
+            if "sha" not in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) or not salt.utils.stringutils.is_hex(ref):
+                return False
+            try:
+                self.repo.revparse_single(ref)
+            except (KeyError, ValueError):
+                return False
+            return True
+
         try:
-            if remote_ref not in refs and tag_ref not in refs and self.fallback:
+            if (
+                remote_ref not in refs
+                and tag_ref not in refs
+                and not _ref_resolves_to_sha(tgt_ref)
+                and self.fallback
+            ):
                 tgt_ref = self.fallback
                 local_ref = "refs/heads/" + tgt_ref
                 remote_ref = "refs/remotes/origin/" + tgt_ref
@@ -1962,6 +1991,48 @@ class Pygit2(GitProvider):
 
                     # Return the relative root, if present
                     return self.check_root()
+
+            elif "sha" in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) and salt.utils.stringutils.is_hex(tgt_ref):
+                # Neither branch nor tag matched, but the target looks like a
+                # commit SHA (full or short). Mirror the behavior of
+                # ``gitfs_remotes`` which already accepts a commit SHA in
+                # place of a branch/tag. See issue #64199.
+                try:
+                    commit_obj = self.repo.revparse_single(tgt_ref)
+                except (KeyError, ValueError):
+                    commit_obj = None
+                if commit_obj is not None:
+                    try:
+                        commit_peeled = self.peel(commit_obj)
+                        commit_sha = str(commit_peeled.id)
+                    except AttributeError:
+                        commit_sha = None
+                    if commit_sha is not None:
+                        if head_sha != commit_sha:
+                            try:
+                                with self.gen_lock(lock_type="checkout"):
+                                    # Materialize the worktree at this commit
+                                    # and set a detached HEAD.
+                                    self.repo.checkout_tree(commit_peeled)
+                                    self.repo.set_head(commit_peeled.id)
+                            except GitLockError as exc:
+                                if exc.errno == errno.EEXIST:
+                                    raise GitLockError(
+                                        exc.errno,
+                                        f"Checkout lock exists for {self.role} "
+                                        f"remote '{self.id}'",
+                                    )
+                                log.error(
+                                    "Error %d encountered obtaining checkout "
+                                    "lock for %s remote '%s'",
+                                    exc.errno,
+                                    self.role,
+                                    self.id,
+                                )
+                                return None
+                        return self.check_root()
         except GitLockError:
             raise
         except Exception as exc:  # pylint: disable=broad-except
