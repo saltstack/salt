@@ -29,11 +29,11 @@ import salt.auth
 import salt.cache
 import salt.channel.server
 import salt.client
-import salt.config.topology
 import salt.client.ssh.client
 import salt.cluster
 import salt.cluster.healthchecks
 import salt.cluster.ring_membership
+import salt.config.topology
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -1112,6 +1112,19 @@ class Master(SMaster):
                 "cluster_id is set but cluster_peers is empty. "
                 "Every cluster member must have at least one peer configured. "
                 "Dynamic peer discovery is not supported."
+            )
+
+        # Topology + syndic coexistence note (RFC "Syndic deprecation plan"):
+        # running both on the same master is permitted during the deprecation
+        # window but discouraged.  Surface an INFO-level breadcrumb so
+        # operators auditing their config see the dual-mode state in logs.
+        if self.opts.get("topology_enabled") and self.opts.get("syndic_master"):
+            log.info(
+                "Master is configured with BOTH topology_enabled=True and "
+                "syndic_master=%r. This coexistence is permitted during the "
+                "syndic deprecation window; topology is the recommended "
+                "replacement. See the master-topology RFC.",
+                self.opts.get("syndic_master"),
             )
 
         if errors or critical_errors:

@@ -96,6 +96,15 @@ class TopologyCluster:
         self.identity_pub = identity_pub
         self._contexts = []
         self._terminated = False
+        #: Lazily generated real-crypto identity keypair bytes
+        #: ``(pub_pem, priv_pem)``.  Populated by
+        #: :meth:`ensure_identity_key`; copied over by
+        #: :meth:`accept_peer`.  Separate from the deterministic
+        #: ``identity_pub`` placeholder bytes so scenarios that assert on
+        #: the placeholder shape keep working while scenarios that need
+        #: to drive the real ``topology/_master_auth`` handshake get
+        #: real RSA bytes under ``pki_dir/master/master_identity.pub``.
+        self._real_identity_pub = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -147,17 +156,82 @@ class TopologyCluster:
     # Peer acceptance (``salt-key -a --master`` simulation)
     # ------------------------------------------------------------------
 
+    def identity_key_paths(self):
+        """
+        Return ``(pub_path, priv_path)`` for this cluster's
+        ``master_identity`` keypair under
+        ``<pki_dir>/master/master_identity.{pub,pem}``.
+        """
+        master = self.masters[0]
+        pki_dir = pathlib.Path(master.config["pki_dir"]) / "master"
+        return (
+            pki_dir / "master_identity.pub",
+            pki_dir / "master_identity.pem",
+        )
+
+    def ensure_identity_key(self):
+        """
+        Generate and persist a real
+        :class:`salt.crypt.MasterIdentityKey` keypair for this
+        cluster under ``<pki_dir>/master/master_identity.{pub,pem}``.
+
+        Idempotent: a second call reuses the on-disk keypair.
+        Returns the pub-key PEM bytes --- the same bytes
+        :meth:`accept_peer` copies into a peer's ``masters/`` dir.
+        """
+        import salt.crypt  # local import to keep harness lazy
+
+        pub_path, _priv_path = self.identity_key_paths()
+        master = self.masters[0]
+        opts = {
+            "pki_dir": master.config["pki_dir"],
+            "hash_type": master.config.get("hash_type", "sha256"),
+            "keysize": master.config.get("keysize", 2048),
+        }
+        key = salt.crypt.MasterIdentityKey(opts)
+        if not key.exists():
+            pub_pem, priv_pem = key.generate()
+            key.write(pub_pem, priv_pem)
+        pub_bytes, _priv_bytes = key.load()
+        self._real_identity_pub = pub_bytes
+        # Keep ``identity_pub`` pointing at the real bytes too so
+        # callers that previously consumed the placeholder see the
+        # real key once ``ensure_identity_key`` has run.  Scenarios
+        # that still want the placeholder shape bypass this helper.
+        self.identity_pub = pub_bytes
+        # Mirror onto cluster peers (3008.x master cluster) so every
+        # peer in the logical cluster has the same identity key on
+        # disk.
+        for peer in self.masters[1:]:
+            peer_pki = pathlib.Path(peer.config["pki_dir"]) / "master"
+            peer_pki.mkdir(parents=True, exist_ok=True)
+            (peer_pki / "master_identity.pub").write_bytes(pub_bytes)
+            os.chmod(str(peer_pki / "master_identity.pub"), 0o444)
+        return pub_bytes
+
     def accept_peer(self, other):
         """
         Place *other*'s identity pub in this cluster's ``masters/``
         directory --- simulates ``salt-key -a <other.cluster_id> --master``.
 
+        If the peer has already generated a real
+        :class:`salt.crypt.MasterIdentityKey` on disk (via
+        :meth:`ensure_identity_key`), the real pub-key PEM is copied
+        over.  Otherwise, the placeholder bytes assigned at
+        construction time are written --- preserves the behaviour
+        the existing core/failure scenario tests depend on.
+
         :param other: Another :class:`TopologyCluster`.
         """
         if not isinstance(other, TopologyCluster):
             raise TypeError(f"accept_peer expects TopologyCluster, got {type(other)!r}")
+        other_pub_path, _ = other.identity_key_paths()
+        if other_pub_path.is_file():
+            pub_bytes = other_pub_path.read_bytes()
+        else:
+            pub_bytes = other.identity_pub
         target = self.masters_pki_dir / f"{other.cluster_id}.pub"
-        target.write_bytes(other.identity_pub)
+        target.write_bytes(pub_bytes)
         os.chmod(target, 0o644)
 
     def revoke_peer(self, other):

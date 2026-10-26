@@ -216,6 +216,12 @@ def _opts_from_cluster(cluster):
     on-disk pki_dir, so the registry/breadcrumb MmapCaches we open
     in the test share bytes with the master process when (and if)
     it eventually populates them.
+
+    Cache sizes must mirror the master's own pre_create or the
+    test-opened writer sees an "Index file size mismatch" --- the
+    master's pre_fork path already materialised the mmap at the
+    opt-specified size.  See the matching note in
+    :meth:`TopologyCluster.master_opts`.
     """
     master = cluster.masters[0]
     return {
@@ -224,12 +230,22 @@ def _opts_from_cluster(cluster):
         "interface": master.config.get("interface", "127.0.0.1"),
         "topology_enabled": True,
         "topology_link_port": master.config["topology_link_port"],
-        "topology_breadcrumb_grace": 2,
-        "topology_breadcrumb_max_age": 60,
-        "topology_breadcrumb_cache_size": 512,
-        "topology_breadcrumb_cache_key_size": 64,
-        "topology_registry_cache_size": 512,
-        "topology_registry_cache_key_size": 64,
+        "topology_breadcrumb_grace": master.config.get("topology_breadcrumb_grace", 2),
+        "topology_breadcrumb_max_age": master.config.get(
+            "topology_breadcrumb_max_age", 60
+        ),
+        "topology_breadcrumb_cache_size": master.config.get(
+            "topology_breadcrumb_cache_size", 1_000_000
+        ),
+        "topology_breadcrumb_cache_key_size": master.config.get(
+            "topology_breadcrumb_cache_key_size", 64
+        ),
+        "topology_registry_cache_size": master.config.get(
+            "topology_registry_cache_size", 10_000
+        ),
+        "topology_registry_cache_key_size": master.config.get(
+            "topology_registry_cache_key_size", 64
+        ),
     }
 
 
