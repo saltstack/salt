@@ -93,7 +93,11 @@ async def _publish(pusher, raw):
         client = _TCPPubServerPublisher(
             pusher.pull_host, pusher.pull_port, getattr(pusher, "pull_path", None)
         )
-        await client.connect()
+        try:
+            await client.connect()
+        except Exception:  # pylint: disable=broad-except
+            client.close()
+            raise
         # Stash on the pusher so the next send reuses the connection.
         # The pusher's lifetime exceeds the master process; the kernel
         # closes the fd at exit, so explicit teardown isn't required.

@@ -1435,3 +1435,35 @@ async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
         "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
         "at the end of MasterKeys._setup_keys)."
     )
+
+
+async def test_send_state_sync_chunks_closes_its_pusher(cluster_master_opts):
+    """
+    Regression test for issue #70561.
+
+    The state-sync sender must close the pusher it created.
+    """
+    from tests.support.mock import MagicMock, patch
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.transport = MagicMock()
+
+    fake_pusher = MagicMock()
+    channel.pusher = MagicMock(return_value=fake_pusher)
+
+    secrets = {"cluster_aes": {"secret": MagicMock()}}
+    with patch.object(SMaster, "secrets", secrets), patch.object(
+        salt.crypt, "Crypticle", MagicMock()
+    ), patch(
+        "salt.cluster.state_sync.iter_keys_chunks",
+        side_effect=RuntimeError("state-sync unavailable"),
+    ), patch(
+        "salt.cluster.state_sync.iter_root_chunks",
+        side_effect=RuntimeError("state-sync unavailable"),
+    ):
+        # Must not raise -- the handler logs the abort and cleans up.
+        await channel._send_state_sync_chunks("session-1", "salt-master-2")
+
+    channel.pusher.assert_called_once_with("salt-master-2")
+    fake_pusher.close.assert_called_once_with()
