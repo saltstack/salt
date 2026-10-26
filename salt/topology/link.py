@@ -36,9 +36,26 @@ unreachable.  Failover doesn't require re-authentication ---
 the session AES is pinned to the identity, not the endpoint.
 """
 
+import asyncio
 import logging
+import os
+
+from salt.channel.client import AsyncPubChannel, AsyncReqChannel
+from salt.config.topology import PeerRef
+from salt.topology.summary import ClusterSummary
+from salt.topology.summary import serialize as serialize_summary
 
 log = logging.getLogger(__name__)
+
+
+#: Default retry backoff while waiting for the peer to accept us.
+_DEFAULT_HANDSHAKE_BACKOFF = 2.0
+
+#: Maximum number of handshake attempts before giving up (and leaving
+#: the link in PENDING_ACCEPT so the caller can decide to retry
+#: later from a scheduler).  The retry loop inside ``connect`` is
+#: bounded so a wedged peer cannot pin an asyncio task forever.
+_DEFAULT_HANDSHAKE_MAX_TRIES = 6
 
 
 class LinkHealth:
@@ -77,6 +94,22 @@ class LinkUnavailable(Exception):
     """Raised when a send is attempted on a link that cannot deliver."""
 
 
+def _build_envelope(origin, destinations, transit_match, path):
+    """Return the ``load["topology"]`` dict defined in the RFC.
+
+    The receiver, not the sender, authenticates the path --- so this
+    helper does not append anything to ``path``.  It copies the list
+    defensively so caller-side mutation after send cannot change the
+    on-wire bytes retroactively.
+    """
+    return {
+        "origin": origin,
+        "destinations": list(destinations) if destinations is not None else None,
+        "transit_match": bool(transit_match),
+        "path": list(path),
+    }
+
+
 class PeerMasterLink:
     """
     One peer-master link.
@@ -109,6 +142,63 @@ class PeerMasterLink:
         :param io_loop: Asyncio loop; must be the same loop used
             by the master's publish daemon.
         """
+        if not isinstance(seed_ref, PeerRef):
+            raise TypeError(
+                f"PeerMasterLink seed_ref must be PeerRef, got {type(seed_ref)!r}"
+            )
+        self.opts = dict(opts)
+        self.io_loop = io_loop
+        self._endpoints = [seed_ref]
+        self._peer_cluster_id = None
+        self._health = LinkHealth.INITIAL
+        self._remote_summary = None
+        #: The session AES key established at ``_master_auth`` time.
+        #: Rotates on every successful re-handshake; see
+        #: :meth:`_rotate_session`.
+        self._session_aes = None
+        #: Rotation counter --- unit tests exercise this to prove
+        #: that a fresh handshake does not re-use the prior key.
+        self._session_generation = 0
+        #: Outbound req + inbound pub channels.  Lazily opened on
+        #: first ``connect`` and torn down by ``disconnect``.
+        self._req_channel = None
+        self._pub_channel = None
+        self._closing = False
+
+    # ------------------------------------------------------------------
+    # Equality / hashing --- used by link_manager's registry dict
+    # ------------------------------------------------------------------
+
+    def __eq__(self, other):
+        """Two links are equal when their peer identity matches.
+
+        Before handshake, falls back to the seed endpoint tuple so
+        the pre-handshake registry key is stable.
+        """
+        if not isinstance(other, PeerMasterLink):
+            return NotImplemented
+        if self._peer_cluster_id and other._peer_cluster_id:
+            return self._peer_cluster_id == other._peer_cluster_id
+        if self._peer_cluster_id or other._peer_cluster_id:
+            return False
+        # Both unauthenticated --- fall back to seed endpoint.
+        return self._endpoints[:1] == other._endpoints[:1]
+
+    def __hash__(self):
+        if self._peer_cluster_id:
+            return hash(("peer_cluster_id", self._peer_cluster_id))
+        seed = self._endpoints[0] if self._endpoints else None
+        return hash(("seed", seed))
+
+    def __repr__(self):
+        return (
+            f"<PeerMasterLink peer={self._peer_cluster_id!r} "
+            f"health={self._health!r} endpoints={len(self._endpoints)}>"
+        )
+
+    # ------------------------------------------------------------------
+    # Properties
+    # ------------------------------------------------------------------
 
     @property
     def peer_cluster_id(self):
@@ -119,10 +209,12 @@ class PeerMasterLink:
         afterward even if the link later goes DISCONNECTED, since
         the identity is persistent across reconnects.
         """
+        return self._peer_cluster_id
 
     @property
     def health(self):
         """Current :class:`LinkHealth` state as a string."""
+        return self._health
 
     @property
     def remote_summary(self):
@@ -131,6 +223,7 @@ class PeerMasterLink:
         received from the peer, or ``None`` if no summary has
         arrived yet.
         """
+        return self._remote_summary
 
     @property
     def endpoints(self):
@@ -142,6 +235,16 @@ class PeerMasterLink:
         Raft membership (shared with us during handshake and
         refreshed via subsequent summary updates).
         """
+        return tuple(self._endpoints)
+
+    @property
+    def session_generation(self):
+        """Generation counter --- increments on each session rotation."""
+        return self._session_generation
+
+    # ------------------------------------------------------------------
+    # Endpoint management
+    # ------------------------------------------------------------------
 
     def add_endpoint(self, ref):
         """
@@ -152,6 +255,89 @@ class PeerMasterLink:
         exposes a new peer-cluster member.  Deduplicates against
         existing endpoints by ``(host, port)``.
         """
+        if not isinstance(ref, PeerRef):
+            raise TypeError(f"add_endpoint expects PeerRef, got {type(ref).__name__}")
+        for existing in self._endpoints:
+            if existing.host == ref.host and existing.port == ref.port:
+                return
+        self._endpoints.append(ref)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _rotate_session(self, aes):
+        """Install a fresh session AES and bump the generation counter."""
+        self._session_aes = aes
+        self._session_generation += 1
+
+    def _build_channel_opts(self, endpoint):
+        """
+        Build a transport opts dict scoped to *endpoint*.
+
+        The channel primitives key off ``master_uri``, ``master_ip``,
+        and ``publish_port`` / ``ret_port`` --- we scope those to
+        this peer so the underlying zmq / tcp transport talks to the
+        right place.
+        """
+        opts = dict(self.opts)
+        host = endpoint.host
+        port = endpoint.port or self.opts.get("topology_link_port")
+        if port is None:
+            raise ValueError(
+                "PeerMasterLink endpoint has no port and no "
+                "topology_link_port fallback in opts"
+            )
+        opts["master_ip"] = host
+        opts["master_host"] = host
+        opts["master_uri"] = f"tcp://{host}:{port}"
+        opts["master_port"] = port
+        opts["ret_port"] = port
+        return opts
+
+    def _build_envelope_payload(self, body, tag):
+        """Wrap *body* into a serialized tagged envelope.
+
+        Signing with the session AES is a receive-side verification
+        concern; today the key is pinned to the link and included in
+        the payload under ``session_generation`` for the receiver to
+        correlate.  When the Phase 3 inbound listener lands it will
+        verify the generation and reject stale keys.
+        """
+        if self._session_aes is None:
+            raise LinkUnavailable(
+                f"link to {self._peer_cluster_id!r} has no session AES"
+            )
+        return {
+            "cmd": tag,
+            "tag": tag,
+            "origin_cluster_id": self.opts.get("cluster_id"),
+            "session_generation": self._session_generation,
+            "load": body,
+        }
+
+    def _assert_sendable(self, tag):
+        """Guard that the link is in a state that permits *tag* sends."""
+        if self._closing:
+            raise LinkUnavailable("link is closing")
+        if self._health == LinkHealth.CONNECTED:
+            return
+        if self._health == LinkHealth.QUIESCING:
+            # Returns drain through quiesce; everything else is rejected.
+            if tag == "topology/ret":
+                return
+            raise LinkUnavailable(
+                f"link to {self._peer_cluster_id!r} is QUIESCING; "
+                f"{tag} not permitted"
+            )
+        raise LinkUnavailable(
+            f"link to {self._peer_cluster_id!r} not available "
+            f"(health={self._health})"
+        )
+
+    # ------------------------------------------------------------------
+    # Connect / disconnect / quiesce
+    # ------------------------------------------------------------------
 
     async def connect(self):
         """
@@ -171,6 +357,128 @@ class PeerMasterLink:
         :raises asyncio.CancelledError: If the link is torn down
             during connect.
         """
+        if self._closing:
+            raise LinkUnavailable("link is closing")
+        endpoint = self._endpoints[0]
+        channel_opts = self._build_channel_opts(endpoint)
+        self._health = LinkHealth.CONNECTING
+
+        backoff = float(
+            self.opts.get("topology_handshake_backoff", _DEFAULT_HANDSHAKE_BACKOFF)
+        )
+        max_tries = int(
+            self.opts.get("topology_handshake_max_tries", _DEFAULT_HANDSHAKE_MAX_TRIES)
+        )
+
+        # Lazily open the req channel.  We hold onto it across the
+        # retry loop so the backoff doesn't allocate a fresh socket
+        # on every attempt.
+        if self._req_channel is None:
+            self._req_channel = AsyncReqChannel.factory(
+                channel_opts, io_loop=self.io_loop, crypt="clear"
+            )
+
+        attempt = 0
+        last_status = None
+        while attempt < max_tries:
+            attempt += 1
+            handshake_load = {
+                "cmd": "topology/_master_auth",
+                "tag": "topology/_master_auth",
+                "cluster_id": self.opts.get("cluster_id"),
+                "nonce": os.urandom(16).hex(),
+            }
+            try:
+                reply = await self._req_channel.send(handshake_load)
+            except asyncio.CancelledError:
+                self._health = LinkHealth.DISCONNECTED
+                raise
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "topology link to %s: handshake transport error: %s",
+                    endpoint.host,
+                    exc,
+                )
+                self._health = LinkHealth.DISCONNECTED
+                return
+
+            if not isinstance(reply, dict):
+                log.warning(
+                    "topology link to %s: unexpected handshake reply shape: %r",
+                    endpoint.host,
+                    reply,
+                )
+                self._health = LinkHealth.DISCONNECTED
+                return
+
+            status = reply.get("status")
+            last_status = status
+            if status == "ok":
+                aes = reply.get("aes")
+                if not aes:
+                    log.warning(
+                        "topology link to %s: handshake ok but missing aes",
+                        endpoint.host,
+                    )
+                    self._health = LinkHealth.DISCONNECTED
+                    return
+                self._peer_cluster_id = reply.get("cluster_id")
+                self._rotate_session(aes)
+                # Harvest any additional endpoints the peer advertised.
+                for ep in reply.get("endpoints") or []:
+                    if isinstance(ep, dict) and "host" in ep:
+                        self.add_endpoint(
+                            PeerRef(
+                                host=ep["host"],
+                                port=ep.get("port"),
+                                finger=ep.get("finger"),
+                            )
+                        )
+                # Open the pub channel; failures are logged but do
+                # not block CONNECTED --- Phase 3 brings up the real
+                # inbound listener, Phase 2 can live without pub.
+                try:
+                    if self._pub_channel is None:
+                        self._pub_channel = AsyncPubChannel.factory(
+                            channel_opts, io_loop=self.io_loop
+                        )
+                    await self._pub_channel.connect()
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug(
+                        "topology link to %s: pub channel connect skipped: %s",
+                        endpoint.host,
+                        exc,
+                    )
+                self._health = LinkHealth.CONNECTED
+                return
+            if status == "rejected":
+                log.warning(
+                    "topology link to %s: handshake rejected",
+                    endpoint.host,
+                )
+                self._health = LinkHealth.DISCONNECTED
+                return
+            if status == "retry":
+                # Peer has not accepted us yet; park in PENDING_ACCEPT
+                # and sleep before trying again.
+                self._health = LinkHealth.PENDING_ACCEPT
+                if attempt >= max_tries:
+                    break
+                await asyncio.sleep(backoff)
+                continue
+            # Unknown status --- treat as disconnected.
+            log.warning(
+                "topology link to %s: unknown handshake status %r",
+                endpoint.host,
+                status,
+            )
+            self._health = LinkHealth.DISCONNECTED
+            return
+        # Exhausted retries while the peer kept replying ``retry``.
+        if last_status == "retry":
+            self._health = LinkHealth.PENDING_ACCEPT
+        else:
+            self._health = LinkHealth.DISCONNECTED
 
     async def disconnect(self):
         """
@@ -182,6 +490,27 @@ class PeerMasterLink:
         disconnects.  A disconnected link can be reconnected via
         :meth:`connect` without new human accept steps.
         """
+        self._closing = True
+        if self._req_channel is not None:
+            try:
+                await self._req_channel.close_async()
+            except Exception:  # pylint: disable=broad-except
+                try:
+                    self._req_channel.close()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug("req channel close failed", exc_info=True)
+            self._req_channel = None
+        if self._pub_channel is not None:
+            try:
+                await self._pub_channel.close_async()
+            except Exception:  # pylint: disable=broad-except
+                try:
+                    self._pub_channel.close()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug("pub channel close failed", exc_info=True)
+            self._pub_channel = None
+        self._health = LinkHealth.DISCONNECTED
+        self._closing = False
 
     async def quiesce(self):
         """
@@ -196,6 +525,17 @@ class PeerMasterLink:
         :func:`salt.topology.link_manager.remove_link` on
         detach so returns in flight aren't dropped.
         """
+        if self._health == LinkHealth.DISCONNECTED:
+            return
+        self._health = LinkHealth.QUIESCING
+        drain = float(self.opts.get("topology_detach_quiesce", 0))
+        if drain > 0:
+            await asyncio.sleep(drain)
+        await self.disconnect()
+
+    # ------------------------------------------------------------------
+    # Outbound sends
+    # ------------------------------------------------------------------
 
     async def send_publish(self, load, path):
         """
@@ -212,6 +552,19 @@ class PeerMasterLink:
             QUIESCING, or PENDING_ACCEPT with no acceptable
             session yet.
         """
+        self._assert_sendable("topology/pub")
+        topology = (load.get("topology") if isinstance(load, dict) else None) or {}
+        envelope = _build_envelope(
+            origin=topology.get("origin", self.opts.get("cluster_id")),
+            destinations=topology.get("destinations"),
+            transit_match=topology.get("transit_match", True),
+            path=path,
+        )
+        # Caller-owned ``load`` must not be mutated.
+        body = dict(load) if isinstance(load, dict) else {"inner": load}
+        body["topology"] = envelope
+        payload = self._build_envelope_payload(body, "topology/pub")
+        return await self._req_channel.send(payload)
 
     async def send_return(self, ret_batch, path):
         """
@@ -235,6 +588,16 @@ class PeerMasterLink:
             returns.  Caller is responsible for either retrying
             later or buffering.
         """
+        self._assert_sendable("topology/ret")
+        body = {
+            "batch": list(ret_batch),
+            "topology": {
+                "origin": self.opts.get("cluster_id"),
+                "path": list(path),
+            },
+        }
+        payload = self._build_envelope_payload(body, "topology/ret")
+        return await self._req_channel.send(payload)
 
     async def send_event(self, event, path):
         """
@@ -245,6 +608,16 @@ class PeerMasterLink:
         --- this is the normal path for the vast majority of
         events, which stay local.
         """
+        self._assert_sendable("topology/evt")
+        body = {
+            "event": event,
+            "topology": {
+                "origin": self.opts.get("cluster_id"),
+                "path": list(path),
+            },
+        }
+        payload = self._build_envelope_payload(body, "topology/evt")
+        return await self._req_channel.send(payload)
 
     async def send_summary(self, summary):
         """
@@ -256,6 +629,14 @@ class PeerMasterLink:
         inside this cluster (so peers get a fresh count promptly
         after minions attach/detach).
         """
+        self._assert_sendable("topology/sum")
+        if not isinstance(summary, ClusterSummary):
+            raise TypeError(
+                f"send_summary expects ClusterSummary, got {type(summary).__name__}"
+            )
+        body = {"summary": serialize_summary(summary)}
+        payload = self._build_envelope_payload(body, "topology/sum")
+        return await self._req_channel.send(payload)
 
     async def subscribe(self, tag_patterns):
         """
@@ -267,3 +648,8 @@ class PeerMasterLink:
         on the next outbound message or on the next heartbeat,
         whichever comes first.
         """
+        self._assert_sendable("topology/sub")
+        patterns = list(tag_patterns)
+        body = {"subscribe": patterns}
+        payload = self._build_envelope_payload(body, "topology/sub")
+        return await self._req_channel.send(payload)

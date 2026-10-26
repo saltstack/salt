@@ -32,9 +32,40 @@ caused committed entries to never apply.
 """
 
 import logging
+import os
+import re
+import shutil
 from typing import NamedTuple
 
+import salt.crypt
+import salt.topology.registry as registry
+import salt.utils.files
+import salt.utils.msgpack
+from salt.cluster.consensus.raft.log import BaseStateMachine, LogEntryType
+from salt.config.topology import CLUSTER_ID_RE
+
 log = logging.getLogger(__name__)
+
+
+# Snapshot envelope version prefix.  Bumping is a breaking change
+# for on-disk snapshot compatibility; the restore path checks the
+# first field and refuses to restore unknown versions so a joiner
+# with an older binary cannot silently misread a newer snapshot.
+TOPOLOGY_SNAPSHOT_VERSION = "topology.snapshot.v1"
+
+# Compiled regex for the hostile-peer re-validation at apply time.
+_CLUSTER_ID_RE = re.compile(CLUSTER_ID_RE)
+
+# Reserved MmapCache sentinel keys that must never be used as a
+# peer ``cluster_id``.  Imported from the registry for a single
+# source of truth; mirrored here so the SM can reject at apply
+# time before touching the writer handle.
+_RESERVED_IDS = frozenset(
+    {
+        registry.RESERVED_IDENTITY_PUB_KEY,
+        registry.RESERVED_IDENTITY_VERSION_KEY,
+    }
+)
 
 
 class PeerState(NamedTuple):
@@ -66,7 +97,7 @@ class PeerState(NamedTuple):
     attached_at: float
 
 
-class TopologyStateMachine:
+class TopologyStateMachine(BaseStateMachine):
     """
     Raft-committed write path for the topology registry.
 
@@ -85,8 +116,24 @@ class TopologyStateMachine:
         """
         :param opts: Master opts.
         """
+        self.opts = opts
+        # Materialize the mmap files on first construction so the
+        # writer open below finds a valid header.  ``pre_create``
+        # is idempotent --- a no-op if the files already exist.
+        registry.pre_create(opts)
+        self.registry = registry.open_writer(opts)
+        # Dispatch table keyed by LogEntryType value.
+        self._handlers = {
+            LogEntryType.MASTER_IDENTITY_KEY: self._handle_identity_key,
+            LogEntryType.MASTER_PEER_ATTACH: self._handle_peer_attach,
+            LogEntryType.MASTER_PEER_DETACH: self._handle_peer_detach,
+        }
 
-    def apply(self, cmd, client_id, sequence_num, index=-1):
+    # ------------------------------------------------------------------
+    # BaseStateMachine interface
+    # ------------------------------------------------------------------
+
+    def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
         """
         Apply a committed Raft log entry.
 
@@ -110,6 +157,21 @@ class TopologyStateMachine:
         removed; routes are derived from the summary stream
         locally.
         """
+        if not isinstance(cmd, dict):
+            log.debug(
+                "TopologyStateMachine: ignoring non-dict cmd (type=%s)",
+                type(cmd).__name__,
+            )
+            return
+        entry_type = cmd.get("type")
+        handler = self._handlers.get(entry_type)
+        if handler is None:
+            log.debug(
+                "TopologyStateMachine: no handler for entry type %r; ignoring",
+                entry_type,
+            )
+            return
+        handler(cmd)
 
     def get_snapshot(self):
         """
@@ -122,6 +184,27 @@ class TopologyStateMachine:
         would make snapshot replay diverge from live gossip
         replay.
         """
+        peers = {}
+        # Use list_keys + get rather than list_items because
+        # list_items rstrips trailing NUL bytes from values, which
+        # can corrupt a msgpack blob whose last byte is 0x00.  get()
+        # reads exactly ``length`` bytes from the heap.
+        for cluster_id in self.registry.list_keys():
+            if cluster_id in _RESERVED_IDS:
+                continue
+            decoded = registry.get_peer(self.registry, cluster_id)
+            if decoded is None:
+                continue
+            peers[cluster_id] = decoded
+        identity_pub = registry.get_identity_pub(self.registry) or b""
+        identity_version = _read_identity_version(self.registry)
+        payload = {
+            "version": TOPOLOGY_SNAPSHOT_VERSION,
+            "identity_pub": identity_pub,
+            "identity_version": identity_version,
+            "peers": peers,
+        }
+        return salt.utils.msgpack.packb(payload, use_bin_type=True)
 
     def restore_snapshot(self, data):
         """
@@ -130,10 +213,75 @@ class TopologyStateMachine:
 
         Matches :class:`BaseStateMachine.restore_snapshot`
         signature.  Called during joiner catch-up or follower
-        restart.  Applied in one write-locked transaction on the
-        registry MmapCache so readers never see a partial
-        restore.
+        restart.  The restore replaces the entire registry
+        contents (identity + peers) so a joiner's post-restore
+        view matches a leader that produced the snapshot.
         """
+        if data is None:
+            return
+        try:
+            payload = salt.utils.msgpack.unpackb(bytes(data), raw=False)
+        except (ValueError, TypeError) as exc:
+            log.error(
+                "TopologyStateMachine: snapshot payload failed to decode: %s",
+                exc,
+            )
+            return
+        if not isinstance(payload, dict):
+            log.error(
+                "TopologyStateMachine: snapshot payload must be a dict, got %s",
+                type(payload).__name__,
+            )
+            return
+        version = payload.get("version")
+        if version != TOPOLOGY_SNAPSHOT_VERSION:
+            log.error(
+                "TopologyStateMachine: snapshot version %r not understood "
+                "(expected %r); refusing to restore",
+                version,
+                TOPOLOGY_SNAPSHOT_VERSION,
+            )
+            return
+        # Wipe the current peer set so the restore truly replaces
+        # state rather than merging into whatever was there.
+        for existing in list(registry.list_peer_ids(self.registry)):
+            registry.delete_peer(self.registry, existing)
+        # Identity half.
+        identity_pub = payload.get("identity_pub") or b""
+        if identity_pub:
+            if isinstance(identity_pub, str):
+                identity_pub = identity_pub.encode("utf-8")
+            registry.set_identity_pub(self.registry, identity_pub)
+        else:
+            # Explicit clear so a snapshot that pre-dates identity
+            # bootstrap wipes any locally-stashed key.
+            self.registry.delete(registry.RESERVED_IDENTITY_PUB_KEY)
+        identity_version = payload.get("identity_version") or 0
+        try:
+            version_int = int(identity_version)
+        except (TypeError, ValueError):
+            version_int = 0
+        self.registry.put(
+            registry.RESERVED_IDENTITY_VERSION_KEY,
+            str(version_int).encode("ascii"),
+        )
+        # Peer half.
+        peers = payload.get("peers") or {}
+        if isinstance(peers, dict):
+            for cluster_id, state in peers.items():
+                if cluster_id in _RESERVED_IDS:
+                    continue
+                if not isinstance(state, dict):
+                    continue
+                registry.set_peer(
+                    self.registry,
+                    cluster_id,
+                    _normalise_peer_state(cluster_id, state),
+                )
+
+    # ------------------------------------------------------------------
+    # Handlers
+    # ------------------------------------------------------------------
 
     def _handle_identity_key(self, entry):
         """
@@ -147,20 +295,42 @@ class TopologyStateMachine:
         permissions (0400 priv, 0444 pub) for other components
         that read the files directly (e.g. ``salt-key -F``).
 
-        The private key is NOT stored in the MmapCache --- it
-        lives only on disk at 0400 to avoid inheriting the
-        MmapCache heap file's default umask permissions.
-
         **Rotation path:** when the entry's bytes differ from
         the stored bytes, this is an identity rotation.  Replace
-        the keypair in the registry + on disk, increment the
-        ``__identity_version__`` counter, and tear down any
-        existing peer-master links so they re-authenticate with
-        the new key on reconnect.  Peers that have the old key
-        in their ``masters/`` dir will reject the new key until
-        re-accepted by the operator; this is intentional (an
-        operator-visible rotation).
+        the keypair in the registry + on disk and increment the
+        ``__identity_version__`` counter.  Peers that have the
+        old key in their ``masters/`` dir will reject the new
+        key until re-accepted by the operator; this is
+        intentional (an operator-visible rotation).
         """
+        pub_pem = entry.get("public_key")
+        if not pub_pem:
+            log.error(
+                "TopologyStateMachine: MASTER_IDENTITY_KEY entry missing public_key"
+            )
+            return
+        if isinstance(pub_pem, str):
+            pub_pem = pub_pem.encode("utf-8")
+        existing = registry.get_identity_pub(self.registry)
+        if existing == pub_pem:
+            # Idempotent re-apply: no state change, no version bump.
+            self._persist_identity_disk(pub_pem, entry.get("private_key"))
+            return
+        # First commit or rotation: write pub + bump version.
+        registry.set_identity_pub(self.registry, pub_pem)
+        prior_version = _read_identity_version(self.registry)
+        new_version = prior_version + 1
+        self.registry.put(
+            registry.RESERVED_IDENTITY_VERSION_KEY,
+            str(new_version).encode("ascii"),
+        )
+        self._persist_identity_disk(pub_pem, entry.get("private_key"))
+        if existing is not None:
+            log.warning(
+                "TopologyStateMachine: identity key rotated (version=%d); "
+                "peers must re-accept the new key",
+                new_version,
+            )
 
     def _handle_peer_attach(self, entry):
         """
@@ -179,39 +349,94 @@ class TopologyStateMachine:
         PeerState for the same ``cluster_id`` already exists
         with a different ``public_key``, the apply is rejected
         unless the entry carries an explicit ``force_replace``
-        flag.  Attempting to attach a different-keyed peer
-        under an existing name is logged at CRITICAL --- this
-        is either an operator mistake (re-generated the peer's
-        identity without first detaching) or an attack.
-
-        On accept: writes a new :class:`PeerState` entry into
-        the registry MmapCache keyed by ``cluster_id``.  Moves
-        the accepted ``<cluster_id>.pub`` from
-        ``pki_dir/masters_pre/`` to ``pki_dir/masters/`` if it
-        was pending; writes the key from the entry if the file
-        is absent (follower that joined after the attach was
-        committed).
-
-        **Propose-first ordering**: salt-key does NOT rename
-        the file; this handler does.  Keeps file-system state
-        in sync with Raft state across every cluster peer.
+        flag.
         """
+        cluster_id = entry.get("cluster_id")
+        if not isinstance(cluster_id, str) or not cluster_id:
+            log.critical(
+                "TopologyStateMachine: MASTER_PEER_ATTACH missing cluster_id; "
+                "rejecting entry"
+            )
+            return
+        if cluster_id in _RESERVED_IDS or not _CLUSTER_ID_RE.match(cluster_id):
+            log.critical(
+                "TopologyStateMachine: MASTER_PEER_ATTACH cluster_id %r is "
+                "invalid or reserved; rejecting entry (hostile-peer defense)",
+                cluster_id,
+            )
+            return
+        public_key = entry.get("public_key")
+        if public_key is None:
+            log.critical(
+                "TopologyStateMachine: MASTER_PEER_ATTACH for %r missing "
+                "public_key; rejecting entry",
+                cluster_id,
+            )
+            return
+        if isinstance(public_key, str):
+            public_key = public_key.encode("utf-8")
+        else:
+            public_key = bytes(public_key)
+        existing = registry.get_peer(self.registry, cluster_id)
+        if existing is not None:
+            if existing.get("public_key") == public_key:
+                # Idempotent re-apply.
+                return
+            if not entry.get("force_replace"):
+                log.critical(
+                    "TopologyStateMachine: MASTER_PEER_ATTACH for %r would "
+                    "overwrite an existing peer with a different public_key "
+                    "and force_replace is not set; rejecting entry",
+                    cluster_id,
+                )
+                return
+            log.warning(
+                "TopologyStateMachine: MASTER_PEER_ATTACH for %r replacing "
+                "an existing public_key (force_replace=True)",
+                cluster_id,
+            )
+        state = _normalise_peer_state(
+            cluster_id,
+            {
+                "cluster_id": cluster_id,
+                "public_key": public_key,
+                "endpoints": entry.get("endpoints") or (),
+                "attached_at": entry.get("attached_at") or 0.0,
+            },
+        )
+        registry.set_peer(self.registry, cluster_id, state)
+        self._finalise_accepted_key_file(cluster_id, public_key)
 
     def _handle_peer_detach(self, entry):
         """
         Apply ``MASTER_PEER_DETACH``.
 
         Removes the peer entry from the registry MmapCache and
-        moves the key file to ``masters_denied/`` or deletes it
-        depending on the ``reason`` field.
-
-        Also signals the publish daemon's
-        :mod:`salt.topology.link_manager` to invalidate any
-        routing-table entries whose next-hop was this peer.
-        The routing table itself is not Raft-replicated, so
-        this signal is a function call within the same process
-        (publish daemon only).
+        moves the key file to ``masters_denied/`` for
+        ``reason="rejected"`` or deletes it for other reasons.
+        Idempotent on an already-detached peer.
         """
+        cluster_id = entry.get("cluster_id")
+        if not isinstance(cluster_id, str) or not cluster_id:
+            log.error(
+                "TopologyStateMachine: MASTER_PEER_DETACH missing cluster_id; "
+                "ignoring"
+            )
+            return
+        if cluster_id in _RESERVED_IDS:
+            log.critical(
+                "TopologyStateMachine: MASTER_PEER_DETACH for reserved key %r "
+                "ignored",
+                cluster_id,
+            )
+            return
+        reason = entry.get("reason") or "revoked"
+        registry.delete_peer(self.registry, cluster_id)
+        self._move_detached_key_file(cluster_id, reason)
+
+    # ------------------------------------------------------------------
+    # Identity helpers
+    # ------------------------------------------------------------------
 
     def generate_identity_key(self):
         """
@@ -225,9 +450,198 @@ class TopologyStateMachine:
 
         :returns: ``(pub_pem, priv_pem)`` as bytes.
         """
+        keysize = int(self.opts.get("keysize") or 2048)
+        priv_str, pub_str = salt.crypt.gen_keys(keysize)
+        if isinstance(priv_str, str):
+            priv_pem = priv_str.encode("utf-8")
+        else:
+            priv_pem = bytes(priv_str)
+        if isinstance(pub_str, str):
+            pub_pem = pub_str.encode("utf-8")
+        else:
+            pub_pem = bytes(pub_str)
+        return pub_pem, priv_pem
 
     def is_bootstrapped(self):
         """
         Return True once the identity key is committed to Raft
         and reflected in the registry MmapCache.
         """
+        return registry.get_identity_pub(self.registry) is not None
+
+    # ------------------------------------------------------------------
+    # Internal: on-disk file hand-offs
+    # ------------------------------------------------------------------
+
+    def _master_pki_subdir(self, name):
+        """Return (and ensure) ``pki_dir/<name>/``."""
+        path = os.path.join(self.opts["pki_dir"], name)
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError:  # pragma: no cover - best-effort
+            pass
+        return path
+
+    def _persist_identity_disk(self, pub_pem, priv_pem):
+        """
+        Write master_identity.{pub,pem} with strict perms.
+
+        Idempotent on identical bytes.  The private half is
+        optional: a snapshot restore on a follower will carry only
+        the public key (private material never crosses the wire),
+        so this method accepts ``priv_pem=None``.
+        """
+        master_dir = os.path.join(self.opts["pki_dir"], "master")
+        try:
+            os.makedirs(master_dir, exist_ok=True)
+        except OSError:
+            log.exception("TopologyStateMachine: could not create %s", master_dir)
+            return
+        pub_path = os.path.join(master_dir, "master_identity.pub")
+        _write_file_atomic(pub_path, pub_pem, mode=0o444)
+        if priv_pem is not None:
+            if isinstance(priv_pem, str):
+                priv_pem = priv_pem.encode("utf-8")
+            else:
+                priv_pem = bytes(priv_pem)
+            priv_path = os.path.join(master_dir, "master_identity.pem")
+            _write_file_atomic(priv_path, priv_pem, mode=0o400)
+
+    def _finalise_accepted_key_file(self, cluster_id, public_key):
+        """
+        Move or create ``masters/<cluster_id>.pub`` for an accepted peer.
+
+        If the file is already in ``masters_pre/``, rename it into
+        ``masters/`` (operator-visible move) so file-system state
+        tracks Raft state across every cluster peer.  Otherwise
+        (follower that joined after the attach was committed), the
+        public key bytes from the Raft entry are written out.
+        """
+        masters_dir = self._master_pki_subdir("masters")
+        pre_dir = self._master_pki_subdir("masters_pre")
+        accepted_path = os.path.join(masters_dir, f"{cluster_id}.pub")
+        pre_path = os.path.join(pre_dir, f"{cluster_id}.pub")
+        try:
+            if os.path.exists(pre_path):
+                # Move; the ``masters_pre`` convention is operator-
+                # visible so we don't duplicate the bytes --- rename.
+                os.replace(pre_path, accepted_path)
+            else:
+                _write_file_atomic(accepted_path, public_key, mode=0o644)
+        except OSError:
+            log.exception(
+                "TopologyStateMachine: failed to finalise accepted key file "
+                "for peer %r",
+                cluster_id,
+            )
+
+    def _move_detached_key_file(self, cluster_id, reason):
+        """
+        Move or delete the on-disk key file for a detached peer.
+
+        * ``reason="rejected"`` -> move to ``masters_denied/``
+        * any other reason (default ``"revoked"``) -> delete
+        """
+        masters_dir = self._master_pki_subdir("masters")
+        accepted_path = os.path.join(masters_dir, f"{cluster_id}.pub")
+        if not os.path.exists(accepted_path):
+            return
+        try:
+            if reason == "rejected":
+                denied_dir = self._master_pki_subdir("masters_denied")
+                denied_path = os.path.join(denied_dir, f"{cluster_id}.pub")
+                shutil.move(accepted_path, denied_path)
+            else:
+                os.remove(accepted_path)
+        except OSError:
+            log.exception(
+                "TopologyStateMachine: failed to move/delete key file for "
+                "detached peer %r (reason=%s)",
+                cluster_id,
+                reason,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Module-local helpers
+# ---------------------------------------------------------------------------
+
+
+def _normalise_peer_state(cluster_id, raw):
+    """Coerce a peer-state dict into the shape ``registry.set_peer`` expects."""
+    public_key = raw.get("public_key") or b""
+    if isinstance(public_key, str):
+        public_key = public_key.encode("utf-8")
+    else:
+        public_key = bytes(public_key)
+    endpoints = raw.get("endpoints") or ()
+    try:
+        endpoints = tuple(endpoints)
+    except TypeError:
+        endpoints = ()
+    try:
+        attached_at = float(raw.get("attached_at") or 0.0)
+    except (TypeError, ValueError):
+        attached_at = 0.0
+    return {
+        "cluster_id": cluster_id,
+        "public_key": public_key,
+        "endpoints": endpoints,
+        "attached_at": attached_at,
+    }
+
+
+def _decode_peer_payload(raw):
+    """Decode a peer value from the raw bytes stored in the MmapCache."""
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8")
+    try:
+        data = salt.utils.msgpack.unpackb(bytes(raw), raw=False)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    public_key = data.get("public_key")
+    if isinstance(public_key, str):
+        data["public_key"] = public_key.encode("utf-8")
+    endpoints = data.get("endpoints")
+    if endpoints is not None:
+        data["endpoints"] = tuple(endpoints)
+    return data
+
+
+def _read_identity_version(cache):
+    """
+    Return the identity version counter as an int, defaulting to 0.
+
+    The counter is stored as ASCII-encoded bytes in the MmapCache
+    (``put`` can only take bytes/str) so the SM owns the string ->
+    int coercion.
+    """
+    raw = cache.get(registry.RESERVED_IDENTITY_VERSION_KEY, default=None)
+    if raw is None:
+        return 0
+    if isinstance(raw, int):
+        return raw
+    if isinstance(raw, bytes):
+        try:
+            return int(raw.decode("ascii"))
+        except (UnicodeDecodeError, ValueError):
+            return 0
+    if isinstance(raw, str):
+        try:
+            return int(raw)
+        except ValueError:
+            return 0
+    return 0
+
+
+def _write_file_atomic(path, data, mode):
+    """Write ``data`` to ``path`` and chmod ``mode``.  Overwrites in place."""
+    tmp = f"{path}.tmp"
+    with salt.utils.files.fopen(tmp, "wb") as fh:
+        fh.write(data)
+    os.chmod(tmp, mode)
+    os.replace(tmp, path)

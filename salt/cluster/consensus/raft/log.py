@@ -77,6 +77,26 @@ class LogEntryType:
     # the cluster log; gates consult the routing table to decide
     # which ring (if any) owns a given cache.
     ROUTE = 5
+    # Master-topology identity key commit.  Applied by
+    # ``TopologyStateMachine`` on the cluster log; writes the
+    # master's identity public key bytes into the shared registry
+    # MmapCache and persists the keypair to disk under
+    # ``pki_dir/master/master_identity.{pub,pem}``.  Issued at
+    # bootstrap and on identity rotation.
+    MASTER_IDENTITY_KEY = 6
+    # Master-topology peer-attach commit.  Operator-accepted peer
+    # masters land here; applied by ``TopologyStateMachine`` on the
+    # cluster log.  Each committed entry writes a
+    # ``PeerState`` into the shared registry MmapCache keyed by
+    # ``cluster_id`` and finalises the pending ``masters_pre/``
+    # key file into ``masters/``.
+    MASTER_PEER_ATTACH = 7
+    # Master-topology peer-detach commit.  Operator-revoked peer
+    # masters land here; applied by ``TopologyStateMachine`` on the
+    # cluster log.  Each committed entry removes the peer entry
+    # from the registry MmapCache and moves/removes the on-disk
+    # key file per the ``reason`` field.
+    MASTER_PEER_DETACH = 8
 
 
 class LogEntry(NamedTuple):
