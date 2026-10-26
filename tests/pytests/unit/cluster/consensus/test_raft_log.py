@@ -319,7 +319,14 @@ class TestMembershipStateMachine:
         sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=5)
 
         snap = sm.get_snapshot()
-        assert snap == {"voters": ["m1", "m2"], "learners": ["m3"], "version": 5}
+        # The ``protocol_versions`` field is new (rolling-upgrade gate);
+        # a CONFIG without an advertisement produces an empty dict.
+        assert snap == {
+            "voters": ["m1", "m2"],
+            "learners": ["m3"],
+            "protocol_versions": {},
+            "version": 5,
+        }
 
         sm2 = MembershipStateMachine()
         sm2.restore_snapshot(snap)
@@ -1042,6 +1049,7 @@ class TestLogSnapshotMultiSM:
         assert envelope["machines"]["membership_sm"] == {
             "voters": ["m1", "m2", "m3"],
             "learners": [],
+            "protocol_versions": {},
             "version": 2,
         }
 

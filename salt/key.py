@@ -1244,12 +1244,36 @@ class Key:
             # Clustered: propose first; apply handler does the rename.
             import time as _time
 
-            raft.propose_peer_attach(
-                cluster_id=cluster_id,
-                public_key=pub_bytes,
-                endpoints=(),
-                attached_at=_time.time(),
-            )
+            try:
+                raft.propose_peer_attach(
+                    cluster_id=cluster_id,
+                    public_key=pub_bytes,
+                    endpoints=(),
+                    attached_at=_time.time(),
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                # Rolling-upgrade gate (RFC master-topology.md): the
+                # propose refused because a cluster peer still runs the
+                # pre-topology release.  Surface a clean operator-visible
+                # error and leave the pending key file in
+                # ``masters_pre/`` untouched --- the apply handler
+                # owns the rename, and the propose never reached the
+                # Raft log.
+                try:
+                    from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
+                        MixedVersionClusterError,
+                    )
+                except ImportError:
+                    MixedVersionClusterError = None
+                if MixedVersionClusterError is not None and isinstance(
+                    exc, MixedVersionClusterError
+                ):
+                    print(
+                        f"salt-key: cannot accept peer master {cluster_id!r}: {exc}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                raise
         else:
             # Solo: rename directly.
             os.replace(pending_path, accepted_path)
@@ -1307,7 +1331,24 @@ class Key:
 
         raft = self._master_raft_service()
         if raft is not None and hasattr(raft, "propose_peer_detach"):
-            raft.propose_peer_detach(cluster_id=cluster_id, reason="revoked")
+            try:
+                raft.propose_peer_detach(cluster_id=cluster_id, reason="revoked")
+            except Exception as exc:  # pylint: disable=broad-except
+                try:
+                    from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
+                        MixedVersionClusterError,
+                    )
+                except ImportError:
+                    MixedVersionClusterError = None
+                if MixedVersionClusterError is not None and isinstance(
+                    exc, MixedVersionClusterError
+                ):
+                    print(
+                        f"salt-key: cannot revoke peer master {cluster_id!r}: {exc}",
+                        file=sys.stderr,
+                    )
+                    sys.exit(1)
+                raise
         else:
             if os.path.exists(accepted_path):
                 os.remove(accepted_path)

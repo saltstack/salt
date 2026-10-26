@@ -1013,13 +1013,66 @@ def _own_endpoints(opts):
 
 
 def _maybe_propose_attach(cluster_id, accepted_path):
-    """When a Raft service is wired, propose MASTER_PEER_ATTACH."""
+    """When a Raft service is wired, propose MASTER_PEER_ATTACH.
+
+    Pre-check: if the Raft service exposes the rolling-upgrade gate
+    (:meth:`RaftService._min_cluster_protocol_version`) and any
+    cluster voter still advertises the pre-topology version, log a
+    WARNING naming the laggard(s) and skip the propose.  Catching
+    the eventual propose exception is not sufficient here because
+    the attach path reaches us from the inbound ``_master_auth``
+    coroutine --- naming the laggard in the daemon log keeps the
+    diagnostic signal operator-visible without requiring an
+    exception to escape the handler.
+    """
     if _RAFT_SERVICE is None:
         return
     propose = getattr(_RAFT_SERVICE, "propose_peer_attach", None)
     if propose is None:
         # No Raft propose API (service is a stub); nothing to do.
         return
+
+    # Pre-check the gate so we can log a clean, operator-visible
+    # WARNING before the propose raises.  The service's propose
+    # method itself enforces the gate too --- this is defence in
+    # depth, not a replacement.
+    try:
+        from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
+            TOPOLOGY_PROTOCOL_VERSION,
+            MixedVersionClusterError,
+        )
+    except ImportError:
+        TOPOLOGY_PROTOCOL_VERSION = None
+        MixedVersionClusterError = None
+    gate_check = getattr(_RAFT_SERVICE, "_min_cluster_protocol_version", None)
+    if (
+        gate_check is not None
+        and TOPOLOGY_PROTOCOL_VERSION is not None
+        and MixedVersionClusterError is not None
+    ):
+        try:
+            min_version = gate_check()  # pylint: disable=not-callable
+        except Exception:  # pylint: disable=broad-except
+            min_version = None
+        if min_version is not None and min_version < TOPOLOGY_PROTOCOL_VERSION:
+            laggards_fn = getattr(_RAFT_SERVICE, "_laggard_voters", None)
+            laggards = (
+                laggards_fn()  # pylint: disable=not-callable
+                if callable(laggards_fn)
+                else []
+            )
+            log.warning(
+                "topology _master_auth: refusing MASTER_PEER_ATTACH for "
+                "%r --- cluster peer(s) still advertise pre-topology "
+                "protocol version (min=%s, required=%s); finish rolling "
+                "upgrade first (laggards: %s)",
+                cluster_id,
+                min_version,
+                TOPOLOGY_PROTOCOL_VERSION,
+                laggards,
+            )
+            return
+
     try:
         pub_bytes = b""
         if os.path.exists(accepted_path):
@@ -1031,7 +1084,20 @@ def _maybe_propose_attach(cluster_id, accepted_path):
             endpoints=(),
             attached_at=time.time(),
         )
-    except Exception:  # pylint: disable=broad-except
+    except Exception as exc:  # pylint: disable=broad-except
+        if MixedVersionClusterError is not None and isinstance(
+            exc, MixedVersionClusterError
+        ):
+            # Already surfaced via the pre-check above in nearly every
+            # case; this branch covers a race where the gate state
+            # changed between pre-check and propose.
+            log.warning(
+                "topology _master_auth: MASTER_PEER_ATTACH blocked by "
+                "rolling-upgrade gate for %r: %s",
+                cluster_id,
+                exc,
+            )
+            return
         log.exception(
             "topology _master_auth: propose_peer_attach failed for %r", cluster_id
         )

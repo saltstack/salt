@@ -572,6 +572,11 @@ class MembershipStateMachine(BaseStateMachine):
        ``Node.peers`` voting flags and ``Node.voting``.
     """
 
+    # Pre-topology peers are implicitly version 0 (no field in their
+    # join payload).  Topology-aware peers advertise ``>= 1`` via
+    # ``RaftService.TOPOLOGY_PROTOCOL_VERSION``.
+    PROTOCOL_VERSION_PRE_TOPOLOGY = 0
+
     def __init__(self, on_change=None):
         """
         :param on_change: Optional ``callable(voters, learners)`` called after
@@ -580,6 +585,12 @@ class MembershipStateMachine(BaseStateMachine):
         """
         self._voters = set()
         self._learners = set()
+        # Per-node advertised protocol version.  Keyed by node_id;
+        # entries only exist for nodes that advertised a version in
+        # their CONFIG entry.  Absent entries default to
+        # ``PROTOCOL_VERSION_PRE_TOPOLOGY``, which is the "N" the
+        # rolling-upgrade gate blocks on.
+        self._protocol_versions = {}
         self._membership_version = -1
         self.on_change = on_change
 
@@ -591,20 +602,44 @@ class MembershipStateMachine(BaseStateMachine):
         """
         Apply a committed CONFIG entry.
 
-        :param cmd:   ``dict`` with keys ``"voters"`` (list[str]) and
-                      optionally ``"learners"`` (list[str]).  Non-dict values
-                      are treated as a plain voter list with no learners.
+        :param cmd:   ``dict`` with keys ``"voters"`` (list[str]),
+                      optionally ``"learners"`` (list[str]), and
+                      optionally ``"protocol_versions"`` (dict[str, int]
+                      mapping node_id -> advertised protocol version).
+                      Non-dict values are treated as a plain voter list
+                      with no learners and no versions.
         :param index: Raft log index of this entry (used as version stamp).
         """
         if isinstance(cmd, dict):
             voters = list(cmd.get("voters", []))
             learners = list(cmd.get("learners", []))
+            raw_versions = cmd.get("protocol_versions") or {}
         else:
             voters = list(cmd) if cmd else []
             learners = []
+            raw_versions = {}
 
         self._voters = set(voters)
         self._learners = set(learners)
+        # Prune per-node versions for nodes that are no longer part
+        # of the committed membership so a laggard that leaves the
+        # cluster stops blocking the gate.  Merge in any newly
+        # advertised versions from this CONFIG entry (coerce to int;
+        # bogus payloads degrade to the pre-topology default).
+        current = set(self._voters) | set(self._learners)
+        self._protocol_versions = {
+            node_id: version
+            for node_id, version in self._protocol_versions.items()
+            if node_id in current
+        }
+        if isinstance(raw_versions, dict):
+            for node_id, version in raw_versions.items():
+                if node_id not in current:
+                    continue
+                try:
+                    self._protocol_versions[node_id] = int(version)
+                except (TypeError, ValueError):
+                    continue
         self._membership_version = index
 
         if self.on_change is not None:
@@ -615,6 +650,7 @@ class MembershipStateMachine(BaseStateMachine):
         return {
             "voters": sorted(self._voters),
             "learners": sorted(self._learners),
+            "protocol_versions": dict(self._protocol_versions),
             "version": self._membership_version,
         }
 
@@ -626,6 +662,15 @@ class MembershipStateMachine(BaseStateMachine):
             return
         self._voters = set(data.get("voters", []))
         self._learners = set(data.get("learners", []))
+        raw_versions = data.get("protocol_versions") or {}
+        restored = {}
+        if isinstance(raw_versions, dict):
+            for node_id, version in raw_versions.items():
+                try:
+                    restored[node_id] = int(version)
+                except (TypeError, ValueError):
+                    continue
+        self._protocol_versions = restored
         self._membership_version = data.get("version", -1)
 
     # ------------------------------------------------------------------
@@ -647,6 +692,62 @@ class MembershipStateMachine(BaseStateMachine):
     def is_learner(self, node_id):
         """Return True if *node_id* is in the current learner set."""
         return node_id in self._learners
+
+    # ------------------------------------------------------------------
+    # Protocol-version advertisement (rolling-upgrade gate, RFC
+    # ``master-topology.md`` --- "Rolling-upgrade protocol-version gate")
+    # ------------------------------------------------------------------
+
+    def get_protocol_version(self, node_id):
+        """
+        Return the advertised protocol version for *node_id*.
+
+        Peers that joined before the gate landed never set this field,
+        so an absent entry maps to
+        :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY` (0).  Topology-aware
+        peers advertise a strictly greater value via
+        :attr:`RaftService.TOPOLOGY_PROTOCOL_VERSION`.
+        """
+        return self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+
+    def protocol_versions(self):
+        """Return a copy of the per-node advertised protocol-version map."""
+        return dict(self._protocol_versions)
+
+    def min_protocol_version(self):
+        """
+        Return the minimum advertised protocol version across the current
+        voter set.
+
+        Learners are excluded: a laggard learner cannot block a
+        ``MASTER_*`` commit because learners do not count toward
+        quorum.  A voter with no advertised version is treated as
+        :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY`.  An empty voter set
+        returns :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY` so the gate
+        defaults closed on a brand-new cluster whose founding CONFIG
+        has not yet applied.
+        """
+        if not self._voters:
+            return self.PROTOCOL_VERSION_PRE_TOPOLOGY
+        return min(
+            self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+            for node_id in self._voters
+        )
+
+    def laggard_voters(self, floor):
+        """
+        Return the sorted list of voter node_ids whose advertised
+        protocol version is below *floor*.
+
+        Used to construct operator-visible error messages that name
+        the specific peer(s) still running the pre-topology release.
+        """
+        return sorted(
+            node_id
+            for node_id in self._voters
+            if self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+            < floor
+        )
 
     @property
     def membership_version(self):

@@ -110,15 +110,9 @@ FAKE_PUB_EAST = (
 # ---------------------------------------------------------------------------
 
 
-class _MixedVersionClusterError(RuntimeError):
-    """
-    Stand-in for the exception the real ``RaftService`` is expected to
-    raise when ``propose_peer_attach`` is called on a mixed-version
-    cluster.  Mirrors the "specific exception from RaftService" the
-    task spec calls for.  Lives here so scenario 1 can assert
-    *something concrete* even though the production exception type
-    does not yet exist.
-    """
+from salt.cluster.consensus.service import (
+    MixedVersionClusterError as _MixedVersionClusterError,
+)
 
 
 class _MixedVersionFakeRaftService:
@@ -201,23 +195,6 @@ class _MixedVersionFakeRaftService:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Protocol-version gate not implemented. "
-        "salt/cluster/consensus/service.py exposes no "
-        "protocol_version opt, no _min_cluster_protocol_version() "
-        "helper, and no gate check on propose_peer_attach. "
-        "Flipping this test to passing requires: (a) MembershipStateMachine "
-        "advertising per-peer protocol version at Raft join; "
-        "(b) RaftService._min_cluster_protocol_version() returning "
-        "the cluster-wide minimum; (c) RaftService.propose_peer_attach "
-        "raising a specific exception (e.g. MixedVersionClusterError) "
-        "when the minimum is below N+1; (d) salt.key.Key.accept_master "
-        "surfacing that exception as a clean operator-visible error. "
-        "See the docstring at the top of this file for the full checklist."
-    ),
-)
 def test_mixed_version_cluster_blocks_peer_attach(tmp_path):
     """
     Scenario 1 --- A 3-peer cluster where peer1 and peer2 advertise
@@ -363,22 +340,6 @@ class _PreTopologyStateMachine(TopologyStateMachine):
         self._handlers.pop(LogEntryType.MASTER_PEER_DETACH, None)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Protocol-version gate not implemented. "
-        "salt/cluster/consensus/raft/topology.py:170-174 silently "
-        "logs unknown entry types at DEBUG and no-ops.  This is "
-        "the exact behaviour the RFC rolling-upgrade gate was "
-        "designed to prevent (silent divergence on older peers). "
-        "Flipping this test to passing requires either: (a) the "
-        "apply handler logs at WARNING/ERROR when it sees an "
-        "unknown entry type AND the SM exposes a reject counter "
-        "or sentinel the test can inspect; or (b) the apply "
-        "raises so the Node's commit loop halts replication "
-        "until the operator upgrades the peer."
-    ),
-)
 def test_unknown_entry_type_on_pre_topology_peer_does_not_silently_noop(
     tmp_path, caplog
 ):

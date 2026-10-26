@@ -168,8 +168,21 @@ class TopologyStateMachine(BaseStateMachine):
         entry_type = cmd.get("type")
         handler = self._handlers.get(entry_type)
         if handler is None:
-            log.debug(
-                "TopologyStateMachine: no handler for entry type %r; ignoring",
+            # Second half of the RFC rolling-upgrade gate: a
+            # pre-topology peer that somehow saw a ``MASTER_*`` commit
+            # (gate failed open, hostile replay, or a snapshot-restore
+            # race) must not silently diverge from the cluster.  Log
+            # at WARNING so operators notice; the pre-topology
+            # SM has no handler and no in-process state to update,
+            # which is exactly what the gate is designed to produce.
+            # Defence in depth for the propose-side gate at
+            # :meth:`RaftService._enforce_topology_protocol_gate`.
+            log.warning(
+                "TopologyStateMachine: refusing to apply unknown "
+                "topology entry type %r --- this master may be "
+                "running a pre-topology binary that saw a MASTER_* "
+                "commit it does not understand; finish the rolling "
+                "upgrade so every peer handles this entry type",
                 entry_type,
             )
             return
