@@ -45,6 +45,7 @@ import salt.utils.stringutils
 import salt.utils.tracing
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
+from salt.utils.network import ip_bracket
 
 log = logging.getLogger(__name__)
 
@@ -3154,7 +3155,7 @@ class MasterPubServerChannel:
 
             # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts.get("interface", "127.0.0.1"),
+                host=ip_bracket(self.opts.get("interface", "127.0.0.1"), strip=True),
                 port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,

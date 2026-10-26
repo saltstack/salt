@@ -2745,3 +2745,45 @@ def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
     )
     # And the stream itself must be closed.
     fake_stream.close.assert_called()
+
+
+@pytest.mark.parametrize(
+    "host,resolved,expected",
+    [
+        ("peer.example.test", socket.AF_INET6, socket.AF_INET6),
+        ("peer.example.test", socket.AF_INET, socket.AF_INET),
+        # Literals must keep working.
+        ("2001:db8::1", socket.AF_INET6, socket.AF_INET6),
+        ("192.0.2.1", socket.AF_INET, socket.AF_INET),
+    ],
+)
+def test_socket_family_follows_resolution(host, resolved, expected):
+    """
+    Regression test for issue #70559.
+
+    ``_socket_family`` must take the address family from the resolver if possible.
+    """
+    addrinfo = [(resolved, socket.SOCK_STREAM, 6, "", ("", 0))]
+    with patch("socket.getaddrinfo", return_value=addrinfo) as getaddrinfo:
+        assert salt.transport.tcp._socket_family(host) == expected
+    assert getaddrinfo.call_args.args[0] == host
+
+
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        ("2001:db8::1", socket.AF_INET6),
+        ("peer.example.test", socket.AF_INET),
+        ("", socket.AF_INET),
+        (None, socket.AF_INET),
+    ],
+)
+def test_socket_family_falls_back_when_unresolvable(host, expected):
+    """
+    Regression test for issue #70559.
+
+    If the host doesn't resolve, fall back to the heuristic approach: if the
+    host contains colon, attempt to connect via IPv6.
+    """
+    with patch("socket.getaddrinfo", side_effect=socket.gaierror):
+        assert salt.transport.tcp._socket_family(host) == expected
