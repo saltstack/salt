@@ -2633,6 +2633,20 @@ class SaltKeyOptionParser(
             action="store_true",
             help="Print all keys' fingerprints.",
         )
+        actions_group.add_option(
+            "--master",
+            dest="master_scope",
+            default=False,
+            action="store_true",
+            help=(
+                "Operate on master-topology cluster-peer keys stored under "
+                "``pki_dir/masters*/`` instead of the minion keys.  When set, "
+                "-L / -a / -d / -F / -A / -D dispatch to the master-scope "
+                "Key methods (``list_master``, ``accept_master``, "
+                "``delete_master``, ``finger_master``, etc.).  No-op on solo "
+                "masters that have no cluster peers configured."
+            ),
+        )
         self.add_option_group(actions_group)
 
         # Client key management actions
