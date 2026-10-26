@@ -89,9 +89,13 @@ def test_create_task_passes_compatibility_to_edit_task():
         win_task, "win32com", stub_win32com, create=True
     ), patch.object(win_task, "edit_task") as mock_edit, patch.object(
         win_task, "list_tasks", return_value=[]
-    ), patch.object(win_task, "add_action", return_value=True), patch.object(
+    ), patch.object(
+        win_task, "add_action", return_value=True
+    ), patch.object(
         win_task, "add_trigger", return_value=True
-    ), patch.object(win_task, "_save_task_definition", return_value=True):
+    ), patch.object(
+        win_task, "_save_task_definition", return_value=True
+    ):
         win_task.create_task(
             "TestTask",
             user_name="System",
