@@ -398,6 +398,9 @@ def test_aes_funcs_black(master_opts):
         "_sync_minion_publish",
         "_sync_minion_runner",
         "_sync_revoke_auth",
+        # Internal helper for the topology-return envelope hand-off from
+        # both ``_return`` and ``_sync_return``.  Not exposed to minions.
+        "_maybe_fire_topology_return",
     ]
     try:
         for name in dir(aes_funcs):

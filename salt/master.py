@@ -29,6 +29,7 @@ import salt.auth
 import salt.cache
 import salt.channel.server
 import salt.client
+import salt.config.topology
 import salt.client.ssh.client
 import salt.cluster
 import salt.cluster.healthchecks
@@ -92,6 +93,41 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+def _topology_cluster_id_for_auth(opts):
+    """
+    Return the topology ``cluster_id`` string to publish in the auth
+    response, or ``""`` when the grain should not be pushed.
+
+    Gated on ``topology_enabled`` + ``topology_push_cluster_grain``
+    (the latter defaults to True per RFC).  The topology ``cluster_id``
+    comes from ``topology.conf`` --- it is deliberately distinct from
+    the 3008.x ``cluster_id`` master-cluster primitive, so we go
+    through :func:`salt.config.topology.load_topology_config`.
+
+    Cached per-opts after first call to avoid re-parsing topology.conf
+    on every minion auth.
+    """
+    if not opts.get("topology_enabled"):
+        return ""
+    if not opts.get("topology_push_cluster_grain", True):
+        return ""
+    cached = opts.get("_topology_cluster_id_cache")
+    if cached is not None:
+        return cached
+    try:
+        cfg = salt.config.topology.load_topology_config(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology.conf unreadable during auth; skipping master_cluster_id grain",
+            exc_info=True,
+        )
+        opts["_topology_cluster_id_cache"] = ""
+        return ""
+    cluster_id = cfg.cluster_id if cfg.enabled else ""
+    opts["_topology_cluster_id_cache"] = cluster_id
+    return cluster_id
 
 
 class _ContextThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
@@ -3367,6 +3403,71 @@ class AESFuncs(TransportMethods):
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
 
+        # Topology-return hand-off: detect via envelope origin (NOT by
+        # parsing ``load["jid"]``) so native Salt jid formats and
+        # ``unique_jid: True`` keep working.  When this return belongs to
+        # a publish that was originated by a foreign cluster, fire
+        # ``salt/topology/return/<origin>/<jid>`` so the publish daemon's
+        # topology event subscriber can forward it upstream.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=True)
+
+    def _maybe_fire_topology_return(self, load, *, async_path):
+        """
+        Shared helper for the async and sync ``_return`` paths.
+
+        Determines, from the envelope on ``load["topology"]``, whether an
+        incoming minion return needs upstream forwarding.  Checks the
+        breadcrumb MmapCache under ``opts["pki_dir"]/master/`` to confirm
+        this master actually forwarded the originating publish; if so,
+        fires a ``salt/topology/return/<origin>/<jid>`` event that the
+        publish daemon's topology subscriber picks up.
+
+        No action on any guard-clause miss.  Any exception during the
+        hand-off is logged and swallowed --- a storage/forwarding error
+        on the topology path must never fail the local return path.
+        """
+        try:
+            topology = load.get("topology") or {}
+            origin = topology.get("origin")
+            if not origin:
+                return
+            if origin == self.opts.get("cluster_id"):
+                return
+            jid = load.get("jid")
+            if jid is None:
+                return
+            # Lazy imports so pre-topology deployments never pull in the
+            # topology package.
+            import salt.topology.breadcrumbs as _bc  # pylint: disable=import-outside-toplevel
+
+            cache = _bc.open_reader(self.opts)
+            try:
+                if _bc.lookup(cache, jid) is None:
+                    return
+            finally:
+                closer = getattr(cache, "close", None)
+                if closer is not None:
+                    try:
+                        closer()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            tag = f"salt/topology/return/{origin}/{jid}"
+            data = {"load": load}
+            if async_path and hasattr(self.event, "fire_event_async"):
+                # Schedule the async fire without awaiting --- the sync
+                # ``fire_event`` fallback keeps semantics identical even
+                # if an async loop isn't currently running the handler.
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.event.fire_event_async(data, tag))
+                    return
+                except RuntimeError:
+                    pass
+            self.event.fire_event(data, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: _return hand-off failed")
+
     async def _syndic_return(self, load):
         """
         Receive a syndic minion return and format it to look like returns from
@@ -3964,6 +4065,11 @@ class AESFuncs(TransportMethods):
             )
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
+
+        # Topology-return hand-off: envelope-based detection, breadcrumb
+        # gated.  See ``_maybe_fire_topology_return`` for details.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=False)
 
     def _sync_syndic_return(self, load):
         """Sync-shim body of ``_syndic_return`` (pre-PR verbatim)."""
@@ -4809,6 +4915,10 @@ class AuthFuncs(TransportMethods):
             "publish_port": self.opts["publish_port"],
         }
 
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
+
         # sign the master's pubkey (if enabled) before it is
         # sent to the minion that was just authenticated
         if self.opts["master_sign_pubkey"]:
@@ -5366,6 +5476,10 @@ class AuthFuncs(TransportMethods):
             "pub_key": self.master_key.get_pub_str(),
             "publish_port": self.opts["publish_port"],
         }
+
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
 
         if self.opts["master_sign_pubkey"]:
             if self.master_key.pubkey_signature:

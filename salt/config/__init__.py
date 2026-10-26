@@ -128,6 +128,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The fingerprint of the master key may be specified to increase security. Generate
         # a master fingerprint with `salt-key -F master`
         "master_finger": str,
+        # Cluster ID of the master this minion is currently connected to.
+        # Populated by the auth-response hook when
+        # ``topology_push_cluster_grain`` is enabled on the master side;
+        # exposed to the minion as a grain for targeting across a
+        # topology.  Empty string means "no cluster / standalone master".
+        "master_cluster_id": str,
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
@@ -252,6 +258,35 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_min_voters": int,
         "cluster_demote_cooldown": float,
         "cluster_auto_replace_voters": bool,
+        # Master-topology opts (see rfcs/master-topology.md "New config
+        # options").  Grouped here next to cluster_* so the two feature
+        # surfaces live together.  ``topology_enabled`` is the master
+        # key; when False every runtime hook short-circuits.  See
+        # ``salt/topology/`` and ``salt/config/topology.py`` for how
+        # the other opts are consumed.
+        "topology_enabled": bool,
+        "topology_config_file": str,
+        "topology_link_port": int,
+        "topology_summary_interval": int,
+        "topology_breadcrumb_grace": int,
+        "topology_breadcrumb_max_age": int,
+        "topology_push_cluster_grain": bool,
+        # Mirrors ``auto_accept`` but for cross-master MasterIdentityKey
+        # presentation during link setup (see trust-model section of the
+        # RFC).
+        "auto_accept_masters": bool,
+        # MmapCache sizing for breadcrumb / registry stores (see
+        # salt/utils/mmap_cache.py for shape semantics).
+        "topology_breadcrumb_cache_size": int,
+        "topology_breadcrumb_cache_key_size": int,
+        "topology_registry_cache_size": int,
+        "topology_registry_cache_key_size": int,
+        # Seconds a detaching master waits for in-flight work to drain
+        # before tearing down its links.
+        "topology_detach_quiesce": int,
+        # Grains the summary thread fans out alongside the periodic
+        # topology summary.  Empty list disables the extra fan-out.
+        "topology_summary_grains": list,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1201,6 +1236,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "interface": "0.0.0.0",
         "master": "salt",
         "master_type": "str",
+        "master_cluster_id": "",
         "master_uri_format": "default",
         "source_interface_name": "",
         "source_address": "",
@@ -2011,6 +2047,21 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        # Master-topology defaults (see VALID_OPTS block for docs).
+        "topology_enabled": False,
+        "topology_config_file": "/etc/salt/topology.conf",
+        "topology_link_port": 4521,
+        "topology_summary_interval": 30,
+        "topology_breadcrumb_grace": 30,
+        "topology_breadcrumb_max_age": 600,
+        "topology_push_cluster_grain": True,
+        "auto_accept_masters": False,
+        "topology_breadcrumb_cache_size": 1_000_000,
+        "topology_breadcrumb_cache_key_size": 64,
+        "topology_registry_cache_size": 10_000,
+        "topology_registry_cache_key_size": 64,
+        "topology_detach_quiesce": 60,
+        "topology_summary_grains": [],
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

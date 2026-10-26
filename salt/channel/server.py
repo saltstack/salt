@@ -9,6 +9,7 @@ import collections
 import errno
 import hashlib
 import hmac
+import importlib
 import logging
 import os
 import pathlib
@@ -3088,6 +3089,25 @@ class MasterPubServerChannel:
 
     def close(self):
         self.transport.close()
+        # Topology shutdown hook.  Lazy-import so masters that have never
+        # enabled topology never pay the import cost.  The io_loop may
+        # already be closed by this point (close is a destructor-style
+        # method); run_until_complete handles that by raising, which we
+        # swallow after a debug log.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            io_loop = getattr(self, "io_loop", None)
+            try:
+                if io_loop is not None and not io_loop.asyncio_loop.is_closed():
+                    io_loop.run_sync(link_manager.stop)
+                else:
+                    # Fall back to a one-shot loop; stop() is idempotent.
+                    asyncio.run(link_manager.stop())
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology link_manager.stop raised during close",
+                    exc_info=True,
+                )
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -3102,6 +3122,13 @@ class MasterPubServerChannel:
             process_manager.add_process(
                 self._publish_daemon, kwargs=proc_kwargs, name="EventPublisher"
             )
+        # Topology pre_fork hook.  Reserve topology_link_port in the
+        # parent process so the forked publish daemon inherits a
+        # listening fd, and pre-create breadcrumb/registry MmapCaches so
+        # MWorkers that fork later can open readers without racing.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            link_manager.pre_fork(self.opts, process_manager)
 
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""
@@ -3236,6 +3263,16 @@ class MasterPubServerChannel:
                         "New node joining cluster %r — waiting for join-reply to start Raft as learner",
                         self.opts["cluster_id"],
                     )
+        # Topology start hook: schedule link_manager.start on the io loop
+        # so outbound links come up alongside the publish daemon.  Lazy
+        # import keeps non-topology masters free of the dependency chain.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            self.io_loop.spawn_callback(
+                link_manager.start,
+                self.opts,
+                self.io_loop,
+            )
         # run forever
         try:
             self.io_loop.start()
@@ -4256,3 +4293,29 @@ class MasterPubServerChannel:
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
                 )
+
+        # Topology fan-out hook.  Dispatch the decoded publish envelope
+        # to :func:`salt.topology.router.on_publish`, which decides which
+        # peer links (if any) the publish forwards to and emits per-link
+        # failure events on error.  Lazy import so masters without
+        # topology enabled never load the module.  ``importlib`` is used
+        # here instead of a plain ``import salt.topology.router`` so the
+        # ``salt`` name is not rebound as a function-local (which would
+        # shadow the module-level ``salt`` imports used earlier in this
+        # method).
+        if self.opts.get("topology_enabled"):
+            topology_router = importlib.import_module("salt.topology.router")
+            try:
+                decoded_load = _decode_data()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: unable to decode publish payload for %s",
+                    tag,
+                    exc_info=True,
+                )
+            else:
+                if isinstance(decoded_load, dict):
+                    try:
+                        await topology_router.on_publish(decoded_load, self.io_loop)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("topology: on_publish failed for %s", tag)

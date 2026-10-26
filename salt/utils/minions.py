@@ -59,7 +59,7 @@ def presence_is_fresh(record, ttl, now=None):
 TARGET_REX = re.compile(
     r"""(?x)
         (
-            (?P<engine>G|P|I|J|L|N|S|E|R|T|M)  # Possible target engines
+            (?P<engine>G|P|I|J|L|N|S|E|R|T|M|C)  # Possible target engines
             (?P<delimiter>(?<=G|P|I|J).)?        # Optional delimiter (G/P/I/J only)
         @)?                                      # Engine+delimiter separated by '@', optional
         (?P<pattern>.+)$"""  # The pattern passed to the target engine
@@ -879,6 +879,7 @@ class CkMinions:
                 "R": self._all_minions,
                 "T": self._check_resource_minions,
                 "M": self._check_managing_minion_minions,
+                "C": self._check_cluster_minions,
             }
             if pillar_exact:
                 ref["I"] = self._check_pillar_exact_minions
@@ -1256,6 +1257,33 @@ class CkMinions:
         matches ``expr``.
         """
         return self._check_glob_minions(expr, greedy, minions=minions)
+
+    def _check_cluster_minions(self, expr, greedy, minions=None):
+        """
+        Return the minion set for a ``C@`` cluster-id expression.
+
+        ``expr`` is a comma-separated list of ``cluster_id`` values
+        (``east`` or ``east,west``).  Semantics mirror
+        :mod:`salt.matchers.cluster_match`: when this master's
+        ``cluster_id`` (falling back to ``master_cluster_id``) is in
+        the target set, every local accepted minion is in-scope; when
+        it is not, the clause contributes an empty set and gates out
+        anything ``and``-combined with it.
+
+        The actual peer-link fan-out for non-local ``C@`` clauses is
+        handled later by :func:`salt.topology.router.on_publish`;
+        this check only decides whether the origin cluster itself
+        has local minions to publish to.
+        """
+        local = self.opts.get("cluster_id") or self.opts.get("master_cluster_id")
+        if not local:
+            return {"minions": [], "missing": []}
+        if not isinstance(expr, str):
+            return {"minions": [], "missing": []}
+        wanted = {token.strip() for token in expr.split(",") if token.strip()}
+        if local in wanted:
+            return self._all_minions(minions=minions)
+        return {"minions": [], "missing": []}
 
     def check_minions(
         self,
