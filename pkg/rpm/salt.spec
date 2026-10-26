@@ -40,7 +40,7 @@
 %define fish_dir %{_datadir}/fish/vendor_functions.d
 
 Name:    salt
-Version: 3007.16
+Version: 3007.17
 Release: 0
 Summary: A parallel remote execution system
 Group:   System Environment/Daemons
@@ -1316,6 +1316,13 @@ if [ $1 -ge 1 ] ; then
 fi
 
 %changelog
+* Mon Oct 26 2026 Salt Project <saltproject.pdl@broadcom.com> - 3007.17
+
+# Security
+
+- Updated certifi to 2026.10.23 to pick up the latest Mozilla CA bundle. [#70571](https://github.com/saltstack/salt/issues/70571)
+
+
 * Fri Oct 23 2026 Salt Project <saltproject.pdl@broadcom.com> - 3007.16
 
 # Security
