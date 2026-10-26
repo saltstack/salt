@@ -343,9 +343,45 @@ def cleanup(cache):
             for k, v in cache.list_items()
             if v is not True
         ]
+        # Delay the physical ``os.unlink`` of the pre-rebuild heap by one
+        # staleness-check interval so MWorker readers whose mmaps still
+        # point at the old inodes have a chance to detect the swap and
+        # re-mmap before the old directory entry disappears.  Pairs with
+        # the duplicate-return-forward LRU in :mod:`salt.topology.router`
+        # (RFC item 7, mitigation A).  The writer's own staleness check
+        # interval is the right length — a reader whose last stat was
+        # within that window is still trusting its cached inode.
+        unlink_delay = getattr(cache, "_staleness_check_interval", 0) or 0
         try:
-            cache.atomic_rebuild(iter(surviving))
+            cache.atomic_rebuild(iter(surviving), unlink_delay=unlink_delay)
         except Exception:  # pylint: disable=broad-except
             log.exception("topology breadcrumbs atomic_rebuild failed")
 
     return removed
+
+def jids_for_link(cache, link_cluster_id):
+    """
+    Return the sorted list of non-expired jids whose breadcrumbs
+    reference ``link_cluster_id``.
+
+    Used by :meth:`salt.topology.link.PeerMasterLink.quiesce` to
+    decide whether the drain window can exit early --- an empty
+    list means no in-flight return still routes back through this
+    link, so the link can transition straight to DISCONNECTED.
+
+    Safe to call from any process.  O(occupied) via the roster.
+    """
+    now = time.time()
+    live = []
+    for key, raw in cache.list_items():
+        decoded = _decode(raw)
+        if decoded is None:
+            continue
+        if decoded.get("expiry_at", 0) <= now:
+            continue
+        if decoded.get("link_cluster_id") != link_cluster_id:
+            continue
+        live.append(key if isinstance(key, str) else key.decode("utf-8", "replace"))
+    live.sort()
+    return live
+

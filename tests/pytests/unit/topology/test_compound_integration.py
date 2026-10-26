@@ -88,6 +88,22 @@ def test_check_compound_minions_ref_has_cluster_entry():
 # ---------------------------------------------------------------------
 
 
+def _make_ckminions(opts):
+    """
+    Build a bare :class:`CkMinions` for pure-logic tests.
+
+    ``CkMinions.__init__`` wires up a cache driver, key store, and
+    transport probe; none of that is needed for exercising the
+    pure ``_local_cluster_id`` / ``_check_cluster_minions``
+    branches.  Bypass ``__init__`` so the opts dict can stay
+    minimal.
+    """
+    ck = minions.CkMinions.__new__(minions.CkMinions)
+    ck.opts = opts
+    ck.acc = "minions"
+    return ck
+
+
 def test_compound_match_source_dispatches_c_to_cluster():
     """
     ``salt.matchers.compound_match.match`` builds its ref dict
@@ -99,3 +115,113 @@ def test_compound_match_source_dispatches_c_to_cluster():
     assert (
         '"C": "cluster"' in src or "'C': 'cluster'" in src
     ), "compound_match.match's ref dict must map 'C' to 'cluster'."
+
+
+# ---------------------------------------------------------------------
+# ``_local_cluster_id`` --- topology-config fallback for C@ matching
+# ---------------------------------------------------------------------
+
+
+def test_local_cluster_id_prefers_opts_cluster_id():
+    """``opts["cluster_id"]`` wins over everything else when present."""
+    ck = _make_ckminions(
+        {
+            "cluster_id": "east",
+            "master_cluster_id": "ignored",
+            "topology_enabled": True,
+        }
+    )
+    assert ck._local_cluster_id() == "east"
+
+
+def test_local_cluster_id_falls_back_to_master_cluster_id():
+    """
+    ``opts["master_cluster_id"]`` is the second-tier source when the
+    3008.x master-cluster primitive is not set.
+    """
+    ck = _make_ckminions({"master_cluster_id": "east"})
+    assert ck._local_cluster_id() == "east"
+
+
+def test_local_cluster_id_reads_topology_conf(tmp_path):
+    """
+    On a topology-enabled solo master, ``opts["cluster_id"]`` is
+    FORBIDDEN by the pre-flight check (3008.x ``_pre_flight``
+    requires ``cluster_peers`` whenever ``cluster_id`` is truthy).
+    The topology identity must come from ``topology.conf`` via
+    :func:`salt.config.topology.load_topology_config`.  This test
+    pins that fallback: without ``opts["cluster_id"]``, the
+    ``C@east`` match on a topology-enabled master still resolves
+    to ``east``.
+    """
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    ck = _make_ckminions(
+        {
+            "topology_enabled": True,
+            "topology_config_file": str(topo_conf),
+        }
+    )
+    assert ck._local_cluster_id() == "east"
+
+
+def test_local_cluster_id_cached_per_opts(tmp_path):
+    """
+    The topology-config read is cached in
+    ``opts["_topology_cluster_id_cache"]`` so the per-publish C@
+    compound match does not re-parse ``topology.conf`` on every
+    call.
+    """
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    opts = {
+        "topology_enabled": True,
+        "topology_config_file": str(topo_conf),
+    }
+    ck = _make_ckminions(opts)
+    first = ck._local_cluster_id()
+    assert first == "east"
+    assert opts["_topology_cluster_id_cache"] == "east"
+    # Delete the config file to prove the second call uses the cache.
+    topo_conf.unlink()
+    assert ck._local_cluster_id() == "east"
+
+
+def test_check_cluster_minions_dispatches_on_topology_cluster_id(tmp_path):
+    """
+    End-to-end: ``_check_compound_minions`` with target ``"C@east"``
+    on a topology-only master (no ``opts["cluster_id"]``) must
+    recognise east as the local cluster and return the all-minions
+    set.  Pre-fix this returned empty because the C@ matcher only
+    consulted ``opts["cluster_id"]``, which is unset on a
+    topology-enabled solo master.
+    """
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    ck = _make_ckminions(
+        {
+            "topology_enabled": True,
+            "topology_config_file": str(topo_conf),
+            "minion_data_cache": False,  # take the simple return path
+        }
+    )
+    result = ck._check_cluster_minions("east", greedy=True, minions=["m1", "m2"])
+    assert result["minions"] == ["m1", "m2"]
+
+
+def test_check_cluster_minions_empty_when_not_in_scope(tmp_path):
+    """
+    ``_check_cluster_minions("west", ...)`` on an east master is
+    empty.  The forward-only path is the router's responsibility;
+    the local match contributes nothing.
+    """
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    ck = _make_ckminions(
+        {
+            "topology_enabled": True,
+            "topology_config_file": str(topo_conf),
+        }
+    )
+    result = ck._check_cluster_minions("west", greedy=True, minions=["m1"])
+    assert result["minions"] == []

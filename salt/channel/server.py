@@ -1721,6 +1721,28 @@ class PubServerChannel:
 
     async def publish_payload(self, load, *args):
         load = salt.payload.loads(load)
+        # Topology ``C@`` scope stripping: on a topology-enabled
+        # master the publish load reaches the pub daemon with the
+        # operator-provided target (e.g. ``C@east and web-*``).
+        # The minion-side matcher cannot evaluate ``C@`` without a
+        # ``master_cluster_id`` grain, and even with the grain it
+        # is a wasted round-trip --- the router has already decided
+        # locality.  Strip the ``C@`` tokens before fan-out so the
+        # subscribing minions see a well-formed compound expression.
+        if (
+            self.opts.get("topology_enabled")
+            and isinstance(load, dict)
+            and load.get("tgt_type") in ("compound", "compound_pillar_exact")
+        ):
+            try:
+                import salt.topology.router as _topology_router
+
+                load["tgt"] = _topology_router.strip_cluster_scope(load.get("tgt"))
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: strip_cluster_scope failed on publish_payload",
+                    exc_info=True,
+                )
         unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])

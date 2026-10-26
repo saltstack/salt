@@ -1,6 +1,22 @@
 """
 Return data to local job cache
 
+Schema notes
+------------
+The on-disk layout is a tree keyed by jid directory, with one
+sub-directory per minion:
+
+* ``<jid_dir>/.load.p``          — the publish load (msgpack)
+* ``<jid_dir>/.minions.p``       — list of targeted minions
+* ``<jid_dir>/<id>/return.p``    — the minion's return payload
+* ``<jid_dir>/<id>/out.p``       — optional ``out`` metadata
+* ``<jid_dir>/<id>/cluster_path.p`` — RFC item 9 cluster_path annotation
+  (optional; written only when ``load["cluster_path"]`` is present on
+  topology-forwarded returns).
+
+The ``cluster_path.p`` sidecar is purely additive — any pre-topology
+install reads cleanly because every pre-existing accessor (``get_jid``,
+``_walk_through``) is layout-tolerant: unknown files are ignored.
 """
 
 import bisect
@@ -36,6 +52,10 @@ SYNDIC_MINIONS_P = ".minions.{0}.p"
 RETURN_P = "return.p"
 # out is the "out" from the minion data
 OUT_P = "out.p"
+# cluster_path annotation written when a topology-forwarded return
+# carries a ``cluster_path`` field (RFC item 9).  Pre-topology callers
+# never write this file; readers tolerate its absence.
+CLUSTER_PATH_P = "cluster_path.p"
 # endtime is the end time for a job, not stored as msgpack
 ENDTIME = "endtime"
 
@@ -262,6 +282,21 @@ def returner(load):
             salt.utils.atomicfile.atomic_open(os.path.join(hn_dir, OUT_P), "w+b"),
         )
 
+    # RFC item 9: topology-forwarded returns carry a ``cluster_path``
+    # tuple identifying the origin of the publish.  Persist it alongside
+    # the return so ``jobs.lookup_jid`` can disambiguate duplicate
+    # minion-ids coming back from different clusters.  Absent on
+    # non-topology deployments — in that case we skip the sidecar
+    # entirely so pre-topology installs are byte-identical.
+    cluster_path = load.get("cluster_path")
+    if cluster_path:
+        salt.payload.dump(
+            list(cluster_path),
+            salt.utils.atomicfile.atomic_open(
+                os.path.join(hn_dir, CLUSTER_PATH_P), "w+b"
+            ),
+        )
+
 
 def save_load(jid, clear_load, minions=None, recurse_count=0):
     """
@@ -464,6 +499,7 @@ def get_jid(jid):
         if fn_ not in ret:
             retp = os.path.join(jid_dir, fn_, RETURN_P)
             outp = os.path.join(jid_dir, fn_, OUT_P)
+            cpp = os.path.join(jid_dir, fn_, CLUSTER_PATH_P)
             if not os.path.isfile(retp):
                 continue
             while fn_ not in ret:
@@ -479,6 +515,18 @@ def get_jid(jid):
                     if os.path.isfile(outp):
                         with salt.utils.files.fopen(outp, "rb") as rfh:
                             ret[fn_]["out"] = salt.payload.load(rfh)
+                    # RFC item 9: surface the cluster_path annotation when
+                    # the sidecar is present.  Pre-topology returns don't
+                    # have the sidecar — ret[fn_] stays
+                    # byte-identical to the pre-RFC shape.
+                    if os.path.isfile(cpp):
+                        try:
+                            with salt.utils.files.fopen(cpp, "rb") as rfh:
+                                ret[fn_]["cluster_path"] = salt.payload.load(rfh)
+                        except Exception:  # pylint: disable=broad-except
+                            # Partial-write / corrupt sidecar: silently skip —
+                            # the primary return record is still returned.
+                            pass
                 except Exception as exc:  # pylint: disable=broad-except
                     if "Permission denied:" in str(exc):
                         raise

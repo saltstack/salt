@@ -130,6 +130,23 @@ def _check_owner_pid():
         )
 
 
+def is_owner():
+    """
+    Return ``True`` when this process owns the link_manager state.
+
+    The link_manager module globals are populated in-process by
+    :func:`start` from the publish daemon.  Followers (non-leaders)
+    and MWorker children never call :func:`start`, so their copy of
+    this module has ``_OWNER_PID is None`` and no live link entries.
+
+    :class:`salt.cluster.consensus.raft.topology.TopologyStateMachine`
+    uses this to decide whether a routing query (``next_hop``) can be
+    answered from live state or must be refused with
+    :class:`salt.cluster.consensus.raft.topology.NotLeaderError`.
+    """
+    return _OWNER_PID is not None and os.getpid() == _OWNER_PID
+
+
 def _reserve_listener_socket(opts):
     """Bind + listen on ``topology_link_port`` and return the socket.
 
@@ -720,9 +737,17 @@ def remove_link(cluster_id):
 
 
 def _schedule_quiesce(link):
-    """Create the quiesce task on the io_loop."""
+    """Create the quiesce task on the io_loop.
+
+    Passes the module's breadcrumb cache so the drain exits early when
+    no return still routes through the link; without the cache the
+    drain always runs the full ``topology_detach_quiesce`` timer.
+    """
     try:
-        asyncio.ensure_future(link.quiesce(), loop=_IO_LOOP)
+        asyncio.ensure_future(
+            link.quiesce(breadcrumb_cache=_BREADCRUMB_CACHE),
+            loop=_IO_LOOP,
+        )
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: scheduling quiesce() failed")
 
@@ -742,7 +767,22 @@ def _dispatch_master_auth(payload):
     return _handle_master_auth(load)
 
 
-def _dispatch_pub(payload):
+async def _dispatch_pub(payload):
+    """
+    Handle an inbound ``topology/pub`` payload.
+
+    Calls :meth:`salt.topology.router.TopologyRouter.forward_publish`
+    to decide the next-hop link set + whether this cluster should
+    also publish to its own minions.  When ``local_match`` is True,
+    strips the ``C@`` scope from the target (so the minion-side
+    compound matcher stays oblivious to topology) and dispatches
+    the stripped load via the master publish channel so the local
+    accepted minions receive it.
+
+    Returns ``(links, local_match)`` from the router call.  The
+    inbound ReqServerChannel does not consume the return value;
+    the tuple is kept for test observability.
+    """
     router = router_mod.get_router()
     if router is None:
         return None
@@ -752,10 +792,60 @@ def _dispatch_pub(payload):
     )
     inbound_link = _INBOUND.get(inbound_cluster) if inbound_cluster else None
     try:
-        return router.forward_publish(load, inbound_link)
+        result = router.forward_publish(load, inbound_link)
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: forward_publish raised")
         return None
+    if not isinstance(result, tuple) or len(result) != 2:
+        # Legacy / fake router: nothing to do with local_match.
+        return result
+    links, local_match = result
+    if local_match and isinstance(load, dict):
+        try:
+            await _publish_to_local_minions(load)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "topology: local-minion publish failed for forwarded jid=%r",
+                load.get("jid"),
+            )
+    return links, local_match
+
+
+async def _publish_to_local_minions(load):
+    """
+    Fan a forwarded publish out to this master's own minions.
+
+    Strips every ``C@`` scope from ``load["tgt"]`` via
+    :func:`salt.topology.router.strip_cluster_scope` so a
+    (non-topology-aware) minion still sees a well-formed compound
+    expression.  Then opens a transient
+    :class:`salt.channel.server.PubServerChannel` and sends the
+    stripped load through the same IPC path the local
+    :meth:`salt.master.ClearFuncs._send_pub` uses for new publishes.
+
+    Idempotent at the channel layer: ``publish`` is a pure
+    IPC-pull-socket write, no bind.
+    """
+    import salt.channel.server
+    import salt.utils.channel
+
+    stripped = dict(load)
+    tgt = stripped.get("tgt")
+    try:
+        stripped["tgt"] = router_mod.strip_cluster_scope(tgt)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: strip_cluster_scope failed; publishing raw tgt", exc_info=True
+        )
+    for transport, opts in salt.utils.channel.iter_transport_opts(_OPTS or {}):
+        chan = salt.channel.server.PubServerChannel.factory(opts)
+        try:
+            await chan.publish(stripped)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "topology: PubServerChannel.publish failed on transport %r",
+                transport,
+            )
 
 
 def _dispatch_ret(payload):

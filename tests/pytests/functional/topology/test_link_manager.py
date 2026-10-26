@@ -579,6 +579,167 @@ def test_handle_inbound_unknown_tag_dropped(opts, clean_state, monkeypatch):
         loop.close()
 
 
+class _FakeRouterWithLocalMatch:
+    """
+    Router stub that returns ``(links, local_match)`` from
+    ``forward_publish`` so :func:`_dispatch_pub` can exercise the
+    local-publish branch.
+    """
+
+    def __init__(self, local_match=True):
+        self._local_match = local_match
+        self.calls = []
+
+    def forward_publish(self, load, inbound_link):
+        self.calls.append((load, inbound_link))
+        return [], self._local_match
+
+
+def test_handle_inbound_pub_local_match_publishes_to_local_minions(
+    opts, clean_state, monkeypatch
+):
+    """
+    When ``forward_publish`` returns ``local_match=True`` on an
+    inbound ``topology/pub``, the dispatcher must call
+    :func:`_publish_to_local_minions` so west dispatches the
+    forwarded publish to its own minions.  Pre-fix the local-match
+    flag was computed but never acted on.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        fake = _FakeRouterWithLocalMatch(local_match=True)
+        monkeypatch.setattr(router_mod, "_ROUTER", fake)
+        _install_fake_inbound_link("east", session_generation=11)
+
+        local_calls = []
+
+        async def _spy_publish(load):
+            local_calls.append(load)
+
+        monkeypatch.setattr(link_manager, "_publish_to_local_minions", _spy_publish)
+        payload = {
+            "tag": "topology/pub",
+            "origin_cluster_id": "east",
+            "session_generation": 11,
+            "load": {
+                "jid": "20260101000000000000",
+                "tgt": "C@west and *",
+                "tgt_type": "compound",
+                "fun": "test.ping",
+            },
+        }
+        result = loop.run_until_complete(
+            link_manager._handle_inbound(payload)
+        )  # pylint: disable=protected-access
+        assert result == ([], True)
+        assert len(local_calls) == 1, (
+            f"local-minion publish not dispatched for local_match=True: "
+            f"calls={local_calls!r}"
+        )
+        assert local_calls[0]["jid"] == "20260101000000000000"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+def test_handle_inbound_pub_no_local_match_skips_local_publish(
+    opts, clean_state, monkeypatch
+):
+    """
+    Transit-only case: when ``forward_publish`` returns
+    ``local_match=False`` (this cluster is in the path but is not a
+    named destination), the dispatcher must NOT publish to local
+    minions.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        fake = _FakeRouterWithLocalMatch(local_match=False)
+        monkeypatch.setattr(router_mod, "_ROUTER", fake)
+        _install_fake_inbound_link("east", session_generation=13)
+
+        local_calls = []
+
+        async def _spy_publish(load):
+            local_calls.append(load)
+
+        monkeypatch.setattr(link_manager, "_publish_to_local_minions", _spy_publish)
+        payload = {
+            "tag": "topology/pub",
+            "origin_cluster_id": "east",
+            "session_generation": 13,
+            "load": {
+                "jid": "20260101000000000001",
+                "tgt": "C@north and *",
+                "tgt_type": "compound",
+            },
+        }
+        result = loop.run_until_complete(
+            link_manager._handle_inbound(payload)
+        )  # pylint: disable=protected-access
+        assert result == ([], False)
+        assert (
+            local_calls == []
+        ), f"local-minion publish fired on transit-only hop: {local_calls!r}"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+def test_publish_to_local_minions_strips_c_scope(opts, clean_state, monkeypatch):
+    """
+    :func:`_publish_to_local_minions` must call
+    :func:`salt.topology.router.strip_cluster_scope` on the target
+    before handing off to the PubServerChannel so the minion-side
+    compound matcher never sees the ``C@`` clause.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+
+        published = []
+
+        class _FakePubChannel:
+            def __init__(self, opts):
+                self.opts = opts
+
+            @classmethod
+            def factory(cls, opts, **kwargs):
+                return cls(opts)
+
+            async def publish(self, load):
+                published.append(load)
+
+        import salt.channel.server as server_mod
+
+        monkeypatch.setattr(
+            server_mod, "PubServerChannel", _FakePubChannel, raising=True
+        )
+        # Force a single transport pass regardless of system defaults.
+        monkeypatch.setattr(
+            "salt.utils.channel.iter_transport_opts",
+            lambda _opts: [("zeromq", opts)],
+        )
+        load = {
+            "jid": "20260101000000000002",
+            "tgt": "C@west and web-*",
+            "tgt_type": "compound",
+            "fun": "test.ping",
+        }
+        loop.run_until_complete(
+            link_manager._publish_to_local_minions(load)
+        )  # pylint: disable=protected-access
+        assert len(published) == 1, published
+        # ``C@west`` must have been stripped; "web-*" remains.
+        assert "C@" not in str(
+            published[0]["tgt"]
+        ), f"stripped target still contains C@: {published[0]!r}"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
 # ---------------------------------------------------------------------------
 # stop
 # ---------------------------------------------------------------------------

@@ -6326,18 +6326,37 @@ class ClearFuncs(TransportMethods):
         if not self.opts.get("order_masters"):
             # Check for no minions
             if not minions:
-                return {
-                    "enc": "clear",
-                    "load": {
-                        "jid": None,
-                        "minions": minions,
-                        "error": (
-                            "Master could not resolve minions for target {}".format(
-                                clear_load["tgt"]
-                            )
-                        ),
-                    },
-                }
+                # Topology forward-only exception: when
+                # ``topology_enabled`` is set and the target contains
+                # ``C@`` scopes that name clusters OTHER than this
+                # master's own topology ``cluster_id``, the publish
+                # must still flow through
+                # :meth:`MasterPubServerChannel.publish_payload` ->
+                # :func:`salt.topology.router.on_publish` so the
+                # topology router can forward it to the named peer
+                # cluster(s).  Short-circuiting here on the empty
+                # local-match would drop the publish before it ever
+                # reaches the router.
+                #
+                # A target like ``nonexistent-minion`` (no topology
+                # scope) still errors out below --- the forward-only
+                # path is only taken when at least one ``C@`` scope
+                # names a non-local cluster.
+                if not self._topology_forward_only_target(
+                    clear_load["tgt"], clear_load.get("tgt_type", "glob")
+                ):
+                    return {
+                        "enc": "clear",
+                        "load": {
+                            "jid": None,
+                            "minions": minions,
+                            "error": (
+                                "Master could not resolve minions for target {}".format(
+                                    clear_load["tgt"]
+                                )
+                            ),
+                        },
+                    }
         if extra.get("batch", None) and batch_async_required(self.opts, minions, extra):
             return await self.publish_batch(clear_load, minions, missing)
 
@@ -6387,6 +6406,52 @@ class ClearFuncs(TransportMethods):
         if not record:
             return False
         return record.get("state") == "accepted"
+
+    def _topology_forward_only_target(self, tgt, tgt_type):
+        """
+        Return ``True`` when a publish with no local-match minions
+        should still be allowed through for topology-level
+        forwarding to one or more peer clusters.
+
+        Semantics: the target carries at least one ``C@`` cluster
+        scope naming a cluster OTHER than this master's own
+        topology ``cluster_id``.  ``tgt_type`` must be a compound
+        target --- globs / lists / pcre never carry ``C@`` scopes.
+
+        A pure-local-miss (e.g. ``nonexistent-minion`` glob, or
+        ``C@east`` on east with no accepted minions) continues to
+        error out the normal way; this gate only widens the pass
+        for the single case of "the C@scope is for someone else."
+        """
+        if not self.opts.get("topology_enabled"):
+            return False
+        if tgt_type not in ("compound", "compound_pillar_exact", "nodegroup"):
+            return False
+        try:
+            # Local import keeps non-topology masters out of this path.
+            import salt.topology.router as topology_router
+        except ImportError:
+            return False
+        try:
+            destinations = topology_router.extract_cluster_scope(tgt)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        if destinations is None:
+            # Flood (either no C@ at all, or a ``not`` makes extraction
+            # conservative-flood).  "no C@ at all" is a plain target
+            # miss --- the existing error should still fire.  Flood-via-
+            # ``not`` is treated the same here: on an empty local
+            # match there is nothing to forward with correct semantics
+            # anyway.  No forward-only pass.
+            return False
+        local_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        # Any destination not equal to our local cluster_id implies a
+        # peer-cluster forward opportunity.  ``local_cluster_id`` may
+        # be ``""`` on a master whose topology config has no
+        # ``cluster_id`` --- in that case every named destination is
+        # "someone else" and the forward is still worth attempting.
+        remote = {c for c in destinations if c and c != local_cluster_id}
+        return bool(remote)
 
     def _prep_auth_info(self, clear_load, want_stacked=False):
         """

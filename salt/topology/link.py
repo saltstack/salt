@@ -164,6 +164,12 @@ class PeerMasterLink:
         self._req_channel = None
         self._pub_channel = None
         self._closing = False
+        #: Number of ``send_return`` coroutines mid-send on this link.
+        #: Decremented in a ``finally`` so a raise inside ``_req_channel.send``
+        #: still releases the gate; the quiesce drain path waits for this
+        #: counter to reach zero before transitioning to DISCONNECTED when
+        #: the drain timer fires.
+        self._inflight_returns = 0
 
     # ------------------------------------------------------------------
     # Equality / hashing --- used by link_manager's registry dict
@@ -512,25 +518,108 @@ class PeerMasterLink:
         self._health = LinkHealth.DISCONNECTED
         self._closing = False
 
-    async def quiesce(self):
+    async def quiesce(self, breadcrumb_cache=None):
         """
         Transition the link to :data:`LinkHealth.QUIESCING` and
-        schedule the final disconnect after
-        ``opts["topology_detach_quiesce"]`` seconds.
+        drain in-flight returns before the final disconnect.
 
-        During quiesce, :meth:`send_publish` raises
-        :class:`LinkUnavailable` so no new publishes cross the
-        link, but :meth:`send_return` continues to drain
-        in-flight returns.  Called by
-        :func:`salt.topology.link_manager.remove_link` on
-        detach so returns in flight aren't dropped.
+        Drain window duration = ``opts["topology_detach_quiesce"]``
+        (falls back to ``opts["publish_timeout"]`` if the explicit
+        knob is unset).  Drain exit condition is (whichever comes
+        first):
+
+        * **No active breadcrumbs reference this link** --- there
+          are no returns still routable back through this link, so
+          nothing is in flight.  Checked against ``breadcrumb_cache``
+          (reader or writer handle from
+          :mod:`salt.topology.breadcrumbs`) when the caller passes
+          one; without the cache the drain simply runs the full
+          timer.
+        * **Timer elapses** --- fallback.  A WARNING is logged
+          listing any undelivered jids whose breadcrumbs still
+          point at this link so operators can investigate.
+
+        If a :meth:`send_return` is mid-send when the timer fires
+        (``self._inflight_returns > 0``), the drain waits for the
+        in-flight send to complete before transitioning so a
+        return already on the wire is never truncated.
+
+        **Already-DISCONNECTED links**: no-op.  Called by
+        :func:`salt.topology.link_manager.remove_link` on detach
+        so returns in flight aren't dropped.
+
+        :param breadcrumb_cache: Optional
+            :class:`salt.utils.mmap_cache.MmapCache` handle; when
+            present the drain exits early as soon as no breadcrumb
+            still references this link's ``peer_cluster_id``.
         """
         if self._health == LinkHealth.DISCONNECTED:
             return
         self._health = LinkHealth.QUIESCING
-        drain = float(self.opts.get("topology_detach_quiesce", 0))
+
+        drain = self.opts.get("topology_detach_quiesce")
+        if drain is None:
+            drain = self.opts.get("publish_timeout", 0)
+        try:
+            drain = float(drain)
+        except (TypeError, ValueError):
+            drain = 0.0
+
+        peer = self._peer_cluster_id
+        timer_elapsed = False
         if drain > 0:
-            await asyncio.sleep(drain)
+            poll = min(0.25, drain)
+            elapsed = 0.0
+            loop = asyncio.get_event_loop()
+            start = loop.time()
+            while elapsed < drain:
+                if breadcrumb_cache is not None and peer is not None:
+                    try:
+                        # Local import avoids a module-level cycle:
+                        # ``breadcrumbs`` imports nothing from this file,
+                        # but keeping the import inside ``quiesce`` means
+                        # a link opened without the cache does not pay
+                        # the module import cost.
+                        from salt.topology import breadcrumbs as _bc
+
+                        if not _bc.jids_for_link(breadcrumb_cache, peer):
+                            # No in-flight return still routes through
+                            # this link; clean exit before the timer.
+                            break
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug(
+                            "topology link quiesce: breadcrumb lookup failed",
+                            exc_info=True,
+                        )
+                await asyncio.sleep(poll)
+                elapsed = loop.time() - start
+            else:
+                timer_elapsed = True
+
+        if timer_elapsed:
+            # Wait for any send_return still on the wire; the active
+            # send gets to finish before we tear the channel down.
+            while self._inflight_returns > 0:
+                await asyncio.sleep(0)
+            pending = []
+            if breadcrumb_cache is not None and peer is not None:
+                try:
+                    from salt.topology import breadcrumbs as _bc
+
+                    pending = _bc.jids_for_link(breadcrumb_cache, peer)
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "topology link quiesce: breadcrumb lookup failed",
+                        exc_info=True,
+                    )
+            log.warning(
+                "topology link to %r: quiesce drain timer elapsed after "
+                "%.3fs with %d undelivered jids still pending: %r",
+                peer,
+                drain,
+                len(pending),
+                pending,
+            )
         await self.disconnect()
 
     # ------------------------------------------------------------------
@@ -597,7 +686,14 @@ class PeerMasterLink:
             },
         }
         payload = self._build_envelope_payload(body, "topology/ret")
-        return await self._req_channel.send(payload)
+        # Track in-flight returns so the quiesce drain path can wait for
+        # the current ``send_return`` to complete even if the drain timer
+        # fires mid-send.
+        self._inflight_returns += 1
+        try:
+            return await self._req_channel.send(payload)
+        finally:
+            self._inflight_returns -= 1
 
     async def send_event(self, event, path):
         """

@@ -27,6 +27,7 @@ from salt.cluster.consensus.raft.log import LogEntryType
 from salt.cluster.consensus.raft.topology import (
     _read_raft_applied_peers as _sm_read_applied_peers,
 )
+from salt.cluster.consensus.raft.topology import build_peer_attach_entry
 
 log = logging.getLogger(__name__)
 
@@ -198,13 +199,12 @@ def _collect_pending(opts):
             if peer is None:
                 continue
             entries.append(
-                {
-                    "type": LogEntryType.MASTER_PEER_ATTACH,
-                    "cluster_id": cluster_id,
-                    "public_key": peer.get("public_key") or b"",
-                    "endpoints": tuple(peer.get("endpoints") or ()),
-                    "attached_at": float(peer.get("attached_at") or 0.0),
-                }
+                build_peer_attach_entry(
+                    cluster_id=cluster_id,
+                    public_key=peer.get("public_key") or b"",
+                    endpoints=peer.get("endpoints") or (),
+                    attached_at=peer.get("attached_at") or 0.0,
+                )
             )
         return entries
     finally:

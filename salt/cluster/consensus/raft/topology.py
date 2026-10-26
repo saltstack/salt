@@ -53,6 +53,21 @@ log = logging.getLogger(__name__)
 # with an older binary cannot silently misread a newer snapshot.
 TOPOLOGY_SNAPSHOT_VERSION = "topology.snapshot.v1"
 
+# Per-peer serialization schema version carried under
+# ``__schema_version__`` in every :class:`PeerState` dict that
+# crosses the Raft log or lands in a snapshot.  Decoupled from the
+# snapshot envelope version so a PeerState field reorder /
+# addition can bump this independently without invalidating the
+# whole snapshot format.
+#
+# Backward compat invariant: entries / snapshots WITHOUT a
+# ``__schema_version__`` field are treated as v1.  This is the
+# only sanctioned implicit version; any explicit value other than
+# a member of :data:`_KNOWN_PEER_STATE_SCHEMA_VERSIONS` is
+# rejected at apply + restore time with a clear log.
+PEER_STATE_SCHEMA_VERSION = 1
+_KNOWN_PEER_STATE_SCHEMA_VERSIONS = frozenset({1})
+
 # Compiled regex for the hostile-peer re-validation at apply time.
 _CLUSTER_ID_RE = re.compile(CLUSTER_ID_RE)
 
@@ -68,6 +83,22 @@ _RESERVED_IDS = frozenset(
         registry.RESERVED_RAFT_APPLIED_PEERS_KEY,
     }
 )
+
+
+class NotLeaderError(RuntimeError):
+    """
+    Raised by :meth:`TopologyStateMachine.next_hop` on a follower.
+
+    Routing queries can only be answered from the live
+    :mod:`salt.topology.link_manager` state, which is populated in
+    the publish daemon of the leader (the master that owns the
+    pub-server socket).  Followers' link_manager modules are empty
+    --- returning ``None`` for every target would be ambiguous
+    between "no route exists" and "I cannot tell"; the explicit
+    raise forces the caller to redirect the query to the leader.
+
+    Per RFC master-topology.md "Implementation follow-ups" item 5.
+    """
 
 
 class PeerState(NamedTuple):
@@ -168,21 +199,20 @@ class TopologyStateMachine(BaseStateMachine):
         entry_type = cmd.get("type")
         handler = self._handlers.get(entry_type)
         if handler is None:
-            # Second half of the RFC rolling-upgrade gate: a
-            # pre-topology peer that somehow saw a ``MASTER_*`` commit
-            # (gate failed open, hostile replay, or a snapshot-restore
-            # race) must not silently diverge from the cluster.  Log
-            # at WARNING so operators notice; the pre-topology
-            # SM has no handler and no in-process state to update,
-            # which is exactly what the gate is designed to produce.
-            # Defence in depth for the propose-side gate at
-            # :meth:`RaftService._enforce_topology_protocol_gate`.
+            # Second half of the RFC rolling-upgrade gate (merged in from
+            # FU-C): a pre-topology peer that somehow saw a MASTER_*
+            # commit must not silently diverge.  Log at WARNING so
+            # operators notice; the pre-topology SM has no handler and
+            # no in-process state to update, which is what the gate is
+            # designed to produce.  Defence in depth for the
+            # propose-side gate at
+            # ``RaftService._enforce_topology_protocol_gate``.
             log.warning(
                 "TopologyStateMachine: refusing to apply unknown "
-                "topology entry type %r --- this master may be "
-                "running a pre-topology binary that saw a MASTER_* "
-                "commit it does not understand; finish the rolling "
-                "upgrade so every peer handles this entry type",
+                "topology entry type %r --- this master may be running "
+                "a pre-topology binary that saw a MASTER_* commit it "
+                "does not understand; finish the rolling upgrade so "
+                "every peer handles this entry type",
                 entry_type,
             )
             return
@@ -210,6 +240,11 @@ class TopologyStateMachine(BaseStateMachine):
             decoded = registry.get_peer(self.registry, cluster_id)
             if decoded is None:
                 continue
+            # Stamp the current PeerState schema version on every peer
+            # dict going into the snapshot so a joiner on a newer binary
+            # (with a different PeerState shape) refuses to misread this
+            # entry rather than silently assuming field-position matches.
+            decoded["__schema_version__"] = PEER_STATE_SCHEMA_VERSION
             peers[cluster_id] = decoded
         identity_pub = registry.get_identity_pub(self.registry) or b""
         identity_version = _read_identity_version(self.registry)
@@ -275,6 +310,23 @@ class TopologyStateMachine(BaseStateMachine):
                     continue
                 if not isinstance(state, dict):
                     continue
+                peer_version = _peer_schema_version(state)
+                if not _peer_schema_version_is_known(peer_version):
+                    # A snapshot with per-peer schema versions we don't
+                    # recognise is REFUSED entirely (not just this peer):
+                    # restoring a strict subset of the leader's peer set
+                    # would leave the follower with an inconsistent view
+                    # of the cluster.  Error + abort.
+                    log.error(
+                        "TopologyStateMachine: snapshot peer %r carries "
+                        "__schema_version__ %r not in the known set %r; "
+                        "refusing to restore to avoid silent "
+                        "field-reorder data corruption",
+                        cluster_id,
+                        state.get("__schema_version__"),
+                        sorted(_KNOWN_PEER_STATE_SCHEMA_VERSIONS),
+                    )
+                    return
                 target_peers[cluster_id] = _normalise_peer_state(cluster_id, state)
         applied_ids = sorted(target_peers)
 
@@ -404,6 +456,16 @@ class TopologyStateMachine(BaseStateMachine):
         unless the entry carries an explicit ``force_replace``
         flag.
         """
+        schema_version = _peer_schema_version(entry)
+        if not _peer_schema_version_is_known(schema_version):
+            log.critical(
+                "TopologyStateMachine: MASTER_PEER_ATTACH __schema_version__ "
+                "%r not understood (known: %r); rejecting entry so a "
+                "field-reordering across releases does not silently misapply",
+                entry.get("__schema_version__"),
+                sorted(_KNOWN_PEER_STATE_SCHEMA_VERSIONS),
+            )
+            return
         cluster_id = entry.get("cluster_id")
         if not isinstance(cluster_id, str) or not cluster_id:
             log.critical(
@@ -535,6 +597,60 @@ class TopologyStateMachine(BaseStateMachine):
         return registry.get_identity_pub(self.registry) is not None
 
     # ------------------------------------------------------------------
+    # Route resolution
+    # ------------------------------------------------------------------
+
+    def next_hop(self, target_cluster_id):
+        """
+        Return the ``cluster_id`` of the next hop toward
+        *target_cluster_id*, or ``None`` if no route is known.
+
+        **Leader-only.**  Consults
+        :mod:`salt.topology.link_manager` for live link state;
+        link_manager is populated inside the publish-daemon process
+        of the leader master.  On a follower cluster peer (or any
+        process that is not the link_manager owner) this method
+        raises :class:`NotLeaderError` rather than returning
+        ``None`` --- ``None`` is reserved for the unambiguous "no
+        route" case, so followers must raise to force the caller
+        to redirect the query.
+
+        Resolution precedence:
+
+        1. Direct link: if a healthy outbound/inbound link to
+           *target_cluster_id* exists, the target is the next hop.
+        2. Transit: not yet implemented at the SM layer; the live
+           router owns multi-hop decisions off summary gossip.
+           Returns ``None`` for non-direct destinations in Phase 3.
+
+        :param target_cluster_id: Destination ``cluster_id``.
+        :raises NotLeaderError: If this process is not the leader
+            / publish-daemon owner.
+        :returns: Peer ``cluster_id`` to send to, or ``None`` when
+            no route is known.
+        """
+        # Local import avoids a module-level cycle: ``link_manager`` imports
+        # from this module at apply-handler install time.
+        from salt.topology import link_manager
+
+        if not link_manager.is_owner():
+            raise NotLeaderError(
+                "TopologyStateMachine.next_hop is leader-only: this process "
+                f"(pid={os.getpid()}) does not own salt.topology.link_manager "
+                "state; redirect the routing query to the publish-daemon "
+                "leader"
+            )
+        link = link_manager.get_link(target_cluster_id)
+        if link is None:
+            return None
+        # The peer_cluster_id attribute is only populated post-handshake;
+        # a provisional (pre-handshake) link is treated as no route.
+        peer = getattr(link, "peer_cluster_id", None)
+        if peer is None:
+            return None
+        return peer
+
+    # ------------------------------------------------------------------
     # Internal: on-disk file hand-offs
     # ------------------------------------------------------------------
 
@@ -646,6 +762,54 @@ class TopologyStateMachine(BaseStateMachine):
 # ---------------------------------------------------------------------------
 # Module-local helpers
 # ---------------------------------------------------------------------------
+
+
+def build_peer_attach_entry(cluster_id, public_key, endpoints, attached_at, **extra):
+    """
+    Build a ``MASTER_PEER_ATTACH`` Raft log entry with the current
+    PeerState schema version stamped under ``__schema_version__``.
+
+    Callers in :mod:`salt.topology.migration` and
+    :mod:`salt.topology.link_manager` route through this helper so a
+    future PeerState field reorder bumps the schema version in one
+    place.  Extra kwargs (e.g. ``force_replace``) pass through
+    untouched.
+
+    :param cluster_id: Peer ``cluster_id``.
+    :param public_key: Peer identity public key as PEM bytes.
+    :param endpoints: Iterable of endpoint tuples/dicts.
+    :param attached_at: Unix timestamp of accept.
+    :returns: Dict suitable for the Raft propose path.
+    """
+    entry = {
+        "type": LogEntryType.MASTER_PEER_ATTACH,
+        "__schema_version__": PEER_STATE_SCHEMA_VERSION,
+        "cluster_id": cluster_id,
+        "public_key": public_key,
+        "endpoints": tuple(endpoints or ()),
+        "attached_at": float(attached_at or 0.0),
+    }
+    entry.update(extra)
+    return entry
+
+
+def _peer_schema_version(entry):
+    """
+    Return the ``__schema_version__`` carried by *entry*, defaulting
+    to 1 when absent (backward compat with pre-schema-version
+    entries / snapshots).  Non-int values coerce to ``None`` so the
+    caller can treat them as unknown.
+    """
+    raw = entry.get("__schema_version__", 1)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _peer_schema_version_is_known(version):
+    """Return True when *version* is in the known-good set."""
+    return version is not None and version in _KNOWN_PEER_STATE_SCHEMA_VERSIONS
 
 
 def _normalise_peer_state(cluster_id, raw):

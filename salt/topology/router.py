@@ -46,6 +46,7 @@ slow link does not block aggregation on the others --- see
 """
 
 import asyncio
+import collections
 import logging
 import time
 
@@ -54,6 +55,16 @@ import salt.topology.registry as registry
 import salt.topology.summary as summary_mod
 
 log = logging.getLogger(__name__)
+
+#: Cap on the LRU of recently-forwarded ``(jid, id)`` keys used by
+#: :meth:`TopologyRouter.forward_return_once` to drop duplicate return
+#: forwards.  See RFC item 7 (mitigation B): a breadcrumb lookup that
+#: lands on a still-mapped-but-unlinked old heap segment can resolve a
+#: cleaned-up jid for one extra lookup; the LRU ensures the second
+#: forward is silently dropped instead of causing a double delivery
+#: upstream.  1000 entries comfortably covers the ~250ms staleness
+#: window at any sane cluster return rate.
+_FORWARDED_RETURN_LRU_SIZE = 1000
 
 
 #: Compound-expression operators.  Mirrors the set accepted by
@@ -127,7 +138,7 @@ def _cluster_ids_from_token(token):
     return {c for c in payload.split(",") if c}
 
 
-def extract_cluster_scope(tgt):
+def extract_cluster_scope(tgt, nodegroups=None):
     """
     Return the set of ``cluster_id`` strings mentioned positively
     in ``C@`` clauses of a compound target.
@@ -148,6 +159,8 @@ def extract_cluster_scope(tgt):
     :param tgt: Target string or already-tokenized list.
     """
     tokens = _tokenize(tgt)
+    if nodegroups:
+        tokens = _expand_nodegroup_tokens(tokens, nodegroups)
     if not tokens:
         return None
     if any(tok == "not" for tok in tokens):
@@ -158,6 +171,48 @@ def extract_cluster_scope(tgt):
             out |= _cluster_ids_from_token(tok)
     if not out:
         return None
+    return out
+
+
+def _expand_nodegroup_tokens(tokens, nodegroups):
+    """
+    Return *tokens* with every ``N@<name>`` reference expanded in-place
+    via :func:`salt.utils.minions.nodegroup_comp`.
+
+    Mirrors the expansion :meth:`CkMinions._check_compound_minions` does
+    at match time, but on the raw tokens so the router can see any
+    ``C@`` scope hidden inside a nodegroup definition.  Imports are
+    deferred to avoid a module-import cycle through
+    :mod:`salt.utils.minions`.
+    """
+    import salt.utils.minions as _minions  # pylint: disable=import-outside-toplevel
+
+    out = []
+    for tok in tokens:
+        if not isinstance(tok, str) or not tok.startswith("N@") or len(tok) < 3:
+            out.append(tok)
+            continue
+        try:
+            expanded = _minions.nodegroup_comp(tok[2:], nodegroups)
+        except Exception:  # pylint: disable=broad-except
+            # nodegroup_comp is already error-tolerant (returns "" on
+            # unknown / cyclic groups); any raised exception here is a
+            # bug in the expander itself, not a user-visible condition.
+            # Leave the token opaque so flood semantics kick in.
+            log.exception("topology: nodegroup_comp raised for token %r", tok)
+            out.append(tok)
+            continue
+        if isinstance(expanded, list):
+            # Re-tokenise through _tokenize so paren-adjacency is normalised
+            # and recursive nodegroup expansions (which nodegroup_comp
+            # already resolved) stay well-formed for the C@ scan.
+            out.extend(_tokenize(expanded))
+        elif isinstance(expanded, str) and expanded:
+            out.extend(_tokenize(expanded))
+        else:
+            # Empty expansion (unknown / cyclic nodegroup, or empty def):
+            # drop the N@ token so it does not pollute the scope scan.
+            continue
     return out
 
 
@@ -243,24 +298,32 @@ def strip_cluster_scope(tgt):
     # Clean up any stranded sentinels.
     result = [t for t in result if t is not _DROPPED]
 
-    # Tidy empty parens produced by ``(C@foo)`` groups.
-    cleaned = []
-    i = 0
-    while i < len(result):
-        tok = result[i]
-        if tok == "(" and i + 1 < len(result) and result[i + 1] == ")":
-            i += 2
-            # Drop a preceding operator left dangling by the empty
-            # group's disappearance...
-            if cleaned and cleaned[-1] in ("and", "or"):
-                cleaned.pop()
-            # ...and drop a following operator if the empty group was
-            # at the head of the expression.
-            if not cleaned and i < len(result) and result[i] in ("and", "or"):
-                i += 1
-            continue
-        cleaned.append(tok)
-        i += 1
+    # Tidy empty parens produced by ``(C@foo)`` groups.  Run to fixpoint
+    # so nested wrappers like ``((C@east))`` collapse their outer group
+    # once the inner one has disappeared.
+    cleaned = result
+    while True:
+        prev = cleaned
+        step = []
+        i = 0
+        while i < len(prev):
+            tok = prev[i]
+            if tok == "(" and i + 1 < len(prev) and prev[i + 1] == ")":
+                i += 2
+                # Drop a preceding operator left dangling by the empty
+                # group's disappearance...
+                if step and step[-1] in ("and", "or"):
+                    step.pop()
+                # ...and drop a following operator if the empty group was
+                # at the head of the expression.
+                if not step and i < len(prev) and prev[i] in ("and", "or"):
+                    i += 1
+                continue
+            step.append(tok)
+            i += 1
+        cleaned = step
+        if cleaned == prev:
+            break
 
     # Trim leading/trailing dangling operators (an empty group at
     # the midpoint can leave ``A and or B`` after removal; the loop
@@ -441,6 +504,15 @@ class TopologyRouter:
         #: Tag-pattern -> set of ``cluster_id`` subscriptions received
         #: from peers.  Populated by inbound ``topology/sub`` messages.
         self._event_subscriptions = {}
+        #: Bounded LRU of ``(jid, minion_id)`` pairs this router has
+        #: already forwarded a return for in this process.  Used by
+        #: :meth:`forward_return_once` to drop duplicate forwards that
+        #: would otherwise land on an upstream peer after a breadcrumb
+        #: lookup hit a still-mapped-but-unlinked old heap segment
+        #: (RFC item 7 mitigation B).  :class:`collections.OrderedDict`
+        #: is cheap and gives O(1) LRU semantics via
+        #: ``move_to_end`` + size cap.
+        self._forwarded_returns: "collections.OrderedDict" = collections.OrderedDict()
 
     # ------------------------------------------------------------------
     # Overridable event hook
@@ -620,6 +692,58 @@ class TopologyRouter:
         if jid is None:
             return None
         return self.lookup_breadcrumb(jid)
+
+    def forward_return_once(self, ret):
+        """
+        Idempotency guard for upstream return forwarding.
+
+        A publish daemon that receives a return event
+        (``salt/topology/return/<origin>/<jid>``) consults
+        :meth:`route_return` to pick an outbound link, then calls
+        this method **before** emitting on the wire.  The first call
+        for a given ``(jid, minion_id)`` returns ``True`` and records
+        the pair in the LRU; subsequent calls return ``False`` and
+        the caller must drop the forward silently (DEBUG log).
+
+        **Why**: ``MmapCache.atomic_rebuild`` renames the pre-rebuild
+        heap aside and schedules its physical unlink for one staleness
+        window later (RFC item 7 mitigation A).  During that window a
+        cross-process reader whose mmap still points at the old inode
+        can still resolve a cleaned-up breadcrumb for one more lookup
+        — the writer has already dropped it from the live index, but
+        the reader hasn't re-mapped.  Mitigation A keeps the file
+        valid; mitigation B (this method) ensures the duplicate
+        forward that the stale lookup triggers lands on a no-op path
+        instead of double-delivering to the upstream peer.
+
+        :param ret: Return record dict (``{jid, id, return, ...}``).
+        :returns: ``True`` if this is the first time ``(jid, id)``
+            is being forwarded, ``False`` on duplicate.
+        """
+        if not isinstance(ret, dict):
+            return False
+        jid = ret.get("jid")
+        minion_id = ret.get("id")
+        if jid is None or minion_id is None:
+            # No key to deduplicate on — pass through; drop decisions
+            # fall to the usual return pipeline.
+            return True
+        key = (jid, minion_id)
+        if key in self._forwarded_returns:
+            # Move-to-end bumps recency; the second-forward of a stale
+            # jid stays "fresh" so a third one is still caught.
+            self._forwarded_returns.move_to_end(key)
+            log.debug(
+                "topology: dropping duplicate return forward for "
+                "jid=%r id=%r (seen within LRU window)",
+                jid,
+                minion_id,
+            )
+            return False
+        self._forwarded_returns[key] = None
+        while len(self._forwarded_returns) > _FORWARDED_RETURN_LRU_SIZE:
+            self._forwarded_returns.popitem(last=False)
+        return True
 
     def route_event(self, event):
         """

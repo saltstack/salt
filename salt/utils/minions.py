@@ -1258,6 +1258,52 @@ class CkMinions:
         """
         return self._check_glob_minions(expr, greedy, minions=minions)
 
+    def _local_cluster_id(self):
+        """
+        Return this master's effective local ``cluster_id`` for
+        ``C@`` compound matching.
+
+        Resolution order:
+
+        1. ``opts["cluster_id"]`` --- the 3008.x master-cluster
+           primitive (requires ``cluster_peers``; set only on
+           clustered masters).
+        2. ``opts["master_cluster_id"]`` --- grain-style override
+           occasionally used in test harnesses.
+        3. ``topology.conf``'s ``cluster_id`` via
+           :func:`salt.config.topology.load_topology_config`.  This
+           is the ONLY path on a topology-enabled solo master,
+           which cannot set ``opts["cluster_id"]`` without also
+           claiming to be a cluster (``_pre_flight`` requires
+           ``cluster_peers`` whenever ``cluster_id`` is truthy).
+
+        Cached per-opts in ``opts["_topology_cluster_id_cache"]``
+        so the per-publish compound match does not re-parse
+        ``topology.conf``.
+        """
+        local = self.opts.get("cluster_id") or self.opts.get("master_cluster_id")
+        if local:
+            return local
+        if not self.opts.get("topology_enabled"):
+            return ""
+        cached = self.opts.get("_topology_cluster_id_cache")
+        if cached is not None:
+            return cached
+        try:
+            import salt.config.topology as topology_config
+
+            cfg = topology_config.load_topology_config(self.opts)
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "topology.conf unreadable during C@ match; treating as no local cluster_id",
+                exc_info=True,
+            )
+            self.opts["_topology_cluster_id_cache"] = ""
+            return ""
+        cluster_id = cfg.cluster_id if cfg.enabled else ""
+        self.opts["_topology_cluster_id_cache"] = cluster_id
+        return cluster_id
+
     def _check_cluster_minions(self, expr, greedy, minions=None):
         """
         Return the minion set for a ``C@`` cluster-id expression.
@@ -1265,9 +1311,10 @@ class CkMinions:
         ``expr`` is a comma-separated list of ``cluster_id`` values
         (``east`` or ``east,west``).  Semantics mirror
         :mod:`salt.matchers.cluster_match`: when this master's
-        ``cluster_id`` (falling back to ``master_cluster_id``) is in
-        the target set, every local accepted minion is in-scope; when
-        it is not, the clause contributes an empty set and gates out
+        ``cluster_id`` (resolved via :meth:`_local_cluster_id`,
+        which also consults ``topology.conf``) is in the target
+        set, every local accepted minion is in-scope; when it is
+        not, the clause contributes an empty set and gates out
         anything ``and``-combined with it.
 
         The actual peer-link fan-out for non-local ``C@`` clauses is
@@ -1275,7 +1322,7 @@ class CkMinions:
         this check only decides whether the origin cluster itself
         has local minions to publish to.
         """
-        local = self.opts.get("cluster_id") or self.opts.get("master_cluster_id")
+        local = self._local_cluster_id()
         if not local:
             return {"minions": [], "missing": []}
         if not isinstance(expr, str):

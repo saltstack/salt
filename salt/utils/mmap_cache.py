@@ -279,6 +279,14 @@ class MmapCache:
         # start when ``time.monotonic()`` is still small (seen on macOS CI).
         self._last_staleness_check = None
 
+        # Background threads used by ``atomic_rebuild(unlink_delay=...)`` to
+        # delay the ``os.unlink`` of the old heap-segment files so cross-
+        # process readers whose mmaps still point at the old inodes have a
+        # chance to detect the atomic swap and re-mmap.  Each entry is a
+        # ``threading.Thread`` instance; :meth:`close` joins them all so
+        # process shutdown does not leak the pending-unlink files.
+        self._pending_unlink_threads: list = []
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
@@ -960,6 +968,91 @@ class MmapCache:
             except OSError:
                 pass
             self._lock_fd = None
+        # Drain any pending-unlink threads scheduled by ``atomic_rebuild``.
+        # Each thread is a short-lived ``time.sleep(delay); os.unlink`` worker
+        # so a bounded join window is sufficient; a slow unlink does not block
+        # close indefinitely.
+        for thread in list(self._pending_unlink_threads):
+            try:
+                thread.join(timeout=5.0)
+            except RuntimeError:
+                pass
+        self._pending_unlink_threads = []
+
+    def _reap_stale_pending_unlinks(self):
+        """
+        Remove any ``*.unlink-pending-*`` leftover files in the cache
+        directory on open/rebuild.  Protects against crash-and-restart where
+        a previous ``atomic_rebuild(unlink_delay=...)`` was killed between
+        the rename-aside and the delayed ``os.unlink`` — the orphan files
+        would otherwise accumulate forever.
+
+        The naming convention ``.unlink-pending-<pid>-<nanos>`` is strict so
+        a stray file in the cache dir can't be swept by accident.
+        """
+        import re
+
+        pattern = re.compile(r".*\.unlink-pending-\d+-\d+(?:\.\d+)?$")
+        cache_dir = os.path.dirname(self.path)
+        try:
+            entries = os.listdir(cache_dir)
+        except OSError:
+            return
+        for name in entries:
+            if not pattern.match(name):
+                continue
+            full = os.path.join(cache_dir, name)
+            try:
+                os.unlink(full)
+            except OSError:
+                # Another process may have reaped it, or we lack permission;
+                # harmless either way.
+                pass
+
+    def _schedule_delayed_unlink(self, paths, delay):
+        """
+        Spawn a short-lived daemon thread that sleeps *delay* seconds and
+        then unlinks each path in *paths*.  Called from
+        :meth:`atomic_rebuild` when ``unlink_delay > 0``.
+
+        The thread handle is appended to ``self._pending_unlink_threads`` so
+        :meth:`close` can join it; the thread itself is a daemon so it never
+        blocks interpreter shutdown.
+
+        Zero or negative *delay* performs the unlink immediately on the
+        current thread — identical to the pre-delay behaviour.
+        """
+        if delay is None or delay <= 0:
+            for p in paths:
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+            return
+
+        def _unlink_after():
+            try:
+                time.sleep(delay)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            for p in paths:
+                try:
+                    os.unlink(p)
+                except OSError:
+                    pass
+
+        thread = threading.Thread(
+            target=_unlink_after,
+            name=f"MmapCache-unlink-{os.path.basename(self.path)}",
+            daemon=True,
+        )
+        thread.start()
+        # Opportunistically prune any threads that already finished so
+        # long-running processes don't accumulate joined handles.
+        self._pending_unlink_threads = [
+            t for t in self._pending_unlink_threads if t.is_alive()
+        ]
+        self._pending_unlink_threads.append(thread)
 
     def _open_heap_mmap(self):
         """
@@ -1764,7 +1857,7 @@ class MmapCache:
                 "heap_live_bytes": heap_live,
             }
 
-    def atomic_rebuild(self, iterator):
+    def atomic_rebuild(self, iterator, unlink_delay=0):
         """
         Rebuild the cache from an iterator of ``(key, value)`` or ``(key,)``
         tuples.
@@ -1772,6 +1865,27 @@ class MmapCache:
         Writes fresh temporary index, heap, and roster files, then atomically
         swaps all three.  Roster is swapped last so readers never see a new
         roster pointing into an old index.
+
+        :param unlink_delay: Seconds to delay the physical ``os.unlink`` of
+            the old heap-segment file(s) after the swap.  Defaults to ``0``
+            (immediate unlink, legacy behaviour).
+
+            On Linux an mmap keeps an unlinked inode alive for the mapping's
+            lifetime, so a cross-process reader holding an mmap on the
+            previous heap continues to read the old (correct-at-the-time)
+            bytes.  The hazard is a reader that opens the heap *by path*
+            between the heap-replace and its own staleness re-stat — it
+            could land on the new heap paired with the still-cached old
+            index pointers, reading garbage.  Delaying the unlink by
+            ``topology_breadcrumb_staleness_check_interval`` gives those
+            readers one full staleness window to detect the swap and
+            re-mmap before the old inode's directory entry disappears.
+
+            The old files are renamed aside to
+            ``<path>.unlink-pending-<pid>-<nanos>`` and physically unlinked
+            by a daemon thread after ``unlink_delay`` seconds.  :meth:`close`
+            joins any outstanding threads.  Orphaned pending files from a
+            previous crashed process are reaped on the next rebuild.
         """
         os.makedirs(os.path.dirname(self.path), exist_ok=True)
 
@@ -1959,21 +2073,59 @@ class MmapCache:
                         rf.flush()
                         os.fsync(rf.fileno())
 
-                    # Remove old extra segments (seg >= 1) before swapping.
+                    # Reap any orphan ``*.unlink-pending-*`` files left by a
+                    # previous crashed rebuild.  Safe to do under the lock —
+                    # the naming convention is strict enough that this cannot
+                    # race with another live writer's pending unlinks.
+                    self._reap_stale_pending_unlinks()
+
+                    # Enumerate the old heap segment paths we are about to
+                    # replace.  Each gets renamed aside before ``os.replace``
+                    # when ``unlink_delay > 0`` so a reader whose mmap points
+                    # at the old inode can finish out one staleness window
+                    # before the directory entry vanishes.
+                    old_heap_paths = []
+                    if os.path.exists(self.heap_path):
+                        old_heap_paths.append(self.heap_path)
                     old_extra = 1
                     while True:
                         old_p = self._segment_path(old_extra)
                         if not os.path.exists(old_p):
                             break
-                        try:
-                            os.remove(old_p)
-                        except OSError as exc:
-                            log.warning(
-                                "Could not remove old heap segment %s: %s",
-                                old_p,
-                                exc,
-                            )
+                        old_heap_paths.append(old_p)
                         old_extra += 1
+
+                    pending_aside = []
+                    if unlink_delay and unlink_delay > 0:
+                        stamp = f"{os.getpid()}-{time.time_ns()}"
+                        for p in old_heap_paths:
+                            aside = f"{p}.unlink-pending-{stamp}"
+                            try:
+                                os.rename(p, aside)
+                            except OSError as exc:
+                                log.warning(
+                                    "Could not rename old heap segment aside "
+                                    "for delayed unlink %s -> %s: %s",
+                                    p,
+                                    aside,
+                                    exc,
+                                )
+                                continue
+                            pending_aside.append(aside)
+                    else:
+                        for p in old_heap_paths:
+                            if p == self.heap_path:
+                                # ``os.replace`` further down unlinks the
+                                # primary heap atomically; nothing to do.
+                                continue
+                            try:
+                                os.remove(p)
+                            except OSError as exc:
+                                log.warning(
+                                    "Could not remove old heap segment %s: %s",
+                                    p,
+                                    exc,
+                                )
 
                     # Close mmaps but keep the lock fd — still inside _lock().
                     self._close_mmaps_and_fds()
@@ -1987,6 +2139,12 @@ class MmapCache:
                     os.replace(tmp_heap_base, self.heap_path)
                     os.replace(tmp_idx_path, self.path)
                     os.replace(tmp_roster_path, self.roster_path)
+
+                    # Schedule the physical unlink of the renamed-aside old
+                    # heap files.  Daemon thread + bounded join on ``close()``
+                    # ensures no leak on normal shutdown.
+                    if pending_aside:
+                        self._schedule_delayed_unlink(pending_aside, unlink_delay)
                     return True
 
         except OSError as exc:

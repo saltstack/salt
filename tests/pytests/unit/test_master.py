@@ -461,6 +461,7 @@ def test_clear_funcs_black(master_opts):
         "_prep_pub",
         "_send_pub",
         "_send_ssh_pub",
+        "_topology_forward_only_target",
         "connect",
         "destroy",
         "get_method",
@@ -4690,3 +4691,168 @@ async def test_publish_batch_runs_batch_in_owned_task(publish_clear_funcs):
     await asyncio.wait_for(started.wait(), 1)
     release.set()
     await asyncio.sleep(0)
+
+
+# ---------------------------------------------------------------------------
+# ClearFuncs.publish --- topology forward-only pass on empty local match
+# ---------------------------------------------------------------------------
+
+
+async def test_publish_topology_c_scope_forward_only_pass(
+    publish_clear_funcs, tmp_path
+):
+    """
+    When ``topology_enabled`` is set and a compound target names a
+    peer cluster via ``C@west`` that this master is not part of,
+    ``check_minions`` returns empty locally.  The publish must NOT
+    short-circuit with "Master could not resolve minions for
+    target"; it must proceed through ``_prep_jid`` and ``_send_pub``
+    so the topology router's ``on_publish`` hook (fired from
+    :meth:`MasterPubServerChannel.publish_payload`) can forward it
+    to west.
+    """
+    # Materialize a minimal topology.conf on-disk so
+    # ``_topology_cluster_id_for_auth`` resolves to ``east`` for
+    # the forward-only check.
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["topology_config_file"] = str(topo_conf)
+    publish_clear_funcs.opts.pop("_topology_cluster_id_cache", None)
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "C@west",
+        "tgt_type": "compound",
+        "arg": [],
+    }
+    # Local check_minions returns empty: east has no accepted minions
+    # that match the ``C@west`` compound locally.
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+
+    jid_value = "20260101000000000000"
+
+    def _fake_prep_pub(minions_arg, jid, cl, extra, missing):
+        # Mirror the sole mutation ``_prep_pub`` makes to the caller's
+        # ``clear_load`` so the final return in ``publish`` can read
+        # ``clear_load["jid"]`` without blowing up.
+        cl["jid"] = jid
+        return {"enc": "aes"}
+
+    send_pub = AsyncMock()
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_jid",
+        MagicMock(return_value=jid_value),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_pub",
+        side_effect=_fake_prep_pub,
+    ), patch.object(
+        publish_clear_funcs, "_send_pub", send_pub
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    # Must NOT be the no-match error load; the jid is populated and
+    # ``_send_pub`` was invoked so the on_publish topology hook can
+    # forward to west.
+    assert result == {
+        "enc": "clear",
+        "load": {"jid": jid_value, "minions": [], "missing": []},
+    }, f"forward-only publish got unexpected envelope: {result!r}"
+    send_pub.assert_awaited_once()
+
+
+async def test_publish_topology_c_scope_matches_local_cluster_normal_path(
+    publish_clear_funcs, tmp_path
+):
+    """
+    Companion to the forward-only test: a target that names the
+    LOCAL cluster (``C@east`` on east) must still go through the
+    normal path.  The empty-minion short-circuit only widens for
+    *peer* clusters; a local-cluster target with zero accepted
+    minions must still error out so operators see the real
+    "nothing matched" signal.
+    """
+    topo_conf = tmp_path / "topology.conf"
+    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["topology_config_file"] = str(topo_conf)
+    publish_clear_funcs.opts.pop("_topology_cluster_id_cache", None)
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "C@east",
+        "tgt_type": "compound",
+        "arg": [],
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    assert (
+        "Master could not resolve minions for target" in result["load"]["error"]
+    ), f"local-only C@east with empty minions should still error: {result!r}"
+
+
+async def test_publish_glob_empty_minions_still_errors(publish_clear_funcs):
+    """
+    A non-topology target (plain glob) with no matches must still
+    short-circuit with "Master could not resolve minions for
+    target", regardless of ``topology_enabled``.  The forward-only
+    pass is gated on a ``C@`` scope naming a peer cluster, not on
+    the empty-match condition alone.
+    """
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["_topology_cluster_id_cache"] = "east"
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "nonexistent-*",
+        "tgt_type": "glob",
+        "arg": [],
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    assert "Master could not resolve minions for target" in result["load"]["error"]
