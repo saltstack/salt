@@ -395,18 +395,6 @@ def test_get_snapshot_during_concurrent_attach_is_not_torn(sm):
     assert not errors, f"concurrent snapshot/attach raised: {errors!r}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG: TopologyStateMachine.restore_snapshot wipes peers via a "
-        "sequential delete_peer loop followed by a set_peer loop, each "
-        "operation taking its own flock span.  A concurrent reader can "
-        "observe a strict subset of the pre- or post-snapshot peer set "
-        "mid-restore --- the RFC claim of 'one write-locked transaction' "
-        "is not held by the current code at salt/cluster/consensus/raft/"
-        "topology.py restore_snapshot."
-    ),
-)
 def test_restore_snapshot_concurrent_reader_never_sees_half_wipe(sm, opts):
     """
     While ``restore_snapshot`` is wiping and re-populating peers, a
@@ -427,6 +415,7 @@ def test_restore_snapshot_concurrent_reader_never_sees_half_wipe(sm, opts):
             client_id="op",
             sequence_num=10 + i,
         )
+    old_snap = sm.get_snapshot()
     # Capture a snapshot that holds a different "new-NN" set we will
     # restore in a loop below.  First swap old-NN out, snap, swap back.
     for i in range(5):
@@ -438,15 +427,9 @@ def test_restore_snapshot_concurrent_reader_never_sees_half_wipe(sm, opts):
             sequence_num=20 + i,
         )
     target_snap = sm.get_snapshot()
-    # Restore baseline so the live state is the "old-NN" set.
-    for cid in list(registry.list_peer_ids(sm.registry)):
-        registry.delete_peer(sm.registry, cid)
-    for i in range(5):
-        sm.apply(
-            _attach_cmd(f"old-{i:02d}", f"OLDKEY-{i}".encode() * 4),
-            client_id="op",
-            sequence_num=30 + i,
-        )
+    # Restore baseline atomically so the live state is the "old-NN" set
+    # before we start polling.
+    sm.restore_snapshot(old_snap)
 
     reader = registry.open_reader(opts)
     errors = []
@@ -477,17 +460,16 @@ def test_restore_snapshot_concurrent_reader_never_sees_half_wipe(sm, opts):
     t.start()
     try:
         for _ in range(20):
+            # Restore the "new-NN" snapshot --- diff-apply or
+            # atomic_rebuild must make this appear atomic to the
+            # reader (full old set or full new set, never a mix or
+            # strict subset).
             sm.restore_snapshot(target_snap)
-            # Swap live state back to "old-NN" so the next restore has
-            # work to do.
-            for cid in list(registry.list_peer_ids(sm.registry)):
-                registry.delete_peer(sm.registry, cid)
-            for i in range(5):
-                sm.apply(
-                    _attach_cmd(f"old-{i:02d}", f"OLDKEY-{i}".encode() * 4),
-                    client_id="op",
-                    sequence_num=40 + i,
-                )
+            # Swap live state back to "old-NN" via restore_snapshot
+            # as well, so the next iteration's restore has work to
+            # do and the swap itself is also an atomic transaction
+            # under test.
+            sm.restore_snapshot(old_snap)
     finally:
         stop.set()
         t.join(timeout=10)
@@ -649,19 +631,6 @@ def test_migration_crash_after_half_attached_resumes_only_remainder(opts):
     sm2.registry.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG: _handle_peer_attach short-circuits on idempotent "
-        "public_key match BEFORE calling _finalise_accepted_key_file. "
-        "If a crash lands between the registry.set_peer commit and the "
-        "pre->accepted rename, the committed-entry replay sees "
-        "existing.public_key == entry.public_key and returns early, "
-        "leaving the key stuck in masters_pre/ forever.  The idempotent "
-        "path at salt/cluster/consensus/raft/topology.py "
-        "_handle_peer_attach must still drive the file-system hand-off."
-    ),
-)
 def test_migration_crash_during_peer_attach_file_rename_resumes(opts):
     """
     Scenario: a ``MASTER_PEER_ATTACH`` landed in the registry (Raft

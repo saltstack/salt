@@ -190,6 +190,19 @@ def pre_fork(opts, process_manager):
         return
     registry.pre_create(opts)
     breadcrumbs.pre_create(opts)
+    # Idempotent: if we already reserved a socket bound to the configured
+    # host/port, reuse it instead of rebinding (which would leak the fd).
+    if _LISTENER_SOCKET is not None:
+        try:
+            bound_host, bound_port = _LISTENER_SOCKET.getsockname()[:2]
+        except OSError:
+            bound_host, bound_port = None, None
+        want_host = opts.get("interface", "127.0.0.1")
+        want_port = int(opts.get("topology_link_port") or 0)
+        if bound_port == want_port and (
+            bound_host == want_host or want_host in ("0.0.0.0", "")
+        ):
+            return
     try:
         _LISTENER_SOCKET = _reserve_listener_socket(opts)
     except OSError as exc:
@@ -388,6 +401,37 @@ def _install_sm_callbacks(sm):
     sm._handlers[LogEntryType.MASTER_PEER_ATTACH] = _wrapped_attach
     sm._handlers[LogEntryType.MASTER_PEER_DETACH] = _wrapped_detach
     sm._link_manager_wired = True
+
+    # Replay pre-existing committed peers from the registry MmapCache.
+    # Raft apply() does not re-fire already-applied entries, so without
+    # this a clustered-master restart would come up with zero outbound
+    # links.  Mirror of the solo-path peer replay in _replay_registry.
+    if _REGISTRY_CACHE is None:
+        return
+    try:
+        peer_ids = registry.list_peer_ids(_REGISTRY_CACHE)
+    except Exception:  # pylint: disable=broad-except
+        log.debug("topology: clustered registry replay failed", exc_info=True)
+        return
+    for cluster_id in peer_ids:
+        peer_state = registry.get_peer(_REGISTRY_CACHE, cluster_id)
+        if peer_state is None:
+            continue
+        endpoints = peer_state.get("endpoints") or ()
+        if not endpoints:
+            continue
+        ref = _ref_from_endpoint(endpoints[0])
+        if ref is None:
+            continue
+        try:
+            link = PeerMasterLink(
+                {"cluster_id": _CONFIG.cluster_id if _CONFIG else ""},
+                ref,
+                _IO_LOOP,
+            )
+        except (TypeError, ValueError):
+            continue
+        add_link(link)
 
 
 def _replay_registry():

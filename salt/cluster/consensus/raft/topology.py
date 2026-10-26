@@ -244,54 +244,72 @@ class TopologyStateMachine(BaseStateMachine):
                 TOPOLOGY_SNAPSHOT_VERSION,
             )
             return
-        # Wipe the current peer set so the restore truly replaces
-        # state rather than merging into whatever was there.
-        for existing in list(registry.list_peer_ids(self.registry)):
-            registry.delete_peer(self.registry, existing)
-        # Identity half.
+        # Normalise the identity half.
         identity_pub = payload.get("identity_pub") or b""
-        if identity_pub:
-            if isinstance(identity_pub, str):
-                identity_pub = identity_pub.encode("utf-8")
-            registry.set_identity_pub(self.registry, identity_pub)
-        else:
-            # Explicit clear so a snapshot that pre-dates identity
-            # bootstrap wipes any locally-stashed key.
-            self.registry.delete(registry.RESERVED_IDENTITY_PUB_KEY)
+        if identity_pub and isinstance(identity_pub, str):
+            identity_pub = identity_pub.encode("utf-8")
         identity_version = payload.get("identity_version") or 0
         try:
             version_int = int(identity_version)
         except (TypeError, ValueError):
             version_int = 0
-        self.registry.put(
-            registry.RESERVED_IDENTITY_VERSION_KEY,
-            str(version_int).encode("ascii"),
-        )
-        # Peer half.
-        peers = payload.get("peers") or {}
-        applied_ids = []
-        if isinstance(peers, dict):
-            for cluster_id, state in peers.items():
+        # Normalise the peer half.
+        raw_peers = payload.get("peers") or {}
+        target_peers = {}
+        if isinstance(raw_peers, dict):
+            for cluster_id, state in raw_peers.items():
                 if cluster_id in _RESERVED_IDS:
                     continue
                 if not isinstance(state, dict):
                     continue
-                registry.set_peer(
-                    self.registry,
+                target_peers[cluster_id] = _normalise_peer_state(cluster_id, state)
+        applied_ids = sorted(target_peers)
+
+        # Rebuild the entire MmapCache atomically.  A sequential
+        # delete-then-repopulate (even in diff-apply form) leaves a
+        # window where a lock-free reader can observe either a strict
+        # subset of the pre- or post-snapshot peer set, or an
+        # old+new mix --- the RFC's "one write-locked transaction"
+        # guarantee only holds if the swap is a single mmap-level
+        # file replace, which is what ``atomic_rebuild`` provides.
+        # Readers detect the swap via the MmapCache ``_cache_id`` on
+        # their next ``list_keys`` / ``get`` call and remap in one
+        # step.
+        def _entries():
+            if identity_pub:
+                yield registry.RESERVED_IDENTITY_PUB_KEY, bytes(identity_pub)
+                yield registry.RESERVED_RAFT_BOOTSTRAPPED_KEY, b"1"
+            yield (
+                registry.RESERVED_IDENTITY_VERSION_KEY,
+                str(version_int).encode("ascii"),
+            )
+            # Mirror the Raft-applied sentinel: a follower that caught
+            # up via snapshot restore has, by definition, "applied"
+            # every peer in it.  A subsequent migration pass must not
+            # re-propose peers already present in the restored log.
+            yield (
+                registry.RESERVED_RAFT_APPLIED_PEERS_KEY,
+                salt.utils.msgpack.packb(applied_ids, use_bin_type=True),
+            )
+            for cluster_id in applied_ids:
+                yield (
                     cluster_id,
-                    _normalise_peer_state(cluster_id, state),
+                    salt.utils.msgpack.packb(
+                        {
+                            "cluster_id": cluster_id,
+                            "public_key": bytes(target_peers[cluster_id]["public_key"]),
+                            "endpoints": tuple(
+                                target_peers[cluster_id].get("endpoints", ())
+                            ),
+                            "attached_at": float(
+                                target_peers[cluster_id]["attached_at"]
+                            ),
+                        },
+                        use_bin_type=True,
+                    ),
                 )
-                applied_ids.append(cluster_id)
-        # The snapshot IS the authoritative Raft-applied state --- a
-        # follower that catches up via snapshot restore has, by
-        # definition, "applied" every peer in it.  Mirror that into
-        # the sentinel so a subsequent migration pass does not
-        # re-propose peers already present in the restored log.
-        _write_raft_applied_peers(self.registry, applied_ids)
-        if identity_pub:
-            self.registry.put(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY, b"1")
-        else:
-            self.registry.delete(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY)
+
+        self.registry._cache.atomic_rebuild(_entries())
 
     # ------------------------------------------------------------------
     # Handlers
@@ -405,8 +423,14 @@ class TopologyStateMachine(BaseStateMachine):
                 # Idempotent re-apply.  Stamp the Raft-applied
                 # sentinel in case this commit is the first Raft
                 # confirmation of a peer that was previously solo-
-                # written to the registry.
+                # written to the registry.  Still drive the file-
+                # system hand-off: a crash between the set_peer
+                # commit and the masters_pre -> masters rename
+                # otherwise leaves the key stuck in masters_pre/
+                # forever.  _finalise_accepted_key_file is itself
+                # idempotent on a no-op rename.
                 _add_raft_applied_peer(self.registry, cluster_id)
+                self._finalise_accepted_key_file(cluster_id, public_key)
                 return
             if not entry.get("force_replace"):
                 log.critical(
@@ -544,6 +568,13 @@ class TopologyStateMachine(BaseStateMachine):
         tracks Raft state across every cluster peer.  Otherwise
         (follower that joined after the attach was committed), the
         public key bytes from the Raft entry are written out.
+
+        **Idempotent**: when ``masters/<cluster_id>.pub`` already
+        exists with the exact bytes we would write, this is a no-op
+        --- no mtime churn, no rewrite.  This lets the idempotent
+        apply path safely call us on every replay (including a
+        crash-recovery replay where the rename never landed) without
+        bumping on-disk timestamps on a true no-op.
         """
         masters_dir = self._master_pki_subdir("masters")
         pre_dir = self._master_pki_subdir("masters_pre")
@@ -554,8 +585,17 @@ class TopologyStateMachine(BaseStateMachine):
                 # Move; the ``masters_pre`` convention is operator-
                 # visible so we don't duplicate the bytes --- rename.
                 os.replace(pre_path, accepted_path)
-            else:
-                _write_file_atomic(accepted_path, public_key, mode=0o644)
+                return
+            if os.path.exists(accepted_path):
+                try:
+                    with salt.utils.files.fopen(accepted_path, "rb") as fh:
+                        if fh.read() == public_key:
+                            # No-op: file already matches the key.
+                            return
+                except OSError:
+                    # Fall through to rewrite.
+                    pass
+            _write_file_atomic(accepted_path, public_key, mode=0o644)
         except OSError:
             log.exception(
                 "TopologyStateMachine: failed to finalise accepted key file "

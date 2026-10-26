@@ -345,21 +345,6 @@ def test_sm_peer_attach_rejects_malformed_cluster_id(sm, bad_id, caplog):
     )
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "implementation bug: CLUSTER_ID_RE = '^[a-z0-9][a-z0-9_-]*$' with "
-        "Python's default re.match semantics allows '$' to match before a "
-        "trailing newline, so cluster_id='east\\n' matches the regex and "
-        "lands in the registry.  Hostile peer can thus register a "
-        "near-twin of a legitimate cluster_id that will corrupt log files "
-        "(line splits), directory listings, and any downstream text "
-        "parsing.  Fix: either use re.compile(..., re.MULTILINE=False) "
-        "with r'\\A[a-z0-9][a-z0-9_-]*\\Z' (anchors that do NOT accept "
-        "\\n), or explicitly reject strings containing '\\r' or '\\n' "
-        "before the regex check in _handle_peer_attach + salt.key."
-    ),
-)
 def test_sm_peer_attach_rejects_trailing_newline_cluster_id(sm, caplog):
     """
     Hostile cluster_id ``east\\n`` matches ``CLUSTER_ID_RE`` because

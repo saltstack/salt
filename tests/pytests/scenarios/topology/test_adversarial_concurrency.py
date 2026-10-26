@@ -411,19 +411,6 @@ def test_link_manager_double_start_is_safe(tmp_path, link_manager_module):
         loop1.close()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "implementation bug: salt.topology.link_manager.pre_fork is NOT "
-        "idempotent.  The second call unconditionally constructs a brand-new "
-        "listening socket (_reserve_listener_socket), overwriting the "
-        "_LISTENER_SOCKET module global without closing the previously "
-        "reserved fd.  Reproducer: call pre_fork(opts, None) twice with the "
-        "same port and compare the fileno() of _LISTENER_SOCKET; they differ, "
-        "and the first fd is leaked.  Fix: early-return if _LISTENER_SOCKET "
-        "is already a valid listening socket."
-    ),
-)
 def test_link_manager_pre_fork_is_idempotent(tmp_path, link_manager_module):
     """
     Calling ``pre_fork`` twice in the parent before any child forks must be
@@ -475,23 +462,6 @@ class _FakeSMHandlers:
         return None
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "implementation bug: salt.topology.link_manager._install_sm_callbacks "
-        "does not replay pre-existing committed peers from the registry "
-        "MmapCache.  It only wraps the state machine's _handle_peer_attach / "
-        "_handle_peer_detach for FUTURE commits.  A clustered master that "
-        "restarts and reloads a Raft log containing MASTER_PEER_ATTACH "
-        "entries will come up with zero outbound links because apply() does "
-        "not re-fire for already-applied entries and the wrapper only runs "
-        "on new entries.  Reproducer: pre-seed registry with set_peer; call "
-        "_install_sm_callbacks(sm); observe that add_link is never invoked.  "
-        "Fix: iterate registry.list_peer_ids inside _install_sm_callbacks "
-        "and call add_link() for each pre-existing peer (mirroring the solo "
-        "_replay_registry path)."
-    ),
-)
 def test_install_sm_callbacks_replays_existing_peers(tmp_path, link_manager_module):
     """
     Audit flag: Phase 3 claimed the callback install replays pre-existing
@@ -1128,22 +1098,6 @@ def test_full_index_rejects_put_without_corruption(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "implementation bug: salt.utils.mmap_cache.MmapCache.get decodes "
-        "stored bytes through salt.utils.stringutils.to_unicode even when "
-        "the caller passed bytes to put().  A payload of struct.pack('<Q', 0) "
-        "(8 NUL bytes) IS valid utf-8 (decodes to U+0000 * 8), so the "
-        "fallback-to-bytes branch (UnicodeDecodeError) is never taken and the "
-        "caller gets a str back instead of bytes.  Reproducer: put the key "
-        "with 8-NUL bytes, get() the key, assert isinstance(..., bytes).  "
-        "This violates the documented bytes-in/bytes-out contract in the "
-        "MmapCache docstring.  Fix: record the stored type (e.g. a 1-byte "
-        "type tag on the heap record) or return raw bytes whenever the "
-        "caller originally passed bytes to put()."
-    ),
-)
 def test_null_terminated_value_roundtrip(tmp_path):
     """
     Values ending in NUL (e.g. msgpack dicts with trailing zero ints) must

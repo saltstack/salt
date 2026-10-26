@@ -57,7 +57,12 @@ DEFAULT_EVENT_SUBSCRIPTIONS = (
 # characters.  Enforced by :func:`validate_topology_config` and
 # (critically) re-validated at Raft apply time on peer-supplied
 # cluster_ids so a hostile peer cannot claim a reserved name.
-CLUSTER_ID_RE = r"^[a-z0-9][a-z0-9_-]*$"
+#
+# ``\A`` and ``\Z`` are used instead of ``^`` and ``$`` because Python's
+# ``$`` matches just before a trailing newline by default, which would
+# admit ``"east\n"`` --- unsafe as a filename component, log token, or
+# MmapCache key.  ``\A``/``\Z`` match only true string boundaries.
+CLUSTER_ID_RE = r"\A[a-z0-9][a-z0-9_-]*\Z"
 
 
 # MmapCache sentinel keys that must never collide with a user-supplied
