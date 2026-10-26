@@ -79,7 +79,31 @@ RESERVED_IDENTITY_VERSION_KEY = "__identity_version__"
 # counter lets diagnostics distinguish "same identity, different
 # session" from "identity was rotated."
 
-_RESERVED_KEYS = frozenset([RESERVED_IDENTITY_PUB_KEY, RESERVED_IDENTITY_VERSION_KEY])
+RESERVED_RAFT_BOOTSTRAPPED_KEY = "__raft_bootstrapped__"
+# Reserved MmapCache key: ``b"1"`` once ``MASTER_IDENTITY_KEY`` has
+# been applied via the Raft path (as opposed to a direct solo
+# write).  Lets :func:`salt.topology.migration.needs_migration`
+# distinguish "identity_pub landed through Raft" from "identity_pub
+# landed through the solo direct-write path" without a bespoke
+# in-memory flag that would reset on process restart.
+
+RESERVED_RAFT_APPLIED_PEERS_KEY = "__raft_applied_peers__"
+# Reserved MmapCache key: msgpack-encoded list of ``cluster_id``
+# strings for peers whose ``MASTER_PEER_ATTACH`` has been applied
+# via the Raft path.  Maintained by
+# :meth:`TopologyStateMachine._handle_peer_attach` /
+# ``_handle_peer_detach`` so a crash-restart knows which peers
+# were already proposed and need not be proposed again by
+# :func:`salt.topology.migration.promote_solo_to_clustered`.
+
+_RESERVED_KEYS = frozenset(
+    [
+        RESERVED_IDENTITY_PUB_KEY,
+        RESERVED_IDENTITY_VERSION_KEY,
+        RESERVED_RAFT_BOOTSTRAPPED_KEY,
+        RESERVED_RAFT_APPLIED_PEERS_KEY,
+    ]
+)
 
 # Default sizing when opts do not provide values.  The index is a
 # fixed-size open-addressing table; 4096 slots at the default

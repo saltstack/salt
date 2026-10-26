@@ -45,9 +45,86 @@ slow link does not block aggregation on the others --- see
 ``_handle_topology_return_event`` on this router.
 """
 
+import asyncio
 import logging
+import time
+
+import salt.topology.breadcrumbs as breadcrumbs
+import salt.topology.registry as registry
+import salt.topology.summary as summary_mod
 
 log = logging.getLogger(__name__)
+
+
+#: Compound-expression operators.  Mirrors the set accepted by
+#: :meth:`salt.utils.minions.CkMinions._check_compound_minions`;
+#: duplicated here to avoid an import cycle through salt.utils.minions
+#: (which transitively pulls in heavier salt internals).
+_COMPOUND_OPERATORS = frozenset({"and", "or", "not", "(", ")"})
+
+
+#: Module-level singleton populated by
+#: :func:`salt.topology.link_manager.start`.  ``None`` means topology
+#: is disabled or not yet instantiated in this process.
+_ROUTER = None
+
+
+# ---------------------------------------------------------------------------
+# Target-string helpers
+# ---------------------------------------------------------------------------
+
+
+def _tokenize(tgt):
+    """Split *tgt* into compound tokens, pulling parens off neighbours.
+
+    :meth:`CkMinions._check_compound_minions` tokenizes via plain
+    ``expr.split()`` and reads parens via the opers set --- but when
+    parens hug a target like ``(C@east`` they stay attached and the
+    compound matcher accepts them that way.  For the router we need
+    to see ``C@...`` tokens cleanly, so we normalise paren-adjacency
+    into separate tokens.  The grammar is still Salt-compound-safe
+    because ``(`` / ``)`` already live in the opers set the matcher
+    recognises.
+    """
+    if tgt is None:
+        return []
+    if isinstance(tgt, (list, tuple)):
+        tokens = list(tgt)
+    elif isinstance(tgt, str):
+        tokens = tgt.split()
+    else:
+        return []
+    out = []
+    for tok in tokens:
+        if not isinstance(tok, str) or tok in _COMPOUND_OPERATORS:
+            out.append(tok)
+            continue
+        # Strip leading ``(`` and trailing ``)`` into separate tokens.
+        lead = 0
+        while lead < len(tok) and tok[lead] == "(":
+            out.append("(")
+            lead += 1
+        core = tok[lead:]
+        trail = 0
+        while trail < len(core) and core[len(core) - 1 - trail] == ")":
+            trail += 1
+        middle = core[: len(core) - trail] if trail else core
+        if middle:
+            out.append(middle)
+        for _ in range(trail):
+            out.append(")")
+    return out
+
+
+def _is_c_token(token):
+    """True when *token* names a ``C@...`` cluster target."""
+    return isinstance(token, str) and token.startswith("C@")
+
+
+def _cluster_ids_from_token(token):
+    """Return the set of cluster_ids named in a ``C@a,b,c`` token."""
+    payload = token[2:]
+    return {c for c in payload.split(",") if c}
 
 
 def extract_cluster_scope(tgt):
@@ -70,6 +147,18 @@ def extract_cluster_scope(tgt):
 
     :param tgt: Target string or already-tokenized list.
     """
+    tokens = _tokenize(tgt)
+    if not tokens:
+        return None
+    if any(tok == "not" for tok in tokens):
+        return None
+    out = set()
+    for tok in tokens:
+        if _is_c_token(tok):
+            out |= _cluster_ids_from_token(tok)
+    if not out:
+        return None
+    return out
 
 
 def strip_cluster_scope(tgt):
@@ -91,8 +180,7 @@ def strip_cluster_scope(tgt):
     * ``"C@east and web-*"`` -> ``"web-*"``
     * ``"C@east,west and G@os:ubuntu"`` -> ``"G@os:ubuntu"``
     * ``"(C@east and web-*) or (C@west and db-*)"`` ->
-      ``"(web-*) or (db-*)"`` --- when evaluated on east this
-      is equivalent to ``web-* or False``, which is correct.
+      ``"(web-*) or (db-*)"``.
 
     **Negation handling**: when ``not`` appears near a ``C@``
     (e.g. ``"not C@east and web-*"``), naive stripping produces
@@ -106,11 +194,142 @@ def strip_cluster_scope(tgt):
     If the residual after a valid strip would be empty (e.g.
     target ``"C@east"`` alone), returns ``"*"`` so the publish
     still matches every local minion on the destination cluster.
-
-    Fuzzing against the compound grammar is part of the test
-    plan --- all residuals must re-parse via
-    :func:`salt.utils.minions.parse_target`.
     """
+    if tgt is None:
+        return tgt
+    tokens = _tokenize(tgt)
+    if not tokens:
+        return tgt
+    if any(tok == "not" for tok in tokens):
+        # Skip-strip: let the receiver evaluate the full compound.
+        return tgt if isinstance(tgt, str) else list(tokens)
+    if not any(_is_c_token(tok) for tok in tokens):
+        return tgt if isinstance(tgt, str) else list(tokens)
+
+    # Safety net: a C@ token adjacent to ``or`` cannot be dropped
+    # without changing the compound's semantics (``C@east or db-*``
+    # on east means "every minion on east OR db-*", i.e. everything).
+    # If any C@ token has an ``or`` as its neighbour inside the
+    # tokenised form, fall through to skip-strip and let the minion-
+    # side matcher evaluate the full expression --- unknown ``C@``
+    # engine will match nothing on-minion, giving a safe under-match.
+    for i, tok in enumerate(tokens):
+        if not _is_c_token(tok):
+            continue
+        if i > 0 and tokens[i - 1] == "or":
+            return tgt if isinstance(tgt, str) else list(tokens)
+        if i + 1 < len(tokens) and tokens[i + 1] == "or":
+            return tgt if isinstance(tgt, str) else list(tokens)
+
+    # Walk tokens, dropping each C@ token and any adjacent 'and'
+    # that would otherwise dangle.
+    result = []
+    for tok in tokens:
+        if _is_c_token(tok):
+            # Drop a preceding 'and' if present.
+            if result and result[-1] == "and":
+                result.pop()
+                continue
+            # Otherwise mark this slot so a following 'and' can be
+            # dropped on the next iteration.
+            result.append(_DROPPED)
+            continue
+        if tok == "and" and result and result[-1] is _DROPPED:
+            # Drop the 'and' trailing a C@ we already removed.
+            result.pop()
+            continue
+        result.append(tok)
+
+    # Clean up any stranded sentinels.
+    result = [t for t in result if t is not _DROPPED]
+
+    # Tidy empty parens produced by ``(C@foo)`` groups.
+    cleaned = []
+    i = 0
+    while i < len(result):
+        tok = result[i]
+        if tok == "(" and i + 1 < len(result) and result[i + 1] == ")":
+            i += 2
+            # Drop a preceding operator left dangling by the empty
+            # group's disappearance...
+            if cleaned and cleaned[-1] in ("and", "or"):
+                cleaned.pop()
+            # ...and drop a following operator if the empty group was
+            # at the head of the expression.
+            if not cleaned and i < len(result) and result[i] in ("and", "or"):
+                i += 1
+            continue
+        cleaned.append(tok)
+        i += 1
+
+    # Trim leading/trailing dangling operators (an empty group at
+    # the midpoint can leave ``A and or B`` after removal; the loop
+    # below folds any adjacent operator pairs down to one).
+    folded = []
+    for tok in cleaned:
+        if tok in ("and", "or") and folded and folded[-1] in ("and", "or"):
+            # ``and or`` -> keep the more conservative ``and``.
+            if tok == "and":
+                folded[-1] = "and"
+            continue
+        folded.append(tok)
+    cleaned = folded
+    while cleaned and cleaned[0] in ("and", "or"):
+        cleaned.pop(0)
+    while cleaned and cleaned[-1] in ("and", "or", "not"):
+        cleaned.pop()
+
+    # Residual empty -> match-everything.
+    if not cleaned:
+        return "*"
+
+    if isinstance(tgt, str):
+        return _join_tokens(cleaned)
+    return cleaned
+
+
+def _join_tokens(tokens):
+    """
+    Render a token list back to a compound-expression string with
+    paren hugging restored --- ``["(", "web-*", ")"]`` -> ``"(web-*)"``.
+
+    The compound matcher accepts either spacing, but tests pin the
+    canonical hugged form so round-trips are stable.
+    """
+    out = []
+    for tok in tokens:
+        if tok == ")":
+            # Hug onto the previous token with no space.
+            if out:
+                out[-1] = out[-1] + ")"
+            else:
+                out.append(")")
+            continue
+        if tok == "(":
+            out.append("(")
+            continue
+        if out and out[-1] == "(":
+            out[-1] = "(" + tok
+        else:
+            out.append(tok)
+    return " ".join(out)
+
+
+class _Sentinel:  # pylint: disable=too-few-public-methods
+    """Opaque sentinel used by :func:`strip_cluster_scope` for stripped slots."""
+
+    __slots__ = ()
+
+    def __repr__(self):
+        return "<_DROPPED>"
+
+
+_DROPPED = _Sentinel()
+
+
+# ---------------------------------------------------------------------------
+# Module-level accessor + publish entry point
+# ---------------------------------------------------------------------------
 
 
 def get_router():
@@ -122,6 +341,7 @@ def get_router():
     publish daemon path check this before invoking any routing
     logic.
     """
+    return _ROUTER
 
 
 async def on_publish(load, io_loop):
@@ -143,6 +363,46 @@ async def on_publish(load, io_loop):
        link that raised, so operators see per-cluster failures
        instead of swallowed task exceptions.
     """
+    r = get_router()
+    if r is None:
+        return
+    links, _local_match = r.route_publish(load)
+    if not links:
+        return
+
+    cluster_id = r.cluster_id
+
+    # Each outbound send is wrapped so we can correlate exceptions
+    # with the link that raised them.
+    async def _one(link):
+        try:
+            await link.send_publish(load, [cluster_id])
+            return (link, None)
+        except Exception as exc:  # pylint: disable=broad-except
+            return (link, exc)
+
+    results = await asyncio.gather(
+        *[_one(link) for link in links], return_exceptions=False
+    )
+    for link, exc in results:
+        if exc is None:
+            continue
+        peer = getattr(link, "peer_cluster_id", None) or "unknown"
+        tag = f"salt/topology/pub/failed/{peer}"
+        data = {
+            "cluster_id": peer,
+            "jid": load.get("jid") if isinstance(load, dict) else None,
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        try:
+            r._fire_event(tag, data)  # pylint: disable=protected-access
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: failed to fire pub-failed event for %s", peer)
+
+
+# ---------------------------------------------------------------------------
+# TopologyRouter
+# ---------------------------------------------------------------------------
 
 
 class TopologyRouter:
@@ -170,6 +430,36 @@ class TopologyRouter:
             breadcrumbs MmapCache
             (:func:`salt.topology.breadcrumbs.open_writer`).
         """
+        self.opts = dict(opts)
+        self.cluster_id = opts.get("cluster_id")
+        self._registry = registry_cache
+        self._breadcrumbs = breadcrumbs_cache
+        #: ``cluster_id -> PeerMasterLink`` (or stub) for every peer
+        #: link currently known to this process.  Populated by
+        #: :mod:`salt.topology.link_manager`.
+        self._links = {}
+        #: Tag-pattern -> set of ``cluster_id`` subscriptions received
+        #: from peers.  Populated by inbound ``topology/sub`` messages.
+        self._event_subscriptions = {}
+
+    # ------------------------------------------------------------------
+    # Overridable event hook
+    # ------------------------------------------------------------------
+
+    def _fire_event(self, tag, data):
+        """
+        Fire *tag* on the master event bus with *data* as payload.
+
+        Default is a WARNING log because the publish daemon's real
+        event-bus client is wired in by
+        :mod:`salt.topology.link_manager`.  Tests override this
+        attribute directly to intercept failure events.
+        """
+        log.warning("topology event (no event bus wired): %s %s", tag, data)
+
+    # ------------------------------------------------------------------
+    # Publish routing
+    # ------------------------------------------------------------------
 
     def route_publish(self, load):
         """
@@ -187,14 +477,40 @@ class TopologyRouter:
           authenticated ``cluster_id`` on *receive*, not on
           send.
 
-        The jid itself stays in its native Salt format.  Earlier
-        drafts prefixed the jid with ``<cluster_id>:``; that
-        broke :func:`salt.utils.jid.is_jid`, ``unique_jid``,
-        ``SyndicManager`` event filtering, and shipped returner
-        schemas.  Origin tracking now lives in the envelope.
-
         :returns: ``(links_to_dispatch, local_match)``.
         """
+        if not isinstance(load, dict):
+            return [], False
+
+        tgt = load.get("tgt")
+        destinations = extract_cluster_scope(tgt)
+        if destinations is None:
+            local_match = True
+            dest_list = None
+        else:
+            local_match = self.cluster_id in destinations
+            dest_list = sorted(destinations)
+
+        envelope = {
+            "origin": self.cluster_id,
+            "destinations": dest_list,
+            "transit_match": bool(local_match),
+            "path": [],
+        }
+        load["topology"] = envelope
+
+        # Pick the outbound links.  Flood -> every peer link.  Scoped ->
+        # only links whose peer_cluster_id is in destinations and not
+        # equal to self.
+        links = []
+        for peer_id, link in self._links.items():
+            if peer_id == self.cluster_id:
+                continue
+            if destinations is None:
+                links.append(link)
+            elif peer_id in destinations:
+                links.append(link)
+        return links, local_match
 
     def forward_publish(self, load, inbound_link):
         """
@@ -215,34 +531,95 @@ class TopologyRouter:
 
         **Destinations-shrinking**: if ``destinations`` is a
         set (not None), remove this cluster from the forwarded
-        copy so the next hop sees only remaining targets.  Also
-        set ``transit_match`` for the forwarded copy based on
-        whether each next-hop cluster is a destination or a
-        transit stop.
+        copy so the next hop sees only remaining targets.
 
         Records a breadcrumb for return routing via
         :meth:`record_breadcrumb`.
 
-        :returns: Same shape as :meth:`route_publish`.
-            ``local_match`` on THIS cluster is True when
-            ``transit_match`` is True for this cluster
-            (destination hit) or ``destinations`` is ``None``
-            and this is a flood target.
+        :returns: ``(links_to_dispatch, local_match)``.
         """
+        if not isinstance(load, dict):
+            return [], False
+        envelope = load.get("topology") or {}
+        path = list(envelope.get("path") or [])
+        expected_peer = getattr(inbound_link, "peer_cluster_id", None)
+        if not path or path[-1] != expected_peer:
+            log.warning(
+                "topology: forward_publish rejecting tampered path "
+                "(path tail=%r, inbound peer=%r)",
+                path[-1] if path else None,
+                expected_peer,
+            )
+            return [], False
+        if self.cluster_id in path:
+            log.debug(
+                "topology: forward_publish dropping cycle for cluster_id=%r (path=%r)",
+                self.cluster_id,
+                path,
+            )
+            return [], False
+
+        # Authenticated-path append: receiver sticks its OWN id on.
+        path.append(self.cluster_id)
+        envelope["path"] = path
+
+        destinations = envelope.get("destinations")
+        if destinations is None:
+            local_match = True
+        else:
+            dest_set = set(destinations)
+            local_match = self.cluster_id in dest_set
+            # Strip self so the next hop sees only remaining targets.
+            dest_set.discard(self.cluster_id)
+            envelope["destinations"] = sorted(dest_set)
+        envelope["transit_match"] = bool(local_match)
+
+        # Breadcrumb before we hand off to send tasks.
+        jid = load.get("jid")
+        timeout = load.get("timeout", 60)
+        if jid is not None:
+            try:
+                self.record_breadcrumb(jid, inbound_link, timeout)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("topology: breadcrumb write failed for jid=%r", jid)
+
+        # Pick next-hop links.  Flood -> every peer other than inbound.
+        # Scoped -> links whose peer_cluster_id is in the shrunken
+        # destinations set.
+        remaining = None if destinations is None else set(envelope["destinations"])
+        links = []
+        for peer_id, link in self._links.items():
+            if peer_id == self.cluster_id:
+                continue
+            if link is inbound_link or peer_id == expected_peer:
+                continue
+            if remaining is None:
+                links.append(link)
+            elif peer_id in remaining:
+                links.append(link)
+        return links, local_match
+
+    # ------------------------------------------------------------------
+    # Returns
+    # ------------------------------------------------------------------
 
     def route_return(self, ret):
         """
         For a return record generated by a local minion whose
         originating publish came from a topology peer, consult
-        the breadcrumb table using ``ret["jid"]`` (which carries
-        the originating ``cluster_id`` prefix) and return the
+        the breadcrumb table using ``ret["jid"]`` and return the
         link to send back on.
 
         Returns ``None`` if there is no breadcrumb --- the
         return is either from a locally-originated publish, or
-        the breadcrumb has already expired.  In both cases the
-        caller falls back to normal local storage.
+        the breadcrumb has already expired.
         """
+        if not isinstance(ret, dict):
+            return None
+        jid = ret.get("jid")
+        if jid is None:
+            return None
+        return self.lookup_breadcrumb(jid)
 
     def route_event(self, event):
         """
@@ -253,6 +630,21 @@ class TopologyRouter:
         event (when topology is enabled).  Empty return -> event
         stays local, no wire traffic.
         """
+        if not isinstance(event, dict):
+            return []
+        tag = event.get("tag") or ""
+        matched = []
+        for pattern, peers in self._event_subscriptions.items():
+            if _tag_matches(tag, pattern):
+                for peer_id in peers:
+                    link = self._links.get(peer_id)
+                    if link is not None and link not in matched:
+                        matched.append(link)
+        return matched
+
+    # ------------------------------------------------------------------
+    # Breadcrumbs
+    # ------------------------------------------------------------------
 
     def record_breadcrumb(self, jid, inbound_link, timeout):
         """
@@ -262,57 +654,146 @@ class TopologyRouter:
         Expiry is computed as
         ``now + min(timeout + opts["topology_breadcrumb_grace"],
         opts["topology_breadcrumb_max_age"])``.
-
-        Called by :meth:`forward_publish` after relaying a
-        publish down the graph.
         """
+        peer = getattr(inbound_link, "peer_cluster_id", None)
+        if peer is None:
+            log.warning("topology: record_breadcrumb called with unauthenticated link")
+            return
+        try:
+            breadcrumbs.put(self._breadcrumbs, jid, peer, timeout, self.opts)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: breadcrumb put failed for jid=%r", jid)
 
     def lookup_breadcrumb(self, jid):
         """
-        Return the inbound link previously recorded for ``jid``,
-        or ``None`` if no breadcrumb exists or if the breadcrumb
+        Return the link previously recorded for ``jid``, or
+        ``None`` if no breadcrumb exists or if the breadcrumb
         has expired.
         """
+        peer = breadcrumbs.lookup(self._breadcrumbs, jid)
+        if peer is None:
+            return None
+        return self._links.get(peer)
 
     def cleanup_breadcrumbs(self):
         """
         Remove expired breadcrumbs from the in-memory table.
-
-        Called periodically by the publish daemon's housekeeping
-        loop (typically every ``topology_breadcrumb_grace``
-        seconds).  Delegates to
-        :func:`salt.topology.breadcrumbs.cleanup`.
         """
+        try:
+            return breadcrumbs.cleanup(self._breadcrumbs)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: breadcrumb cleanup failed")
+            return 0
 
-    def ingest_summary(self, summary, inbound_link):
+    # ------------------------------------------------------------------
+    # Summary ingest
+    # ------------------------------------------------------------------
+
+    async def ingest_summary(self, summary, inbound_link):
         """
-        Fold an inbound summary into state.
+        Fold an inbound summary into state and re-forward to
+        other peers.
 
         **Path authentication**: asserts ``summary.path[-1] ==
         inbound_link.peer_cluster_id`` AND
         ``self.opts["cluster_id"] not in summary.path`` on
-        receive.  A hostile or buggy peer that sends a summary
-        with ``path=[X, self, inbound]`` would otherwise
-        install a route for X whose next hop is ``inbound``,
-        creating a 2-hop loop as soon as X traffic arrives.
-        Rejects on either assertion failure with a WARNING log.
+        receive.  Rejects on either assertion failure with a
+        WARNING log.
 
-        Three effects after validation:
+        Then:
 
-        1. Write the summary into the (publish-daemon-local)
-           ``last_summary`` state for the peer.
-        2. If the summary's ``path`` exposes a
-           newly-reachable cluster not currently in the routing
-           table, update the local routing table.
-        3. Re-forward (with ``path`` extended via
+        1. Write the summary into the registry's
+           ``last_summary``-equivalent peer state.
+        2. Re-forward (with ``path`` extended via
            :func:`salt.topology.summary.with_path_extended`) to
            this master's other peers that have not already seen
            it (loop detection via path membership).
-
-        Note: summaries are NOT Raft-replicated (soft state).
-        The routing table is likewise local to each publish
-        daemon.  An earlier draft proposed ``MASTER_PEER_ROUTE``
-        as a replicated entry type; that was removed to avoid
-        the "snapshot replay vs live gossip replay" divergence
-        it would have caused.
         """
+        peer_cluster_id = getattr(inbound_link, "peer_cluster_id", None)
+        path = tuple(summary.path or ())
+        if not path or path[-1] != peer_cluster_id:
+            log.warning(
+                "topology: ingest_summary rejecting tampered path "
+                "(path tail=%r, inbound peer=%r)",
+                path[-1] if path else None,
+                peer_cluster_id,
+            )
+            return
+        if self.cluster_id in path:
+            log.debug(
+                "topology: ingest_summary dropping cycle for cluster_id=%r "
+                "(path=%r)",
+                self.cluster_id,
+                path,
+            )
+            return
+
+        # Write to registry.  We store the peer summary under the
+        # origin cluster_id with a minimal PeerState-shaped dict ---
+        # the registry's encoder requires ``public_key`` and
+        # ``attached_at``; soft fields the SM writes stay
+        # unaffected.
+        state = {
+            "cluster_id": summary.cluster_id,
+            "public_key": b"",
+            "endpoints": (),
+            "attached_at": float(summary.origin_at),
+        }
+        try:
+            registry.set_peer(self._registry, summary.cluster_id, state)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "topology: registry write failed for summary origin=%r",
+                summary.cluster_id,
+            )
+
+        # Forward to other peers.  Extend the path so loop detection
+        # works on the next hop.
+        extended = summary_mod.with_path_extended(summary, self.cluster_id)
+        forwards = []
+        for peer_id, link in self._links.items():
+            if peer_id == self.cluster_id:
+                continue
+            if link is inbound_link or peer_id == peer_cluster_id:
+                continue
+            if peer_id in extended.path:
+                continue
+            forwards.append(link)
+
+        if not forwards:
+            return
+
+        async def _one(link):
+            try:
+                await link.send_summary(extended)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: summary forward failed to peer=%r",
+                    getattr(link, "peer_cluster_id", None),
+                )
+
+        await asyncio.gather(*[_one(link) for link in forwards])
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _tag_matches(tag, pattern):
+    """
+    Return True if *tag* matches the Salt-style glob *pattern*.
+
+    Implemented via :mod:`fnmatch`.  The topology subscription
+    model is glob-based (tag_patterns handed to
+    :meth:`PeerMasterLink.subscribe`), so this matches the wire
+    semantics.
+    """
+    import fnmatch
+
+    return fnmatch.fnmatchcase(tag, pattern)
+
+
+# Silence unused-import warnings for the time helper exposed to tests
+# that monkeypatch breadcrumb clocks.
+_time = time

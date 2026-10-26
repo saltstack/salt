@@ -64,6 +64,8 @@ _RESERVED_IDS = frozenset(
     {
         registry.RESERVED_IDENTITY_PUB_KEY,
         registry.RESERVED_IDENTITY_VERSION_KEY,
+        registry.RESERVED_RAFT_BOOTSTRAPPED_KEY,
+        registry.RESERVED_RAFT_APPLIED_PEERS_KEY,
     }
 )
 
@@ -267,6 +269,7 @@ class TopologyStateMachine(BaseStateMachine):
         )
         # Peer half.
         peers = payload.get("peers") or {}
+        applied_ids = []
         if isinstance(peers, dict):
             for cluster_id, state in peers.items():
                 if cluster_id in _RESERVED_IDS:
@@ -278,6 +281,17 @@ class TopologyStateMachine(BaseStateMachine):
                     cluster_id,
                     _normalise_peer_state(cluster_id, state),
                 )
+                applied_ids.append(cluster_id)
+        # The snapshot IS the authoritative Raft-applied state --- a
+        # follower that catches up via snapshot restore has, by
+        # definition, "applied" every peer in it.  Mirror that into
+        # the sentinel so a subsequent migration pass does not
+        # re-propose peers already present in the restored log.
+        _write_raft_applied_peers(self.registry, applied_ids)
+        if identity_pub:
+            self.registry.put(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY, b"1")
+        else:
+            self.registry.delete(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY)
 
     # ------------------------------------------------------------------
     # Handlers
@@ -314,6 +328,10 @@ class TopologyStateMachine(BaseStateMachine):
         existing = registry.get_identity_pub(self.registry)
         if existing == pub_pem:
             # Idempotent re-apply: no state change, no version bump.
+            # Still stamp the Raft-bootstrapped sentinel in case this
+            # commit is the first Raft confirmation of a key that
+            # was previously solo-written to the registry.
+            self.registry.put(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY, b"1")
             self._persist_identity_disk(pub_pem, entry.get("private_key"))
             return
         # First commit or rotation: write pub + bump version.
@@ -324,6 +342,10 @@ class TopologyStateMachine(BaseStateMachine):
             registry.RESERVED_IDENTITY_VERSION_KEY,
             str(new_version).encode("ascii"),
         )
+        # Mark Raft-bootstrapped so :func:`salt.topology.migration.needs_migration`
+        # knows the identity has gone through the Raft path (as
+        # opposed to a solo direct write).
+        self.registry.put(registry.RESERVED_RAFT_BOOTSTRAPPED_KEY, b"1")
         self._persist_identity_disk(pub_pem, entry.get("private_key"))
         if existing is not None:
             log.warning(
@@ -380,7 +402,11 @@ class TopologyStateMachine(BaseStateMachine):
         existing = registry.get_peer(self.registry, cluster_id)
         if existing is not None:
             if existing.get("public_key") == public_key:
-                # Idempotent re-apply.
+                # Idempotent re-apply.  Stamp the Raft-applied
+                # sentinel in case this commit is the first Raft
+                # confirmation of a peer that was previously solo-
+                # written to the registry.
+                _add_raft_applied_peer(self.registry, cluster_id)
                 return
             if not entry.get("force_replace"):
                 log.critical(
@@ -405,6 +431,7 @@ class TopologyStateMachine(BaseStateMachine):
             },
         )
         registry.set_peer(self.registry, cluster_id, state)
+        _add_raft_applied_peer(self.registry, cluster_id)
         self._finalise_accepted_key_file(cluster_id, public_key)
 
     def _handle_peer_detach(self, entry):
@@ -432,6 +459,7 @@ class TopologyStateMachine(BaseStateMachine):
             return
         reason = entry.get("reason") or "revoked"
         registry.delete_peer(self.registry, cluster_id)
+        _remove_raft_applied_peer(self.registry, cluster_id)
         self._move_detached_key_file(cluster_id, reason)
 
     # ------------------------------------------------------------------
@@ -636,6 +664,56 @@ def _read_identity_version(cache):
         except ValueError:
             return 0
     return 0
+
+
+def _read_raft_applied_peers(cache):
+    """
+    Return the set of peer ``cluster_id`` strings that have been
+    applied via the Raft path, drawn from the registry sentinel.
+
+    Returns an empty set when the sentinel is absent, decodes
+    malformed payloads to an empty set as well so a corrupt
+    sentinel never crashes the apply hot path --- the migration
+    module will just re-propose everything in the registry, which
+    the apply handlers idempotently absorb.
+    """
+    raw = cache.get(registry.RESERVED_RAFT_APPLIED_PEERS_KEY, default=None)
+    if raw is None:
+        return set()
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8")
+    try:
+        data = salt.utils.msgpack.unpackb(bytes(raw), raw=False)
+    except (ValueError, TypeError):
+        return set()
+    if not isinstance(data, (list, tuple)):
+        return set()
+    return {entry for entry in data if isinstance(entry, str)}
+
+
+def _write_raft_applied_peers(cache, cluster_ids):
+    """Persist the Raft-applied peer set as msgpack-encoded bytes."""
+    ids = sorted({cid for cid in cluster_ids if isinstance(cid, str) and cid})
+    payload = salt.utils.msgpack.packb(ids, use_bin_type=True)
+    cache.put(registry.RESERVED_RAFT_APPLIED_PEERS_KEY, payload)
+
+
+def _add_raft_applied_peer(cache, cluster_id):
+    """Add ``cluster_id`` to the Raft-applied peer sentinel."""
+    current = _read_raft_applied_peers(cache)
+    if cluster_id in current:
+        return
+    current.add(cluster_id)
+    _write_raft_applied_peers(cache, current)
+
+
+def _remove_raft_applied_peer(cache, cluster_id):
+    """Remove ``cluster_id`` from the Raft-applied peer sentinel."""
+    current = _read_raft_applied_peers(cache)
+    if cluster_id not in current:
+        return
+    current.discard(cluster_id)
+    _write_raft_applied_peers(cache, current)
 
 
 def _write_file_atomic(path, data, mode):
