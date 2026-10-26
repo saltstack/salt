@@ -7,6 +7,13 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3008.5 (2026-10-26)
+
+
+### Security
+
+- Updated certifi to 2026.10.23 to pick up the latest Mozilla CA bundle. [#70571](https://github.com/saltstack/salt/issues/70571)
+
 ## 3008.4 (2026-10-23)
 
 
