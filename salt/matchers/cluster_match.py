@@ -20,6 +20,10 @@ process (unlikely path, as the router strips ``C@`` before publish-
 to-minions), ``opts["master_cluster_id"]`` is consulted instead.
 """
 
+import logging
+
+log = logging.getLogger(__name__)
+
 
 def match(tgt, opts=None, minion_id=None):
     """
@@ -40,3 +44,18 @@ def match(tgt, opts=None, minion_id=None):
         etc.) --- a non-matching failure is always safer than a
         false positive.
     """
+    if opts is None:
+        try:
+            opts = __opts__  # noqa: F821 (loader-injected dunder)
+        except NameError:
+            opts = {}
+    if not isinstance(tgt, str):
+        log.error("cluster_match target must be a string, got %r", type(tgt))
+        return False
+    local = opts.get("cluster_id") or opts.get("master_cluster_id")
+    if not local:
+        return False
+    wanted = {token.strip() for token in tgt.split(",") if token.strip()}
+    if not wanted:
+        return False
+    return local in wanted

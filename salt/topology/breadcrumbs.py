@@ -65,8 +65,72 @@ itself is looked up by cluster_id in
 """
 
 import logging
+import os
+import time
+
+import salt.utils.mmap_cache
+import salt.utils.msgpack
 
 log = logging.getLogger(__name__)
+
+#: Fraction of tombstoned slots at which :func:`cleanup` triggers
+#: :meth:`salt.utils.mmap_cache.MmapCache.atomic_rebuild` to reclaim
+#: index space before linear-probing degradation sets in.
+_REBUILD_TOMBSTONE_RATIO = 0.3
+
+#: Default sizing used when ``opts`` does not carry the breadcrumb
+#: cache knobs.  Matches the RFC-documented defaults so a
+#: topology-enabled master that hasn't yet been reconfigured still
+#: comes up with a usable cache.
+_DEFAULT_CACHE_SIZE = 1_000_000
+_DEFAULT_KEY_SIZE = 64
+_DEFAULT_GRACE = 30
+_DEFAULT_MAX_AGE = 600
+
+
+def _cache_path(opts):
+    """Return the breadcrumbs index path for *opts*."""
+    return os.path.join(opts["pki_dir"], "master", "topology_breadcrumbs.mmap")
+
+
+def _cache_kwargs(opts):
+    """Return the kwargs used to instantiate :class:`MmapCache`."""
+    return {
+        "size": opts.get("topology_breadcrumb_cache_size", _DEFAULT_CACHE_SIZE),
+        "key_size": opts.get("topology_breadcrumb_cache_key_size", _DEFAULT_KEY_SIZE),
+    }
+
+
+def _compute_expiry_at(publish_timeout, opts, now=None):
+    """
+    Return the absolute wall-clock expiry timestamp for a breadcrumb.
+
+    Formula per RFC: ``put_time + min(publish_timeout + grace, max_age)``.
+    """
+    grace = opts.get("topology_breadcrumb_grace", _DEFAULT_GRACE)
+    max_age = opts.get("topology_breadcrumb_max_age", _DEFAULT_MAX_AGE)
+    lifetime = min(publish_timeout + grace, max_age)
+    base = time.time() if now is None else now
+    return base + lifetime
+
+
+def _check_owner(cache):
+    """
+    Raise :exc:`RuntimeError` if the caller's PID is not the one that
+    opened this writer.
+
+    Writer handles stamp ``_breadcrumb_owner_pid`` at
+    :func:`open_writer` time; reader handles don't carry that attribute,
+    so this guard is a no-op for them.
+    """
+    owner = getattr(cache, "_breadcrumb_owner_pid", None)
+    if owner is None:
+        return
+    if os.getpid() != owner:
+        raise RuntimeError(
+            "topology breadcrumb writer called from pid %d but was opened "
+            "by pid %d" % (os.getpid(), owner)
+        )
 
 
 def pre_create(opts):
@@ -86,6 +150,19 @@ def pre_create(opts):
     Idempotent: no-op if the files already exist with a valid
     header.
     """
+    path = _cache_path(opts)
+    if os.path.exists(path):
+        return
+    cache = salt.utils.mmap_cache.MmapCache(path, **_cache_kwargs(opts))
+    try:
+        # open(write=True) performs the actual on-disk layout work
+        # (zero-filled index, empty heap, header magic).
+        if not cache.open(write=True):
+            raise RuntimeError(
+                "failed to pre-create topology breadcrumbs cache at %s" % path
+            )
+    finally:
+        cache.close()
 
 
 def open_writer(opts):
@@ -105,6 +182,16 @@ def open_writer(opts):
     :raises RuntimeError: If called from a process other than
         the publish daemon.
     """
+    path = _cache_path(opts)
+    cache = salt.utils.mmap_cache.MmapCache(path, **_cache_kwargs(opts))
+    if not cache.open(write=True):
+        cache.close()
+        raise RuntimeError(
+            "failed to open topology breadcrumbs writer at %s "
+            "(did pre_create run?)" % path
+        )
+    cache._breadcrumb_owner_pid = os.getpid()  # pylint: disable=protected-access
+    return cache
 
 
 def open_reader(opts):
@@ -119,6 +206,10 @@ def open_reader(opts):
     Call once per MWorker after fork; keep the handle open for
     the worker's lifetime.
     """
+    path = _cache_path(opts)
+    kwargs = _cache_kwargs(opts)
+    kwargs["staleness_check_interval"] = 0
+    return salt.utils.mmap_cache.MmapCache(path, **kwargs)
 
 
 def put(cache, jid, inbound_link_cluster_id, publish_timeout, opts):
@@ -135,6 +226,35 @@ def put(cache, jid, inbound_link_cluster_id, publish_timeout, opts):
         expiry.
     :param opts: Master opts.
     """
+    _check_owner(cache)
+    expiry_at = _compute_expiry_at(publish_timeout, opts)
+    value = salt.utils.msgpack.dumps(
+        {
+            "link_cluster_id": inbound_link_cluster_id,
+            "expiry_at": expiry_at,
+        },
+        use_bin_type=True,
+    )
+    cache.put(jid, value)
+
+
+def _decode(raw):
+    """Decode a stored msgpack value into a dict, or ``None`` on failure."""
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        # ``MmapCache.get`` decodes bytes->str via utf-8/latin-1 fallback;
+        # msgpack bytes aren't utf-8 so Salt's stringutils typically
+        # returns the raw bytes.  Guard against both shapes.
+        try:
+            raw = raw.encode("latin-1")
+        except UnicodeEncodeError:
+            return None
+    try:
+        return salt.utils.msgpack.loads(raw, raw=False)
+    except Exception:  # pylint: disable=broad-except
+        log.warning("failed to decode breadcrumb value for lookup")
+        return None
 
 
 def lookup(cache, jid):
@@ -151,6 +271,13 @@ def lookup(cache, jid):
     read path is intentionally un-throttled on staleness so the
     hot return path sees fresh writes.
     """
+    raw = cache.get(jid)
+    decoded = _decode(raw)
+    if decoded is None:
+        return None
+    if decoded.get("expiry_at", 0) <= time.time():
+        return None
+    return decoded.get("link_cluster_id")
 
 
 def delete(cache, jid):
@@ -161,6 +288,8 @@ def delete(cache, jid):
     successfully forwarded upstream so the breadcrumb can be
     reclaimed before expiry.
     """
+    _check_owner(cache)
+    cache.delete(jid)
 
 
 def cleanup(cache):
@@ -182,3 +311,41 @@ def cleanup(cache):
 
     :returns: Number of entries removed.
     """
+    _check_owner(cache)
+    now = time.time()
+    removed = 0
+    for key, raw in cache.list_items():
+        decoded = _decode(raw)
+        if decoded is None:
+            # Corrupt / undecodable entries get swept too; they can't be
+            # routed on anyway.
+            cache.delete(key)
+            removed += 1
+            continue
+        if decoded.get("expiry_at", 0) <= now:
+            cache.delete(key)
+            removed += 1
+
+    if removed == 0:
+        return 0
+
+    stats = cache.get_stats()
+    occupied = stats.get("occupied", 0)
+    deleted = stats.get("deleted", 0)
+    denom = occupied + deleted
+    if denom > 0 and (deleted / denom) > _REBUILD_TOMBSTONE_RATIO:
+        # Rebuild from the surviving (key, raw-value) pairs.  We hand
+        # ``MmapCache.list_items`` output straight back in; ``raw`` is
+        # the msgpack-serialised bytes so round-tripping preserves the
+        # on-disk format exactly.
+        surviving = [
+            (k, v if isinstance(v, bytes) else v.encode("latin-1"))
+            for k, v in cache.list_items()
+            if v is not True
+        ]
+        try:
+            cache.atomic_rebuild(iter(surviving))
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology breadcrumbs atomic_rebuild failed")
+
+    return removed

@@ -17,10 +17,26 @@ small grain histograms, a short path of ``cluster_id`` strings ---
 so this mechanism scales to arbitrarily large graphs.
 """
 
+import itertools
 import logging
+import time
 from typing import NamedTuple
 
+import salt.cache
+import salt.exceptions
+import salt.key
+
 log = logging.getLogger(__name__)
+
+
+# Module-level monotonic sequence counter.  ``itertools.count`` is
+# incremented atomically under the CPython GIL, so concurrent
+# ``collect`` calls from the summary heartbeat task + an ad-hoc
+# ``topology.status`` runner cannot collide on the same ``origin_seq``.
+# This is the clock-skew mitigation called out in the ``origin_seq``
+# docstring: receivers compare seq numbers (not wall-clock
+# ``origin_at``) when picking the newer of two summaries.
+_SEQ_COUNTER = itertools.count(1)
 
 
 class ClusterSummary(NamedTuple):
@@ -70,6 +86,88 @@ class ClusterSummary(NamedTuple):
     origin_at: float
 
 
+def _count_accepted_minions(opts):
+    """
+    Return the number of accepted minion keys for the master
+    described by *opts*.
+
+    Any PKI read failure is logged and treated as zero rather than
+    raising --- the summary heartbeat must not take the publish
+    daemon down over a transient disk hiccup.
+    """
+    try:
+        key = salt.key.get_key(opts)
+        return len(key.list_keys().get("minions", []))
+    except (OSError, salt.exceptions.SaltException) as exc:  # pragma: no cover
+        log.warning("topology summary: accepted-key count failed: %s", exc)
+        return 0
+    except Exception as exc:  # pylint: disable=broad-except  # pragma: no cover
+        log.warning("topology summary: accepted-key count errored: %s", exc)
+        return 0
+
+
+def _cached_minion_ids(opts):
+    """
+    Return the set of minion ids whose grains are cached at the
+    master, i.e. minions that have authed and reported in within
+    the master's cache window.  Used both as the ``up_count``
+    source and as the ``grain_histograms`` iteration set.
+    """
+    try:
+        cache = salt.cache.factory(opts)
+        ids = cache.list("grains") or []
+    except salt.exceptions.SaltCacheError as exc:  # pragma: no cover
+        log.warning("topology summary: grain cache list failed: %s", exc)
+        return []
+    except Exception as exc:  # pylint: disable=broad-except  # pragma: no cover
+        log.warning("topology summary: grain cache list errored: %s", exc)
+        return []
+    return list(ids)
+
+
+def _build_grain_histograms(opts, grain_keys, cached_ids):
+    """
+    Build ``{grain_key: {value: count}}`` for *grain_keys* across
+    the minions whose grains are cached.  Keys with no data still
+    appear in the result (as empty dicts) so receivers can
+    distinguish "we asked for this grain, no minion reports it"
+    from "we never asked for this grain".
+    """
+    histograms = {k: {} for k in grain_keys}
+    if not cached_ids:
+        return histograms
+    try:
+        cache = salt.cache.factory(opts)
+    except Exception as exc:  # pylint: disable=broad-except  # pragma: no cover
+        log.warning("topology summary: grain cache factory failed: %s", exc)
+        return histograms
+    for minion_id in cached_ids:
+        try:
+            grains = cache.fetch("grains", minion_id)
+        except salt.exceptions.SaltCacheError:  # pragma: no cover
+            continue
+        except Exception:  # pylint: disable=broad-except  # pragma: no cover
+            continue
+        if not grains:
+            continue
+        for grain_key in grain_keys:
+            if grain_key not in grains:
+                continue
+            value = grains[grain_key]
+            # Grain values can be lists/dicts; stringify for histogram
+            # bucketing so wire form stays plain-dict-of-plain-dict.
+            if isinstance(value, (list, tuple)):
+                for sub in value:
+                    bucket = str(sub)
+                    histograms[grain_key][bucket] = (
+                        histograms[grain_key].get(bucket, 0) + 1
+                    )
+            else:
+                bucket = str(value)
+                histograms[grain_key][bucket] = histograms[grain_key].get(bucket, 0) + 1
+    return histograms
+
+
 def collect(opts):
     """
     Build a :class:`ClusterSummary` for this cluster from local
@@ -86,6 +184,31 @@ def collect(opts):
     re-forward the summary extend ``path`` via
     :func:`with_path_extended`.
     """
+    cluster_id = opts["cluster_id"]
+    minion_count = _count_accepted_minions(opts)
+    cached_ids = _cached_minion_ids(opts)
+    # ``up_count`` is bounded above by ``minion_count`` --- the
+    # grain cache can lag behind key removal in corner cases
+    # (minion key deleted while a stale grain file still exists),
+    # so clamp here rather than letting an inconsistent snapshot
+    # produce ``up_count > minion_count`` on the wire.
+    up_count = min(len(cached_ids), minion_count)
+
+    grain_keys = opts.get("topology_summary_grains") or []
+    if grain_keys:
+        grain_histograms = _build_grain_histograms(opts, grain_keys, cached_ids)
+    else:
+        grain_histograms = {}
+
+    return ClusterSummary(
+        cluster_id=cluster_id,
+        path=(cluster_id,),
+        minion_count=minion_count,
+        up_count=up_count,
+        grain_histograms=grain_histograms,
+        origin_seq=next(_SEQ_COUNTER),
+        origin_at=time.time(),
+    )
 
 
 def with_path_extended(summary, next_hop):
@@ -102,6 +225,7 @@ def with_path_extended(summary, next_hop):
     :returns: A new :class:`ClusterSummary`; ``summary`` is
         unchanged (NamedTuple semantics).
     """
+    return summary._replace(path=summary.path + (next_hop,))
 
 
 def is_cycle_for(summary, cluster_id):
@@ -112,6 +236,7 @@ def is_cycle_for(summary, cluster_id):
     Receivers call this to drop summaries that would otherwise
     loop back through themselves on a cyclic graph.
     """
+    return cluster_id in summary.path
 
 
 def serialize(summary):
@@ -123,6 +248,26 @@ def serialize(summary):
     Caller is responsible for wrapping in whatever transport
     envelope the link protocol expects.
     """
+    return {
+        "cluster_id": summary.cluster_id,
+        "path": list(summary.path),
+        "minion_count": summary.minion_count,
+        "up_count": summary.up_count,
+        "grain_histograms": {k: dict(v) for k, v in summary.grain_histograms.items()},
+        "origin_seq": summary.origin_seq,
+        "origin_at": summary.origin_at,
+    }
+
+
+_REQUIRED_FIELDS = (
+    "cluster_id",
+    "path",
+    "minion_count",
+    "up_count",
+    "grain_histograms",
+    "origin_seq",
+    "origin_at",
+)
 
 
 def deserialize(data):
@@ -134,6 +279,53 @@ def deserialize(data):
         types --- an incoming summary with the wrong shape is
         treated as a protocol error and dropped by the caller.
     """
+    if not isinstance(data, dict):
+        raise ValueError(f"ClusterSummary wire form must be a dict, got {type(data)!r}")
+    missing = [f for f in _REQUIRED_FIELDS if f not in data]
+    if missing:
+        raise ValueError(
+            "ClusterSummary wire form missing fields: {}".format(", ".join(missing))
+        )
+    if not isinstance(data["cluster_id"], str):
+        raise ValueError("ClusterSummary.cluster_id must be str")
+    if not isinstance(data["path"], (list, tuple)):
+        raise ValueError("ClusterSummary.path must be list or tuple")
+    for hop in data["path"]:
+        if not isinstance(hop, str):
+            raise ValueError("ClusterSummary.path entries must be str")
+    # ``bool`` is a subclass of ``int`` in Python; reject explicitly so
+    # a stray ``True`` on the wire doesn't masquerade as a count.
+    if isinstance(data["minion_count"], bool) or not isinstance(
+        data["minion_count"], int
+    ):
+        raise ValueError("ClusterSummary.minion_count must be int")
+    if isinstance(data["up_count"], bool) or not isinstance(data["up_count"], int):
+        raise ValueError("ClusterSummary.up_count must be int")
+    if not isinstance(data["grain_histograms"], dict):
+        raise ValueError("ClusterSummary.grain_histograms must be dict")
+    for grain_key, buckets in data["grain_histograms"].items():
+        if not isinstance(grain_key, str):
+            raise ValueError("ClusterSummary.grain_histograms keys must be str")
+        if not isinstance(buckets, dict):
+            raise ValueError(
+                f"ClusterSummary.grain_histograms[{grain_key!r}] must be dict"
+            )
+    if isinstance(data["origin_seq"], bool) or not isinstance(data["origin_seq"], int):
+        raise ValueError("ClusterSummary.origin_seq must be int")
+    if not isinstance(data["origin_at"], (int, float)) or isinstance(
+        data["origin_at"], bool
+    ):
+        raise ValueError("ClusterSummary.origin_at must be numeric")
+
+    return ClusterSummary(
+        cluster_id=data["cluster_id"],
+        path=tuple(data["path"]),
+        minion_count=data["minion_count"],
+        up_count=data["up_count"],
+        grain_histograms={k: dict(v) for k, v in data["grain_histograms"].items()},
+        origin_seq=data["origin_seq"],
+        origin_at=float(data["origin_at"]),
+    )
 
 
 def merge_into(summary, aggregate_counts, aggregate_histograms):
@@ -147,3 +339,13 @@ def merge_into(summary, aggregate_counts, aggregate_histograms):
     state's lifetime, so this function is a pure accumulator and
     does not mutate ``summary``.
     """
+    aggregate_counts["minion_count"] = (
+        aggregate_counts.get("minion_count", 0) + summary.minion_count
+    )
+    aggregate_counts["up_count"] = (
+        aggregate_counts.get("up_count", 0) + summary.up_count
+    )
+    for grain_key, buckets in summary.grain_histograms.items():
+        target = aggregate_histograms.setdefault(grain_key, {})
+        for value, count in buckets.items():
+            target[value] = target.get(value, 0) + count

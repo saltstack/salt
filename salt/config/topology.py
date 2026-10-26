@@ -29,8 +29,14 @@ master, :func:`load_topology_config` returns a disabled
 ``enabled`` attribute without a None-check.
 """
 
+import fnmatch
 import logging
+import os
+import re
 from typing import NamedTuple
+
+import salt.utils.files
+import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +58,20 @@ DEFAULT_EVENT_SUBSCRIPTIONS = (
 # (critically) re-validated at Raft apply time on peer-supplied
 # cluster_ids so a hostile peer cannot claim a reserved name.
 CLUSTER_ID_RE = r"^[a-z0-9][a-z0-9_-]*$"
+
+
+# MmapCache sentinel keys that must never collide with a user-supplied
+# cluster_id.  The regex above already rejects leading underscores so
+# none of these can match today, but the loader checks the names
+# explicitly as a belt-and-braces guard against a future regex
+# relaxation silently opening the collision.
+_RESERVED_CLUSTER_IDS = frozenset(
+    {
+        "__identity_pub__",
+        "__cluster_meta__",
+        "__peer_index__",
+    }
+)
 
 
 class PeerRef(NamedTuple):
@@ -103,6 +123,22 @@ class TopologyConfig(NamedTuple):
     enabled: bool
 
 
+def _disabled_config():
+    """Return the canonical disabled :class:`TopologyConfig`.
+
+    Centralized so the ``disabled`` short-circuit and the
+    missing-file short-circuit return byte-identical shapes; callers
+    that duck-type over ``enabled`` + ``peers`` get the same
+    guarantees from both paths.
+    """
+    return TopologyConfig(
+        cluster_id="",
+        peers=(),
+        event_subscriptions=DEFAULT_EVENT_SUBSCRIPTIONS,
+        enabled=False,
+    )
+
+
 def validate_topology_config(cfg):
     """
     Enforce structural and security invariants on a
@@ -135,6 +171,170 @@ def validate_topology_config(cfg):
     :raises ValueError: On any invariant violation.  The message
         names the specific field at fault.
     """
+    if not isinstance(cfg, TopologyConfig):
+        raise ValueError(
+            f"validate_topology_config expected TopologyConfig, got "
+            f"{type(cfg).__name__}"
+        )
+
+    # Disabled configs have no invariants to enforce --- callers may
+    # construct them with empty values on purpose.
+    if not cfg.enabled:
+        return
+
+    errors = []
+
+    # cluster_id presence / shape
+    cluster_id = cfg.cluster_id
+    if not isinstance(cluster_id, str) or not cluster_id:
+        errors.append("cluster_id is required when topology is enabled")
+    else:
+        if cluster_id in _RESERVED_CLUSTER_IDS:
+            errors.append(
+                f"cluster_id {cluster_id!r} is a reserved MmapCache sentinel name"
+            )
+        elif not re.match(CLUSTER_ID_RE, cluster_id):
+            errors.append(
+                f"cluster_id {cluster_id!r} does not match "
+                f"{CLUSTER_ID_RE} (short, lowercase, [a-z0-9][a-z0-9_-]*)"
+            )
+
+    # peers container
+    if not isinstance(cfg.peers, tuple):
+        errors.append(f"peers must be a tuple, got {type(cfg.peers).__name__}")
+    else:
+        seen = {}
+        for idx, peer in enumerate(cfg.peers):
+            if not isinstance(peer, PeerRef):
+                errors.append(
+                    f"peers[{idx}] must be PeerRef, got " f"{type(peer).__name__}"
+                )
+                continue
+            if not isinstance(peer.host, str) or not peer.host:
+                errors.append(f"peers[{idx}].host is empty or non-string")
+                continue
+            if peer.port is not None:
+                if not isinstance(peer.port, int) or isinstance(peer.port, bool):
+                    errors.append(
+                        f"peers[{idx}].port must be int, got "
+                        f"{type(peer.port).__name__}"
+                    )
+                elif peer.port < 1 or peer.port > 65535:
+                    errors.append(
+                        f"peers[{idx}].port {peer.port} out of range " "(1-65535)"
+                    )
+            # Conflicting-fingerprint detection on identical (host, port).
+            key = (peer.host, peer.port)
+            if key in seen:
+                prior = seen[key]
+                if (
+                    prior is not None
+                    and peer.finger is not None
+                    and prior != peer.finger
+                ):
+                    errors.append(
+                        f"peers[{idx}] duplicate (host={peer.host!r}, "
+                        f"port={peer.port!r}) with conflicting fingerprints "
+                        f"{prior!r} vs {peer.finger!r}"
+                    )
+            else:
+                seen[key] = peer.finger
+
+    # event_subscriptions shape and glob validity.
+    if not isinstance(cfg.event_subscriptions, tuple):
+        errors.append(
+            "event_subscriptions must be a tuple, got "
+            f"{type(cfg.event_subscriptions).__name__}"
+        )
+    else:
+        for idx, pattern in enumerate(cfg.event_subscriptions):
+            if not isinstance(pattern, str) or not pattern:
+                errors.append(f"event_subscriptions[{idx}] must be a non-empty string")
+                continue
+            try:
+                fnmatch.translate(pattern)
+            except (
+                re.error,
+                TypeError,
+            ) as exc:  # pragma: no cover - fnmatch is permissive
+                errors.append(
+                    f"event_subscriptions[{idx}] {pattern!r} is not a valid "
+                    f"glob: {exc}"
+                )
+
+    if errors:
+        raise ValueError(
+            "topology.conf validation failed:\n  - " + "\n  - ".join(errors)
+        )
+
+
+def _coerce_peer(raw, idx):
+    """Build a :class:`PeerRef` from a raw YAML dict entry.
+
+    Validation of the resulting PeerRef happens in
+    :func:`validate_topology_config`; this helper is just structural
+    shape-checking.
+    """
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"peers[{idx}] must be a mapping (host/port/finger), got "
+            f"{type(raw).__name__}"
+        )
+    if "host" not in raw:
+        raise ValueError(f"peers[{idx}] missing required 'host' key")
+
+    host = raw.get("host")
+    port = raw.get("port")
+    finger = raw.get("finger")
+
+    if host is not None and not isinstance(host, str):
+        raise ValueError(
+            f"peers[{idx}].host must be a string, got {type(host).__name__}"
+        )
+    if finger is not None and not isinstance(finger, str):
+        raise ValueError(
+            f"peers[{idx}].finger must be a string, got " f"{type(finger).__name__}"
+        )
+    # Allow None port (falls back to this master's topology_link_port).
+    # Any non-None non-int port is caught by the validator below with a
+    # consistent error message.
+    return PeerRef(host=host, port=port, finger=finger)
+
+
+def _dedupe_peers(peers):
+    """Collapse duplicate ``(host, port)`` entries.
+
+    * Identical ``(host, port, finger)`` -> silently kept once.
+    * Identical ``(host, port)``, one with ``finger=None`` and one
+      with a specific fingerprint -> keep the pinned entry (more
+      specific wins).
+    * Identical ``(host, port)`` with two different non-None
+      fingerprints -> left in the list; the validator rejects.
+    """
+    by_key = {}
+    order = []
+    for peer in peers:
+        key = (peer.host, peer.port)
+        if key not in by_key:
+            by_key[key] = peer
+            order.append(key)
+            continue
+        existing = by_key[key]
+        if existing.finger == peer.finger:
+            # Exact duplicate; drop.
+            continue
+        if existing.finger is None and peer.finger is not None:
+            # Promote to the pinned entry.
+            by_key[key] = peer
+            continue
+        if existing.finger is not None and peer.finger is None:
+            # Keep the pinned entry.
+            continue
+        # Conflicting non-None fingerprints: leave both so the
+        # validator can report the specific pair.
+        order.append(key + (id(peer),))
+        by_key[key + (id(peer),)] = peer
+    return tuple(by_key[k] for k in order)
 
 
 def load_topology_config(opts):
@@ -159,3 +359,71 @@ def load_topology_config(opts):
     :raises OSError: If the config file is present but unreadable
         (permissions, I/O error).  Fatal at daemon start.
     """
+    if not opts.get("topology_enabled"):
+        return _disabled_config()
+
+    path = opts.get("topology_config_file")
+    if not path:
+        # Enabled but no path at all --- treat as missing-file.  Rare
+        # (the master opts default to /etc/salt/topology.conf) but
+        # we don't want to blow up with a non-informative TypeError.
+        log.info("topology enabled but no topology_config_file set; topology inert")
+        return _disabled_config()
+
+    if not os.path.exists(path):
+        log.info(
+            "topology config file %s does not exist; topology inert",
+            path,
+        )
+        return _disabled_config()
+
+    # Open explicitly so a permission failure surfaces as OSError,
+    # per the public contract.  salt.utils.yaml.safe_load accepts a
+    # file-like object.
+    with salt.utils.files.fopen(path, encoding="utf-8") as fh:
+        try:
+            raw = salt.utils.yaml.safe_load(fh) or {}
+        except salt.utils.yaml.YAMLError as exc:
+            raise ValueError(
+                f"topology.conf at {path} is not valid YAML: {exc}"
+            ) from exc
+
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"topology.conf at {path} must be a YAML mapping, got "
+            f"{type(raw).__name__}"
+        )
+
+    cluster_id = raw.get("cluster_id")
+    if cluster_id is None:
+        cluster_id = ""
+
+    raw_peers = raw.get("peers") or []
+    if not isinstance(raw_peers, list):
+        raise ValueError(
+            f"topology.conf peers must be a list, got " f"{type(raw_peers).__name__}"
+        )
+    peers_in = tuple(_coerce_peer(entry, idx) for idx, entry in enumerate(raw_peers))
+    peers = _dedupe_peers(peers_in)
+
+    raw_subs = raw.get("event_subscriptions")
+    if raw_subs is None:
+        event_subscriptions = DEFAULT_EVENT_SUBSCRIPTIONS
+    else:
+        if not isinstance(raw_subs, list):
+            raise ValueError(
+                f"topology.conf event_subscriptions must be a list, got "
+                f"{type(raw_subs).__name__}"
+            )
+        event_subscriptions = tuple(raw_subs)
+
+    cfg = TopologyConfig(
+        cluster_id=cluster_id,
+        peers=peers,
+        event_subscriptions=event_subscriptions,
+        enabled=True,
+    )
+
+    validate_topology_config(cfg)
+
+    return cfg
