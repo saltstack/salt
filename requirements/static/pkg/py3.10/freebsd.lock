@@ -18,7 +18,7 @@ attrs==26.1.0
     #   aiohttp
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.10.19
+certifi==2026.10.23
     # via
     #   -r requirements/base.txt
     #   requests
