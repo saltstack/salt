@@ -53,7 +53,7 @@ class SaltStorage(BaseStorage):
     ``cluster/consensus/<node_id>/log`` with one cache key per entry,
     keyed by stringified Raft index.
 
-    :param node_id: Raft node identifier (the master's interface address).
+    :param node_id: Raft node identifier (see :func:`salt.cluster.node_id`).
     :param opts:    Salt master opts dict — passed straight to
                     :class:`salt.cache.Cache`.
     :param ring_id: Identifier of the Raft group this storage belongs
