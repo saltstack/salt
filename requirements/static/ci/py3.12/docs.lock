@@ -35,7 +35,7 @@ babel==2.18.0
     #   sphinx
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2026.10.19
+certifi==2026.10.23
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/base.txt
