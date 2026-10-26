@@ -249,11 +249,12 @@ class TopologyCluster:
         """
         Return the list of breadcrumb entries visible on disk.
 
-        Harness-level --- returns an empty list until the real
-        :mod:`salt.topology.breadcrumbs` MmapCache lands.  Per-file
-        teams who land the breadcrumb cache may extend this to parse
-        it.  Callers can rely on the shape (list of dicts) staying
-        stable.
+        Reads the real :mod:`salt.topology.breadcrumbs` MmapCache
+        when it exists and returns a list of
+        ``{"jid": str, "link_cluster_id": str, "expiry_at": float}``
+        dicts for every non-expired entry.  Returns ``[]`` when the
+        file has not yet been materialised (either the publish
+        daemon hasn't started or no publishes have been forwarded).
         """
         crumbs = []
         master = self.masters[0]
@@ -261,10 +262,152 @@ class TopologyCluster:
         mmap_path = pki_dir / "master" / "topology_breadcrumbs.mmap"
         if not mmap_path.exists():
             return crumbs
-        # Real parsing lands with the breadcrumb impl.  Harness
-        # callers that need the file present can touch it; shape is
-        # locked here.
+        # Open a reader against the real breadcrumbs cache and
+        # decode each live entry's msgpack payload.
+        import salt.topology.breadcrumbs as breadcrumbs_mod
+
+        opts = {
+            "pki_dir": str(pki_dir),
+            "topology_breadcrumb_cache_size": master.config.get(
+                "topology_breadcrumb_cache_size", 1_000_000
+            ),
+            "topology_breadcrumb_cache_key_size": master.config.get(
+                "topology_breadcrumb_cache_key_size", 64
+            ),
+        }
+        reader = breadcrumbs_mod.open_reader(opts)
+        try:
+            for key, raw in reader.list_items():
+                decoded = breadcrumbs_mod._decode(  # pylint: disable=protected-access
+                    raw
+                )
+                if decoded is None:
+                    continue
+                crumbs.append(
+                    {
+                        "jid": key,
+                        "link_cluster_id": decoded.get("link_cluster_id"),
+                        "expiry_at": decoded.get("expiry_at"),
+                    }
+                )
+        finally:
+            reader.close()
         return crumbs
+
+    def breadcrumb_mmap_paths(self):
+        """
+        Return the on-disk paths of the breadcrumbs MmapCache files
+        as a dict with keys ``index``, ``heap``, ``roster``,
+        ``lock``.
+
+        Lets scenario tests assert "the cache file persists on disk"
+        across a publish-daemon restart --- the file is written
+        before :meth:`terminate` and still exists afterward because
+        MmapCache lifetime is tied to on-disk files, not the
+        process.
+        """
+        master = self.masters[0]
+        pki_dir = pathlib.Path(master.config["pki_dir"])
+        base = pki_dir / "master" / "topology_breadcrumbs.mmap"
+        return {
+            "index": base,
+            "heap": pathlib.Path(str(base) + ".heap"),
+            "roster": pathlib.Path(str(base) + ".roster"),
+            "lock": pathlib.Path(str(base) + ".lock"),
+        }
+
+    def master_opts(self):
+        """
+        Return the opts dict needed to drive
+        :mod:`salt.topology.link_manager` /
+        :mod:`salt.topology.registry` /
+        :mod:`salt.topology.breadcrumbs` against this cluster's
+        on-disk state.
+
+        Pulls values from the first master's running config so an
+        in-process link_manager.start uses the same pki_dir /
+        topology_link_port / topology.conf as the harness-managed
+        daemon.  Scenario tests that drive topology lifecycle
+        in-process (publish daemon restart, startup ordering) use
+        this to point module-level writers at the right disk.
+        """
+        master = self.masters[0]
+        # Mirror the running master's config sizing so the writer we
+        # open here lines up byte-for-byte with any MmapCache files
+        # the salt-master's own ``pre_fork`` already materialised.
+        # A size mismatch between pre-created files and the writer
+        # produces a cache that silently drops writes to the
+        # out-of-range slots.
+        return {
+            "pki_dir": master.config["pki_dir"],
+            "cluster_id": self.cluster_id,
+            "interface": master.config.get("interface", "127.0.0.1"),
+            "topology_enabled": True,
+            "topology_link_port": master.config["topology_link_port"],
+            "topology_config_file": master.config["topology_config_file"],
+            "topology_registry_cache_size": master.config.get(
+                "topology_registry_cache_size", 10_000
+            ),
+            "topology_registry_cache_key_size": master.config.get(
+                "topology_registry_cache_key_size", 64
+            ),
+            "topology_breadcrumb_cache_size": master.config.get(
+                "topology_breadcrumb_cache_size", 1_000_000
+            ),
+            "topology_breadcrumb_cache_key_size": master.config.get(
+                "topology_breadcrumb_cache_key_size", 64
+            ),
+            "topology_breadcrumb_grace": master.config.get(
+                "topology_breadcrumb_grace", 2
+            ),
+            "topology_breadcrumb_max_age": master.config.get(
+                "topology_breadcrumb_max_age", 60
+            ),
+            "topology_detach_quiesce": master.config.get("topology_detach_quiesce", 1),
+        }
+
+    def start_publish_daemon(self, raft_service=None):
+        """
+        Drive :func:`salt.topology.link_manager.start` in-process
+        against this cluster's pki_dir.
+
+        Simulates the publish-daemon post-fork hook that will wire
+        the topology subsystem once Phase 5 integration lands in
+        :class:`salt.channel.server.MasterPubServerChannel`.
+        Returns the ``(loop, opts)`` pair so the caller can drive
+        follow-on operations (``_handle_master_auth``, forced
+        ``stop``, etc.) on the same loop.
+
+        The caller is responsible for calling :meth:`stop_publish_daemon`
+        (or driving ``link_manager.stop`` on the returned loop) at
+        the end of the scenario.  Idempotent-ish: if ``link_manager``
+        is already started, a WARNING is logged and the existing
+        state is reused.
+        """
+        import asyncio
+
+        import salt.topology.link_manager as link_manager
+
+        opts = self.master_opts()
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(link_manager.start(opts, loop, raft_service))
+        return loop, opts
+
+    def stop_publish_daemon(self, loop):
+        """
+        Drive :func:`salt.topology.link_manager.stop` on *loop*.
+
+        Mirrors :meth:`start_publish_daemon`.  Idempotent: a second
+        ``stop_publish_daemon`` with the same loop is a no-op after
+        the first because ``link_manager.stop`` resets module state
+        to its post-import defaults.
+        """
+        import salt.topology.link_manager as link_manager
+
+        try:
+            loop.run_until_complete(link_manager.stop())
+        finally:
+            loop.close()
 
 
 def _write_topology_conf(path, cluster_id):
