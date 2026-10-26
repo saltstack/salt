@@ -319,7 +319,7 @@ class TopologyCluster:
             "peers": peers,
         }
 
-    def inspect_breadcrumbs(self):
+    def inspect_breadcrumbs(self, peer_index=0):
         """
         Return the list of breadcrumb entries visible on disk.
 
@@ -331,7 +331,7 @@ class TopologyCluster:
         daemon hasn't started or no publishes have been forwarded).
         """
         crumbs = []
-        master = self.masters[0]
+        master = self.masters[peer_index]
         pki_dir = pathlib.Path(master.config["pki_dir"])
         mmap_path = pki_dir / "master" / "topology_breadcrumbs.mmap"
         if not mmap_path.exists():
@@ -368,7 +368,7 @@ class TopologyCluster:
             reader.close()
         return crumbs
 
-    def breadcrumb_mmap_paths(self):
+    def breadcrumb_mmap_paths(self, peer_index=0):
         """
         Return the on-disk paths of the breadcrumbs MmapCache files
         as a dict with keys ``index``, ``heap``, ``roster``,
@@ -380,7 +380,7 @@ class TopologyCluster:
         MmapCache lifetime is tied to on-disk files, not the
         process.
         """
-        master = self.masters[0]
+        master = self.masters[peer_index]
         pki_dir = pathlib.Path(master.config["pki_dir"])
         base = pki_dir / "master" / "topology_breadcrumbs.mmap"
         return {
@@ -390,7 +390,7 @@ class TopologyCluster:
             "lock": pathlib.Path(str(base) + ".lock"),
         }
 
-    def master_opts(self):
+    def master_opts(self, peer_index=0):
         """
         Return the opts dict needed to drive
         :mod:`salt.topology.link_manager` /
@@ -398,14 +398,24 @@ class TopologyCluster:
         :mod:`salt.topology.breadcrumbs` against this cluster's
         on-disk state.
 
-        Pulls values from the first master's running config so an
+        Pulls values from the running config of the Nth peer so an
         in-process link_manager.start uses the same pki_dir /
         topology_link_port / topology.conf as the harness-managed
         daemon.  Scenario tests that drive topology lifecycle
         in-process (publish daemon restart, startup ordering) use
         this to point module-level writers at the right disk.
+
+        :param peer_index: Index into ``self.masters`` to source opts
+            from.  Defaults to 0 (the leader-like first peer); set
+            to another index to point an in-process publish daemon
+            at a non-primary peer in a 3008.x master cluster.
         """
-        master = self.masters[0]
+        if peer_index < 0 or peer_index >= len(self.masters):
+            raise IndexError(
+                f"peer_index {peer_index} out of range for cluster with "
+                f"{len(self.masters)} peer(s)"
+            )
+        master = self.masters[peer_index]
         # Mirror the running master's config sizing so the writer we
         # open here lines up byte-for-byte with any MmapCache files
         # the salt-master's own ``pre_fork`` already materialised.
@@ -440,7 +450,7 @@ class TopologyCluster:
             "topology_detach_quiesce": master.config.get("topology_detach_quiesce", 1),
         }
 
-    def start_publish_daemon(self, raft_service=None):
+    def start_publish_daemon(self, raft_service=None, peer_index=0):
         """
         Drive :func:`salt.topology.link_manager.start` in-process
         against this cluster's pki_dir.
@@ -457,17 +467,23 @@ class TopologyCluster:
         the end of the scenario.  Idempotent-ish: if ``link_manager``
         is already started, a WARNING is logged and the existing
         state is reused.
+
+        :param peer_index: In a 3008.x master cluster, which peer's
+            opts to drive the in-process publish daemon against.
+            Defaults to 0 (the first peer); scenario tests that
+            exercise non-primary-peer inbound paths pass an
+            explicit index.
         """
         import asyncio
 
         import salt.topology.link_manager as link_manager
 
-        opts = self.master_opts()
+        opts = self.master_opts(peer_index=peer_index)
         loop = asyncio.new_event_loop()
         loop.run_until_complete(link_manager.start(opts, loop, raft_service))
         return loop, opts
 
-    def stop_publish_daemon(self, loop):
+    def stop_publish_daemon(self, loop, peer_index=0):
         """
         Drive :func:`salt.topology.link_manager.stop` on *loop*.
 
@@ -475,9 +491,16 @@ class TopologyCluster:
         ``stop_publish_daemon`` with the same loop is a no-op after
         the first because ``link_manager.stop`` resets module state
         to its post-import defaults.
+
+        :param peer_index: Accepted for symmetry with
+            :meth:`start_publish_daemon`; module state is global so
+            the actual stop is peer-agnostic, but accepting the
+            same keyword lets scenario tests document which peer's
+            daemon they intend to tear down.
         """
         import salt.topology.link_manager as link_manager
 
+        _ = peer_index  # peer_index documented at the call site only
         try:
             loop.run_until_complete(link_manager.stop())
         finally:
@@ -569,6 +592,12 @@ def make_cluster(
     link_port = ports.get_unused_localhost_port()
     ret_port = ports.get_unused_localhost_port()
     pub_port = ports.get_unused_localhost_port()
+    # 3008.x master clusters bind an IPC pool-puller on
+    # ``cluster_pool_port`` per peer.  The default (4520) collides
+    # when two independent clusters share the loopback alias set
+    # (127.0.0.1..N), so pick a fresh port per cluster and let the
+    # caller override if they need a stable value.
+    cluster_pool_port = ports.get_unused_localhost_port()
     cluster_shared = pathlib.Path(tmp_path) / f"{cluster_id}-shared"
     cluster_shared.mkdir(parents=True, exist_ok=True)
     cluster_pki = cluster_shared / "pki"
@@ -603,6 +632,7 @@ def make_cluster(
             "cache_dir": str(cluster_cache),
             "ret_port": ret_port,
             "publish_port": pub_port,
+            "cluster_pool_port": cluster_pool_port,
             "topology_enabled": True,
             "topology_link_port": link_port,
             "topology_config_file": str(topology_conf),
