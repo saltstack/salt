@@ -5,7 +5,13 @@ import salt.utils.process
 from tests.conftest import FIPS_TESTRUN
 from tests.support.pytest.transport_ssl import (  # pylint: disable=unused-import
     ssl_ca_cert_key,
+    ssl_chained_client_cert_key,
+    ssl_chained_master_config,
+    ssl_chained_minion_config,
+    ssl_chained_root_ca_cert_key,
+    ssl_chained_server_cert_key_dns_only,
     ssl_client_cert_key,
+    ssl_intermediate_ca_cert_key,
     ssl_master_config,
     ssl_minion_config,
     ssl_server_cert_key,
@@ -104,13 +110,8 @@ def ssl_salt_master(salt_factories, ssl_transport, ssl_master_config):
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
         "ssl": ssl_master_config,
-        # worker_pools_enabled is False here because SSL tests with TCP/WS transports
-        # currently hang when worker pools are enabled. This happens because the
-        # master binds the external port but never starts accepting connections,
-        # as there is no dedicated RouterProcess to call post_fork and start the
-        # main PoolRoutingChannel handler for TCP/WS transports. Additionally,
-        # internal IPC sockets for worker pools would incorrectly attempt SSL
-        # handshakes since pool_opts inherits the master's SSL config.
+        # Keep the historical non-pooled layout here; the default pooled layout
+        # with TLS is covered by ``test_ssl_with_worker_pools_enabled``.
         "worker_pools_enabled": False,
     }
     factory = salt_factories.salt_master_daemon(

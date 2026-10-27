@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import socket
 import time
+import urllib.parse
 
 import aiohttp
 import aiohttp.web
@@ -12,6 +13,7 @@ import tornado.ioloop
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
+import salt.transport.tls_reload
 import salt.utils.asynchronous
 import salt.utils.resource_warnings
 from salt.transport.tcp import (
@@ -21,6 +23,7 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.transport.tls_reload import stop_polling as _stop_tls_polling
 
 log = logging.getLogger(__name__)
 
@@ -78,6 +81,7 @@ class PublishClient(salt.transport.base.PublishClient):
         self._creator_pid = os.getpid()
 
     def close(self):
+        _stop_tls_polling(self)
         if self._closing:
             return
         self._closing = True
@@ -134,8 +138,14 @@ class PublishClient(salt.transport.base.PublishClient):
         while ws is None and (not self._closed and not self._closing):
             try:
                 ctx = None
+                server_hostname = None
                 if self.ssl is not None:
-                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
+                    ctx = salt.transport.tls_reload.client_context(
+                        self, self.ssl, getattr(self, "io_loop", None)
+                    )
+                    server_hostname = salt.transport.base.tls_server_hostname(
+                        self.ssl, self.opts, self.host
+                    )
                 if self.host and self.port:
                     conn = aiohttp.TCPConnector()
                     session = aiohttp.ClientSession(connector=conn)
@@ -152,7 +162,7 @@ class PublishClient(salt.transport.base.PublishClient):
                         url = "http://ipc.saltproject.io/ws"
                 log.debug("pub client connect %r %r", url, ctx)
                 ws = await asyncio.wait_for(
-                    session.ws_connect(url, ssl=ctx),
+                    session.ws_connect(url, ssl=ctx, server_hostname=server_hostname),
                     timeout if timeout is not None else 5,
                 )
                 # For SSL connections, give handshake time to complete and fail if invalid
@@ -403,7 +413,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
         ctx = None
         if self.ssl is not None:
-            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
+            self._tls = salt.transport.tls_reload.ReloadableTLS(
+                self.ssl, server_side=True
+            )
+            ctx = self._tls.context
+            self._tls.start(io_loop)
         if self.pub_path:
             server = aiohttp.web.Server(self.handle_request)
             self.runner = aiohttp.web.ServerRunner(server)
@@ -534,6 +548,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.clients.discard(ws)
 
     def close(self):
+        _stop_tls_polling(self)
         if self.pub_writer:
             self.pub_writer.close()
             self.pub_writer = None
@@ -601,7 +616,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             await runner.setup()
             ctx = None
             if self.ssl is not None:
-                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
+                self._tls = salt.transport.tls_reload.ReloadableTLS(
+                    self.ssl, server_side=True
+                )
+                ctx = self._tls.context
+                self._tls.start(io_loop)
             self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
             log.info("Worker binding to socket %s", self._socket)
             await self.site.start()
@@ -639,6 +658,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         return ws
 
     def close(self):
+        _stop_tls_polling(self)
         if self._run is not None:
             self._run.set()  # Signal shutdown
         if self._socket is not None:
@@ -677,8 +697,11 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
         ctx = None
+        server_hostname = None
         if self.ssl is not None:
-            ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
+            ctx = salt.transport.tls_reload.client_context(
+                self, self.ssl, getattr(self, "io_loop", None)
+            )
 
         master_uri = self.opts.get("master_uri", "")
         if master_uri.startswith("ipc://"):
@@ -689,9 +712,16 @@ class RequestClient(salt.transport.base.RequestClient):
         else:
             self.session = aiohttp.ClientSession()
             URL = self.get_master_uri(self.opts)
+            if ctx is not None:
+                host = urllib.parse.urlparse(URL).hostname
+                server_hostname = salt.transport.base.tls_server_hostname(
+                    self.ssl, self.opts, host
+                )
 
         log.debug("Connect to %s %s", URL, ctx)
-        self.ws = await self.session.ws_connect(URL, ssl=ctx)
+        self.ws = await self.session.ws_connect(
+            URL, ssl=ctx, server_hostname=server_hostname
+        )
 
     async def send(self, load, timeout=60):
         if self.sending or self._closing:
@@ -720,6 +750,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._closed = True
 
     def close(self):
+        _stop_tls_polling(self)
         if self._closing:
             return
         self._closing = True
