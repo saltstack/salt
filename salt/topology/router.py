@@ -138,6 +138,56 @@ def _cluster_ids_from_token(token):
     return {c for c in payload.split(",") if c}
 
 
+def _c_at_adjacent_to_or(tokens):
+    """
+    Return True if any ``C@`` token has an ``or`` operator as an
+    immediate neighbour at the same paren-group depth.
+
+    The depth check matters because ``C@east and (web-* or db-*)``
+    has an ``or`` inside a parenthesised sub-expression that cannot
+    cross the group boundary semantically, so the top-level
+    destination set is still ``{east}``.  In contrast,
+    ``C@east or web-*`` and ``(C@east or web-*)`` both have the
+    ``or`` at the same depth as the ``C@`` token, so the OR truly
+    disjoins the cluster scope with another predicate --- the
+    cluster-scoped routing table cannot honour the disjunction and
+    we must flood instead.
+
+    Walks tokens once, maintaining a running paren-depth, and for
+    each ``C@`` token checks the immediately-neighbouring non-paren
+    operator tokens at the matching depth.
+    """
+    depth = 0
+    depths = []
+    for tok in tokens:
+        if tok == "(":
+            depth += 1
+            depths.append(depth)
+            continue
+        if tok == ")":
+            depths.append(depth)
+            depth = max(0, depth - 1)
+            continue
+        depths.append(depth)
+    for i, tok in enumerate(tokens):
+        if not _is_c_token(tok):
+            continue
+        my_depth = depths[i]
+        # Look backward past parens that would raise depth; stop
+        # once we reach a sibling token at the same depth.
+        j = i - 1
+        while j >= 0 and tokens[j] in ("(", ")"):
+            j -= 1
+        if j >= 0 and tokens[j] == "or" and depths[j] == my_depth:
+            return True
+        j = i + 1
+        while j < len(tokens) and tokens[j] in ("(", ")"):
+            j += 1
+        if j < len(tokens) and tokens[j] == "or" and depths[j] == my_depth:
+            return True
+    return False
+
+
 def extract_cluster_scope(tgt, nodegroups=None):
     """
     Return the set of ``cluster_id`` strings mentioned positively
@@ -153,6 +203,16 @@ def extract_cluster_scope(tgt, nodegroups=None):
       themselves on local resolution, so flood-and-let-local-
       eval-sort-it-out gives correct semantics without requiring
       the router to parse negation.
+    * A ``C@`` token sits at the same paren-depth as an ``or``
+      operator -> flood.  ``C@east or web-*`` means "every east
+      minion OR every web-* minion anywhere," which the router
+      cannot honour with a scoped destination set; the only safe
+      answer is to flood and let every cluster's local matcher
+      evaluate the full compound.  See :func:`_c_at_adjacent_to_or`
+      for the depth-aware adjacency rule --- an ``or`` buried inside
+      a parenthesised sub-expression (``C@east and (web-* or db-*)``)
+      does NOT trigger the flood because its scope is isolated from
+      the top-level ``C@``.
 
     Returns the extracted set otherwise.
 
@@ -164,6 +224,8 @@ def extract_cluster_scope(tgt, nodegroups=None):
     if not tokens:
         return None
     if any(tok == "not" for tok in tokens):
+        return None
+    if _c_at_adjacent_to_or(tokens):
         return None
     out = set()
     for tok in tokens:
@@ -520,6 +582,17 @@ class TopologyRouter:
         #: resets on process restart (which is fine --- fresh
         #: gossip populates it immediately).
         self._last_origin_seq: dict = {}
+        #: ``destination_cluster_id -> (next_hop_peer_id, hop_count)``
+        #: routing table populated by :meth:`ingest_summary` from the
+        #: ``path`` field on each accepted summary.  When
+        #: :meth:`route_publish` is handed a destination that is not
+        #: a direct peer, it consults this table to pick a transit
+        #: hop.  Shortest-path wins; equal-length races leave the
+        #: first-seen hop in place (the ``origin_seq`` dedup drops
+        #: later paths at the same seq).  Soft state; rebuilt from
+        #: fresh summary gossip on process restart.  See audit BUG
+        #: #2b for the pre-fix silent-drop behavior this fixes.
+        self._routes: dict = {}
 
     # ------------------------------------------------------------------
     # Overridable event hook
@@ -577,6 +650,41 @@ class TopologyRouter:
             local_match = self.cluster_id in destinations
             dest_list = sorted(destinations)
 
+        # For scoped routing, resolve each non-adjacent destination to
+        # a direct peer via the routing table built from summary gossip
+        # (:meth:`ingest_summary` writes ``self._routes``).  Destinations
+        # with no known route trigger a flood fallback so the publish
+        # still reaches targets whose summary has not yet propagated
+        # (parity with syndic's "if you don't know, broadcast" model).
+        # Audit BUG #2b: without this consult, A↔B↔C with ``C@c`` on
+        # A yields an empty link set and the publish is silently
+        # dropped at the origin.
+        unresolved = []
+        resolved_hops = set()
+        if destinations is not None:
+            for dest in destinations:
+                if dest == self.cluster_id:
+                    continue
+                if dest in self._links:
+                    resolved_hops.add(dest)
+                    continue
+                route = self._routes.get(dest)
+                if route is None:
+                    unresolved.append(dest)
+                    continue
+                next_hop, _hops = route
+                if next_hop in self._links:
+                    resolved_hops.add(next_hop)
+                else:
+                    unresolved.append(dest)
+            if unresolved:
+                log.warning(
+                    "topology: route_publish flooding --- no known route for "
+                    "destination(s) %s (known routes: %s)",
+                    sorted(unresolved),
+                    sorted(self._routes),
+                )
+
         envelope = {
             "origin": self.cluster_id,
             "destinations": dest_list,
@@ -585,16 +693,18 @@ class TopologyRouter:
         }
         load["topology"] = envelope
 
-        # Pick the outbound links.  Flood -> every peer link.  Scoped ->
-        # only links whose peer_cluster_id is in destinations and not
-        # equal to self.
+        # Pick the outbound links.  Flood -> every peer link.  Scoped
+        # with every destination resolvable -> only the resolved
+        # next-hop links.  Scoped with any destination unresolved ->
+        # flood (safer than silent-drop; see unresolved warning above).
+        flood_outbound = destinations is None or bool(unresolved)
         links = []
         for peer_id, link in self._links.items():
             if peer_id == self.cluster_id:
                 continue
-            if destinations is None:
+            if flood_outbound:
                 links.append(link)
-            elif peer_id in destinations:
+            elif peer_id in resolved_hops:
                 links.append(link)
         return links, local_match
 
@@ -913,6 +1023,21 @@ class TopologyRouter:
             )
             return
         self._last_origin_seq[origin_id] = incoming_seq
+
+        # Learn a next-hop route toward ``origin_id`` from the path
+        # the summary traversed.  ``path`` begins at the origin and
+        # ends at the direct sender --- which equals
+        # ``inbound_link.peer_cluster_id`` after the authentication
+        # check above --- so the next hop from this cluster toward
+        # the origin is simply ``path[-1]``.  The number of transits
+        # from this cluster to the origin is ``len(path)``.  Shortest
+        # path wins: a strictly-newer seq (gated by the dedup check
+        # above) may bring a longer path if the mesh reconfigured,
+        # but we trust fresh gossip over cached topology info.
+        # Audit BUG #2b --- previously no code populated the routing
+        # table, so non-adjacent ``C@`` scope silently dropped.
+        if origin_id != self.cluster_id:
+            self._routes[origin_id] = (peer_cluster_id, len(path))
 
         # Write to registry.  We store the peer summary under the
         # origin cluster_id with a minimal PeerState-shaped dict ---
