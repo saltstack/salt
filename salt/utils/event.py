@@ -622,8 +622,6 @@ class SaltEvent:
 
         :param tag: The tag to search for
         :type tag: str
-        :param tags_regex: List of re expressions to search for also
-        :type tags_regex: list[re.compile()]
         :return:
         """
         if match_func is None:
@@ -1028,6 +1026,7 @@ class SaltEvent:
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
+                    self.close_pull()
                     raise
                 # PATCH: do NOT re-raise.  ``fire_event`` is best-effort:
                 # callers use it to publish informational events (job
@@ -1096,6 +1095,10 @@ class SaltEvent:
             retcode = load["retcode"]
 
         if not isinstance(ret, dict):
+            # A malformed / stringified return payload from a minion (e.g. an
+            # error string that never got wrapped in the state-return
+            # per-decl dict); ``ret.items()`` would raise. Log and skip so a
+            # single bad return doesn't break the master event loop.
             log.error(
                 "Event with bad payload received from '%s': %s",
                 load.get("id", "UNKNOWN"),
