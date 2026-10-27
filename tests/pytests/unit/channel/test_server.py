@@ -1490,17 +1490,16 @@ async def test_auth_errors_replayed_under_their_own_tag(cluster_master_opts):
     fake_peer_key = MagicMock()
     fake_peer_key.decrypt.return_value = digest
 
-    monkey = pytest.MonkeyPatch()
-    try:
-        monkey.setattr(salt.crypt, "PublicKey", lambda *a, **kw: fake_peer_key)
-        (
-            pathlib.Path(cluster_master_opts["cluster_pki_dir"])
-            / "peers"
-            / "salt-master-2.pub"
-        ).write_text("dummy")
-        await channel.handle_pool_publish(payload)
-    finally:
-        monkey.undo()
+    # 3008.x fetches peer public keys through ``MasterKeys`` (cache-backed),
+    # not via ``salt.crypt.PublicKey(path)`` as earlier branches did.  Stub
+    # ``master_key.fetch`` so the signature check uses our fake peer key.
+    channel.master_key.fetch.return_value = fake_peer_key
+    (
+        pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+        / "peers"
+        / "salt-master-2.pub"
+    ).write_text("dummy")
+    await channel.handle_pool_publish(payload)
 
     assert extracted == [
         ("salt-master-2", b"parked-payload")
