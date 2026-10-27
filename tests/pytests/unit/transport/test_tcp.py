@@ -785,7 +785,7 @@ async def test_presence_removed_on_stream_closed():
             server.remove_presence_callback.assert_called_with(client)
 
 
-async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
+async def test_tcp_publish_client_decode_dict(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     with salt.transport.tcp.PublishClient(
         minion_opts, io_loop, path=tmp_path
@@ -794,7 +794,7 @@ async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
         assert ret == dmsg
 
 
-async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop, tmp_path):
+async def test_tcp_publish_client_decode_msgpack(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     msg = salt.payload.dumps(dmsg)
     with salt.transport.tcp.PublishClient(
@@ -804,7 +804,7 @@ async def test_tcp_pub_client_decode_msgpack(minion_opts, io_loop, tmp_path):
         assert ret == dmsg
 
 
-def test_tcp_pub_client_close(minion_opts, io_loop, tmp_path):
+def test_tcp_publish_client_close(minion_opts, io_loop, tmp_path):
     client = salt.transport.tcp.PublishClient(minion_opts, io_loop, path=tmp_path)
 
     stream = MagicMock()
@@ -1092,7 +1092,7 @@ async def test_message_client_stream_return_exception(minion_opts, io_loop):
         client.close()
 
 
-def test_tcp_pub_server_pre_fork(master_opts):
+def test_tcp_publish_server_pre_fork(master_opts):
     process_manager = MagicMock()
     server = salt.transport.tcp.PublishServer(master_opts)
     server.pre_fork(process_manager)
