@@ -245,7 +245,7 @@ def homebrew_prefix(name=None):
     name
         The name of the formula to get its prefix.
 
-        .. versionadded:: 3008.3
+        .. versionadded:: 3008.6
 
     Returns ``Str`` with the location of the given formula.
 
@@ -950,7 +950,7 @@ def list_trusted(type=None):
     """
     List trusted taps, formulae, casks and commands.
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     type
         Filter by type. Valid values: ``tap``, ``formula``, ``cask``, ``command``.
@@ -988,7 +988,7 @@ def trust(name, type=None):
     Trust a tap, formula, cask or command so Homebrew may load it when
     ``$HOMEBREW_REQUIRE_TAP_TRUST`` is set.
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     name
         The name of the tap, formula, cask or command to trust. Can also be a
@@ -1032,7 +1032,7 @@ def untrust(name, type=None):
     """
     Stop trusting a tap, formula, cask or command.
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     name
         The name of the tap, formula, cask or command to untrust.
@@ -1075,7 +1075,7 @@ def is_trusted(name, type=None):
     """
     Check whether a tap, formula, cask or command is trusted.
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     name
         The name of the tap, formula, cask or command to check.

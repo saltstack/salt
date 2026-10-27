@@ -474,7 +474,8 @@ def _find_remove_targets(
                 targets.append(pkgname)
             else:
                 log.debug(
-                    "Current version (%s) did not match desired version specification (%s), will not remove",
+                    "Current version (%s) did not match desired version "
+                    "specification (%s), will not remove",
                     cver,
                     pkgver,
                 )
@@ -740,6 +741,7 @@ def _find_install_targets(
     warnings = []
     failed_verify = False
     for package_name, version_string in desired.items():
+
         # FreeBSD pkg supports `openjdk` and `java/openjdk7` package names
         origin = bool(re.search("/", package_name))
 
@@ -1845,9 +1847,8 @@ def installed(
                     "changes": {},
                     "result": False,
                     "comment": (
-                        "An error was encountered while holding/unholding package(s): {}".format(
-                            hold_ret["comment"]
-                        )
+                        "An error was encountered while "
+                        "holding/unholding package(s): {}".format(hold_ret["comment"])
                     ),
                 }
             else:
@@ -1916,9 +1917,8 @@ def installed(
             )
         if to_unpurge:
             comment.append(
-                "The following packages would have their selection status changed from 'purge' to 'install': {}".format(
-                    ", ".join(to_unpurge)
-                )
+                "The following packages would have their selection status "
+                "changed from 'purge' to 'install': {}".format(", ".join(to_unpurge))
             )
             changes.update({x: {"new": "installed", "old": ""} for x in to_unpurge})
         if to_reinstall:
@@ -1946,9 +1946,8 @@ def installed(
                     else:
                         pkgstr = _get_desired_pkg(reinstall_pkg, to_reinstall)
                     comment.append(
-                        "Package '{}' would be reinstalled because the following files have been altered:".format(
-                            pkgstr
-                        )
+                        "Package '{}' would be reinstalled because the "
+                        "following files have been altered:".format(pkgstr)
                     )
                     changes.update({reinstall_pkg: {}})
                     comment.append(_nested_output(altered_files[reinstall_pkg]))
@@ -2033,9 +2032,8 @@ def installed(
                     "changes": {},
                     "result": False,
                     "comment": (
-                        "An error was encountered while holding/unholding package(s): {}".format(
-                            hold_ret["comment"]
-                        )
+                        "An error was encountered while "
+                        "holding/unholding package(s): {}".format(hold_ret["comment"])
                     ),
                 }
                 if warnings:
@@ -3954,7 +3952,7 @@ def trusted(name, **kwargs):
     manager. Only available for package managers that implement a trust model
     (e.g. Homebrew on macOS).
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     name
         The identifier of the package source or component to trust. The exact
@@ -4014,7 +4012,7 @@ def untrusted(name, **kwargs):
     package manager. Only available for package managers that implement a
     trust model (e.g. Homebrew on macOS).
 
-    .. versionadded:: 3008.3
+    .. versionadded:: 3008.6
 
     name
         The identifier of the package source or component to untrust. The
