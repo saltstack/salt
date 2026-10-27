@@ -202,18 +202,18 @@ def test_scenario_cli_c_at_local_publish_round_trip(
 
 @pytest.mark.xfail(
     reason=(
-        "Blocked by the same pre-existing handshake/breadcrumb-mmap "
-        "harness bug that already keeps "
-        "tests/pytests/functional/topology/test_link_manager.py::"
-        "test_two_master_handshake_e2e red at HEAD. The three "
-        "follow-up fixes verified by this test are each individually "
-        "covered by targeted unit/functional tests "
-        "(tests/pytests/unit/test_master.py::"
-        "test_publish_topology_c_scope_forward_only_pass, "
-        "tests/pytests/unit/topology/test_compound_integration.py::"
-        "test_check_cluster_minions_dispatches_on_topology_cluster_id, "
-        "tests/pytests/functional/topology/test_link_manager.py::"
-        "test_handle_inbound_pub_local_match_publishes_to_local_minions)."
+        "Follow-up gap: outbound ``AsyncReqChannel`` + inbound "
+        ":class:`salt.channel.server.ReqServerChannel` do not meet on the "
+        "wire for ``topology/_master_auth``.  "
+        ":meth:`PeerMasterLink.connect` sends a cleartext req; the receiving "
+        "channel's transport does not pick it up (the publish-daemon never "
+        "invokes :func:`_handle_inbound_channel`), so every handshake sits "
+        "in retry and ``router._links`` stays empty for the duration of the "
+        "scenario.  Separate from the dispatch-shape fix landed in this "
+        "commit (``_handle_inbound`` unwrapping + ``send_clear`` return "
+        "shape + non-pooled channel + ``router._links`` wiring + solo "
+        "``cluster_id`` projection on the outbound handshake), which the "
+        "existing targeted tests continue to exercise."
     ),
     strict=False,
 )
@@ -252,6 +252,15 @@ def test_scenario_cli_c_at_peer_publish_round_trip_with_peered_topology(
     west.accept_peer(east)
     east.config_peer(west)
     west.config_peer(east)
+
+    # The running masters loaded ``topology.conf`` at startup with an
+    # empty peers list (the fixture writes it to disk before
+    # ``factory.started()``).  ``config_peer`` just updated the file;
+    # restart both masters so :func:`salt.topology.link_manager.start`
+    # picks up the new peer and brings up the east<->west outbound
+    # links the C@west publish needs.
+    east.restart()
+    west.restart()
 
     # Attach the target minion to WEST, not east.  The C@west
     # scope must forward the publish to west and have west fan it

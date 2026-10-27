@@ -152,6 +152,29 @@ class TopologyCluster:
                 log.warning("terminate(%s): %s", master.id, exc)
         self._terminated = True
 
+    def restart(self, start_timeout=120):
+        """
+        Stop and restart every underlying salt-master in place.
+
+        Tests that mutate on-disk state the master only reads at
+        boot — most notably ``topology.conf`` via :meth:`config_peer`
+        — call this after the mutation so the next boot picks up
+        the new config.  The fixture's exit-stack still owns the
+        final teardown via the original ``factory.started()``
+        context (which calls :meth:`terminate` on exit; idempotent
+        once the final restart's termination also runs).
+
+        :param start_timeout: Per-master start timeout in seconds.
+        """
+        for master in self.masters:
+            try:
+                master.terminate()
+            except (OSError, RuntimeError) as exc:  # pragma: no cover
+                log.warning("restart terminate(%s): %s", master.id, exc)
+        for master in self.masters:
+            master.start(start_timeout=start_timeout)
+        self._terminated = False
+
     # ------------------------------------------------------------------
     # Peer acceptance (``salt-key -a --master`` simulation)
     # ------------------------------------------------------------------

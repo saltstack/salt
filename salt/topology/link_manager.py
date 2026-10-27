@@ -33,6 +33,7 @@ import time
 import salt.topology.breadcrumbs as breadcrumbs
 import salt.topology.registry as registry
 import salt.topology.router as router_mod
+import salt.utils.asynchronous
 import salt.utils.files
 from salt.config.topology import PeerRef, load_topology_config
 from salt.topology.link import PeerMasterLink
@@ -296,8 +297,16 @@ async def start(opts, io_loop, raft_service=None):
         )
         return
 
-    # Step 2: own this process's state.
+    # Step 2: own this process's state.  The io_loop passed in from
+    # :meth:`salt.channel.server.MasterPubServerChannel._publish_daemon`
+    # is a tornado ``AsyncIOMainLoop``; the unit/scenario harnesses
+    # pass a bare ``asyncio.AbstractEventLoop``.  Every subsequent
+    # ``call_soon_threadsafe`` dispatch (``_schedule_connect`` /
+    # ``_schedule_quiesce`` from state-machine callback apply
+    # threads) requires an asyncio loop, so normalize here once
+    # instead of guarding each call site.
     _OWNER_PID = os.getpid()
+    io_loop = salt.utils.asynchronous.aioloop(io_loop)
     _IO_LOOP = io_loop
     _RAFT_SERVICE = raft_service
     _CONFIG = cfg
@@ -356,9 +365,22 @@ async def start(opts, io_loop, raft_service=None):
     _LISTENER = _open_inbound_listener(opts, io_loop)
 
     # Step 8: outbound links from topology.conf.
+    #
+    # Project this master's topology-config cluster_id onto the opts
+    # dict handed to each :class:`PeerMasterLink`.  Solo (non-3008.x)
+    # masters do not set ``opts["cluster_id"]`` — that key is the
+    # 3008.x master-cluster primitive.  Without this projection the
+    # outbound ``topology/_master_auth`` handshake would send
+    # ``cluster_id=None`` and the receiving peer's
+    # :func:`_handle_master_auth` would reject it via
+    # :func:`_reserved_cluster_id` (``None`` fails the "non-empty
+    # str" guard), leaving every solo-to-solo link stuck in retry.
+    link_opts = dict(opts)
+    if not link_opts.get("cluster_id") and cfg.cluster_id:
+        link_opts["cluster_id"] = cfg.cluster_id
     for peer_ref in cfg.peers:
         try:
-            link = PeerMasterLink(opts, peer_ref, io_loop)
+            link = PeerMasterLink(link_opts, peer_ref, io_loop)
         except TypeError as exc:
             log.warning("topology: could not build link for peer %r: %s", peer_ref, exc)
             continue
@@ -516,14 +538,73 @@ def _provisional_key(peer_ref):
     return f"__pending__:{host}:{port}"
 
 
+def _register_connected_link(link):
+    """Re-key ``_LINKS`` under ``peer_cluster_id`` and wire the link
+    into the process-wide :class:`salt.topology.router.TopologyRouter`.
+
+    Call sites: scheduled on the io_loop after
+    :meth:`salt.topology.link.PeerMasterLink.connect` completes
+    successfully.  Before this runs the link is registered in
+    ``_LINKS`` under a ``__pending__:host:port`` key with no
+    ``peer_cluster_id`` yet — nothing can route to it because the
+    router keys outbound dispatch by peer ``cluster_id``.  After this
+    runs the router sees the link under its real id and
+    ``route_publish`` / ``forward_publish`` can pick it up.
+
+    Idempotent: a second call for the same link is a no-op.  Safe to
+    call when the connect attempt failed and left no
+    ``peer_cluster_id`` behind — nothing happens.
+    """
+    peer_id = getattr(link, "peer_cluster_id", None)
+    if not peer_id:
+        return
+    with _LOCK:
+        # Drop any provisional (pre-handshake) key pointing at this link.
+        stale_keys = [
+            k
+            for k, v in _LINKS.items()
+            if v is link and isinstance(k, str) and k.startswith("__pending__:")
+        ]
+        for k in stale_keys:
+            _LINKS.pop(k, None)
+        _LINKS[peer_id] = link
+    router = router_mod.get_router()
+    if router is not None:
+        router._links[peer_id] = link  # pylint: disable=protected-access
+
+
+async def _connect_and_register(link):
+    """Await ``link.connect()`` then publish the result into
+    ``_LINKS`` + ``router._links`` via :func:`_register_connected_link`.
+
+    Split out so :func:`_schedule_connect` keeps its "fire and forget"
+    shape while the post-handshake wiring stays single-sourced.
+    """
+    try:
+        await link.connect()
+    except Exception:  # pylint: disable=broad-except
+        # ``asyncio.CancelledError`` is a ``BaseException`` subclass on
+        # modern Python and does not match this ``Exception`` branch;
+        # the task cancellation propagates naturally.
+        log.exception("topology: link.connect() failed")
+        return
+    try:
+        _register_connected_link(link)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: _register_connected_link failed")
+
+
 def _schedule_connect(link):
     """Create the connect task on the io_loop.
 
     Must run on the io_loop thread.  Scheduled via
-    ``call_soon_threadsafe`` from any thread.
+    ``call_soon_threadsafe`` from any thread.  Wraps the raw
+    ``link.connect()`` with :func:`_connect_and_register` so a
+    successful handshake re-keys ``_LINKS`` and populates
+    ``router._links``.
     """
     try:
-        asyncio.ensure_future(link.connect(), loop=_IO_LOOP)
+        asyncio.ensure_future(_connect_and_register(link), loop=_IO_LOOP)
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: scheduling connect() failed")
 
@@ -541,9 +622,25 @@ def _open_inbound_listener(opts, io_loop):
 
         channel_opts = dict(opts)
         channel_opts["ret_port"] = opts.get("topology_link_port")
+        # Force the plain (non-pooled) :class:`ReqServerChannel`
+        # irrespective of ``worker_pools_enabled``.  The pooled
+        # :class:`PoolRoutingChannel` routes every request through
+        # per-pool IPC into an MWorker and the ``payload_handler``
+        # registered here is only honoured in the main routing path
+        # — never on a pool worker.  Our dispatch table lives in
+        # this process (:func:`_handle_inbound` + ``_DISPATCH_TABLE``)
+        # so we need the request to come back here, not into a
+        # worker's :meth:`salt.master.MWorker._handle_payload`.
+        channel_opts["worker_pools_enabled"] = False
         channel = ReqServerChannel.factory(channel_opts)
         if hasattr(channel, "post_fork"):
-            channel.post_fork(_handle_inbound, io_loop)
+            # Pass the channel adapter, not the bare dispatcher: the
+            # channel unpacks ``payload_handler``'s return as
+            # ``(ret, req_opts)`` and dispatches on
+            # ``req_opts["fun"]``.  Direct in-process callers continue
+            # to invoke :func:`_handle_inbound` (which returns a single
+            # value) via the same module API.
+            channel.post_fork(_handle_inbound_channel, io_loop)
         return channel
     except Exception as exc:  # pylint: disable=broad-except
         log.warning(
@@ -927,6 +1024,30 @@ def _verify_session(payload):
     return int(expected) == int(gen)
 
 
+def _unwrap_inbound_envelope(payload):
+    """Return the topology-level payload, peeling the ReqServerChannel
+    wire envelope (``{"enc": ..., "load": {...}, "version": N}``) if it
+    is wrapped around a dict.
+
+    Direct in-process callers (functional tests driving dispatch
+    without a channel) pass the topology envelope untouched; the
+    on-wire inbound path lands here with the outer envelope.  A
+    single unwrap handles both.
+    """
+    if not isinstance(payload, dict):
+        return None
+    if "enc" in payload and isinstance(payload.get("load"), dict):
+        inner = payload["load"]
+        # Only unwrap when the outer envelope is clearly transport-level
+        # (``enc`` present).  Topology-native payloads with an inner
+        # ``load`` key (e.g. a dispatch to :func:`_dispatch_pub` whose
+        # inner dict holds the publish body) are NOT touched here --
+        # the dispatchers themselves pull ``payload["load"]`` as the
+        # application-level body.
+        return inner
+    return payload
+
+
 async def _handle_inbound(payload):
     """
     Payload handler for the inbound topology listener.
@@ -946,26 +1067,47 @@ async def _handle_inbound(payload):
     dropped with a WARNING log.  Unknown tags are dropped at
     DEBUG.
     """
-    if not isinstance(payload, dict):
+    inner = _unwrap_inbound_envelope(payload)
+    if inner is None:
         log.debug("topology inbound: non-dict payload dropped")
         return None
-    tag = payload.get("tag") or payload.get("cmd")
+    tag = inner.get("tag") or inner.get("cmd")
     handler = _DISPATCH_TABLE.get(tag)
     if handler is None:
         log.debug("topology inbound: unknown tag %r dropped", tag)
         return None
-    if not _verify_session(payload):
+    if not _verify_session(inner):
         log.warning(
             "topology inbound: dropping %r with bad/missing session (origin=%r, gen=%r)",
             tag,
-            payload.get("origin_cluster_id"),
-            payload.get("session_generation"),
+            inner.get("origin_cluster_id"),
+            inner.get("session_generation"),
         )
         return None
-    result = handler(payload)
+    result = handler(inner)
     if asyncio.iscoroutine(result):
         result = await result
     return result
+
+
+async def _handle_inbound_channel(payload):
+    """
+    Wire-adapter for :meth:`salt.channel.server.ReqServerChannel.handle_message`.
+
+    ``handle_message`` unpacks ``payload_handler``'s return as
+    ``(ret, req_opts)`` and dispatches by ``req_opts["fun"]``.  The
+    core :func:`_handle_inbound` returns a single value (the inner
+    dispatch result, or ``None`` on drop) so in-process callers do not
+    have to carry the channel's return-shape contract.  This wrapper
+    adapts between the two: it awaits the inner dispatch and always
+    returns a ``(ret, {"fun": "send_clear"})`` tuple so a dropped
+    message yields a well-formed empty cleartext reply instead of a
+    transport-level failure.
+    """
+    result = await _handle_inbound(payload)
+    if result is None:
+        result = {}
+    return result, {"fun": "send_clear"}
 
 
 # ---------------------------------------------------------------------------
