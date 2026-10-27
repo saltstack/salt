@@ -136,6 +136,11 @@ class Master(
             os.path.join(self.config["pki_dir"], "minions_denied"),
             os.path.join(self.config["pki_dir"], "minions_autosign"),
             os.path.join(self.config["pki_dir"], "minions_rejected"),
+            os.path.join(self.config["pki_dir"], "clients"),
+            os.path.join(self.config["pki_dir"], "clients_pre"),
+            os.path.join(self.config["pki_dir"], "clients_denied"),
+            os.path.join(self.config["pki_dir"], "clients_autosign"),
+            os.path.join(self.config["pki_dir"], "clients_rejected"),
             self.config["cachedir"],
             os.path.join(self.config["cachedir"], "jobs"),
             os.path.join(self.config["cachedir"], "proc"),
@@ -159,6 +164,11 @@ class Master(
                     os.path.join(self.config["cluster_pki_dir"], "minions_denied"),
                     os.path.join(self.config["cluster_pki_dir"], "minions_autosign"),
                     os.path.join(self.config["cluster_pki_dir"], "minions_rejected"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_pre"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_denied"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_autosign"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_rejected"),
                 ]
             )
             pki_dir = [self.config["pki_dir"], self.config["cluster_pki_dir"]]

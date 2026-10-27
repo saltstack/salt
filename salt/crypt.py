@@ -1109,8 +1109,23 @@ class AsyncAuth:
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
-        self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
-        self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        # Determine paths based on role
+        if self.opts.get("__role") == "client":
+            # Remote CLI client
+            self.pub_path = os.path.join(self.opts["pki_dir"], "client.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "client.pem")
+            self.mpub = "client_master.pub"
+        elif self.opts["__role"] == "syndic":
+            # Syndic (master of masters)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "syndic_master.pub"
+        else:
+            # Regular minion (default)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "minion_master.pub"
+
         self._private_key = None
         # Initialize ``_creds`` so ``_authenticate`` can safely check it even
         # when a sibling ``AsyncAuth`` populates ``creds_map`` between our
@@ -1120,10 +1135,6 @@ class AsyncAuth:
         # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
         # issue #67947).
         self._creds = None
-        if self.opts["__role"] == "syndic":
-            self.mpub = "syndic_master.pub"
-        else:
-            self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         if io_loop is None:
@@ -1555,12 +1566,27 @@ class AsyncAuth:
                 log.info("Generating keys: %s", self.opts["pki_dir"])
                 (priv, pub) = gen_keys(self.opts["keysize"])
 
+                # Determine cache keys based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                    cache_key_pub = "client.pub"
+                else:
+                    # minion/syndic use minion keys
+                    cache_key_priv = "minion.pem"
+                    cache_key_pub = "minion.pub"
+
                 # the cache bank is called master keys but the codepath is shared
-                # on master/minion for interacting with pki
-                self.cache.store("master_keys", "minion.pem", priv)
-                self.cache.store("master_keys", "minion.pub", pub)
+                # on master/minion/client for interacting with pki
+                self.cache.store("master_keys", cache_key_priv, priv)
+                self.cache.store("master_keys", cache_key_pub, pub)
             else:
-                priv = self.cache.fetch("master_keys", "minion.pem")
+                # Determine cache key based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                else:
+                    cache_key_priv = "minion.pem"
+
+                priv = self.cache.fetch("master_keys", cache_key_priv)
 
             self._private_key = PrivateKey.from_str(priv, None)
         return self._private_key
@@ -1595,6 +1621,8 @@ class AsyncAuth:
         payload["nonce"] = uuid.uuid4().hex
         payload["enc_algo"] = self.opts["encryption_algorithm"]
         payload["sig_algo"] = self.opts["signing_algorithm"]
+        # Include role to distinguish clients from minions
+        payload["role"] = self.opts.get("__role", "minion")
         if "autosign_grains" in self.opts:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:

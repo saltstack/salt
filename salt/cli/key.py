@@ -22,5 +22,6 @@ class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
                 )
 
         with salt.key.KeyCLI(self.config) as key:
-            if check_user(self.config["user"]):
+            # Skip user check when using client auth (remote execution)
+            if self.config.get("client_auth") or check_user(self.config["user"]):
                 key.run()

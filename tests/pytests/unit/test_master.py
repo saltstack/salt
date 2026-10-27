@@ -119,6 +119,9 @@ def encrypted_requests(tmp_path):
             "master_sign_key_name": "master_sign",
             "id": "master",
             "master_async_mworker": True,
+            "cluster_id": None,
+            "eauth_tokens.cache_driver": None,
+            "eauth_tokens.cluster_id": None,
         }
     )
 
@@ -1475,6 +1478,9 @@ def _git_pillar_base_config(tmp_path):
         # These tests exercise the async ``_pillar`` handler; opt in
         # so ``AESFuncs.__init__`` does not shadow it with the sync body.
         "master_async_mworker": True,
+        "cluster_id": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 
 

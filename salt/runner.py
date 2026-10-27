@@ -275,6 +275,22 @@ class Runner(RunnerClient):
     """
 
     def __init__(self, opts, context=None):
+        # If client auth is enabled, load client config and set role
+        if opts.get("client_auth"):
+            import salt.config
+            import salt.syspaths as syspaths
+
+            # Load client config if not already loaded
+            if "__role" not in opts:
+                client_opts = salt.config.client_config(
+                    opts.get("conf_file", os.path.join(syspaths.CONFIG_DIR, "master"))
+                )
+                # Merge client config with provided opts
+                client_opts.update(opts)
+                opts = client_opts
+            # Set client role for PKI authentication
+            opts["__role"] = "client"
+
         super().__init__(opts, context=context)
         self.returners = salt.loader.returners(opts, self.functions, context=context)
         self.outputters = salt.loader.outputters(opts)
@@ -328,7 +344,11 @@ class Runner(RunnerClient):
                 low["arg"] = args
                 low["kwarg"] = kwargs
 
-                if self.opts.get("eauth"):
+                # Skip eauth credential collection for client auth
+                if self.opts.get("client_auth"):
+                    # Client auth uses PKI keys, no credentials needed in low dict
+                    pass
+                elif self.opts.get("eauth"):
                     if "token" in self.opts:
                         try:
                             with salt.utils.files.fopen(
@@ -365,7 +385,7 @@ class Runner(RunnerClient):
 
                 # Run the runner!
                 if self.opts.get("async", False):
-                    if self.opts.get("eauth"):
+                    if self.opts.get("eauth") or self.opts.get("client_auth"):
                         async_pub = self.cmd_async(low)
                     else:
                         async_pub = self.asynchronous(
@@ -385,7 +405,7 @@ class Runner(RunnerClient):
                 if self.opts.get("show_jid"):
                     print(f"jid: {self.jid}")
 
-                if self.opts.get("eauth"):
+                if self.opts.get("eauth") or self.opts.get("client_auth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
                         outputter = ret["outputter"]

@@ -59,7 +59,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ""
 
-            self.local_client = salt.client.get_local_client(
+            self.client = salt.client.get_remote_client(
                 self.get_config_file_path(),
                 skip_perm_errors=skip_perm_errors,
                 auto_reconnect=True,
@@ -82,7 +82,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             return
 
         if self.options.timeout <= 0:
-            self.options.timeout = self.local_client.opts["timeout"]
+            self.options.timeout = self.client.opts["timeout"]
 
         kwargs = {
             "tgt": self.config["tgt"],
@@ -122,7 +122,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 try:
                     self._run_batch()
                 finally:
-                    self.local_client.destroy()
+                    self.client.destroy()
                 return
 
         if getattr(self.options, "return"):
@@ -169,12 +169,12 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             kwargs["eauth"] = self.options.eauth
 
         if self.config["async"]:
-            jid = self.local_client.cmd_async(**kwargs)
+            jid = self.client.cmd_async(**kwargs)
             salt.utils.stringutils.print_cli(f"Executed command with job ID: {jid}")
             return
 
         # local will be None when there was an error
-        if not self.local_client:
+        if not self.client:
             return
 
         retcodes = []
@@ -182,11 +182,11 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         try:
             if self.options.subset:
-                cmd_func = self.local_client.cmd_subset
+                cmd_func = self.client.cmd_subset
                 kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
-                cmd_func = self.local_client.cmd_cli
+                cmd_func = self.client.cmd_cli
 
             if self.options.progress:
                 kwargs["progress"] = True
@@ -205,7 +205,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             elif self.config["fun"] == "sys.doc":
                 ret = {}
                 out = ""
-                for full_ret in self.local_client.cmd_cli(**kwargs):
+                for full_ret in self.client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
                 self._output_ret(ret, out, retcode=retcode)
@@ -248,13 +248,13 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         ) as exc:
             self._output_ret(str(exc), "", retcode=1)
         finally:
-            self.local_client.destroy()
+            self.client.destroy()
 
     def _preview_target(self):
         """
         Return a list of minions from a given target
         """
-        return self.local_client.gather_minions(
+        return self.client.gather_minions(
             self.config["tgt"], self.selected_target_option or "glob"
         )
 

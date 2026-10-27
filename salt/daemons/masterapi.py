@@ -1208,6 +1208,10 @@ class LocalFuncs:
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
         self.mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
+        # Make a wheel object
+        self.wheel_ = salt.wheel.Wheel(opts)
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(opts.get("client_acl", {}))
 
     def runner(self, load):
         """
@@ -1224,24 +1228,70 @@ class LocalFuncs:
             # Authentication error occurred: do not continue.
             return {"error": error}
 
-        # Authorize
-        runner_check = self.ckminions.runner_check(
-            auth_check.get("auth_list", []), load["fun"], load["kwarg"]
-        )
         username = auth_check.get("username")
-        if not runner_check:
-            return {
-                "error": {
-                    "name": err_name,
-                    "message": (
-                        'Authentication failure of type "{}" occurred '
-                        "for user {}.".format(auth_type, username)
-                    ),
+
+        # Check if this is a client request (for client ACL enforcement)
+        is_client = False
+        if auth_type == "user" and username:
+            # Check if username is in client_keys cache (indicates client authentication)
+            try:
+                key_cache = salt.cache.Cache(
+                    self.opts, driver=self.opts["keys.cache_driver"]
+                )
+                client_key = key_cache.fetch("client_keys", username)
+                if client_key:
+                    is_client = True
+            except Exception:  # pylint: disable=broad-except
+                # If we can't check, assume not a client
+                pass
+
+        # If this is a client, check client ACL
+        if is_client:
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist:
+                if self.client_acl.client_is_blacklisted(
+                    username, load["fun"], "runner", client_acl_blacklist
+                ):
+                    return {
+                        "error": {
+                            "name": "ClientAuthorizationError",
+                            "message": (
+                                f'Client "{username}" is blacklisted from executing '
+                                f'runner function "{load["fun"]}".'
+                            ),
+                        }
+                    }
+
+            # Check whitelist
+            if not self.client_acl.client_is_allowed(username, load["fun"], "runner"):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to execute '
+                            f'runner function "{load["fun"]}".'
+                        ),
+                    }
                 }
-            }
-        elif isinstance(runner_check, dict) and "error" in runner_check:
-            # A dictionary with an error name/message was handled by ckminions.runner_check
-            return runner_check
+        else:
+            # Regular user/eauth/token - use existing authorization
+            runner_check = self.ckminions.runner_check(
+                auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+            )
+            if not runner_check:
+                return {
+                    "error": {
+                        "name": err_name,
+                        "message": (
+                            'Authentication failure of type "{}" occurred '
+                            "for user {}.".format(auth_type, username)
+                        ),
+                    }
+                }
+            elif isinstance(runner_check, dict) and "error" in runner_check:
+                # A dictionary with an error name/message was handled by ckminions.runner_check
+                return runner_check
 
         # Authorized. Do the job!
         try:
@@ -1275,25 +1325,71 @@ class LocalFuncs:
             # Authentication error occurred: do not continue.
             return {"error": error}
 
-        # Authorize
         username = auth_check.get("username")
-        if auth_type != "user":
-            wheel_check = self.ckminions.wheel_check(
-                auth_check.get("auth_list", []), load["fun"], load["kwarg"]
-            )
-            if not wheel_check:
+
+        # Check if this is a client request (for client ACL enforcement)
+        is_client = False
+        if auth_type == "user" and username:
+            # Check if username is in client_keys cache (indicates client authentication)
+            try:
+                key_cache = salt.cache.Cache(
+                    self.opts, driver=self.opts["keys.cache_driver"]
+                )
+                client_key = key_cache.fetch("client_keys", username)
+                if client_key:
+                    is_client = True
+            except Exception:  # pylint: disable=broad-except
+                # If we can't check, assume not a client
+                pass
+
+        # If this is a client, check client ACL
+        if is_client:
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist:
+                if self.client_acl.client_is_blacklisted(
+                    username, load["fun"], "wheel", client_acl_blacklist
+                ):
+                    return {
+                        "error": {
+                            "name": "ClientAuthorizationError",
+                            "message": (
+                                f'Client "{username}" is blacklisted from executing '
+                                f'wheel function "{load["fun"]}".'
+                            ),
+                        }
+                    }
+
+            # Check whitelist
+            if not self.client_acl.client_is_allowed(username, load["fun"], "wheel"):
                 return {
                     "error": {
-                        "name": err_name,
+                        "name": "ClientAuthorizationError",
                         "message": (
-                            'Authentication failure of type "{}" occurred for '
-                            "user {}.".format(auth_type, username)
+                            f'Client "{username}" is not authorized to execute '
+                            f'wheel function "{load["fun"]}".'
                         ),
                     }
                 }
-            elif isinstance(wheel_check, dict) and "error" in wheel_check:
-                # A dictionary with an error name/message was handled by ckminions.wheel_check
-                return wheel_check
+        else:
+            # Regular user/eauth/token - use existing authorization
+            if auth_type != "user":
+                wheel_check = self.ckminions.wheel_check(
+                    auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+                )
+                if not wheel_check:
+                    return {
+                        "error": {
+                            "name": err_name,
+                            "message": (
+                                'Authentication failure of type "{}" occurred for '
+                                "user {}.".format(auth_type, username)
+                            ),
+                        }
+                    }
+                elif isinstance(wheel_check, dict) and "error" in wheel_check:
+                    # A dictionary with an error name/message was handled by ckminions.wheel_check
+                    return wheel_check
 
         # Authenticated. Do the job.
         jid = salt.utils.jid.gen_jid(self.opts)
