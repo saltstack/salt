@@ -1095,10 +1095,12 @@ class Pillar:
         Builds actual pillar data structure and updates the ``pillar`` variable
         """
         ext = None
-        args = salt.utils.args.get_function_argspec(self.ext_pillars[key]).args
+        valid_kwargs = salt.utils.args.get_function_argspec(
+            self.ext_pillars[key]
+        ).namedargs
 
         if isinstance(val, dict):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1108,7 +1110,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1118,7 +1120,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, *val)
         else:
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
