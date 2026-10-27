@@ -1842,6 +1842,11 @@ async def test_auth_errors_replayed_under_their_own_tag(cluster_master_opts):
     channel.master_key = MagicMock()
     channel.master_key.master_key.decrypt.return_value = aes_bytes
     channel.send_aes_key_event = lambda: None
+    # On 3008.x the first-time AES-key path also schedules a drain of the
+    # sender-side pending-replication queue via ``_schedule_pending_flush``,
+    # which snapshots ``self.pushers``.  Give it an empty list so the method
+    # takes its ``depth == 0`` early return instead of ``AttributeError``.
+    channel.pushers = []
 
     # One event forwarded by salt-master-2 while we still had no key for it.
     parked_tag = "cluster/event/salt-master-2/salt/job/20260101/ret"
@@ -1863,17 +1868,16 @@ async def test_auth_errors_replayed_under_their_own_tag(cluster_master_opts):
     fake_peer_key = MagicMock()
     fake_peer_key.decrypt.return_value = digest
 
-    monkey = pytest.MonkeyPatch()
-    try:
-        monkey.setattr(salt.crypt, "PublicKey", lambda *a, **kw: fake_peer_key)
-        (
-            pathlib.Path(cluster_master_opts["cluster_pki_dir"])
-            / "peers"
-            / "salt-master-2.pub"
-        ).write_text("dummy")
-        await channel.handle_pool_publish(payload)
-    finally:
-        monkey.undo()
+    # 3008.x fetches peer public keys through ``MasterKeys`` (cache-backed),
+    # not via ``salt.crypt.PublicKey(path)`` as earlier branches did.  Stub
+    # ``master_key.fetch`` so the signature check uses our fake peer key.
+    channel.master_key.fetch.return_value = fake_peer_key
+    (
+        pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+        / "peers"
+        / "salt-master-2.pub"
+    ).write_text("dummy")
+    await channel.handle_pool_publish(payload)
 
     assert extracted == [
         ("salt-master-2", b"parked-payload")
