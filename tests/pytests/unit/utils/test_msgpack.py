@@ -1,3 +1,4 @@
+import collections
 import inspect
 import io
 import os
@@ -8,7 +9,6 @@ import msgpack
 import pytest
 
 import salt.utils.msgpack
-import salt.utils.odict
 from tests.support.mock import MagicMock, patch
 
 
@@ -460,7 +460,7 @@ def check_pack_float(pack_func, **kwargs):
 def check_odict(pack_func, unpack_func):
     seq = [(b"one", 1), (b"two", 2), (b"three", 3), (b"four", 4)]
 
-    od = salt.utils.odict.OrderedDict(seq)
+    od = collections.OrderedDict(seq)
     assert dict(seq) == unpack_func(pack_func(od), use_list=True)
 
     def pair_hook(seq):

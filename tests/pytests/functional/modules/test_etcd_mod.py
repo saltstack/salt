@@ -118,29 +118,8 @@ def test_basic_operations(subtests, profile_name, prefix):
         assert modified["value"] == "one"
 
 
-def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
-    """
-    Test the correct response when the profile is missing and we can't connect
-    """
-    if etcd_version in (EtcdVersion.v2, EtcdVersion.v3_v2_mode) and etcd_port != 2379:
-        # Only need to run this once
-        with subtests.test("Test no profile and bad connection in get_"):
-            assert etcd_mod.get_(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in set_"):
-            assert etcd_mod.set_(f"{prefix}/1", "lol") is None
-
-        with subtests.test("Test no profile and bad connection in update"):
-            assert etcd_mod.update({f"{prefix}/1": "SIUUU"}) is None
-
-        with subtests.test("Test no profile and bad connection in watch"):
-            assert etcd_mod.watch(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in ls_"):
-            assert etcd_mod.ls_() is None
-
-        with subtests.test("Test no profile and bad connection in rm"):
-            assert etcd_mod.rm_(f"{prefix}/1") is None
-
-        with subtests.test("Test no profile and bad connection in tree"):
-            assert etcd_mod.tree() is None
+# NOTE: The former ``test_with_missing_profile`` validated python-etcd (v2)
+# lazy-connect behavior where a missing profile + bad connection silently
+# returned ``None``. etcd3-py (v3) raises eagerly during client construction,
+# so there is no v3-equivalent contract to assert; the test was removed with
+# the v2 API in 3009.0.

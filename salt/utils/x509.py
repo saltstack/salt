@@ -286,26 +286,26 @@ class SuperfluousPassword(PasswordError):
 
 def ensure_cert_kwargs_compat(kwargs):
     """
-    Ensures the deprecated long form of Name Attribute and
-    extension definitions is still recognized, but warned about.
+    Reject the long form of Name Attribute and extension definitions.
+
+    These were accepted with a deprecation warning through 3008.x and
+    removed in 3009.0 (Potassium). Callers must use the short names.
     """
     for name, long_names in NAME_ATTRS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in kwargs:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
+                raise CommandExecutionError(
+                    f"Keyword argument `{long_name}` was removed in 3009.0."
+                    f" Use the short name `{name}` instead."
                 )
-                kwargs[name] = kwargs.pop(long_name)
 
     for extname, long_names in EXTENSIONS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in kwargs:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
+                raise CommandExecutionError(
+                    f"Keyword argument `{long_name}` was removed in 3009.0."
+                    f" Use the short name `{extname}` instead."
                 )
-                kwargs[extname] = kwargs.pop(long_name)
     return kwargs
 
 
@@ -941,25 +941,24 @@ def merge_signing_policy(policy, kwargs):
     # ensure we don't modify data that is used elsewhere
     policy = copy.deepcopy(policy)
 
-    # Don't immediately break for the long form of name attributes
+    # Long-form name-attribute and extension aliases were accepted with a
+    # deprecation warning through 3008.x and removed in 3009.0 (Potassium);
+    # callers must use short names.
     for name, long_names in NAME_ATTRS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in kwargs:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in keyword args. Please migrate to the short name: {name}",
+                raise CommandExecutionError(
+                    f"Keyword argument `{long_name}` was removed in 3009.0."
+                    f" Use the short name `{name}` instead."
                 )
-                kwargs[name] = kwargs.pop(long_name)
 
-    # Don't immediately break for the long form of extensions
     for extname, long_names in EXTENSIONS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in kwargs:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in keyword args. Please migrate to the short name: {extname}",
+                raise CommandExecutionError(
+                    f"Keyword argument `{long_name}` was removed in 3009.0."
+                    f" Use the short name `{extname}` instead."
                 )
-                kwargs[extname] = kwargs.pop(long_name)
 
     if "subject" in kwargs:
         # a) ensure subject in kwargs does not override CN etc from signing policy

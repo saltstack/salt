@@ -24,13 +24,11 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
-In order to choose whether to use etcd API v2 or v3, you can put the following
-configuration option in the same place as your etcd configuration.  This option
-defaults to true, meaning you will use v2 unless you specify otherwise.
+.. versionchanged:: 3009.0
 
-.. code-block:: yaml
-
-    etcd.require_v2: True
+    The etcd v2 API was removed. Only the v3 API is supported; the
+    ``etcd.require_v2`` option is no longer accepted and setting it to
+    ``True`` raises a ``CommandExecutionError``.
 
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
@@ -92,7 +90,7 @@ def __virtual__():
     """
     Only return if python-etcd is installed
     """
-    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
+    if salt.utils.etcd_util.HAS_ETCD_V3:
         return __virtualname__
     return (
         False,
@@ -195,7 +193,7 @@ def update(fields, path="", profile=None, **kwargs):
     return client.update(fields, path)
 
 
-def watch(key, recurse=False, profile=None, timeout=0, index=None, **kwargs):
+def watch(key, recurse=False, profile=None, timeout=0, **kwargs):
     """
     .. versionadded:: 2016.3.0
 
@@ -212,12 +210,14 @@ def watch(key, recurse=False, profile=None, timeout=0, index=None, **kwargs):
 
         salt myminion etcd.watch /path/to/key
         salt myminion etcd.watch /path/to/key timeout=10
-        salt myminion etcd.watch /patch/to/key profile=my_etcd_config index=10
+        salt myminion etcd.watch /patch/to/key profile=my_etcd_config start_revision=10
         salt myminion etcd.watch /patch/to/key host=127.0.0.1 port=2379
     """
-
+    start_revision = kwargs.pop("start_revision", None)
     client = __utils__["etcd_util.get_conn"](__opts__, profile, **kwargs)
-    return client.watch(key, recurse=recurse, timeout=timeout, index=index)
+    return client.watch(
+        key, recurse=recurse, timeout=timeout, start_revision=start_revision
+    )
 
 
 def ls_(path="/", profile=None, **kwargs):

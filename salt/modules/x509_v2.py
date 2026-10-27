@@ -509,30 +509,20 @@ def create_certificate(
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
     """
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        kwargs["digest"] = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version", "serial_bits"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`. `text`, `version`, and `serial_bits` were ignored kwargs
+    # removed in the same release.
+    for removed in ("algorithm", "text", "version", "serial_bits"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
+            )
     kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     if "days_valid" not in kwargs and "not_after" not in kwargs:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 30. Please adapt your code accordingly.",
-            )
-            kwargs["days_valid"] = 365
-        except RuntimeError:
-            pass
+        # Default changed from 365 to 30 in 3009.0 (Potassium).
+        kwargs["days_valid"] = 30
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -960,12 +950,9 @@ def create_crl(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # Deprecation checks vs the old x509 module
+    # `text` was ignored (compat with the pre-x509_v2 module). Removed in
+    # 3009.0 (Potassium); unknown kwargs are rejected.
     if kwargs:
-        if "text" in kwargs:
-            salt.utils.versions.kwargs_warn_until(["text"], "Potassium")
-            kwargs.pop("text")
-
         unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
         if unknown:
             raise SaltInvocationError(
@@ -973,35 +960,26 @@ def create_crl(
             )
 
     if days_valid is None:
-        try:
-            salt.utils.versions.warn_until(
-                3009,
-                "The default value for `days_valid` will change to 7. Please adapt your code accordingly.",
-            )
-            days_valid = 100
-        except RuntimeError:
-            days_valid = 7
+        # Default changed from 100 to 7 in 3009.0 (Potassium).
+        days_valid = 7
 
-    revoked_parsed = []
+    # ``revoked`` must be a flat list of dicts and must spell the revocation
+    # reason via ``extensions:CRLReason``. The dict-of-key-to-list wrapper
+    # and the top-level ``reason`` key were accepted (with a deprecation
+    # warning) through 3008.x; both were removed in 3009.0 (Potassium).
     for rev in revoked:
-        parsed = {}
         if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
-            salt.utils.versions.warn_until(
-                3009,
-                "Revoked certificates should be specified as a simple list of dicts.",
+            raise SaltInvocationError(
+                "Revoked certificates must be specified as a flat list of "
+                "dicts. The {<key>: [<dict>, ...]} wrapper is no longer "
+                "accepted (removed in 3009.0)."
             )
-            for val in rev[next(iter(rev))]:
-                parsed.update(val)
-        if "reason" in (parsed or rev):
-            salt.utils.versions.warn_until(
-                3009,
-                "The `reason` parameter for revoked certificates should be specified in extensions:CRLReason.",
+        if "reason" in rev:
+            raise SaltInvocationError(
+                "The top-level `reason` key for revoked certificates is no "
+                "longer accepted (removed in 3009.0). Specify the reason "
+                "via `extensions:CRLReason` instead."
             )
-            salt.utils.dictupdate.set_dict_key_value(
-                (parsed or rev), "extensions:CRLReason", (parsed or rev).pop("reason")
-            )
-        revoked_parsed.append(parsed or rev)
-    revoked = revoked_parsed
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1141,17 +1119,15 @@ def create_csr(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    # Deprecation checks vs the old x509 module
-    if "algorithm" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`algorithm` has been renamed to `digest`. Please update your code.",
-        )
-        digest = kwargs.pop("algorithm")
-
-    ignored_params = {"text", "version"}.intersection(kwargs)  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
+    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
+    # use `digest`. `text` and `version` were ignored kwargs removed in the
+    # same release.
+    for removed in ("algorithm", "text", "version"):
+        if removed in kwargs:
+            raise SaltInvocationError(
+                f"Keyword argument `{removed}` was removed in 3009.0. "
+                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
+            )
     kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
 
     if encoding not in ["der", "pem"]:
@@ -1287,22 +1263,9 @@ def create_private_key(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # Deprecation checks vs the old x509 module
-    if "bits" in kwargs:
-        salt.utils.versions.warn_until(
-            3009,
-            "`bits` has been renamed to `keysize`. Please update your code.",
-        )
-        keysize = kwargs.pop("bits")
-
-    ignored_params = {"cipher", "verbose", "text"}.intersection(
-        kwargs
-    )  # path, overwrite
-    if ignored_params:
-        salt.utils.versions.kwargs_warn_until(ignored_params, "Potassium")
-        for x in ignored_params:
-            kwargs.pop(x)
-
+    # `bits` was deprecated in 3007.0 and removed in 3009.0 (Potassium); use
+    # `keysize`. `cipher`, `verbose`, and `text` were ignored kwargs removed
+    # in the same release.
     unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
     if unknown:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
@@ -1600,7 +1563,7 @@ def get_private_key_size(private_key, passphrase=None):
     return privkey.key_size
 
 
-def get_public_key(key, passphrase=None, asObj=None):
+def get_public_key(key, passphrase=None):
     """
     Returns a PEM-encoded public key derived from some reference.
     The reference should be a public key, certificate, private key or CSR.
@@ -1617,10 +1580,7 @@ def get_public_key(key, passphrase=None, asObj=None):
     passphrase
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
-    # Deprecation checks vs the old x509 module
-    if asObj is not None:
-        salt.utils.versions.kwargs_warn_until(["asObj"], "Potassium")
-
+    # `asObj` was deprecated in 3007.0 and removed in 3009.0 (Potassium).
     try:
         return x509util.to_pem(x509util.load_pubkey(key)).decode()
     except (CommandExecutionError, SaltInvocationError):
@@ -1697,25 +1657,26 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Don't immediately break for the long form of name attributes
+    # Long-form name-attribute and extension aliases (e.g. ``commonName``
+    # for ``CN``, ``X509v3 Basic Constraints`` for ``basicConstraints``)
+    # were accepted with a deprecation warning through 3008.x and removed
+    # in 3009.0 (Potassium). Signing policies must use short names.
     for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {name}",
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form name "
+                    f"attribute `{long_name}` which was removed in 3009.0."
+                    f" Use the short name `{name}` instead."
                 )
-                policy[name] = policy.pop(long_name)
-
-    # Don't immediately break for the long form of extensions
     for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
         for long_name in long_names:
             if long_name in policy:
-                salt.utils.versions.warn_until(
-                    3009,
-                    f"Found {long_name} in {signing_policy}. Please migrate to the short name: {extname}",
+                raise CommandExecutionError(
+                    f"{signing_policy} contains the long-form extension "
+                    f"`{long_name}` which was removed in 3009.0. Use the "
+                    f"short name `{extname}` instead."
                 )
-                policy[extname] = policy.pop(long_name)
     return policy
 
 
