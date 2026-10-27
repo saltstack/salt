@@ -10,7 +10,6 @@ import re
 import shutil
 import signal
 import stat
-import subprocess
 import sys
 import threading
 import time
@@ -1260,8 +1259,6 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
     # syndic's master listens on another address. The syndic's config goes
     # in its master's master.d, so the master picks these up too.
     interface = "127.0.0.2"
-    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
-        subprocess.check_output(["ifconfig", "lo0", "alias", interface, "up"])
     publish_port = salt_syndic_master_factory.config["publish_port"]
     config_defaults = {
         "transport": salt_syndic_master_factory.config["transport"],

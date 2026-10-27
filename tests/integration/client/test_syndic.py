@@ -1,5 +1,8 @@
+import subprocess
+
 import pytest
 
+import salt.utils.platform
 from tests.support.case import SyndicCase
 
 
@@ -8,6 +11,18 @@ def salt_syndic(salt_syndic_master_factory, salt_syndic_factory):
     """
     The master of masters and the syndic, which aren't started by default
     """
+    # The syndic's master listens on 127.0.0.2, which macOS and FreeBSD don't
+    # have by default
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(
+            [
+                "ifconfig",
+                "lo0",
+                "alias",
+                salt_syndic_factory.config["interface"],
+                "up",
+            ]
+        )
     with salt_syndic_master_factory.started(), salt_syndic_factory.started():
         yield salt_syndic_factory
 
