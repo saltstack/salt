@@ -40,10 +40,10 @@ TASK_ACTION_SEND_EMAIL = 6
 TASK_ACTION_SHOW_MESSAGE = 7
 
 # TASK_COMPATIBILITY
-TASK_COMPATIBILITY_AT = 0
-TASK_COMPATIBILITY_V1 = 1
-TASK_COMPATIBILITY_V2 = 2
-TASK_COMPATIBILITY_V3 = 3
+TASK_COMPATIBILITY_AT = 2
+TASK_COMPATIBILITY_V1 = 2
+TASK_COMPATIBILITY_V2 = 3
+TASK_COMPATIBILITY_V2_1 = 4
 
 # TASK_CREATION
 TASK_VALIDATE_ONLY = 0x1
@@ -582,12 +582,11 @@ def create_task(
             the task is compatible with. Corresponds to the ``Configure for``
             dropdown in the Task Scheduler GUI. Valid values are:
 
-            - 0: AT command compatibility (not in gui)
-            - 1: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
-              Windows 2000``)
-            - 2: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
+            - 2: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
+              Windows 2000``; also AT command compatibility)
+            - 3: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
               later)
-            - 3: Task Scheduler 3.0 (``Windows 10`` or later)
+            - 4: Task Scheduler 2.1 (``Windows 10`` or later)
 
             Default is ``2``.
 
@@ -1099,12 +1098,11 @@ def edit_task(
             ``Configure for`` dropdown in the Task Scheduler GUI. Valid values
             are:
 
-            - 0: AT command compatibility
-            - 1: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
-              Windows 2000``)
-            - 2: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
+            - 2: Task Scheduler 1.0 (``Windows Server 2003, Windows XP, or
+              Windows 2000``; also AT command compatibility)
+            - 3: Task Scheduler 2.0 (``Windows Vista, Windows Server 2008`` or
               later)
-            - 3: Task Scheduler 3.0 (``Windows 10`` or later)
+            - 4: Task Scheduler 2.1 (``Windows 10`` or later)
 
             Default is ``None``.
 
@@ -1187,7 +1185,7 @@ def edit_task(
         if hidden is not None:
             task_definition.Settings.Hidden = hidden
         if compatibility is not None:
-            if compatibility in (0, 1, 2, 3):
+            if compatibility in (2, 3, 4):
                 task_definition.Settings.Compatibility = compatibility
             else:
                 return 'Invalid value for "compatibility"'

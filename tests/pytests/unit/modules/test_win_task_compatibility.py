@@ -14,10 +14,9 @@ from tests.support.mock import MagicMock, patch
 @pytest.mark.parametrize(
     "compatibility",
     [
-        0,  # AT command compatibility
-        1,  # Task Scheduler 1.0 (Server 2003/XP/2000)
-        2,  # Task Scheduler 2.0 (Vista/2008 and later)
-        3,  # Task Scheduler 3.0 (Windows 10 and later)
+        2,  # Task Scheduler 1.0 (Server 2003/XP/2000; also AT command compatibility)
+        3,  # Task Scheduler 2.0 (Vista/2008 and later)
+        4,  # Task Scheduler 2.1 (Windows 10 and later)
     ],
 )
 def test_edit_task_compatibility(compatibility):
@@ -55,10 +54,10 @@ def test_edit_task_compatibility_none_leaves_unset():
     assert mock_task_def.Settings.Compatibility is sentinel
 
 
-@pytest.mark.parametrize("compatibility", [-1, 4, "V1"])
+@pytest.mark.parametrize("compatibility", [-1, 0, 1, 5, "V1"])
 def test_edit_task_compatibility_invalid(compatibility):
     """
-    edit_task rejects compatibility values outside 0-3 and leaves the
+    edit_task rejects compatibility values outside 2-4 and leaves the
     task definition untouched.
     """
     mock_task_def = MagicMock()
@@ -100,9 +99,9 @@ def test_create_task_passes_compatibility_to_edit_task():
             "TestTask",
             user_name="System",
             force=True,
-            compatibility=1,
+            compatibility=4,
             action_type="Execute",
             cmd="cmd.exe",
         )
 
-    assert mock_edit.call_args.kwargs["compatibility"] == 1
+    assert mock_edit.call_args.kwargs["compatibility"] == 4
