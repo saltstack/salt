@@ -513,6 +513,13 @@ class TopologyRouter:
         #: is cheap and gives O(1) LRU semantics via
         #: ``move_to_end`` + size cap.
         self._forwarded_returns: "collections.OrderedDict" = collections.OrderedDict()
+        #: ``origin_cluster_id -> last origin_seq int`` tracked by
+        #: :meth:`ingest_summary` so a mesh-topology peer that
+        #: receives the same summary twice (via two paths) does
+        #: not re-write the registry nor re-forward.  Soft state;
+        #: resets on process restart (which is fine --- fresh
+        #: gossip populates it immediately).
+        self._last_origin_seq: dict = {}
 
     # ------------------------------------------------------------------
     # Overridable event hook
@@ -638,6 +645,22 @@ class TopologyRouter:
             )
             return [], False
 
+        # Jid dedup (mesh topology): if a breadcrumb already exists
+        # for this jid, a copy of this publish arrived earlier via a
+        # different mesh path.  First arrival wins; the second
+        # arrival is a silent no-op --- re-forwarding would fan the
+        # same job out again and overwriting the breadcrumb would
+        # race the return route through a non-origin peer.
+        jid = load.get("jid")
+        if jid is not None and self.lookup_breadcrumb(jid) is not None:
+            log.debug(
+                "topology: forward_publish dropping duplicate for "
+                "jid=%r (breadcrumb already present, path=%r)",
+                jid,
+                path,
+            )
+            return [], False
+
         # Authenticated-path append: receiver sticks its OWN id on.
         path.append(self.cluster_id)
         envelope["path"] = path
@@ -653,8 +676,8 @@ class TopologyRouter:
             envelope["destinations"] = sorted(dest_set)
         envelope["transit_match"] = bool(local_match)
 
-        # Breadcrumb before we hand off to send tasks.
-        jid = load.get("jid")
+        # Breadcrumb before we hand off to send tasks.  (``jid`` was
+        # already bound above for the dedup check.)
         timeout = load.get("timeout", 60)
         if jid is not None:
             try:
@@ -671,6 +694,15 @@ class TopologyRouter:
             if peer_id == self.cluster_id:
                 continue
             if link is inbound_link or peer_id == expected_peer:
+                continue
+            # Mesh dedup: do not forward back to any peer whose
+            # cluster_id already appears in the authenticated path.
+            # Without this guard, in a triangle A-B-C the publish
+            # from A arrives at B, and B's forward loop would
+            # include C --- even though A already sent a direct
+            # copy to C.  Mirrors the equivalent membership check
+            # in :meth:`ingest_summary`.
+            if peer_id in envelope["path"]:
                 continue
             if remaining is None:
                 links.append(link)
@@ -858,6 +890,29 @@ class TopologyRouter:
                 path,
             )
             return
+
+        # origin_seq dedup: if we've already ingested a summary from
+        # this origin with seq >= the incoming one, drop both the
+        # registry write AND the re-forward.  Without this guard,
+        # mesh topologies produce N copies of each summary (one per
+        # path through the graph) and every copy triggers a redundant
+        # registry write + another fan-out, amplifying wire traffic.
+        # First-arrival wins; strictly-newer summaries overwrite
+        # (standard gossip freshness, see ``origin_seq`` docstring on
+        # :class:`salt.topology.summary.ClusterSummary`).
+        origin_id = summary.cluster_id
+        incoming_seq = int(summary.origin_seq)
+        stored_seq = self._last_origin_seq.get(origin_id)
+        if stored_seq is not None and stored_seq >= incoming_seq:
+            log.debug(
+                "topology: ingest_summary dropping stale/duplicate "
+                "summary from origin=%r (stored_seq=%r, incoming_seq=%r)",
+                origin_id,
+                stored_seq,
+                incoming_seq,
+            )
+            return
+        self._last_origin_seq[origin_id] = incoming_seq
 
         # Write to registry.  We store the peer summary under the
         # origin cluster_id with a minimal PeerState-shaped dict ---
