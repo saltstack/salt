@@ -5323,6 +5323,12 @@ class ClearFuncs(TransportMethods):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
+        # Initialize key cache for client authentication checking
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(self.opts.get("client_acl", {}))
         # LTS default: sync ClearFuncs path preserved; async is opt-in via
         # ``master_async_mworker``. Restore the pre-PR ``async_methods``
         # tuple (only ``publish`` was async) and shadow the newly-added
