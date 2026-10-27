@@ -2515,6 +2515,8 @@ class AESFuncs(TransportMethods):
         self.key_cache = salt.cache.Cache(
             self.opts, driver=self.opts["keys.cache_driver"]
         )
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(self.opts.get("client_acl", {}))
         # LTS default: sync AESFuncs path preserved; async is opt-in via
         # ``master_async_mworker``. When the flag is off (default on
         # 3008.x) shadow every ``async def`` handler with its pre-PR
@@ -5642,8 +5644,92 @@ class ClearFuncs(TransportMethods):
                     {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
                 )
             return err
+
+        # Check if this is a client request (for client ACL enforcement)
+        is_client = False
+        username = auth_check.get("username")
+        if auth_type == "user" and username:
+            # Check if username is in client_keys cache (indicates client authentication)
+            try:
+                client_key = self.key_cache.fetch("client_keys", username)
+                if client_key:
+                    is_client = True
+            except Exception:  # pylint: disable=broad-except
+                # If we can't check, assume not a client
+                pass
+
+        # If this is a client, check client ACL for minion targeting and module execution
+        if is_client:
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist and username in client_acl_blacklist:
+                blacklist_config = client_acl_blacklist[username]
+
+                # Check if function is blacklisted
+                if (
+                    "modules" in blacklist_config
+                    or "minion_functions" in blacklist_config
+                ):
+                    blacklist_modules = blacklist_config.get(
+                        "modules", blacklist_config.get("minion_functions", [])
+                    )
+                    if (
+                        blacklist_modules
+                        and salt.utils.stringutils.check_whitelist_blacklist(
+                            clear_load["fun"], blacklist=blacklist_modules
+                        )
+                    ):
+                        err = {
+                            "error": {
+                                "name": "ClientAuthorizationError",
+                                "message": (
+                                    f'Client "{username}" is blacklisted from executing '
+                                    f'function "{clear_load["fun"]}".'
+                                ),
+                            }
+                        }
+                        if "jid" in clear_load:
+                            self.event.fire_event(
+                                {**clear_load, **err},
+                                tagify([clear_load["jid"], "error"], "job"),
+                            )
+                        return err
+
+            # Use the ClientACL helper to check publish permissions
+            acl_result = self.client_acl.client_can_publish(
+                username, minions, clear_load["fun"]
+            )
+
+            if not acl_result["allowed"]:
+                # Client ACL denied the request
+                log.warning(
+                    'Client "%s" denied: %s',
+                    username,
+                    acl_result["error"]["message"],
+                )
+                err = {"error": acl_result["error"]}
+                if "jid" in clear_load:
+                    self.event.fire_event(
+                        {**clear_load, **err},
+                        tagify([clear_load["jid"], "error"], "job"),
+                    )
+                return err
+
+            # Client ACL passed - set user in clear_load for logging
+            clear_load["user"] = username
+            log.info(
+                'Client "%s" authorized to execute "%s" on target "%s" (%d minions)',
+                username,
+                clear_load["fun"],
+                clear_load["tgt"],
+                len(minions),
+            )
+
         # All Token, Eauth, and non-root users must pass the authorization check
-        if auth_type != "user" or (auth_type == "user" and auth_list):
+        # (Skip this check for clients since they use client ACL above)
+        if not is_client and (
+            auth_type != "user" or (auth_type == "user" and auth_list)
+        ):
             # Authorize the request
             authorized = self.ckminions.auth_check(
                 auth_list,
