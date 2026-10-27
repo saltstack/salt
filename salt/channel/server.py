@@ -3139,18 +3139,25 @@ class MasterPubServerChannel:
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
+        # Topology pre_fork hook MUST run BEFORE ``process_manager.add_process``.
+        # ``ProcessManager.add_process`` calls ``process.start()`` synchronously,
+        # so forking the EventPublisher first would race the parent's
+        # ``_init_index_file`` call (both processes init the same mmap backing
+        # file, producing a partially-written file whose size does not match
+        # ``size*slot_size`` --- ``open_writer`` then fails with
+        # ``RuntimeError("failed to open topology breadcrumbs writer ... (did
+        # pre_create run?)")``).  Reserving the ``topology_link_port`` socket
+        # and finishing ``pre_create`` for the breadcrumb/registry MmapCaches
+        # in the parent before any fork guarantees the child inherits a fully
+        # materialised set of files.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            link_manager.pre_fork(self.opts, process_manager)
         if hasattr(self.transport, "publish_daemon"):
             proc_kwargs = kwargs.pop("kwargs", kwargs)
             process_manager.add_process(
                 self._publish_daemon, kwargs=proc_kwargs, name="EventPublisher"
             )
-        # Topology pre_fork hook.  Reserve topology_link_port in the
-        # parent process so the forked publish daemon inherits a
-        # listening fd, and pre-create breadcrumb/registry MmapCaches so
-        # MWorkers that fork later can open readers without racing.
-        if self.opts.get("topology_enabled"):
-            link_manager = importlib.import_module("salt.topology.link_manager")
-            link_manager.pre_fork(self.opts, process_manager)
 
     def _publish_daemon(self, **kwargs):
         """Clean implementation: separate local IPC from cluster peer communication."""

@@ -62,6 +62,24 @@ float}``.  ``link_cluster_id`` names the peer the publish arrived
 from (where the return is routed back to); the link object
 itself is looked up by cluster_id in
 :func:`salt.topology.link_manager.get_link`.
+
+Signal-safety invariant
+-----------------------
+The breadcrumbs writer holds a per-process :mod:`fcntl` flock on
+the ``.lock`` sidecar across every ``put`` / ``delete`` /
+``cleanup`` call.  Spawning a subprocess (``subprocess.Popen``,
+:func:`os.fork`, :func:`os.spawnv`, etc.) while that lock is held
+would duplicate the lock fd into the child, keeping the lock
+alive after the writer process has released it --- every
+subsequent breadcrumb write would then block indefinitely until
+the child exits.
+:func:`salt.utils.mmap_cache.MmapCache._close_mmaps_and_fds`
+preserves the lock fd across mmap rebuilds so the writer's own
+release of the flock is deterministic; the counterpart
+requirement on callers is to never allow fork/exec paths to
+inherit the fd.  In practice: do not call out to ``cmd.run`` or
+subprocess APIs from inside a breadcrumb write path.  The
+publish-daemon writer path is pure in-process code by design.
 """
 
 import logging
@@ -359,6 +377,7 @@ def cleanup(cache):
 
     return removed
 
+
 def jids_for_link(cache, link_cluster_id):
     """
     Return the sorted list of non-expired jids whose breadcrumbs
@@ -384,4 +403,3 @@ def jids_for_link(cache, link_cluster_id):
         live.append(key if isinstance(key, str) else key.decode("utf-8", "replace"))
     live.sort()
     return live
-

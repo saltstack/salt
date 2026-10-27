@@ -792,20 +792,17 @@ def test_two_master_handshake_e2e(two_cluster_fixture, clean_state):
     west.accept_peer(east)
 
     # Build opts pointing at west's pki_dir so handle_master_auth
-    # sees the accepted file west just wrote.
-    west_master = west.masters[0]
-    west_opts = {
-        "pki_dir": west_master.config["pki_dir"],
-        "cluster_id": "west",
-        "interface": west_master.config.get("interface", "127.0.0.1"),
-        "topology_link_port": west_master.config["topology_link_port"],
-        "topology_enabled": True,
-        "topology_config_file": west_master.config["topology_config_file"],
-        "topology_registry_cache_size": 512,
-        "topology_registry_cache_key_size": 64,
-        "topology_breadcrumb_cache_size": 1024,
-        "topology_breadcrumb_cache_key_size": 64,
-    }
+    # sees the accepted file west just wrote.  Cache-size opts MUST
+    # mirror the running master's config so the writer we open here
+    # matches the MmapCache files the salt-master's own ``pre_fork``
+    # already materialised.  A size mismatch between pre-created
+    # files and the writer makes ``open_writer`` raise
+    # ``RuntimeError("failed to open topology breadcrumbs writer at
+    # ... (did pre_create run?)")`` --- the test harness equivalent
+    # of the production bug fixed in
+    # ``MasterPubServerChannel.pre_fork``.
+    west_opts = west.master_opts(peer_index=0)
+    west_opts["cluster_id"] = "west"
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(link_manager.start(west_opts, loop))

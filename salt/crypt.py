@@ -1676,11 +1676,17 @@ class AsyncAuth:
                     self._finger_fail(self.opts["master_finger"], m_pub_fn)
 
         auth["publish_port"] = payload["publish_port"]
-        if self.opts.get("topology_enabled") and self.opts.get(
-            "topology_push_cluster_grain"
-        ):
-            if "cluster_id" in payload:
-                auth["cluster_id"] = payload["cluster_id"]
+        # Lift ``cluster_id`` from the auth response whenever the master
+        # publishes it.  The master's ``_topology_cluster_id_for_auth``
+        # already gates on ``topology_enabled`` + ``topology_push_cluster_grain``
+        # (both master-side opts).  Gating a second time on the MINION's
+        # opts is wrong: ``topology_enabled`` and ``topology_push_cluster_grain``
+        # are master-side knobs with no minion-side config schema entries,
+        # so they are always falsy on a minion --- the grain never
+        # arrives.  Downstream ``_store_master_cluster_id`` is additive,
+        # so lifting an absent field is a no-op.
+        if "cluster_id" in payload:
+            auth["cluster_id"] = payload["cluster_id"]
         return auth
 
     def get_keys(self):

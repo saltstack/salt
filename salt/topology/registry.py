@@ -55,6 +55,22 @@ cannot collide with any ``cluster_id`` (which validates as
 :data:`salt.config.topology.CLUSTER_ID_RE`).  The same regex is
 re-validated at Raft apply time on peer-supplied cluster_ids so
 a hostile peer cannot overwrite reserved slots.
+
+Signal-safety invariant
+-----------------------
+Writers MUST NOT spawn subprocesses that inherit the registry
+MmapCache's lock fd while the cross-process flock is held.  The
+child process would own a duplicate of the fd and keep the lock
+alive after the parent releases it (fd-inheritance semantics of
+``fork(2)`` + ``flock(2)``), leaving every subsequent writer
+blocked on an orphaned lock until the child exits.
+:func:`salt.utils.mmap_cache.MmapCache._close_mmaps_and_fds`
+explicitly preserves the lock fd across mmap rebuilds for exactly
+this reason --- the lock must be released by the process that
+acquired it, by *that* fd, in deterministic order.  Hold the
+flock around pure in-process work only; defer any ``subprocess``,
+``Popen``, or :func:`os.fork` call to after the write completes
+and the lock is released.
 """
 
 import logging

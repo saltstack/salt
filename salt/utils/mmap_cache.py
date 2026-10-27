@@ -1,3 +1,43 @@
+"""
+Shared, mmap-backed hash-table primitive used by:
+
+* :mod:`salt.utils.resource_registry` --- minion-level resource cache.
+* :mod:`salt.topology.registry` --- topology identity + accepted peers.
+* :mod:`salt.topology.breadcrumbs` --- jid -> inbound-link map for
+  return routing.
+* :mod:`salt.cache.mmap_cache` --- generic cache backend.
+
+Writes are coordinated by a per-process :mod:`fcntl` flock held on
+the ``.lock`` sidecar file for the duration of each mutation.  The
+mmap heap is extended with ``atomic_rebuild`` under the same lock
+when fragmentation crosses a tunable ratio.
+
+Signal-safety invariant
+-----------------------
+Writers MUST NOT spawn subprocesses (``subprocess.Popen``,
+:func:`os.fork`, :func:`os.spawnv`, ``shutil.which``'s ``os.popen``
+fallback, etc.) while the cross-process flock is held.  POSIX
+``flock(2)`` locks are a property of the open file description
+inherited across ``fork(2)``: a forked child shares the parent's
+lock, and the lock remains held until *every* reference across all
+processes is released or the file description is closed.  A write
+path that fork+execs a short-lived subprocess therefore leaves the
+flock alive in the child, blocking every subsequent writer in the
+cache ecosystem until the child exits.
+
+:meth:`MmapCache._close_mmaps_and_fds` preserves the lock fd
+explicitly across the ``mmap`` rebuild path (the mmap is closed
+and reopened, the backing index/heap fds are rotated, but the
+lock fd lives through the rebuild) so the writer that acquired
+the flock is the writer that releases it, in deterministic order.
+The counterpart requirement on all callers of
+:meth:`MmapCache.put`, :meth:`MmapCache.delete`,
+:meth:`MmapCache.atomic_rebuild`, and any helper that holds the
+flock, is to confine the critical section to pure in-process
+Python code.  If a subprocess is unavoidable, drop the lock
+first, run the subprocess, and re-acquire.
+"""
+
 import contextlib
 import errno
 import logging

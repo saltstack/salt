@@ -17,9 +17,13 @@ Exercises the thin reader/writer on real on-disk PKI directories:
 
 Plus the minion auth-response hook in
 :meth:`AsyncAuth.handle_signin_response`: when the master's response
-carries ``cluster_id`` and the minion has ``topology_enabled`` +
-``topology_push_cluster_grain``, the resulting ``auth`` dict exposes
-``cluster_id``.  When either opt is False, the field is absent.
+carries ``cluster_id``, the resulting ``auth`` dict exposes
+``cluster_id``.  Gating lives on the master side
+(:func:`salt.master._topology_cluster_id_for_auth`); the minion does
+not re-gate --- ``topology_enabled`` and ``topology_push_cluster_grain``
+are master-side config keys with no minion-side schema entries, so
+re-gating on them makes the grain unreachable in every real
+deployment.
 """
 
 import os
@@ -348,26 +352,38 @@ def test_auth_response_includes_cluster_id_when_both_opts_true(pki_dir):
     assert auth.get("cluster_id") == "east"
 
 
-def test_auth_response_omits_cluster_id_when_topology_disabled(pki_dir):
+def test_auth_response_includes_cluster_id_regardless_of_minion_opts(pki_dir):
     """
-    With topology_enabled=False, cluster_id is NOT propagated even
-    when the master's response carries it.
+    ``topology_enabled`` and ``topology_push_cluster_grain`` are
+    master-side knobs with no minion-side config schema entries, so
+    neither flag is defined on a minion opts dict in production.  The
+    minion must therefore accept ``cluster_id`` from any auth response
+    that carries it --- gating twice (master emits, minion accepts)
+    would make the grain unreachable in every real deployment because
+    both of the keys this test varies default to falsy on the minion.
+    See the matching master-side gate in
+    :func:`salt.master._topology_cluster_id_for_auth`; that is where
+    the policy decision lives.
     """
+    # Minion opts shaped the way a real minion would see them: both
+    # keys absent / falsy, mimicking production.  cluster_id lifts
+    # through regardless.
     opts = _build_minion_opts(False, True, pki_dir)
     auth = _invoke_hook(opts, cluster_id_in_payload="east")
     assert auth is not False
-    assert "cluster_id" not in auth
+    assert auth.get("cluster_id") == "east"
 
 
-def test_auth_response_omits_cluster_id_when_push_grain_disabled(pki_dir):
+def test_auth_response_includes_cluster_id_when_push_grain_absent(pki_dir):
     """
-    With topology_push_cluster_grain=False, cluster_id is NOT
-    propagated even when topology is enabled.
+    Same contract from the other side: minion accepts ``cluster_id``
+    even when ``topology_push_cluster_grain`` is falsy on the minion
+    (it is always falsy; this is a master-side knob).
     """
     opts = _build_minion_opts(True, False, pki_dir)
     auth = _invoke_hook(opts, cluster_id_in_payload="east")
     assert auth is not False
-    assert "cluster_id" not in auth
+    assert auth.get("cluster_id") == "east"
 
 
 def test_auth_response_omits_cluster_id_when_payload_lacks_it(pki_dir):

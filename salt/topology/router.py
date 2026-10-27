@@ -555,7 +555,14 @@ class TopologyRouter:
             return [], False
 
         tgt = load.get("tgt")
-        destinations = extract_cluster_scope(tgt)
+        # Nodegroups may embed ``C@`` tokens that scope expansion must
+        # see --- without pre-expansion, the router would read the raw
+        # ``N@<name>`` reference, extract no cluster scope, and default
+        # to flood on a target that was actually single-cluster-scoped.
+        # RFC "Expand nodegroups before extract_cluster_scope" follow-up.
+        destinations = extract_cluster_scope(
+            tgt, nodegroups=self.opts.get("nodegroups")
+        )
         if destinations is None:
             local_match = True
             dest_list = None
