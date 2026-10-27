@@ -3,6 +3,7 @@
     :codeauthor: Gareth J. Greenaway
 """
 
+import platform
 import subprocess
 import time
 
@@ -21,6 +22,14 @@ pytestmark = [
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
     pytest.mark.skip_if_binaries_missing("brew"),
+    # Homebrew no longer builds bottles for macOS Intel (x86_64), so installing
+    # even a small formula there pulls in source builds of its dependencies
+    # (e.g. openssl@4). Those exceed the test timeout and leave the
+    # ``brew update`` lock held, failing every later brew test.
+    pytest.mark.skipif(
+        platform.machine() == "x86_64",
+        reason="Homebrew no longer provides bottles for macOS Intel (x86_64)",
+    ),
 ]
 
 

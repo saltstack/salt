@@ -3358,3 +3358,123 @@ async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
         # code path; the .destroy() call would try to tear down channels
         # we never created. A best-effort close is enough.
         pass
+
+
+def test_proxy_minion_destroy_tears_down_subproxies(minion_opts):
+    """
+    A deltaproxy holds its sub-proxies in ``deltaproxy_objs`` and each of them
+    owns its own ``req_channel``, schedule, beacons and periodic callbacks.
+    Nothing tore those down, so every stop or restart abandoned them.
+    """
+    minion_opts["metaproxy"] = "deltaproxy"
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    sub1 = MagicMock()
+    sub2 = MagicMock()
+    proxy.deltaproxy_objs = {"minion1": sub1, "minion2": sub2}
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert sub1.destroy.called
+    assert sub2.destroy.called
+    # The control proxy itself is still torn down afterwards.
+    assert parent_destroy.called
+
+
+def test_proxy_minion_destroy_survives_a_bad_subproxy(minion_opts):
+    """
+    One sub-proxy failing to tear down must not stop the others, nor the
+    control proxy's own teardown.
+    """
+    minion_opts["metaproxy"] = "deltaproxy"
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    bad = MagicMock()
+    bad.destroy.side_effect = RuntimeError("device gone")
+    good = MagicMock()
+    proxy.deltaproxy_objs = {"minion1": bad, "minion2": good}
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert good.destroy.called
+    assert parent_destroy.called
+
+
+def test_proxy_minion_destroy_without_subproxies(minion_opts):
+    """
+    Inverse: a single (non-delta) proxy has no ``deltaproxy_objs`` at all and
+    must still tear itself down normally.
+    """
+    proxy = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
+    proxy.opts = minion_opts
+
+    with patch.object(salt.minion.Minion, "destroy") as parent_destroy:
+        proxy.destroy()
+
+    assert parent_destroy.called
+
+
+def test_terminate_subprocess_list_tolerates_thread_entries():
+    """
+    With ``multiprocessing: False`` the entries in ``SubprocessList`` are
+    ``threading.Thread`` objects, which have no ``pid`` and cannot be
+    signalled. Reading ``.pid`` raised ``AttributeError``, which is not an
+    ``OSError``, so it escaped this helper and aborted the graceful shutdown
+    before ``destroy()`` ever ran.
+    """
+    import threading
+
+    started = threading.Event()
+    release = threading.Event()
+
+    def _worker():
+        started.set()
+        release.wait(5)
+
+    thread = threading.Thread(target=_worker)
+    thread.start()
+    started.wait(5)
+
+    class _SubprocessList:
+        processes = [thread]
+
+    try:
+        # Must not raise. Before the fix this blew up with AttributeError.
+        salt.minion._terminate_subprocess_list(
+            _SubprocessList(), signal.SIGTERM, grace_seconds=0.1
+        )
+    finally:
+        release.set()
+        thread.join(5)
+
+
+def test_terminate_subprocess_list_still_signals_real_processes():
+    """
+    Inverse of the above: an entry that really is a process must still be
+    signalled, so skipping the pid-less thread entries cannot turn the whole
+    helper into a no-op.
+    """
+
+    class _FakeProc:
+        pid = 4242
+
+        def is_alive(self):
+            return True
+
+        def join(self, timeout=None):
+            return None
+
+    class _SubprocessList:
+        processes = [_FakeProc()]
+
+    with patch("os.kill") as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            _SubprocessList(), signal.SIGTERM, grace_seconds=0.1
+        )
+
+    assert kill_mock.called
+    assert kill_mock.call_args[0][0] == 4242
