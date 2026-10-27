@@ -350,11 +350,17 @@ class Key:
     STATE_MAP = {"accepted": ACC, "rejected": REJ, "pending": PEND, "denied": DEN}
     DIR_MAP = {v: k for k, v in STATE_MAP.items()}
 
+    # Short-form ``act`` strings fired on ``salt/key`` events.  Peer
+    # masters in a cluster (``salt.master.EventMonitor._PEER_KEY_STATE``)
+    # and the auto-accept auth path both key off the short form, so
+    # ``change_state`` must emit short-form values here, not the
+    # long-form ``DIR_MAP`` values that are stored as the local cache
+    # ``state`` field.  See issue #70401.
     ACT_MAP = {
         ACC: "accept",
         REJ: "reject",
         PEND: "pend",
-        DEN: "denied",
+        DEN: "deny",
     }
 
     def __init__(self, opts, io_loop=None):
@@ -778,7 +784,7 @@ class Key:
                     key["state"] = self.DIR_MAP[to_state]
                     self.cache.store("keys", keyname, key)
 
-                eload = {"result": True, "act": self.DIR_MAP[to_state], "id": keyname}
+                eload = {"result": True, "act": self.ACT_MAP[to_state], "id": keyname}
                 # Cluster masters: include the public key body so peer
                 # masters can populate their local ``pki_dir/<bucket>/<id>``
                 # without a shared filesystem.  The bytes are only useful
