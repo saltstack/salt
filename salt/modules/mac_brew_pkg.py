@@ -245,7 +245,7 @@ def homebrew_prefix(name=None):
     name
         The name of the formula to get its prefix.
 
-        .. versionadded:: 3008.6
+        .. versionadded:: 3006.7
 
     Returns ``Str`` with the location of the given formula.
 
