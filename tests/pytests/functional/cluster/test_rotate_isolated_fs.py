@@ -10,6 +10,7 @@ the new key encrypted per-peer in the event payload so receivers write it to
 their own ``.aes`` before reloading.
 """
 
+import asyncio
 import ctypes
 import hashlib
 import multiprocessing
@@ -22,8 +23,10 @@ import pytest
 
 import salt.crypt
 import salt.master
+import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
+from tests.support.mock import MagicMock, patch
 
 # The rotation protocol uses the OAEP-SHA1/PKCS1v15-SHA1 defaults.  FIPS
 # platforms reject SHA1, so skip until the cluster code negotiates a FIPS-safe
@@ -209,6 +212,152 @@ def test_rotate_peer_payload_skips_missing_peer_pubs(isolated_cluster, caplog):
         "peer pub key" in record.message and "m3.pub" in record.message
         for record in caplog.records
     )
+
+
+def test_handle_event_rotate_tag_installs_new_key(isolated_cluster):
+    """
+    Guards the ``EventMonitor.handle_event`` dispatch wiring: a received
+    ``rotate_cluster_aes_key`` event must flow through
+    ``_install_rotated_cluster_aes`` AND trigger the local reload via
+    ``SMaster.rotate_cluster_secret(owner=False)``.
+
+    Issue #70543 is primarily about the payload shape, but the dispatcher
+    is the single-point-of-failure that routes the payload to the
+    installer -- a future refactor that drops either call without
+    updating the other will silently reintroduce the split-brain this
+    PR fixes.
+    """
+    m1 = isolated_cluster["m1"]
+    _install_owner_secrets(m1)
+
+    # Owner builds a real payload to feed into the dispatcher so the
+    # test exercises the actual ciphertext shape the receiver sees.
+    event = _CaptureEvent()
+    salt.master.SMaster.rotate_cluster_secret(m1, event=event, owner=True)
+    _, payload = event.events[0]
+    payload["__peer_id"] = "m1"
+
+    m2 = isolated_cluster["m2"]
+    monitor = salt.master.EventMonitor(m2, ipc_publisher=MagicMock())
+    package = salt.utils.event.SaltEvent.pack("rotate_cluster_aes_key", payload)
+
+    install_calls = []
+    reload_calls = []
+    original_install = salt.master.EventMonitor._install_rotated_cluster_aes
+
+    def spy_install(self, data):
+        install_calls.append(dict(data))
+        return original_install(self, data)
+
+    def spy_rotate(opts, owner=False, publisher=None, **_kwargs):
+        reload_calls.append({"id": opts["id"], "owner": owner})
+
+    with patch.object(
+        salt.master.EventMonitor,
+        "_install_rotated_cluster_aes",
+        spy_install,
+    ), patch.object(
+        salt.master.SMaster, "rotate_cluster_secret", staticmethod(spy_rotate)
+    ):
+        asyncio.run(monitor.handle_event(package))
+
+    assert (
+        len(install_calls) == 1
+    ), "handle_event must call _install_rotated_cluster_aes"
+    assert install_calls[0]["rotate_cluster_aes_key"] is True
+    assert "peers" in install_calls[0], "dispatcher must pass through the peers payload"
+    assert reload_calls == [
+        {"id": "m2", "owner": False}
+    ], "handle_event must call rotate_cluster_secret with owner=False after install"
+    # Receiver's local .aes should now match the new owner key.
+    post_m2 = _aes_hash(m2)
+    post_m1 = _aes_hash(m1)
+    assert post_m2 == post_m1
+
+
+def test_handle_event_rotate_tag_requires_peer_id(isolated_cluster):
+    """
+    The dispatcher must guard on ``__peer_id`` -- a locally-fired event
+    (no cluster peer attribution) must NOT trigger an install, otherwise
+    a stray local event bus message would rewrite the local ``.aes``.
+    """
+    m2 = isolated_cluster["m2"]
+    monitor = salt.master.EventMonitor(m2, ipc_publisher=MagicMock())
+
+    # Payload with NO __peer_id.
+    payload = {"rotate_cluster_aes_key": True, "peers": {"m2": b"garbage"}}
+    package = salt.utils.event.SaltEvent.pack("rotate_cluster_aes_key", payload)
+
+    install_calls = []
+
+    def spy_install(self, data):
+        install_calls.append(data)
+
+    with patch.object(
+        salt.master.EventMonitor,
+        "_install_rotated_cluster_aes",
+        spy_install,
+    ), patch.object(
+        salt.master.SMaster, "rotate_cluster_secret", staticmethod(lambda *a, **k: None)
+    ):
+        asyncio.run(monitor.handle_event(package))
+
+    assert install_calls == [], (
+        "handle_event must ignore rotate_cluster_aes_key events that lack a "
+        "__peer_id attribution"
+    )
+
+
+def test_multiple_independent_rotators_still_converge(isolated_cluster):
+    """
+    Reporter noted (secondary observation on #70543) that each master
+    has its own private ``cachedir/.dfn`` under
+    ``cluster_isolated_filesystem: True``, so two masters can each
+    independently decide to rotate on their own schedule.
+
+    This test drives TWO successive rotations initiated from different
+    masters (m1 then m2) and verifies the cluster still converges to a
+    single AES key after each rotation.  A permanent split would be the
+    #70543 symptom; this test asserts the fix survives the
+    independent-rotator case the reporter observed in production.
+    """
+    seed = _aes_hash(isolated_cluster["m1"])
+
+    # Rotation #1: owner is m1.
+    _install_owner_secrets(isolated_cluster["m1"])
+    event = _CaptureEvent()
+    salt.master.SMaster.rotate_cluster_secret(
+        isolated_cluster["m1"], event=event, owner=True
+    )
+    _, payload = event.events[0]
+    for mid in ("m2", "m3"):
+        monitor = _FakeMonitor(isolated_cluster[mid])
+        salt.master.EventMonitor._install_rotated_cluster_aes(monitor, payload)
+    after_first = {mid: _aes_hash(opts) for mid, opts in isolated_cluster.items()}
+    assert len(set(after_first.values())) == 1
+    assert after_first["m1"] != seed
+
+    # Clear ``SMaster.secrets`` so the next owner's ``rotate_cluster_secret``
+    # populates its own view (mirrors a fresh master process picking up the
+    # file after a restart).  Then rotate from m2.
+    salt.master.SMaster.secrets.pop("cluster_aes", None)
+    _install_owner_secrets(isolated_cluster["m2"])
+    event = _CaptureEvent()
+    salt.master.SMaster.rotate_cluster_secret(
+        isolated_cluster["m2"], event=event, owner=True
+    )
+    _, payload = event.events[0]
+    assert set(payload["peers"].keys()) == {"m1", "m3"}
+    for mid in ("m1", "m3"):
+        monitor = _FakeMonitor(isolated_cluster[mid])
+        salt.master.EventMonitor._install_rotated_cluster_aes(monitor, payload)
+    after_second = {mid: _aes_hash(opts) for mid, opts in isolated_cluster.items()}
+    assert (
+        len(set(after_second.values())) == 1
+    ), f"independent rotator from m2 left the cluster split: {after_second}"
+    assert (
+        after_second["m1"] != after_first["m1"]
+    ), "second rotation should advance the key"
 
 
 def test_handle_key_rotate_removes_publish_session_dropfile(
