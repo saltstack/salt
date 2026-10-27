@@ -72,9 +72,9 @@ def client(io_loop, config):
         client.close()
 
 
-async def test_message_client_reconnect(config, client, server):
+async def test_publish_client_reconnect(config, client, server):
     """
-    Verify that the tcp MessageClient class re-sets it's unpacker after a
+    Verify that the tcp PublishClient class re-sets its unpacker after a
     stream disconnect.
     """
 
@@ -106,7 +106,7 @@ async def test_message_client_reconnect(config, client, server):
     # log.info("sleep")
     # await asyncio.sleep(1)
 
-    # The message client has unpacked one msg and there is a partial msg left in
+    # The publish client has unpacked one msg and there is a partial msg left in
     # the unpacker. Closing the stream now leaves the unpacker in a bad state
     # since the rest of the partil message will never be received.
     server.disconnect = True
