@@ -2647,11 +2647,11 @@ class MasterPubServerChannel:
             iter_root_chunks,
         )
 
-        pusher = self.pusher(peer_id)
         crypticle = salt.crypt.Crypticle(
             self.opts,
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
+        pusher = self.pusher(peer_id)
 
         async def send_channel(channel, chunk_iter):
             chunks = list(chunk_iter)
@@ -2713,6 +2713,8 @@ class MasterPubServerChannel:
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("state-sync session %s aborted unexpectedly", session_id)
+        finally:
+            pusher.close()
 
     def _apply_state_sync_chunk(self, chunk):
         """
@@ -3883,7 +3885,11 @@ class MasterPubServerChannel:
                         "payload": tosign,
                     },
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
                 if state_sync_session_id is not None:
                     asyncio.get_event_loop().create_task(
                         self._send_state_sync_chunks(
@@ -4015,7 +4021,11 @@ class MasterPubServerChannel:
                     salt.utils.event.tagify("discover-reply", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
             elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
                 # Sibling masters key ``data["peers"]`` by the bare names
