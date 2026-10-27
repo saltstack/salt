@@ -1495,6 +1495,12 @@ def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_b
         "interface": interface,
     }
     channel.transport = MagicMock()
+    # Skip the ``if hasattr(self.transport, "publisher"):`` branch in
+    # ``_publish_daemon`` -- it calls ``salt.utils.asynchronous.aioloop``
+    # on ``self.io_loop``, which rejects a bare MagicMock.  This test only
+    # exercises the cluster pool-puller bind path, not the local IPC
+    # publisher setup.
+    del channel.transport.publisher
 
     # A MagicMock io_loop makes ``start()`` return immediately, so the daemon
     # runs to its ``finally: self.close()`` without driving tornado.
