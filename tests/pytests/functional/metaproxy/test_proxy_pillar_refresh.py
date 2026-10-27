@@ -174,6 +174,7 @@ def _run_pillar_refresh(minion, new_pillar=None, compile_error=False):
     else:
         compiler.compile_pillar.return_value = _resolved_future(new_pillar)
     compiler.destroy.return_value = None
+    compiler.aclose.return_value = _resolved_future(None)
 
     event_ctx = MagicMock()
     event_obj = MagicMock()
