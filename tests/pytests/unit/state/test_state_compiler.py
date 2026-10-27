@@ -1115,6 +1115,71 @@ def test_verify_onlyif_cmd_opts_exclude(minion_opts):
             )
 
 
+def test_verify_onlyif_shell_excluded_for_user_state(minion_opts):
+    """
+    Regression test for #59420: user.present's `shell` (login shell) must
+    never be forwarded as the shell to run onlyif/unless check commands in,
+    even without an explicit cmd_opts_exclude.
+    """
+    low_data = {
+        "onlyif": "somecommand",
+        "name": "bob",
+        "shell": "/bin/zsh",
+        "state": "user",
+        "__id__": "this is just a test",
+        "fun": "present",
+        "__env__": "base",
+        "__sls__": "sometest",
+        "order": 10000,
+    }
+
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        mock = MagicMock()
+        with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+            state_obj._run_check(low_data)
+            mock.assert_called_once_with(
+                "somecommand",
+                ignore_retcode=True,
+                python_shell=True,
+                cwd=None,
+                root=None,
+                runas=None,
+                env=None,
+                prepend_path=None,
+                umask=None,
+                timeout=None,
+                success_retcodes=None,
+            )
+
+
+def test_verify_onlyif_shell_not_excluded_for_cmd_state(minion_opts):
+    """
+    Companion to test_verify_onlyif_shell_excluded_for_user_state: cmd.run's
+    own `shell` argument must still flow into the onlyif/unless check, since
+    there it legitimately describes the check's execution environment.
+    """
+    low_data = {
+        "onlyif": "somecommand",
+        "name": "echo something",
+        "shell": "/bin/dash",
+        "state": "cmd",
+        "__id__": "this is just a test",
+        "fun": "run",
+        "__env__": "base",
+        "__sls__": "sometest",
+        "order": 10000,
+    }
+
+    with patch("salt.state.State._gather_pillar"):
+        state_obj = salt.state.State(minion_opts)
+        mock = MagicMock()
+        with patch.dict(state_obj.functions, {"cmd.retcode": mock}):
+            state_obj._run_check(low_data)
+            _, kwargs = mock.call_args
+            assert kwargs.get("shell") == "/bin/dash"
+
+
 @pytest.mark.parametrize("verifier", (salt.state.State, salt.state.Compiler))
 @pytest.mark.parametrize(
     "high,err_msg",

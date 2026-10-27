@@ -1131,7 +1131,25 @@ class State:
             if run_cmd_arg not in cmd_opts_exclude:
                 cmd_opts[run_cmd_arg] = low.get(run_cmd_arg)
 
-        if "shell" in low and "shell" not in cmd_opts_exclude:
+        # NOTE: low.get("state") != "user" is a deliberately narrow,
+        # state-name-based carve-out, not a general mechanism. "shell" here
+        # means two different things depending on which state declared it:
+        # for cmd.run it is (correctly) the shell to run the check command
+        # in, but for user.present it is the user's login shell and has
+        # nothing to do with how the check command should execute (see
+        # #59420). A more general solution -- e.g. a registry of state
+        # modules that opt out of shell inheritance, or handling this
+        # entirely inside salt/states/user.py via a custom mod_run_check --
+        # would avoid naming a specific state module here, but no such
+        # mechanism exists today (mod_run_check is unused anywhere in the
+        # codebase), so this targeted check was chosen to fix the reported
+        # bug without introducing new, untested extensibility. Revisit if a
+        # third state module develops the same shell-name collision.
+        if (
+            "shell" in low
+            and "shell" not in cmd_opts_exclude
+            and low.get("state") != "user"
+        ):
             cmd_opts["shell"] = low["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
