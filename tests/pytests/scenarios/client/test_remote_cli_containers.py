@@ -28,7 +28,7 @@ def master_container(salt_factories):
         "auto_accept": False,
         "client_acl": {},
         "publisher_acl": {},
-        "client_event_port": 4507,
+        "client_event_port": 4507,  # Enable network event publishing for tests
     }
 
     factory = salt_factories.salt_master_daemon(

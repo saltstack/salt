@@ -61,10 +61,11 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         2. Listen for client authentication requests
         3. Filter and forward events to authenticated clients
         """
+        client_event_port = self.opts.get("client_event_port", 4507)
         log.info(
             "Starting client event publisher on %s:%s",
             self.opts["interface"],
-            self.opts["client_event_port"],
+            client_event_port,
         )
 
         # Create ZeroMQ context
@@ -80,13 +81,15 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
 
         # Create publisher socket for clients (TCP)
         pub_socket = context.socket(zmq.PUB)
-        pub_uri = f"tcp://{self.opts['interface']}:{self.opts['client_event_port']}"
+        pub_socket.setsockopt(zmq.LINGER, 1000)
+        pub_uri = f"tcp://{self.opts['interface']}:{client_event_port}"
         pub_socket.bind(pub_uri)
 
         # Create REP socket for client authentication
         auth_socket = context.socket(zmq.REP)
+        auth_socket.setsockopt(zmq.LINGER, 1000)
         auth_uri = (
-            f"tcp://{self.opts['interface']}:{self.opts['client_event_port'] + 1}"
+            f"tcp://{self.opts['interface']}:{client_event_port + 1}"
         )
         auth_socket.bind(auth_uri)
 
