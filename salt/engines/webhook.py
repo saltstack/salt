@@ -50,7 +50,7 @@ def start(address=None, port=5000, ssl_crt=None, ssl_key=None):
     """
     if __opts__.get("__role") == "master":
         fire_master = salt.utils.event.get_master_event(
-            __opts__, __opts__["sock_dir"]
+            __opts__, __opts__["sock_dir"], listen=False
         ).fire_event
     else:
         fire_master = None

@@ -76,13 +76,12 @@ def test_pip_environment_use_pythonpath_opt_in_no_inherited_value():
 
 @pytest.mark.parametrize(
     "env_var",
-    ["PIP_NO_DEPS", "PIP_NO_INDEX", "PIP_DISABLE_PIP_VERSION_CHECK"],
+    ["PIP_NO_DEPS", "PIP_NO_INDEX"],
 )
 def test_pip_environment_network_lockdown_opts_default_off(env_var):
     """
-    saltpip_no_deps/saltpip_no_index/saltpip_disable_pip_version_check
-    default to False, matching current (unchanged) behavior: the
-    corresponding PIP_* env var isn't set at all.
+    saltpip_no_deps/saltpip_no_index default to False, matching current
+    (unchanged) behavior: the corresponding PIP_* env var isn't set at all.
     """
     extras = "/tmp/footest"
     env = {"HOME": "/home/dwoz"}
@@ -108,6 +107,38 @@ def test_pip_environment_network_lockdown_opts_enabled(kwarg, env_var):
     env = {"HOME": "/home/dwoz", env_var: "0"}
     pipenv = _pip_environment(env, extras, **{kwarg: True})
     assert pipenv[env_var] == "1"
+
+
+def test_pip_environment_disables_version_check():
+    """
+    Regression test for #70024.
+
+    ``salt-pip`` shells out to ``python -m pip`` under a packager-pinned
+    onedir pip; pip's periodic "A new release of pip is available" check
+    is pure noise and a proxy-config gotcha (cf. #69910). ``_pip_environment``
+    must inject ``PIP_DISABLE_PIP_VERSION_CHECK=1`` into the child's env
+    by default.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz"}
+    pipenv = _pip_environment(env, extras)
+    assert "PIP_DISABLE_PIP_VERSION_CHECK" not in env
+    assert pipenv["PIP_DISABLE_PIP_VERSION_CHECK"] == "1"
+
+
+def test_pip_environment_respects_operator_override():
+    """
+    Regression test for #70024.
+
+    Operators must be able to re-enable pip's periodic version check by
+    exporting ``PIP_DISABLE_PIP_VERSION_CHECK=0`` before invoking
+    ``salt-pip``. ``_pip_environment`` uses ``setdefault`` so a caller's
+    explicit setting wins over the salt-pip default.
+    """
+    extras = "/tmp/footest"
+    env = {"HOME": "/home/dwoz", "PIP_DISABLE_PIP_VERSION_CHECK": "0"}
+    pipenv = _pip_environment(env, extras)
+    assert pipenv["PIP_DISABLE_PIP_VERSION_CHECK"] == "0"
 
 
 def test_pip_environment_find_links_passthrough_by_default():
