@@ -2070,32 +2070,63 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.close()
 
 
-def _finalize_zmq_context(context):
-    """Bounded, wedge-safe zmq.Context teardown for ``weakref.finalize``.
+def _finalize_zmq_context(context, owned_sockets):
+    """Deterministic, non-blocking zmq.Context teardown for ``weakref.finalize``.
 
     Runs when a ``RequestClient`` (or similar owner) is garbage-collected
-    without an explicit ``close()`` having been called on it.  Explicitly
-    destroys the ``zmq.asyncio.Context`` with a bounded linger so
-    pyzmq's own ``Context.__del__`` -- which would otherwise walk the
-    context's sockets and call libzmq's ``zmq_ctx_term()`` under each
-    socket's native LINGER setting -- has nothing left to do.  That
-    matters because pyzmq's ``__del__`` runs synchronously on whatever
-    thread the last reference is dropped from, and when that thread is
-    an asyncio ioloop callback ``zmq_ctx_term()`` can block the whole
-    loop indefinitely.
+    without an explicit ``close()`` having been called on it.  pyzmq's
+    own ``Context.__del__`` would otherwise walk the context's sockets
+    and call libzmq's ``zmq_ctx_term()`` under each socket's native
+    LINGER setting -- synchronously on whatever thread drops the last
+    reference.  When that thread is an asyncio ioloop callback, the loop
+    freezes for the duration of ``zmq_ctx_term()``.
+
+    ``Context.destroy()`` is not safe here either.  It only closes the
+    sockets still tracked in ``Context._sockets`` (a ``WeakSet``) before
+    calling the blocking ``term()``.  When this callback fires from a
+    cyclic GC run, a socket that is part of the same unreachable garbage
+    has already been dropped from that set (the GC clears weakrefs before
+    it runs finalizers) but is not closed yet (``Socket.__del__`` only
+    runs later in the same GC pass).  ``term()`` then waits for that
+    socket forever and deadlocks the thread running the GC, typically the
+    minion's ioloop (#70353).
+
+    So the ``RequestClient`` keeps a strong-ref list of every socket it
+    creates on the instance itself (``self._owned_sockets``) and hands
+    that list to the finalizer.  The list is not a weakref, so a cyclic
+    GC pass cannot drop entries from it before we see them: every socket
+    Salt opened is still right here, and we can close it with
+    ``LINGER=0`` (REQ-safe -- REQ has no in-flight guarantee) before
+    calling ``term()``.  With every Salt-owned socket actually closed,
+    not just missing from ``Context._sockets``, ``term()`` returns
+    immediately on the calling thread and there is no need to hand it
+    off to a daemon thread.
 
     Register from a ``RequestClient``-alike via::
 
-        weakref.finalize(self, _finalize_zmq_context, self.context)
+        weakref.finalize(
+            self, _finalize_zmq_context, self.context, self._owned_sockets
+        )
 
-    ``weakref.finalize`` fires before the type slot ``__del__`` on the
-    referent runs and captures its own strong reference to ``context``,
-    so this callback is guaranteed to execute exactly once and to see a
-    live Context.
+    ``weakref.finalize`` captures its own strong references to the
+    arguments, so this callback is guaranteed to execute exactly once
+    and to see live sockets + Context.
     """
     try:
-        if context is not None and not context.closed:
-            context.destroy(linger=1000)
+        if owned_sockets:
+            for sock in owned_sockets:
+                try:
+                    if not sock.closed:
+                        sock.setsockopt(zmq.LINGER, 0)
+                        sock.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        if context is None or context.closed:
+            return
+        try:
+            context.term()
+        except zmq.ZMQError as exc:
+            log.debug("Error terminating zmq context: %s", exc)
     except Exception:  # pylint: disable=broad-except
         pass
 
@@ -2121,6 +2152,13 @@ class RequestClient(salt.transport.base.RequestClient):
         self.send_future_map = {}
         self._closing = False
         self.socket = None
+        # Strong-ref list of every zmq socket this RequestClient opens.  The
+        # context's own ``_sockets`` is a ``WeakSet`` that a cyclic GC run can
+        # drop entries from before our finalizer sees them; keeping our own
+        # list on ``self`` guarantees the finalizer can close every Salt-owned
+        # socket before calling ``term()``.  See ``_finalize_zmq_context``
+        # for the full rationale (#70353).
+        self._owned_sockets = []
         self._queue = asyncio.Queue()
         self._connect_lock = asyncio.Lock()
         self.send_recv_task = None
@@ -2194,12 +2232,23 @@ class RequestClient(salt.transport.base.RequestClient):
             # callback via _fire_master_main -> _send_req_async_main
             # -> req_channel.send -> transport.send -> connect() ->
             # _init_socket, all on the ioloop), the loop freezes.
-            # ``weakref.finalize`` runs a bounded ``destroy(linger=N)``
-            # first, so pyzmq's ``__del__`` sees ``closed=True`` and
-            # skips the wedge-prone destroy path.
-            weakref.finalize(self, _finalize_zmq_context, self.context)
+            # ``weakref.finalize`` closes the strongly-tracked sockets
+            # first, then runs ``term()`` on the calling thread; with
+            # every Salt-owned socket actually closed (not just missing
+            # from Context._sockets), ``term()`` returns immediately
+            # and pyzmq's ``__del__`` sees ``closed=True`` and skips
+            # the wedge-prone destroy path.  See the docstring of
+            # ``_finalize_zmq_context`` for the full rationale (#70353).
+            weakref.finalize(
+                self, _finalize_zmq_context, self.context, self._owned_sockets
+            )
 
         self.socket = self.context.socket(zmq.REQ)
+        # Register the socket on ``self`` immediately after creation.  No
+        # ``await`` runs between ``context.socket(...)`` and this append,
+        # so even if the context is dropped mid-init the finalizer sees
+        # the socket and can close it before calling term().  (#70353)
+        self._owned_sockets.append(self.socket)
         self.socket.setsockopt(zmq.LINGER, 1)
 
         # socket options
