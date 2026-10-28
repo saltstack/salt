@@ -27,7 +27,10 @@ class ZyppCallMock:
 
     def __call__(self, *args, **kwargs):
         # If the call is for a configuration modifier, we return self
-        if any(i in kwargs for i in ("no_repo_failure", "systemd_scope", "root")):
+        if any(
+            i in kwargs
+            for i in ("no_repo_failure", "ignore_not_found", "systemd_scope", "root")
+        ):
             return self
         return MagicMock(return_value=self.__return_value)()
 
@@ -1751,7 +1754,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
                 """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1774,7 +1779,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "16.2.*-2*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1796,7 +1803,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "16.2.5*"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1817,7 +1826,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         """
 
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         wcard = zypper.Wildcard(_zpr)
         wcard.name, wcard.version = "libzypp", "*.1"
         assert wcard._get_scope_versions(wcard._get_available_versions()) == [
@@ -1839,7 +1850,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
         """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         assert zypper.Wildcard(_zpr)("libzypp", "16.2.4*") == "16.2.4-19.5"
         assert zypper.Wildcard(_zpr)("libzypp", "16.2*") == "16.2.5-25.1"
         assert zypper.Wildcard(_zpr)("libzypp", "*6-*") == "17.2.6-27.9.1"
@@ -1859,7 +1872,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
         """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         assert zypper.Wildcard(_zpr)("libzypp", None) is None
 
     def test_wildcard_to_query_typecheck(self):
@@ -1876,7 +1891,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
         """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         assert isinstance(zypper.Wildcard(_zpr)("libzypp", "*.1"), str)
 
     def test_wildcard_to_query_condition_preservation(self):
@@ -1893,7 +1910,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
         """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
 
         for op in zypper.Wildcard.Z_OP:
             assert zypper.Wildcard(_zpr)("libzypp", f"{op}*.1") == f"{op}17.2.6-27.9.1"
@@ -1916,7 +1935,9 @@ class ZypperTestCase(TestCase, LoaderModuleMockMixin):
         </solvable-list></search-result></stream>
         """
         _zpr = MagicMock()
-        _zpr.nolock.xml.call = MagicMock(return_value=minidom.parseString(xmldoc))
+        # _get_available_versions now calls self.zypper(ignore_not_found=True)
+        # before .nolock.xml.call, so configure the return_value chain.
+        _zpr.return_value.nolock.xml.call.return_value = minidom.parseString(xmldoc)
         with self.assertRaises(CommandExecutionError):
             for op in [">>", "==", "<<", "+"]:
                 zypper.Wildcard(_zpr)("libzypp", f"{op}*.1")
@@ -2042,3 +2063,68 @@ pattern() = package-c"""
                 self.assertFalse(zypper.__zypper__._is_rpm_lock())
                 self.assertEqual(lockf_mock.call_count, 2)
             zypper.__zypper__._reset()
+
+    def test_search(self):
+        """
+        search() must request ignore_not_found so that zypper's 104
+        (nothing found) exit code is whitelisted and not logged as an error.
+        """
+        xml_mock = MagicMock(return_value=[])
+        zypp_mock = MagicMock(return_value=xml_mock)
+        with patch("salt.modules.zypperpkg.__zypper__", zypp_mock):
+            zypper.search("emacs")
+            zypp_mock.assert_called_with(root=None, ignore_not_found=True)
+            xml_mock.nolock.noraise.xml.call.assert_called_with("search", "emacs")
+
+    def test_search_not_found_58551(self):
+        """
+        Regression test for issue #58551.
+
+        When a search matches nothing, zypper exits with code 104. search()
+        passes ignore_not_found=True, so _Zypper whitelists 104 through
+        cmd.run_all's success_retcodes and no spurious ERROR is logged. The
+        empty result still raises CommandExecutionError as before.
+        """
+        ret = {
+            "stdout": "<?xml version='1.0'?><stream></stream>",
+            "stderr": None,
+            "retcode": 104,
+        }
+        run_all_mock = MagicMock(return_value=ret)
+        with patch.dict(zypper.__salt__, {"cmd.run_all": run_all_mock}):
+            self.assertRaises(CommandExecutionError, zypper.search, "vim")
+            # ignore_not_found=True -> success_retcodes=[104] on the cmd.run_all call
+            run_all_mock.assert_called_with(
+                [
+                    "zypper",
+                    "--non-interactive",
+                    "--xmlout",
+                    "--no-refresh",
+                    "search",
+                    "vim",
+                ],
+                success_retcodes=[104],
+                output_loglevel="trace",
+                python_shell=False,
+                env={"ZYPP_READONLY_HACK": "1"},
+            )
+
+    def test_search_without_ignore_not_found_still_errors(self):
+        """
+        Inverse must-not-regress guard for issue #58551.
+
+        A zypper call that does NOT request ignore_not_found must not
+        whitelist retcode 104: cmd.run_all is invoked without a
+        success_retcodes kwarg, so a genuine non-zero retcode still surfaces
+        as an error. This passes with and without the fix, ensuring the 104
+        whitelist never leaks into unrelated zypper calls.
+        """
+        ret = {
+            "stdout": "<?xml version='1.0'?><stream></stream>",
+            "stderr": None,
+            "retcode": 0,
+        }
+        run_all_mock = MagicMock(return_value=ret)
+        with patch.dict(zypper.__salt__, {"cmd.run_all": run_all_mock}):
+            zypper._Zypper().xml.call("se", "-t", "pattern")
+            assert "success_retcodes" not in run_all_mock.call_args.kwargs
