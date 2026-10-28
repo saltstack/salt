@@ -28,6 +28,8 @@ def master_container(salt_factories):
         "auto_accept": False,
         "client_acl": {},
         "publisher_acl": {},
+        "client_event_publish": True,  # Enable network event publishing
+        "client_event_port": 4507,
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -36,6 +38,19 @@ def master_container(salt_factories):
     )
 
     with factory.started():
+        yield factory
+
+
+@pytest.fixture
+def minion_container(salt_factories, master_container):
+    """Create a Salt minion connected to the master."""
+    factory = salt_factories.salt_minion_daemon(
+        "remote-test-minion",
+        master_id=master_container.id,
+    )
+
+    with factory.started():
+        # Wait for minion to connect
         yield factory
 
 
@@ -87,7 +102,8 @@ def remote_client_setup(master_container, client_config_dir):
     # Create client config file pointing to master
     master_config = master_container.config
 
-    client_config = textwrap.dedent(f"""
+    client_config = textwrap.dedent(
+        f"""
         # Client configuration for remote CLI access
         id: {client_id}
         master: {master_config['interface']}
@@ -103,7 +119,8 @@ def remote_client_setup(master_container, client_config_dir):
         timeout: 30
         acceptance_wait_time: 10
         acceptance_wait_time_max: 30
-    """)
+    """
+    )
 
     config_file = client_config_dir / "client"
     with open(config_file, "w") as f:
@@ -113,9 +130,7 @@ def remote_client_setup(master_container, client_config_dir):
     with salt.key.ClientKey(master_container.config) as ckey:
         # Store client public key on master
         ckey.cache.store(
-            "client_keys",
-            client_id,
-            {"pub": pub_key, "state": "accepted"}
+            "client_keys", client_id, {"pub": pub_key, "state": "accepted"}
         )
 
     return {
@@ -148,21 +163,21 @@ class TestRemoteCLIScenario:
         with salt.key.ClientKey(master_container.config) as ckey:
             all_keys = ckey.list_keys()
 
-            assert client_id in all_keys["clients"], \
-                f"Client {client_id} should be in accepted clients"
+            assert (
+                client_id in all_keys["clients"]
+            ), f"Client {client_id} should be in accepted clients"
 
             # Get client key fingerprint
             fingerprints = ckey.finger(client_id)
-            assert client_id in fingerprints["clients"], \
-                "Client should have a fingerprint"
+            assert (
+                client_id in fingerprints["clients"]
+            ), "Client should have a fingerprint"
 
             # Verify fingerprint format
             fp = fingerprints["clients"][client_id]
             assert ":" in fp, "Fingerprint should be colon-separated"
 
-    def test_remote_client_configuration(
-        self, master_container, remote_client_setup
-    ):
+    def test_remote_client_configuration(self, master_container, remote_client_setup):
         """
         Test RemoteClient configuration for remote command execution.
 
@@ -176,9 +191,7 @@ class TestRemoteCLIScenario:
         import salt.config
 
         # Load client config (simulates remote workstation)
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         # Verify config loaded correctly
         assert client_config["id"] == remote_client_setup["id"]
@@ -192,22 +205,21 @@ class TestRemoteCLIScenario:
 
         try:
             # Verify client has correct role
-            assert client.opts["__role"] == "client", \
-                "RemoteClient should set __role to 'client'"
+            assert (
+                client.opts["__role"] == "client"
+            ), "RemoteClient should set __role to 'client'"
 
             # Verify client ID is set correctly
-            assert client.opts["id"] == remote_client_setup["id"], \
-                "Client ID should match configuration"
+            assert (
+                client.opts["id"] == remote_client_setup["id"]
+            ), "Client ID should match configuration"
 
             # Verify transport is configured
-            assert "transport" in client.opts, \
-                "Transport should be configured"
+            assert "transport" in client.opts, "Transport should be configured"
 
             # Verify client is ready to execute commands
-            assert hasattr(client, "cmd"), \
-                "RemoteClient should have cmd method"
-            assert hasattr(client, "pub"), \
-                "RemoteClient should have pub method"
+            assert hasattr(client, "cmd"), "RemoteClient should have cmd method"
+            assert hasattr(client, "pub"), "RemoteClient should have pub method"
         finally:
             client.destroy()
 
@@ -224,9 +236,7 @@ class TestRemoteCLIScenario:
         import salt.config
         import salt.utils.client_event
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         client = salt.client.RemoteClient(
             mopts=client_config,
@@ -235,8 +245,9 @@ class TestRemoteCLIScenario:
 
         try:
             # CRITICAL: Verify using network events, not IPC
-            assert client._use_network_events is True, \
-                "RemoteClient must use network events for remote execution"
+            assert (
+                client._use_network_events is True
+            ), "RemoteClient must use network events for remote execution"
 
             # Verify event subscriber is ClientEventSubscriber
             assert isinstance(
@@ -250,9 +261,7 @@ class TestRemoteCLIScenario:
         finally:
             client.destroy()
 
-    def test_remote_runner_execution(
-        self, master_container, remote_client_setup
-    ):
+    def test_remote_runner_execution(self, master_container, remote_client_setup):
         """
         Test executing runners from remote client.
 
@@ -267,9 +276,7 @@ class TestRemoteCLIScenario:
         import salt.runner
 
         # Load client config
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         # Enable client auth (simulates --client-auth flag)
         client_config["client_auth"] = True
@@ -299,9 +306,7 @@ class TestRemoteCLIScenario:
         import salt.runner
         import salt.utils.client_event
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
         client_config["client_auth"] = True
         client_config["fun"] = "test.ping"
         client_config["arg"] = []
@@ -309,17 +314,16 @@ class TestRemoteCLIScenario:
         runner = salt.runner.Runner(client_config)
 
         # CRITICAL: Verify network events are being used
-        assert runner._use_network_events is True, \
-            "RunnerClient must use network events for remote execution"
+        assert (
+            runner._use_network_events is True
+        ), "RunnerClient must use network events for remote execution"
 
         # Verify event subscriber is ClientEventSubscriber
         assert isinstance(
             runner.event, salt.utils.client_event.ClientEventSubscriber
         ), "RunnerClient should use ClientEventSubscriber for network events"
 
-    def test_remote_key_management(
-        self, master_container, remote_client_setup
-    ):
+    def test_remote_key_management(self, master_container, remote_client_setup):
         """
         Test managing keys remotely via salt-key.
 
@@ -334,9 +338,7 @@ class TestRemoteCLIScenario:
         import salt.key
 
         # Load client config
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         # Enable client auth (simulates --client-auth flag)
         client_config["client_auth"] = True
@@ -366,9 +368,7 @@ class TestRemoteCLIScenario:
         import salt.key
         import salt.wheel
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
         client_config["client_auth"] = True
         client_config["list"] = True
 
@@ -379,20 +379,20 @@ class TestRemoteCLIScenario:
 
         try:
             # CRITICAL: Verify network events are being used
-            assert wheel_client._use_network_events is True, \
-                "WheelClient must use network events for remote execution"
+            assert (
+                wheel_client._use_network_events is True
+            ), "WheelClient must use network events for remote execution"
 
             # Verify event subscriber is ClientEventSubscriber
             import salt.utils.client_event
+
             assert isinstance(
                 wheel_client.event, salt.utils.client_event.ClientEventSubscriber
             ), "WheelClient should use ClientEventSubscriber for network events"
         finally:
             wheel_client.destroy()
 
-    def test_multi_client_scenario(
-        self, master_container, client_config_dir
-    ):
+    def test_multi_client_scenario(self, master_container, client_config_dir):
         """
         Test multiple administrators with separate client keys.
 
@@ -414,24 +414,25 @@ class TestRemoteCLIScenario:
             # Accept on master
             with salt.key.ClientKey(master_container.config) as ckey:
                 ckey.cache.store(
-                    "client_keys",
-                    client_id,
-                    {"pub": pub_key, "state": "accepted"}
+                    "client_keys", client_id, {"pub": pub_key, "state": "accepted"}
                 )
 
-            clients.append({
-                "id": client_id,
-                "name": name,
-                "keys": (priv_key, pub_key),
-            })
+            clients.append(
+                {
+                    "id": client_id,
+                    "name": name,
+                    "keys": (priv_key, pub_key),
+                }
+            )
 
         # Verify all clients are accepted
         with salt.key.ClientKey(master_container.config) as ckey:
             all_keys = ckey.list_keys()
 
             for client in clients:
-                assert client["id"] in all_keys["clients"], \
-                    f"Client {client['id']} should be accepted"
+                assert (
+                    client["id"] in all_keys["clients"]
+                ), f"Client {client['id']} should be accepted"
 
         # Verify we can list all client keys
         with salt.key.ClientKey(master_container.config) as ckey:
@@ -441,8 +442,9 @@ class TestRemoteCLIScenario:
                 fingerprints[client["id"]] = fp["clients"][client["id"]]
 
             # All fingerprints should be unique
-            assert len(set(fingerprints.values())) == len(clients), \
-                "Each client should have unique fingerprint"
+            assert len(set(fingerprints.values())) == len(
+                clients
+            ), "Each client should have unique fingerprint"
 
     def test_client_key_revocation_scenario(
         self, master_container, remote_client_setup
@@ -482,9 +484,7 @@ class TestRemoteCLIScenario:
         # Accept new client
         with salt.key.ClientKey(master_container.config) as ckey:
             ckey.cache.store(
-                "client_keys",
-                new_client_id,
-                {"pub": new_pub, "state": "accepted"}
+                "client_keys", new_client_id, {"pub": new_pub, "state": "accepted"}
             )
 
         # Verify new client is accepted, old is still rejected
@@ -497,9 +497,7 @@ class TestRemoteCLIScenario:
 class TestRemoteCLIConfiguration:
     """Test different configuration scenarios for remote CLI."""
 
-    def test_saltrc_configuration(
-        self, master_container, client_config_dir, tmp_path
-    ):
+    def test_saltrc_configuration(self, master_container, client_config_dir, tmp_path):
         """
         Test user-specific saltrc configuration.
 
@@ -514,12 +512,14 @@ class TestRemoteCLIConfiguration:
         home_dir.mkdir()
 
         saltrc_file = home_dir / ".saltrc"
-        saltrc_content = textwrap.dedent(f"""
+        saltrc_content = textwrap.dedent(
+            f"""
             # User's default Salt configuration
             master: {master_container.config['interface']}
             master_port: {master_container.config['ret_port']}
             id: user-workstation
-        """)
+        """
+        )
 
         with open(saltrc_file, "w") as f:
             f.write(saltrc_content)
@@ -528,9 +528,7 @@ class TestRemoteCLIConfiguration:
         assert saltrc_file.exists()
         assert "master:" in saltrc_file.read_text()
 
-    def test_multiple_master_configuration(
-        self, master_container, client_config_dir
-    ):
+    def test_multiple_master_configuration(self, master_container, client_config_dir):
         """
         Test managing multiple masters from one workstation.
 
@@ -549,11 +547,13 @@ class TestRemoteCLIConfiguration:
             env_dir.mkdir()
 
             config_file = env_dir / "client"
-            config_content = textwrap.dedent(f"""
+            config_content = textwrap.dedent(
+                f"""
                 # {env.upper()} environment
                 master: {env}-master.example.com
                 id: admin-workstation-{env}
-            """)
+            """
+            )
 
             with open(config_file, "w") as f:
                 f.write(config_content)
@@ -617,18 +617,28 @@ class TestRemoteCLIACLScenarios:
 
         # Test admin client (full access)
         assert client_acl.client_can_run_runner("admin-workstation", "test.ping")
-        assert client_acl.client_can_run_runner("admin-workstation", "state.orchestrate")
+        assert client_acl.client_can_run_runner(
+            "admin-workstation", "state.orchestrate"
+        )
         assert client_acl.client_can_run_wheel("admin-workstation", "key.accept")
         assert client_acl.client_can_target_minion("admin-workstation", "prod-web-01")
         assert client_acl.client_can_run_minion_function("admin-workstation", "cmd.run")
 
         # Test readonly client (limited access)
         assert client_acl.client_can_run_runner("readonly-workstation", "test.ping")
-        assert client_acl.client_can_run_runner("readonly-workstation", "jobs.list_jobs")
-        assert not client_acl.client_can_run_runner("readonly-workstation", "state.orchestrate")
+        assert client_acl.client_can_run_runner(
+            "readonly-workstation", "jobs.list_jobs"
+        )
+        assert not client_acl.client_can_run_runner(
+            "readonly-workstation", "state.orchestrate"
+        )
         assert not client_acl.client_can_run_wheel("readonly-workstation", "key.accept")
-        assert client_acl.client_can_run_minion_function("readonly-workstation", "test.ping")
-        assert not client_acl.client_can_run_minion_function("readonly-workstation", "cmd.run")
+        assert client_acl.client_can_run_minion_function(
+            "readonly-workstation", "test.ping"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "readonly-workstation", "cmd.run"
+        )
 
         # Test dev client (environment-restricted)
         assert client_acl.client_can_target_minion("dev-workstation", "dev-web-01")
@@ -636,7 +646,9 @@ class TestRemoteCLIACLScenarios:
         assert not client_acl.client_can_target_minion("dev-workstation", "prod-web-01")
         assert client_acl.client_can_run_minion_function("dev-workstation", "cmd.run")
 
-    def test_multi_client_different_permissions(self, master_container, client_config_dir):
+    def test_multi_client_different_permissions(
+        self, master_container, client_config_dir
+    ):
         """
         Test multiple clients with different permission levels.
 
@@ -690,14 +702,22 @@ class TestRemoteCLIACLScenarios:
         # Audit team has read-only access
         assert client_acl.client_can_run_runner("audit-team-client", "jobs.list_jobs")
         assert client_acl.client_can_run_wheel("audit-team-client", "key.list_all")
-        assert not client_acl.client_can_run_runner("audit-team-client", "state.orchestrate")
+        assert not client_acl.client_can_run_runner(
+            "audit-team-client", "state.orchestrate"
+        )
         assert not client_acl.client_can_run_wheel("audit-team-client", "key.accept")
 
         # Verify audit team can target all minions but with limited functions
         assert client_acl.client_can_target_minion("audit-team-client", "prod-web-01")
-        assert client_acl.client_can_run_minion_function("audit-team-client", "test.ping")
-        assert client_acl.client_can_run_minion_function("audit-team-client", "status.uptime")
-        assert not client_acl.client_can_run_minion_function("audit-team-client", "cmd.run")
+        assert client_acl.client_can_run_minion_function(
+            "audit-team-client", "test.ping"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "audit-team-client", "status.uptime"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "audit-team-client", "cmd.run"
+        )
 
     def test_acl_denied_operations(self, master_container, client_config_dir):
         """
@@ -746,7 +766,9 @@ class TestRemoteCLIACLScenarios:
         assert not client_acl.client_can_run_runner("junior-admin-client", "cmd.run")
         assert not client_acl.client_can_run_runner("junior-admin-client", "cmd.shell")
         assert not client_acl.client_can_run_wheel("junior-admin-client", "key.delete")
-        assert not client_acl.client_can_target_minion("junior-admin-client", "prod-db-01")
+        assert not client_acl.client_can_target_minion(
+            "junior-admin-client", "prod-db-01"
+        )
 
         # Junior admin - verify allowed operations
         assert client_acl.client_can_run_runner("junior-admin-client", "test.ping")
@@ -757,9 +779,15 @@ class TestRemoteCLIACLScenarios:
         # Contractor - very limited access
         assert client_acl.client_can_run_runner("contractor-client", "test.ping")
         assert not client_acl.client_can_run_runner("contractor-client", "state.apply")
-        assert client_acl.client_can_target_minion("contractor-client", "contractor-vm-01")
-        assert not client_acl.client_can_target_minion("contractor-client", "prod-web-01")
-        assert not client_acl.client_can_target_minion("contractor-client", "dev-web-01")
+        assert client_acl.client_can_target_minion(
+            "contractor-client", "contractor-vm-01"
+        )
+        assert not client_acl.client_can_target_minion(
+            "contractor-client", "prod-web-01"
+        )
+        assert not client_acl.client_can_target_minion(
+            "contractor-client", "dev-web-01"
+        )
 
         # Test error messages for denied operations
         denial_msg = client_acl.get_denial_message(
@@ -790,7 +818,7 @@ class TestRemoteCLIACLScenarios:
             ckey.cache.store(
                 "client_keys",
                 compromised_client_id,
-                {"pub": pub_key, "state": "accepted"}
+                {"pub": pub_key, "state": "accepted"},
             )
 
         # Verify client is accepted
@@ -825,13 +853,12 @@ class TestRemoteCLIACLScenarios:
         # Accept new client
         with salt.key.ClientKey(master_container.config) as ckey:
             ckey.cache.store(
-                "client_keys",
-                new_client_id,
-                {"pub": new_pub_key, "state": "accepted"}
+                "client_keys", new_client_id, {"pub": new_pub_key, "state": "accepted"}
             )
 
         # Verify restricted access
         import salt.acl
+
         client_acl = salt.acl.ClientACL(restricted_acl)
 
         assert client_acl.client_can_run_runner(new_client_id, "test.ping")
@@ -945,7 +972,9 @@ class TestPublishACLScenarios:
         # Can run service management
         assert client_acl.client_can_run_minion_function("web-admin", "service.restart")
         assert client_acl.client_can_run_minion_function("web-admin", "service.status")
-        assert client_acl.client_can_run_minion_function("web-admin", "nginx.configtest")
+        assert client_acl.client_can_run_minion_function(
+            "web-admin", "nginx.configtest"
+        )
         assert client_acl.client_can_run_minion_function("web-admin", "test.ping")
         assert client_acl.client_can_run_minion_function("web-admin", "pkg.list_pkgs")
 
@@ -970,7 +999,13 @@ class TestPublishACLScenarios:
         acl_config = {
             "db-admin": {
                 "minion": ["db-*", "cache-*"],
-                "minion_function": ["mysql.*", "postgres.*", "redis.*", "test.ping", "grains.get"],
+                "minion_function": [
+                    "mysql.*",
+                    "postgres.*",
+                    "redis.*",
+                    "test.ping",
+                    "grains.get",
+                ],
             }
         }
 
@@ -993,7 +1028,9 @@ class TestPublishACLScenarios:
 
         # Cannot run system commands
         assert not client_acl.client_can_run_minion_function("db-admin", "cmd.run")
-        assert not client_acl.client_can_run_minion_function("db-admin", "service.restart")
+        assert not client_acl.client_can_run_minion_function(
+            "db-admin", "service.restart"
+        )
         assert not client_acl.client_can_run_minion_function("db-admin", "pkg.install")
 
     def test_monitoring_client_scenario(self):
@@ -1011,7 +1048,13 @@ class TestPublishACLScenarios:
         acl_config = {
             "monitoring": {
                 "minion": ["*"],
-                "minion_function": ["test.ping", "status.*", "grains.items", "disk.usage", "network.interfaces"],
+                "minion_function": [
+                    "test.ping",
+                    "status.*",
+                    "grains.items",
+                    "disk.usage",
+                    "network.interfaces",
+                ],
             }
         }
 
@@ -1032,9 +1075,15 @@ class TestPublishACLScenarios:
 
         # Cannot run administrative functions
         assert not client_acl.client_can_run_minion_function("monitoring", "cmd.run")
-        assert not client_acl.client_can_run_minion_function("monitoring", "service.restart")
-        assert not client_acl.client_can_run_minion_function("monitoring", "pkg.install")
-        assert not client_acl.client_can_run_minion_function("monitoring", "file.remove")
+        assert not client_acl.client_can_run_minion_function(
+            "monitoring", "service.restart"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "monitoring", "pkg.install"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "monitoring", "file.remove"
+        )
 
     def test_environment_segregation_scenario(self):
         """
@@ -1055,7 +1104,12 @@ class TestPublishACLScenarios:
             },
             "staging-team": {
                 "minion": ["staging-*"],
-                "minion_function": ["test.*", "state.apply", "saltutil.refresh_*", "service.*"],
+                "minion_function": [
+                    "test.*",
+                    "state.apply",
+                    "saltutil.refresh_*",
+                    "service.*",
+                ],
             },
             "prod-readonly": {
                 "minion": ["prod-*"],
@@ -1076,17 +1130,25 @@ class TestPublishACLScenarios:
         assert client_acl.client_can_target_minion("staging-team", "staging-web-01")
         assert client_acl.client_can_run_minion_function("staging-team", "test.ping")
         assert client_acl.client_can_run_minion_function("staging-team", "state.apply")
-        assert client_acl.client_can_run_minion_function("staging-team", "service.restart")
+        assert client_acl.client_can_run_minion_function(
+            "staging-team", "service.restart"
+        )
         assert not client_acl.client_can_run_minion_function("staging-team", "cmd.run")
         assert not client_acl.client_can_target_minion("staging-team", "prod-web-01")
 
         # Prod readonly - very limited in production
         assert client_acl.client_can_target_minion("prod-readonly", "prod-web-01")
         assert client_acl.client_can_run_minion_function("prod-readonly", "test.ping")
-        assert client_acl.client_can_run_minion_function("prod-readonly", "grains.items")
-        assert client_acl.client_can_run_minion_function("prod-readonly", "status.uptime")
+        assert client_acl.client_can_run_minion_function(
+            "prod-readonly", "grains.items"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "prod-readonly", "status.uptime"
+        )
         assert not client_acl.client_can_run_minion_function("prod-readonly", "cmd.run")
-        assert not client_acl.client_can_run_minion_function("prod-readonly", "service.restart")
+        assert not client_acl.client_can_run_minion_function(
+            "prod-readonly", "service.restart"
+        )
 
     def test_contractor_limited_access_scenario(self):
         """
@@ -1103,31 +1165,56 @@ class TestPublishACLScenarios:
         acl_config = {
             "contractor-client": {
                 "minion": ["contractor-*", "test-contractor-*"],
-                "minion_function": ["test.ping", "grains.items", "pkg.list_pkgs", "file.read"],
+                "minion_function": [
+                    "test.ping",
+                    "grains.items",
+                    "pkg.list_pkgs",
+                    "file.read",
+                ],
             }
         }
 
         client_acl = salt.acl.ClientACL(acl_config)
 
         # Can only target contractor minions
-        assert client_acl.client_can_target_minion("contractor-client", "contractor-vm-01")
-        assert client_acl.client_can_target_minion("contractor-client", "test-contractor-app")
+        assert client_acl.client_can_target_minion(
+            "contractor-client", "contractor-vm-01"
+        )
+        assert client_acl.client_can_target_minion(
+            "contractor-client", "test-contractor-app"
+        )
 
         # Cannot target production or other systems
         assert not client_acl.client_can_target_minion("contractor-client", "web-01")
-        assert not client_acl.client_can_target_minion("contractor-client", "prod-web-01")
+        assert not client_acl.client_can_target_minion(
+            "contractor-client", "prod-web-01"
+        )
         assert not client_acl.client_can_target_minion("contractor-client", "db-master")
 
         # Can run safe read-only operations
-        assert client_acl.client_can_run_minion_function("contractor-client", "test.ping")
-        assert client_acl.client_can_run_minion_function("contractor-client", "grains.items")
-        assert client_acl.client_can_run_minion_function("contractor-client", "pkg.list_pkgs")
+        assert client_acl.client_can_run_minion_function(
+            "contractor-client", "test.ping"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "contractor-client", "grains.items"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "contractor-client", "pkg.list_pkgs"
+        )
 
         # Cannot run administrative or write operations
-        assert not client_acl.client_can_run_minion_function("contractor-client", "cmd.run")
-        assert not client_acl.client_can_run_minion_function("contractor-client", "pkg.install")
-        assert not client_acl.client_can_run_minion_function("contractor-client", "service.restart")
-        assert not client_acl.client_can_run_minion_function("contractor-client", "file.write")
+        assert not client_acl.client_can_run_minion_function(
+            "contractor-client", "cmd.run"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "contractor-client", "pkg.install"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "contractor-client", "service.restart"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "contractor-client", "file.write"
+        )
 
     def test_security_audit_scenario(self):
         """
@@ -1166,17 +1253,35 @@ class TestPublishACLScenarios:
 
         # Can run audit functions
         assert client_acl.client_can_run_minion_function("security-audit", "test.ping")
-        assert client_acl.client_can_run_minion_function("security-audit", "grains.items")
-        assert client_acl.client_can_run_minion_function("security-audit", "pkg.list_pkgs")
-        assert client_acl.client_can_run_minion_function("security-audit", "user.list_users")
-        assert client_acl.client_can_run_minion_function("security-audit", "status.uptime")
+        assert client_acl.client_can_run_minion_function(
+            "security-audit", "grains.items"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "security-audit", "pkg.list_pkgs"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "security-audit", "user.list_users"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "security-audit", "status.uptime"
+        )
 
         # Cannot make changes
-        assert not client_acl.client_can_run_minion_function("security-audit", "cmd.run")
-        assert not client_acl.client_can_run_minion_function("security-audit", "pkg.install")
-        assert not client_acl.client_can_run_minion_function("security-audit", "service.restart")
-        assert not client_acl.client_can_run_minion_function("security-audit", "user.add")
-        assert not client_acl.client_can_run_minion_function("security-audit", "file.write")
+        assert not client_acl.client_can_run_minion_function(
+            "security-audit", "cmd.run"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "security-audit", "pkg.install"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "security-audit", "service.restart"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "security-audit", "user.add"
+        )
+        assert not client_acl.client_can_run_minion_function(
+            "security-audit", "file.write"
+        )
 
     def test_multi_tier_application_scenario(self):
         """
@@ -1197,11 +1302,22 @@ class TestPublishACLScenarios:
             },
             "app-tier-admin": {
                 "minion": ["app-*"],
-                "minion_function": ["service.*", "supervisord.*", "test.*", "saltutil.*"],
+                "minion_function": [
+                    "service.*",
+                    "supervisord.*",
+                    "test.*",
+                    "saltutil.*",
+                ],
             },
             "data-tier-admin": {
                 "minion": ["db-*", "cache-*"],
-                "minion_function": ["mysql.*", "postgres.*", "redis.*", "service.*", "test.*"],
+                "minion_function": [
+                    "mysql.*",
+                    "postgres.*",
+                    "redis.*",
+                    "service.*",
+                    "test.*",
+                ],
             },
         }
 
@@ -1210,25 +1326,159 @@ class TestPublishACLScenarios:
         # Web tier admin
         assert client_acl.client_can_target_minion("web-tier-admin", "web-01")
         assert client_acl.client_can_target_minion("web-tier-admin", "lb-main")
-        assert client_acl.client_can_run_minion_function("web-tier-admin", "nginx.configtest")
-        assert client_acl.client_can_run_minion_function("web-tier-admin", "service.restart")
+        assert client_acl.client_can_run_minion_function(
+            "web-tier-admin", "nginx.configtest"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "web-tier-admin", "service.restart"
+        )
         assert not client_acl.client_can_target_minion("web-tier-admin", "app-01")
-        assert not client_acl.client_can_run_minion_function("web-tier-admin", "mysql.query")
+        assert not client_acl.client_can_run_minion_function(
+            "web-tier-admin", "mysql.query"
+        )
 
         # App tier admin
         assert client_acl.client_can_target_minion("app-tier-admin", "app-server-01")
-        assert client_acl.client_can_run_minion_function("app-tier-admin", "service.restart")
-        assert client_acl.client_can_run_minion_function("app-tier-admin", "supervisord.status")
+        assert client_acl.client_can_run_minion_function(
+            "app-tier-admin", "service.restart"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "app-tier-admin", "supervisord.status"
+        )
         assert not client_acl.client_can_target_minion("app-tier-admin", "web-01")
-        assert not client_acl.client_can_run_minion_function("app-tier-admin", "nginx.configtest")
+        assert not client_acl.client_can_run_minion_function(
+            "app-tier-admin", "nginx.configtest"
+        )
 
         # Data tier admin
         assert client_acl.client_can_target_minion("data-tier-admin", "db-master")
         assert client_acl.client_can_target_minion("data-tier-admin", "cache-redis-01")
-        assert client_acl.client_can_run_minion_function("data-tier-admin", "mysql.query")
-        assert client_acl.client_can_run_minion_function("data-tier-admin", "redis.info")
+        assert client_acl.client_can_run_minion_function(
+            "data-tier-admin", "mysql.query"
+        )
+        assert client_acl.client_can_run_minion_function(
+            "data-tier-admin", "redis.info"
+        )
         assert not client_acl.client_can_target_minion("data-tier-admin", "web-01")
-        assert not client_acl.client_can_run_minion_function("data-tier-admin", "nginx.configtest")
+        assert not client_acl.client_can_run_minion_function(
+            "data-tier-admin", "nginx.configtest"
+        )
+
+
+class TestRemoteCommandExecution:
+    """Test actual command execution with remote clients."""
+
+    def test_remote_client_executes_command_on_minion(
+        self, master_container, minion_container, remote_client_setup
+    ):
+        """
+        CRITICAL TEST: Verify RemoteClient can actually execute commands remotely.
+
+        This tests the complete workflow:
+        1. Remote client publishes command to master
+        2. Master forwards to minion
+        3. Minion executes and returns result
+        4. Master publishes result event
+        5. Remote client receives event over network
+        6. Remote client returns result to caller
+        """
+        import salt.client
+        import salt.config
+
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
+
+        client = salt.client.RemoteClient(
+            mopts=client_config,
+            skip_perm_errors=True,
+        )
+
+        try:
+            # CRITICAL: Actually execute a command
+            ret = client.cmd(
+                minion_container.id,
+                "test.ping",
+                timeout=30,
+            )
+
+            # Verify we got a result
+            assert ret is not None, "Should receive command result"
+            assert (
+                minion_container.id in ret
+            ), f"Result should contain minion {minion_container.id}"
+            assert ret[minion_container.id] is True, "test.ping should return True"
+
+            # This proves:
+            # 1. Command was published to master
+            # 2. Master forwarded to minion
+            # 3. Minion executed and returned
+            # 4. Events were delivered over network (not IPC)
+            # 5. RemoteClient received events and returned result
+        finally:
+            client.destroy()
+
+    def test_remote_client_receives_events_over_network(
+        self, master_container, minion_container, remote_client_setup
+    ):
+        """
+        CRITICAL TEST: Verify events are delivered over network, not IPC.
+
+        This tests the event streaming implementation specifically.
+        """
+        import time
+
+        import salt.client
+        import salt.config
+
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
+
+        client = salt.client.RemoteClient(
+            mopts=client_config,
+            skip_perm_errors=True,
+            listen=True,  # Enable event listening
+        )
+
+        try:
+            # Verify using network events
+            from salt.utils import client_event
+
+            assert isinstance(
+                client.event, client_event.ClientEventSubscriber
+            ), "Remote client must use ClientEventSubscriber for network events"
+
+            # Execute async command to get JID
+            pub_data = client.cmd_async(
+                minion_container.id,
+                "test.ping",
+            )
+
+            assert "jid" in pub_data, "Should receive JID from async command"
+            jid = pub_data["jid"]
+
+            # Subscribe to job events
+            client.event.subscribe_job(jid)
+
+            # Wait for return event
+            max_wait = 30
+            start = time.time()
+            result_received = False
+
+            while time.time() - start < max_wait:
+                event = client.event.get_event(wait=1, full=True)
+                if event and "tag" in event:
+                    if f"salt/job/{jid}/ret" in event["tag"]:
+                        # Got the return event!
+                        result_received = True
+                        assert "data" in event, "Event should have data"
+                        assert "return" in event["data"], "Event should have return data"
+                        break
+
+            assert (
+                result_received
+            ), f"Should receive job return event for JID {jid} over network"
+
+            # This proves events were delivered over network, not IPC
+        finally:
+            client.destroy()
 
 
 class TestNetworkEventStreaming:
@@ -1245,29 +1495,29 @@ class TestNetworkEventStreaming:
         import salt.config
         import salt.utils.client_event
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         # Create ClientEventSubscriber
         subscriber = salt.utils.client_event.ClientEventSubscriber(client_config)
 
         # Verify it has required attributes
         assert subscriber.opts == client_config
-        assert hasattr(subscriber, "connect"), \
-            "ClientEventSubscriber should have connect method"
-        assert hasattr(subscriber, "get_event"), \
-            "ClientEventSubscriber should have get_event method"
-        assert hasattr(subscriber, "subscribe_job"), \
-            "ClientEventSubscriber should have subscribe_job method"
-        assert hasattr(subscriber, "destroy"), \
-            "ClientEventSubscriber should have destroy method"
+        assert hasattr(
+            subscriber, "connect"
+        ), "ClientEventSubscriber should have connect method"
+        assert hasattr(
+            subscriber, "get_event"
+        ), "ClientEventSubscriber should have get_event method"
+        assert hasattr(
+            subscriber, "subscribe_job"
+        ), "ClientEventSubscriber should have subscribe_job method"
+        assert hasattr(
+            subscriber, "destroy"
+        ), "ClientEventSubscriber should have destroy method"
 
         subscriber.destroy()
 
-    def test_remote_client_event_attribute(
-        self, master_container, remote_client_setup
-    ):
+    def test_remote_client_event_attribute(self, master_container, remote_client_setup):
         """
         Test that RemoteClient has properly initialized event subscriber.
 
@@ -1278,9 +1528,7 @@ class TestNetworkEventStreaming:
         import salt.config
         import salt.utils.client_event
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
 
         client = salt.client.RemoteClient(
             mopts=client_config,
@@ -1289,8 +1537,7 @@ class TestNetworkEventStreaming:
 
         try:
             # Verify event subscriber exists
-            assert client.event is not None, \
-                "RemoteClient should have event subscriber"
+            assert client.event is not None, "RemoteClient should have event subscriber"
 
             # Verify it's the correct type
             assert isinstance(
@@ -1298,14 +1545,13 @@ class TestNetworkEventStreaming:
             ), f"RemoteClient.event should be ClientEventSubscriber, got {type(client.event)}"
 
             # Verify _use_network_events flag is set
-            assert client._use_network_events is True, \
-                "RemoteClient._use_network_events should be True for remote execution"
+            assert (
+                client._use_network_events is True
+            ), "RemoteClient._use_network_events should be True for remote execution"
         finally:
             client.destroy()
 
-    def test_runner_client_event_attribute(
-        self, master_container, remote_client_setup
-    ):
+    def test_runner_client_event_attribute(self, master_container, remote_client_setup):
         """
         Test that RunnerClient has properly initialized network event subscriber.
 
@@ -1316,9 +1562,7 @@ class TestNetworkEventStreaming:
         import salt.runner
         import salt.utils.client_event
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
         client_config["client_auth"] = True
         client_config["fun"] = "test.ping"
         client_config["arg"] = []
@@ -1326,8 +1570,7 @@ class TestNetworkEventStreaming:
         runner = salt.runner.Runner(client_config)
 
         # Verify event subscriber exists
-        assert runner.event is not None, \
-            "RunnerClient should have event subscriber"
+        assert runner.event is not None, "RunnerClient should have event subscriber"
 
         # Verify it's the correct type
         assert isinstance(
@@ -1335,12 +1578,11 @@ class TestNetworkEventStreaming:
         ), f"RunnerClient.event should be ClientEventSubscriber, got {type(runner.event)}"
 
         # Verify _use_network_events flag is set
-        assert runner._use_network_events is True, \
-            "RunnerClient._use_network_events should be True for remote execution"
+        assert (
+            runner._use_network_events is True
+        ), "RunnerClient._use_network_events should be True for remote execution"
 
-    def test_wheel_client_event_attribute(
-        self, master_container, remote_client_setup
-    ):
+    def test_wheel_client_event_attribute(self, master_container, remote_client_setup):
         """
         Test that WheelClient has properly initialized network event subscriber.
 
@@ -1348,20 +1590,17 @@ class TestNetworkEventStreaming:
         work remotely.
         """
         import salt.config
-        import salt.wheel
         import salt.utils.client_event
+        import salt.wheel
 
-        client_config = salt.config.client_config(
-            remote_client_setup["config_file"]
-        )
+        client_config = salt.config.client_config(remote_client_setup["config_file"])
         client_config["client_auth"] = True
 
         wheel = salt.wheel.WheelClient(client_config)
 
         try:
             # Verify event subscriber exists
-            assert wheel.event is not None, \
-                "WheelClient should have event subscriber"
+            assert wheel.event is not None, "WheelClient should have event subscriber"
 
             # Verify it's the correct type
             assert isinstance(
@@ -1369,8 +1608,9 @@ class TestNetworkEventStreaming:
             ), f"WheelClient.event should be ClientEventSubscriber, got {type(wheel.event)}"
 
             # Verify _use_network_events flag is set
-            assert wheel._use_network_events is True, \
-                "WheelClient._use_network_events should be True for remote execution"
+            assert (
+                wheel._use_network_events is True
+            ), "WheelClient._use_network_events should be True for remote execution"
         finally:
             wheel.destroy()
 
@@ -1392,9 +1632,11 @@ class TestNetworkEventStreaming:
         runner = salt.runner.RunnerClient(local_config)
 
         # Should use IPC events for local execution
-        assert runner._use_network_events is False, \
-            "Local RunnerClient should not use network events"
+        assert (
+            runner._use_network_events is False
+        ), "Local RunnerClient should not use network events"
 
         # Should be standard IPC event subscriber
-        assert isinstance(runner.event, salt.utils.event.SaltEvent), \
-            "Local RunnerClient should use IPC SaltEvent"
+        assert isinstance(
+            runner.event, salt.utils.event.SaltEvent
+        ), "Local RunnerClient should use IPC SaltEvent"
