@@ -2274,6 +2274,16 @@ class SaltCMDOptionParser(
                 " command."
             ),
         )
+        self.add_option(
+            "--client-auth",
+            default=False,
+            action="store_true",
+            help=(
+                "Use client key authentication for remote execution. Requires client "
+                "keys to be accepted by the Salt Master. This enables remote "
+                "execution using PKI-based authentication."
+            ),
+        )
 
     def _mixin_after_parsed(self):
         if (

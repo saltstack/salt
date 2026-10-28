@@ -59,11 +59,19 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ""
 
-            self.client = salt.client.get_remote_client(
-                self.get_config_file_path(),
-                skip_perm_errors=skip_perm_errors,
-                auto_reconnect=True,
-            )
+            # Use RemoteClient only when --client-auth is specified
+            if self.config.get("client_auth"):
+                self.client = salt.client.get_remote_client(
+                    self.get_config_file_path(),
+                    skip_perm_errors=skip_perm_errors,
+                    auto_reconnect=True,
+                )
+            else:
+                self.client = salt.client.get_local_client(
+                    self.get_config_file_path(),
+                    skip_perm_errors=skip_perm_errors,
+                    auto_reconnect=True,
+                )
         except SaltClientError as exc:
             self.exit(2, f"{exc}\n")
             return
