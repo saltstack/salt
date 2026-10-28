@@ -33,6 +33,7 @@ attrs==26.1.0
     #   -c requirements/static/pkg/py3.11/darwin.lock
     #   -r requirements/base.txt
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -157,7 +158,7 @@ googleapis-common-protos==1.75.0
     #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
-hypothesis==6.170.12
+hypothesis==6.130.13
     # via -r requirements/pytest.txt
 idna==3.18
     # via

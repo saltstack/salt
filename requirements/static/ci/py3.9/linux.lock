@@ -186,7 +186,7 @@ httpcore==0.17.3
     # via httpx
 httpx==0.24.1
     # via python-telegram-bot
-hypothesis==6.141.1
+hypothesis==6.130.13
     # via -r requirements/pytest.txt
 idna==3.18
     # via

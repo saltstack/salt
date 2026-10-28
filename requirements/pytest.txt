@@ -18,4 +18,10 @@ pytest-skip-markers <= 1.5.1 ; python_version < '3.8'
 pytest-shell-utilities <= 1.9.0; python_version <= '3.9'
 pytest-shell-utilities >= 1.9.7; python_version >= '3.10'
 pytest-benchmark
-hypothesis
+# Hypothesis's "local constants" discovery (added in 6.131.0) walks every
+# loaded salt module's AST at collection time and raises
+# ``TypeError: unhashable type: 'types.SimpleNamespace'`` on some of
+# salt's modules.  Pin below that version until either hypothesis fixes
+# the discovery to tolerate unhashable constants or we work around on
+# the salt side.  See the CI investigation on nightly run 40727972252.
+hypothesis>=6.0,<6.131

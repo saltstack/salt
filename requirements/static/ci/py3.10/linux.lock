@@ -48,6 +48,7 @@ attrs==26.1.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -189,7 +190,7 @@ httpcore==1.0.9
     # via httpx
 httpx==0.28.1
     # via python-telegram-bot
-hypothesis==6.168.5
+hypothesis==6.130.13
     # via -r requirements/pytest.txt
 idna==3.18
     # via

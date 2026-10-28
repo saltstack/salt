@@ -41,6 +41,7 @@ attrs==26.1.0
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -202,7 +203,7 @@ googleapis-common-protos==1.75.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-hypothesis==6.170.12
+hypothesis==6.130.13
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/pytest.txt
