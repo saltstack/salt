@@ -3769,7 +3769,9 @@ async def test_master_disconnect_deletes_per_master_alive_job(minion_opts):
     with patch.object(
         minion, "eval_master", MagicMock(side_effect=SaltClientError("down"))
     ):
-        package = salt.utils.event.SaltEvent.pack("__master_disconnected", {"master": "master1"})
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
         await minion.handle_event(package)
 
     minion.schedule.delete_job.assert_any_call(name="__master_alive_master1")
@@ -3786,7 +3788,9 @@ async def test_master_reconnect_respects_master_alive_interval(
     """
     minion = _master_alive_minion(minion_opts, master_alive_interval)
     minion.connected = False
-    package = salt.utils.event.SaltEvent.pack("__master_connected", {"master": "master1"})
+    package = salt.utils.event.SaltEvent.pack(
+        "__master_connected", {"master": "master1"}
+    )
     await minion.handle_event(package)
 
     assert minion.connected is True
@@ -3824,15 +3828,15 @@ async def test_master_failover_reinit_respects_master_alive_interval(
     req_channel.connect = fake_coro
     with patch.object(minion, "eval_master", fake_eval_master), patch.object(
         minion, "_fire_master_minion_start", fake_coro
-    ), patch.object(
-        minion, "_register_resources_with_master", fake_coro
-    ), patch.object(
+    ), patch.object(minion, "_register_resources_with_master", fake_coro), patch.object(
         minion, "_load_modules", MagicMock(return_value=(None, None, None, None))
     ), patch(
         "salt.channel.client.AsyncReqChannel.factory",
         MagicMock(return_value=req_channel),
     ):
-        package = salt.utils.event.SaltEvent.pack("__master_disconnected", {"master": "master1"})
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
         await minion.handle_event(package)
 
     assert minion.opts["master"] == "master2"
