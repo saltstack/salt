@@ -21,7 +21,7 @@ import logging
 import os
 import time
 
-import salt.cluster
+from salt.cluster import node_id as _cluster_node_id
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ def perform_shed(
     if not banks:
         raise ValueError("perform_shed requires at least one bank")
 
-    node_id = (opts.get("id") and salt.cluster.node_id(opts)) or "unknown"
+    node_id = (opts.get("id") and _cluster_node_id(opts)) or "unknown"
 
     # Cluster registry replay — same shape the runner uses.
     cluster_storage = SaltStorage(node_id, opts, ring_id="cluster")
