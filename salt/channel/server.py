@@ -767,42 +767,6 @@ class ReqServerChannel:
                 self.ckminions.cache = None
             self.ckminions = None
 
-        if not salt.utils.verify.valid_id(self.opts, load["id"]):
-            log.info("Authentication request from invalid id %s", load["id"])
-            if sign_messages:
-                return self._clear_signed(
-                    {"ret": False, "nonce": load["nonce"]}, sig_algo
-                )
-            else:
-                return {"enc": "clear", "load": {"ret": False}}
-        log.info("Authentication request from %s", load["id"])
-        # remove any trailing whitespace
-        load["pub"] = load["pub"].strip()
-
-        # Determine if this is a client or minion authentication
-        # Clients will have role="client" in the auth payload
-        is_client = load.get("role") == "client"
-        if is_client:
-            keys_cache = "client_keys"
-            denied_cache = "client_denied_keys"
-            log.info("Client authentication request from %s", load["id"])
-        else:
-            keys_cache = "keys"
-            denied_cache = "denied_keys"
-
-        # 0 is default which should be 'unlimited'
-        if self.opts["max_minions"] > 0:
-            # use the ConCache if enabled, else use the minion utils
-            if self.cache_cli:
-                minions = self.cache_cli.get_cached()
-            else:
-                minions = self.ckminions.connected_ids()
-                if len(minions) > 1000:
-                    log.info(
-                        "With large numbers of minions it is advised "
-                        "to enable the ConCache with 'con_cache: True' "
-                        "in the masters configuration file."
-                    )
 
 class PoolRoutingChannel:
     """
