@@ -3295,13 +3295,28 @@ class MasterPubServerChannel:
         # Topology start hook: schedule link_manager.start on the io loop
         # so outbound links come up alongside the publish daemon.  Lazy
         # import keeps non-topology masters free of the dependency chain.
+        #
+        # link_manager.start is a pure ``async def`` asyncio coroutine, so
+        # it has to be scheduled on the loop's asyncio side -- not via
+        # ``self.io_loop.spawn_callback`` (tornado), which hands tornado a
+        # bare coroutine object and never actually drives the body.  The
+        # ``aio_loop.create_task`` pattern used here mirrors the publisher
+        # setup 100 lines above (``aio_loop.create_task(self.transport.
+        # publisher(...))``) and the Raft bootstrap below.
+        #
+        # Longer term: this whole daemon should run on a pure asyncio
+        # event loop end-to-end, with the tornado shim retired.  All of
+        # topology, Raft, the publisher, and the join-reply path are
+        # already ``async def`` on top of ``aioloop(self.io_loop)``; the
+        # only reason ``self.io_loop`` is still a tornado ``IOLoop`` is
+        # that ``PubServerChannel.publish_payload`` and the TCP transport
+        # callbacks were written against tornado.  Once those migrate,
+        # drop the ``aioloop`` adapter here and have ``_publish_daemon``
+        # own a plain ``asyncio.new_event_loop()`` directly.
         if self.opts.get("topology_enabled"):
             link_manager = importlib.import_module("salt.topology.link_manager")
-            self.io_loop.spawn_callback(
-                link_manager.start,
-                self.opts,
-                self.io_loop,
-            )
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            aio_loop.create_task(link_manager.start(self.opts, self.io_loop))
         # run forever
         try:
             self.io_loop.start()

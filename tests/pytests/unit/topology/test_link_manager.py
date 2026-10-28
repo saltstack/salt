@@ -332,3 +332,120 @@ def test_remove_link_is_idempotent(opts, clean_state):
     finally:
         loop.run_until_complete(link_manager.stop())
         loop.close()
+
+
+# ---------------------------------------------------------------------------
+# ``_INBOUND`` lock discipline (regression)
+# ---------------------------------------------------------------------------
+#
+# ``_INBOUND`` is mutated from two different thread contexts: the publish
+# daemon's asyncio loop (``_handle_master_auth`` + ``_maybe_lazy_register_
+# inbound``) and the Raft-SM apply thread (``remove_link``).  The latter
+# pops ``_INBOUND[cluster_id]`` under ``_LOCK``; the former two must take
+# the same lock across their writes to prevent a detach landing
+# mid-registration from leaving a stale record resurrected.
+#
+# These tests use an instrumented ``_INBOUND`` dict that records every
+# ``__setitem__`` call made while ``_LOCK`` is NOT owned by the current
+# thread; a nonzero count indicates one of the write paths dropped the
+# lock discipline (or a new write path was added without it).
+
+
+class _LockWitnessDict(dict):
+    """A ``dict`` subclass that counts ``__setitem__`` calls made without
+    ``_lock`` held by the current thread.
+
+    Uses :meth:`threading.RLock._is_owned`, which is a CPython
+    implementation detail that has been stable across versions and is the
+    only API that lets us assert "lock X is currently held by this
+    thread" without actually trying to acquire.
+    """
+
+    def __init__(self, lock):
+        super().__init__()
+        self._lock = lock
+        self.unlocked_writes = 0
+
+    def __setitem__(self, key, value):
+        if not self._lock._is_owned():  # pylint: disable=protected-access
+            self.unlocked_writes += 1
+        super().__setitem__(key, value)
+
+
+@pytest.fixture
+def inbound_lock_witness(monkeypatch):
+    """Replace ``_INBOUND`` with a :class:`_LockWitnessDict` and yield it.
+
+    Reset at teardown via the standard ``clean_state`` fixture semantics.
+    """
+    witness = _LockWitnessDict(link_manager._LOCK)  # pylint: disable=protected-access
+    monkeypatch.setattr(link_manager, "_INBOUND", witness)
+    return witness
+
+
+def test_handle_master_auth_holds_lock_on_inbound_write(
+    opts, clean_state, inbound_lock_witness, monkeypatch
+):
+    """Regression: ``_handle_master_auth`` must hold ``_LOCK`` across
+    its ``_INBOUND[cluster_id]`` write.  Without the lock, a concurrent
+    ``remove_link`` on the Raft-SM apply thread can leave a stale
+    inbound record for a cluster_id the SM has just detached.
+    """
+    # ``_handle_master_auth`` consults ``_current_opts(load)`` which
+    # reads module-level ``_OPTS``; populate it directly.
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+
+    # Pre-create the accepted-key sentinel so the auth path reaches the
+    # ``_INBOUND`` registration branch.
+    accepted = (
+        pytest.importorskip("pathlib").Path(opts["pki_dir"]) / "masters" / "east.pub"
+    )
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+
+    load = {"cluster_id": "east", "nonce": "deadbeef"}
+    reply = asyncio.new_event_loop().run_until_complete(
+        link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+    )
+
+    assert reply["status"] == "ok"
+    assert "east" in inbound_lock_witness, "handshake did not populate _INBOUND"
+    assert inbound_lock_witness.unlocked_writes == 0, (
+        f"_handle_master_auth wrote _INBOUND without _LOCK held "
+        f"({inbound_lock_witness.unlocked_writes} unlocked writes)"
+    )
+
+
+def test_maybe_lazy_register_inbound_holds_lock_on_inbound_write(
+    opts, clean_state, inbound_lock_witness, monkeypatch
+):
+    """Regression: ``_maybe_lazy_register_inbound`` must hold ``_LOCK``
+    across its ``_INBOUND[origin]`` write.  Same race window as
+    :func:`_handle_master_auth` --- a Raft-SM detach landing between
+    the staleness check and the write would resurrect a stale record.
+    """
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = (
+        pytest.importorskip("pathlib").Path(opts["pki_dir"]) / "masters" / "east.pub"
+    )
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+
+    payload = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 1,
+    }
+    link_manager._maybe_lazy_register_inbound(
+        payload
+    )  # pylint: disable=protected-access
+
+    assert "east" in inbound_lock_witness, "lazy-register did not populate _INBOUND"
+    assert inbound_lock_witness.unlocked_writes == 0, (
+        f"_maybe_lazy_register_inbound wrote _INBOUND without _LOCK held "
+        f"({inbound_lock_witness.unlocked_writes} unlocked writes)"
+    )

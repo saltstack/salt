@@ -880,8 +880,17 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param func message_handler: A function to called to handle incoming payloads as
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
+
+        :keyword bool direct_bind: When True, bind the REP socket directly to
+            ``tcp://interface:ret_port`` instead of connecting to an
+            ``MWorkerQueue``'s DEALER on ``workers.ipc``.  Used when the
+            caller owns the external port in a single process and dispatches
+            inbound requests in-process via ``message_handler`` (e.g.
+            :mod:`salt.topology`), rather than fronting the port with a
+            separate ``MWorkerQueue`` + MWorker pool.
         """
         pool_name = kwargs.get("pool_name")
+        direct_bind = kwargs.get("direct_bind", False)
         # context = zmq.Context(1)
         self.context = zmq.asyncio.Context(1)
         self._socket = self.context.socket(zmq.REP)
@@ -889,22 +898,27 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._socket.setsockopt(zmq.LINGER, 1)
         self._start_zmq_monitor()
 
-        # Use get_worker_uri() for consistent URI construction
-        self.w_uri = self.get_worker_uri(pool_name=pool_name)
-        log.info("Worker binding to socket %s", self.w_uri)
-        self._socket.connect(self.w_uri)
+        if direct_bind:
+            self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
+            log.info("RequestServer direct-bind listening on %s", self.uri)
+            self._socket.bind(self.uri)
+        else:
+            # Use get_worker_uri() for consistent URI construction
+            self.w_uri = self.get_worker_uri(pool_name=pool_name)
+            log.info("Worker binding to socket %s", self.w_uri)
+            self._socket.connect(self.w_uri)
 
-        # Set permissions for IPC sockets
-        if self.opts.get("ipc_mode", "") != "tcp":
-            pool_name = self.opts.get("pool_name", "")
-            if pool_name:
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
-                )
-            else:
-                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
-            if os.path.isfile(ipc_path):
-                os.chmod(ipc_path, 0o600)
+            # Set permissions for IPC sockets
+            if self.opts.get("ipc_mode", "") != "tcp":
+                pool_name = self.opts.get("pool_name", "")
+                if pool_name:
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                    )
+                else:
+                    ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+                if os.path.isfile(ipc_path):
+                    os.chmod(ipc_path, 0o600)
         self.message_handler = message_handler
 
         async def callback():

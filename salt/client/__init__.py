@@ -538,8 +538,14 @@ class LocalClient:
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
-        # are found
-        if not self.opts.get("order_masters"):
+        # are found.  Same for topology-forward-only publishes: when
+        # ``topology_enabled`` is set and the target names a non-local
+        # cluster via ``C@``, the originating master cannot know the
+        # peer-cluster minion ids at pub-time -- those return
+        # asynchronously via the topology forwarder.  Short-circuiting
+        # here on empty-local-match would hide every cross-cluster return
+        # the user is actually waiting on.
+        if not self.opts.get("order_masters") and not self.opts.get("topology_enabled"):
             # Check for no minions
             if not pub_data["minions"]:
                 print(
@@ -1449,6 +1455,16 @@ class LocalClient:
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
+                # Topology-forward-only publishes start with an empty
+                # ``minions`` set because the originating master cannot
+                # know peer-cluster targets at pub-time.  Returns stream
+                # in asynchronously as the topology forwarder delivers
+                # them; without this guard the loop breaks on the very
+                # first iteration (``0 >= 0``) before any return has had
+                # a chance to arrive.  Fall through to the timeout path
+                # so the CLI waits the full ``timeout`` window for
+                # cross-cluster returns.
+                and not (self.opts.get("topology_enabled") and not minions)
             ):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)

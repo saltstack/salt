@@ -400,13 +400,46 @@ class PeerMasterLink:
                 self._health = LinkHealth.DISCONNECTED
                 raise
             except Exception as exc:  # pylint: disable=broad-except
+                # Transport error on the handshake send.  The common case
+                # is "peer master is briefly unreachable" --- a restart
+                # window, a short network blip, or we raced ahead of the
+                # peer's listener bind.  Back off and retry; if the loop
+                # exhausts ``max_tries`` the handshake eventually gives up.
+                #
+                # Tear down the pooled :class:`AsyncReqChannel` between
+                # attempts: zmq REQ sockets go into a bad state after a
+                # failed send (expecting the matching recv) and the next
+                # send on the same socket deadlocks.  Rebuilding the
+                # channel resets the socket FSM cleanly.
                 log.warning(
-                    "topology link to %s: handshake transport error: %s",
+                    "topology link to %s: handshake transport error "
+                    "(attempt %d/%d): %s",
                     endpoint.host,
+                    attempt,
+                    max_tries,
                     exc,
                 )
-                self._health = LinkHealth.DISCONNECTED
-                return
+                try:
+                    close = getattr(self._req_channel, "close", None)
+                    if close is not None:
+                        close()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "topology link to %s: req channel close failed on retry",
+                        endpoint.host,
+                        exc_info=True,
+                    )
+                self._req_channel = None
+                self._health = LinkHealth.CONNECTING
+                if attempt >= max_tries:
+                    self._health = LinkHealth.DISCONNECTED
+                    return
+                await asyncio.sleep(backoff)
+                # Re-open the req channel for the next attempt.
+                self._req_channel = AsyncReqChannel.factory(
+                    channel_opts, io_loop=self.io_loop, crypt="clear"
+                )
+                continue
 
             if not isinstance(reply, dict):
                 log.warning(

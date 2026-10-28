@@ -200,23 +200,6 @@ def test_scenario_cli_c_at_local_publish_round_trip(
     ), f"web-local returned {ret.data['web-local']!r}; expected True"
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Follow-up gap: outbound ``AsyncReqChannel`` + inbound "
-        ":class:`salt.channel.server.ReqServerChannel` do not meet on the "
-        "wire for ``topology/_master_auth``.  "
-        ":meth:`PeerMasterLink.connect` sends a cleartext req; the receiving "
-        "channel's transport does not pick it up (the publish-daemon never "
-        "invokes :func:`_handle_inbound_channel`), so every handshake sits "
-        "in retry and ``router._links`` stays empty for the duration of the "
-        "scenario.  Separate from the dispatch-shape fix landed in this "
-        "commit (``_handle_inbound`` unwrapping + ``send_clear`` return "
-        "shape + non-pooled channel + ``router._links`` wiring + solo "
-        "``cluster_id`` projection on the outbound handshake), which the "
-        "existing targeted tests continue to exercise."
-    ),
-    strict=False,
-)
 def test_scenario_cli_c_at_peer_publish_round_trip_with_peered_topology(
     two_cluster_fixture,
     attach_minion,

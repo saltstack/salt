@@ -34,6 +34,7 @@ import salt.topology.breadcrumbs as breadcrumbs
 import salt.topology.registry as registry
 import salt.topology.router as router_mod
 import salt.utils.asynchronous
+import salt.utils.event
 import salt.utils.files
 from salt.config.topology import PeerRef, load_topology_config
 from salt.topology.link import PeerMasterLink
@@ -182,54 +183,28 @@ def pre_fork(opts, process_manager):
     :meth:`salt.channel.server.MasterPubServerChannel.pre_fork`
     when ``opts["topology_enabled"]`` is True.
 
-    Two responsibilities:
-
-    1. Reserve the ``topology_link_port`` socket in the parent
-       process so the forked publish daemon inherits a listening
-       fd.  Follows the pattern used by
-       :class:`salt.channel.server.PubServerChannel.pre_fork`.
-       Sets ``FD_CLOEXEC`` on the listening fd for MWorker
-       descriptors so the listener is not inherited by workers
-       that have no business accepting on it.
-    2. Pre-create the breadcrumb and registry MmapCache files
-       via :func:`salt.topology.breadcrumbs.pre_create` and
-       :func:`salt.topology.registry.pre_create`.  Prevents the
-       startup race where MWorkers fork and call
-       :func:`open_reader` on a file the publish daemon has not
-       yet opened.
+    Pre-create the breadcrumb and registry MmapCache files via
+    :func:`salt.topology.breadcrumbs.pre_create` and
+    :func:`salt.topology.registry.pre_create`.  Prevents the
+    startup race where MWorkers fork and call :func:`open_reader`
+    on a file the publish daemon has not yet opened.
 
     This function must NOT touch ``_LINKS``, ``_INBOUND``, or
     ``_LISTENER``.  Those are populated by :func:`start` on the
     publish daemon side, after fork.  Populating them pre-fork
     would leak into every forked child.
+
+    ``topology_link_port`` is bound by
+    :class:`salt.transport.zeromq.RequestServer`'s ``direct_bind``
+    path inside the publish daemon after fork.  No pre-fork
+    reservation is needed; a reservation here would hold a bound
+    fd in the parent process and cause the publish daemon's zmq
+    bind to fail with EADDRINUSE.
     """
-    global _LISTENER_SOCKET
     if not opts.get("topology_enabled"):
         return
     registry.pre_create(opts)
     breadcrumbs.pre_create(opts)
-    # Idempotent: if we already reserved a socket bound to the configured
-    # host/port, reuse it instead of rebinding (which would leak the fd).
-    if _LISTENER_SOCKET is not None:
-        try:
-            bound_host, bound_port = _LISTENER_SOCKET.getsockname()[:2]
-        except OSError:
-            bound_host, bound_port = None, None
-        want_host = opts.get("interface", "127.0.0.1")
-        want_port = int(opts.get("topology_link_port") or 0)
-        if bound_port == want_port and (
-            bound_host == want_host or want_host in ("0.0.0.0", "")
-        ):
-            return
-    try:
-        _LISTENER_SOCKET = _reserve_listener_socket(opts)
-    except OSError as exc:
-        log.warning(
-            "topology pre_fork: could not reserve topology_link_port %r: %s",
-            opts.get("topology_link_port"),
-            exc,
-        )
-        _LISTENER_SOCKET = None
 
 
 async def start(opts, io_loop, raft_service=None):
@@ -324,8 +299,22 @@ async def start(opts, io_loop, raft_service=None):
     # via its documented accessor path.  The stubbed router may
     # ignore its constructor args (empty body); we still attach the
     # cache handles so our dispatch helpers can rely on them.
+    #
+    # Solo (non-3008.x) masters do not set ``opts["cluster_id"]`` --
+    # that key is the 3008.x master-cluster primitive.  Project the
+    # topology-config ``cluster_id`` into the opts handed to the
+    # router (and later to each :class:`PeerMasterLink`) so
+    # ``TopologyRouter.cluster_id`` and
+    # :attr:`salt.topology.link.PeerMasterLink.opts["cluster_id"]`
+    # both resolve to the configured identity.  Without this
+    # projection, every outbound envelope goes on the wire with
+    # ``origin=None, path=[None]`` and the peer rejects it as a
+    # tampered path.
+    projected_opts = dict(opts)
+    if not projected_opts.get("cluster_id") and cfg.cluster_id:
+        projected_opts["cluster_id"] = cfg.cluster_id
     _topology_router = router_mod.TopologyRouter(
-        opts, _REGISTRY_CACHE, _BREADCRUMB_CACHE
+        projected_opts, _REGISTRY_CACHE, _BREADCRUMB_CACHE
     )
     if not hasattr(_topology_router, "opts"):
         _topology_router.opts = opts
@@ -364,23 +353,16 @@ async def start(opts, io_loop, raft_service=None):
     # tests without full master context do not implode.
     _LISTENER = _open_inbound_listener(opts, io_loop)
 
-    # Step 8: outbound links from topology.conf.
-    #
-    # Project this master's topology-config cluster_id onto the opts
-    # dict handed to each :class:`PeerMasterLink`.  Solo (non-3008.x)
-    # masters do not set ``opts["cluster_id"]`` — that key is the
-    # 3008.x master-cluster primitive.  Without this projection the
-    # outbound ``topology/_master_auth`` handshake would send
+    # Step 8: outbound links from topology.conf.  Reuse the
+    # ``cluster_id``-projected opts the router already uses; without
+    # it the outbound ``topology/_master_auth`` handshake would send
     # ``cluster_id=None`` and the receiving peer's
     # :func:`_handle_master_auth` would reject it via
     # :func:`_reserved_cluster_id` (``None`` fails the "non-empty
     # str" guard), leaving every solo-to-solo link stuck in retry.
-    link_opts = dict(opts)
-    if not link_opts.get("cluster_id") and cfg.cluster_id:
-        link_opts["cluster_id"] = cfg.cluster_id
     for peer_ref in cfg.peers:
         try:
-            link = PeerMasterLink(link_opts, peer_ref, io_loop)
+            link = PeerMasterLink(projected_opts, peer_ref, io_loop)
         except TypeError as exc:
             log.warning("topology: could not build link for peer %r: %s", peer_ref, exc)
             continue
@@ -640,7 +622,16 @@ def _open_inbound_listener(opts, io_loop):
             # ``req_opts["fun"]``.  Direct in-process callers continue
             # to invoke :func:`_handle_inbound` (which returns a single
             # value) via the same module API.
-            channel.post_fork(_handle_inbound_channel, io_loop)
+            #
+            # ``direct_bind=True`` tells the underlying transport
+            # :class:`salt.transport.zeromq.RequestServer` to bind the REP
+            # socket directly to ``tcp://interface:topology_link_port``
+            # instead of connecting to the master's ``MWorkerQueue`` on
+            # ``workers.ipc``.  Topology does not front its port with an
+            # MWorkerQueue -- we dispatch inbound requests here in the
+            # publish daemon via ``_handle_inbound_channel`` -- so there is
+            # no DEALER waiting for us on the other end of ``workers.ipc``.
+            channel.post_fork(_handle_inbound_channel, io_loop, direct_bind=True)
         return channel
     except Exception as exc:  # pylint: disable=broad-except
         log.warning(
@@ -898,14 +889,104 @@ async def _dispatch_pub(payload):
         return result
     links, local_match = result
     if local_match and isinstance(load, dict):
+        # Minion-return event forwarded from a transit cluster: west
+        # fires ``salt/job/<jid>/ret/<minion_id>`` on its event bus when
+        # its locally-attached minion returns.  The publish daemon's
+        # topology hook packages that as a ``topology/pub``, so the
+        # return arrives on the origin cluster through this very
+        # ``_dispatch_pub`` -- not through the ``topology/ret`` path,
+        # which currently depends on an event-bus subscriber the
+        # publish daemon does not yet own.  Short-circuit here: when
+        # the load looks like a native minion return (``cmd='_return'``
+        # with ``jid`` + ``id`` + ``return``), write it to this
+        # master's local returner via
+        # :func:`salt.utils.job.store_job` so the ``salt`` CLI's
+        # ``local_cache`` poll finds it.  Native publishes (which
+        # carry ``tgt``/``tgt_type``/``fun``/``arg`` but no
+        # ``return``) continue to flow to local minions via
+        # :func:`_publish_to_local_minions`.
+        if _looks_like_minion_return(load):
+            try:
+                _store_forwarded_return(load)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: store_job for forwarded return failed for jid=%r",
+                    load.get("jid"),
+                )
+        else:
+            try:
+                await _publish_to_local_minions(load)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: local-minion publish failed for forwarded jid=%r",
+                    load.get("jid"),
+                )
+    return links, local_match
+
+
+def _looks_like_minion_return(load):
+    """Return True when ``load`` is a minion-return event payload rather
+    than a target publish.  See the discriminator comment in
+    :func:`_dispatch_pub`.
+    """
+    if not isinstance(load, dict):
+        return False
+    return (
+        load.get("cmd") == "_return"
+        and "jid" in load
+        and "id" in load
+        and "return" in load
+    )
+
+
+_MMINION_CACHE = None
+
+
+def _store_forwarded_return(load):
+    """Write a return received via topology forwarding into this
+    master's local returner.
+
+    Lazy-loaded :class:`salt.minion.MasterMinion` is cached at module
+    level so repeated calls don't re-walk the returner loader for
+    every forwarded return in a hot publish.
+    """
+    global _MMINION_CACHE
+    if _OPTS is None:
+        return
+    import salt.utils.job  # pylint: disable=import-outside-toplevel
+
+    if _MMINION_CACHE is None:
+        import salt.minion  # pylint: disable=import-outside-toplevel
+
+        _MMINION_CACHE = salt.minion.MasterMinion(_OPTS, states=False, rend=False)
+    event = salt.utils.event.get_master_event(
+        _OPTS, _OPTS.get("sock_dir"), listen=False
+    )
+    salt.utils.job.store_job(_OPTS, load, event=event, mminion=_MMINION_CACHE)
+
+    # ``store_job`` writes the return under ``<jid>/<minion_id>/return.p``
+    # but does not touch ``<jid>/.minions.p`` -- that list was pre-written
+    # by the local master when the publish was first issued and names
+    # only the LOCAL minions matched by the target.  For a C@-scoped
+    # publish on a master whose own minion set has no overlap with the
+    # scope, that list is empty, so the ``salt`` CLI polling
+    # :func:`salt.returners.local_cache.get_minions` concludes "no
+    # minions matched" and exits before our forwarded return arrives.
+    # Append the returning minion so the CLI's next poll finds a match.
+    minion_id = load.get("id")
+    jid = load.get("jid")
+    if minion_id and jid:
         try:
-            await _publish_to_local_minions(load)
+            job_cache = _OPTS.get("master_job_cache", "local_cache")
+            save_minions_fn = _MMINION_CACHE.returners.get(f"{job_cache}.save_minions")
+            if save_minions_fn is not None:
+                save_minions_fn(jid, [minion_id])
         except Exception:  # pylint: disable=broad-except
             log.exception(
-                "topology: local-minion publish failed for forwarded jid=%r",
-                load.get("jid"),
+                "topology: save_minions for forwarded return failed jid=%r id=%r",
+                jid,
+                minion_id,
             )
-    return links, local_match
 
 
 async def _publish_to_local_minions(load):
@@ -997,6 +1078,56 @@ _DISPATCH_TABLE = {
 }
 
 
+def _maybe_lazy_register_inbound(payload):
+    """Register ``_INBOUND[origin]`` when the peer key is accepted but
+    the in-process inbound record is missing.
+
+    Called from :func:`_handle_inbound` before :func:`_verify_session`
+    on every non-handshake frame.  Idempotent: a frame that arrives
+    with an existing matching session leaves the record untouched; a
+    frame carrying a strictly higher ``session_generation`` bumps the
+    record forward (handles the "peer re-handshaked out-of-band"
+    case).  Older-generation frames fail :func:`_verify_session`
+    naturally.
+
+    No-op when:
+
+    * the payload is not a dict
+    * ``origin_cluster_id`` is missing / reserved
+    * the peer key is not in ``masters/<cluster_id>.pub``
+      (``_handle_master_auth`` is still the only way to accept keys)
+    """
+    if not isinstance(payload, dict):
+        return
+    origin = payload.get("origin_cluster_id")
+    gen = payload.get("session_generation")
+    if _reserved_cluster_id(origin) or gen is None:
+        return
+    if _OPTS is None:
+        return
+    try:
+        gen_i = int(gen)
+    except (TypeError, ValueError):
+        return
+    accepted = os.path.join(_masters_subdir(_OPTS, "masters"), f"{origin}.pub")
+    if not os.path.exists(accepted):
+        return
+    # Mutating ``_INBOUND`` concurrently with the Raft-SM apply thread's
+    # :func:`remove_link` (``_INBOUND.pop`` under ``_LOCK``) is a data
+    # race; hold the module lock around both the staleness check and the
+    # write so a detach landing mid-registration cannot leave a stale
+    # record resurrected.
+    with _LOCK:
+        existing = _INBOUND.get(origin)
+        if existing is not None and existing.session_generation >= gen_i:
+            return
+        _INBOUND[origin] = _InboundLink(
+            peer_cluster_id=origin,
+            session_generation=gen_i,
+            session_aes=None,
+        )
+
+
 def _verify_session(payload):
     """Return True if the payload's session matches a known link.
 
@@ -1076,6 +1207,24 @@ async def _handle_inbound(payload):
     if handler is None:
         log.debug("topology inbound: unknown tag %r dropped", tag)
         return None
+    # Lazy inbound registration: when a frame arrives from a peer whose
+    # key is accepted on disk but ``_INBOUND[origin]`` is empty in this
+    # process, auto-register.  Covers the common zmq REQ-REP survival
+    # pattern where the client's socket silently reconnects after the
+    # server restarts -- the client never learns the session is dead
+    # (zmq delivers the queued send to the fresh server), so the server
+    # must bootstrap state from the authenticated key on disk rather
+    # than wait for a re-handshake that will not come.
+    #
+    # The accepted-key check is the authentication boundary.  The
+    # frame's self-reported ``origin_cluster_id`` is only trusted
+    # because the peer could not have reached us on
+    # ``topology_link_port`` without previously completing a
+    # ``_master_auth`` whose cluster_id key is now in
+    # ``masters/<cluster_id>.pub`` -- a stranger with no accepted key
+    # cannot forge an entry here.
+    if tag not in ("_master_auth", "topology/_master_auth"):
+        _maybe_lazy_register_inbound(inner)
     if not _verify_session(inner):
         log.warning(
             "topology inbound: dropping %r with bad/missing session (origin=%r, gen=%r)",
@@ -1123,6 +1272,45 @@ def _masters_subdir(opts, name):
     except OSError:
         pass
     return path
+
+
+class _InboundLink:
+    """Server-side record of a peer master link.
+
+    Carries the minimum attributes the inbound dispatch path needs:
+
+    * ``peer_cluster_id`` --- for
+      :meth:`salt.topology.router.TopologyRouter.forward_publish`'s
+      path-authentication check (the first-hop in the authenticated
+      path must equal this).
+    * ``session_generation`` --- for :func:`_verify_session` to accept
+      follow-on ``topology/pub|ret|evt|sum`` frames.  Mirrors the
+      sender's :attr:`salt.topology.link.PeerMasterLink.session_generation`
+      which increments from 0 to 1 on first successful handshake and
+      bumps on each re-handshake.
+    * ``session_aes`` --- the AES handed back in the handshake reply;
+      retained so a future crypt-aware inbound dispatch can decrypt.
+
+    Separate from :class:`salt.topology.link.PeerMasterLink` because the
+    server-side record never initiates outbound traffic through this
+    object --- the symmetric outbound link lives in ``_LINKS`` and runs
+    its own ``connect()``.  Keeping the two record-sides separate avoids
+    coupling the inbound side to a :class:`salt.config.topology.PeerRef`
+    (host/port) that the handshake load never carries.
+    """
+
+    __slots__ = ("peer_cluster_id", "session_generation", "session_aes")
+
+    def __init__(self, peer_cluster_id, session_generation, session_aes):
+        self.peer_cluster_id = peer_cluster_id
+        self.session_generation = session_generation
+        self.session_aes = session_aes
+
+    def __repr__(self):
+        return (
+            f"<_InboundLink peer={self.peer_cluster_id!r} "
+            f"gen={self.session_generation}>"
+        )
 
 
 def _reserved_cluster_id(cluster_id):
@@ -1202,6 +1390,28 @@ async def _handle_master_auth(load):
     # raw AES so the handshake completes end-to-end for the harness.
     aes = os.urandom(32)
     endpoints = _own_endpoints(opts)
+
+    # Register the server-side inbound link so follow-on
+    # ``topology/pub|ret|evt|sum`` frames from this peer pass
+    # :func:`_verify_session`.  The sender's
+    # :class:`salt.topology.link.PeerMasterLink` increments its own
+    # :attr:`session_generation` from 0 -> 1 on receipt of this ``ok``
+    # reply (and bumps on each re-handshake), so mirror by incrementing
+    # the server-side counter here.  Prior ``_INBOUND[cluster_id]`` is
+    # a re-handshake; absence is a first-handshake.
+    #
+    # Hold ``_LOCK`` around the read-modify-write: the Raft-SM apply
+    # thread's :func:`remove_link` also touches ``_INBOUND`` under the
+    # same lock, so an un-serialized sequence here could resurrect an
+    # inbound record for a cluster_id the SM has just detached.
+    with _LOCK:
+        existing = _INBOUND.get(cluster_id)
+        next_gen = existing.session_generation + 1 if existing is not None else 1
+        _INBOUND[cluster_id] = _InboundLink(
+            peer_cluster_id=cluster_id,
+            session_generation=next_gen,
+            session_aes=aes,
+        )
     reply = {
         "status": "ok",
         "aes": aes,
