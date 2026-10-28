@@ -2284,6 +2284,15 @@ class SaltCMDOptionParser(
                 "execution using PKI-based authentication."
             ),
         )
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
+            ),
+        )
 
     def _mixin_after_parsed(self):
         if (
@@ -2740,6 +2749,15 @@ class SaltKeyOptionParser(
                 "Use client key authentication for remote execution. Requires client "
                 "keys to be accepted by the Salt Master. This enables remote "
                 "key management using PKI-based authentication."
+            ),
+        )
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
             ),
         )
 
@@ -3210,6 +3228,15 @@ class SaltRunOptionParser(
                 "Use client key authentication instead of eauth. Requires client "
                 "keys to be accepted by the Salt Master. This enables remote "
                 "execution using PKI-based authentication."
+            ),
+        )
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
             ),
         )
         group = self.output_options_group = optparse.OptionGroup(

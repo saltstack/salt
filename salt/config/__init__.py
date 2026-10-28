@@ -4754,24 +4754,49 @@ def apply_master_config(overrides=None, defaults=None):
     return opts
 
 
-def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
+def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=None):
     """
-    Load Master configuration data
+    Load Client configuration data
 
     Usage:
 
     .. code-block:: python
 
         import salt.config
-        master_opts = salt.config.client_config('/etc/salt/master')
+        client_opts = salt.config.client_config('/etc/salt/client')
 
-    Returns a dictionary of the Salt Master configuration file with necessary
-    options needed to communicate with a locally-running Salt Master daemon.
-    This function searches for client specific configurations and adds them to
-    the data from the master configuration.
+    Returns a dictionary of configuration options for Salt CLI tools (salt,
+    salt-run, salt-key) to communicate with a Salt Master. Supports both
+    local (IPC socket) and remote (network) connections.
 
-    This is useful for master-side operations like
-    :py:class:`~salt.client.LocalClient`.
+    This function first checks for a dedicated client config file
+    (/etc/salt/client), then falls back to the master config for backwards
+    compatibility with local master usage.
+
+    Supports profiles for managing multiple masters:
+
+    .. code-block:: yaml
+
+        # /etc/salt/client
+        master: localhost
+        id: admin-laptop
+
+        profiles:
+          prod:
+            master: prod-salt.example.com
+            id: admin-laptop-prod
+          dev:
+            master: dev-salt.example.com
+            id: admin-laptop-dev
+
+    Args:
+        path: Path to config file (typically /etc/salt/client or /etc/salt/master)
+        env_var: Environment variable to override config path
+        defaults: Default options dictionary
+        profile: Profile name to use (e.g., 'prod', 'dev')
+
+    Returns:
+        OptsDict: Configuration dictionary
     """
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS.copy()
@@ -4791,9 +4816,33 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
             "token_file", os.path.join(client_config_dir, "salt_token")
         )
     }
-    # Update options with the master configuration, either from the provided
-    # path, salt's defaults or provided defaults
-    opts.update(master_config(path, defaults=defaults))
+
+    # Check for dedicated client config first, fall back to master config
+    # This allows /etc/salt/client to configure remote masters while
+    # maintaining backwards compatibility with /etc/salt/master for local usage
+    config_dir = os.path.dirname(path)
+    client_config_path = os.path.join(config_dir, "client")
+
+    if os.path.isfile(client_config_path):
+        # Use dedicated client config
+        opts.update(master_config(client_config_path, defaults=defaults))
+        config_used = client_config_path
+    else:
+        # Fall back to master config (backwards compatible)
+        opts.update(master_config(path, defaults=defaults))
+        config_used = path
+
+    # If profile is specified, load and apply profile settings
+    if profile:
+        profiles = opts.get("profiles", {})
+        if profile not in profiles:
+            raise salt.exceptions.SaltClientError(
+                f"Profile '{profile}' not found in {config_used}. "
+                f"Available profiles: {', '.join(profiles.keys()) if profiles else 'none'}"
+            )
+        # Apply profile settings, overlaying on base config
+        profile_opts = profiles[profile]
+        opts.update(profile_opts)
     # Update with the users salt dot file or with the environment variable
     saltrc_config = os.path.join(client_config_dir, saltrc_config_file)
     opts.update(load_config(saltrc_config, env_var, saltrc_config))

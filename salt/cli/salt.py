@@ -64,12 +64,15 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # 2. Otherwise, auto-detect based on environment:
             #    - Try LocalClient if we have master access/permissions
             #    - Fall back to RemoteClient if client keys exist
+            profile = self.config.get("profile")
+
             if self.config.get("client_auth"):
                 # Explicit client auth requested
                 self.client = salt.client.get_remote_client(
                     self.get_config_file_path(),
                     skip_perm_errors=skip_perm_errors,
                     auto_reconnect=True,
+                    profile=profile,
                 )
             elif self.config.get("client_auth") is False:
                 # Explicitly disabled, use local only
@@ -77,6 +80,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                     self.get_config_file_path(),
                     skip_perm_errors=skip_perm_errors,
                     auto_reconnect=True,
+                    profile=profile,
                 )
             else:
                 # Auto-detect: try local first, fall back to remote if needed
@@ -85,6 +89,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                         self.get_config_file_path(),
                         skip_perm_errors=skip_perm_errors,
                         auto_reconnect=True,
+                        profile=profile,
                     )
                 except (SaltClientError, PermissionError) as exc:
                     # LocalClient failed, try RemoteClient if client keys exist
@@ -104,6 +109,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                             self.get_config_file_path(),
                             skip_perm_errors=skip_perm_errors,
                             auto_reconnect=True,
+                            profile=profile,
                         )
                     else:
                         # No client keys, re-raise original error
