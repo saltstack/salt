@@ -2091,7 +2091,9 @@ pattern() = package-c"""
             "retcode": 104,
         }
         run_all_mock = MagicMock(return_value=ret)
-        with patch.dict(zypper.__salt__, {"cmd.run_all": run_all_mock}):
+        with patch.dict(zypper.__salt__, {"cmd.run_all": run_all_mock}), patch.object(
+            zypper.__zypper__, "_is_rpm_lock", return_value=False
+        ):
             self.assertRaises(CommandExecutionError, zypper.search, "vim")
             # ignore_not_found=True -> success_retcodes=[104] on the cmd.run_all call
             run_all_mock.assert_called_with(
