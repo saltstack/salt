@@ -421,15 +421,15 @@ class MinionSwarm(Swarm):
         pki/minion directory path.
         """
 
-        cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/minion")
-        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/minion")
+        cachedir_path = os.path.join(self.swarm_root, "var", "cache", "salt", "minion")
+        sock_dir_path = os.path.join(self.swarm_root, "var", "run", "salt", "minion")
         extension_modules_dir_path = os.path.join(
-            self.swarm_root, "var/cache/salt/minion/extmods"
+            self.swarm_root, "var", "cache", "salt", "minion", "extmods"
         )
-        pki_dir_path = os.path.join(self.swarm_root, "etc/salt/pki/minion")
+        pki_dir_path = os.path.join(self.swarm_root, "etc", "salt", "pki", "minion")
 
         try:
-            os.makedirs(cachdir_path)
+            os.makedirs(cachedir_path)
         except FileExistsError:
             # directory already exists
             pass
@@ -441,7 +441,7 @@ class MinionSwarm(Swarm):
 
         data.update(
             {
-                "cachedir": cachdir_path,
+                "cachedir": cachedir_path,
                 "sock_dir": sock_dir_path,
                 "extension_modules": extension_modules_dir_path,
                 "pki_dir": pki_dir_path,
@@ -532,13 +532,15 @@ class MasterSwarm(Swarm):
         respectively, which generally will not exist.
         """
 
-        key_logfile_path = os.path.join(self.swarm_root, "var/log/salt/key")
-        cachdir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
-        sock_dir_path = os.path.join(self.swarm_root, "var/run/salt/master")
-        sqlite_queue_dir_path = os.path.join(self.swarm_root, "var/cache/salt/master")
+        key_logfile_path = os.path.join(self.swarm_root, "var", "log", "salt", "key")
+        cachedir_path = os.path.join(self.swarm_root, "var", "cache", "salt", "master")
+        sock_dir_path = os.path.join(self.swarm_root, "var", "run", "salt", "master")
+        sqlite_queue_dir_path = os.path.join(
+            self.swarm_root, "var", "cache", "salt", "master"
+        )
 
         try:
-            os.makedirs(cachdir_path)
+            os.makedirs(cachedir_path)
         except FileExistsError:
             # directory already exists
             pass
@@ -551,7 +553,7 @@ class MasterSwarm(Swarm):
         data.update(
             {
                 "key_logfile": key_logfile_path,
-                "cachedir": cachdir_path,
+                "cachedir": cachedir_path,
                 "sock_dir": sock_dir_path,
                 "sqlite_queue_dir": sqlite_queue_dir_path,
             }
