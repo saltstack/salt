@@ -131,7 +131,9 @@ durationpy==0.10
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
 exceptiongroup==1.1.1
-    # via pytest
+    # via
+    #   hypothesis
+    #   pytest
 filelock==3.29.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
@@ -165,6 +167,8 @@ googleapis-common-protos==1.75.0
     #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
+hypothesis==6.168.5
+    # via -r requirements/pytest.txt
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
@@ -563,6 +567,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   gitdb
+sortedcontainers==2.4.0
+    # via hypothesis
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7

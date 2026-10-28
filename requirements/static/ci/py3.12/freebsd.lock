@@ -169,6 +169,8 @@ googleapis-common-protos==1.75.0
     #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/freebsd.txt
+hypothesis==6.170.12
+    # via -r requirements/pytest.txt
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.12/freebsd.lock
@@ -612,6 +614,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.12/freebsd.lock
     #   gitdb
+sortedcontainers==2.4.0
+    # via hypothesis
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7

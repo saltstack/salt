@@ -12,8 +12,10 @@ Invariant: for any well-formed compound expression that embeds at least one
 
 These tests complement the hand-written cases in :mod:`test_router.py` by
 driving at least 100 generated inputs per property via :mod:`hypothesis`.
-When hypothesis is not available in the environment the module skips so CI
-without that optional test dep stays green.
+``hypothesis`` is a declared test dep in ``requirements/pytest.txt`` so
+the real path always runs in CI; the ``try/except ImportError`` fallback
+below is a defence for devs running against a minimal local venv --
+pytest emits "skipped" at collection time instead of crashing.
 """
 
 import pytest
