@@ -14,7 +14,12 @@ import salt.utils.mount
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import CommandExecutionError, CommandNotFoundError
+import salt.utils.versions
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+)
 
 log = logging.getLogger(__name__)
 
@@ -247,6 +252,38 @@ def _resolve_user_group_names(opts):
     return opts
 
 
+def _resolve_pass_num(pass_num, kwargs):
+    """
+    Standardize pass_num and handle deprecated pass_fsck/fs_passno kwargs.
+    """
+    if pass_num is not None and ("pass_fsck" in kwargs or "fs_passno" in kwargs):
+        raise SaltInvocationError(
+            "Conflicting arguments: Cannot pass both 'pass_num' and the deprecated "
+            "'pass_fsck' or 'fs_passno'. Please update to use 'pass_num' only."
+        )
+
+    if "pass_fsck" in kwargs:
+        salt.utils.versions.warn_until(
+            "3011",
+            "The 'pass_fsck' argument has been deprecated in favor of 'pass_num' "
+            "and will be removed in Salt 3011.",
+        )
+        pass_num = kwargs.pop("pass_fsck")
+
+    elif "fs_passno" in kwargs:
+        salt.utils.versions.warn_until(
+            "3011",
+            "The 'fs_passno' argument has been deprecated in favor of 'pass_num' "
+            "and will be removed in Salt 3011.",
+        )
+        pass_num = kwargs.pop("fs_passno")
+
+    if pass_num is None:
+        pass_num = 0
+
+    return pass_num
+
+
 def active(extended=False):
     """
     List the active mounts.
@@ -295,15 +332,10 @@ class _fstab_entry:
 
     fstab_keys = ("device", "name", "fstype", "opts", "dump", "pass_num")
 
-    # preserve data format
-    compatibility_keys = ("device", "name", "fstype", "opts", "dump", "pass")
-
     fstab_format = "{device}\t\t{name}\t{fstype}\t{opts}\t{dump} {pass_num}\n"
 
     @classmethod
-    def dict_from_line(cls, line, keys=fstab_keys):
-        if len(keys) != 6:
-            raise ValueError(f"Invalid key array: {keys}")
+    def dict_from_line(cls, line):
         if line.startswith("#"):
             raise cls.ParseError("Comment!")
 
@@ -311,9 +343,16 @@ class _fstab_entry:
         if len(comps) < 4 or len(comps) > 6:
             raise cls.ParseError("Invalid Entry!")
 
-        comps.extend(["0"] * (len(keys) - len(comps)))
+        comps.extend(["0"] * (len(cls.fstab_keys) - len(comps)))
 
-        return dict(zip(keys, comps))
+        output = dict(zip(cls.fstab_keys, comps))
+
+        # Keep the old "pass" attribute until
+        # fully deprecation of "pass" in favor of "pass_num" in
+        # the output expected for Salt 3011
+        output["pass"] = output["pass_num"]
+
+        return output
 
     @classmethod
     def from_line(cls, *args, **kwargs):
@@ -398,13 +437,13 @@ class _vfstab_entry:
         "device_fsck",
         "name",
         "fstype",
-        "pass_fsck",
+        "pass_num",
         "mount_at_boot",
         "opts",
     )
     # NOTE: weird formatting to match default spacing on Solaris
     vfstab_format = (
-        "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_fsck:<3}"
+        "{device:<11} {device_fsck:<3} {name:<19} {fstype:<8} {pass_num:<3}"
         " {mount_at_boot:<6} {opts}\n"
     )
 
@@ -417,7 +456,14 @@ class _vfstab_entry:
         if len(comps) != 7:
             raise cls.ParseError("Invalid Entry!")
 
-        return dict(zip(cls.vfstab_keys, comps))
+        output = dict(zip(cls.vfstab_keys, comps))
+
+        # Keep the old "pass_fsck" attribute until
+        # fully deprecation of "pass_fsck" in favor of "pass_num" in
+        # the output expected for Salt 3011
+        output["pass_fsck"] = output["pass_num"]
+
+        return output
 
     @classmethod
     def from_line(cls, *args, **kwargs):
@@ -657,6 +703,11 @@ def fstab(config="/etc/fstab"):
 
     List the contents of the fstab
 
+    .. versionchanged:: 3009.0
+        The output dictionary now includes the ``pass_num`` key to align with
+        input arguments. The legacy ``pass`` key is deprecated and will be
+        removed in Salt 3011.
+
     CLI Example:
 
     .. code-block:: bash
@@ -676,11 +727,10 @@ def fstab(config="/etc/fstab"):
                         continue
                     entry = _vfstab_entry.dict_from_line(line)
                 else:
-                    entry = _fstab_entry.dict_from_line(
-                        line, _fstab_entry.compatibility_keys
-                    )
+                    entry = _fstab_entry.dict_from_line(line)
 
                 entry["opts"] = entry["opts"].split(",")
+
                 while entry["name"] in ret:
                     entry["name"] += "_"
 
@@ -698,6 +748,11 @@ def vfstab(config="/etc/vfstab"):
     .. versionadded:: 2016.3.2
 
     List the contents of the vfstab
+
+    .. versionchanged:: 3009.0
+        The output dictionary now includes the ``pass_num`` key to align with
+        input arguments. The legacy ``pass_fsck`` key is deprecated and will be
+        removed in Salt 3011.
 
     CLI Example:
 
@@ -783,7 +838,7 @@ def set_fstab(
     fstype,
     opts="defaults",
     dump=0,
-    pass_num=0,
+    pass_num=None,
     config="/etc/fstab",
     test=False,
     match_on="auto",
@@ -803,6 +858,8 @@ def set_fstab(
 
         salt '*' mount.set_fstab /mnt/foo /dev/sdz1 ext4
     """
+
+    pass_num = _resolve_pass_num(pass_num, kwargs)
 
     # Fix the opts type if it is a list
     if isinstance(opts, list):
@@ -923,7 +980,7 @@ def set_vfstab(
     fstype,
     opts="-",
     device_fsck="-",
-    pass_fsck="-",
+    pass_num="-",
     mount_at_boot="yes",
     config="/etc/vfstab",
     test=False,
@@ -940,12 +997,19 @@ def set_vfstab(
     If the entry is found via `match_on` and `not_change` is True, the
     current line will be preserved.
 
+    .. versionchanged:: 3009.0
+        The ``pass_fsck`` argument is being deprecated in favor of ``pass_num``
+        to align this parameter name with other functions within the mount module.
+        The legacy ``pass_fsck`` argument will be removed in Salt 3011.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' mount.set_vfstab /mnt/foo /device/c0t0d0p0 ufs
     """
+
+    pass_num = _resolve_pass_num(pass_num, kwargs)
 
     # Fix the opts type if it is a list
     if isinstance(opts, list):
@@ -962,7 +1026,7 @@ def set_vfstab(
         "fstype": fstype,
         "opts": opts,
         "device_fsck": device_fsck,
-        "pass_fsck": pass_fsck,
+        "pass_num": pass_num,
         "mount_at_boot": mount_at_boot,
     }
 
