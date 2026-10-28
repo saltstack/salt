@@ -3,6 +3,7 @@ Modules used to control the master itself
 """
 
 import logging
+import os
 from collections.abc import Mapping
 
 import salt.channel.client
@@ -44,6 +45,22 @@ class WheelClient(
     tag_prefix = "wheel"
 
     def __init__(self, opts, context=None):
+        # If client auth is enabled, load client config and set role
+        if opts.get("client_auth"):
+            import salt.syspaths as syspaths
+            from salt import config as salt_config
+
+            # Load client config if it exists
+            client_config_path = os.path.join(
+                syspaths.CONFIG_DIR, opts.get("conf_file", "master")
+            )
+            if os.path.exists(client_config_path):
+                client_opts = salt_config.client_config(client_config_path)
+                client_opts.update(opts)
+                opts = client_opts
+            # Set client role for PKI authentication
+            opts["__role"] = "client"
+
         salt.client.mixins.SyncClientMixin.__init__(self, opts, context=context)
         salt.client.mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
@@ -85,8 +102,6 @@ class WheelClient(
             return True
 
         # Check if IPC socket exists (if not, we're probably remote)
-        import os
-
         sock_dir = self.opts.get("sock_dir")
         if sock_dir and not os.path.exists(
             os.path.join(sock_dir, "master_event_pub.ipc")

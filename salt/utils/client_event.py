@@ -226,12 +226,15 @@ class ClientEventPublisher(multiprocessing.Process):
         tag = event.get("tag", "")
         data = event.get("data", {})
 
-        # Extract job ID if this is a job event
+        # Extract job ID from various event types
+        # Handles: salt/job/* (minion commands), salt/run/* (runners), salt/wheel/* (key management)
         jid = None
-        if tag.startswith("salt/job/"):
-            parts = tag.split("/")
-            if len(parts) >= 3:
-                jid = parts[2]
+        for prefix in ("salt/job/", "salt/run/", "salt/wheel/"):
+            if tag.startswith(prefix):
+                parts = tag.split("/")
+                if len(parts) >= 3:
+                    jid = parts[2]
+                break
 
         # Publish to clients subscribed to this job
         for client_id, client_info in clients.items():

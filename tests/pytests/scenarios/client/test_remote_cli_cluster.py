@@ -42,7 +42,7 @@ def master_cluster(salt_factories):
             "open_mode": False,
             "auto_accept": False,
             "order_masters": True,  # Enable master ordering for cluster
-            "cluster_mode": True,   # Enable cluster mode
+            "cluster_mode": True,  # Enable cluster mode
         }
 
         factory = salt_factories.salt_master_daemon(
@@ -93,7 +93,8 @@ def remote_admin_workstation(tmp_path, master_cluster):
     for i, master in enumerate(master_cluster):
         config_file = workstation_dir / f"master{i+1}"
 
-        config_content = textwrap.dedent(f"""
+        config_content = textwrap.dedent(
+            f"""
             # Cluster Master {i+1} configuration
             id: {admin_id}
             master: {master.config['interface']}
@@ -105,7 +106,8 @@ def remote_admin_workstation(tmp_path, master_cluster):
             timeout: 30
             acceptance_wait_time: 10
             acceptance_wait_time_max: 30
-        """)
+        """
+        )
 
         with open(config_file, "w") as f:
             f.write(config_content)
@@ -116,9 +118,7 @@ def remote_admin_workstation(tmp_path, master_cluster):
     for master in master_cluster:
         with salt.key.ClientKey(master.config) as ckey:
             ckey.cache.store(
-                "client_keys",
-                admin_id,
-                {"pub": pub_key, "state": "accepted"}
+                "client_keys", admin_id, {"pub": pub_key, "state": "accepted"}
             )
 
     return {
@@ -151,8 +151,9 @@ class TestClusterRemoteCLI:
         for i, master in enumerate(master_cluster):
             with salt.key.ClientKey(master.config) as ckey:
                 all_keys = ckey.list_keys()
-                assert admin_id in all_keys["clients"], \
-                    f"Client {admin_id} should be accepted on master {i+1}"
+                assert (
+                    admin_id in all_keys["clients"]
+                ), f"Client {admin_id} should be accepted on master {i+1}"
 
     def test_remote_salt_key_list_across_cluster(
         self, master_cluster, remote_admin_workstation
@@ -182,16 +183,19 @@ class TestClusterRemoteCLI:
             keycli = salt.key.KeyCLI(client_config)
 
             # Verify configuration
-            assert keycli.opts["__role"] == "client", \
-                f"Should be configured as client for master {i+1}"
-            assert keycli.opts["client_auth"] is True, \
-                f"Should have client_auth enabled for master {i+1}"
+            assert (
+                keycli.opts["__role"] == "client"
+            ), f"Should be configured as client for master {i+1}"
+            assert (
+                keycli.opts["client_auth"] is True
+            ), f"Should have client_auth enabled for master {i+1}"
 
             # CRITICAL: Verify WheelClient (used by KeyCLI) uses network events
             wheel_client = salt.wheel.WheelClient(client_config)
             try:
-                assert wheel_client._use_network_events is True, \
-                    f"WheelClient must use network events for master {i+1} in cluster"
+                assert (
+                    wheel_client._use_network_events is True
+                ), f"WheelClient must use network events for master {i+1} in cluster"
                 assert isinstance(
                     wheel_client.event, salt.utils.client_event.ClientEventSubscriber
                 ), f"WheelClient should use ClientEventSubscriber for master {i+1}"
@@ -227,16 +231,20 @@ class TestClusterRemoteCLI:
             runner = salt.runner.Runner(client_config)
 
             # Verify runner is configured correctly
-            assert runner.opts["__role"] == "client", \
-                f"Runner should be configured as client for master {i+1}"
-            assert runner.opts["client_auth"] is True, \
-                f"Runner should have client_auth for master {i+1}"
-            assert runner.opts["fun"] == "test.ping", \
-                "Runner should have correct function"
+            assert (
+                runner.opts["__role"] == "client"
+            ), f"Runner should be configured as client for master {i+1}"
+            assert (
+                runner.opts["client_auth"] is True
+            ), f"Runner should have client_auth for master {i+1}"
+            assert (
+                runner.opts["fun"] == "test.ping"
+            ), "Runner should have correct function"
 
             # CRITICAL: Verify using network events for cluster
-            assert runner._use_network_events is True, \
-                f"Runner must use network events for master {i+1} in cluster"
+            assert (
+                runner._use_network_events is True
+            ), f"Runner must use network events for master {i+1} in cluster"
             assert isinstance(
                 runner.event, salt.utils.client_event.ClientEventSubscriber
             ), f"Runner should use ClientEventSubscriber for master {i+1}"
@@ -268,21 +276,25 @@ class TestClusterRemoteCLI:
 
         try:
             # Verify client is configured correctly
-            assert client.opts["__role"] == "client", \
-                "RemoteClient should have client role"
-            assert client.opts["id"] == remote_admin_workstation["id"], \
-                "RemoteClient should have correct ID"
+            assert (
+                client.opts["__role"] == "client"
+            ), "RemoteClient should have client role"
+            assert (
+                client.opts["id"] == remote_admin_workstation["id"]
+            ), "RemoteClient should have correct ID"
 
             # Verify RemoteClient methods are available
-            assert hasattr(client, "cmd"), \
-                "RemoteClient should have cmd method"
-            assert hasattr(client, "cmd_async"), \
-                "RemoteClient should have cmd_async method"
+            assert hasattr(client, "cmd"), "RemoteClient should have cmd method"
+            assert hasattr(
+                client, "cmd_async"
+            ), "RemoteClient should have cmd_async method"
 
             # CRITICAL: Verify using network events for remote execution
             import salt.utils.client_event
-            assert client._use_network_events is True, \
-                "RemoteClient must use network events in cluster scenario"
+
+            assert (
+                client._use_network_events is True
+            ), "RemoteClient must use network events in cluster scenario"
             assert isinstance(
                 client.event, salt.utils.client_event.ClientEventSubscriber
             ), "RemoteClient should use ClientEventSubscriber for cluster operations"
@@ -293,9 +305,7 @@ class TestClusterRemoteCLI:
         finally:
             client.destroy()
 
-    def test_cluster_failover_scenario(
-        self, master_cluster, remote_admin_workstation
-    ):
+    def test_cluster_failover_scenario(self, master_cluster, remote_admin_workstation):
         """
         Test remote CLI failover between cluster masters.
 
@@ -329,10 +339,12 @@ class TestClusterRemoteCLI:
         assert secondary_runner.opts["__role"] == "client"
 
         # Both runners should work identically
-        assert primary_runner.opts["id"] == secondary_runner.opts["id"], \
-            "Same admin ID on both masters"
-        assert primary_runner.opts["client_auth"] == secondary_runner.opts["client_auth"], \
-            "Same auth mode on both masters"
+        assert (
+            primary_runner.opts["id"] == secondary_runner.opts["id"]
+        ), "Same admin ID on both masters"
+        assert (
+            primary_runner.opts["client_auth"] == secondary_runner.opts["client_auth"]
+        ), "Same auth mode on both masters"
 
     def test_cluster_load_balancing_simulation(
         self, master_cluster, remote_admin_workstation
@@ -405,17 +417,16 @@ class TestClusterKeyManagement:
             # In production, minion would send key automatically
             # For test, we manually add to pending
             master_key.cache.store(
-                "keys",
-                new_minion_id,
-                {"pub": new_pub, "state": "pending"}
+                "keys", new_minion_id, {"pub": new_pub, "state": "pending"}
             )
 
         # Verify key is pending on all masters
         for i, master in enumerate(master_cluster):
             master_key = salt.key.Key(master.config)
             all_keys = master_key.list_keys()
-            assert new_minion_id in all_keys["minions_pre"], \
-                f"New minion should be pending on master {i+1}"
+            assert (
+                new_minion_id in all_keys["minions_pre"]
+            ), f"New minion should be pending on master {i+1}"
 
         # Administrator accepts on first master
         master_key = salt.key.Key(master_cluster[0].config)
@@ -450,21 +461,21 @@ class TestClusterKeyManagement:
         for master in master_cluster:
             with salt.key.ClientKey(master.config) as ckey:
                 ckey.cache.store(
-                    "client_keys",
-                    new_admin_id,
-                    {"pub": new_pub, "state": "accepted"}
+                    "client_keys", new_admin_id, {"pub": new_pub, "state": "accepted"}
                 )
 
         # Verify new admin is accepted on all masters
         for i, master in enumerate(master_cluster):
             with salt.key.ClientKey(master.config) as ckey:
                 all_keys = ckey.list_keys()
-                assert new_admin_id in all_keys["clients"], \
-                    f"New admin should be accepted on master {i+1}"
+                assert (
+                    new_admin_id in all_keys["clients"]
+                ), f"New admin should be accepted on master {i+1}"
 
                 # Original admin should still be there
-                assert remote_admin_workstation["id"] in all_keys["clients"], \
-                    f"Original admin should still be on master {i+1}"
+                assert (
+                    remote_admin_workstation["id"] in all_keys["clients"]
+                ), f"Original admin should still be on master {i+1}"
 
         # Clean up
         for master in master_cluster:
@@ -475,9 +486,7 @@ class TestClusterKeyManagement:
 class TestClusterProductionWorkflow:
     """Test complete production workflow with cluster."""
 
-    def test_complete_admin_workflow(
-        self, master_cluster, remote_admin_workstation
-    ):
+    def test_complete_admin_workflow(self, master_cluster, remote_admin_workstation):
         """
         Test complete administrator workflow with cluster.
 
