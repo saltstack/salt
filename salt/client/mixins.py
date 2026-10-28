@@ -183,11 +183,27 @@ class SyncClientMixin(ClientStateMixin):
                 'eauth': 'pam',
             })
         """
-        with salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=True
-        ) as event:
+        # Use self.event if available (supports both IPC and network events)
+        # Otherwise fall back to creating IPC event listener
+        if hasattr(self, "event") and self.event is not None:
+            event = self.event
+            should_close = False
+            # For ClientEventSubscriber, ensure connected
+            if hasattr(event, "connect") and not getattr(event, "authenticated", True):
+                event.connect()
+        else:
+            event = salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=True
+            )
+            should_close = True
+
+        try:
             job = self.master_call(**low)
             ret_tag = salt.utils.event.tagify("ret", base=job["tag"])
+
+            # Subscribe to this specific job if using ClientEventSubscriber
+            if hasattr(event, "subscribe_job"):
+                event.subscribe_job(job["jid"])
 
             if timeout is None:
                 timeout = self.opts.get("rest_timeout", 300)
@@ -201,6 +217,9 @@ class SyncClientMixin(ClientStateMixin):
                 )
 
             return ret if full_return else ret["data"]["return"]
+        finally:
+            if should_close and hasattr(event, "destroy"):
+                event.destroy()
 
     def cmd(
         self,

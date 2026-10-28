@@ -1468,7 +1468,9 @@ class TestRemoteCommandExecution:
                         # Got the return event!
                         result_received = True
                         assert "data" in event, "Event should have data"
-                        assert "return" in event["data"], "Event should have return data"
+                        assert (
+                            "return" in event["data"]
+                        ), "Event should have return data"
                         break
 
             assert (
