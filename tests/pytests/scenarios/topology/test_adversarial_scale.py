@@ -274,10 +274,14 @@ class TestBreadcrumbCacheExhaustion:
         achieved rate.  The writer holds flock + mmap flush per put,
         so sustained rate caps around disk sync throughput.
 
-        This test asserts a FLOOR: at least 500 puts/sec on tmpfs or
-        a modern SSD.  On the author's dev box the measured rate is
-        ~4-8 kHz; the floor is intentionally conservative to avoid
-        flakes on slow CI storage.
+        This test asserts a FLOOR: at least 100 puts/sec.  On the
+        author's dev box the measured rate is ~4-8 kHz, and tmpfs/SSD
+        CI storage gets 500+/s; the original 500/s floor was tuned to
+        that, but GitHub Actions' virtualised disks regularly land in
+        the 200-400/s range (we've seen 227/s on Ubuntu-24.04 runners
+        in CI).  The 100/s floor still catches a 10x+ regression in
+        the writer path (flock + mmap flush per put) while tolerating
+        the slow-virtualised-disk floor.
         """
         opts = _router_opts(tmp_path, "east", cache_size=16_384)
         breadcrumbs.pre_create(opts)
@@ -289,10 +293,10 @@ class TestBreadcrumbCacheExhaustion:
                 breadcrumbs.put(cache, f"east:{i:020d}", "west", 60, opts)
             dt = time.monotonic() - t0
             rate = n / dt
-            # Floor: 500 puts/sec.  Record the achieved rate in the
+            # Floor: 100 puts/sec.  Record the achieved rate in the
             # assertion message so a CI log diff shows the number.
             assert (
-                rate > 500
+                rate > 100
             ), f"breadcrumb put rate too low: {rate:.0f}/s over {dt:.3f}s"
             # And lookups from the same handle must find them.
             assert breadcrumbs.lookup(cache, "east:00000000000000000500") == "west"
@@ -685,10 +689,14 @@ class TestCleanupGcPressure:
     def test_cleanup_10k_expired_entries(self, tmp_path):
         """
         Fill 10,000 entries, all expired, run cleanup, assert it
-        completes in bounded time (<30 s) and clears the cache.
+        completes in bounded time (<90 s) and clears the cache.
 
         10k entries ~ 10k deletes + one atomic_rebuild of a 10k-slot
-        index.  Measured on dev box: ~2.1 s total.
+        index.  Measured on dev box: ~2.1 s total.  GitHub Actions
+        runners regularly land in the 40-50 s range on their
+        virtualised disks (we've seen 43.5 s on Ubuntu-24.04); 90 s
+        gives a comfortable headroom while still catching a 10x+
+        regression in the cleanup path.
         """
         opts = _router_opts(tmp_path, "east", cache_size=16_384)
         # Expired-on-arrival: negative grace/max_age.
@@ -706,7 +714,7 @@ class TestCleanupGcPressure:
             dt = time.monotonic() - t0
             assert removed == 10_000, f"cleanup removed {removed}, expected 10000"
             # Expensive but bounded.
-            assert dt < 30.0, f"cleanup of 10k entries took {dt:.3f}s"
+            assert dt < 90.0, f"cleanup of 10k entries took {dt:.3f}s"
             # Post-rebuild: 0 occupied, 0 tombstones.
             post = cache.get_stats()
             assert post["occupied"] == 0

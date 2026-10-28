@@ -223,20 +223,29 @@ def test_pre_fork_materialises_mmap_files(opts, clean_state):
     assert os.path.isfile(br_path), "breadcrumbs index not created"
 
 
-def test_pre_fork_reserves_listener_socket(opts, clean_state):
-    """``pre_fork`` binds ``topology_link_port`` and stashes the socket."""
+def test_pre_fork_does_not_reserve_listener_socket(opts, clean_state):
+    """
+    ``pre_fork`` must NOT bind ``topology_link_port`` in the parent.
+
+    The direct_bind path in
+    :class:`salt.transport.zeromq.RequestServer`'s ``post_fork`` binds
+    the port inside the publish daemon after fork; a parent-held bound
+    fd on the same host:port causes the publish daemon's zmq bind to
+    fail with EADDRINUSE.  Also helps Windows CI where ``fcntl`` --
+    needed by the old reservation path -- is unavailable.
+    """
     link_manager.pre_fork(opts, process_manager=None)
     sock = link_manager._LISTENER_SOCKET  # pylint: disable=protected-access
-    assert sock is not None, "pre_fork should populate _LISTENER_SOCKET"
-    assert sock.getsockname()[1] == opts["topology_link_port"]
+    assert sock is None, "pre_fork must leave _LISTENER_SOCKET unreserved"
 
 
 def test_pre_fork_does_not_populate_module_globals(opts, clean_state):
-    """``pre_fork`` must NOT touch _LINKS / _INBOUND / _LISTENER."""
+    """``pre_fork`` must NOT touch _LINKS / _INBOUND / _LISTENER / _LISTENER_SOCKET."""
     link_manager.pre_fork(opts, process_manager=None)
     assert link_manager._LINKS == {}  # pylint: disable=protected-access
     assert link_manager._INBOUND == {}  # pylint: disable=protected-access
     assert link_manager._LISTENER is None  # pylint: disable=protected-access
+    assert link_manager._LISTENER_SOCKET is None  # pylint: disable=protected-access
     assert link_manager._OWNER_PID is None  # pylint: disable=protected-access
 
 

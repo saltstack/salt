@@ -414,11 +414,20 @@ def test_link_manager_double_start_is_safe(tmp_path, link_manager_module):
 def test_link_manager_pre_fork_is_idempotent(tmp_path, link_manager_module):
     """
     Calling ``pre_fork`` twice in the parent before any child forks must be
-    idempotent.  The second call must NOT leak a second bound socket.
+    idempotent.
+
+    ``pre_fork`` no longer reserves ``topology_link_port`` in the parent
+    (that was the old EADDRINUSE-prone design superseded by
+    :class:`salt.transport.zeromq.RequestServer`'s ``direct_bind`` path
+    inside the publish daemon).  Both calls must leave
+    ``_LISTENER_SOCKET`` as ``None`` -- idempotence means "neither call
+    allocates nor replaces a socket," not "both calls return the same
+    socket reference."  Also pre-creates the breadcrumb + registry
+    MmapCaches once; the second call must not re-create them.
     """
     import socket
 
-    # Reserve a free port, then release it so pre_fork can bind.
+    # Reserve a free port, then release it (used to feed opts).
     s = socket.socket()
     s.bind(("127.0.0.1", 0))
     port = s.getsockname()[1]
@@ -432,19 +441,15 @@ def test_link_manager_pre_fork_is_idempotent(tmp_path, link_manager_module):
         topology_link_port=port,
     )
     link_manager_module.pre_fork(opts, process_manager=None)
-    first_sock = link_manager_module._LISTENER_SOCKET
-    assert first_sock is not None, "first pre_fork did not reserve a socket"
+    assert (
+        link_manager_module._LISTENER_SOCKET is None
+    ), "pre_fork must not reserve a socket (direct_bind path owns the bind)"
 
-    # Second pre_fork: must NOT silently replace the socket (would leak the fd)
-    # and must NOT raise.
+    # Second pre_fork: still no socket, still no raise.
     link_manager_module.pre_fork(opts, process_manager=None)
-    second_sock = link_manager_module._LISTENER_SOCKET
-    assert second_sock is first_sock, (
-        "pre_fork is not idempotent --- second call replaced the "
-        f"listener socket (first fd={first_sock.fileno()}, "
-        f"second fd={second_sock.fileno() if second_sock else None}); "
-        "the first fd leaked"
-    )
+    assert (
+        link_manager_module._LISTENER_SOCKET is None
+    ), "second pre_fork must also leave _LISTENER_SOCKET unreserved"
 
 
 # ---------------------------------------------------------------------------

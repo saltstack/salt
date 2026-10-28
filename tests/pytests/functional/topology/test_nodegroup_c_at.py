@@ -122,17 +122,29 @@ class TestExtractClusterScopeNodegroups:
         ng = {"loop": "N@loop and web-*"}
         assert router.extract_cluster_scope("N@loop", nodegroups=ng) is None
 
-    def test_union_of_c_at_tokens_in_nodegroup(self):
+    def test_or_adjacent_c_at_in_nodegroup_floods(self):
+        """
+        ``C@east or C@west`` inside a nodegroup expands to tokens where
+        each ``C@`` sits adjacent to ``or``.  The router's
+        :func:`_c_at_adjacent_to_or` rule treats any ``or``-adjacent
+        ``C@`` as flood (``None``) because the conservative pattern
+        cannot distinguish ``C@east or C@west`` (which could safely
+        resolve to ``{east, west}``) from ``C@east or web-*`` (where
+        the OR branches to a non-cluster-scoped predicate).  See the
+        docstring on :func:`salt.topology.router.extract_cluster_scope`.
+        """
         ng = {"multi": "C@east or C@west"}
-        assert router.extract_cluster_scope("N@multi", nodegroups=ng) == {
-            "east",
-            "west",
-        }
+        assert router.extract_cluster_scope("N@multi", nodegroups=ng) is None
 
-    def test_c_at_outside_nodegroup_unions_with_c_at_inside(self):
+    def test_or_between_nodegroup_and_c_at_floods(self):
+        """
+        An ``or`` connecting a C@-bearing nodegroup to a top-level
+        ``C@`` lands under the same conservative rule as
+        :meth:`test_or_adjacent_c_at_in_nodegroup_floods`.
+        """
         ng = {"east_web": "C@east and web-*"}
         got = router.extract_cluster_scope("N@east_web or C@south", nodegroups=ng)
-        assert got == {"east", "south"}
+        assert got is None
 
     def test_not_near_nodegroup_floods(self):
         # Explicit negation still returns None (flood) --- the receiver
