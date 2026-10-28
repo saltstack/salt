@@ -2620,6 +2620,16 @@ class TCPPublishServer(PublishServer):
         super().__init__(*args, **kwargs)
 
 
+def _socket_family(host):
+    """
+    Return the address family to open a connection to *host* with.
+    """
+    try:
+        return socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)[0][0]
+    except socket.gaierror:
+        return socket.AF_INET6 if ":" in (host or "") else socket.AF_INET
+
+
 class _TCPPubServerPublisher:
     """
     Client half of the local publish channel used for the Salt event bus.
@@ -2711,7 +2721,7 @@ class _TCPPubServerPublisher:
             sock_addr = self.path
             log.debug("Publisher connecting to %s", self.path)
         else:
-            sock_type = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
+            sock_type = _socket_family(self.host)
             sock_addr = (self.host, self.port)
             log.debug("Publisher connecting to %s:%s", self.host, self.port)
 
