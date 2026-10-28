@@ -2364,6 +2364,30 @@ class RemoteClient(LocalClient):
             c_path, mopts, skip_perm_errors, io_loop, keep_loop, auto_reconnect, listen
         )
 
+        # Replace IPC event system with network event subscriber
+        # This allows RemoteClient to work from truly remote machines
+        self._use_network_events = True
+        self._setup_network_events(listen)
+
+    def _setup_network_events(self, listen):
+        """
+        Set up network-based event subscription for remote clients.
+
+        Replaces the IPC event system with an authenticated network
+        subscriber that works from remote machines.
+        """
+        import salt.utils.client_event
+
+        # Destroy the IPC event subscriber created by LocalClient
+        if self.event:
+            self.event.destroy()
+
+        # Create network event subscriber
+        self.event = salt.utils.client_event.ClientEventSubscriber(self.opts)
+
+        if listen:
+            self.event.connect()
+
     def pub(
         self,
         tgt,
@@ -2413,18 +2437,23 @@ class RemoteClient(LocalClient):
 
         payload_kwargs["client_id"] = self.opts["id"]
 
+        # Use master address from config, not interface (for remote clients)
+        master = self.opts.get("master", "localhost")
         master_uri = "tcp://{}:{}".format(
-            salt.utils.network.ip_bracket(self.opts["interface"]),
-            str(self.opts["ret_port"]),
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
         )
         with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="aes", master_uri=master_uri
         ) as channel:
             try:
-                # Ensure that the event subscriber is connected.
-                # If not, we won't get a response, so error out
-                if listen and not self.event.connect_pub(timeout=timeout):
+                # For network events, ensure we're connected
+                if listen and self._use_network_events:
+                    if not self.event.authenticated:
+                        self.event.connect()
+                # For IPC events (shouldn't happen), use original logic
+                elif listen and not self.event.connect_pub(timeout=timeout):
                     raise SaltReqTimeoutError()
+
                 payload = channel.send(payload_kwargs, timeout=timeout)
             except SaltReqTimeoutError as err:
                 log.error(err)
@@ -2463,7 +2492,13 @@ class RemoteClient(LocalClient):
             if not payload:
                 return payload
 
-        return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+        result = {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+
+        # Subscribe to job events if using network events
+        if self._use_network_events and listen and "jid" in result:
+            self.event.subscribe_job(result["jid"])
+
+        return result
 
     def __read_master_key(self):
         """

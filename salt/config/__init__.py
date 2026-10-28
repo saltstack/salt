@@ -1603,6 +1603,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "master"),
         "sock_pool_size": 1,
         "ret_port": 4506,
+        "client_event_port": 4507,
+        "client_event_publish": True,
         "timeout": 5,
         "publish_timeout": 30,
         "keep_jobs": 24,

@@ -1286,6 +1286,18 @@ class Master(SMaster):
                 FileserverUpdate, args=(self.opts,), name="FileserverUpdate"
             )
 
+            # Start client event publisher if enabled
+            if self.opts.get("client_event_publish", True):
+                log.info("Creating client event publisher process")
+                # Late import to avoid circular dependencies
+                from salt.utils import client_event
+
+                self.process_manager.add_process(
+                    client_event.ClientEventPublisher,
+                    args=(self.opts,),
+                    name="ClientEventPublisher",
+                )
+
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
                 if salt.utils.ssdp.SSDPDiscoveryServer.is_available():
