@@ -13,7 +13,6 @@ Architecture:
 """
 
 import logging
-import multiprocessing
 import os
 
 import zmq
@@ -25,12 +24,13 @@ import salt.transport.zeromq
 import salt.utils.event
 import salt.utils.files
 import salt.utils.network
+import salt.utils.process
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
 
 
-class ClientEventPublisher(multiprocessing.Process):
+class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
     """
     Authenticated event publisher for remote Salt clients.
 
@@ -52,7 +52,6 @@ class ClientEventPublisher(multiprocessing.Process):
         """
         super().__init__()
         self.opts = opts
-        self.running = False
 
     def run(self):
         """
@@ -62,7 +61,6 @@ class ClientEventPublisher(multiprocessing.Process):
         2. Listen for client authentication requests
         3. Filter and forward events to authenticated clients
         """
-        self.running = True
         log.info(
             "Starting client event publisher on %s:%s",
             self.opts["interface"],
@@ -108,7 +106,7 @@ class ClientEventPublisher(multiprocessing.Process):
         poller.register(auth_socket, zmq.POLLIN)
 
         try:
-            while self.running:
+            while True:
                 # Poll for authentication requests (non-blocking)
                 socks = dict(poller.poll(timeout=100))
 
@@ -121,9 +119,10 @@ class ClientEventPublisher(multiprocessing.Process):
                 if event:
                     self._publish_filtered_event(pub_socket, event, clients)
 
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             log.info("Client event publisher shutting down")
         finally:
+            log.debug("Cleaning up client event publisher resources")
             pub_socket.close()
             auth_socket.close()
             context.term()
@@ -249,11 +248,6 @@ class ClientEventPublisher(multiprocessing.Process):
                     pub_socket.send_multipart([client_id.encode(), msg])
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error("Error publishing event to client %s: %s", client_id, exc)
-
-    def shutdown(self):
-        """Shut down the event publisher."""
-        self.running = False
-        self.terminate()
 
 
 class ClientEventSubscriber:
