@@ -42,6 +42,8 @@ from collections.abc import Callable, Iterable, Iterator
 from types import SimpleNamespace
 from typing import Any, TypeVar, cast
 
+import salt.utils.files
+
 log = logging.getLogger(__name__)
 
 _ENV = "PROMETHEUS_MULTIPROC_DIR"
@@ -94,7 +96,9 @@ _dir: str | None = None
 _dir_is_ours: bool = False
 _owner_pid: int | None = None
 _server: Any = None
+_directory_lock: Any = None
 _orig_value_class: Any = None
+_value_class: Any = None
 _boundaries: dict[str, tuple[float, ...]] = {}
 _target_info: dict[str, str] = {}
 # Problems already reported at warning level; see :func:`_warn_once`.
@@ -146,7 +150,7 @@ def start(opts: dict[str, Any]) -> bool:
     their metrics write into that directory.
     """
     global _dir, _dir_is_ours, _owner_pid  # pylint: disable=global-statement
-    global _server, _boundaries  # pylint: disable=global-statement
+    global _server, _boundaries, _directory_lock  # pylint: disable=global-statement
     global _start_failed, _target_info  # pylint: disable=global-statement
     if not load():
         return False
@@ -173,14 +177,14 @@ def start(opts: dict[str, Any]) -> bool:
 
         prom_opts = opts.get("prometheus") or {}
         configured = prom_opts.get("multiproc_dir")
-        if configured:
-            os.makedirs(configured, exist_ok=True)
-            for name in os.listdir(configured):
-                if name.endswith(".db"):
-                    os.remove(os.path.join(configured, name))
-            _dir, _dir_is_ours = configured, False
-        else:
-            _dir, _dir_is_ours = tempfile.mkdtemp(prefix="salt-metrics-"), True
+        try:
+            _dir, _dir_is_ours, _directory_lock = _prepare_directory(configured)
+        except OSError as exc:
+            log.error(
+                "Cannot use Prometheus multiprocess directory %s: %s", configured, exc
+            )
+            _start_failed = True
+            return False
         os.environ[_ENV] = _dir
         os.environ[_OWNER_ENV] = str(os.getpid())
         _owner_pid = os.getpid()
@@ -205,6 +209,37 @@ def start(opts: dict[str, Any]) -> bool:
         return True
 
 
+def _prepare_directory(configured: str | None) -> tuple[str, bool, Any]:
+    """Claim a configured directory before removing any stale metric files."""
+    if not configured:
+        return tempfile.mkdtemp(prefix="salt-metrics-"), True, None
+    os.makedirs(configured, exist_ok=True)
+    # The owner retains this handle until _teardown, beyond this function.
+    lock_file = salt.utils.files.fopen(  # pylint: disable=resource-leakage
+        os.path.join(configured, ".salt-metrics.lock"), "a+b"
+    )
+    try:
+        if os.name == "nt":
+            import msvcrt  # pylint: disable=import-outside-toplevel
+
+            lock_file.seek(0)
+            msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl  # pylint: disable=import-outside-toplevel
+
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        for name in os.listdir(configured):
+            if name.endswith(".db"):
+                os.remove(os.path.join(configured, name))
+    except OSError:
+        lock_file.close()
+        raise
+    # Keep the file open for the owner's lifetime.  Closing releases the
+    # kernel lock even if the process dies; leave its inode in place so
+    # another owner cannot bypass a lock on an unlinked file.
+    return configured, False, lock_file
+
+
 def stop() -> None:
     """Stop serving and remove the shared directory (owner process only)."""
     global _start_failed  # pylint: disable=global-statement
@@ -225,6 +260,7 @@ def stop() -> None:
 
 def _teardown() -> None:
     global _dir, _dir_is_ours, _owner_pid, _server  # pylint: disable=global-statement
+    global _directory_lock, _orig_value_class, _value_class  # pylint: disable=global-statement
     if _pc is not None:
         close = getattr(_pc.values.ValueClass, "close_all_files", None)
         if close is not None:
@@ -232,8 +268,9 @@ def _teardown() -> None:
                 close()
             except Exception:  # pylint: disable=broad-except
                 log.debug("closing multiprocess files raised", exc_info=True)
-        if _orig_value_class is not None:
+        if _orig_value_class is not None and _pc.values.ValueClass is _value_class:
             _pc.values.ValueClass = _orig_value_class
+    _orig_value_class, _value_class = None, None
     directory = _dir
     if directory:
         if _dir_is_ours:
@@ -245,6 +282,9 @@ def _teardown() -> None:
                         os.remove(os.path.join(directory, name))
                     except OSError:
                         pass
+    if _directory_lock is not None:
+        _directory_lock.close()
+        _directory_lock = None
     os.environ.pop(_ENV, None)
     os.environ.pop(_OWNER_ENV, None)
     _dir, _dir_is_ours, _owner_pid, _server = None, False, None, None
@@ -258,13 +298,14 @@ def _use_multiprocess_values() -> None:
     environment.  Another module may have imported it earlier, so set
     the class explicitly instead of relying on the import order.
     """
-    global _orig_value_class  # pylint: disable=global-statement
+    global _orig_value_class, _value_class  # pylint: disable=global-statement
     values = _pc.values
-    if getattr(values.ValueClass, "_multiprocess", False):
-        return
-    if _orig_value_class is None:
+    if _value_class is None:
         _orig_value_class = values.ValueClass
-    values.ValueClass = values.MultiProcessValue()
+        # A pre-existing multiprocess class can already cache files from
+        # another directory.  Salt needs its own class and file cache.
+        _value_class = values.MultiProcessValue()
+    values.ValueClass = _value_class
 
 
 def _warn_once(key: str, message: str, *args: Any, exc_info: bool = False) -> None:
@@ -342,6 +383,11 @@ class _Instrument:
 
     def _create(self, labelnames: tuple[str, ...]) -> Any:
         raise NotImplementedError
+
+    def reset_after_fork(self) -> None:
+        """Discard inherited client locks and reopen this process's metric."""
+        self._create_lock = threading.Lock()
+        self._metric = None
 
     def _child(self, attributes: dict[str, Any] | None) -> Any:
         labels = _labels(attributes)
@@ -462,3 +508,28 @@ class _CallbackCollector:
                 labels = _labels(obs.attributes)
                 family.add_metric([labels.get(k, "") for k in labelnames], obs.value)
             yield family
+
+
+def _after_fork() -> None:
+    """Replace locks that may have been held by another thread at fork."""
+    global _lock, _value_class, _directory_lock, _server  # pylint: disable=global-statement
+    _lock = threading.RLock()
+    for instrument in _instruments.values():
+        instrument.reset_after_fork()
+    if _value_class is not None:
+        _value_class = _pc.values.MultiProcessValue()
+        _pc.values.ValueClass = _value_class
+    if _directory_lock is not None:
+        # Close the child's duplicate without LOCK_UN, which would also
+        # release the parent's lock on the shared open file description.
+        _directory_lock.close()
+        _directory_lock = None
+    if isinstance(_server, tuple):
+        # The serving thread does not survive fork; its listening socket
+        # belongs only to the owner process.
+        _server[0].socket.close()
+        _server = None
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_after_fork)

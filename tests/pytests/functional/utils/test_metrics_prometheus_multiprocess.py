@@ -10,6 +10,7 @@ all processes, with no per-process label (#70248).
 import multiprocessing
 import os
 import socket
+import threading
 import time
 import urllib.request
 from types import SimpleNamespace
@@ -17,6 +18,7 @@ from types import SimpleNamespace
 import pytest
 
 import salt.utils.metrics as metrics
+import salt.utils.metrics_prometheus as backend
 
 pytest.importorskip("prometheus_client")
 
@@ -55,6 +57,13 @@ def _record(opts):
         for _ in range(PER_ROUND):
             counter.add(1, attributes={"cmd": "ret"})
             duration.record(10, attributes={"cmd": "ret"})
+
+
+def _record_cached(opts, counter):
+    metrics.configure(opts)
+    counter.add(2, attributes={"cmd": "ret"})
+    metrics.counter("salt.test.jobs").add(1, attributes={"cmd": "ret"})
+    metrics.shutdown()
 
 
 def _scrape(port):
@@ -154,3 +163,69 @@ def test_directory_is_removed_on_shutdown():
     metrics.shutdown()
     assert not os.path.exists(directory)
     assert "PROMETHEUS_MULTIPROC_DIR" not in os.environ
+
+
+@pytest.mark.parametrize("held_lock", ["backend", "instrument", "labels", "value"])
+def test_fork_while_another_thread_records_or_scrapes(tmp_path, monkeypatch, held_lock):
+    opts = _opts(0, tmp_path)
+    metrics.configure(opts)
+    port = backend._server[0].server_port
+    counter = metrics.counter("salt.test.jobs")
+    held = threading.Event()
+    release = threading.Event()
+    parent_total = 1
+
+    if held_lock in ("labels", "value"):
+        counter.add(1, attributes={"cmd": "ret"})
+        parent_total += 1
+    if held_lock == "value":
+        value_file = counter._metric.labels("ret")._value._file
+        original_write = value_file.write_value
+
+        def delayed_write(*args):
+            held.set()
+            assert release.wait(10)
+            original_write(*args)
+
+        monkeypatch.setattr(value_file, "write_value", delayed_write)
+
+        def target():
+            counter.add(1, attributes={"cmd": "ret"})
+
+        parent_total += 1
+    else:
+        lock = {
+            "backend": backend._lock,
+            "instrument": counter._create_lock,
+            "labels": getattr(counter._metric, "_lock", None),
+        }[held_lock]
+
+        def target():
+            with lock:
+                held.set()
+                assert release.wait(10)
+
+    thread = threading.Thread(target=target)
+    thread.start()
+    proc = multiprocessing.get_context("fork").Process(
+        target=_record_cached, args=(opts, counter)
+    )
+    try:
+        assert held.wait(5)
+        proc.start()
+        release.set()
+        thread.join(timeout=5)
+        assert not thread.is_alive()
+        proc.join(timeout=10)
+        assert proc.exitcode == 0, "forked worker blocked on an inherited metrics lock"
+    finally:
+        release.set()
+        thread.join(timeout=5)
+        if proc.is_alive():
+            proc.kill()
+            proc.join(timeout=5)
+
+    counter.add(1, attributes={"cmd": "ret"})
+    assert _value(_scrape(port), 'salt_test_jobs_total{cmd="ret"}') == parent_total + 3
+    # A child's shutdown must leave the owner's directory and lock intact.
+    assert (tmp_path / "prom" / ".salt-metrics.lock").exists()

@@ -88,8 +88,11 @@ are the same on both daemons.
     Directory where the processes keep their values.  When empty, a
     temporary directory is created at start and removed at stop.  When
     set, ``*.db`` files left in it by a previous run are deleted at
-    start.  If ``PROMETHEUS_MULTIPROC_DIR`` is set in the master's
-    environment, Salt logs a warning and uses its own directory instead.
+    start.  Each independent daemon needs its own directory; Salt holds
+    an operating-system lock and refuses to clear a directory already
+    owned by a running daemon.  If ``PROMETHEUS_MULTIPROC_DIR`` is set in
+    the master's environment, Salt logs a warning and uses its own
+    directory instead.
 
 ``histogram_boundaries``
     Per-instrument explicit bucket boundaries.  The defaults span

@@ -5,6 +5,7 @@ Unit tests for the ``prometheus_client`` backend of salt.utils.metrics.
 import logging
 import os
 import socket
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -216,6 +217,66 @@ def test_environment_variable_is_overridden_with_a_warning(
     assert os.environ["PROMETHEUS_MULTIPROC_DIR"] == str(tmp_path / "prom")
     assert any("PROMETHEUS_MULTIPROC_DIR" in rec.message for rec in caplog.records)
     assert not list(foreign.iterdir())
+
+
+def test_existing_multiprocess_metrics_keep_their_directory(tmp_path, monkeypatch):
+    foreign = tmp_path / "foreign"
+    foreign.mkdir()
+    monkeypatch.setenv("PROMETHEUS_MULTIPROC_DIR", str(foreign))
+    assert backend.load()
+    original = backend._pc.values.MultiProcessValue()
+    monkeypatch.setattr(backend._pc.values, "ValueClass", original)
+    external = backend._pc.lib.Counter("external_requests", "External", registry=None)
+    external.inc()
+
+    port = _configure(tmp_path)
+    metrics.counter("salt.test.own").add(3)
+    external.inc()
+    body = _scrape(port)
+    assert "salt_test_own_total 3.0" in body
+    assert "external_requests" not in body
+    assert list((tmp_path / "prom").glob("counter_*.db"))
+
+    metrics.shutdown()
+    assert backend._pc.values.ValueClass is original
+
+
+def test_active_directory_is_not_cleared_by_another_process(tmp_path):
+    port = _configure(tmp_path)
+    counter = metrics.counter("salt.test.owner")
+    counter.add(5)
+    env = os.environ.copy()
+    env.pop("PROMETHEUS_MULTIPROC_DIR", None)
+    env.pop("SALT_METRICS_PROMETHEUS_OWNER", None)
+    script = """
+import sys
+import salt.utils.metrics_prometheus as backend
+assert not backend.start({'prometheus': {
+    'host': '127.0.0.1', 'port': int(sys.argv[2]), 'multiproc_dir': sys.argv[1],
+}})
+backend.stop()
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, str(tmp_path / "prom"), str(port)],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=15,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Cannot use Prometheus multiprocess directory" in result.stderr
+    counter.add(3)
+    assert "salt_test_owner_total 8.0" in _scrape(port)
+
+
+def test_directory_can_be_reused_after_shutdown(tmp_path):
+    _configure(tmp_path)
+    metrics.counter("salt.test.restart").add(5)
+    metrics.shutdown()
+    port = _configure(tmp_path)
+    metrics.counter("salt.test.restart").add(3)
+    assert "salt_test_restart_total 3.0" in _scrape(port)
 
 
 def test_bind_failure_is_not_retried(tmp_path, monkeypatch):
