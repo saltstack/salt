@@ -886,7 +886,7 @@ class Master(SMaster):
         """
         Create a salt master server instance
 
-        :param dict: The salt options
+        :param dict opts: The salt options
         """
         if zmq and ZMQ_VERSION_INFO < (3, 2):
             log.warning(
@@ -2183,7 +2183,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Process a command sent via an AES key
 
-        :param str load: Encrypted payload
+        :param str data: Encrypted payload
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -3923,6 +3923,30 @@ class AuthFuncs(TransportMethods):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file.  Derive from ``cluster.pem``
+        # (master-only; distributed in join-reply, never leaves the
+        # cluster) salted by ``cluster_aes`` so every peer master
+        # agrees on the key while no minion can derive another
+        # minion's key.  ``cluster_aes`` as HKDF salt rotates the
+        # derived key in lockstep with cluster-wide aes rotation.
+        # See ``salt.crypt.Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = SMaster.secrets["cluster_aes"]["secret"].value
+            with self._sessions_lock:
+                cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            with self._sessions_lock:
+                self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         # Fast-path cache hit: single read of ``self.sessions[minion]``.
@@ -5669,7 +5693,7 @@ class ClearFuncs(TransportMethods):
 
                 # Check if 'minions' is included in returner's save_load arg_spec.
                 # This may be missing in custom returners, which we should warn about.
-                if "minions" not in arg_spec.args:
+                if "minions" not in arg_spec.namedargs:
                     log.critical(
                         "The specified returner used for the external job cache "
                         "'%s' does not have a 'minions' kwarg in the returner's "
@@ -5697,7 +5721,7 @@ class ClearFuncs(TransportMethods):
         # always write out to the master job caches
         try:
             fstr = "{}.save_load".format(self.opts["master_job_cache"])
-            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions)
+            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions=minions)
         except KeyError:
             log.critical(
                 "The specified returner used for the master job cache "

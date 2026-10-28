@@ -477,8 +477,13 @@ class Pillar:
         if functions is None:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
+                # Use self.opts, which __gen_opts has stamped with the target
+                # minion_id, so execution modules called from pillar templates
+                # (e.g. salt["match.compound"]) resolve against the minion the
+                # pillar is being compiled for rather than the master's own id.
+                # This matches the non-local branch below (#58407).
                 self.functions = salt.loader.minion_mods(
-                    opts,
+                    self.opts,
                     utils=utils,
                     file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                     pillar=self.pillar_data,
@@ -1090,10 +1095,12 @@ class Pillar:
         Builds actual pillar data structure and updates the ``pillar`` variable
         """
         ext = None
-        args = salt.utils.args.get_function_argspec(self.ext_pillars[key]).args
+        valid_kwargs = salt.utils.args.get_function_argspec(
+            self.ext_pillars[key]
+        ).namedargs
 
         if isinstance(val, dict):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1103,7 +1110,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1113,7 +1120,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, *val)
         else:
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
