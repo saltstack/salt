@@ -18,6 +18,7 @@ import pytest
 
 import salt.crypt
 import salt.key
+import salt.utils.files
 
 
 @pytest.fixture
@@ -88,10 +89,10 @@ def remote_client_setup(master_container, client_config_dir):
     priv_path = pki_dir / "client.pem"
     pub_path = pki_dir / "client.pub"
 
-    with open(priv_path, "wb") as f:
+    with salt.utils.files.fopen(priv_path, "wb") as f:
         f.write(priv_key.encode() if isinstance(priv_key, str) else priv_key)
 
-    with open(pub_path, "wb") as f:
+    with salt.utils.files.fopen(pub_path, "wb") as f:
         f.write(pub_key.encode() if isinstance(pub_key, str) else pub_key)
 
     # Set proper permissions
@@ -122,7 +123,7 @@ def remote_client_setup(master_container, client_config_dir):
     )
 
     config_file = client_config_dir / "client"
-    with open(config_file, "w") as f:
+    with salt.utils.files.fopen(config_file, "w") as f:
         f.write(client_config)
 
     # Accept client key on master
@@ -520,7 +521,7 @@ class TestRemoteCLIConfiguration:
         """
         )
 
-        with open(saltrc_file, "w") as f:
+        with salt.utils.files.fopen(saltrc_file, "w") as f:
             f.write(saltrc_content)
 
         # Verify saltrc would be loaded
@@ -554,7 +555,7 @@ class TestRemoteCLIConfiguration:
             """
             )
 
-            with open(config_file, "w") as f:
+            with salt.utils.files.fopen(config_file, "w") as f:
                 f.write(config_content)
 
             configs[env] = str(config_file)
@@ -563,7 +564,7 @@ class TestRemoteCLIConfiguration:
         assert len(configs) == 3
         for env, config_path in configs.items():
             assert os.path.exists(config_path)
-            with open(config_path) as f:
+            with salt.utils.files.fopen(config_path) as f:
                 content = f.read()
                 assert f"{env}-master" in content
                 assert f"admin-workstation-{env}" in content
