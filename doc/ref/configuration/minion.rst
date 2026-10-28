@@ -237,20 +237,23 @@ minion event bus. The value is expressed in bytes.
 
 .. versionadded:: 2019.2.0
 
-Default: ``True``
+.. versionchanged:: 3009.0
+
+    Default changed from ``True`` to ``False``.
+
+Default: ``False``
 
 When a minion starts up it sends a notification on the event bus with a tag
 that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set ``enable_legacy_startup_events: False`` in the
-minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``3001`` Salt release this option will default to
-``False``.
+when there are many minions. Set ``enable_legacy_startup_events: True`` in the
+minion config to restore the legacy ``minion_start`` events in addition to the
+``salt/minion/<minion_id>/start`` events.
 
 .. code-block:: yaml
 
-    enable_legacy_startup_events: True
+    enable_legacy_startup_events: False
 
 .. conf_minion:: master_failback
 

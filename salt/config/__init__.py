@@ -1366,7 +1366,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
         "max_event_size": 1048576,
-        "enable_legacy_startup_events": True,
+        "enable_legacy_startup_events": False,
         "test": False,
         "ext_job_cache": "",
         "cython_enable": False,
