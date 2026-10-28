@@ -49,9 +49,39 @@ except ImportError:  # pragma: no cover - hypothesis is an optional test dep
         too_slow = None
         filter_too_much = None
 
-    class _StStub:
+    class _DummyStrategy:
+        """A null-object stand-in for ``hypothesis.strategies.SearchStrategy``.
+
+        Supports arbitrary attribute access and chained method calls
+        (``st.lists(...).map(" ".join)``) so class-body decorator
+        arguments can be constructed without ``AttributeError`` or
+        ``TypeError`` when ``hypothesis`` is missing.  The pytestmark
+        skip above means these strategies are never actually consumed.
+        """
+
+        def __call__(self, *a, **kw):
+            return self
+
         def __getattr__(self, _name):
-            return lambda *a, **k: None
+            return self
+
+    _DUMMY = _DummyStrategy()
+
+    class _StStub:
+        def composite(self, _fn):
+            # @st.composite wraps a generator-style strategy builder.
+            # The decorated function is called at class-collection time
+            # as ``_fn(...)`` to produce a strategy; preserve callable
+            # shape here so those calls return a dummy strategy instead
+            # of raising ``TypeError: 'NoneType' object is not
+            # callable`` (which fails the whole module to collect).
+            def _strategy_factory(*_a, **_kw):
+                return _DUMMY
+
+            return _strategy_factory
+
+        def __getattr__(self, _name):
+            return lambda *a, **k: _DUMMY
 
     st = _StStub()
 

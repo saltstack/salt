@@ -23,10 +23,8 @@ module-level functions.
 """
 
 import asyncio
-import fcntl
 import logging
 import os
-import socket
 import threading
 import time
 
@@ -147,34 +145,6 @@ def is_owner():
     :class:`salt.cluster.consensus.raft.topology.NotLeaderError`.
     """
     return _OWNER_PID is not None and os.getpid() == _OWNER_PID
-
-
-def _reserve_listener_socket(opts):
-    """Bind + listen on ``topology_link_port`` and return the socket.
-
-    SO_REUSEADDR to tolerate TIME_WAIT across restarts;
-    FD_CLOEXEC so MWorker fork children do not inherit the fd.
-    Returns the socket on success.  Raises OSError on bind failure
-    --- the caller treats that as fatal in the master pre-fork path.
-    """
-    host = opts.get("interface", "127.0.0.1")
-    port = int(opts.get("topology_link_port") or 0)
-    if port == 0:
-        raise ValueError(
-            "topology_link_port is not set; cannot reserve inbound listener"
-        )
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
-        sock.bind((host, port))
-    except OSError:
-        sock.close()
-        raise
-    sock.listen(opts.get("topology_link_backlog", 128))
-    # FD_CLOEXEC so MWorker fork() does not inherit the listening fd.
-    flags = fcntl.fcntl(sock.fileno(), fcntl.F_GETFD)
-    fcntl.fcntl(sock.fileno(), fcntl.F_SETFD, flags | fcntl.FD_CLOEXEC)
-    return sock
 
 
 def pre_fork(opts, process_manager):
@@ -604,6 +574,16 @@ def _open_inbound_listener(opts, io_loop):
 
         channel_opts = dict(opts)
         channel_opts["ret_port"] = opts.get("topology_link_port")
+        # Disable the minion-auth downgrade check for the topology REP
+        # channel.  ``ReqServerChannel.handle_message`` rejects any
+        # payload with ``version < minimum_auth_version`` (default 3),
+        # which is correct for minion ``_auth`` traffic but wrong for
+        # the topology ``_master_auth`` handshake, which is clear-text,
+        # version-less, and authenticated at the
+        # ``masters/<cluster_id>.pub`` boundary.  Without this override
+        # every inbound topology REQ gets "bad load" back and the
+        # east<->west handshake deadlocks.
+        channel_opts["minimum_auth_version"] = 0
         # Force the plain (non-pooled) :class:`ReqServerChannel`
         # irrespective of ``worker_pools_enabled``.  The pooled
         # :class:`PoolRoutingChannel` routes every request through
