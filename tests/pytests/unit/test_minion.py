@@ -31,6 +31,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_warnings
 import salt.utils.state
 from salt._compat import ipaddress
 from salt.exceptions import (
@@ -3478,3 +3479,67 @@ def test_terminate_subprocess_list_still_signals_real_processes():
 
     assert kill_mock.called
     assert kill_mock.call_args[0][0] == 4242
+
+
+def _bare_master_minion():
+    """
+    A ``MasterMinion`` with just the attributes ``destroy()`` touches.
+    """
+    mm = salt.minion.MasterMinion.__new__(salt.minion.MasterMinion)
+    mm.opts = {}
+    mm.returners = {}
+    mm.functions = {}
+    mm.utils = {}
+    return mm
+
+
+def test_master_minion_del_quiet_after_destroy():
+    """
+    Regression test for issue #70590.
+
+    ``__del__`` must not warn if ``destroy()`` was called.
+    """
+    mm = _bare_master_minion()
+    mm.destroy()
+
+    with patch.object(
+        salt.utils.resource_warnings, "warn_until_close"
+    ) as warn_until_close:
+        mm.__del__()
+
+    warn_until_close.assert_not_called()
+
+
+def test_master_minion_del_quiet_after_context_manager():
+    """
+    Regression test for issue #70590.
+
+    ``__del__`` must not warn after exiting the context manager.
+    """
+    mm = _bare_master_minion()
+    with mm:
+        pass
+
+    with patch.object(
+        salt.utils.resource_warnings, "warn_until_close"
+    ) as warn_until_close:
+        mm.__del__()
+
+    warn_until_close.assert_not_called()
+
+
+def test_master_minion_del_still_warns_without_destroy():
+    """
+    Regression test for issue #70590.
+
+    A warning should still be emitted if the object was never destroyed.
+    """
+    mm = _bare_master_minion()
+
+    with patch.object(
+        salt.utils.resource_warnings, "warn_until_close"
+    ) as warn_until_close:
+        mm.__del__()
+
+    warn_until_close.assert_called_once()
+    assert "unclosed MasterMinion" in warn_until_close.call_args.args[0]

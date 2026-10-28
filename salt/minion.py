@@ -1416,6 +1416,7 @@ class MasterMinion:
         """
         Destroy the MasterMinion object
         """
+        self._destroyed = True
         if self.returners is not None:
             # Some returners have a destroy method
             for returner in self.returners:
@@ -1479,7 +1480,7 @@ class MasterMinion:
         # fallback and requires callers to use a context manager or
         # explicit ``destroy()``.
         try:
-            already_torn_down = (
+            already_torn_down = getattr(self, "_destroyed", False) or (
                 getattr(self, "returners", None) is None
                 and getattr(self, "functions", None) is None
                 and getattr(self, "utils", None) is None
