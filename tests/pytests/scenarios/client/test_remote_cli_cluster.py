@@ -22,6 +22,7 @@ import salt.config
 import salt.crypt
 import salt.key
 import salt.runner
+import salt.utils.files
 
 
 @pytest.fixture(scope="module")
@@ -80,9 +81,9 @@ def remote_admin_workstation(tmp_path, master_cluster):
     priv_path = pki_dir / "client.pem"
     pub_path = pki_dir / "client.pub"
 
-    with open(priv_path, "wb") as f:
+    with salt.utils.files.fopen(priv_path, "wb") as f:
         f.write(priv_key.encode() if isinstance(priv_key, str) else priv_key)
-    with open(pub_path, "wb") as f:
+    with salt.utils.files.fopen(pub_path, "wb") as f:
         f.write(pub_key.encode() if isinstance(pub_key, str) else pub_key)
 
     os.chmod(priv_path, 0o400)
@@ -109,7 +110,7 @@ def remote_admin_workstation(tmp_path, master_cluster):
         """
         )
 
-        with open(config_file, "w") as f:
+        with salt.utils.files.fopen(config_file, "w") as f:
             f.write(config_content)
 
         master_configs.append(str(config_file))
