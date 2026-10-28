@@ -12,7 +12,6 @@ from urllib.parse import urlparse, urlunparse
 import cryptography
 from cryptography import x509 as cx509
 from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
-from cryptography.hazmat import asn1
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, ed448, ed25519, padding, rsa
 from cryptography.hazmat.primitives.serialization import pkcs7, pkcs12
@@ -23,6 +22,19 @@ import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
 import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
+
+try:
+    # ``cryptography.hazmat.asn1`` was introduced in cryptography 44.0 and the
+    # ``Null``/``decode_der`` helpers used here require cryptography >= 46.
+    # ``salt.utils.x509`` must import on systems that ship an older cryptography
+    # (e.g. the salt-ssh target's system python on Ubuntu 22.04 / Debian 12),
+    # so the dependency is optional and only required for ``otherName`` support.
+    from cryptography.hazmat import asn1
+
+    HAS_ASN1 = hasattr(asn1, "encode_der") and hasattr(asn1, "Null")
+except ImportError:
+    HAS_ASN1 = False
+    asn1 = None
 
 try:
     import idna
@@ -2170,6 +2182,11 @@ def _parse_other_name(value):
                 f"Unsupported otherName ASN.1 type {asn_typ!r}; only UTF8STRING is supported"
             )
         oid = _get_oid(oid_text)
+        if not HAS_ASN1:
+            raise SaltInvocationError(
+                "`otherName` support requires cryptography >= 46 "
+                "(cryptography.hazmat.asn1)"
+            )
         try:
             encoded = asn1.encode_der(asn_val)
         except ValueError as err:
@@ -2209,6 +2226,11 @@ def _parse_other_name(value):
             )
         return cx509.OtherName(oid, encoded)
     if "value" in value:
+        if not HAS_ASN1:
+            raise SaltInvocationError(
+                "`otherName` support requires cryptography >= 46 "
+                "(cryptography.hazmat.asn1)"
+            )
         # Support basic types by passing them through
         to_encode = value["value"]
         if to_encode is None:
@@ -2440,9 +2462,13 @@ def render_gn(gn):
     if isinstance(gn, cx509.UniformResourceIdentifier):
         return f"URI:{gn.value}"
     if isinstance(gn, cx509.OtherName):
-        try:
-            val = "UTF8:" + asn1.decode_der(str, gn.value)
-        except ValueError:
+        val = None
+        if HAS_ASN1 and hasattr(asn1, "decode_der"):
+            try:
+                val = "UTF8:" + asn1.decode_der(str, gn.value)
+            except ValueError:
+                val = None
+        if val is None:
             val = f"<hex:{gn.value.hex()}>"
         return f"otherName:{gn.type_id.dotted_string};{val}"
     return str(gn)
