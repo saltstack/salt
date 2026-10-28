@@ -215,12 +215,11 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -560,7 +559,7 @@ psutil==5.9.8
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -806,14 +805,6 @@ six==1.16.0
     #   rfc3339-validator
     #   transitions
     #   vcert
-slack-bolt==1.18.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/linux.txt
-slack-sdk==3.21.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   slack-bolt
 smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock

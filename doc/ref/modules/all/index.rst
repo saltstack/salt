@@ -202,7 +202,6 @@ execution modules
     sdb
     seed
     selinux
-    slack_notify
     slsutil
     smbios
     smf_service
