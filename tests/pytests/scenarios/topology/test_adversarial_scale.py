@@ -36,7 +36,6 @@ machine, the asserted thresholds are deliberately generous.
 import asyncio
 import gc
 import os
-import resource
 import time
 import tracemalloc
 
@@ -49,9 +48,23 @@ import salt.topology.summary as summary_mod
 from salt.topology.link import LinkHealth
 from salt.topology.summary import ClusterSummary
 
+# POSIX-only; the fd-accounting probe below is Linux-specific (reads
+# ``/proc/<pid>/fd``) anyway, and the pytestmark below skips the whole
+# module on Windows where ``resource`` does not exist.
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows
+    resource = None
+
+# The fd-accounting probe reads ``/proc/<pid>/fd`` and the ``resource``
+# module (``RLIMIT_NOFILE`` sanity check at the end of
+# ``TestFanOutConcurrency.test_1000_links_no_fd_leak``).  Both are
+# POSIX / Linux-only, so skip the whole module on Windows -- the import
+# of ``resource`` above falls back to ``None`` so pytest collection
+# does not crash before the skip marker takes effect.
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.windows_whitelisted,
+    pytest.mark.skip_on_windows,
 ]
 
 
