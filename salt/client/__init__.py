@@ -2376,14 +2376,14 @@ class RemoteClient(LocalClient):
         Replaces the IPC event system with an authenticated network
         subscriber that works from remote machines.
         """
-        import salt.utils.client_event
+        from salt.utils import client_event
 
         # Destroy the IPC event subscriber created by LocalClient
         if self.event:
             self.event.destroy()
 
         # Create network event subscriber
-        self.event = salt.utils.client_event.ClientEventSubscriber(self.opts)
+        self.event = client_event.ClientEventSubscriber(self.opts)
 
         if listen:
             self.event.connect()
