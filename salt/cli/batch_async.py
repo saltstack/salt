@@ -147,6 +147,19 @@ class SharedEventsChannel:
                 return
             self._reconnect_task = asyncio.current_task()
             try:
+                # SaltEvent starts the first connection during construction.
+                # Join that attempt before opening another connection.
+                initial = self.master_event._connect_task
+                if initial is not None and not initial.cancelled():
+                    try:
+                        await initial
+                    except StreamClosedError:
+                        pass
+                    if self.master_event.subscriber.connected:
+                        self.master_event.subscriber._stream.set_close_callback(
+                            self.__handle_close
+                        )
+                        return
                 max_tries = max(1, int(self._subscriber_reconnect_tries))
                 for attempt in range(1, max_tries + 1):
                     try:
