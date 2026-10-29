@@ -44,7 +44,9 @@ def batch(temp_salt_master, io_loop):
             },
         )
         yield instance
-        salt.utils.asynchronous.aioloop(io_loop).run_until_complete(instance.close())
+        salt.utils.asynchronous.aioloop(io_loop).run_until_complete(
+            instance.close_safe()
+        )
 
 
 @pytest.mark.parametrize(
@@ -182,8 +184,8 @@ async def test_batch_close_is_idempotent(batch):
     ) as events_channel_mock, patch.object(
         batch, "event", MagicMock(fire_event_async=AsyncMock())
     ):
-        await batch.close()
-        await batch.close()
+        await batch.close_safe()
+        await batch.close_safe()
         assert batch.events_channel is None
         assert batch.event is None
         events_channel_mock.unsubscribe.assert_called_once()
@@ -513,7 +515,7 @@ async def test_close_drains_pending_batch_jobs(batch):
 
     task = batch._create_task(job())
     await started.wait()
-    await batch.close()
+    await batch.close_safe()
     assert cleaned.is_set()
     assert task.cancelled()
     assert batch.events_channel is None
