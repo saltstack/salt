@@ -315,6 +315,11 @@ salt/utils/vt.py:
   - pytests.integration.netapi.test_ssh_client
   - pytests.integration.ssh.test_state
 
+salt/(utils/event|transport/tcp)\.py:
+  - pytests.unit.utils.event.test_async_session
+  - pytests.functional.utils.test_async_event
+  - pytests.unit.test_minion
+
 salt/wheel/*:
   - pytests.integration.wheel.test_client
 

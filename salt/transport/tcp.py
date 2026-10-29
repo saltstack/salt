@@ -376,6 +376,11 @@ class PublishClient(salt.transport.base.PublishClient):
             self._tcp_client = None
         self._closed = True
 
+    async def close_async(self):
+        tasks = (self.on_recv_task, self._read_task)
+        self.close()
+        await salt.utils.asynchronous.cancel_tasks(*tasks)
+
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)

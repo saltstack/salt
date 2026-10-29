@@ -191,17 +191,16 @@ async def test_send_req_async_regression_62453(minion_opts):
         def __init__(self, *args, **kwargs):
             pass
 
-        @tornado.gen.coroutine
-        def fire_event_async(self, *args, **kwargs):
+        async def fire_event_async(self, *args, **kwargs):
             return
 
-        def get_event(self, *args, **kwargs):
+        async def get_event_async(self, *args, **kwargs):
             return
 
-        def __enter__(self):
+        async def __aenter__(self):
             return self
 
-        def __exit__(self, *args):
+        async def __aexit__(self, *args):
             return
 
     def get_event(*args, **kwargs):

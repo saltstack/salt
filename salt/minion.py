@@ -2347,28 +2347,30 @@ class Minion(MinionBase):
             raise SaltReqTimeoutError("Request timed out")
 
     async def _send_req_async(self, load, timeout):
-        # XXX: Signing should happen in RequestChannel to be fixed in 3008
-        # XXX: This is only used by syndic
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=True) as event:
-            request_id = str(uuid.uuid4())
-            log.trace("Send request to main id=%s", request_id)
-            await event.fire_event_async(
-                load,
-                f"__master_req_channel_payload/{request_id}/{self.opts['master']}",
-                timeout=timeout,
-            )
-            start = time.time()
-            while time.time() - start < timeout:
-                ret = event.get_event(
-                    tag=f"__master_req_channel_return/{request_id}", no_block=True
+        async def exchange():
+            async with salt.utils.event.get_event(
+                "minion",
+                opts=self.opts,
+                listen=True,
+                io_loop=asyncio.get_running_loop(),
+            ) as event:
+                request_id = str(uuid.uuid4())
+                await event.fire_event_async(
+                    load,
+                    f"__master_req_channel_payload/{request_id}/{self.opts['master']}",
+                    timeout=timeout,
                 )
-                if ret:
-                    break
-                await asyncio.sleep(0.3)
-            else:
-                raise SaltReqTimeoutError("Did not recieve return event")
-            log.trace("Reply from main %s", request_id)
-            return ret["ret"]
+                result = await event.get_event_async(
+                    wait=timeout, tag=f"__master_req_channel_return/{request_id}"
+                )
+                if result is None:
+                    raise SaltReqTimeoutError("Did not receive return event")
+                return result["ret"]
+
+        try:
+            return await asyncio.wait_for(exchange(), timeout)
+        except asyncio.TimeoutError as exc:
+            raise SaltReqTimeoutError("Did not receive return event") from exc
 
     async def _send_req_async_main(self, load, timeout):
         """
@@ -4411,14 +4413,12 @@ class Minion(MinionBase):
                 await async_pillar.aclose()
         self.matchers_refresh()
         self.beacons_refresh()
-        # Fire the completion event synchronously on the minion event bus.
-        # Passing io_loop would set _run_io_loop_sync=False, in which case
-        # fire_event() schedules publish via asyncio.create_task and the event
-        # may not exist yet when callers/tests observe the bus — breaking
-        # pillar_refresh / grains_refresh / saltutil.waiting flows.
-        with salt.utils.event.get_event("minion", opts=self.opts, listen=False) as evt:
+        # Deliver completion before the native event session closes.
+        async with salt.utils.event.get_event(
+            "minion", opts=self.opts, listen=False, io_loop=asyncio.get_running_loop()
+        ) as evt:
             try:
-                evt.fire_event(
+                await evt.fire_event_async(
                     {"complete": True},
                     tag=salt.defaults.events.MINION_PILLAR_REFRESH_COMPLETE,
                 )
@@ -4610,8 +4610,11 @@ class Minion(MinionBase):
                         data,
                         request_id,
                     )
-                    with salt.utils.event.get_event(
-                        "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+                    async with salt.utils.event.get_event(
+                        "minion",
+                        opts=self.opts,
+                        listen=False,
+                        io_loop=asyncio.get_running_loop(),
                     ) as event:
                         try:
                             await event.fire_event_async(
@@ -4623,8 +4626,11 @@ class Minion(MinionBase):
                                 "Error firing master request timeout event: %s", exc
                             )
                     return
-                with salt.utils.event.get_event(
-                    "minion", opts=self.opts, listen=False, io_loop=self.io_loop
+                async with salt.utils.event.get_event(
+                    "minion",
+                    opts=self.opts,
+                    listen=False,
+                    io_loop=asyncio.get_running_loop(),
                 ) as event:
                     try:
                         await event.fire_event_async(

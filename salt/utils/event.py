@@ -79,6 +79,7 @@ import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
+from salt.utils.asynchronous import cancel_tasks, resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -264,6 +265,11 @@ class SaltEvent:
                 inst.pusher = None
                 inst.cpub = False
                 inst.cpush = False
+                inst._connect_task = None
+                inst._publish_tasks = set()
+                inst._event_read_tasks = set()
+                inst._event_read_lock = asyncio.Lock()
+                inst._event_destroy_lock = asyncio.Lock()
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -272,6 +278,26 @@ class SaltEvent:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.destroy()
+
+    async def __aenter__(self):
+        if self._run_io_loop_sync or self.io_loop is not asyncio.get_running_loop():
+            raise SaltInvocationError(
+                "Async event sessions require the caller's io_loop"
+            )
+        try:
+            if self._connect_task is not None:
+                await self._connect_task
+        except BaseException:
+            await self.destroy_async()
+            raise
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        if exc_type is not None:
+            publications = tuple(self._publish_tasks)
+            await cancel_tasks(*publications)
+            self._publish_tasks.difference_update(publications)
+        await self.destroy_async()
 
     # pylint: disable=W1701
     def __del__(self):
@@ -369,6 +395,10 @@ class SaltEvent:
             self.opts["ipc_mode"] = "tcp"
         self.pending_tags = []
         self.pending_events = []
+        self._connect_task = None
+        self._event_read_tasks = set()
+        self._event_read_lock = asyncio.Lock()
+        self._event_destroy_lock = asyncio.Lock()
         self.__load_cache_regex()
         type(self)._register_atfork()
         type(self)._instances.add(self)
@@ -697,6 +727,69 @@ class SaltEvent:
             return self.opts["id"] == data.get("proxy_target", None)
         return True
 
+    def _matches_event(self, event, tag, match_func):
+        if match_func(event["tag"], tag) and self._subproxy_match(event["data"]):
+            return True
+        if any(
+            matcher(event["tag"], pending_tag)
+            for pending_tag, matcher in self.pending_tags
+        ):
+            self.pending_events.append(event)
+        return False
+
+    async def get_event_async(
+        self, wait=5, tag="", full=False, match_type=None, no_block=False
+    ):
+        """Await one matching event within a total timeout, using the sync API's filters."""
+        if self._run_io_loop_sync or self.io_loop is not asyncio.get_running_loop():
+            raise SaltInvocationError("get_event_async requires the caller's io_loop")
+        if no_block and self._event_read_lock.locked():
+            return None
+        timeout = None if no_block or wait == 0 else wait
+        operation = self._start_event_task(
+            self._get_event_async(tag, match_type, no_block), self._event_read_tasks
+        )
+        try:
+            event = await asyncio.wait_for(operation, timeout)
+        except asyncio.TimeoutError:
+            return None
+        return event if event is None or full else event["data"]
+
+    async def _get_event_async(self, tag, match_type, no_block):
+        try:
+            async with self._event_read_lock:
+                matcher = self._get_match_func(match_type)
+                event = self._check_pending(tag, matcher)
+                if event is not None:
+                    return event
+                if not self.cpub:
+                    self.connect_pub()
+                if self._connect_task is not None:
+                    if no_block and not self._connect_task.done():
+                        return None
+                    await self._connect_task
+                while True:
+                    try:
+                        raw = await self.subscriber.recv(
+                            timeout=0 if no_block else None
+                        )
+                        if raw is None:
+                            return None
+                        event_tag, data = self.unpack(raw)
+                    except SaltDeserializationError:
+                        if no_block:
+                            return None
+                        continue
+                    event = {"tag": event_tag, "data": data}
+                    if self._matches_event(event, tag, matcher):
+                        return event
+                    if no_block:
+                        return None
+        except tornado.iostream.StreamClosedError:
+            if self.raise_errors:
+                raise
+            return None
+
     def _get_event(self, wait, tag, match_func=None, no_block=False):
         if match_func is None:
             match_func = self._get_match_func()
@@ -750,14 +843,7 @@ class SaltEvent:
                 )
                 return None
 
-            if not match_func(ret["tag"], tag) or not self._subproxy_match(ret["data"]):
-                # tag not match
-                if any(
-                    pmatch_func(ret["tag"], ptag)
-                    for ptag, pmatch_func in self.pending_tags
-                ):
-                    log.trace("get_event() caching unwanted event = %s", ret)
-                    self.pending_events.append(ret)
+            if not self._matches_event(ret, tag, match_func):
                 if wait:  # only update the wait timeout if we had one
                     wait = timeout_at - time.time()
                 continue
@@ -891,13 +977,13 @@ class SaltEvent:
                 continue
             yield data
 
-    async def fire_event_async(self, data, tag, timeout=1000):
-        """
-        Send a single event into the publisher with payload dict "data" and
-        event identifier "tag"
+    def _start_event_task(self, coroutine, tasks):
+        task = self.io_loop.create_task(coroutine)
+        tasks.add(task)
+        task.add_done_callback(tasks.discard)
+        return task
 
-        The default is 1000 ms
-        """
+    def _prepare_event(self, data, tag, timeout):
         if self.opts.get("subproxy", False):
             data["proxy_target"] = self.opts["id"]
 
@@ -913,7 +999,7 @@ class SaltEvent:
             else:
                 timeout_s = None
             if not self.connect_pull(timeout=timeout_s):
-                return False
+                return None
 
         data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
         salt.utils.tracing.inject(data)
@@ -922,7 +1008,29 @@ class SaltEvent:
             description="Events placed on the salt event bus.",
         ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
-        msg = salt.utils.stringutils.to_bytes(event, "utf-8")
+        return salt.utils.stringutils.to_bytes(event, "utf-8")
+
+    async def fire_event_async(self, data, tag, timeout=1000):
+        """Await event delivery and track native publication until cleanup completes."""
+        if self._run_io_loop_sync:
+            return await self._fire_event_async(data, tag, timeout)
+        if self.io_loop is not asyncio.get_running_loop():
+            raise SaltInvocationError("fire_event_async requires the caller's io_loop")
+        operation = self._start_event_task(
+            self._fire_event_async(data, tag, timeout), self._publish_tasks
+        )
+        return await operation
+
+    async def _fire_event_async(self, data, tag, timeout=1000):
+        """
+        Send a single event into the publisher with payload dict "data" and
+        event identifier "tag"
+
+        The default is 1000 ms
+        """
+        msg = self._prepare_event(data, tag, timeout)
+        if msg is None:
+            return False
         # LTS default: pre-PR sync publish path preserved. The
         # SyncWrapper-bypass below only kicks in when
         # ``master_async_mworker`` is on, because that's the only path
@@ -960,9 +1068,7 @@ class SaltEvent:
                 and underlying is not None
                 and hasattr(underlying, "publish")
             ):
-                result = underlying.publish(msg)
-                if inspect.isawaitable(result):
-                    await result
+                await resolve_result(underlying.publish(msg))
             elif self._run_io_loop_sync:
                 # No async publisher available; fall back to the sync path
                 # by running it in the default executor so we don't block
@@ -979,31 +1085,9 @@ class SaltEvent:
 
         The default is 1000 ms
         """
-        if self.opts.get("subproxy", False):
-            data["proxy_target"] = self.opts["id"]
-
-        if not str(tag):  # no empty tags allowed
-            raise ValueError("Empty tag.")
-
-        if not isinstance(data, MutableMapping):  # data must be dict
-            raise ValueError(f"Dict object expected, not '{data}'.")
-
-        if not self.cpush:
-            if timeout is not None:
-                timeout_s = float(timeout) / 1000
-            else:
-                timeout_s = None
-            if not self.connect_pull(timeout=timeout_s):
-                return False
-
-        data["_stamp"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        salt.utils.tracing.inject(data)
-        salt.utils.metrics.counter(
-            "salt.events.fired",
-            description="Events placed on the salt event bus.",
-        ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
-        event = self.pack(tag, data, max_size=self.opts["max_event_size"])
-        msg = salt.utils.stringutils.to_bytes(event, "utf-8")
+        msg = self._prepare_event(data, tag, timeout)
+        if msg is None:
+            return False
         if self._run_io_loop_sync:
             try:
                 self.pusher.publish(msg)
@@ -1040,9 +1124,7 @@ class SaltEvent:
                     exc,
                 )
         else:
-            task = self.io_loop.create_task(self.pusher.publish(msg))
-            self._publish_tasks.add(task)
-            task.add_done_callback(self._publish_tasks.discard)
+            self._start_event_task(self.pusher.publish(msg), self._publish_tasks)
         return True
 
     def fire_master(self, data, tag, timeout=1000):
@@ -1054,6 +1136,39 @@ class SaltEvent:
         """
         msg = {"tag": tag, "data": data, "events": None, "pretag": None}
         return self.fire_event(msg, "fire_master", timeout)
+
+    @staticmethod
+    async def _close_event_transport(transport):
+        if transport is not None:
+            close = getattr(transport, "close_async", None) or transport.close
+            await resolve_result(close())
+
+    async def destroy_async(self):
+        """Drain this session's publications and release only its own resources."""
+        if self._run_io_loop_sync:
+            raise SaltInvocationError(
+                "destroy_async requires a native async event session"
+            )
+        async with self._event_destroy_lock:
+            current = asyncio.current_task()
+            publications = tuple(
+                task for task in self._publish_tasks if task is not current
+            )
+            try:
+                if publications:
+                    await asyncio.gather(*publications)
+            finally:
+                subscriber, self.subscriber = self.subscriber, None
+                pusher, self.pusher = self.pusher, None
+                connection, self._connect_task = self._connect_task, None
+                self.cpub = self.cpush = False
+                self.pending_events = []
+                self._publish_tasks.clear()
+                await cancel_tasks(connection, *publications, *self._event_read_tasks)
+                try:
+                    await self._close_event_transport(subscriber)
+                finally:
+                    await self._close_event_transport(pusher)
 
     def destroy(self):
         if self.subscriber is not None:
