@@ -1109,6 +1109,16 @@ class MasterIdentityKey:
             # unopenable for writing on rotation; remove it first so
             # the open() below can create a fresh file with a
             # restrictive umask.
+            #
+            # Windows semantics: a 0400 file is read-only in NTFS and
+            # ``os.unlink`` raises ``PermissionError``.  Clear the
+            # read-only attribute first so the unlink succeeds and
+            # the subsequent write does not blow up with
+            # ``[Errno 13] Permission denied`` / ``[WinError 5]``.
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
             try:
                 os.unlink(path)
             except OSError:

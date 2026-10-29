@@ -934,9 +934,26 @@ def _remove_raft_applied_peer(cache, cluster_id):
 
 
 def _write_file_atomic(path, data, mode):
-    """Write ``data`` to ``path`` and chmod ``mode``.  Overwrites in place."""
+    """Write ``data`` to ``path`` and chmod ``mode``.  Overwrites in place.
+
+    On Windows ``os.replace`` fails with ``PermissionError (WinError 5)``
+    when the existing destination is read-only -- which is exactly what
+    this function sets on its first successful call (``mode`` is typically
+    ``0o444`` for the identity-pub).  Clear the read-only attribute on
+    the destination before the rename and apply the final mode after,
+    so identity rotation remains atomic (the on-disk key is only ever
+    the full-old or full-new byte string) and still ends up with the
+    requested permission bits.
+    """
     tmp = f"{path}.tmp"
     with salt.utils.files.fopen(tmp, "wb") as fh:
         fh.write(data)
-    os.chmod(tmp, mode)
+    if os.path.exists(path):
+        try:
+            os.chmod(path, 0o600)
+        except OSError:
+            # Non-fatal: if chmod fails the os.replace below will raise
+            # the real error with full context.
+            pass
     os.replace(tmp, path)
+    os.chmod(path, mode)
