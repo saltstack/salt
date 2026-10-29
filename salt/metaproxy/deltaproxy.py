@@ -736,6 +736,8 @@ def thread_return(cls, minion_instance, opts, data):
                     raise SaltInvocationError(f"Executor '{name}' is not available")
 
                 return_data = executor_loader[fname](opts, data, func, args, kwargs)
+                if asyncio.iscoroutine(return_data):
+                    return_data = asyncio.run(return_data)
                 if return_data is not None:
                     break
 
@@ -969,6 +971,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
             ret["return"][key] = func(*args, **kwargs)
+            if asyncio.iscoroutine(ret["return"][key]):
+                ret["return"][key] = asyncio.run(ret["return"][key])
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return

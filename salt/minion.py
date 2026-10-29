@@ -9,6 +9,7 @@ import contextlib
 import copy
 import errno
 import gc
+import inspect
 import logging
 import multiprocessing
 import os
@@ -3122,6 +3123,8 @@ class Minion(MinionBase):
             if fname not in executor_loader:
                 raise SaltInvocationError(f"Executor '{name}' is not available")
             return_data = executor_loader[fname](opts, data, func, args, kwargs)
+            if inspect.isawaitable(return_data):
+                return_data = asyncio.get_event_loop().run_until_complete(return_data)
             if return_data is not None:
                 return return_data
 

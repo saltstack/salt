@@ -11,9 +11,8 @@ import salt.config
 import salt.modules.status as status
 import salt.payload
 import salt.transport.frame
-import salt.utils.asynchronous
 import salt.utils.msgpack
-from tests.support.mock import MagicMock
+from tests.support.mock import AsyncMock, MagicMock
 
 pytestmark = [pytest.mark.timeout(30)]
 
@@ -98,10 +97,9 @@ def ping_client(master_server, monkeypatch):
     )
     event = MagicMock()
     event.__enter__.return_value = event
+    event.fire_event_async = AsyncMock(return_value=True)
     monkeypatch.setattr(status, "__opts__", opts, raising=False)
     monkeypatch.setattr(salt.utils.event, "get_event", MagicMock(return_value=event))
-    bridge = salt.utils.asynchronous.LoopBridge()
-    monkeypatch.setattr(salt.utils.asynchronous, "get_bridge", lambda: bridge)
     transports = []
     factory = salt.transport.request_client
 
@@ -111,25 +109,23 @@ def ping_client(master_server, monkeypatch):
         return client
 
     monkeypatch.setattr(salt.transport, "request_client", record)
-    try:
-        yield opts, event, bridge, transports
-    finally:
-        bridge.shutdown()
+    return opts, event, transports
 
 
-def test_repeated_pings_release_request_resources(master_server, ping_client):
+async def test_repeated_pings_release_request_resources(master_server, ping_client):
     transport, _, requests, _ = master_server
-    _, event, bridge, clients = ping_client
-    loop = bridge._loop
+    _, event, clients = ping_client
+    loop = asyncio.get_running_loop()
+    original_tasks = asyncio.all_tasks()
+    original_timers = set(loop._scheduled)
     for _ in range(5):
-        assert status.ping_master("127.0.0.1") is True
-        assert bridge._loop is loop
+        assert await status.ping_master("127.0.0.1") is True
     assert requests.qsize() == 5
     for _ in range(5):
         request = requests.get_nowait()
         assert request["enc"] == "clear"
         assert request["load"] == {"cmd": "ping"}
-    assert event.fire_event.call_count == 5
+    assert event.fire_event_async.await_count == 5
     assert len(clients) == 5
     assert all(client._closing for client in clients)
     if transport == "zeromq":
@@ -140,24 +136,24 @@ def test_repeated_pings_release_request_resources(master_server, ping_client):
     else:
         assert all(client._stream is None and client.task is None for client in clients)
 
-    async def remaining_work():
-        await asyncio.sleep(0)
-        tasks = asyncio.all_tasks() - {asyncio.current_task()}
-        timers = [handle for handle in loop._scheduled if not handle.cancelled()]
-        return len(tasks), len(timers)
+    await asyncio.sleep(0)
+    assert not asyncio.all_tasks().difference(original_tasks)
+    assert not [
+        handle
+        for handle in loop._scheduled
+        if handle not in original_timers and not handle.cancelled()
+    ]
 
-    assert bridge.run(remaining_work()) == (0, 0)
 
-
-def test_unresponsive_master_releases_transport_without_failback(
+async def test_unresponsive_master_releases_transport_without_failback(
     master_server, ping_client
 ):
     transport, _, _, server = master_server
-    opts, event, _, clients = ping_client
+    opts, event, clients = ping_client
     server.reply = False
     opts["auth_timeout"] = 0.1
-    assert status.ping_master("127.0.0.1") is False
-    event.fire_event.assert_not_called()
+    assert await status.ping_master("127.0.0.1") is False
+    event.fire_event_async.assert_not_awaited()
     assert len(clients) == 1
     assert clients[0]._closing
     if transport == "zeromq":

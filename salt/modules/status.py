@@ -18,7 +18,6 @@ import salt.channel
 import salt.channel.client
 import salt.config
 import salt.minion
-import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
 import salt.utils.network
@@ -1736,17 +1735,7 @@ def master(master=None, connected=True):
     return master_connection_status
 
 
-async def _ping_master(opts, timeout):
-    """Keep channel creation, request and awaited cleanup on the same loop."""
-    async with salt.channel.client.AsyncReqChannel.factory(
-        opts, crypt="clear"
-    ) as channel:
-        await asyncio.wait_for(
-            channel.send({"cmd": "ping"}, tries=0, timeout=timeout), timeout=timeout
-        )
-
-
-def ping_master(master):
+async def ping_master(master):
     """
     .. versionadded:: 2016.3.0
 
@@ -1775,22 +1764,22 @@ def ping_master(master):
     timeout = opts.get("auth_timeout", 60)
     if timeout is None:
         timeout = opts.get("request_channel_timeout", 60)
-    # The request deadline includes connecting. Allow a separate cleanup
-    # budget for close_async before bounding the synchronous caller's wait.
-    wait_timeout = (
-        None
-        if timeout is None
-        else float(timeout) + salt.utils.asynchronous.DEFAULT_TIMEOUT
-    )
     try:
-        salt.utils.asynchronous.get_bridge().run(
-            _ping_master(opts, timeout), timeout=wait_timeout
-        )
+        async with salt.channel.client.AsyncReqChannel.factory(
+            opts, crypt="clear"
+        ) as channel:
+            await asyncio.wait_for(
+                channel.send({"cmd": "ping"}, tries=0, timeout=timeout), timeout=timeout
+            )
     except Exception:  # pylint: disable=broad-except
         return False
 
-    with salt.utils.event.get_event("minion", opts=__opts__, listen=False) as event:
-        event.fire_event({"master": master}, salt.minion.master_event(type="failback"))
+    with salt.utils.event.get_event(
+        "minion", opts=__opts__, listen=False, io_loop=asyncio.get_running_loop()
+    ) as event:
+        await event.fire_event_async(
+            {"master": master}, salt.minion.master_event(type="failback")
+        )
     return True
 
 

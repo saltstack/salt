@@ -11,9 +11,11 @@ Requires that python-dateutil is installed on the minion.
 """
 
 
+import asyncio
 import copy
 import datetime
 import errno
+import inspect
 import itertools
 import logging
 import os
@@ -174,6 +176,7 @@ class Schedule:
             self.time_offset = "0000"
 
         self.schedule_returner = self.option("schedule_returner")
+        self._async_jobs = set()
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxsize
         if not self.standalone:
@@ -751,9 +754,13 @@ class Schedule:
             return schedule.get(name, {})
 
     def handle_func(self, multiprocessing_enabled, func, data, jid=None):
-        """
-        Execute this method in a multiprocess or thread
-        """
+        """Run a scheduled job in its worker process or thread."""
+        return asyncio.run(
+            self.handle_func_async(multiprocessing_enabled, func, data, jid)
+        )
+
+    async def handle_func_async(self, multiprocessing_enabled, func, data, jid=None):
+        """Execute a job and await its result before reporting success or failure."""
         if (
             salt.utils.platform.spawning_platform()
             or self.opts.get("transport") == "zeromq"
@@ -925,7 +932,10 @@ class Schedule:
 
             self.functions.pack["__context__"]["retcode"] = 0
 
-            ret["return"] = dispatch_functions[func](*args, **kwargs)
+            result = dispatch_functions[func](*args, **kwargs)
+            if inspect.isawaitable(result):
+                result = await result
+            ret["return"] = result
 
             if not self.standalone:
                 # runners do not provide retcode
@@ -1885,7 +1895,14 @@ class Schedule:
 
         if run_schedule_jobs_in_background is False:
             # Explicitly pass False for multiprocessing_enabled
-            self.handle_func(False, func, data, jid)
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                self.handle_func(False, func, data, jid)
+            else:
+                task = loop.create_task(self.handle_func_async(False, func, data, jid))
+                self._async_jobs.add(task)
+                task.add_done_callback(self._async_jobs.discard)
             return
 
         if multiprocessing_enabled and salt.utils.platform.spawning_platform():

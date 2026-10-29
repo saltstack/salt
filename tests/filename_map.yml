@@ -174,12 +174,6 @@ salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
-salt/utils/asynchronous.py:
-  - pytests.unit.utils.test_asynchronous
-  - pytests.unit.utils.test_asynchronous_bridge
-  - pytests.unit.modules.test_status
-  - pytests.functional.modules.test_status_ping_master
-
 salt/modules/status.py:
   - pytests.unit.modules.test_status
   - pytests.functional.modules.test_status_ping_master
@@ -235,12 +229,16 @@ salt/config/*:
   - pytests.unit.config.test__validate_opts
 
 salt/loader/*:
+  - pytests.unit.loader.test_lazy
+  - pytests.unit.loader.test_context
   - integration.loader.test_ext_modules
   - pytests.integration.loader.test_ext_grains
   - pytests.functional.loader.test_loader
   - pytests.functional.loader.test_loaded_base_name
 
 salt/minion.py:
+  - pytests.unit.test_minion
+  - pytests.unit.test_async_execution
   - integration.client.test_syndic
   - integration.minion.test_timeout
   - pytests.integration.cli.test_matcher
@@ -312,6 +310,7 @@ salt/(cli/spm\.py|spm/.+):
   - integration.spm.test_repo
 
 salt/utils/schedule.py:
+  - pytests.unit.utils.scheduler.test_async_jobs
   - pytests.unit.utils.scheduler.test_error
   - pytests.unit.utils.scheduler.test_eval
   - pytests.unit.utils.scheduler.test_postpone
@@ -319,6 +318,13 @@ salt/utils/schedule.py:
   - pytests.unit.utils.scheduler.test_maxrunning
   - pytests.unit.utils.scheduler.test_helpers
   - pytests.unit.utils.scheduler.test_schedule
+
+salt/cli/caller.py:
+  - pytests.unit.test_async_execution
+  - pytests.unit.cli.test_caller_resources
+
+salt/metaproxy/(proxy|deltaproxy)\.py:
+  - pytests.unit.metaproxy.test_thread_return
 
 salt/utils/vt.py:
   - integration.cli.test_custom_module

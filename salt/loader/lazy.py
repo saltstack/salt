@@ -214,7 +214,8 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        ret = await self.loader.run(run_func, *args, **kwargs)
+        with salt.loader.context.loader_context(self.loader):
+            ret = await self.loader.run(run_func, *args, **kwargs)
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
         return ret

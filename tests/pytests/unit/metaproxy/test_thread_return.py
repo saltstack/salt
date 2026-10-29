@@ -33,12 +33,14 @@ executor-ownership test rebinds both attributes to a new generation after the
 job has started but before its executor lookup.
 """
 
+import asyncio
 import functools
 import types
 
 import pytest
 
 import salt.defaults.exitcodes
+import salt.executors.direct_call
 import salt.loader
 import salt.metaproxy.deltaproxy
 import salt.metaproxy.proxy
@@ -181,6 +183,42 @@ def _assert_distinct_loaders(job_loader, state):
         state["sibling_loader"].pack["__context__"]
         is not job_loader.pack["__context__"]
     )
+
+
+@METAPROXIES
+@pytest.mark.parametrize("multi", [False, True])
+def test_proxy_job_awaits_native_coroutine_result(
+    metaproxy, proxy_opts, proc_dir, multi
+):
+    functions = salt.loader.minion_mods(proxy_opts)
+
+    async def native_result():
+        await asyncio.sleep(0)
+        functions.pack["__context__"]["retcode"] = 7
+        return False
+
+    functions["test.native_result"] = native_result
+    delivered = []
+    minion = _minion_instance(
+        proxy_opts,
+        proc_dir,
+        functions,
+        {"direct_call.execute": salt.executors.direct_call.execute},
+        delivered,
+    )
+    data = {
+        "jid": "20261028000000000001",
+        "ret": "",
+        "fun": ["test.native_result"] if multi else "test.native_result",
+        "arg": [[]] if multi else [],
+    }
+    runner = metaproxy.thread_multi_return if multi else metaproxy.thread_return
+    runner(salt.minion.ProxyMinion, minion, proxy_opts, data)
+
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert (ret["return"]["test.native_result"] if multi else ret["return"]) is False
+    assert (ret["retcode"]["test.native_result"] if multi else ret["retcode"]) == 7
 
 
 @METAPROXIES

@@ -3,6 +3,7 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
+import asyncio
 import logging
 import os
 import sys
@@ -210,6 +211,8 @@ class BaseCaller:
                     ret["return"] = self.minion.executors[fname](
                         self.opts, data, func, args, kwargs
                     )
+                    if asyncio.iscoroutine(ret["return"]):
+                        ret["return"] = asyncio.run(ret["return"])
                     if ret["return"] is not None:
                         break
             except TypeError as exc:
