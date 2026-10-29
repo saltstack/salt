@@ -24,6 +24,7 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.utils.asynchronous import cancel_tasks
 
 log = logging.getLogger(__name__)
 
@@ -783,11 +784,7 @@ class RequestClient(salt.transport.base.RequestClient):
         await asyncio.shield(self.close_task)
 
     async def _close(self):
-        tasks = tuple(self._operation_tasks)
-        for task in tasks:
-            task.cancel()
-        if tasks:
-            await asyncio.gather(*tasks, return_exceptions=True)
+        await cancel_tasks(*self._operation_tasks)
         self._operation_tasks.clear()
         await self._close_connection()
         self._closed = True
