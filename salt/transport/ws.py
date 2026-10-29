@@ -689,6 +689,10 @@ class RequestClient(salt.transport.base.RequestClient):
         self._creator_pid = os.getpid()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
+        if self._closing:
+            raise ClosingError("Request client is closed")
+        if self.ws is not None and not self.ws.closed:
+            return self.ws
         return await self._start_operation(_RequestOperation.CONNECT)
 
     async def _connect(self):

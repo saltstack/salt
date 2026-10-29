@@ -15,6 +15,7 @@ from salt.exceptions import (
     SaltDeserializationError,
     SaltReqTimeoutError,
 )
+from salt.transport.tcp import ClosingError
 from tests.support.mock import AsyncMock, MagicMock, patch
 
 
@@ -89,6 +90,18 @@ async def test_malformed_binary_reply_releases_connection(client, connection):
     assert session.closed
     assert ws.closed
     assert client.ws is client.session is None
+
+
+async def test_connect_rejects_closing_client_even_with_cached_connection(
+    client, connection
+):
+    await client.connect()
+    client.close()
+    assert not connection[1].closed
+    with pytest.raises(ClosingError):
+        await client.connect()
+    await client.close_async()
+    assert connection[0].closed
 
 
 @pytest.mark.parametrize("stage", ["send_bytes", "receive"])

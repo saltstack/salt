@@ -119,6 +119,21 @@ async def test_connect_and_send_share_one_connection(client, websocket_server):
     assert websocket_server["connections"] == 1
 
 
+async def test_connect_reuses_healthy_connection_during_active_request(
+    client, websocket_server
+):
+    active = asyncio.create_task(client.send("wait"))
+    await websocket_server["waiting"].wait()
+    ws = client.ws
+    try:
+        assert await asyncio.wait_for(client.connect(), 1) is ws
+        assert not active.done()
+        assert websocket_server["connections"] == 1
+    finally:
+        websocket_server["release"].set()
+        assert await active == "wait"
+
+
 async def test_timeout_discards_connection_and_allows_retry(client, websocket_server):
     with pytest.raises(SaltReqTimeoutError):
         await client.send("wait", timeout=0.02)
@@ -210,11 +225,10 @@ async def test_failed_connect_closes_new_session(client):
     assert client.ws is None
 
 
-async def test_close_drains_queued_requests_and_connect(client, websocket_server):
+async def test_close_drains_active_and_queued_requests(client, websocket_server):
     active = asyncio.create_task(client.send("wait"))
     await websocket_server["waiting"].wait()
     queued = [asyncio.create_task(client.send(index)) for index in range(5)]
-    queued.append(asyncio.create_task(client.connect()))
     await asyncio.sleep(0)
     await asyncio.sleep(0)
     await asyncio.wait_for(client.close_async(), 1)
@@ -248,9 +262,17 @@ async def test_close_during_connect_drains_child_before_channel_exit(client):
     ):
         task = asyncio.create_task(caller())
         await started.wait()
+        queued = [
+            asyncio.create_task(client.connect()),
+            asyncio.create_task(client.send("queued")),
+        ]
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
         await asyncio.wait_for(client.close_async(), 1)
         with pytest.raises(asyncio.CancelledError):
             await asyncio.wait_for(task, 1)
+        results = await asyncio.gather(*queued, return_exceptions=True)
+        assert all(isinstance(result, asyncio.CancelledError) for result in results)
     assert finalized.is_set()
     assert session.closed
     assert not client._operation_tasks
