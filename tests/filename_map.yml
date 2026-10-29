@@ -178,6 +178,9 @@ salt/utils/metrics.py:
   - pytests.functional.utils.test_metrics_otlp_instances
   - pytests.unit.utils.test_metrics
 
+salt/(channel/server|transport/ws)\.py:
+  - pytests.functional.transport.ws.test_request_server
+
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 

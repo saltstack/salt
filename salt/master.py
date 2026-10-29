@@ -1947,6 +1947,17 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                 pass
         super()._handle_signals(signum, sigframe)
 
+    async def _close_channels(self):
+        for channel in self.req_channels:
+            try:
+                close_async = getattr(channel, "close_async", None)
+                if close_async is None:
+                    channel.close()
+                else:
+                    await close_async()
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Error closing worker request channel")
+
     def __bind(self):
         """
         Bind to the local port.
@@ -2014,7 +2025,10 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         except (KeyboardInterrupt, SystemExit):
             pass
         finally:
-            self.io_loop.close()
+            try:
+                self.io_loop.run_until_complete(self._close_channels())
+            finally:
+                self.io_loop.close()
 
     async def _handle_payload(self, payload):
         """

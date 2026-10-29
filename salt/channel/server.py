@@ -676,6 +676,17 @@ class ReqServerChannel:
 
     def close(self):
         self.transport.close()
+        self._close_resources()
+
+    async def close_async(self):
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.transport.close()
+        self._close_resources()
+
+    def _close_resources(self):
         if self.event is not None:
             self.event.destroy()
         if hasattr(self, "ckminions") and self.ckminions is not None:

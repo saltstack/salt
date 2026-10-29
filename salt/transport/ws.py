@@ -9,6 +9,7 @@ import aiohttp
 import aiohttp.web
 import tornado.ioloop
 
+import salt.exceptions
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
@@ -21,6 +22,7 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.utils.asynchronous import cancel_tasks, resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -551,6 +553,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self.ssl = self.opts.get("ssl", None)
         self._run = None
         self._socket = None
+        self._runner = None
+        self._server_task = None
+        self._closing = False
+        self._closed = False
+        self._request_tasks = set()
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -581,70 +588,112 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 self._socket.setblocking(0)
                 self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
 
-    def post_fork(self, message_handler, io_loop, **kwargs):
-        """
-        After forking we need to create all of the local sockets to listen to the
-        router
-
-        message_handler: function to call with your payloads
-        """
+    def post_fork(
+        self,
+        message_handler,
+        io_loop: asyncio.AbstractEventLoop | tornado.ioloop.IOLoop,
+        **kwargs,
+    ):
+        """Schedule the worker's server on the loop created by its entry point."""
+        if self._server_task is not None:
+            raise RuntimeError("Request server has already been started")
         self.message_handler = message_handler
         self._run = asyncio.Event()
         self._started = asyncio.Event()
-
-        # Convert to asyncio loop
         io_loop = salt.utils.asynchronous.aioloop(io_loop)
+        self._server_task = io_loop.create_task(self._serve())
 
-        async def server():
-            server = aiohttp.web.Server(self.handle_message)
-            runner = aiohttp.web.ServerRunner(server)
-            await runner.setup()
-            ctx = None
-            if self.ssl is not None:
-                ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
-            self.site = aiohttp.web.SockSite(runner, self._socket, ssl_context=ctx)
-            log.info("Worker binding to socket %s", self._socket)
+    async def _serve(self):
+        try:
+            if self._closing:
+                return
+            if self._socket is None:
+                # Windows binds in the worker rather than inheriting a socket.
+                self._socket = _get_socket(self.opts)
+                self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                _set_tcp_keepalive(self._socket, self.opts)
+                self._socket.setblocking(False)
+                self._socket.bind(_get_bind_addr(self.opts, "ret_port"))
+            self._runner = aiohttp.web.ServerRunner(
+                aiohttp.web.Server(self.handle_message), shutdown_timeout=1
+            )
+            await self._runner.setup()
+            ctx = (
+                None
+                if self.ssl is None
+                else salt.transport.base.ssl_context(self.ssl, server_side=True)
+            )
+            self.site = aiohttp.web.SockSite(
+                self._runner, self._socket, ssl_context=ctx
+            )
             await self.site.start()
             self._started.set()
-            # pause here for very long time by serving HTTP requests and
-            # waiting for keyboard interruption
-            # Wait for shutdown signal instead of polling
             await self._run.wait()
-            await self.site.stop()
-            self._socket.close()
-
-        io_loop.create_task(server())
+        finally:
+            try:
+                await cancel_tasks(*self._request_tasks)
+                if self._runner is not None:
+                    await self._runner.cleanup()
+                    self._runner = self.site = None
+            finally:
+                if self._socket is not None:
+                    self._socket.close()
+                    self._socket = None
+                self._closed = True
 
     async def handle_message(self, request):
+        if self._closing:
+            return aiohttp.web.Response(status=503)
+        task = asyncio.current_task()
+        self._request_tasks.add(task)
         try:
-            cert = request.get_extra_info("peercert")
-        except AttributeError:
-            pass
-        else:
-            if cert:
-                name = salt.transport.base.common_name(cert)
-                log.debug("Request client cert %r", name)
-        ws = aiohttp.web.WebSocketResponse()
-        await ws.prepare(request)
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                if msg.data == "close":
-                    await ws.close()
-            if msg.type == aiohttp.WSMsgType.BINARY:
-                payload = salt.payload.loads(msg.data)
-                reply = await self.message_handler(payload)
-                await ws.send_bytes(salt.payload.dumps(reply))
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                log.error("ws connection closed with exception %s", ws.exception())
-        return ws
+            try:
+                cert = request.get_extra_info("peercert")
+            except AttributeError:
+                pass
+            else:
+                if cert:
+                    name = salt.transport.base.common_name(cert)
+                    log.debug("Request client cert %r", name)
+            ws = aiohttp.web.WebSocketResponse()
+            await ws.prepare(request)
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    if msg.data == "close":
+                        await ws.close()
+                if msg.type == aiohttp.WSMsgType.BINARY:
+                    payload = salt.payload.loads(msg.data)
+                    reply = await resolve_result(self.message_handler(payload))
+                    await ws.send_bytes(salt.payload.dumps(reply))
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    log.error("ws connection closed with exception %s", ws.exception())
+            return ws
+        finally:
+            self._request_tasks.discard(task)
+
+    async def close_async(self):
+        self.close()
+        if self._closed:
+            return
+        task = self._server_task
+        if task is not None and task is not asyncio.current_task():
+            await asyncio.shield(task)
 
     def close(self):
+        self._closing = True
         if self._run is not None:
-            self._run.set()  # Signal shutdown
-        if self._socket is not None:
-            self._socket.shutdown(socket.SHUT_RDWR)
-            self._socket.close()
-            self._socket = None
+            self._run.set()
+        if self._server_task is None:
+            if self._socket is not None:
+                self._socket.close()
+                self._socket = None
+            self._closed = True
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_async()
 
     async def forward_message(self, payload):
         """
