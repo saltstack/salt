@@ -463,7 +463,7 @@ def diff(package_path, path):
     NOTE: this function includes all files (configuration and not), but does
     not work on binary content.
 
-    :param package: Full pack of the RPM file
+    :param package_path: Full pack of the RPM file
     :param path: Full path to the installed file
     :return: Difference or empty string. For binary files only a notification.
 

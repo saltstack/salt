@@ -56,7 +56,10 @@ def _gather_pillar(pillarenv, pillar_override):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    ret = pillar.compile_pillar()
+    try:
+        ret = pillar.compile_pillar()
+    finally:
+        pillar.destroy()
     if pillar_override and isinstance(pillar_override, dict):
         ret.update(pillar_override)
     return ret

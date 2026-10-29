@@ -2416,14 +2416,29 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 per_loop[loop] = entry
             pub, lock = entry
             async with lock:
+                # PATCH (#69998 review): Re-resolve the active publisher
+                # inside the lock so tasks that captured a stale ``pub``
+                # from the outer scope before a concurrent
+                # ``StreamClosedError`` retry replaced ``per_loop[loop]``
+                # don't cascade evict the healthy replacement.  Falls
+                # back to the outer-scope ``pub`` if the cache is empty
+                # (e.g. ``close()`` ran between capture and lock
+                # acquisition).
+                current_entry = per_loop.get(loop)
+                active_pub = current_entry[0] if current_entry else pub
                 try:
-                    await pub.send(payload)
+                    await active_pub.send(payload)
                 except tornado.iostream.StreamClosedError:
                     # PATCH: puller closed on us mid-send.  Drop the
                     # cached publisher and rebuild once so the next call
                     # (or the retry here) can succeed.  We do a single
                     # retry inside the lock to preserve message ordering
                     # for concurrent callers on this loop.
+                    #
+                    # PATCH (#69998 review): Only drop the cache entry
+                    # if it still points at the publisher we tried --
+                    # otherwise a peer task already replaced it with a
+                    # healthy new one and we must not evict that.
                     #
                     # PATCH: explicitly ``close()`` the stale publisher
                     # before dropping it.  Tornado's ``StreamClosedError``
@@ -2438,7 +2453,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     # already-closed stream (EBADF is swallowed) and
                     # resolves any pending ``_connecting_future`` so
                     # awaiters don't hang.
-                    stale_pub = per_loop.pop(loop, (None,))[0]
+                    stale_pub = active_pub
+                    current_entry = per_loop.get(loop)
+                    if current_entry is not None and current_entry[0] is stale_pub:
+                        per_loop.pop(loop, None)
                     if stale_pub is not None:
                         try:
                             stale_pub.close()
@@ -2602,6 +2620,16 @@ class TCPPublishServer(PublishServer):
         super().__init__(*args, **kwargs)
 
 
+def _socket_family(host):
+    """
+    Return the address family to open a connection to *host* with.
+    """
+    try:
+        return socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)[0][0]
+    except socket.gaierror:
+        return socket.AF_INET6 if ":" in (host or "") else socket.AF_INET
+
+
 class _TCPPubServerPublisher:
     """
     Client half of the local publish channel used for the Salt event bus.
@@ -2693,7 +2721,7 @@ class _TCPPubServerPublisher:
             sock_addr = self.path
             log.debug("Publisher connecting to %s", self.path)
         else:
-            sock_type = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
+            sock_type = _socket_family(self.host)
             sock_addr = (self.host, self.port)
             log.debug("Publisher connecting to %s:%s", self.host, self.port)
 

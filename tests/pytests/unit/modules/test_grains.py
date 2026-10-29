@@ -767,3 +767,37 @@ def test_delkey_nested_key_force_needed():
         assert res["result"]
         assert res["changes"] == {"b": None}
         assert grainsmod.__grains__ == {"a": "aval", "c": 8}
+
+
+def test_setvals_failed_write_keeps_existing_grains(tmp_path):
+    """
+    If writing the grains file fails part-way, the previous grains file must
+    be left intact instead of being truncated.
+    """
+    static_grains = tmp_path / "grains"
+    static_grains.write_text("datacenter: dc1\nroles:\n- web\n")
+
+    def crash_mid_write(data, stream=None, **kwargs):
+        if stream is not None:
+            stream.write("partial")
+        raise OSError("killed while writing")
+
+    with patch.dict(grainsmod.__opts__, {"conf_file": str(tmp_path / "minion")}):
+        with patch("salt.utils.yaml.safe_dump", crash_mid_write):
+            grainsmod.setvals({"maintainer": "ops-oncall"})
+
+    assert yaml.safe_load(static_grains.read_text()) == {
+        "datacenter": "dc1",
+        "roles": ["web"],
+    }
+    # no temporary file is left next to the grains file
+    assert [p.name for p in tmp_path.iterdir()] == ["grains"]
+
+
+def test_setvals_writes_utf8(tmp_path):
+    static_grains = tmp_path / "grains"
+    with patch.dict(grainsmod.__opts__, {"conf_file": str(tmp_path / "minion")}):
+        grainsmod.setvals({"city": "İstanbul"})
+    assert yaml.safe_load(static_grains.read_bytes().decode("utf-8")) == {
+        "city": "İstanbul"
+    }
