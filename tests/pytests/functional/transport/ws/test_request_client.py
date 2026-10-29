@@ -1,6 +1,7 @@
 """WebSocket requests serialize replies and close on the caller's loop."""
 
 import asyncio
+import tempfile
 
 import aiohttp.web
 import pytest
@@ -15,7 +16,7 @@ from tests.support.mock import AsyncMock, patch
 
 
 @pytest.fixture
-def websocket_server(io_loop):
+def websocket_server(io_loop, request):
     state = {
         "connections": 0,
         "received": [],
@@ -48,12 +49,32 @@ def websocket_server(io_loop):
     app.router.add_get("/ws", handle)
     runner = aiohttp.web.AppRunner(app)
 
+    mode = getattr(request, "param", "tcp")
+    ssl_context = None
+    if mode == "tls":
+        ssl_context = salt.transport.base.ssl_context(
+            request.getfixturevalue("ssl_master_config"), server_side=True
+        )
+        state["ssl"] = request.getfixturevalue("ssl_minion_config")
+    socket_path = None
+    if mode == "unix":
+        directory = tempfile.TemporaryDirectory(prefix="salt-ws-", dir="/tmp")
+        request.addfinalizer(directory.cleanup)
+        socket_path = f"{directory.name}/request"
+
     async def start():
         await runner.setup()
-        site = aiohttp.web.TCPSite(runner, "127.0.0.1", 0)
+        if socket_path is not None:
+            site = aiohttp.web.UnixSite(runner, socket_path)
+        else:
+            site = aiohttp.web.TCPSite(runner, "127.0.0.1", 0, ssl_context=ssl_context)
         await site.start()
-        host, port = runner.addresses[0]
-        state["uri"] = f"http://{host}:{port}/ws"
+        if socket_path is not None:
+            state["uri"] = f"ipc://{socket_path}"
+        else:
+            host, port = runner.addresses[0]
+            scheme = "https" if ssl_context is not None else "http"
+            state["uri"] = f"{scheme}://{host}:{port}/ws"
 
     loop = salt.utils.asynchronous.aioloop(io_loop)
     loop.run_until_complete(start())
@@ -64,9 +85,10 @@ def websocket_server(io_loop):
 
 @pytest.fixture
 def client(websocket_server, io_loop):
-    instance = salt.transport.ws.RequestClient(
-        {"master_uri": websocket_server["uri"]}, io_loop
-    )
+    opts = {"master_uri": websocket_server["uri"]}
+    if "ssl" in websocket_server:
+        opts["ssl"] = websocket_server["ssl"]
+    instance = salt.transport.ws.RequestClient(opts, io_loop)
     yield instance
     salt.utils.asynchronous.aioloop(io_loop).run_until_complete(instance.close_async())
 
@@ -174,3 +196,18 @@ async def test_failed_connect_closes_new_session(client):
     assert session.closed
     assert client.session is None
     assert client.ws is None
+
+
+@pytest.mark.parametrize("websocket_server", ["tls"], indirect=True)
+async def test_mutual_tls_requests_reuse_connection(client, websocket_server):
+    assert await client.send("first") == "first"
+    assert await client.send("second") == "second"
+    assert websocket_server["connections"] == 1
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize("websocket_server", ["unix"], indirect=True)
+async def test_unix_socket_requests_reuse_connection(client, websocket_server):
+    assert await client.send("first") == "first"
+    assert await client.send("second") == "second"
+    assert websocket_server["connections"] == 1
