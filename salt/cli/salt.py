@@ -445,7 +445,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         pub_kwargs = dict(eauth or {})
         try:
-            self.local_client.run_job(
+            self.client.run_job(
                 tgt=list(initial),
                 fun=self.config["fun"],
                 arg=list(self.config.get("arg") or []),
