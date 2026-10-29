@@ -371,11 +371,17 @@ def test_list_items_skips_unreadable_heap_entry(cache):
     original_read = cache._read_from_heap
 
     def failing_read(offset, length):
-        # Fail reads for the second key's heap region
-        raw = original_read(offset, length)
-        if raw and raw.rstrip(b"\x00") == b"value" and offset > 0:
+        # Fail reads for the second key's heap region.
+        # ``_read_from_heap`` returns ``(value_bytes, type_tag)`` or
+        # ``None``; peek at the value portion to decide which record
+        # to drop.
+        result = original_read(offset, length)
+        if result is None:
             return None
-        return raw
+        value_bytes, _tag = result
+        if value_bytes.rstrip(b"\x00") == b"value" and offset > 0:
+            return None
+        return result
 
     with patch.object(cache, "_read_from_heap", side_effect=failing_read):
         items = cache.list_items()

@@ -166,16 +166,16 @@ class TestSingleSegment:
 
 class TestSegmentRolling:
     def _tiny_cache(self, tmp_path):
-        """Cache that rolls after each record >= 32 bytes."""
+        """Cache that rolls after each record >= 33 bytes."""
         idx = str(tmp_path / "tiny.idx")
-        # record = 8-byte CRC + value; threshold = 32 -> rolls after first 24+ byte value
+        # record = 8-byte CRC + 1-byte TAG + value; threshold = 33 -> fits a 24-byte value exactly, rolls on next
         return MmapCache(
             idx,
             size=64,
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
 
     def test_roll_creates_segment1(self, tmp_path):
@@ -256,7 +256,7 @@ class TestOverwriteAcrossSegments:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
 
     def test_overwrite_within_seg0(self, tmp_path):
@@ -296,7 +296,7 @@ class TestSegmentDiscovery:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
 
     def test_reopen_discovers_segments(self, tmp_path):
@@ -359,7 +359,7 @@ class TestAtomicRebuildSegmented:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
 
     def test_rebuild_single_segment(self, tmp_path):
@@ -506,7 +506,7 @@ class TestChecksumAcrossSegments:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
 
     def test_good_checksum_seg0(self, tmp_path):
@@ -572,7 +572,7 @@ class TestLazyMmapRefresh:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
         c.put("k1", "A" * 24)  # seg 0
         c.put("k2", "B")  # seg 1; seg 0's mmap is stale
@@ -670,7 +670,7 @@ class TestDeleteRePutSegments:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
         c.put("k1", "A" * 24)  # seg 0
         c.put("k2", "hello")  # seg 1
@@ -689,7 +689,7 @@ class TestDeleteRePutSegments:
             slot_size=128,
             key_size=32,
             verify_checksums=True,
-            max_segment_bytes=32,
+            max_segment_bytes=33,
         )
         c.put("k1", "A" * 24)
         c.put("k2", "B")
