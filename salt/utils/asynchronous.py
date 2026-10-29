@@ -58,6 +58,17 @@ def current_ioloop(io_loop):
             asyncio.set_event_loop(None)
 
 
+async def cancel_tasks(*tasks):
+    """Cancel and drain owned tasks, excluding the task performing cleanup."""
+    current = asyncio.current_task()
+    tasks = {task for task in tasks if task is not None and task is not current}
+    for task in tasks:
+        if not task.done():
+            task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
 class SyncWrapper:
     """
     A wrapper to make Async classes synchronous
