@@ -177,3 +177,23 @@ async def test_sync_close_can_be_awaited(client):
     await client.close_async()
     assert client.close_task.done()
     assert session.closed
+
+
+async def test_legacy_wrapper_drives_async_subscriber_cleanup(websocket_publisher):
+    host, port, _, received = websocket_publisher
+    frame = salt.transport.frame.frame_msg({"id": "minion"})
+
+    def send():
+        with salt.utils.asynchronous.SyncWrapper(
+            salt.transport.ws.PublishClient,
+            args=({},),
+            kwargs={"host": host, "port": port},
+            loop_kwarg="io_loop",
+        ) as wrapped:
+            wrapped.connect()
+            session = wrapped.obj._session
+            wrapped.send(frame)
+        assert session.closed
+
+    await asyncio.wait_for(asyncio.to_thread(send), 3)
+    assert await received.get() == frame

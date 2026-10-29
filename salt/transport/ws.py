@@ -31,8 +31,8 @@ class PublishClient(salt.transport.base.PublishClient):
     """WebSocket subscription client whose I/O belongs to the caller's loop."""
 
     ttype = "ws"
-    async_methods = ["connect", "recv", "send"]
-    close_methods = ["close"]
+    async_methods = ["connect", "recv", "send", "close_async"]
+    close_methods = ["close_async"]
 
     def __init__(
         self, opts, io_loop, **kwargs
