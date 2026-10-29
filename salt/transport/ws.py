@@ -4,8 +4,8 @@ import multiprocessing
 import os
 import socket
 import time
-from collections.abc import Awaitable, Callable
-from typing import Any, TypeVar
+from enum import Enum
+from typing import Any
 
 import aiohttp
 import aiohttp.web
@@ -28,7 +28,12 @@ from salt.transport.tcp import (
 
 log = logging.getLogger(__name__)
 
-_ResultT = TypeVar("_ResultT")
+
+class _RequestOperation(Enum):
+    """The fixed I/O operations supported by a WebSocket request client."""
+
+    CONNECT = "connect"
+    SEND = "send"
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -685,7 +690,7 @@ class RequestClient(salt.transport.base.RequestClient):
         self._creator_pid = os.getpid()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
-        return await self._start_operation(self._connect)
+        return await self._start_operation(_RequestOperation.CONNECT)
 
     async def _connect(self):
         if self.ws is not None and not self.ws.closed:
@@ -712,31 +717,37 @@ class RequestClient(salt.transport.base.RequestClient):
     async def send(self, load, timeout=60):
         try:
             return await asyncio.wait_for(
-                self._start_operation(self._send, load), timeout
+                self._start_operation(_RequestOperation.SEND, load), timeout
             )
         except asyncio.TimeoutError as exc:
             raise SaltReqTimeoutError("WebSocket request timed out") from exc
 
     def _start_operation(
-        self, operation: Callable[..., Awaitable[_ResultT]], *args: Any
-    ) -> asyncio.Task[_ResultT]:
+        self, operation: _RequestOperation, load: Any = None
+    ) -> asyncio.Task[Any]:
         """Own the I/O task so shutdown never cancels the caller's entire task."""
+        if not isinstance(operation, _RequestOperation):
+            raise TypeError("Expected a WebSocket request operation")
         if self._closing:
             raise ClosingError("Request client is closed")
-        task = self.io_loop.create_task(self._run_operation(operation, *args))
+        task = self.io_loop.create_task(self._run_operation(operation, load))
         self._operation_tasks.add(task)
         task.add_done_callback(self._operation_tasks.discard)
         return task
 
     async def _run_operation(
-        self, operation: Callable[..., Awaitable[_ResultT]], *args: Any
-    ) -> _ResultT:
+        self, operation: _RequestOperation, load: Any = None
+    ) -> Any:
         # One connection has no request IDs: keep each exchange indivisible.
         async with self._send_lock:
             if self._closing:
                 raise ClosingError("Request client is closed")
             try:
-                return await operation(*args)
+                if operation is _RequestOperation.CONNECT:
+                    return await self._connect()
+                if operation is _RequestOperation.SEND:
+                    return await self._send(load)
+                raise TypeError("Unknown WebSocket request operation")
             except BaseException:
                 # A cancelled or failed exchange cannot leave a late reply for
                 # the next caller. Discard the connection before releasing the lock.

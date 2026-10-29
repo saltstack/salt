@@ -69,6 +69,18 @@ async def test_non_binary_reply_releases_connection(client, connection, message_
     assert not client._operation_tasks
 
 
+@pytest.mark.parametrize("operation", ["send", object(), AsyncMock()])
+async def test_unknown_operation_is_rejected_before_starting_io(
+    client, connection, operation
+):
+    with pytest.raises(TypeError, match="Expected a WebSocket request operation"):
+        client._start_operation(operation)
+    connection[0].ws_connect.assert_not_awaited()
+    assert not client._operation_tasks
+    if isinstance(operation, AsyncMock):
+        operation.assert_not_called()
+
+
 async def test_malformed_binary_reply_releases_connection(client, connection):
     session, ws = connection
     ws.receive.return_value.data = b"\x81"
