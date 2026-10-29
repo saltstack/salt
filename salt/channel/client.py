@@ -59,9 +59,10 @@ class AsyncReqChannel:
         "_uncrypted_transfer",
         "send",
         "connect",
+        "close_async",
     ]
     close_methods = [
-        "close",
+        "close_async",
     ]
 
     @classmethod
@@ -411,6 +412,9 @@ class AsyncReqChannel:
     async def close_async(self):
         """Async-aware close.
 
+        This can also be awaited after ``close()`` to finish pending transport
+        cleanup before the owning event loop is closed.
+
         When the caller is running on the ioloop that owns the underlying
         transport, this awaits the transport's ``close_async`` (which in
         turn awaits its ``_send_recv`` task's exit future) before
@@ -428,15 +432,13 @@ class AsyncReqChannel:
         do not implement ``close_async``.  Ioloop-owning callers such
         as ``salt.minion``'s reconnect path should prefer this method.
         """
-        if self._closing:
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.close()
             return
         log.debug("Async-closing %s instance", self.__class__.__name__)
         self._closing = True
-        close_async = getattr(self.transport, "close_async", None)
-        if close_async is None:
-            self.transport.close()
-        else:
-            await close_async()
+        await close_async()
 
     def __enter__(self):
         return self
