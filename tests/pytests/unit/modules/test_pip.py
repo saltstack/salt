@@ -1064,13 +1064,14 @@ def test_install_proxy_argument_in_resulting_command(python_binary, venv_target)
     mock = MagicMock(return_value={"retcode": 0, "stdout": ""})
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         pip.install(pkg, proxy=proxy)
-        expected = [*python_binary, "install", "--proxy", proxy, *venv_target, pkg]
+        expected = [*python_binary, "install", *venv_target, pkg]
         mock.assert_called_with(
             expected,
             saltenv="base",
             runas=None,
             use_vt=False,
             python_shell=False,
+            env={"PIP_PROXY": proxy},
         )
 
 
@@ -1117,20 +1118,14 @@ def test_install_global_proxy_in_resulting_command(python_binary, venv_target):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.install(pkg)
-            expected = [
-                *python_binary,
-                "install",
-                "--proxy",
-                proxy,
-                *venv_target,
-                pkg,
-            ]
+            expected = [*python_binary, "install", *venv_target, pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
                 runas=None,
                 use_vt=False,
                 python_shell=False,
+                env={"PIP_PROXY": proxy},
             )
 
 
@@ -1312,14 +1307,7 @@ def test_uninstall_global_proxy_in_resulting_command(python_binary):
     with patch.dict(pip.__salt__, {"cmd.run_all": mock}):
         with patch.dict(pip.__opts__, config_mock):
             pip.uninstall(pkg)
-            expected = [
-                *python_binary,
-                "uninstall",
-                "-y",
-                "--proxy",
-                proxy,
-                pkg,
-            ]
+            expected = [*python_binary, "uninstall", "-y", pkg]
             mock.assert_called_with(
                 expected,
                 saltenv="base",
@@ -1327,6 +1315,7 @@ def test_uninstall_global_proxy_in_resulting_command(python_binary):
                 runas=None,
                 use_vt=False,
                 python_shell=False,
+                env={"PIP_PROXY": proxy},
             )
 
 
@@ -2165,3 +2154,128 @@ def test_freeze_disables_pip_version_check_issue_68214(python_binary):
 )
 def test_normalize(name, expected):
     assert pip.normalize(name) == expected
+
+
+@pytest.mark.parametrize("pip_version", ["20.2", "26.2"])
+@pytest.mark.parametrize(
+    "proxy,config,expected_proxy",
+    [
+        pytest.param(None, {}, None, id="no-proxy"),
+        pytest.param("http://explicit:8080", {}, "http://explicit:8080", id="explicit"),
+        pytest.param(
+            None,
+            {"proxy_host": "global", "proxy_port": 3128},
+            "http://global:3128",
+            id="global",
+        ),
+        pytest.param(
+            None,
+            {
+                "proxy_host": "global",
+                "proxy_port": 3128,
+                "proxy_username": "user",
+                "proxy_password": "password",
+            },
+            "http://user:password@global:3128",
+            id="global-auth",
+        ),
+        pytest.param(
+            "http://explicit:8080",
+            {"proxy_host": "global", "proxy_port": 3128},
+            "http://explicit:8080",
+            id="explicit-overrides-global",
+        ),
+        pytest.param(
+            False,
+            {"proxy_host": "global", "proxy_port": 3128},
+            None,
+            id="disable-global",
+        ),
+    ],
+)
+def test_list_all_versions_proxy(
+    python_binary, pip_version, proxy, config, expected_proxy
+):
+    modern_pip = pip_version == "26.2"
+    stdout = (
+        "Available versions: 2.0, 1.0"
+        if modern_pip
+        else "Could not find a version that satisfies the requirement example==versions (from versions: 1.0, 2.0)"
+    )
+    run_all = MagicMock(
+        return_value={"retcode": 0 if modern_pip else 1, "stdout": stdout}
+    )
+    with patch.dict(pip.__opts__, config, clear=True), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value=pip_version):
+        assert pip.list_all_versions("example", proxy=proxy) == ["1.0", "2.0"]
+
+    command = run_all.call_args.args[0]
+    expected = [*python_binary, "--disable-pip-version-check"]
+    expected.extend(
+        ["index", "versions", "example"]
+        if modern_pip
+        else ["install", "example==versions"]
+    )
+    assert command == expected
+    env = run_all.call_args.kwargs.get("env", {})
+    assert env.get("PIP_PROXY") == expected_proxy
+
+
+@pytest.mark.parametrize(
+    "func,args",
+    [
+        (pip.install, ("pep8",)),
+        (pip.uninstall, ("pep8",)),
+        (pip.list_all_versions, ("pep8",)),
+    ],
+)
+def test_proxy_credentials_not_in_command_line(func, args):
+    """
+    Proxy credentials must not be passed as command line arguments, where any
+    local user could read them from the process list.
+    """
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    config = {
+        "proxy_host": "global",
+        "proxy_port": 3128,
+        "proxy_username": "user",
+        "proxy_password": "s3cret",
+    }
+    with patch.dict(pip.__opts__, config), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value="26.2"):
+        func(*args)
+        func(*args, proxy="http://explicit:hunter2@proxy:8080")
+
+    assert run_all.call_count == 2
+    for call in run_all.call_args_list:
+        command = call.args[0]
+        assert "--proxy" not in command
+        assert not any("s3cret" in a or "hunter2" in a for a in command)
+    assert (
+        run_all.call_args_list[0].kwargs["env"]["PIP_PROXY"]
+        == "http://user:s3cret@global:3128"
+    )
+    assert (
+        run_all.call_args_list[1].kwargs["env"]["PIP_PROXY"]
+        == "http://explicit:hunter2@proxy:8080"
+    )
+
+
+def test_install_proxy_keeps_env_vars_and_virtualenv(tmp_path):
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(pip.__salt__, {"cmd.run_all": run_all}), patch.object(
+        pip, "version", return_value="26.2"
+    ), patch.object(pip, "_get_pip_bin", return_value=["pip"]):
+        pip.install(
+            "pep8",
+            bin_env=str(tmp_path),
+            env_vars={"FOO": "bar"},
+            proxy="http://proxy:8080",
+        )
+    assert run_all.call_args.kwargs["env"] == {
+        "FOO": "bar",
+        "PIP_PROXY": "http://proxy:8080",
+        "VIRTUAL_ENV": str(tmp_path),
+    }

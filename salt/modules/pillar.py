@@ -303,7 +303,10 @@ def items(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    ret = pillar.compile_pillar()
+    try:
+        ret = pillar.compile_pillar()
+    finally:
+        pillar.destroy()
     return _pillar_result(ret, unmask)
 
 
@@ -700,7 +703,10 @@ def ext(external, pillar=None, unmask=None):
         pillar_override=pillar,
     )
 
-    ret = pillar_obj.compile_pillar()
+    try:
+        ret = pillar_obj.compile_pillar()
+    finally:
+        pillar_obj.destroy()
 
     return _pillar_result(ret, unmask)
 

@@ -279,7 +279,7 @@ def test_ext_pillar_no_extra_minion_data_val_dict():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", {"arg": "foo"}, "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -289,7 +289,7 @@ def test_ext_pillar_no_extra_minion_data_val_dict():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", {"arg": "foo"}, "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -320,7 +320,7 @@ def test_ext_pillar_no_extra_minion_data_val_list():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", ["foo"], "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with("mocked-minion", "fake_pillar", "foo")
@@ -328,7 +328,7 @@ def test_ext_pillar_no_extra_minion_data_val_list():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", ["foo"], "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with("mocked-minion", "fake_pillar", "foo")
@@ -358,7 +358,7 @@ def test_ext_pillar_no_extra_minion_data_val_elem():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", "fake_val", "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -368,7 +368,7 @@ def test_ext_pillar_no_extra_minion_data_val_elem():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", "fake_val", "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -401,7 +401,7 @@ def test_ext_pillar_with_extra_minion_data_val_dict():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", {"arg": "foo"}, "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -411,7 +411,7 @@ def test_ext_pillar_with_extra_minion_data_val_dict():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", {"arg": "foo"}, "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -447,7 +447,7 @@ def test_ext_pillar_with_extra_minion_data_val_list():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", ["bar"], "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with("mocked-minion", "fake_pillar", "bar")
@@ -455,7 +455,7 @@ def test_ext_pillar_with_extra_minion_data_val_list():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", ["bar"], "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -488,7 +488,7 @@ def test_ext_pillar_with_extra_minion_data_val_elem():
     # ext pillar function doesn't have the extra_minion_data arg
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=[])),
+        MagicMock(return_value=MagicMock(namedargs=[])),
     ):
         pillar._external_pillar_data("fake_pillar", "bar", "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with("mocked-minion", "fake_pillar", "bar")
@@ -496,7 +496,7 @@ def test_ext_pillar_with_extra_minion_data_val_elem():
     mock_ext_pillar_func.reset_mock()
     with patch(
         "salt.utils.args.get_function_argspec",
-        MagicMock(return_value=MagicMock(args=["extra_minion_data"])),
+        MagicMock(return_value=MagicMock(namedargs=["extra_minion_data"])),
     ):
         pillar._external_pillar_data("fake_pillar", "bar", "fake_ext_pillar")
     mock_ext_pillar_func.assert_called_once_with(
@@ -1519,3 +1519,49 @@ async def test_async_remote_pillar_bad_return(grains, tmp_pki):
     pillar.channel.crypted_transfer_decode_dictentry = crypted_transfer_mock
     with pytest.raises(salt.exceptions.SaltClientError):
         await pillar.compile_pillar()
+
+
+def _min_pillar_opts(**extra):
+    opts = {
+        "optimization_order": [0, 1, 2],
+        "renderer": "json",
+        "renderer_blacklist": [],
+        "renderer_whitelist": [],
+        "state_top": "",
+        "pillar_roots": {"base": []},
+        "file_roots": {"base": []},
+        "extension_modules": "",
+        "fileserver_backend": "",
+        "cachedir": "",
+        "file_client": "local",
+    }
+    opts.update(extra)
+    return opts
+
+
+def test_pillar_functions_use_target_minion_id_on_master():
+    """
+    Regression test for #58407.
+
+    On the master, file_client is "local", so pillar execution modules were
+    loaded with the raw master opts, giving salt["match.compound"] and friends
+    the master's id instead of the minion the pillar is being compiled for.
+    The loaded functions must see the target minion_id (which __gen_opts stamps
+    into self.opts). Pins the bug: before the fix functions.opts["id"] is
+    "master".
+    """
+    with patch("salt.pillar.compile_template"):
+        opts = _min_pillar_opts(id="master")
+        pillar = salt.pillar.Pillar(opts, {"os": "Ubuntu"}, "target-minion", "base")
+        assert pillar.functions.opts["id"] == "target-minion"
+
+
+def test_pillar_functions_masterless_id_unchanged():
+    """
+    Inverse of #58407: in masterless mode opts["id"] already equals the
+    minion_id, so the fix is a no-op and the loaded functions keep that id.
+    """
+    with patch("salt.pillar.compile_template"):
+        opts = _min_pillar_opts(id="myminion")
+        pillar = salt.pillar.Pillar(opts, {"os": "Ubuntu"}, "myminion", "base")
+        assert pillar.functions.opts["id"] == "myminion"

@@ -300,6 +300,7 @@ def _check_if_installed(
     index_url,
     extra_index_url,
     pip_list=False,
+    proxy=None,
     **kwargs,
 ):
     """
@@ -364,6 +365,7 @@ def _check_if_installed(
                 cwd=cwd,
                 index_url=index_url,
                 extra_index_url=extra_index_url,
+                proxy=proxy,
             )
             desired_version = ""
             if any(version_spec) and available_versions:
@@ -956,6 +958,7 @@ def installed(
                     index_url,
                     extra_index_url,
                     pip_list,
+                    proxy=proxy,
                     **kwargs,
                 )
                 # If _check_if_installed result is None, something went wrong with

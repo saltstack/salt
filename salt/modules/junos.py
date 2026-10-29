@@ -43,7 +43,6 @@ try:
     import jnpr.junos.op as tables_dir
     import jnpr.junos.utils
     import jxmlease
-    import yamlordereddictloader
     from jnpr.junos import Device
     from jnpr.junos.exception import (
         ConnectClosedError,
@@ -57,6 +56,13 @@ try:
     from jnpr.junos.utils.config import Config
     from jnpr.junos.utils.scp import SCP
     from jnpr.junos.utils.sw import SW
+
+    try:
+        import yamlordereddictloader
+    except ImportError:
+        # yamlordereddictloader dropped Python 3.11+ wheels; junos-eznc >= 2.7
+        # depends on yamlloader instead and exposes the same SafeLoader.
+        import yamlloader.ordereddict as yamlordereddictloader
 
     # pylint: enable=W0611
     HAS_JUNOS = True
@@ -153,8 +159,14 @@ class HandleFileCopy:
 def _timeout_decorator(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+        # Callers such as napalm.junos_cli pass dev_timeout=None when no timeout
+        # was requested; coalesce None to 0 so max() does not raise, and only
+        # override the connection timeout when a real (>0) value is given
+        # (junos-eznc rejects a None/0 timeout).
+        ldev_timeout = max(
+            kwargs.pop("dev_timeout", 0) or 0, kwargs.pop("timeout", 0) or 0
+        )
+        if ldev_timeout:
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
             conn.timeout = ldev_timeout
@@ -174,8 +186,12 @@ def _timeout_decorator(function):
 def _timeout_decorator_cleankwargs(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
-        if "dev_timeout" in kwargs or "timeout" in kwargs:
-            ldev_timeout = max(kwargs.pop("dev_timeout", 0), kwargs.pop("timeout", 0))
+        # See _timeout_decorator: dev_timeout=None must not raise, and the
+        # connection timeout is only overridden when a real (>0) value is given.
+        ldev_timeout = max(
+            kwargs.pop("dev_timeout", 0) or 0, kwargs.pop("timeout", 0) or 0
+        )
+        if ldev_timeout:
             conn = __proxy__["junos.conn"]()
             restore_timeout = conn.timeout
             conn.timeout = ldev_timeout
@@ -345,6 +361,11 @@ def rpc(cmd=None, dest=None, **kwargs):
                 op[key] = value
     else:
         op.update(kwargs)
+
+    # Reserved kwargs such as __kwarg__ can be carried in via __pub_arg. Strip
+    # them so they are not forwarded to the device as RPC options/arguments,
+    # which would otherwise raise (e.g. the get-config filter reply below).
+    op = salt.utils.args.clean_kwargs(**op)
 
     if cmd is None:
         ret["message"] = "Please provide the rpc to execute."
