@@ -23,9 +23,6 @@ import traceback
 import uuid
 import weakref
 
-import tornado.concurrent
-import tornado.ioloop
-
 import salt.cache
 import salt.channel.client
 import salt.defaults.exitcodes
@@ -1043,7 +1040,7 @@ class AsyncAuth:
 
     @classmethod
     def _register_atfork(cls):
-        # AsyncAuth singletons are bound to a specific tornado IOLoop
+        # AsyncAuth singletons are bound to a specific asyncio loop
         # whose state cannot be safely shared across a fork().  Drop the
         # singleton map in the child so a fresh AsyncAuth (with a fresh
         # io_loop) is created on next use.  creds_map is intentionally
@@ -1069,7 +1066,11 @@ class AsyncAuth:
         """
         cls._register_atfork()
         # do we have any mapping for this io_loop
-        io_loop = io_loop or tornado.ioloop.IOLoop.current()
+        io_loop = (
+            asyncio.get_event_loop()
+            if io_loop is None
+            else salt.utils.asynchronous.aioloop(io_loop)
+        )
         if io_loop not in AsyncAuth.instance_map:
             AsyncAuth.instance_map[io_loop] = weakref.WeakValueDictionary()
         loop_instance_map = AsyncAuth.instance_map[io_loop]
@@ -1125,12 +1126,8 @@ class AsyncAuth:
             self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
-        if io_loop is None:
-            self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
-            )
-        else:
-            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+        self.io_loop = io_loop
+        self._authenticate_waiters = 0
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -1138,7 +1135,7 @@ class AsyncAuth:
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
             self._session_crypticle = Crypticle(self.opts, creds["session"])
-            self._authenticate_future = tornado.concurrent.Future()
+            self._authenticate_future = self.io_loop.create_future()
             self._authenticate_future.set_result(True)
 
     def __deepcopy__(self, memo):
@@ -1171,6 +1168,7 @@ class AsyncAuth:
         return (
             hasattr(self, "_authenticate_future")
             and self._authenticate_future.done()
+            and not self._authenticate_future.cancelled()
             and self._authenticate_future.exception() is None
         )
 
@@ -1181,33 +1179,31 @@ class AsyncAuth:
             if key in AsyncAuth.creds_map:
                 del AsyncAuth.creds_map[key]
 
-    def authenticate(self, callback=None):
-        """
-        Ask for this client to reconnect to the origin
-
-        This function will de-dupe all calls here and return a *single* future
-        for the sign-in-- whis way callers can all assume there aren't others
-        """
-        # if an auth is in flight-- and not done-- just pass that back as the future to wait on
-        if (
-            hasattr(self, "_authenticate_future")
-            and not self._authenticate_future.done()
-        ):
-            future = self._authenticate_future
-        else:
-            future = tornado.concurrent.Future()
+    async def authenticate(self, callback=None):
+        """Authenticate once for concurrent callers, on this object's owning loop."""
+        future = getattr(self, "_authenticate_future", None)
+        if future is None or future.done():
+            future = self.io_loop.create_task(self._authenticate())
             self._authenticate_future = future
-            self.io_loop.create_task(self._authenticate())
 
-        if callback is not None:
-
-            def handle_future(future):
-                response = future.result()
-                self.io_loop.call_soon(callback, response)
-
-            future.add_done_callback(handle_future)
-
-        return future
+        self._authenticate_waiters += 1
+        try:
+            # One cancelled request must not cancel authentication for its peers.
+            result = await asyncio.shield(future)
+            if callback is not None:
+                self.io_loop.call_soon(callback, result)
+            return result
+        finally:
+            self._authenticate_waiters -= 1
+            if not self._authenticate_waiters and not future.done():
+                # No caller owns the operation any longer. Drain it before the
+                # last caller exits so its request channel cannot outlive the loop.
+                del self._authenticate_future
+                future.cancel()
+                try:
+                    await future
+                except asyncio.CancelledError:
+                    pass
 
     async def _authenticate(self):
         """
@@ -1308,7 +1304,7 @@ class AsyncAuth:
                     error = SaltClientError(
                         "Attempt to authenticate with the salt master failed"
                     )
-                self._authenticate_future.set_exception(error)
+                raise error
             else:
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
@@ -1331,32 +1327,24 @@ class AsyncAuth:
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-                self._authenticate_future.set_result(
-                    True
-                )  # mark the sign-in as complete
-                # Notify the bus about creds change.
-                # Fire synchronously on the role's event bus (no io_loop) so the
-                # IPC publish completes before the `with` block tears the event
-                # session down. When fired via fire_event_async with io_loop set,
-                # the publish runs on the *calling* (sub)process io_loop and the
-                # parent minion's handle_event consumer can miss the
-                # salt/auth/creds update before the next master publish arrives,
-                # which gets silently dropped at AES decrypt because creds_map
-                # still holds the previous key (observed on macOS integration
-                # zeromq tests during state.apply-driven re-auth).
+                # Publish credentials before completing authentication so other
+                # processes see key rotation before the next master publish.
                 if self.opts.get("auth_events") is True:
                     with salt.utils.event.get_event(
                         self.opts.get("__role"),
                         opts=self.opts,
                         listen=False,
+                        io_loop=self.io_loop,
                     ) as event:
                         try:
-                            event.fire_event(
+                            await event.fire_event_async(
                                 {"key": key, "creds": creds},
                                 salt.utils.event.tagify(prefix="auth", suffix="creds"),
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error("Error firing auth creds event: %s", exc)
+
+        return True
 
     async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
@@ -1988,7 +1976,8 @@ class SAuth(AsyncAuth):
             self.authenticate()
         return self._crypticle
 
-    def authenticate(self, _=None):  # TODO: remove unused var
+    # SAuth serves the remaining synchronous request callers.
+    def authenticate(self, _=None):  # pylint: disable=invalid-overridden-method
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
