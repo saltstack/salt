@@ -5,6 +5,7 @@ import concurrent.futures
 import contextvars
 import gc
 import multiprocessing
+import multiprocessing.util
 import os
 import sys
 import threading
@@ -12,7 +13,7 @@ import warnings
 
 import pytest
 
-import salt.utils.asyncbridge as asyncbridge
+import salt.utils.asynchronous as asyncbridge
 
 pytestmark = [pytest.mark.timeout(20)]
 
@@ -31,6 +32,7 @@ def shared_bridge(monkeypatch):
     monkeypatch.setattr(asyncbridge, "_bridge", None)
     monkeypatch.setattr(asyncbridge, "_bridge_lock", threading.Lock())
     monkeypatch.setattr(asyncbridge, "_bridge_shutdown", False)
+    monkeypatch.setattr(asyncbridge, "_bridge_finalizer", None)
     try:
         yield
     finally:
@@ -173,13 +175,10 @@ def test_nested_blocking_call_and_shutdown_fail_before_deadlocking(bridge):
     assert bridge.run(nested(), timeout=5) == 42
 
 
-async def test_blocking_calls_from_another_running_loop_are_rejected(bridge):
-    coro = _answer()
-    with pytest.raises(RuntimeError, match="running event loop"):
-        bridge.run(coro)
-    assert coro.cr_frame is None
-    with pytest.raises(RuntimeError, match="running event loop"):
-        bridge.shutdown()
+async def test_sync_entry_points_can_run_from_another_event_loop(bridge):
+    assert bridge.run(_answer()) == 42
+    bridge.shutdown()
+    assert bridge._loop.is_closed()
 
 
 def test_shutdown_waits_for_task_finally_blocks(bridge):
@@ -436,6 +435,13 @@ def test_shared_bridge_shutdown_closes_the_existing_instance(shared_bridge):
         asyncbridge.get_bridge()
 
 
+async def test_shared_bridge_lifecycle_from_another_event_loop(shared_bridge):
+    bridge = asyncbridge.get_bridge()
+    assert bridge.run(_answer()) == 42
+    asyncbridge.shutdown_bridge()
+    assert bridge._loop.is_closed()
+
+
 def test_shared_shutdown_timeout_includes_waiting_for_the_registry(shared_bridge):
     with asyncbridge._bridge_lock:
         with pytest.raises(TimeoutError, match="shared loop bridge"):
@@ -471,6 +477,44 @@ def _child_bridge_probe(connection, inherited=None):
         connection.send((os.getpid(), result, child._loop.is_closed()))
     finally:
         connection.close()
+
+
+def _process_exit_probe(connection):
+    instance = asyncbridge.get_bridge()
+    assert instance.run(_answer()) == 42
+
+    def report():
+        connection.send((instance._loop.is_closed(), instance._thread.is_alive()))
+        connection.close()
+
+    # The bridge's process callback has higher priority and runs first.
+    multiprocessing.util.Finalize(None, report, exitpriority=0)
+
+
+def test_shared_bridge_is_closed_when_a_worker_exits(shared_bridge):
+    context = multiprocessing.get_context("spawn")
+    receiver, sender = context.Pipe(duplex=False)
+    child = context.Process(target=_process_exit_probe, args=(sender,))
+    child.start()
+    sender.close()
+    try:
+        assert receiver.poll(10), "worker did not run process-exit cleanup"
+        assert receiver.recv() == (True, False)
+        child.join(5)
+        assert child.exitcode == 0
+    finally:
+        if child.is_alive():
+            child.terminate()
+            child.join(5)
+        receiver.close()
+
+
+def test_explicit_shared_shutdown_unregisters_process_cleanup(shared_bridge):
+    asyncbridge.get_bridge()
+    finalizer = asyncbridge._bridge_finalizer
+    assert finalizer.still_active()
+    asyncbridge.shutdown_bridge()
+    assert not finalizer.still_active()
 
 
 @pytest.mark.parametrize("method", ["spawn", "fork"])

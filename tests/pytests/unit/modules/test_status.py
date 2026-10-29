@@ -2,19 +2,145 @@
     Test cases for salt.modules.status
 """
 
+import asyncio
 import os
 
 import pytest
 
 import salt.modules.status as status
+import salt.utils.asynchronous
 import salt.utils.platform
 from salt.exceptions import CommandExecutionError
-from tests.support.mock import MagicMock, Mock, mock_open, patch
+from tests.support.mock import AsyncMock, MagicMock, Mock, mock_open, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
     return {status: {}}
+
+
+@pytest.fixture
+def master_ping(monkeypatch):
+    opts = {
+        "id": "ping-test",
+        "master": "current-master",
+        "master_ip": "192.0.2.1",
+        "auth_timeout": 0.1,
+    }
+    channel = MagicMock()
+    channel.loops = []
+    channel.closed = False
+
+    async def send(*args, **kwargs):
+        channel.loops.append(asyncio.get_running_loop())
+        return channel.reply
+
+    async def enter():
+        return channel
+
+    async def exit_(*args):
+        await asyncio.sleep(0)
+        channel.closed = True
+
+    channel.send = AsyncMock(side_effect=send)
+    channel.__aenter__ = AsyncMock(side_effect=enter)
+    channel.__aexit__ = AsyncMock(side_effect=exit_)
+    factory = MagicMock(return_value=channel)
+    event = MagicMock()
+    event.__enter__.return_value = event
+    event_factory = MagicMock(return_value=event)
+    resolver = MagicMock(return_value={"master_ip": "127.0.0.1"})
+    instance = salt.utils.asynchronous.LoopBridge()
+    bridge_factory = MagicMock(return_value=instance)
+    monkeypatch.setattr(status, "__opts__", opts)
+    monkeypatch.setattr(salt.minion, "prep_ip_port", MagicMock(return_value={}))
+    monkeypatch.setattr(salt.minion, "resolve_dns", resolver)
+    monkeypatch.setattr(salt.channel.client.AsyncReqChannel, "factory", factory)
+    monkeypatch.setattr(salt.utils.event, "get_event", event_factory)
+    monkeypatch.setattr(salt.utils.asynchronous, "get_bridge", bridge_factory)
+    try:
+        yield opts, channel, factory, event, resolver, bridge_factory
+    finally:
+        instance.shutdown()
+
+
+@pytest.mark.parametrize("reply", [True, False, None])
+def test_ping_master_waits_for_request_and_cleanup_before_firing_failback(
+    master_ping, reply
+):
+    opts, channel, factory, event, _, _ = master_ping
+    channel.reply = reply
+    assert status.ping_master("preferred-master") is True
+    channel.send.assert_awaited_once_with({"cmd": "ping"}, tries=0, timeout=0.1)
+    assert channel.closed
+    event.fire_event.assert_called_once_with(
+        {"master": "preferred-master"}, salt.minion.master_event(type="failback")
+    )
+    assert factory.call_args.args[0]["master"] == "preferred-master"
+    assert factory.call_args.args[0]["master_ip"] == "127.0.0.1"
+    assert factory.call_args.kwargs == {"crypt": "clear"}
+    assert opts["master"] == "current-master"
+    assert opts["master_ip"] == "192.0.2.1"
+
+
+@pytest.mark.parametrize("master", [None, ""])
+def test_ping_master_invalid_master_does_not_start_a_bridge(master_ping, master):
+    _, _, factory, event, _, bridge_factory = master_ping
+    assert status.ping_master(master) is False
+    bridge_factory.assert_not_called()
+    factory.assert_not_called()
+    event.fire_event.assert_not_called()
+
+
+def test_ping_master_dns_failure_does_not_start_a_bridge(master_ping):
+    _, _, factory, event, resolver, bridge_factory = master_ping
+    resolver.side_effect = OSError("cannot resolve master")
+    assert status.ping_master("preferred-master") is False
+    bridge_factory.assert_not_called()
+    factory.assert_not_called()
+    event.fire_event.assert_not_called()
+
+
+def test_ping_master_request_failure_closes_channel_without_failback(master_ping):
+    _, channel, _, event, _, _ = master_ping
+    channel.send.side_effect = OSError("master unavailable")
+    assert status.ping_master("preferred-master") is False
+    assert channel.closed
+    event.fire_event.assert_not_called()
+
+
+def test_ping_master_request_deadline_includes_connecting_and_closes_channel(
+    master_ping,
+):
+    _, channel, _, event, _, _ = master_ping
+    cancelled = []
+
+    async def send(*args, **kwargs):
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cancelled.append(True)
+
+    channel.send.side_effect = send
+    assert status.ping_master("preferred-master") is False
+    assert cancelled == [True]
+    assert channel.closed
+    event.fire_event.assert_not_called()
+
+
+def test_ping_master_reuses_loop_across_requests(master_ping):
+    _, channel, _, _, _, _ = master_ping
+    for _ in range(3):
+        assert status.ping_master("preferred-master") is True
+    assert len(channel.loops) == 3
+    assert len({id(loop) for loop in channel.loops}) == 1
+
+
+async def test_ping_master_keeps_sync_contract_inside_a_running_loop(master_ping):
+    _, channel, _, event, _, _ = master_ping
+    assert status.ping_master("preferred-master") is True
+    assert channel.closed
+    event.fire_event.assert_called_once()
 
 
 def test_boot_time_aix():

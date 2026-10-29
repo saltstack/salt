@@ -174,6 +174,21 @@ salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
+salt/utils/asynchronous.py:
+  - pytests.unit.utils.test_asynchronous
+  - pytests.unit.utils.test_asynchronous_bridge
+  - pytests.unit.modules.test_status
+  - pytests.functional.modules.test_status_ping_master
+
+salt/modules/status.py:
+  - pytests.unit.modules.test_status
+  - pytests.functional.modules.test_status_ping_master
+
+salt/transport/(tcp|zeromq)\.py:
+  - pytests.unit.transport.test_tcp
+  - pytests.unit.transport.test_zeromq
+  - pytests.functional.modules.test_status_ping_master
+
 salt/utils/metrics.py:
   - pytests.functional.utils.test_metrics_otlp_instances
   - pytests.unit.utils.test_metrics

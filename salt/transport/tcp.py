@@ -2700,7 +2700,9 @@ class RequestClient(salt.transport.base.RequestClient):
                     message_id = header.get("mid")
 
                     if message_id in self.send_future_map:
-                        self.send_future_map.pop(message_id).set_result(body)
+                        future = self.send_future_map.pop(message_id)
+                        if not future.done():
+                            future.set_result(body)
                     else:
                         if self._on_recv is not None:
                             self.io_loop.call_soon(self._on_recv, header, body)
@@ -2717,7 +2719,8 @@ class RequestClient(salt.transport.base.RequestClient):
                     self.port,
                 )
                 for future in self.send_future_map.values():
-                    future.set_exception(e)
+                    if not future.done():
+                        future.set_exception(e)
                 self.send_future_map = {}
                 if self._closing or self._closed:
                     return
@@ -2741,7 +2744,8 @@ class RequestClient(salt.transport.base.RequestClient):
             except Exception as e:  # pylint: disable=broad-except
                 log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
-                    future.set_exception(e)
+                    if not future.done():
+                        future.set_exception(e)
                 self.send_future_map = {}
                 if self._closing or self._closed:
                     return
@@ -2764,7 +2768,7 @@ class RequestClient(salt.transport.base.RequestClient):
         if message_id not in self.send_future_map:
             return
         future = self.send_future_map.pop(message_id)
-        if future is not None:
+        if future is not None and not future.done():
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     async def send(self, load, timeout=60):
@@ -2783,22 +2787,49 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
-        if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, load)
+        send_timeout = None
+        send_task = None
+        try:
+            if timeout is not None:
+                send_timeout = self.io_loop.call_later(
+                    timeout, self.timeout_message, message_id, load
+                )
 
-        item = salt.transport.frame.frame_msg(load, header=header)
+            item = salt.transport.frame.frame_msg(load, header=header)
 
-        async def _do_send():
-            await self.connect()
-            # If the _stream is None, we failed to connect.
-            if self._stream:
-                await self._stream.write(item)
+            async def _do_send():
+                await self.connect()
+                if self._stream:
+                    await self._stream.write(item)
 
-        # Run send in a callback so we can wait on the future, in case we time
-        # out before we are able to connect.
-        self.io_loop.create_task(_do_send())
-        recv = await future
-        return recv
+            send_task = self.io_loop.create_task(_do_send())
+            return await future
+        finally:
+            if send_timeout is not None:
+                send_timeout.cancel()
+            self.send_future_map.pop(message_id, None)
+            if send_task is not None:
+                if not send_task.done():
+                    send_task.cancel()
+                await asyncio.gather(send_task, return_exceptions=True)
+
+    async def close_async(self):
+        """Close this client's resources and await its reader on the owning loop."""
+        if self._closing:
+            return
+        self._closing = True
+        if self._stream is not None:
+            self._stream.close()
+            self._stream = None
+        for future in self.send_future_map.values():
+            future.cancel()
+        self.send_future_map.clear()
+        if self.task is not None:
+            task = self.task
+            self.task = None
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        self._tcp_client.close()
 
     def close(self):
         if self._closing:
