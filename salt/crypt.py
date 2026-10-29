@@ -1127,7 +1127,7 @@ class AsyncAuth:
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         self.io_loop = io_loop
-        self._authenticate_waiters = 0
+        self._authenticate_waiters = {}
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -1186,7 +1186,9 @@ class AsyncAuth:
             future = self.io_loop.create_task(self._authenticate())
             self._authenticate_future = future
 
-        self._authenticate_waiters += 1
+        self._authenticate_waiters[future] = (
+            self._authenticate_waiters.get(future, 0) + 1
+        )
         try:
             # One cancelled request must not cancel authentication for its peers.
             result = await asyncio.shield(future)
@@ -1194,16 +1196,21 @@ class AsyncAuth:
                 self.io_loop.call_soon(callback, result)
             return result
         finally:
-            self._authenticate_waiters -= 1
-            if not self._authenticate_waiters and not future.done():
-                # No caller owns the operation any longer. Drain it before the
-                # last caller exits so its request channel cannot outlive the loop.
-                del self._authenticate_future
-                future.cancel()
-                try:
-                    await future
-                except asyncio.CancelledError:
-                    pass
+            remaining = self._authenticate_waiters[future] - 1
+            if remaining:
+                self._authenticate_waiters[future] = remaining
+            else:
+                del self._authenticate_waiters[future]
+                if not future.done():
+                    # Drain each attempt when its own last caller leaves. An older
+                    # completed attempt may still have callers resuming on this loop.
+                    if self._authenticate_future is future:
+                        del self._authenticate_future
+                    future.cancel()
+                    try:
+                        await future
+                    except asyncio.CancelledError:
+                        pass
 
     async def _authenticate(self):
         """
