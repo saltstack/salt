@@ -395,7 +395,12 @@ class PeerMasterLink:
                 "nonce": os.urandom(16).hex(),
             }
             try:
-                reply = await self._req_channel.send(handshake_load)
+                # tries=1: AsyncReqChannel's built-in retry sends on the
+                # SAME REQ socket, which violates REQ-REP strict
+                # alternation and corrupts the FSM on timeout.  Our
+                # outer backoff loop + fresh-channel rebuild handles
+                # retry at the right granularity.
+                reply = await self._req_channel.send(handshake_load, tries=1)
             except asyncio.CancelledError:
                 self._health = LinkHealth.DISCONNECTED
                 raise
@@ -686,7 +691,7 @@ class PeerMasterLink:
         body = dict(load) if isinstance(load, dict) else {"inner": load}
         body["topology"] = envelope
         payload = self._build_envelope_payload(body, "topology/pub")
-        return await self._req_channel.send(payload)
+        return await self._req_channel.send(payload, tries=1)
 
     async def send_return(self, ret_batch, path):
         """
@@ -724,7 +729,7 @@ class PeerMasterLink:
         # fires mid-send.
         self._inflight_returns += 1
         try:
-            return await self._req_channel.send(payload)
+            return await self._req_channel.send(payload, tries=1)
         finally:
             self._inflight_returns -= 1
 
@@ -746,7 +751,7 @@ class PeerMasterLink:
             },
         }
         payload = self._build_envelope_payload(body, "topology/evt")
-        return await self._req_channel.send(payload)
+        return await self._req_channel.send(payload, tries=1)
 
     async def send_summary(self, summary):
         """
@@ -765,7 +770,7 @@ class PeerMasterLink:
             )
         body = {"summary": serialize_summary(summary)}
         payload = self._build_envelope_payload(body, "topology/sum")
-        return await self._req_channel.send(payload)
+        return await self._req_channel.send(payload, tries=1)
 
     async def subscribe(self, tag_patterns):
         """
@@ -781,4 +786,4 @@ class PeerMasterLink:
         patterns = list(tag_patterns)
         body = {"subscribe": patterns}
         payload = self._build_envelope_payload(body, "topology/sub")
-        return await self._req_channel.send(payload)
+        return await self._req_channel.send(payload, tries=1)

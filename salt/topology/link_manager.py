@@ -56,6 +56,11 @@ _INBOUND = {}
 # process-level :class:`~salt.topology.router.TopologyRouter`.
 _LISTENER = None
 
+#: Master-event subscriber that watches ``salt/topology/return/*``.
+#: Populated by :func:`_start_return_subscriber`; torn down in
+#: :func:`stop`.
+_RETURN_SUBSCRIBER = None
+
 # Pre-fork reserved listening socket (SO_REUSEADDR + FD_CLOEXEC).
 # Populated by :func:`pre_fork`; consumed by :func:`start` when it
 # constructs the ReqServerChannel.  Kept distinct from ``_LISTENER``
@@ -101,11 +106,12 @@ def _reset_module_state():
     """
     global _LINKS, _INBOUND, _LISTENER, _LISTENER_SOCKET, _OWNER_PID
     global _REGISTRY_CACHE, _BREADCRUMB_CACHE, _IO_LOOP, _RAFT_SERVICE
-    global _CONFIG, _OPTS
+    global _CONFIG, _OPTS, _RETURN_SUBSCRIBER
     _LINKS = {}
     _INBOUND = {}
     _LISTENER = None
     _LISTENER_SOCKET = None
+    _RETURN_SUBSCRIBER = None
     _OWNER_PID = None
     _REGISTRY_CACHE = None
     _BREADCRUMB_CACHE = None
@@ -339,6 +345,20 @@ async def start(opts, io_loop, raft_service=None):
         provisional_key = _provisional_key(peer_ref)
         _LINKS[provisional_key] = link
         io_loop.call_soon_threadsafe(_schedule_connect, link)
+
+    # Step 9: topology-return subscriber.  Bridges the MWorker's
+    # ``salt/topology/return/<origin>/<jid>`` event (fired by
+    # :meth:`salt.master.AESFuncs._maybe_fire_topology_return` when a
+    # local minion returns for a jid that we forwarded from an
+    # inbound peer) to the outbound ``topology/ret`` RPC via the
+    # :class:`PeerMasterLink.send_return` method of the breadcrumbed
+    # upstream link.  Without this subscriber the forwarded publish
+    # loop never closes: edges store returns locally but no hop
+    # propagates them back toward origin.
+    try:
+        _start_return_subscriber(opts, io_loop)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: return-subscriber bootstrap failed")
 
 
 def _install_sm_callbacks(sm):
@@ -621,6 +641,86 @@ def _open_inbound_listener(opts, io_loop):
         return None
 
 
+def _start_return_subscriber(opts, io_loop):
+    """Open a master-event subscriber for ``salt/topology/return/*``.
+
+    The MWorker that processes a ``_return`` from a locally-attached
+    minion fires ``salt/topology/return/<origin>/<jid>`` on the
+    master event bus when the jid belongs to a publish forwarded
+    from an inbound peer (see
+    :meth:`salt.master.AESFuncs._maybe_fire_topology_return`).  This
+    subscriber owns the next hop: it looks up the breadcrumb for
+    ``jid`` to find the upstream peer and calls
+    :meth:`PeerMasterLink.send_return` on that link.  On the receiving
+    master the inbound ``topology/ret`` dispatch
+    (:func:`_dispatch_ret`) stores or forwards the return based on
+    its own origin-check -- so the hop chain continues until the
+    origin terminates it.
+    """
+    global _RETURN_SUBSCRIBER
+    event_bus = salt.utils.event.get_master_event(
+        opts, opts.get("sock_dir"), io_loop=io_loop, listen=True
+    )
+    event_bus.subscribe("salt/topology/return", match_type="startswith")
+    # ``set_event_handler`` wraps the callback with
+    # :func:`asyncio.ensure_future` which expects a coroutine, so pass
+    # the async def directly rather than a lambda that pre-schedules
+    # a Task.
+    event_bus.set_event_handler(_handle_topology_return_event)
+    _RETURN_SUBSCRIBER = event_bus
+
+
+async def _handle_topology_return_event(package):
+    """Forward a ``salt/topology/return/<origin>/<jid>`` event upstream.
+
+    Called from the subscriber installed in
+    :func:`_start_return_subscriber`.  Looks up the breadcrumb for
+    the jid and sends the return load via that link's
+    :meth:`PeerMasterLink.send_return`.
+    """
+    try:
+        tag, data = salt.utils.event.SaltEvent.unpack(package)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: unpack failed for topology-return event")
+        return
+    if not tag.startswith("salt/topology/return/"):
+        return
+    load = (data or {}).get("load")
+    if not isinstance(load, dict):
+        return
+    jid = load.get("jid")
+    if not jid:
+        return
+    router = router_mod.get_router()
+    if router is None:
+        return
+    try:
+        upstream = router.route_return(load)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: route_return raised for jid=%r", jid)
+        return
+    if upstream is None:
+        log.debug(
+            "topology: no breadcrumb for jid=%r at return-subscriber -- "
+            "either origin or breadcrumb expired",
+            jid,
+        )
+        return
+    try:
+        if not router.forward_return_once(load):
+            return
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: forward_return_once raised for jid=%r", jid)
+    try:
+        await upstream.send_return([load], [router.cluster_id])
+    except Exception:  # pylint: disable=broad-except
+        log.exception(
+            "topology: send_return to upstream=%r failed for jid=%r",
+            getattr(upstream, "peer_cluster_id", None),
+            jid,
+        )
+
+
 async def stop():
     """
     Shut down the topology subsystem at process exit.
@@ -644,6 +744,16 @@ async def stop():
                 close()
             except Exception:  # pylint: disable=broad-except
                 log.debug("topology stop: listener close failed", exc_info=True)
+    if _RETURN_SUBSCRIBER is not None:
+        close = getattr(_RETURN_SUBSCRIBER, "close", None)
+        if close is not None:
+            try:
+                close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology stop: return subscriber close failed",
+                    exc_info=True,
+                )
     if _LISTENER_SOCKET is not None:
         try:
             _LISTENER_SOCKET.close()
@@ -859,6 +969,65 @@ async def _dispatch_pub(payload):
         payload.get("origin_cluster_id") if isinstance(payload, dict) else None
     )
     inbound_link = _INBOUND.get(inbound_cluster) if inbound_cluster else None
+
+    # Return-shaped inbound: decide origin vs transit.  Origin is
+    # the master that originally issued the publish; it is the only
+    # cluster that has the jid materialized in its local job cache
+    # (``.load.p`` / ``.minions.p`` under
+    # ``<cachedir>/jobs/<hash>/``).  Transit clusters never see the
+    # publish go through their own ``publish`` runner so no files
+    # exist for them.
+    #
+    # Why not use :meth:`route_return` alone: a breadcrumb-based test
+    # is unreliable at the origin because the FIRST return that
+    # arrives falls through to :meth:`forward_publish`, which writes
+    # a breadcrumb (jid -> inbound) as part of its normal
+    # bookkeeping.  Subsequent returns for the same jid would then
+    # look up as "transit" and get forwarded back to the sender --
+    # breaking fan-in.  The on-disk origin test is monotonic and
+    # cannot be perturbed by inbound traffic.
+    if isinstance(load, dict) and _looks_like_minion_return(load):
+        if _jid_is_local_origin(load.get("jid")):
+            # Origin: store locally, skip forward_publish so we
+            # don't fan the return to our other peers (who have no
+            # interest in it).
+            try:
+                _store_forwarded_return(load)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: store_job for forwarded return failed for jid=%r",
+                    load.get("jid"),
+                )
+            return [], True
+        # Transit: use the breadcrumb to find the upstream peer and
+        # forward the return one hop closer to origin.
+        upstream = None
+        try:
+            upstream = router.route_return(load)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: route_return raised for jid=%r", load.get("jid"))
+        if upstream is not None:
+            try:
+                first_time = router.forward_return_once(load)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: forward_return_once raised for jid=%r",
+                    load.get("jid"),
+                )
+                first_time = True
+            if first_time:
+                try:
+                    await upstream.send_publish(load, [router.cluster_id])
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "topology: upstream return forward failed for jid=%r",
+                        load.get("jid"),
+                    )
+            # Transit path: do NOT also run forward_publish (which
+            # would write a breadcrumb into this inbound link and
+            # replay the return on the local returner).
+            return [upstream], False
+
     try:
         result = router.forward_publish(load, inbound_link)
     except Exception:  # pylint: disable=broad-except
@@ -869,21 +1038,12 @@ async def _dispatch_pub(payload):
         return result
     links, local_match = result
     if local_match and isinstance(load, dict):
-        # Minion-return event forwarded from a transit cluster: west
-        # fires ``salt/job/<jid>/ret/<minion_id>`` on its event bus when
-        # its locally-attached minion returns.  The publish daemon's
-        # topology hook packages that as a ``topology/pub``, so the
-        # return arrives on the origin cluster through this very
-        # ``_dispatch_pub`` -- not through the ``topology/ret`` path,
-        # which currently depends on an event-bus subscriber the
-        # publish daemon does not yet own.  Short-circuit here: when
-        # the load looks like a native minion return (``cmd='_return'``
-        # with ``jid`` + ``id`` + ``return``), write it to this
-        # master's local returner via
-        # :func:`salt.utils.job.store_job` so the ``salt`` CLI's
-        # ``local_cache`` poll finds it.  Native publishes (which
-        # carry ``tgt``/``tgt_type``/``fun``/``arg`` but no
-        # ``return``) continue to flow to local minions via
+        # Origin side of the return path (``route_return`` returned
+        # ``None`` above -- no breadcrumb points upstream because this
+        # master issued the publish).  Writing to the local returner
+        # here is what makes the ``salt`` CLI's ``local_cache`` poll
+        # see the forwarded minion return.  Native publishes (no
+        # ``return`` key) continue to flow to local minions via
         # :func:`_publish_to_local_minions`.
         if _looks_like_minion_return(load):
             try:
@@ -901,6 +1061,50 @@ async def _dispatch_pub(payload):
                     "topology: local-minion publish failed for forwarded jid=%r",
                     load.get("jid"),
                 )
+    # Transit fan-out: ``forward_publish`` returned a list of further
+    # peer links (destinations minus inbound, flood-mode minus self);
+    # we are the only code path that can propagate the publish beyond
+    # this hop.  Without this, a 3-hop topology (east -> west ->
+    # west-sub) stalls at west: west publishes to its local minions
+    # and acks the REQ, but west-sub never sees the publish because
+    # :func:`salt.topology.router.on_publish` only runs on the ORIGIN
+    # master's :meth:`publish_payload`.  Native publishes only (not
+    # minion-return frames -- those are handled by the return-shaped
+    # short-circuit above) and only when ``jid`` is present (filters
+    # out non-publish event forwards like key events).
+    #
+    # Scheduling: fire-and-forget via ``create_task`` so the REP
+    # handler acks the inbound REQ without waiting for each outbound
+    # ``send_publish`` to complete.  A slow or disconnected further
+    # peer would otherwise serialize behind this handler and wedge
+    # the receiver side of the publish fan for all other inbound
+    # traffic.
+    if (
+        links
+        and isinstance(load, dict)
+        and load.get("jid")
+        and not _looks_like_minion_return(load)
+    ):
+        cluster_id = router.cluster_id
+
+        async def _transit_send(_link, _load):
+            try:
+                await _link.send_publish(_load, [cluster_id])
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: transit forward to peer=%r failed for jid=%r",
+                    getattr(_link, "peer_cluster_id", None),
+                    _load.get("jid"),
+                )
+
+        for link in links:
+            try:
+                asyncio.ensure_future(_transit_send(link, load))
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: transit scheduling to peer=%r failed",
+                    getattr(link, "peer_cluster_id", None),
+                )
     return links, local_match
 
 
@@ -917,6 +1121,34 @@ def _looks_like_minion_return(load):
         and "id" in load
         and "return" in load
     )
+
+
+def _jid_is_local_origin(jid):
+    """Return True when this master originated ``jid``.
+
+    Checked by *absence* of a breadcrumb for the jid.
+    :meth:`TopologyRouter.forward_publish` records a breadcrumb for
+    every publish received from a peer, pointing at the inbound
+    link.  The ORIGIN never calls ``forward_publish`` for its own
+    jid (its publish goes out via :func:`route_publish` which does
+    not write breadcrumbs), so lookup returns ``None`` there.
+
+    Correctness depends on return-shaped frames NOT falling through
+    to :meth:`forward_publish` (which would spuriously write a
+    breadcrumb into the inbound link on origin and flip subsequent
+    returns onto the transit path).  The caller in
+    :func:`_dispatch_pub` short-circuits before that happens; see
+    the comment there.
+    """
+    if not jid:
+        return False
+    router = router_mod.get_router()
+    if router is None:
+        return False
+    try:
+        return router.lookup_breadcrumb(jid) is None
+    except Exception:  # pylint: disable=broad-except
+        return False
 
 
 _MMINION_CACHE = None
@@ -983,6 +1215,25 @@ async def _publish_to_local_minions(load):
 
     Idempotent at the channel layer: ``publish`` is a pure
     IPC-pull-socket write, no bind.
+
+    Also pre-seeds the local ``local_cache`` job dir with
+    ``.load.p`` + ``.minions.p``.  Rationale:
+    :meth:`salt.channel.server.PubServerChannel.publish` is a pure
+    transport write; it does not run
+    :meth:`salt.master.ClearFuncs.publish`'s ``save_load`` path, so
+    on a transit master the forwarded publish lands with NO cache
+    files.  The first local minion's ``_return`` then triggers
+    :func:`salt.utils.job.store_job`, which calls
+    :func:`salt.returners.local_cache.save_load` -- but ``save_load``
+    only calls :func:`save_minions` when ``load["tgt"]`` is set,
+    which is NOT the case for a minion-return load.  Result: a
+    narrow race where the first return writes ``.load.p`` without
+    ``.minions.p``, and the second concurrent return's ``get_load``
+    sees ``.load.p`` present, tries to read ``.minions.p``, and
+    crashes with ``CommandExecutionError`` which bubbles out of
+    MWorker's ``_return`` handler, skipping the subsequent
+    ``_maybe_fire_topology_return`` call.  Pre-seeding here ensures
+    ``.minions.p`` exists before any return arrives.
     """
     import salt.channel.server
     import salt.utils.channel
@@ -995,6 +1246,7 @@ async def _publish_to_local_minions(load):
         log.debug(
             "topology: strip_cluster_scope failed; publishing raw tgt", exc_info=True
         )
+    _seed_local_cache_for_forwarded_publish(stripped)
     for transport, opts in salt.utils.channel.iter_transport_opts(_OPTS or {}):
         chan = salt.channel.server.PubServerChannel.factory(opts)
         try:
@@ -1006,16 +1258,130 @@ async def _publish_to_local_minions(load):
             )
 
 
-def _dispatch_ret(payload):
+def _seed_local_cache_for_forwarded_publish(load):
+    """Write ``.load.p`` + ``.minions.p`` for a forwarded publish jid.
+
+    See the extended comment in :func:`_publish_to_local_minions` for
+    the exact race this closes.  Writes the local-cache artifacts the
+    same way :func:`salt.returners.local_cache.save_load` would, so
+    the subsequent MWorker ``_return`` path treats this jid as an
+    already-recorded publish and skips the ``save_load`` branch that
+    races on ``.minions.p``.
+    """
+    global _MMINION_CACHE
+    if _OPTS is None or not isinstance(load, dict):
+        return
+    jid = load.get("jid")
+    if not jid:
+        return
+    try:
+        if _MMINION_CACHE is None:
+            import salt.minion  # pylint: disable=import-outside-toplevel
+
+            _MMINION_CACHE = salt.minion.MasterMinion(_OPTS, states=False, rend=False)
+        job_cache = _OPTS.get("master_job_cache", "local_cache")
+        save_load_fn = _MMINION_CACHE.returners.get(f"{job_cache}.save_load")
+        if save_load_fn is None:
+            return
+        import salt.utils.minions  # pylint: disable=import-outside-toplevel
+
+        # Resolve the local matched minions for this master so the
+        # on-disk ``.minions.p`` reflects just the minions that THIS
+        # master actually published to (the ones that will later issue
+        # ``_return``).  Peer-master minions are routed via their own
+        # masters' cache files.
+        ckminions = salt.utils.minions.CkMinions(_OPTS)
+        resolved = ckminions.check_minions(
+            load.get("tgt"), load.get("tgt_type", "glob")
+        )
+        matched = resolved.get("minions") if isinstance(resolved, dict) else None
+        try:
+            save_load_fn(jid, load, minions=matched)
+        except TypeError:
+            save_load_fn(jid, load)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: seed_local_cache_for_forwarded_publish failed for jid=%r",
+            jid,
+            exc_info=True,
+        )
+
+
+async def _dispatch_ret(payload):
+    """Handle an inbound ``topology/ret`` RPC.
+
+    The payload carries one or more minion-return loads that an edge
+    or transit peer forwarded upstream.  Behaviour per load:
+
+    * If this master is the publish's origin
+      (:func:`_jid_is_local_origin`), write the return into the local
+      returner so the ``salt`` CLI's ``local_cache`` poll finds it.
+    * Otherwise, look up the breadcrumb's upstream peer and fan the
+      return one more hop closer to origin via
+      :meth:`PeerMasterLink.send_return`.
+
+    The sender ships either a single load dict or a batch (list of
+    loads) depending on which code path called
+    :meth:`PeerMasterLink.send_return`; both shapes are accepted.
+    """
     router = router_mod.get_router()
     if router is None:
         return None
-    load = payload.get("load") if isinstance(payload, dict) else payload
-    try:
-        return router.route_return(load)
-    except Exception:  # pylint: disable=broad-except
-        log.exception("topology: route_return raised")
-        return None
+    # ``send_return`` wraps a list of per-minion return dicts in a
+    # ``{"batch": [...], "topology": {...}}`` body, which the inbound
+    # envelope then puts under the ``load`` key.  Legacy call sites
+    # (and some tests) pass a single return dict or a bare list; be
+    # permissive about shape so new senders don't have to be careful.
+    body = payload.get("load") if isinstance(payload, dict) else payload
+    if isinstance(body, dict) and isinstance(body.get("batch"), list):
+        batch = body["batch"]
+    elif isinstance(body, list):
+        batch = body
+    elif isinstance(body, dict):
+        batch = [body]
+    else:
+        batch = []
+    for item in batch:
+        if not isinstance(item, dict):
+            continue
+        jid = item.get("jid")
+        if not jid:
+            continue
+        if _jid_is_local_origin(jid):
+            try:
+                _store_forwarded_return(item)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "topology: store_job for inbound topology/ret failed for jid=%r",
+                    jid,
+                )
+            continue
+        try:
+            upstream = router.route_return(item)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: route_return raised for jid=%r", jid)
+            continue
+        if upstream is None:
+            log.debug(
+                "topology: no breadcrumb for jid=%r on inbound topology/ret "
+                "-- dropping",
+                jid,
+            )
+            continue
+        try:
+            if not router.forward_return_once(item):
+                continue
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: forward_return_once raised for jid=%r", jid)
+        try:
+            await upstream.send_return([item], [router.cluster_id])
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "topology: send_return to upstream=%r failed for jid=%r",
+                getattr(upstream, "peer_cluster_id", None),
+                jid,
+            )
+    return None
 
 
 def _dispatch_evt(payload):
@@ -1228,15 +1594,35 @@ async def _handle_inbound_channel(payload):
     core :func:`_handle_inbound` returns a single value (the inner
     dispatch result, or ``None`` on drop) so in-process callers do not
     have to carry the channel's return-shape contract.  This wrapper
-    adapts between the two: it awaits the inner dispatch and always
-    returns a ``(ret, {"fun": "send_clear"})`` tuple so a dropped
-    message yields a well-formed empty cleartext reply instead of a
-    transport-level failure.
+    adapts between the two: it awaits the inner dispatch, extracts a
+    msgpack-serializable ack, and returns a
+    ``(ret, {"fun": "send_clear"})`` tuple so a dropped message yields
+    a well-formed empty cleartext reply instead of a transport-level
+    failure.
+
+    The internal dispatchers return domain objects for the convenience
+    of in-process callers and tests (``_dispatch_pub`` returns
+    ``(links, local_match)`` with :class:`PeerMasterLink` instances,
+    ``_dispatch_ret`` returns the breadcrumb-resolved link, etc.).
+    Those objects do NOT serialize through msgpack and used to crash
+    the REP ``send`` after a successful ``recv`` -- deadlocking the
+    socket.  Collapse the dispatcher return to a serializable ack
+    dict here so only the handshake path keeps its structured reply
+    (``_master_auth`` already returns a plain dict).
     """
     result = await _handle_inbound(payload)
-    if result is None:
-        result = {}
-    return result, {"fun": "send_clear"}
+    if isinstance(result, dict):
+        # Handshake reply (``_master_auth``) is already plain-dict and
+        # msgpack-safe; pass through unchanged.
+        reply = result
+    elif result is None:
+        reply = {}
+    else:
+        # Dispatcher return is internal state (e.g. list of
+        # PeerMasterLink objects); the sender only needs to know the
+        # message was accepted.
+        reply = {"ok": True}
+    return reply, {"fun": "send_clear"}
 
 
 # ---------------------------------------------------------------------------

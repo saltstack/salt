@@ -1729,15 +1729,63 @@ class PubServerChannel:
         # is a wasted round-trip --- the router has already decided
         # locality.  Strip the ``C@`` tokens before fan-out so the
         # subscribing minions see a well-formed compound expression.
+        #
+        # Origin-side locality guard: when the target names ONE OR MORE
+        # clusters via ``C@`` and NONE of them is this master's local
+        # cluster, skip the local publish entirely.  Otherwise the
+        # stripped target (``C@west`` -> ``*`` by design, so the
+        # destination cluster matches all its minions) would fan the
+        # job out to this master's own minions too -- which is wrong
+        # on the origin side, since the operator explicitly scoped the
+        # publish to a non-local cluster.  ``strip_cluster_scope``'s
+        # ``*`` fallback is correct for the destination cluster
+        # (where the stripped load is forwarded), not for the origin.
         if (
             self.opts.get("topology_enabled")
             and isinstance(load, dict)
             and load.get("tgt_type") in ("compound", "compound_pillar_exact")
         ):
             try:
+                import salt.config.topology as _topology_config
                 import salt.topology.router as _topology_router
 
-                load["tgt"] = _topology_router.strip_cluster_scope(load.get("tgt"))
+                tgt = load.get("tgt")
+                destinations = _topology_router.extract_cluster_scope(
+                    tgt, nodegroups=self.opts.get("nodegroups")
+                )
+                # Lazy-load topology config to learn the local
+                # ``cluster_id``; ``opts["cluster_id"]`` is only set on
+                # 3008.x master-cluster masters, not on topology-only
+                # solo masters.
+                local_cluster_id = self.opts.get("cluster_id")
+                if not local_cluster_id:
+                    try:
+                        _cfg = _topology_config.load_topology_config(self.opts)
+                        local_cluster_id = _cfg.cluster_id
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug(
+                            "topology: load_topology_config failed on publish_payload",
+                            exc_info=True,
+                        )
+                if (
+                    destinations is not None
+                    and local_cluster_id
+                    and local_cluster_id not in destinations
+                ):
+                    # Target names only non-local clusters -- the
+                    # topology forwarder (fired from
+                    # ``MasterPubServerChannel.publish_payload`` ->
+                    # ``router.on_publish``) handles the remote fan.
+                    # Skip the origin's local publish.
+                    log.debug(
+                        "topology: skipping origin-local fan-out for "
+                        "non-local target %r (local=%r, destinations=%r)",
+                        tgt,
+                        local_cluster_id,
+                        sorted(destinations),
+                    )
+                    return
+                load["tgt"] = _topology_router.strip_cluster_scope(tgt)
             except Exception:  # pylint: disable=broad-except
                 log.debug(
                     "topology: strip_cluster_scope failed on publish_payload",
@@ -1840,6 +1888,16 @@ class MasterPubServerChannel:
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
             bind_host = opts.get("interface", "127.0.0.1")
+
+            # Windows has no Unix sockets, so ``tornado.netutil.bind_unix_socket``
+            # is not available on the Windows tornado wheel.  Null out the
+            # IPC paths on Windows so :class:`PublishServer.publisher`
+            # falls through to the TCP ``pub_host``/``pub_port`` branch
+            # instead of raising ``AttributeError`` on
+            # ``tornado.netutil.bind_unix_socket`` during startup.
+            if salt.utils.platform.is_windows():
+                pub_path = None
+                pull_path = None
 
             try:
                 transport = salt.transport.tcp.PublishServer(

@@ -1455,16 +1455,21 @@ class LocalClient:
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
-                # Topology-forward-only publishes start with an empty
-                # ``minions`` set because the originating master cannot
-                # know peer-cluster targets at pub-time.  Returns stream
-                # in asynchronously as the topology forwarder delivers
-                # them; without this guard the loop breaks on the very
-                # first iteration (``0 >= 0``) before any return has had
-                # a chance to arrive.  Fall through to the timeout path
-                # so the CLI waits the full ``timeout`` window for
-                # cross-cluster returns.
-                and not (self.opts.get("topology_enabled") and not minions)
+                # When topology is enabled the master cannot pre-compute
+                # the peer-cluster minions matched by a glob/compound
+                # publish -- those come back asynchronously via
+                # :func:`salt.topology.link_manager._store_forwarded_return`
+                # on the origin.  Short-circuiting on
+                # ``found >= local-minions`` means a plain ``salt '*'
+                # test.ping`` returns only the origin's minions and
+                # exits before cross-cluster returns arrive.  Fall
+                # through to the timeout path so cross-cluster returns
+                # have the full ``--timeout`` window to arrive.
+                #
+                # (Explicit minion-id targets still return instantly
+                # because the saltutil.find_job gather_job_timeout path
+                # below takes over.)
+                and not self.opts.get("topology_enabled")
             ):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)

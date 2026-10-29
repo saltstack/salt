@@ -949,6 +949,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.trace("RequestServer.request_handler started")
         try:
             while not self._event.is_set():
+                # Phase 1: receive.  Any exception here means we did NOT
+                # consume a message, so the REP FSM is still in
+                # "expecting recv" state and we can safely loop.
                 try:
                     # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
                     # Python 3.12 rewrote wait_for to use asyncio.timeout() which
@@ -961,20 +964,53 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     if not events:
                         continue
                     request = await self._socket.recv()
-                    reply = await self.handle_message(None, request)
-                    await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Exception in request handler: %s",
+                        "Exception during recv: %s",
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
                     await asyncio.sleep(0)
                     continue
+
+                # Phase 2: dispatch to payload handler.  REP FSM is now
+                # in "expecting send" state -- we MUST send() a reply
+                # (even an error reply) before the next recv() can
+                # succeed.  Catch handler exceptions here and fall
+                # through to the send with an error payload so the
+                # socket does not deadlock.
+                try:
+                    reply = await self.handle_message(None, request)
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception in handle_message: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    reply = {"msg": "handler error"}
+
+                # Phase 3: send the reply.  A send() failure after a
+                # successful recv() is unrecoverable at this layer
+                # (REP FSM is still in "expecting send"); log and loop
+                # -- the next recv() will fail with a state error and
+                # push us into the recovery path.
+                try:
+                    await self._socket.send(self.encode_payload(reply))
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception during send: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    await asyncio.sleep(0)
         finally:
             log.trace("RequestServer.request_handler exiting")
 

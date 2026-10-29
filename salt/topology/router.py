@@ -491,6 +491,52 @@ async def on_publish(load, io_loop):
     r = get_router()
     if r is None:
         return
+
+    # Return events (``cmd='_return'`` loads fired by MWorker's
+    # ``store_job`` or any ``salt/job/<jid>/ret/<id>`` publish) must
+    # NOT be fanned here: returns have no ``tgt`` so
+    # :meth:`route_publish` would flood every peer every time a
+    # single minion returns.  The dedicated upstream-return path
+    # (:meth:`salt.master.AESFuncs._maybe_fire_topology_return` ->
+    # :func:`salt.topology.link_manager._start_return_subscriber` ->
+    # :meth:`PeerMasterLink.send_return`) delivers the return along
+    # the breadcrumb chain exactly once per hop; letting
+    # publish_payload also fan returns via ``topology/pub``
+    # amplifies traffic (N returns -> N floods) and queues
+    # SaltReqTimeoutError events behind every legitimate publish.
+    #
+    # Two shapes to detect:
+    #
+    # * Top-level: ``load["cmd"] == "_return"`` -- a ``_return``
+    #   handed straight to publish_payload (rare).
+    # * Nested: ``salt/job/<jid>/ret/<id>`` fires with the event
+    #   bus's ``{load: {cmd: _return, ...}, _stamp, ...}`` shape,
+    #   so the real cmd lives one level deeper.  Downstream minions
+    #   that pick this up as a publish crash with ``KeyError('ret')``
+    #   in :func:`salt.minion.Minion._thread_return` because the
+    #   top-level dict lacks the ``fun`` / ``arg`` / ``ret`` fields
+    #   a real publish carries.
+    if isinstance(load, dict):
+        # Return events (``cmd='_return'`` at top-level or nested).
+        if load.get("cmd") == "_return":
+            return
+        inner = load.get("load")
+        if isinstance(inner, dict) and inner.get("cmd") == "_return":
+            return
+        # Meta-notifications fired by ``salt-master`` to announce a
+        # publish happened: ``salt/job/<jid>/publish`` events carry
+        # ``minions`` + ``missing`` fields naming the local match
+        # result.  These are informational -- NOT the actual publish
+        # payload the receiving master should re-publish to its own
+        # minions.  Forwarding them as if they were real publishes
+        # feeds downstream minions a load without a ``ret`` key,
+        # tripping ``KeyError('ret')`` in
+        # :func:`salt.minion.Minion._thread_return`.  Discriminate
+        # by the ``missing`` sentinel (``ret``-less publish loads
+        # never carry that key).
+        if "missing" in load and "minions" in load and "ret" not in load:
+            return
+
     links, _local_match = r.route_publish(load)
     if not links:
         return
@@ -761,8 +807,26 @@ class TopologyRouter:
         # arrival is a silent no-op --- re-forwarding would fan the
         # same job out again and overwriting the breadcrumb would
         # race the return route through a non-origin peer.
+        #
+        # Return-shaped frames (minion-return events forwarded from a
+        # peer cluster, ``cmd='_return'``) are NOT subject to jid
+        # dedup: multiple minions in the same cluster return for the
+        # same jid, each must flow through to the origin's local
+        # returner.  (`_dispatch_pub` detects the shape via
+        # ``_looks_like_minion_return`` and routes to
+        # :func:`salt.topology.link_manager._store_forwarded_return`.)
         jid = load.get("jid")
-        if jid is not None and self.lookup_breadcrumb(jid) is not None:
+        is_minion_return = (
+            isinstance(load, dict)
+            and load.get("cmd") == "_return"
+            and "id" in load
+            and "return" in load
+        )
+        if (
+            jid is not None
+            and not is_minion_return
+            and self.lookup_breadcrumb(jid) is not None
+        ):
             log.debug(
                 "topology: forward_publish dropping duplicate for "
                 "jid=%r (breadcrumb already present, path=%r)",
@@ -796,9 +860,39 @@ class TopologyRouter:
                 log.exception("topology: breadcrumb write failed for jid=%r", jid)
 
         # Pick next-hop links.  Flood -> every peer other than inbound.
-        # Scoped -> links whose peer_cluster_id is in the shrunken
-        # destinations set.
+        # Scoped -> links whose peer_cluster_id resolves (directly or
+        # via a known gossip route) to one of the remaining
+        # destinations.  Resolution falls back to flood when any
+        # destination is unresolved, matching the ``route_publish``
+        # policy at origin: better to deliver a duplicate than to
+        # silently drop a publish for a cluster whose summary gossip
+        # has not yet propagated to this transit hop.
         remaining = None if destinations is None else set(envelope["destinations"])
+        unresolved_scoped = False
+        resolved_next_hops = set()
+        if remaining is not None:
+            for dest in remaining:
+                if dest in self._links:
+                    resolved_next_hops.add(dest)
+                    continue
+                route = self._routes.get(dest)
+                if route is None:
+                    unresolved_scoped = True
+                    continue
+                next_hop, _hops = route
+                if next_hop in self._links:
+                    resolved_next_hops.add(next_hop)
+                else:
+                    unresolved_scoped = True
+            if unresolved_scoped:
+                log.debug(
+                    "topology: forward_publish flooding --- unresolved "
+                    "destination(s) in %r (known routes: %s)",
+                    sorted(remaining),
+                    sorted(self._routes),
+                )
+
+        flood_outbound = remaining is None or unresolved_scoped
         links = []
         for peer_id, link in self._links.items():
             if peer_id == self.cluster_id:
@@ -814,9 +908,9 @@ class TopologyRouter:
             # in :meth:`ingest_summary`.
             if peer_id in envelope["path"]:
                 continue
-            if remaining is None:
+            if flood_outbound:
                 links.append(link)
-            elif peer_id in remaining:
+            elif peer_id in resolved_next_hops:
                 links.append(link)
         return links, local_match
 

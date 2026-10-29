@@ -3443,10 +3443,6 @@ class AESFuncs(TransportMethods):
         try:
             topology = load.get("topology") or {}
             origin = topology.get("origin")
-            if not origin:
-                return
-            if origin == self.opts.get("cluster_id"):
-                return
             jid = load.get("jid")
             if jid is None:
                 return
@@ -3454,10 +3450,20 @@ class AESFuncs(TransportMethods):
             # topology package.
             import salt.topology.breadcrumbs as _bc  # pylint: disable=import-outside-toplevel
 
+            # Minions do not echo ``load["topology"]`` back through the
+            # ``_return`` payload (the minion rebuilds ``load`` from the
+            # function result dict in :meth:`_prepare_return_pub`).  The
+            # breadcrumb table on this master records every jid that we
+            # forwarded from an inbound peer along with that peer's
+            # ``cluster_id`` -- which is the correct next hop for a
+            # return heading back toward origin.  Use the breadcrumb's
+            # link as the tag's routing slug when the envelope is
+            # missing; the publish daemon's subscriber only needs
+            # "where to send next" and will look up the breadcrumb
+            # itself anyway.
             cache = _bc.open_reader(self.opts)
             try:
-                if _bc.lookup(cache, jid) is None:
-                    return
+                inbound = _bc.lookup(cache, jid)
             finally:
                 closer = getattr(cache, "close", None)
                 if closer is not None:
@@ -3465,6 +3471,15 @@ class AESFuncs(TransportMethods):
                         closer()
                     except Exception:  # pylint: disable=broad-except
                         pass
+            if inbound is None:
+                # No breadcrumb -- we did not forward this jid, so there
+                # is nothing to send upstream.  This also covers the
+                # locally-originated publish case (origin == self).
+                return
+            if not origin:
+                origin = inbound
+            if origin == self.opts.get("cluster_id"):
+                return
             tag = f"salt/topology/return/{origin}/{jid}"
             data = {"load": load}
             if async_path and hasattr(self.event, "fire_event_async"):
