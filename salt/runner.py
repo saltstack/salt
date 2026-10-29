@@ -324,12 +324,12 @@ class Runner(RunnerClient):
     def __init__(self, opts, context=None):
         # If client auth is enabled, load client config and set role
         if opts.get("client_auth"):
-            import salt.config
             import salt.syspaths as syspaths
+            from salt import config as salt_config
 
             # Load client config if not already loaded
             if "__role" not in opts:
-                client_opts = salt.config.client_config(
+                client_opts = salt_config.client_config(
                     opts.get("conf_file", os.path.join(syspaths.CONFIG_DIR, "master"))
                 )
                 # Merge client config with provided opts
