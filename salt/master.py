@@ -316,9 +316,18 @@ class SMaster:
             )
 
         if event:
-            event.fire_event(
-                {"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
-            )
+            # When this master owns the rotation, carry the freshly-generated
+            # key encrypted per-peer so cluster members running with
+            # ``cluster_isolated_filesystem: True`` can install the new key
+            # locally.  Without this, peers only re-read their own untouched
+            # ``cluster_pki_dir/.aes`` and keep the previous key, causing the
+            # cluster to diverge (saltstack/salt#70543).  The shared-filesystem
+            # case is a no-op: the peer still receives the event and will
+            # overwrite its (already-correct) local file with the same bytes.
+            payload = {"rotate_cluster_aes_key": True}
+            if owner and opts.get("cluster_id"):
+                payload["peers"] = cls._build_rotate_peer_payload(opts)
+            event.fire_event(payload, tag="rotate_cluster_aes_key")
 
         if publisher:
             publisher.send_aes_key_event()
@@ -327,6 +336,43 @@ class SMaster:
             # Ping all minions to get them to pick up the new key
             log.debug("Pinging all connected minions due to key rotation")
             salt.utils.master.ping_all_connected_minions(opts)
+
+    @classmethod
+    def _build_rotate_peer_payload(cls, opts):
+        """
+        Build a ``{peer_id: encrypted_new_key}`` dict for the rotation event.
+
+        Each peer's pub key is loaded from
+        ``cluster_pki_dir/peers/<peer_id>.pub`` and used to RSA-encrypt the
+        freshly-generated cluster AES key.  Peers decrypt their own entry with
+        their private ``master.pem`` and persist the key to their local
+        ``.aes`` so isolated-filesystem clusters converge after a rotation.
+        """
+        peers = {}
+        new_key = cls.secrets["cluster_aes"]["secret"].value
+        if isinstance(new_key, str):
+            new_key = new_key.encode()
+        cluster_pki = pathlib.Path(opts["cluster_pki_dir"])
+        algorithm = opts.get("cluster_encryption_algorithm", "OAEP-SHA1")
+        for peer in opts.get("cluster_peers") or []:
+            peer_pub = cluster_pki / "peers" / f"{peer}.pub"
+            if not peer_pub.exists():
+                log.warning(
+                    "cluster rotate: peer pub key %s missing; peer %s will "
+                    "miss this rotation",
+                    peer_pub,
+                    peer,
+                )
+                continue
+            try:
+                pub = salt.crypt.PublicKey.from_file(peer_pub)
+                peers[peer] = pub.encrypt(new_key, algorithm=algorithm)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "cluster rotate: failed to encrypt new key for peer %s",
+                    peer,
+                )
+        return peers
 
     def populate_secrets(self):
         if self.opts["cluster_id"]:
@@ -589,6 +635,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         # There is no need to check key against publish_session if we're
         # already rotating.
+        rotate_via_publish_session = False
         if not to_rotate and self.opts.get("publish_session"):
             if self.opts.get("cluster_id", None):
                 keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
@@ -609,6 +656,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                         salt.crypt.read_dropfile(self.opts["cachedir"])
                         == self.opts["id"]
                     )
+                    rotate_via_publish_session = to_rotate
 
         if to_rotate:
             if self.opts.get("cluster_id", None):
@@ -617,6 +665,16 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 )
             else:
                 SMaster.rotate_secrets(self.opts, self.event, owner=True)
+            # The ``publish_session`` branch above creates ``.dfn`` to pick a
+            # leader-ish rotator but never removed it on completion.  The
+            # first branch of the next maintenance tick then sees the stale
+            # dropfile and rotates again — double rotation per
+            # ``publish_session`` tick (saltstack/salt#70543).
+            if rotate_via_publish_session:
+                try:
+                    os.remove(dfn)
+                except OSError:
+                    pass
 
     def handle_git_pillar(self):
         """
@@ -886,7 +944,7 @@ class Master(SMaster):
         """
         Create a salt master server instance
 
-        :param dict: The salt options
+        :param dict opts: The salt options
         """
         if zmq and ZMQ_VERSION_INFO < (3, 2):
             log.warning(
@@ -1066,7 +1124,15 @@ class Master(SMaster):
         # registered exactly once, in the parent — registering them in
         # MWorker children would over-count.  Workers call configure
         # again in ``MWorker.run`` but skip the observables.
-        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        # Give the parent a stable name for ``service.instance.id``; each
+        # MWorker names itself after its process in ``MWorker.run``.
+        salt.utils.metrics.configure(
+            {
+                **self.opts,
+                "__role": "master",
+                "__metrics_instance": {"id": "Master"},
+            }
+        )
         # Cross-process counter for "MWorker payloads in flight".  Created
         # here so all forked workers inherit the same shared memory.  Stashed
         # at module level so ``MWorker._handle_payload`` can read it without
@@ -1435,11 +1501,73 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             peer_id = data.pop("__peer_id", None)
             if peer_id:
                 log.debug("Rotating AES session key")
+                # Install the new cluster AES key locally before reload.
+                # Required when ``cluster_isolated_filesystem: True`` because
+                # the local ``cluster_pki_dir/.aes`` is never touched by the
+                # rotating peer; without this write the subsequent reload
+                # just re-reads the stale local file and keeps the old key
+                # (saltstack/salt#70543).  Harmless on shared-fs: the file
+                # already contains these bytes, so this is an idempotent
+                # overwrite.
+                self._install_rotated_cluster_aes(data)
                 SMaster.rotate_cluster_secret(
                     self.opts, owner=False, publisher=self.ipc_publisher
                 )
         else:
             log.trace("Ignore tag %s", tag)
+
+    def _install_rotated_cluster_aes(self, data):
+        """
+        Decrypt our per-peer rotation payload and write the new key to local
+        ``cluster_pki_dir/.aes``.
+
+        The rotating master encodes a ``{peer_id: encrypted_new_key}`` dict in
+        the event payload under ``peers`` (see
+        :meth:`SMaster._build_rotate_peer_payload`).  Look up our own entry
+        (keyed on the bare master id — ``apply_master_config`` may have
+        suffixed ``_master`` to ``opts["id"]``), decrypt with our master
+        private key, and write to local ``.aes``.  The subsequent
+        ``rotate_cluster_secret`` reload reads this file back and installs it
+        into shared memory.
+
+        No-op when the payload lacks a ``peers`` key (older rotating peer, or
+        non-isolated path): fall through to the historical shared-fs reload.
+        """
+        peers = data.get("peers") if isinstance(data, dict) else None
+        if not peers:
+            return
+        master_id = self.opts["id"].removesuffix("_master")
+        blob = peers.get(master_id)
+        if blob is None:
+            log.debug(
+                "cluster rotate: no payload entry for %s; skipping install",
+                master_id,
+            )
+            return
+        rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
+        try:
+            new_key = salt.crypt.PrivateKey.from_file(rsa_path).decrypt(
+                blob,
+                algorithm=self.opts.get("cluster_encryption_algorithm", "OAEP-SHA1"),
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("cluster rotate: failed to decrypt new key for %s", master_id)
+            return
+        aes_path = pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
+        aes_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with salt.utils.files.set_umask(0o177):
+                tmp = aes_path.with_name(aes_path.name + ".new")
+                tmp.write_bytes(new_key)
+                os.rename(tmp, aes_path)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("cluster rotate: failed to persist new key to %s", aes_path)
+            return
+        log.info(
+            "cluster rotate: installed new cluster_aes (%d bytes) for %s",
+            len(new_key),
+            master_id,
+        )
 
     _PEER_KEY_STATE = {
         "accept": "accepted",
@@ -2175,7 +2303,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Process a command sent via an AES key
 
-        :param str load: Encrypted payload
+        :param str data: Encrypted payload
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -2224,7 +2352,13 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         Start a Master Worker
         """
         salt.utils.tracing.configure(self.opts)
-        salt.utils.metrics.configure({**self.opts, "__role": "master"})
+        salt.utils.metrics.configure(
+            {
+                **self.opts,
+                "__role": "master",
+                "__metrics_instance": {"id": self.name},
+            }
+        )
         # if we inherit req_server level without our own, reset it
         if not salt.utils.platform.is_windows():
             enforce_mworker_niceness = True
@@ -3909,6 +4043,30 @@ class AuthFuncs(TransportMethods):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file.  Derive from ``cluster.pem``
+        # (master-only; distributed in join-reply, never leaves the
+        # cluster) salted by ``cluster_aes`` so every peer master
+        # agrees on the key while no minion can derive another
+        # minion's key.  ``cluster_aes`` as HKDF salt rotates the
+        # derived key in lockstep with cluster-wide aes rotation.
+        # See ``salt.crypt.Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = SMaster.secrets["cluster_aes"]["secret"].value
+            with self._sessions_lock:
+                cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            with self._sessions_lock:
+                self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         # Fast-path cache hit: single read of ``self.sessions[minion]``.
@@ -5655,7 +5813,7 @@ class ClearFuncs(TransportMethods):
 
                 # Check if 'minions' is included in returner's save_load arg_spec.
                 # This may be missing in custom returners, which we should warn about.
-                if "minions" not in arg_spec.args:
+                if "minions" not in arg_spec.namedargs:
                     log.critical(
                         "The specified returner used for the external job cache "
                         "'%s' does not have a 'minions' kwarg in the returner's "
@@ -5683,7 +5841,7 @@ class ClearFuncs(TransportMethods):
         # always write out to the master job caches
         try:
             fstr = "{}.save_load".format(self.opts["master_job_cache"])
-            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions)
+            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions=minions)
         except KeyError:
             log.critical(
                 "The specified returner used for the master job cache "

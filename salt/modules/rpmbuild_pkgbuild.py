@@ -311,7 +311,7 @@ def _get_gpg_key_resources(keyid, env, use_passphrase, gnupghome, runas):
                 retrc = __salt__["cmd.retcode"](cmd, runas=runas, env=env)
                 if retrc != 0:
                     raise SaltInvocationError(
-                        "Failed to preset passphrase, error {1}, "
+                        "Failed to preset passphrase, error {}, "
                         "check logs for further details".format(retrc)
                     )
 

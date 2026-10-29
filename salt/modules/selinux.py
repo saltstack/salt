@@ -455,6 +455,39 @@ def filetype_id_to_string(filetype="a"):
     return SeFileType.from_code(filetype).description
 
 
+_FCONTEXT_LIST_LINE = re.compile(
+    r"^(?P<filespec>\S.*?)\s+(?P<filetype>{filetypes})\s+(?P<context>\S+)\s*$".format(
+        filetypes="|".join(re.escape(file_type.description) for file_type in SeFileType)
+    )
+)
+
+
+def _fcontext_list_policy() -> list[dict[str, str]]:
+    """
+    Returns the entries of ``semanage fcontext --list`` as a list of dicts with
+    the keys ``filespec``, ``filetype`` and ``context``.
+
+    The output is parsed here rather than filtered with ``grep``, because the
+    filespec is matched literally. Escaping it for a regex makes grep emit
+    warnings on stderr for some characters (for example ``\\-``), which would
+    otherwise be mistaken for a policy entry.
+    """
+    result = __salt__["cmd.run_all"](
+        ["semanage", "fcontext", "--list"], python_shell=False
+    )
+    if result["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to list the fcontext policy: {result['stderr'] or result['stdout']}"
+        )
+
+    entries = []
+    for line in result["stdout"].splitlines():
+        match = _FCONTEXT_LIST_LINE.match(line)
+        if match:
+            entries.append(match.groupdict())
+    return entries
+
+
 def fcontext_get_policy(
     name, filetype=None, sel_type=None, sel_user=None, sel_level=None
 ):
@@ -488,43 +521,27 @@ def fcontext_get_policy(
         salt '*' selinux.fcontext_get_policy my-policy
     """
     se_file_type = SeFileType.from_code(filetype) if filetype else None
-    re_spacer = "[ ]+"
-    re_optional_spacer = "[ |\t]*"
-    cmd_kwargs = {
-        "spacer": re_spacer,
-        "ospacer": re_optional_spacer,
-        "filespec": re.escape(name),
-        "sel_user": sel_user or "[^:]+",
-        "sel_role": "[^:]+",  # se_role for file context is always object_r
-        "sel_type": sel_type or "[^:]+",
-        "sel_level": sel_level or "[^:]+",
-        "filetype": (
-            "[[:alpha:] ]+" if se_file_type is None else se_file_type.description
-        ),
-    }
-    cmd = (
-        "semanage fcontext --list | grep -E "
-        + "'^{filespec}{spacer}{filetype}{spacer}{sel_user}:{sel_role}:{sel_type}:{sel_level}{ospacer}$'".format(
-            **cmd_kwargs
-        )
-    )
-    current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
-    if not current_entry_text:
-        return None
 
-    if parts := re.match(
-        r"^({filespec}) +([a-z ]+) (.*)$".format(**{"filespec": re.escape(name)}),
-        current_entry_text,
-    ):
-        ret = {
-            "filespec": parts.group(1).strip(),
-            "filetype": parts.group(2).strip(),
-        }
-        ret.update(_context_string_to_dict(parts.group(3).strip()))
+    for entry in _fcontext_list_policy():
+        if entry["filespec"] != name:
+            continue
+        if se_file_type and entry["filetype"] != se_file_type.description:
+            continue
+        # Entries with no context (<<none>>) cannot be split into a context dict
+        if entry["context"].count(":") != 3:
+            continue
+        context = _context_string_to_dict(entry["context"])
+        if sel_user and context["sel_user"] != sel_user:
+            continue
+        if sel_type and context["sel_type"] != sel_type:
+            continue
+        if sel_level and context["sel_level"] != sel_level:
+            continue
+        ret = {"filespec": entry["filespec"], "filetype": entry["filetype"]}
+        ret.update(context)
         return ret
-    raise CommandExecutionError(
-        "Output from the fcontext command did not match the expected format"
-    )
+
+    return None
 
 
 def fcontext_add_policy(
@@ -630,10 +647,11 @@ def _fcontext_add_or_delete_policy(
 
     if "add" == action:
         # need to use --modify if context for name file exists, otherwise ValueError
-        filespec = re.escape(name)
-        cmd = f"semanage fcontext --list | grep -E '{filespec} '"
-        current_entry_text = __salt__["cmd.shell"](cmd, ignore_retcode=True)
-        if current_entry_text != "":
+        filetype_description = SeFileType.from_code(filetype or "a").description
+        if any(
+            entry["filespec"] == name and entry["filetype"] == filetype_description
+            for entry in _fcontext_list_policy()
+        ):
             action = "modify"
 
     cmd = f"semanage fcontext --{action}"

@@ -11,6 +11,7 @@ import salt.loader
 import salt.loader.context
 import salt.loader.lazy
 import salt.utils.files
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -42,6 +43,29 @@ def loader_dir(tmp_path):
         "mod_a.py", directory=tmp_path, contents=mod_contents
     ), pytest.helpers.temp_file("mod_b.py", directory=tmp_path, contents=mod_contents):
         yield str(tmp_path)
+
+
+def test_clean_sys_path_tolerates_shared_cache_race(loader_dir):
+    """
+    Regression test for #61734.
+
+    When several loaders run in one process and load modules concurrently --
+    e.g. a deltaproxy hosting many sub-proxy minions -- they share the global
+    ``sys.path_importer_cache``. ``importlib.invalidate_caches()``, called by
+    ``__clean_sys_path`` after each module load, can then raise ``KeyError``
+    (or ``RuntimeError`` if the mapping changed size mid-iteration) when another
+    loader already removed an entry it is walking. ``__clean_sys_path`` must
+    tolerate that rather than fail the module load that triggered the cleanup.
+    """
+    opts = {"optimization_order": [0]}
+    loader = salt.loader.lazy.LazyLoader([loader_dir], opts)
+    for exc in (
+        KeyError("/x"),
+        RuntimeError("dictionary changed size during iteration"),
+    ):
+        with patch("importlib.invalidate_caches", side_effect=exc):
+            # Must not propagate.
+            loader._LazyLoader__clean_sys_path()
 
 
 def test_loaders_have_uniq_context(loader_dir):
@@ -242,11 +266,74 @@ def test_virtualname_collision_surfaces_all_reasons(tmp_path):
     with pytest.raises(KeyError):
         _ = loader["x509.expires"]
 
+    # The primary failure (x509.py has file basename == virtualname) is
+    # recorded in missing_modules; the sibling x509_v2 failure is tracked
+    # separately in missing_virtualnames to avoid poisoning the shared
+    # virtualname for unrelated modules (see #69806).
     reason = loader.missing_modules.get("x509")
     assert reason is not None
-    assert "Superseded, using x509_v2" in reason
-    assert "Could not load cryptography" in reason
+    assert "Superseded, using x509_v2" in str(reason)
+
+    extra = loader.missing_virtualnames.get("x509", [])
+    assert any("Could not load cryptography" in str(r) for r in extra)
 
     msg = loader.missing_fun_string("x509.expires")
     assert "Superseded, using x509_v2" in msg
     assert "Could not load cryptography" in msg
+
+
+def test_virtualname_sibling_failure_does_not_poison_real_module(tmp_path):
+    """
+    A sibling module whose __virtual__() returns False must not poison the
+    shared __virtualname__ in missing_modules and block the real module
+    from loading.
+
+    Regression test for #69806: on non-Debian OSes, deb_postgres.py's
+    __virtual__() returns False and (under the buggy code) recorded the
+    failure under missing_modules["postgres"] via its __virtualname__.  On
+    the next _load("postgres.foo") call the loader early-returned because
+    "postgres" was already marked missing and the real postgres.py module
+    was never loaded.
+    """
+    (tmp_path / "deb_postgres.py").write_text(
+        textwrap.dedent(
+            """
+            __virtualname__ = "postgres"
+
+            def __virtual__():
+                return (False, "Not a Debian host")
+
+            def user_create(*args, **kwargs):
+                return True
+            """
+        )
+    )
+    (tmp_path / "postgres.py").write_text(
+        textwrap.dedent(
+            """
+            __virtualname__ = "postgres"
+
+            def __virtual__():
+                return True
+
+            def user_create(*args, **kwargs):
+                return "real-postgres"
+            """
+        )
+    )
+
+    opts = {"optimization_order": [0, 1, 2]}
+    loader = salt.loader.lazy.LazyLoader([str(tmp_path)], opts)
+
+    # Force the failing sibling to be processed first so we hit the race the
+    # bug produced (non-deterministic directory ordering in the wild).
+    loader._load_module("deb_postgres")
+
+    # The failing sibling must be recorded under its own basename, NOT
+    # under the shared virtualname.
+    assert "deb_postgres" in loader.missing_modules
+    assert "postgres" not in loader.missing_modules
+
+    # The real postgres.py must still load and provide postgres.user_create.
+    fun = loader["postgres.user_create"]
+    assert fun() == "real-postgres"

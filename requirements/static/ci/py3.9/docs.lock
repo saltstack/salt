@@ -249,7 +249,6 @@ packaging==26.2
 platformdirs==4.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -307,7 +306,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   virtualenv
@@ -424,7 +423,7 @@ urllib3==1.26.20
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.5.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt

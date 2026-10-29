@@ -68,7 +68,7 @@ typing-extensions==4.15.0
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   astroid
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock

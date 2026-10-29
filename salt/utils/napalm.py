@@ -16,7 +16,10 @@ Utils for the NAPALM modules and proxy.
 
 import copy
 import importlib
+import inspect
 import logging
+import os.path
+import threading
 import traceback
 from functools import wraps
 
@@ -100,6 +103,67 @@ def virtual(opts, virtualname, filename):
         )
 
 
+def template_path(napalm_device, template_name):
+    """
+    Return the absolute path to a NAPALM-shipped Jinja template (e.g.
+    ``set_ntp_peers``) for the driver backing this proxy, or ``None`` if the
+    driver does not ship one.
+
+    NAPALM keeps these config templates in a ``templates`` directory next to
+    each driver module and resolves them by walking the driver class MRO
+    (concrete driver first, then its bases). ``net.load_template`` used to route
+    bare template names into NAPALM's own renderer, but that path was removed in
+    the Sodium release; resolving the template to an absolute path lets the
+    still-supported Salt rendering pipeline render it instead.
+    """
+    driver = napalm_device.get("DRIVER") if napalm_device else None
+    if driver is None:
+        return None
+    for klass in type(driver).__mro__:
+        try:
+            module_file = inspect.getfile(klass)
+        except (TypeError, OSError):
+            # Built-in types (e.g. ``object``) raise TypeError; classes without
+            # an on-disk source (``__main__``, frozen) raise OSError. Neither
+            # can ship a template dir, so move on.
+            continue
+        candidate = os.path.join(
+            os.path.dirname(module_file), "templates", f"{template_name}.j2"
+        )
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def template_not_available(template_name, napalm_device):
+    """
+    Standard failure payload returned by the NAPALM config helpers when the
+    driver backing this proxy does not ship ``template_name`` (e.g. the ``ios``
+    driver has no user templates). Mirrors the shape of ``net.load_template``'s
+    return so callers and states handle it uniformly.
+
+    Returning here short-circuits ``net.load_template``, which would otherwise be
+    responsible for closing the per-call connection a non-always-alive proxy /
+    minion opened (``proxy_napalm_wrap`` only closes on ``force_reconnect``). So
+    close it here in that mode to avoid leaking the session.
+    """
+    driver_name = napalm_device.get("DRIVER_NAME") if napalm_device else None
+    opts = napalm_device.get("__opts__") if napalm_device else None
+    if opts and not_always_alive(opts) and napalm_device.get("CLOSE", True):
+        try:
+            napalm_device["DRIVER"].close()
+        except Exception:  # pylint: disable=broad-except
+            log.debug("Failed to close the connection", exc_info=True)
+    return {
+        "result": False,
+        "out": None,
+        "comment": (
+            f"The '{template_name}' template is not available for the"
+            f" '{driver_name}' driver."
+        ),
+    }
+
+
 def call(napalm_device, method, *args, **kwargs):
     """
     Calls arbitrary methods from the network driver instance.
@@ -140,6 +204,22 @@ def call(napalm_device, method, *args, **kwargs):
                 'show chassis fan'
             ]
         )
+    """
+    # Hold the per-device lock (if present) around the whole operation so that
+    # concurrent jobs sharing an always-alive device do not interleave on the
+    # single command channel (see #55332). Devices built without a LOCK (e.g.
+    # hand-constructed in tests, or inherited via inherit_napalm_device) simply
+    # run unserialised, preserving backwards compatibility.
+    lock = napalm_device.get("LOCK")
+    if lock is None:
+        return _call(napalm_device, method, *args, **kwargs)
+    with lock:
+        return _call(napalm_device, method, *args, **kwargs)
+
+
+def _call(napalm_device, method, *args, **kwargs):
+    """
+    Implementation of :func:`call`, executed while holding the device lock.
     """
     result = False
     out = None
@@ -291,7 +371,13 @@ def get_device_opts(opts, salt_obj=None):
         or ""
     )
     network_device["TIMEOUT"] = device_dict.get("timeout", 60)
-    network_device["OPTIONAL_ARGS"] = device_dict.get("optional_args", {})
+    # ``or {}`` (not a ``get`` default) so an explicit ``optional_args: null`` in
+    # the config yields a dict rather than None; deepcopy so the config_lock /
+    # keepalive injected below are not written back into the caller's live
+    # opts / pillar structure.
+    network_device["OPTIONAL_ARGS"] = copy.deepcopy(
+        device_dict.get("optional_args") or {}
+    )
     network_device["ALWAYS_ALIVE"] = device_dict.get("always_alive", True)
     network_device["PROVIDER"] = device_dict.get("provider")
     network_device["UP"] = False
@@ -314,6 +400,12 @@ def get_device(opts, salt_obj=None):
     """
     log.debug("Setting up NAPALM connection")
     network_device = get_device_opts(opts, salt_obj=salt_obj)
+    # Serialise access to this device's connection. An always-alive proxy runs
+    # with multiprocessing disabled, so concurrent jobs are threads that share
+    # this one device object and its single command channel; without a lock two
+    # calls can interleave on the channel (see #55332). A reentrant lock is used
+    # because call() re-enters itself (close/open/re-exec) on a reconnect.
+    network_device["LOCK"] = threading.RLock()
     provider_lib = napalm.base
     if network_device.get("PROVIDER"):
         # Configuration example:
@@ -382,11 +474,16 @@ def proxy_napalm_wrap(func):
         force_reconnect = kwargs.get("force_reconnect", False)
         if force_reconnect:
             log.debug("Usage of reconnect force detected")
-            log.debug("Opts before merging")
-            log.debug(opts["proxy"])
-            opts["proxy"].update(**kwargs)
-            log.debug("Opts after merging")
-            log.debug(opts["proxy"])
+            # The credential override is merged into opts['proxy'] for the
+            # always-alive proxy path below. A straight minion has no 'proxy'
+            # key (this raised KeyError) and picks the override up from
+            # clean_kwargs further down, so only touch opts['proxy'] for a proxy.
+            if is_proxy(opts):
+                log.debug("Opts before merging")
+                log.debug(opts["proxy"])
+                opts["proxy"].update(**kwargs)
+                log.debug("Opts after merging")
+                log.debug(opts["proxy"])
         if is_proxy(opts) and always_alive:
             # if it is running in a NAPALM Proxy and it's using the default
             # always alive behaviour, will get the cached copy of the network

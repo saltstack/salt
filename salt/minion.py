@@ -66,6 +66,7 @@ import salt.utils.resources
 import salt.utils.schedule
 import salt.utils.ssdp
 import salt.utils.state
+import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.user
 import salt.utils.zeromq
@@ -96,6 +97,16 @@ try:
     HAS_PSUTIL = True
 except ImportError:
     HAS_PSUTIL = False
+
+# Paths for cgroup-aware memory-limit detection. Module-level so tests can
+# monkeypatch to a synthetic cgroup filesystem laid out under tmp_path.
+_CGROUP_PROC_PATH = "/proc/self/cgroup"
+_CGROUP_FS_ROOT = "/sys/fs/cgroup"
+# cgroup v1 kernel "no limit" sentinel is (LONG_MAX / PAGE_SIZE) * PAGE_SIZE,
+# i.e. ~9.22 EB. We compare against 2**62 (~4.6 EB) which is comfortably
+# above any real limit but below the sentinel — anything at or above this
+# is treated as "unlimited".
+_CGROUP_V1_UNLIMITED_THRESHOLD = 1 << 62
 
 try:
     import resource
@@ -464,11 +475,19 @@ def _terminate_subprocess_list(subprocess_list, signum, grace_seconds=2.0):
 
     if not salt.utils.platform.is_windows():
         for proc in procs:
+            # With ``multiprocessing: False`` the entries are
+            # ``threading.Thread`` objects, which have no ``pid`` and cannot be
+            # signalled.  Reading ``.pid`` there raises ``AttributeError``,
+            # which is not an ``OSError``, so it escaped and aborted the whole
+            # teardown before ``destroy()`` ever ran.
+            pid = getattr(proc, "pid", None)
+            if pid is None:
+                continue
             try:
-                os.kill(proc.pid, signum)
+                os.kill(pid, signum)
             except OSError as exc:
                 if exc.errno not in (errno.ESRCH, errno.EACCES):
-                    log.warning("Failed to signal job child pid %s: %s", proc.pid, exc)
+                    log.warning("Failed to signal job child pid %s: %s", pid, exc)
 
     deadline = time.time() + grace_seconds
     for proc in procs:
@@ -536,6 +555,7 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     _args = []
     _kwargs = {}
     invalid_kwargs = []
+    named_args = argspec.namedargs
 
     for arg in args:
         if isinstance(arg, dict) and arg.get("__kwarg__", False) is True:
@@ -544,30 +564,28 @@ def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
                 # Skip __kwarg__ when checking kwargs
                 if key == "__kwarg__":
                     continue
-                if argspec.keywords or key in argspec.args:
-                    # Function supports **kwargs or is a positional argument to
-                    # the function.
+                if argspec.keywords or key in named_args:
+                    # Function supports **kwargs or has a parameter with
+                    # this name that can be passed a keyword argument.
                     _kwargs[key] = val
                 else:
-                    # **kwargs not in argspec and parsed argument name not in
-                    # list of positional arguments. This keyword argument is
-                    # invalid.
+                    # **kwargs not in argspec and parsed argument name not
+                    # a parameter that can be passed a keyword argument.
+                    # This keyword argument is invalid.
                     invalid_kwargs.append(f"{key}={val}")
             continue
 
         else:
-            string_kwarg = salt.utils.args.parse_input([arg], condition=False)[
-                1
-            ]  # pylint: disable=W0632
+            string_kwarg = salt.utils.args.parse_input([arg], condition=False)[1]
             if string_kwarg:
-                if argspec.keywords or next(iter(string_kwarg.keys())) in argspec.args:
-                    # Function supports **kwargs or is a positional argument to
-                    # the function.
+                if argspec.keywords or next(iter(string_kwarg)) in named_args:
+                    # Function supports **kwargs or has a parameter with
+                    # this name that can be passed a keyword argument.
                     _kwargs.update(string_kwarg)
                 else:
-                    # **kwargs not in argspec and parsed argument name not in
-                    # list of positional arguments. This keyword argument is
-                    # invalid.
+                    # **kwargs not in argspec and parsed argument name not
+                    # a parameter that can be passed a keyword argument.
+                    # This keyword argument is invalid.
                     for key, val in string_kwarg.items():
                         invalid_kwargs.append(f"{key}={val}")
             else:
@@ -636,6 +654,224 @@ def service_name():
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
 
 
+# The loaders a threaded job needs from one MinionBase.gen_modules() call. They
+# share that call's __context__ dict, so a job that looks up its function, runs it
+# through an executor and reads its retcode back using one generation is
+# unaffected by a sibling job rebuilding the shared minion attributes (#61830).
+ModuleGeneration = collections.namedtuple(
+    "ModuleGeneration", ("functions", "executors", "resource_loaders")
+)
+
+
+def _read_cgroup_file(path):
+    """
+    Read a cgroup pseudo-file. Return the stripped contents on success or
+    ``None`` on any error. Cgroup files are stable on Linux; we intentionally
+    swallow every failure (missing file, permission denied, non-Linux host,
+    exotic mount layout) and let the caller fall back to system-wide memory.
+    """
+    try:
+        with salt.utils.files.fopen(path, "r") as fh:
+            return fh.read().strip()
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+
+
+def _parse_self_cgroup(content):
+    """
+    Parse ``/proc/self/cgroup`` content. Return a tuple
+    ``(v2_path, v1_memory_path)`` where each element is a string starting
+    with ``/`` or ``None`` if that hierarchy isn't present.
+
+    v2 line format:  ``0::/system.slice/salt-minion.service``
+    v1 line format:  ``5:memory:/system.slice/salt-minion.service``
+    """
+    v2_path = None
+    v1_memory_path = None
+    if not content:
+        return v2_path, v1_memory_path
+    for line in content.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        hierarchy_id, controllers, cgroup_path = parts
+        if hierarchy_id == "0" and controllers == "":
+            v2_path = cgroup_path or "/"
+        elif "memory" in controllers.split(","):
+            v1_memory_path = cgroup_path or "/"
+    return v2_path, v1_memory_path
+
+
+def _detect_cgroup_memory(proc_path=None, fs_root=None):
+    """
+    Detect the memory limit and current usage that apply to this process
+    via cgroups.
+
+    Returns ``(limit_bytes, used_bytes, source)`` where ``source`` is
+    ``"cgroup-v2"``, ``"cgroup-v1"``, or ``None``. When no cgroup limit
+    applies (unified hierarchy reports ``"max"``, v1 reports the unlimited
+    sentinel, or the files can't be read) returns ``(None, None, None)``.
+
+    Any I/O or parse failure is logged at DEBUG and swallowed — this helper
+    must never raise into the caller.
+    """
+    proc_path = proc_path or _CGROUP_PROC_PATH
+    fs_root = fs_root or _CGROUP_FS_ROOT
+    content = _read_cgroup_file(proc_path)
+    if content is None:
+        log.debug(
+            "No cgroup information at %s; skipping cgroup memory detection", proc_path
+        )
+        return None, None, None
+    v2_path, v1_memory_path = _parse_self_cgroup(content)
+
+    # Prefer cgroup v2 (unified hierarchy) when both are present. On a
+    # v1 host the v2 line will be absent; on a hybrid host the v2 line
+    # exists but has no controllers, in which case v2 memory files simply
+    # won't be found and we'll fall through to v1.
+    if v2_path is not None:
+        max_str = _read_cgroup_file(
+            os.path.join(fs_root, v2_path.lstrip("/"), "memory.max")
+        )
+        if max_str is not None:
+            if max_str == "max":
+                log.debug("cgroup v2 memory.max is 'max' (unlimited)")
+            else:
+                try:
+                    limit = int(max_str)
+                except ValueError:
+                    log.debug("Unparseable cgroup v2 memory.max: %r", max_str)
+                else:
+                    current_str = _read_cgroup_file(
+                        os.path.join(fs_root, v2_path.lstrip("/"), "memory.current")
+                    )
+                    try:
+                        current = int(current_str) if current_str is not None else 0
+                    except ValueError:
+                        current = 0
+                    return limit, current, "cgroup-v2"
+
+    if v1_memory_path is not None:
+        v1_base = os.path.join(fs_root, "memory", v1_memory_path.lstrip("/"))
+        limit_str = _read_cgroup_file(os.path.join(v1_base, "memory.limit_in_bytes"))
+        if limit_str is not None:
+            try:
+                limit = int(limit_str)
+            except ValueError:
+                log.debug("Unparseable cgroup v1 memory.limit_in_bytes: %r", limit_str)
+            else:
+                if limit >= _CGROUP_V1_UNLIMITED_THRESHOLD:
+                    log.debug(
+                        "cgroup v1 memory.limit_in_bytes is at unlimited sentinel: %s",
+                        limit,
+                    )
+                else:
+                    usage_str = _read_cgroup_file(
+                        os.path.join(v1_base, "memory.usage_in_bytes")
+                    )
+                    try:
+                        used = int(usage_str) if usage_str is not None else 0
+                    except ValueError:
+                        used = 0
+                    return limit, used, "cgroup-v1"
+
+    return None, None, None
+
+
+def _parse_size_opt(value):
+    """
+    Parse a size expressed as int-bytes or a string (``"5G"``, ``"500M"``,
+    or plain digits). Return an int number of bytes, or ``None`` on any
+    parse failure. Zero and negatives are treated as invalid.
+    """
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        # bool is a subclass of int — reject to avoid True->1-byte surprise.
+        return None
+    if isinstance(value, int):
+        return value if value > 0 else None
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = int(text)
+        if parsed > 0:
+            return parsed
+    except ValueError:
+        pass
+    bytes_ = salt.utils.stringutils.human_to_bytes(text)
+    return bytes_ if bytes_ > 0 else None
+
+
+def _headroom_to_bytes(value, reference):
+    """
+    Convert a ``minion_memory_headroom`` opt to an absolute byte count
+    relative to ``reference``. Accepts a percentage string (``"5%"``), a
+    size string / int (``"500M"``, ``5368709120``), or ``None``. Returns
+    ``None`` on any parse failure or when ``value`` is ``None``.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip().endswith("%"):
+        text = value.strip()[:-1].strip()
+        try:
+            pct = float(text)
+        except ValueError:
+            log.debug("Unparseable percentage in minion_memory_headroom: %r", value)
+            return None
+        if not 0 < pct <= 100:
+            log.debug("minion_memory_headroom percentage out of range: %r", value)
+            return None
+        return int(reference * pct / 100.0)
+    bytes_ = _parse_size_opt(value)
+    if bytes_ is None:
+        log.debug("Unparseable minion_memory_headroom: %r", value)
+    return bytes_
+
+
+def _resolve_memory_reference(max_opt):
+    """
+    Resolve the reference "total memory available to this minion" and the
+    current used bytes.
+
+    Precedence:
+        1. ``minion_memory_max`` config (int bytes or size string).
+        2. cgroup v2 ``memory.max`` (with ``memory.current`` for used).
+        3. cgroup v1 ``memory.limit_in_bytes`` (with ``memory.usage_in_bytes``).
+        4. ``psutil.virtual_memory().total`` (with ``.used``).
+
+    Returns ``(reference_bytes, used_bytes, source)`` where ``source`` is
+    one of ``"config"``, ``"cgroup-v2"``, ``"cgroup-v1"``, ``"system"``.
+    """
+    import psutil  # local import mirrors the caller's guarded pattern
+
+    if max_opt is not None:
+        configured = _parse_size_opt(max_opt)
+        if configured is not None:
+            vm = psutil.virtual_memory()
+            # If the operator's cap is <= system total we assume they're
+            # describing a per-process cap and use it as the reference; we
+            # still need a "used" number so we consult cgroup usage first
+            # (accurate for the process) then fall back to system used.
+            cg_limit, cg_used, cg_source = _detect_cgroup_memory()
+            if cg_source is not None:
+                used = cg_used
+            else:
+                used = vm.used
+            return configured, used, "config"
+        log.debug("Unparseable minion_memory_max: %r", max_opt)
+
+    cg_limit, cg_used, cg_source = _detect_cgroup_memory()
+    if cg_source is not None:
+        return cg_limit, cg_used, cg_source
+
+    vm = psutil.virtual_memory()
+    return vm.total, vm.used, "system"
+
+
 class MinionBase:
     def __init__(self, opts):
         # Ensure opts is OptsDict for mutate_key() and other OptsDict methods
@@ -659,13 +895,17 @@ class MinionBase:
         if context is None:
             context = {}
         if initial_load:
-            self.opts["pillar"] = salt.pillar.get_pillar(
+            pillar = salt.pillar.get_pillar(
                 self.opts,
                 self.opts["grains"],
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
-            ).compile_pillar()
+            )
+            try:
+                self.opts["pillar"] = pillar.compile_pillar()
+            finally:
+                pillar.destroy()
 
         # Populate opts["resources"] from pillar now that pillar is available.
         # Must happen before the resource loader loop below so that per-type
@@ -673,15 +913,16 @@ class MinionBase:
         self.opts["resources"] = self._discover_resources()
 
         self.utils = salt.loader.utils(self.opts, context=context)
-        self.functions = salt.loader.minion_mods(
+        functions = salt.loader.minion_mods(
             self.opts, utils=self.utils, context=context
         )
+        self.functions = functions
         self.serializers = salt.loader.serializers(self.opts)
         self.returners = salt.loader.returners(
-            self.opts, functions=self.functions, context=context
+            self.opts, functions=functions, context=context
         )
         self.proxy = salt.loader.proxy(
-            self.opts, functions=self.functions, returners=self.returners
+            self.opts, functions=functions, returners=self.returners
         )
         # Load resource connection modules (salt/resource/*.py) and build
         # one execution-module loader per managed resource type.
@@ -740,20 +981,41 @@ class MinionBase:
         self.function_errors = {}  # Keep the funcs clean
         self.states = salt.loader.states(
             self.opts,
-            functions=self.functions,
+            functions=functions,
             utils=self.utils,
             serializers=self.serializers,
             context=context,
         )
-        self.rend = salt.loader.render(
-            self.opts, functions=self.functions, context=context
-        )
+        self.rend = salt.loader.render(self.opts, functions=functions, context=context)
         #        self.matcher = Matcher(self.opts, self.functions)
         self.matchers = salt.loader.matchers(self.opts)
-        self.functions["sys.reload_modules"] = self.gen_modules
-        self.executors = salt.loader.executors(
-            self.opts, functions=self.functions, proxy=self.proxy, context=context
+        functions["sys.reload_modules"] = self._reload_modules
+        executors = salt.loader.executors(
+            self.opts, functions=functions, proxy=self.proxy, context=context
         )
+        self.executors = executors
+        # Return the loaders this call built so that a threaded job
+        # (multiprocessing=False) can run against them, rather than re-reading
+        # the shared self.functions/self.executors/self.resource_loaders
+        # attributes, which a sibling job's gen_modules() may have rebound by
+        # then. See issue #61830.
+        return ModuleGeneration(functions, executors, _new_resource_loaders)
+
+    def _reload_modules(self, initial_load=False, context=None):
+        """
+        Tell the minion to reload the execution modules
+
+        CLI Example:
+
+        .. code-block:: bash
+
+            salt '*' sys.reload_modules
+        """
+        # This is what sys.reload_modules is bound to. gen_modules() returns the
+        # rebuilt loaders, which are not serializable, so it cannot be bound
+        # directly: its return value would be put on the wire. Reload the
+        # modules and return None instead.
+        self.gen_modules(initial_load=initial_load, context=context)
 
     def _discover_resources(self):
         """
@@ -1376,6 +1638,16 @@ class MasterMinion:
     def destroy(self):
         """
         Destroy the MasterMinion object
+
+        Each component's teardown is isolated in its own try/except and its
+        attribute is *unconditionally* reset to ``{}`` afterward, so that one
+        component raising during teardown can never (a) leave a later
+        component un-torn-down, or (b) leave an already-destroyed component's
+        attribute in a state ``__del__``'s "already torn down" check can't
+        recognize. This also guarantees ``destroy()`` itself never raises,
+        since callers (``RunnerClient``/``WheelClient``) now call it
+        unconditionally from their own ``destroy()``, which in turn may run
+        from a ``finally:`` block (see ``salt/cli/run.py``).
         """
         if self.returners is not None:
             # Some returners have a destroy method
@@ -1386,42 +1658,72 @@ class MasterMinion:
                         func.destroy()
                 except Exception:  # pylint: disable=broad-except
                     pass
-            if hasattr(self.returners, "destroy"):
-                self.returners.destroy()
-            self.returners = {}
-        if self.functions is not None and hasattr(self.functions, "destroy"):
-            self.functions.destroy()
+            try:
+                if hasattr(self.returners, "destroy"):
+                    self.returners.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion returners: %s", exc)
+        self.returners = {}
+        try:
+            if self.functions is not None and hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error destroying MasterMinion functions: %s", exc)
         self.functions = {}
-        if self.utils is not None and hasattr(self.utils, "destroy"):
-            self.utils.destroy()
+        try:
+            if self.utils is not None and hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Error destroying MasterMinion utils: %s", exc)
         self.utils = {}
         if hasattr(self, "states") and self.states is not None:
-            if hasattr(self.states, "destroy"):
-                self.states.destroy()
+            try:
+                if hasattr(self.states, "destroy"):
+                    self.states.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion states: %s", exc)
             self.states = {}
         if hasattr(self, "rend") and self.rend is not None:
-            if hasattr(self.rend, "destroy"):
-                self.rend.destroy()
+            try:
+                if hasattr(self.rend, "destroy"):
+                    self.rend.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion rend: %s", exc)
             self.rend = {}
         if hasattr(self, "matchers") and self.matchers is not None:
-            if hasattr(self.matchers, "destroy"):
-                self.matchers.destroy()
+            try:
+                if hasattr(self.matchers, "destroy"):
+                    self.matchers.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion matchers: %s", exc)
             self.matchers = {}
         if hasattr(self, "executors") and self.executors is not None:
-            if hasattr(self.executors, "destroy"):
-                self.executors.destroy()
+            try:
+                if hasattr(self.executors, "destroy"):
+                    self.executors.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion executors: %s", exc)
             self.executors = {}
         if hasattr(self, "proxy") and self.proxy is not None:
-            if hasattr(self.proxy, "destroy"):
-                self.proxy.destroy()
+            try:
+                if hasattr(self.proxy, "destroy"):
+                    self.proxy.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion proxy: %s", exc)
             self.proxy = {}
         if hasattr(self, "serializers") and self.serializers is not None:
-            if hasattr(self.serializers, "destroy"):
-                self.serializers.destroy()
+            try:
+                if hasattr(self.serializers, "destroy"):
+                    self.serializers.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion serializers: %s", exc)
             self.serializers = {}
         if self.opts and "grains" in self.opts:
-            if hasattr(self.opts["grains"], "destroy"):
-                self.opts["grains"].destroy()
+            try:
+                if hasattr(self.opts["grains"], "destroy"):
+                    self.opts["grains"].destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying MasterMinion grains: %s", exc)
             self.opts["grains"] = {}
 
     def __enter__(self):
@@ -1440,10 +1742,14 @@ class MasterMinion:
         # fallback and requires callers to use a context manager or
         # explicit ``destroy()``.
         try:
+            # ``destroy()`` leaves these as ``{}``, not ``None`` (see
+            # above), so the "already torn down" check must treat an
+            # empty mapping the same as unset, or a properly-destroyed
+            # MasterMinion still trips this warning at GC time.
             already_torn_down = (
-                getattr(self, "returners", None) is None
-                and getattr(self, "functions", None) is None
-                and getattr(self, "utils", None) is None
+                not getattr(self, "returners", None)
+                and not getattr(self, "functions", None)
+                and not getattr(self, "utils", None)
             )
         except Exception:  # pylint: disable=broad-except
             return
@@ -2270,6 +2576,7 @@ class Minion(MinionBase):
                 utils=self.utils,
                 notify=notify,
                 proxy=proxy,
+                loaded_base_name=self.loaded_base_name,
                 context=context,
             )
         returners = salt.loader.returners(opts, functions, proxy=proxy, context=context)
@@ -2644,6 +2951,21 @@ class Minion(MinionBase):
         """
         Check if we have enough memory to start a new process.
         Returns True if we have headroom, False otherwise.
+
+        The reference "total memory" and the required headroom can both be
+        tuned via minion config:
+
+        * ``minion_memory_max`` — explicit override for the reference total
+          (int bytes or a size string like ``"5G"``).
+        * ``minion_memory_headroom`` — required free headroom, either a
+          percentage of the reference (``"5%"``) or an absolute size
+          (``"5G"`` / ``"500M"`` / int bytes).
+
+        When neither opt is set the check preserves the legacy behavior
+        (``psutil.virtual_memory().percent > 95``) byte-for-byte. When an
+        opt is set the reference is resolved from
+        ``minion_memory_max`` > cgroup v2 > cgroup v1 >
+        ``psutil.virtual_memory().total``.
         """
         if not HAS_PSUTIL:
             return True
@@ -2651,11 +2973,44 @@ class Minion(MinionBase):
         try:
             import psutil
 
-            mem = psutil.virtual_memory()
-            if mem.percent > 95:
+            headroom_opt = self.opts.get("minion_memory_headroom")
+            max_opt = self.opts.get("minion_memory_max")
+
+            if headroom_opt is None and max_opt is None:
+                # Legacy fast path — no config, no cgroup lookup, no
+                # behavior change on upgrade.
+                mem = psutil.virtual_memory()
+                if mem.percent > 95:
+                    log.warning(
+                        "Memory limit reached (Used: %s%%). Pausing queue processing.",
+                        mem.percent,
+                    )
+                    return False
+                return True
+
+            reference, used, source = _resolve_memory_reference(max_opt)
+            headroom_bytes = _headroom_to_bytes(headroom_opt, reference)
+            if headroom_bytes is None:
+                # Parse failure already logged at DEBUG; fall back to a
+                # 5% headroom on the resolved reference so operator intent
+                # (they asked for cgroup-aware behavior) is honored.
+                headroom_bytes = int(reference * 0.05)
+
+            log.debug(
+                "Memory headroom check: source=%s reference=%s used=%s headroom=%s",
+                source,
+                reference,
+                used,
+                headroom_bytes,
+            )
+            if used + headroom_bytes > reference:
                 log.warning(
-                    "Memory limit reached (Used: %s%%). Pausing queue processing.",
-                    mem.percent,
+                    "Memory limit reached (Used: %s of %s, headroom: %s, source: %s). "
+                    "Pausing queue processing.",
+                    used,
+                    reference,
+                    headroom_bytes,
+                    source,
                 )
                 return False
         except Exception:  # pylint: disable=broad-exception-caught
@@ -3009,18 +3364,34 @@ class Minion(MinionBase):
                 return Minion._thread_return(minion_instance, opts, data)
 
     def _execute_job_function(
-        self, function_name, function_args, executors, opts, data, functions=None
+        self,
+        function_name,
+        function_args,
+        executors,
+        opts,
+        data,
+        functions=None,
+        executor_loader=None,
     ):
         """
         Executes a function within a job given it's name, the args and the executors.
         It also checks if the function is allowed to run if 'blackout mode' is enabled.
 
-        ``functions`` defaults to ``self.functions`` but callers may pass a
-        different loader (e.g. a per-resource-type loader) to route execution
-        to the correct module set.
+        ``functions`` is the loader this job runs against and ``executor_loader``
+        the executors it runs through. They default to ``self.functions`` and
+        ``self.executors`` for callers that do not thread loaders. A threaded
+        job (multiprocessing: False) passes the loaders of the generation its
+        own gen_modules() call returned, so the func lookup, the retcode reset
+        and an executor that sets the retcode itself (such as sudo) all use the
+        generation it reads its retcode back from, rather than the shared
+        attributes a sibling job may have rebound (#61830). A resource job
+        passes that generation's per-resource-type loader to route execution to
+        the correct module set.
         """
         if functions is None:
             functions = self.functions
+        if executor_loader is None:
+            executor_loader = self.executors
         minion_blackout_violation = False
         if self.connected and self.opts["pillar"].get("minion_blackout", False):
             whitelist = self.opts["pillar"].get("minion_blackout_whitelist", [])
@@ -3068,9 +3439,9 @@ class Minion(MinionBase):
 
         for name in executors:
             fname = f"{name}.execute"
-            if fname not in self.executors:
+            if fname not in executor_loader:
                 raise SaltInvocationError(f"Executor '{name}' is not available")
-            return_data = self.executors[fname](opts, data, func, args, kwargs)
+            return_data = executor_loader[fname](opts, data, func, args, kwargs)
             if return_data is not None:
                 return return_data
 
@@ -3107,7 +3478,7 @@ class Minion(MinionBase):
         # covers; recorded in the finally below.
         _exec_perf_start = time.perf_counter()
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3132,11 +3503,11 @@ class Minion(MinionBase):
             )
             allow_missing_funcs = any(
                 [
-                    minion_instance.executors[f"{executor}.allow_missing_func"](
+                    generation.executors[f"{executor}.allow_missing_func"](
                         function_name
                     )
                     for executor in executors
-                    if f"{executor}.allow_missing_func" in minion_instance.executors
+                    if f"{executor}.allow_missing_func" in generation.executors
                 ]
             )
             # Resolve which execution-module loader to use.  For resource
@@ -3148,7 +3519,7 @@ class Minion(MinionBase):
             resource_target = data.get("resource_target")
             if resource_target:
                 resource_type = resource_target["type"]
-                functions_to_use = minion_instance.resource_loaders.get(resource_type)
+                functions_to_use = generation.resource_loaders.get(resource_type)
                 if functions_to_use is None:
                     ret["return"] = (
                         f"No resource loader available for type '{resource_type}'. "
@@ -3189,7 +3560,7 @@ class Minion(MinionBase):
                 ret["retcode"] = salt.defaults.exitcodes.EX_OK
                 ret["success"] = True
             else:
-                functions_to_use = minion_instance.functions
+                functions_to_use = generation.functions
             if (
                 ret.get("retcode") is None
                 and functions_to_use is not None
@@ -3203,6 +3574,7 @@ class Minion(MinionBase):
                         opts,
                         data,
                         functions=functions_to_use,
+                        executor_loader=generation.executors,
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -3382,9 +3754,7 @@ class Minion(MinionBase):
                         "retcode": salt.defaults.exitcodes.EX_OK,
                         "out": "highstate",
                     }
-                    resource_loader = getattr(
-                        minion_instance, "resource_loaders", {}
-                    ).get(rtype)
+                    resource_loader = generation.resource_loaders.get(rtype)
 
                     if resource_loader is None:
                         per_resource_ret["return"] = (
@@ -3413,6 +3783,7 @@ class Minion(MinionBase):
                                 opts,
                                 data,
                                 functions=resource_loader,
+                                executor_loader=generation.executors,
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error(
@@ -3625,7 +3996,7 @@ class Minion(MinionBase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
 
-        minion_instance.gen_modules()
+        generation = minion_instance.gen_modules()
 
         fn_ = os.path.join(minion_instance.proc_dir, str(data["jid"]))
 
@@ -3682,14 +4053,18 @@ class Minion(MinionBase):
                     ret["success"][function_name] = False
                 try:
                     return_data = minion_instance._execute_job_function(
-                        function_name, function_args, executors, opts, data
+                        function_name,
+                        function_args,
+                        executors,
+                        opts,
+                        data,
+                        functions=generation.functions,
+                        executor_loader=generation.executors,
                     )
 
                     key = ind if multifunc_ordered else data["fun"][ind]
                     ret["return"][key] = return_data
-                    retcode = minion_instance.functions.pack["__context__"].get(
-                        "retcode", 0
-                    )
+                    retcode = generation.functions.pack["__context__"].get("retcode", 0)
                     if retcode == 0:
                         # No nonzero retcode in __context__ dunder. Check if return
                         # is a dictionary with a "result" or "success" key.
@@ -4207,14 +4582,18 @@ class Minion(MinionBase):
         # Cache locally so :meth:`_resolve_resource_targets` can resolve
         # ``tgt_type == "grain"`` without re-rendering.
         self._resource_grains_cache = resource_grains
-        load = {
-            "cmd": "_register_resources",
-            "id": self.opts["id"],
-            "resources": resources,
-            "resource_grains": resource_grains,
-            "tok": self.tok,
-        }
         try:
+            # Build the load inside the guard as well: this method is
+            # best-effort, so a problem assembling the request should be
+            # reported the same way a failure to send it is, rather than
+            # escaping into pillar_refresh and aborting the rest of it.
+            load = {
+                "cmd": "_register_resources",
+                "id": self.opts["id"],
+                "resources": resources,
+                "resource_grains": resource_grains,
+                "tok": self.tok,
+            }
             await self._send_req_async_main(load, timeout=self._return_retry_timer())
             log.debug("Registered resources with master: %s", list(resources.keys()))
         except Exception as err:  # pylint: disable=broad-except
@@ -4326,24 +4705,62 @@ class Minion(MinionBase):
                     current_schedule, new_schedule
                 )
                 self.opts["pillar"] = new_pillar
-                self.functions.pack["__pillar__"] = self.opts["pillar"]
-                # The two-loader model (see ``salt.loader.minion_mods``)
-                # exposes an inner unfiltered loader on
-                # ``self.functions._dunder_salt`` that is the ``__salt__``
-                # packed into every loaded execution module.  PR-#70250
-                # routes minion-internal callsites (e.g. beacons'
-                # ``config.merge`` in ``process_beacons``, scheduler
-                # ``timezone.get_offset`` / ``config.merge``, sys.doc
-                # error-path lookups) through that inner loader so they
-                # succeed under a strict ``whitelist_modules``.  The inner
-                # loader has its own ``pack["__pillar__"]`` captured at
-                # loader-build time; without this mirror, ``config.merge``
-                # dispatched via the inner loader keeps reading the
-                # pre-refresh pillar, so pillar-injected beacons never
-                # activate (regression on ``test_pillar_refresh_pillar_beacons``).
-                _inner = getattr(self.functions, "_dunder_salt", None)
-                if _inner is not None and hasattr(_inner, "pack"):
-                    _inner.pack["__pillar__"] = self.opts["pillar"]
+                # ``self.functions`` is None when Minion has not yet finished
+                # gen_modules() (see the initializer path in __init__ and the
+                # destroy() sequence). Re-pack the exec-module loader only
+                # when it exists; regular minions rebuild it in gen_modules()
+                # on the next job, and proxy minions get a full rebuild
+                # further down when opts["proxy"] is set.
+                if getattr(self, "functions", None) is not None:
+                    self.functions.pack["__pillar__"] = self.opts["pillar"]
+                    # The two-loader model (see ``salt.loader.minion_mods``)
+                    # exposes an inner unfiltered loader on
+                    # ``self.functions._dunder_salt`` that is the ``__salt__``
+                    # packed into every loaded execution module.  PR-#70250
+                    # routes minion-internal callsites (e.g. beacons'
+                    # ``config.merge`` in ``process_beacons``, scheduler
+                    # ``timezone.get_offset`` / ``config.merge``, sys.doc
+                    # error-path lookups) through that inner loader so they
+                    # succeed under a strict ``whitelist_modules``.  The inner
+                    # loader has its own ``pack["__pillar__"]`` captured at
+                    # loader-build time; without this mirror, ``config.merge``
+                    # dispatched via the inner loader keeps reading the
+                    # pre-refresh pillar, so pillar-injected beacons never
+                    # activate (regression on ``test_pillar_refresh_pillar_beacons``).
+                    _inner = getattr(self.functions, "_dunder_salt", None)
+                    if _inner is not None and hasattr(_inner, "pack"):
+                        _inner.pack["__pillar__"] = self.opts["pillar"]
+
+                # On a proxy minion, re-pack the freshly compiled pillar into
+                # the proxy loader so already-loaded proxy modules see the
+                # updated __pillar__ on their next call. Rebinding
+                # self.opts["pillar"] above orphans the dict that the proxy
+                # loader's pack still aliased, leaving proxy modules with stale
+                # pillar (#58197). Mirrors the deltaproxy __grains__ re-pack and
+                # avoids reload_modules(), so each module's connection state and
+                # __context__ are preserved. Gated on opts["proxy"] so regular
+                # minions -- which also build a lazy proxy loader in
+                # gen_modules() -- are untouched. For deltaproxy this covers
+                # every sub-proxy too: handle_event dispatches each sub-proxy's
+                # pillar_refresh to that sub-proxy instance, so ``self`` is the
+                # sub-proxy and its own loader is re-packed here.
+                if self.opts.get("proxy") and getattr(self, "proxy", None):
+                    self.proxy.pack["__pillar__"] = self.opts["pillar"]
+
+                    # The exec-module loaders (functions/returners/executors/
+                    # utils) snapshot opts["pillar"] by value when they are
+                    # built, so re-packing the proxy loader above does not
+                    # freshen them. module_refresh() is already called at the
+                    # top of pillar_refresh, but that runs before the rebind
+                    # above, so those loaders captured the OLD pillar. On a
+                    # regular minion this is masked because every job rebuilds
+                    # the loaders via gen_modules(); a proxy minion's job path
+                    # never does, so exec modules would serve stale __pillar__
+                    # until the next refresh (#59393). Rebuild them here, after
+                    # the rebind, so they see the freshly compiled pillar.
+                    # Proxy-scoped so a regular minion pays no extra rebuild.
+                    self.module_refresh(force_refresh)
+
                 # Re-discover resources now that pillar has changed.  Must
                 # happen *after* opts["pillar"] is updated so that
                 # _discover_resources sees the new resource declarations (or
@@ -5392,6 +5809,7 @@ class Minion(MinionBase):
         if (
             tgt_type == "glob"
             and isinstance(tgt, str)
+            and tgt != self.opts.get("id")
             and not any(c in tgt for c in ("*", "?", "["))
         ):
             resources = self.opts.get("resources", {})
@@ -6428,6 +6846,27 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "tune_in")
         return mp_call(self, start)
 
+    def destroy(self):
+        """
+        Tear down the proxy minion.
+
+        A deltaproxy holds its sub-proxies in ``deltaproxy_objs``, and each of
+        them owns its own ``req_channel``, schedule, beacons and periodic
+        callbacks.  Nothing used to tear those down, so every stop or restart
+        abandoned them.  Destroy the sub-proxies first, then this minion.
+        """
+        subproxies = getattr(self, "deltaproxy_objs", None) or {}
+        for minion_id, _minion in list(subproxies.items()):
+            try:
+                _minion.destroy()
+            except Exception:  # pylint: disable=broad-except
+                log.warning(
+                    "Unable to tear down sub proxy %s", minion_id, exc_info=True
+                )
+        if subproxies:
+            subproxies.clear()
+        super().destroy()
+
     def _target_load(self, load):
         """
         Verify that the publication is valid and applies to this minion
@@ -6482,13 +6921,17 @@ class SProxyMinion(SMinion):
         salt.utils.extmods.sync(self.opts, "grains")
         new_grains = salt.loader.grains(self.opts)
         self.opts.mutate_key("grains", new_grains)
-        new_pillar = salt.pillar.get_pillar(
+        pillar = salt.pillar.get_pillar(
             self.opts,
             self.opts["grains"],
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
-        ).compile_pillar()
+        )
+        try:
+            new_pillar = pillar.compile_pillar()
+        finally:
+            pillar.destroy()
         self.opts.mutate_key("pillar", new_pillar)
 
         if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:

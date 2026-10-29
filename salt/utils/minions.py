@@ -6,6 +6,7 @@ expected to return
 import fnmatch
 import logging
 import re
+import time
 
 import salt.cache
 import salt.payload
@@ -31,6 +32,29 @@ except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
+# Cache bank holding ``{"ts": <epoch seconds>}`` per minion id, written by the
+# master's request server when ``presence_id_tracking`` is enabled.
+PRESENCE_BANK = "presence"
+
+
+def presence_is_fresh(record, ttl, now=None):
+    """
+    Return ``True`` if ``record`` is a presence record that was written less
+    than ``ttl`` seconds before ``now``.
+
+    Anything that is not a dict with a numeric ``ts`` is treated as stale, so a
+    corrupt or foreign cache entry can never make a minion appear present.
+    """
+    if not isinstance(record, dict):
+        return False
+    ts = record.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return False
+    if now is None:
+        now = time.time()
+    return now - ts < ttl
+
 
 TARGET_REX = re.compile(
     r"""(?x)
@@ -1002,6 +1026,56 @@ class CkMinions:
     def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
+
+        Minions are detected by matching the addresses connected to the publish
+        port against the addresses in the minions' cached grains. If
+        ``presence_id_tracking`` is enabled, accepted minions that
+        authenticated to the master within the last ``presence_id_ttl``
+        seconds are included as well. That covers minions whose connecting
+        address is not in their grains, such as NAT'd or internet-facing
+        minions. See issue #58592.
+        """
+        minions = self._connected_ids_by_address(subset=subset, show_ip=show_ip)
+        if self.opts.get("presence_id_tracking", False):
+            found = {minion[0] for minion in minions} if show_ip else minions
+            for id_ in self._recently_seen_ids(subset):
+                if id_ in found:
+                    continue
+                minions.add((id_, None) if show_ip else id_)
+        return minions
+
+    def _recently_seen_ids(self, subset=None):
+        """
+        Return the accepted minion ids with a fresh record in the presence
+        cache bank, optionally within a subset.
+        """
+        ttl = self.opts.get("presence_id_ttl", 600)
+        # Don't use ``self.cache``: it may be a MemCache which would serve
+        # stale presence records.
+        cache = salt.cache.Cache(self.opts)
+        try:
+            candidates = set(cache.list(PRESENCE_BANK) or [])
+        except SaltCacheError as exc:
+            log.warning("Unable to list minion presence records: %s", exc)
+            return set()
+        candidates &= self._pki_minions()
+        if subset:
+            candidates &= set(subset)
+        now = time.time()
+        recent = set()
+        for id_ in candidates:
+            try:
+                record = cache.fetch(PRESENCE_BANK, id_)
+            except SaltCacheError:
+                continue
+            if presence_is_fresh(record, ttl, now):
+                recent.add(id_)
+        return recent
+
+    def _connected_ids_by_address(self, subset=None, show_ip=False):
+        """
+        Return the minion ids (or ``(id, ip)`` tuples if ``show_ip``) whose
+        cached grains contain an address connected to the publish port.
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):

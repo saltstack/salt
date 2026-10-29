@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/linux.txt --constraint requirements/constraints.txt --no-emit-index-url --python-platform=linux --python-version=3.12 -o=requirements/static/pkg/py3.12/linux.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -141,11 +141,11 @@ opentelemetry-sdk==1.42.1
 opentelemetry-semantic-conventions==0.63b1
     # via opentelemetry-sdk
 packaging==24.0
-    # via -r requirements/base.txt
-platformdirs==4.5.1
     # via
-    #   python-discovery
+    #   -r requirements/base.txt
     #   virtualenv
+platformdirs==4.5.1
+    # via virtualenv
 portend==3.1.0
     # via cherrypy
 prometheus-client==0.25.0
@@ -182,7 +182,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/linux.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -238,11 +238,11 @@ typing-extensions==4.14.1
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pyopenssl
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt
