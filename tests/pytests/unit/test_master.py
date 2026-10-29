@@ -1146,6 +1146,9 @@ def test_run_func(maintenance):
 
     mocked_time = MockTime(60 * 4)
 
+    async def advance_time(seconds):
+        mocked_time.sleep(seconds)
+
     class MockTimedFunc:
         def __init__(self):
             self.call_times = []
@@ -1165,9 +1168,11 @@ def test_run_func(maintenance):
     mocked_handle_key_rotate = MockTimedFunc()
     mocked_check_max_open_files = MockTimedFunc()
 
-    with patch("salt.master.time", mocked_time), patch(
-        "salt.utils.process", autospec=True
-    ), patch("salt.master.Maintenance._post_fork_init", mocked__post_fork_init), patch(
+    with patch("salt.master.asyncio.sleep", advance_time), patch(
+        "salt.master.time", mocked_time
+    ), patch("salt.utils.process", autospec=True), patch(
+        "salt.master.Maintenance._post_fork_init", mocked__post_fork_init
+    ), patch(
         "salt.daemons.masterapi.clean_old_jobs", mocked_clean_old_jobs
     ), patch(
         "salt.daemons.masterapi.clean_expired_tokens", mocked_clean_expired_tokens
@@ -1178,7 +1183,8 @@ def test_run_func(maintenance):
     ), patch(
         "salt.master.Maintenance.handle_git_pillar", mocked_handle_git_pillar
     ), patch(
-        "salt.master.Maintenance.handle_schedule", mocked_handle_schedule
+        "salt.master.Maintenance.handle_schedule",
+        AsyncMock(side_effect=mocked_handle_schedule),
     ), patch(
         "salt.master.Maintenance.handle_key_cache", mocked_handle_key_cache
     ), patch(

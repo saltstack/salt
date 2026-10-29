@@ -5,6 +5,7 @@
 import asyncio
 import copy
 import functools
+import inspect
 import logging
 import os
 import signal
@@ -396,7 +397,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
         ProxyMinion._thread_return(minion_instance, opts, data)
 
 
-def thread_return(cls, minion_instance, opts, data):
+async def thread_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -488,8 +489,8 @@ def thread_return(cls, minion_instance, opts, data):
                 if fname not in executor_loader:
                     raise SaltInvocationError(f"Executor '{name}' is not available")
                 return_data = executor_loader[fname](opts, data, func, args, kwargs)
-                if asyncio.iscoroutine(return_data):
-                    return_data = asyncio.run(return_data)
+                if inspect.isawaitable(return_data):
+                    return_data = await return_data
                 if return_data is not None:
                     break
 
@@ -644,7 +645,7 @@ def thread_return(cls, minion_instance, opts, data):
                 log.exception("The return failed for job %s: %s", data["jid"], exc)
 
 
-def thread_multi_return(cls, minion_instance, opts, data):
+async def thread_multi_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -717,8 +718,8 @@ def thread_multi_return(cls, minion_instance, opts, data):
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
             ret["return"][key] = func(*args, **kwargs)
-            if asyncio.iscoroutine(ret["return"][key]):
-                ret["return"][key] = asyncio.run(ret["return"][key])
+            if inspect.isawaitable(ret["return"][key]):
+                ret["return"][key] = await ret["return"][key]
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return
@@ -899,9 +900,9 @@ def target_load(self, load):
 
 
 # Main Minion Tune In
-def tune_in(self, start=True):
+async def tune_in(self):
     """
     Lock onto the publisher. This is the main event loop for the minion
     :rtype : None
     """
-    super(ProxyMinion, self).tune_in(start=start)
+    await super(ProxyMinion, self).tune_in()

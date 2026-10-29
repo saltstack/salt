@@ -176,7 +176,6 @@ class Schedule:
             self.time_offset = "0000"
 
         self.schedule_returner = self.option("schedule_returner")
-        self._async_jobs = set()
         # Keep track of the lowest loop interval needed in this variable
         self.loop_interval = sys.maxsize
         if not self.standalone:
@@ -514,7 +513,7 @@ class Schedule:
         if persist:
             self.persist()
 
-    def run_job(self, name):
+    async def run_job(self, name):
         """
         Run a schedule job now
         """
@@ -558,7 +557,7 @@ class Schedule:
         # Grab run, assume True
         if data.get("run"):
             log.info("Running Job: %s", name)
-            self._run_job(func, data)
+            await self._run_job(func, data)
 
     def enable_schedule(self, persist=True, fire_event=True):
         """
@@ -753,13 +752,7 @@ class Schedule:
             schedule = self._get_schedule()
             return schedule.get(name, {})
 
-    def handle_func(self, multiprocessing_enabled, func, data, jid=None):
-        """Run a scheduled job in its worker process or thread."""
-        return asyncio.run(
-            self.handle_func_async(multiprocessing_enabled, func, data, jid)
-        )
-
-    async def handle_func_async(self, multiprocessing_enabled, func, data, jid=None):
+    async def handle_func(self, multiprocessing_enabled, func, data, jid=None):
         """Execute a job and await its result before reporting success or failure."""
         if (
             salt.utils.platform.spawning_platform()
@@ -1037,7 +1030,7 @@ class Schedule:
                         # Let's make sure we exit the process!
                         sys.exit(salt.defaults.exitcodes.EX_GENERIC)
 
-    def eval(self, now=None):
+    async def eval(self, now=None):
         """
         Evaluate and execute the schedule
 
@@ -1859,7 +1852,7 @@ class Schedule:
                         miss_msg,
                         jid,
                     )
-                    self._run_job(func, data, jid=jid)
+                    await self._run_job(func, data, jid=jid)
 
             finally:
                 # Only set _last_run if the job ran
@@ -1882,7 +1875,11 @@ class Schedule:
                         )
         return jids
 
-    def _run_job(self, func, data, jid=None):
+    def _run_job_in_worker(self, multiprocessing_enabled, func, data, jid=None):
+        """Synchronous target required by Thread and Process."""
+        return asyncio.run(self.handle_func(multiprocessing_enabled, func, data, jid))
+
+    async def _run_job(self, func, data, jid=None):
         job_dry_run = data.get("dry_run", False)
         if job_dry_run:
             log.debug("Job %s has 'dry_run' set to True. Not running it.", data["name"])
@@ -1895,14 +1892,7 @@ class Schedule:
 
         if run_schedule_jobs_in_background is False:
             # Explicitly pass False for multiprocessing_enabled
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                self.handle_func(False, func, data, jid)
-            else:
-                task = loop.create_task(self.handle_func_async(False, func, data, jid))
-                self._async_jobs.add(task)
-                task.add_done_callback(self._async_jobs.discard)
+            await self.handle_func(False, func, data, jid)
             return
 
         if multiprocessing_enabled and salt.utils.platform.spawning_platform():
@@ -1928,7 +1918,7 @@ class Schedule:
                     # Reset current signals before starting the process in
                     # order not to inherit the current signal handlers
                     proc = thread_cls(
-                        target=self.handle_func,
+                        target=self._run_job_in_worker,
                         args=(multiprocessing_enabled, func, data, jid),
                         name=name,
                     )
@@ -1936,7 +1926,7 @@ class Schedule:
                     self._subprocess_list.add(proc)
             else:
                 proc = thread_cls(
-                    target=self.handle_func,
+                    target=self._run_job_in_worker,
                     args=(multiprocessing_enabled, func, data, jid),
                     name=name,
                 )

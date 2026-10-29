@@ -22,7 +22,7 @@ pytestmark = [
 
 
 @pytest.mark.slow_test
-def test_postpone(schedule):
+async def test_postpone(schedule):
     """
     verify that scheduled job is postponed until the specified time.
     """
@@ -48,16 +48,16 @@ def test_postpone(schedule):
         },
     )
     # Run at the original time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     assert "_last_run" not in ret
 
     # Run 5 minutes later
-    schedule.eval(now=run_time + datetime.timedelta(seconds=delay))
+    await schedule.eval(now=run_time + datetime.timedelta(seconds=delay))
     ret = schedule.job_status("job1")
     assert ret["_last_run"] == run_time + datetime.timedelta(seconds=delay)
 
     # Run 6 minutes later
-    schedule.eval(now=run_time + datetime.timedelta(seconds=delay + 1))
+    await schedule.eval(now=run_time + datetime.timedelta(seconds=delay + 1))
     ret = schedule.job_status("job1")
     assert ret["_last_run"] == run_time + datetime.timedelta(seconds=delay)
