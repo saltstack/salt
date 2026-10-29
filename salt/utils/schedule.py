@@ -46,7 +46,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
-from salt.utils.asynchronous import await_result
+from salt.utils.asynchronous import resolve_result
 
 # pylint: disable=import-error
 try:
@@ -926,7 +926,7 @@ class Schedule:
 
             self.functions.pack["__context__"]["retcode"] = 0
 
-            result = await await_result(dispatch_functions[func](*args, **kwargs))
+            result = await resolve_result(dispatch_functions[func](*args, **kwargs))
             ret["return"] = result
 
             if not self.standalone:

@@ -53,7 +53,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.minion import ProxyMinion
-from salt.utils.asynchronous import await_result
+from salt.utils.asynchronous import resolve_result
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
@@ -954,7 +954,7 @@ async def thread_multi_return(cls, minion_instance, opts, data):
             )
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
-            ret["return"][key] = await await_result(func(*args, **kwargs))
+            ret["return"][key] = await resolve_result(func(*args, **kwargs))
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return

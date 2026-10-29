@@ -29,7 +29,7 @@ from salt.exceptions import (
     SaltClientError,
     SaltInvocationError,
 )
-from salt.utils.asynchronous import await_result
+from salt.utils.asynchronous import resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -373,7 +373,7 @@ class BaseCaller:
         # 1. Run the function on the managing minion if it matches the target.
         if minion_matches:
             try:
-                minion_ret = await await_result(
+                minion_ret = await resolve_result(
                     self.minion.functions[fun](*args, **kwargs)
                 )
             except KeyError:
@@ -423,7 +423,7 @@ class BaseCaller:
                         exc,
                     )
             try:
-                result = await await_result(loader[fun](*args, **kwargs))
+                result = await resolve_result(loader[fun](*args, **kwargs))
                 results[rid] = result
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception("Resource %s raised running %s", rid, fun)

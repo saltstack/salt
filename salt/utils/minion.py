@@ -7,11 +7,11 @@ import os
 import threading
 
 import salt.payload
-import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 from salt.exceptions import SaltInvocationError
+from salt.utils.asynchronous import resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ async def run_executors(executor_loader, executors, opts, data, func, args, kwar
         fname = f"{name}.execute"
         if fname not in executor_loader:
             raise SaltInvocationError(f"Executor '{name}' is not available")
-        result = await salt.utils.asynchronous.await_result(
+        result = await resolve_result(
             executor_loader[fname](opts, data, func, args, kwargs)
         )
         if result is not None:

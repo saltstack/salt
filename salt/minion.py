@@ -83,7 +83,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
-from salt.utils.asynchronous import await_result
+from salt.utils.asynchronous import resolve_result
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -4416,7 +4416,7 @@ class Minion(MinionBase):
         # Call the appropriate schedule function
         try:
             alias, params = funcs.get(func)
-            await await_result(getattr(self.schedule, alias)(*params))
+            await resolve_result(getattr(self.schedule, alias)(*params))
         except TypeError:
             log.error('Function "%s" is unavailable in salt.utils.scheduler', func)
 

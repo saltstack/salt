@@ -23,7 +23,7 @@ from tests.support.mock import patch
 
 
 @pytest.mark.parametrize("kind", ["coroutine", "future", "custom"])
-async def test_await_result_accepts_pending_awaitables_on_the_callers_task(kind):
+async def test_resolve_result_accepts_pending_awaitables_on_the_callers_task(kind):
     loop = asyncio.get_running_loop()
     owner = asyncio.current_task()
     future = loop.create_future()
@@ -42,12 +42,12 @@ async def test_await_result_accepts_pending_awaitables_on_the_callers_task(kind)
         else future if kind == "future" else Awaitable()
     )
     loop.call_soon(future.set_result, False)
-    assert await asynchronous.await_result(result) is False
+    assert await asynchronous.resolve_result(result) is False
 
 
-async def test_await_result_propagates_cancellation_to_the_awaited_future():
+async def test_resolve_result_propagates_cancellation_to_the_awaited_future():
     future = asyncio.get_running_loop().create_future()
-    task = asyncio.create_task(asynchronous.await_result(future))
+    task = asyncio.create_task(asynchronous.resolve_result(future))
     await asyncio.sleep(0)
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -55,12 +55,12 @@ async def test_await_result_propagates_cancellation_to_the_awaited_future():
     assert future.cancelled()
 
 
-async def test_await_result_preserves_the_original_exception():
+async def test_resolve_result_preserves_the_original_exception():
     error = OSError("request failed")
     future = asyncio.get_running_loop().create_future()
     future.set_exception(error)
     with pytest.raises(OSError) as caught:
-        await asynchronous.await_result(future)
+        await asynchronous.resolve_result(future)
     assert caught.value is error
 
 

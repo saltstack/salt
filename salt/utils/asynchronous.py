@@ -20,7 +20,7 @@ import salt.utils.resource_warnings
 log = logging.getLogger(__name__)
 
 
-async def await_result(result):
+async def resolve_result(result):
     """Await an awaitable result, or return a synchronous value unchanged."""
     if inspect.isawaitable(result):
         return await result
