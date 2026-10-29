@@ -277,7 +277,10 @@ async def test_publish_factory_uses_callers_loop(minion_opts):
         salt.channel.client.AsyncPubChannel.factory,
     ],
 )
-async def test_channel_factory_deprecates_tornado_loop(minion_opts, io_loop, factory):
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_channel_factory_warns_only_for_tornado_loop(
+    minion_opts, io_loop, factory, legacy
+):
     loop = asyncio.get_running_loop()
     with patch("salt.crypt.AsyncAuth"), patch(
         "salt.transport.request_client"
@@ -286,11 +289,17 @@ async def test_channel_factory_deprecates_tornado_loop(minion_opts, io_loop, fac
     ) as publish_client, patch(
         "salt.utils.event.get_event"
     ):
-        with pytest.warns(DeprecationWarning, match="removed in Salt 3009.2") as caught:
-            channel = factory(minion_opts, io_loop=io_loop, crypt="clear")
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            channel = factory(
+                minion_opts, io_loop=io_loop if legacy else loop, crypt="clear"
+            )
         try:
-            assert len(caught) == 1
-            assert caught[0].filename == __file__
+            assert len(caught) == int(legacy)
+            if legacy:
+                assert "Passing a Tornado IOLoop" in str(caught[0].message)
+                assert "removed in Salt 3009.2" in str(caught[0].message)
+                assert caught[0].filename == __file__
             if request_client.called:
                 assert request_client.call_args.kwargs["io_loop"] is loop
             else:
@@ -299,6 +308,17 @@ async def test_channel_factory_deprecates_tornado_loop(minion_opts, io_loop, fac
         finally:
             channel.close()
     assert not loop.is_closed()
+
+
+async def test_publish_constructor_defaults_to_current_loop(minion_opts):
+    with patch("salt.utils.event.get_event"):
+        channel = salt.channel.client.AsyncPubChannel(
+            minion_opts, MagicMock(), MagicMock()
+        )
+        try:
+            assert channel.io_loop is asyncio.get_running_loop()
+        finally:
+            channel.close()
 
 
 def test_sync_request_factory_supplies_native_loop(minion_opts):

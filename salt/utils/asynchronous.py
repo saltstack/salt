@@ -25,7 +25,7 @@ def aioloop(io_loop, warn=False):
     Ensure the ioloop is an asyncio loop not a tornado ioloop.
 
     With ``warn=True``, deprecate Tornado loop arguments at an API boundary.
-    Callers must pass an asyncio loop before Salt 3009.2.
+    Native asyncio loop arguments remain supported without a warning.
     """
     if isinstance(io_loop, asyncio.AbstractEventLoop):
         return io_loop
@@ -33,9 +33,10 @@ def aioloop(io_loop, warn=False):
         if warn:
             salt.utils.versions.warn_until(
                 (3009, 2),
-                "Passing a tornado.ioloop.IOLoop to this API is deprecated "
-                "and support will be removed in Salt {version}. "
-                "Pass an asyncio.AbstractEventLoop instead.",
+                "Passing a Tornado IOLoop as io_loop is deprecated and will "
+                "be removed in Salt {version}. Omit io_loop to use the current "
+                "asyncio event loop, or pass the Tornado loop's asyncio_loop "
+                "attribute to keep using that loop.",
                 stacklevel=4,
             )
         return io_loop.asyncio_loop

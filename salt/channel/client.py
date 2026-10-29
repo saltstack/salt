@@ -519,7 +519,9 @@ class AsyncPubChannel:
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = aioloop(io_loop, warn=True)
+        self.io_loop = (
+            asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+        )
         self.auth = auth
         try:
             # This loads or generates the minion's public key.

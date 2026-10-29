@@ -1,6 +1,7 @@
 """Pool routing uses the common transport factories and the caller's loop."""
 
 import asyncio
+import warnings
 
 import pytest
 
@@ -17,7 +18,7 @@ async def test_create_client_transport(transport, routing):
     loop = asyncio.get_running_loop()
     expected = "RequestClient" if routing else "PublishClient"
     with patch(f"salt.transport.{transport}.{expected}") as client:
-        result = salt.utils.channel.create_client_transport(opts, loop)
+        result = salt.utils.channel.create_client_transport(opts)
         assert result is client.return_value
         assert client.call_args.args[0] is opts
         passed_loop = client.call_args.kwargs.get("io_loop")
@@ -49,13 +50,19 @@ def test_create_server_transport(transport):
         salt.utils.channel.create_request_client,
     ],
 )
-async def test_pool_factory_deprecates_tornado_loop(factory, io_loop):
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_pool_factory_warns_only_for_tornado_loop(factory, io_loop, legacy):
     opts = {"transport": "tcp", "pool_name": "pool"}
     with patch("salt.transport.tcp.RequestClient") as client:
-        with pytest.warns(DeprecationWarning, match="removed in Salt 3009.2") as caught:
-            assert factory(opts, io_loop) is client.return_value
-        assert len(caught) == 1
-        assert caught[0].filename == __file__
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", DeprecationWarning)
+            supplied = io_loop if legacy else asyncio.get_running_loop()
+            assert factory(opts, supplied) is client.return_value
+        assert len(caught) == int(legacy)
+        if legacy:
+            assert "Passing a Tornado IOLoop" in str(caught[0].message)
+            assert "removed in Salt 3009.2" in str(caught[0].message)
+            assert caught[0].filename == __file__
         assert client.call_args.kwargs["io_loop"] is asyncio.get_running_loop()
 
 
