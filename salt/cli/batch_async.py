@@ -6,7 +6,6 @@ import asyncio
 import logging
 import re
 
-import tornado
 from tornado.iostream import StreamClosedError
 
 import salt.client
@@ -26,9 +25,12 @@ def _get_shared_events_channel(opts, io_loop):
     return __SHARED_EVENTS_CHANNEL
 
 
-def _destroy_unused_shared_events_channel():
+async def _destroy_unused_shared_events_channel():
     global __SHARED_EVENTS_CHANNEL
-    if __SHARED_EVENTS_CHANNEL is not None and __SHARED_EVENTS_CHANNEL.destroy_unused():
+    if (
+        __SHARED_EVENTS_CHANNEL is not None
+        and await __SHARED_EVENTS_CHANNEL.destroy_unused()
+    ):
         __SHARED_EVENTS_CHANNEL = None
 
 
@@ -82,9 +84,10 @@ class SharedEventsChannel:
         self._subscriber_reconnect_interval = batch_async_opts.get(
             "subscriber_reconnect_interval", 1.0
         )
-        self._reconnecting_subscriber = False
+        self._reconnect_lock = asyncio.Lock()
+        self._reconnect_task = None
 
-    def subscribe(self, jid, op, subscriber_id, handler):
+    async def subscribe(self, jid, op, subscriber_id, handler):
         if subscriber_id not in self._subscribers:
             self._subscribers[subscriber_id] = set()
         if jid not in self._subscriptions:
@@ -93,14 +96,14 @@ class SharedEventsChannel:
         if (op, subscriber_id, handler) not in self._subscriptions[jid]:
             self._subscriptions[jid].append((op, subscriber_id, handler))
         if not self.master_event.subscriber.connected:
-            self.__reconnect_subscriber()
+            await self.__reconnect_subscriber()
 
     def unsubscribe(self, jid, op, subscriber_id):
         if subscriber_id not in self._subscribers:
             return
         jids = self._subscribers[subscriber_id].copy()
         if jid is not None:
-            jids = set(jid)
+            jids = {jid}
         for i_jid in jids:
             self._subscriptions[i_jid] = list(
                 filter(
@@ -139,36 +142,30 @@ class SharedEventsChannel:
             )
 
     async def __reconnect_subscriber(self):
-        if self.master_event.subscriber.connected or self._reconnecting_subscriber:
-            return
-        self._reconnecting_subscriber = True
-        max_tries = max(1, int(self._subscriber_reconnect_tries))
-        _try = 1
-        while _try <= max_tries:
-            log.info(
-                "Trying to reconnect to event publisher (try %d of %d) ...",
-                _try,
-                max_tries,
-            )
-            try:
-                await self.master_event.subscriber.connect()
-            except StreamClosedError:
-                log.warning(
-                    "Unable to reconnect to event publisher (try %d of %d)",
-                    _try,
-                    max_tries,
-                )
-            if self.master_event.subscriber.connected:
-                self.master_event.subscriber._stream.set_close_callback(
-                    self.__handle_close
-                )
-                log.info("Event publisher connection restored")
-                self._reconnecting_subscriber = False
+        async with self._reconnect_lock:
+            if self.master_event is None or self.master_event.subscriber.connected:
                 return
-            if _try < max_tries:
-                await asyncio.sleep(self._subscriber_reconnect_interval)
-            _try += 1
-        self._reconnecting_subscriber = False
+            self._reconnect_task = asyncio.current_task()
+            try:
+                max_tries = max(1, int(self._subscriber_reconnect_tries))
+                for attempt in range(1, max_tries + 1):
+                    try:
+                        await self.master_event.subscriber.connect()
+                    except StreamClosedError:
+                        log.warning(
+                            "Unable to reconnect to event publisher (try %d of %d)",
+                            attempt,
+                            max_tries,
+                        )
+                    if self.master_event.subscriber.connected:
+                        self.master_event.subscriber._stream.set_close_callback(
+                            self.__handle_close
+                        )
+                        return
+                    if attempt < max_tries:
+                        await asyncio.sleep(self._subscriber_reconnect_interval)
+            finally:
+                self._reconnect_task = None
 
     def use(self, subscriber_id):
         self._used_by.add(subscriber_id)
@@ -177,8 +174,16 @@ class SharedEventsChannel:
     def unuse(self, subscriber_id):
         self._used_by.discard(subscriber_id)
 
-    def destroy_unused(self):
+    async def destroy_unused(self):
         log.trace("SharedEventsChannel.destroy_unused called")
+        if self._used_by:
+            return False
+        if self.master_event is None:
+            return True
+        task = self._reconnect_task
+        if task is not None and task is not asyncio.current_task():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
         if self._used_by:
             return False
         self.master_event.destroy()
@@ -229,7 +234,7 @@ class BatchAsync:
                 self.extra_job_kwargs[kwarg] = kwargs[kwarg]
             elif kwarg in opts:
                 self.extra_job_kwargs[kwarg] = opts[kwarg]
-        self.io_loop = tornado.ioloop.IOLoop.current()
+        self.io_loop = asyncio.get_event_loop()
         self.events_channel = _get_shared_events_channel(opts, self.io_loop).use(
             id(self)
         )
@@ -268,12 +273,29 @@ class BatchAsync:
         self.ended = False
         self.event = self.events_channel.master_event
         self.scheduled = False
+        self._tasks = set()
+        self._closing = False
+        self._closed = asyncio.Event()
+        self._presence_complete = asyncio.Event()
 
-    def __set_event_handler(self):
-        self.events_channel.subscribe(
+    def _create_task(self, coroutine):
+        task = asyncio.create_task(coroutine)
+        self._tasks.add(task)
+        task.add_done_callback(self._task_done)
+        return task
+
+    def _task_done(self, task):
+        self._tasks.discard(task)
+        if not task.cancelled() and task.exception() is not None:
+            log.error("Batch task failed: %s", task.exception())
+            if not self._closing:
+                self._create_task(self.close_safe())
+
+    async def __set_event_handler(self):
+        await self.events_channel.subscribe(
             self.ping_jid, "ping_return", id(self), self.__event_handler
         )
-        self.events_channel.subscribe(
+        await self.events_channel.subscribe(
             self.batch_jid, "batch_run", id(self), self.__event_handler
         )
 
@@ -286,6 +308,8 @@ class BatchAsync:
             minion = data["id"]
             if op == "ping_return":
                 self.minions.add(minion)
+                if self.minions == self.targeted_minions:
+                    self._presence_complete.set()
             elif op == "find_job_return":
                 if data.get("return", None):
                     self.find_job_returned.add(minion)
@@ -294,7 +318,7 @@ class BatchAsync:
                     self.active.remove(minion)
                     self.done_minions.add(minion)
                 if not self.active:
-                    asyncio.create_task(self.schedule_next())
+                    self._create_task(self.schedule_next())
         except Exception as ex:  # pylint: disable=W0703
             log.error(
                 "Exception occured while processing event: %s: %s",
@@ -333,7 +357,7 @@ class BatchAsync:
         )
 
         if timedout_minions:
-            asyncio.create_task(self.schedule_next())
+            self._create_task(self.schedule_next())
 
         if self.event and running:
             self.find_job_returned = self.find_job_returned.difference(running)
@@ -353,7 +377,7 @@ class BatchAsync:
             return
         try:
             jid = self.jid_gen()
-            self.events_channel.subscribe(
+            await self.events_channel.subscribe(
                 jid, "find_job_return", id(self), self.__event_handler
             )
             await self.events_channel.local_client.run_job_async(
@@ -376,47 +400,54 @@ class BatchAsync:
                 ex,
                 exc_info=True,
             )
-            self.close_safe()
+            await self.close_safe()
 
     async def start(self):
         """
         Start the batch execution
         """
-        if not self.event:
-            return
-        self.__set_event_handler()
-        ping_return = await self.events_channel.local_client.run_job_async(
-            self.opts["tgt"],
-            "test.ping",
-            [],
-            self.opts.get("selected_target_option", self.opts.get("tgt_type", "glob")),
-            gather_job_timeout=self.opts["gather_job_timeout"],
-            jid=self.ping_jid,
-            metadata=self.metadata,
-            io_loop=self.io_loop,
-            listen=False,
-            **self.eauth,
-        )
-        self.targeted_minions = set(ping_return["minions"])
-        # start batching even if not all minions respond to ping
-        timeout_secs = (
-            self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
-        )
-
-        async def _wait_for_all_minions():
-            while True:
-                await asyncio.sleep(0.03)
-                if self.targeted_minions == self.minions:
-                    return
-
+        current = asyncio.current_task()
+        self._tasks.add(current)
         try:
-            await asyncio.wait_for(_wait_for_all_minions(), timeout=timeout_secs)
-        except asyncio.TimeoutError:
-            # Some minions are down, scheduling batch anyway
-            pass
+            if not self.event:
+                return
+            await self.__set_event_handler()
+            ping_return = await self.events_channel.local_client.run_job_async(
+                self.opts["tgt"],
+                "test.ping",
+                [],
+                self.opts.get(
+                    "selected_target_option", self.opts.get("tgt_type", "glob")
+                ),
+                gather_job_timeout=self.opts["gather_job_timeout"],
+                jid=self.ping_jid,
+                metadata=self.metadata,
+                io_loop=self.io_loop,
+                listen=False,
+                **self.eauth,
+            )
+            self.targeted_minions = set(ping_return["minions"])
+            # start batching even if not all minions respond to ping
+            timeout_secs = (
+                self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
+            )
 
-        if self.event:
-            await self.start_batch()
+            if self.targeted_minions == self.minions:
+                self._presence_complete.set()
+            try:
+                await asyncio.wait_for(self._presence_complete.wait(), timeout_secs)
+            except asyncio.TimeoutError:
+                # Some minions are down, scheduling batch anyway
+                pass
+
+            if self.event:
+                await self.start_batch()
+        except BaseException:  # pylint: disable=broad-except
+            if not self._closing:
+                await self.close_safe()
+            raise
+        finally:
+            self._tasks.discard(current)
 
     async def start_batch(self):
         """
@@ -431,7 +462,7 @@ class BatchAsync:
             "down_minions": self.targeted_minions.difference(self.minions),
             "metadata": self.metadata,
         }
-        ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/start")
+        await self.event.fire_event_async(data, f"salt/batch/{self.batch_jid}/start")
         if self.event:
             await self.run_next()
 
@@ -455,21 +486,30 @@ class BatchAsync:
             "timedout_minions": self.timedout_minions,
             "metadata": self.metadata,
         }
-        ret = self.event.fire_event(data, f"salt/batch/{self.batch_jid}/done")
+        await self.event.fire_event_async(data, f"salt/batch/{self.batch_jid}/done")
 
-        # release to the IOLoop to allow the event to be published
-        # before closing batch async execution
-        await asyncio.sleep(0.03)
-        self.close_safe()
+        await self.close_safe()
 
-    def close_safe(self):
-        log.trace("BatchAsync.close_safe called")
-        if self.events_channel is not None:
-            self.events_channel.unsubscribe(None, None, id(self))
-            self.events_channel.unuse(id(self))
-            self.events_channel = None
-            _destroy_unused_shared_events_channel()
+    async def close_safe(self):
+        current = asyncio.current_task()
+        if self._closing:
+            if current not in self._tasks:
+                await self._closed.wait()
+            return
+        self._closing = True
         self.event = None
+        channel, self.events_channel = self.events_channel, None
+        try:
+            tasks = [task for task in self._tasks if task is not current]
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
+            if channel is not None:
+                channel.unsubscribe(None, None, id(self))
+                channel.unuse(id(self))
+                await _destroy_unused_shared_events_channel()
+        finally:
+            self._closed.set()
 
     async def schedule_next(self):
         log.trace("BatchAsync.schedule_next called")
@@ -529,4 +569,4 @@ class BatchAsync:
                 exc_info=True,
             )
             self.active = self.active.difference(next_batch)
-            self.close_safe()
+            await self.close_safe()
