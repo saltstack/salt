@@ -1,5 +1,6 @@
 """Native execution-module coroutines return values through job dispatchers."""
 
+import asyncio
 from types import SimpleNamespace
 
 import pytest
@@ -8,7 +9,52 @@ import salt.cli.caller
 import salt.executors.direct_call
 import salt.loader.lazy
 import salt.minion
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import patch
+
+
+@pytest.mark.parametrize("result", [False, 0, {}])
+async def test_executor_chain_awaits_none_then_stops_at_a_false_result(result):
+    calls = []
+
+    async def first(*args):
+        await asyncio.sleep(0)
+        calls.append("first")
+        return None
+
+    def second(*args):
+        calls.append("second")
+        return result
+
+    def last(*args):
+        pytest.fail("Executors after a non-None result must not run")
+
+    loader = {"first.execute": first, "second.execute": second, "last.execute": last}
+    actual = await salt.utils.minion.run_executors(
+        loader, ["first", "second", "last"], {}, {}, None, [], {}
+    )
+    assert actual is result
+    assert calls == ["first", "second"]
+
+
+@pytest.mark.parametrize("missing", [False, True])
+async def test_executor_chain_propagates_errors_without_trying_the_next_executor(
+    missing,
+):
+    async def first(*args):
+        raise OSError("executor failed")
+
+    def last(*args):
+        pytest.fail("Executor failures must propagate")
+
+    loader = {"last.execute": last}
+    if not missing:
+        loader["first.execute"] = first
+    expected = SaltInvocationError if missing else OSError
+    with pytest.raises(expected):
+        await salt.utils.minion.run_executors(
+            loader, ["first", "last"], {}, {}, None, [], {}
+        )
 
 
 @pytest.fixture

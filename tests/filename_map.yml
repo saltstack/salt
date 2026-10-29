@@ -178,6 +178,17 @@ salt/modules/status.py:
   - pytests.unit.modules.test_status
   - pytests.functional.modules.test_status_ping_master
 
+salt/utils/asynchronous.py:
+  - pytests.unit.utils.test_asynchronous
+  - pytests.unit.test_async_execution
+  - pytests.unit.utils.scheduler.test_async_jobs
+
+salt/utils/minion.py:
+  - unit.utils.test_minion
+  - pytests.unit.test_async_execution
+  - pytests.unit.test_minion
+  - pytests.unit.metaproxy.test_thread_return
+
 salt/transport/(tcp|zeromq)\.py:
   - pytests.unit.transport.test_tcp
   - pytests.unit.transport.test_zeromq

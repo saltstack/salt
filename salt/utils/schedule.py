@@ -15,7 +15,6 @@ import asyncio
 import copy
 import datetime
 import errno
-import inspect
 import itertools
 import logging
 import os
@@ -47,6 +46,7 @@ import salt.utils.stringutils
 import salt.utils.user
 import salt.utils.yaml
 from salt.exceptions import SaltInvocationError
+from salt.utils.asynchronous import await_result
 
 # pylint: disable=import-error
 try:
@@ -65,6 +65,7 @@ try:
 except ImportError:
     _CRON_SUPPORTED = False
 # pylint: enable=import-error
+
 
 log = logging.getLogger(__name__)
 
@@ -925,9 +926,7 @@ class Schedule:
 
             self.functions.pack["__context__"]["retcode"] = 0
 
-            result = dispatch_functions[func](*args, **kwargs)
-            if inspect.isawaitable(result):
-                result = await result
+            result = await await_result(dispatch_functions[func](*args, **kwargs))
             ret["return"] = result
 
             if not self.standalone:

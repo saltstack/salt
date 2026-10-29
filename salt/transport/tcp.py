@@ -2703,35 +2703,13 @@ class RequestClient(salt.transport.base.RequestClient):
                         future = self.send_future_map.pop(message_id)
                         if not future.done():
                             future.set_result(body)
+                    elif self._on_recv is not None:
+                        self.io_loop.call_soon(self._on_recv, header, body)
                     else:
-                        if self._on_recv is not None:
-                            self.io_loop.call_soon(self._on_recv, header, body)
-                        else:
-                            log.error(
-                                "Got response for message_id %s that we are not"
-                                " tracking",
-                                message_id,
-                            )
-            except tornado.iostream.StreamClosedError as e:
-                log.debug(
-                    "tcp stream to %s:%s closed, unable to recv",
-                    self.host,
-                    self.port,
-                )
-                for future in self.send_future_map.values():
-                    if not future.done():
-                        future.set_exception(e)
-                self.send_future_map = {}
-                if self._closing or self._closed:
-                    return
-                if self.disconnect_callback is not None:
-                    self.disconnect_callback()
-                stream = self._stream
-                self._stream = None
-                if stream:
-                    stream.close()
-                unpacker = salt.utils.msgpack.Unpacker()
-                await self.connect()
+                        log.error(
+                            "Got response for message_id %s that we are not tracking",
+                            message_id,
+                        )
             except TypeError:
                 # This is an invalid transport
                 if "detect_mode" in self.opts:
@@ -2742,7 +2720,14 @@ class RequestClient(salt.transport.base.RequestClient):
                 else:
                     raise SaltClientError
             except Exception as e:  # pylint: disable=broad-except
-                log.error("Exception parsing response", exc_info=True)
+                if isinstance(e, tornado.iostream.StreamClosedError):
+                    log.debug(
+                        "tcp stream to %s:%s closed, unable to recv",
+                        self.host,
+                        self.port,
+                    )
+                else:
+                    log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
                     if not future.done():
                         future.set_exception(e)

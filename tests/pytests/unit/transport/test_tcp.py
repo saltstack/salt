@@ -804,6 +804,36 @@ async def test_tcp_request_client_reader_ignores_cancelled_reply(tcp_request_cli
     assert tcp_request_client.send_future_map == {}
 
 
+@pytest.mark.parametrize(
+    "error", [tornado.iostream.StreamClosedError(), ValueError("invalid frame")]
+)
+async def test_request_client_read_error_fails_only_pending_requests(
+    tcp_request_client, error
+):
+    loop = asyncio.get_running_loop()
+    pending, cancelled, completed = (loop.create_future() for _ in range(3))
+    cancelled.cancel()
+    completed.set_result(False)
+    tcp_request_client.send_future_map.update(
+        pending=pending, cancelled=cancelled, completed=completed
+    )
+
+    async def read_bytes(*args, **kwargs):
+        tcp_request_client._closed = True
+        raise error
+
+    tcp_request_client._stream = MagicMock()
+    tcp_request_client._stream.read_bytes = read_bytes
+    await tcp_request_client._stream_return()
+
+    with pytest.raises(type(error)) as caught:
+        await pending
+    assert caught.value is error
+    assert cancelled.cancelled()
+    assert await completed is False
+    assert not tcp_request_client.send_future_map
+
+
 async def test_tcp_request_client_stream_return_resolves_future_by_message_id(
     tcp_request_client,
 ):

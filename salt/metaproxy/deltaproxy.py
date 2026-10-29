@@ -5,7 +5,6 @@
 import asyncio
 import copy
 import functools
-import inspect
 import logging
 import os
 import signal
@@ -54,6 +53,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.minion import ProxyMinion
+from salt.utils.asynchronous import await_result
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
@@ -718,28 +718,12 @@ async def thread_return(cls, minion_instance, opts, data):
                 args, kwargs = data["arg"], data
             functions.pack["__context__"]["retcode"] = 0
             functions.pack["__opts__"] = opts
-            if isinstance(executors, str):
-                executors = [executors]
-            elif not isinstance(executors, list) or not executors:
-                raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list expected".format(
-                        executors
-                    )
-                )
-            if opts.get("sudo_user", "") and executors[-1] != "sudo":
-                executors[-1] = "sudo"  # replace the last one with sudo
+            executors = salt.utils.minion.prepare_executors(executors, opts)
             log.debug("Executors list %s", executors)
 
-            for name in executors:
-                fname = f"{name}.execute"
-                if fname not in executor_loader:
-                    raise SaltInvocationError(f"Executor '{name}' is not available")
-
-                return_data = executor_loader[fname](opts, data, func, args, kwargs)
-                if inspect.isawaitable(return_data):
-                    return_data = await return_data
-                if return_data is not None:
-                    break
+            return_data = await salt.utils.minion.run_executors(
+                executor_loader, executors, opts, data, func, args, kwargs
+            )
 
             if isinstance(return_data, types.GeneratorType):
                 ind = 0
@@ -970,9 +954,7 @@ async def thread_multi_return(cls, minion_instance, opts, data):
             )
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
-            ret["return"][key] = func(*args, **kwargs)
-            if inspect.isawaitable(ret["return"][key]):
-                ret["return"][key] = await ret["return"][key]
+            ret["return"][key] = await await_result(func(*args, **kwargs))
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return

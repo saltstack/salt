@@ -22,6 +22,48 @@ import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
 
 
+@pytest.mark.parametrize("kind", ["coroutine", "future", "custom"])
+async def test_await_result_accepts_pending_awaitables_on_the_callers_task(kind):
+    loop = asyncio.get_running_loop()
+    owner = asyncio.current_task()
+    future = loop.create_future()
+
+    async def operation():
+        assert asyncio.current_task() is owner
+        return await future
+
+    class Awaitable:
+        def __await__(self):
+            return future.__await__()
+
+    result = (
+        operation()
+        if kind == "coroutine"
+        else future if kind == "future" else Awaitable()
+    )
+    loop.call_soon(future.set_result, False)
+    assert await asynchronous.await_result(result) is False
+
+
+async def test_await_result_propagates_cancellation_to_the_awaited_future():
+    future = asyncio.get_running_loop().create_future()
+    task = asyncio.create_task(asynchronous.await_result(future))
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert future.cancelled()
+
+
+async def test_await_result_preserves_the_original_exception():
+    error = OSError("request failed")
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(error)
+    with pytest.raises(OSError) as caught:
+        await asynchronous.await_result(future)
+    assert caught.value is error
+
+
 class HelperA:
     async_methods = [
         "sleep",

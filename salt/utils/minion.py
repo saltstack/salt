@@ -7,11 +7,40 @@ import os
 import threading
 
 import salt.payload
+import salt.utils.asynchronous
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
+from salt.exceptions import SaltInvocationError
 
 log = logging.getLogger(__name__)
+
+
+def prepare_executors(executors, opts):
+    """Validate a minion job's executor chain and apply its sudo policy."""
+    if isinstance(executors, str):
+        executors = [executors]
+    elif not isinstance(executors, list) or not executors:
+        raise SaltInvocationError(
+            f"Wrong executors specification: {executors}. String or non-empty list expected"
+        )
+    if opts.get("sudo_user", "") and executors[-1] != "sudo":
+        executors[-1] = "sudo"
+    return executors
+
+
+async def run_executors(executor_loader, executors, opts, data, func, args, kwargs):
+    """Run an executor chain until an executor returns a non-None result."""
+    for name in executors:
+        fname = f"{name}.execute"
+        if fname not in executor_loader:
+            raise SaltInvocationError(f"Executor '{name}' is not available")
+        result = await salt.utils.asynchronous.await_result(
+            executor_loader[fname](opts, data, func, args, kwargs)
+        )
+        if result is not None:
+            return result
+    return None
 
 
 def running(opts):

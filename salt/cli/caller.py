@@ -4,7 +4,6 @@ minion modules.
 """
 
 import asyncio
-import inspect
 import logging
 import os
 import sys
@@ -30,6 +29,7 @@ from salt.exceptions import (
     SaltClientError,
     SaltInvocationError,
 )
+from salt.utils.asynchronous import await_result
 
 log = logging.getLogger(__name__)
 
@@ -205,17 +205,15 @@ class BaseCaller:
             if isinstance(executors, str):
                 executors = [executors]
             try:
-                for name in executors:
-                    fname = f"{name}.execute"
-                    if fname not in self.minion.executors:
-                        raise SaltInvocationError(f"Executor '{name}' is not available")
-                    ret["return"] = self.minion.executors[fname](
-                        self.opts, data, func, args, kwargs
-                    )
-                    if inspect.isawaitable(ret["return"]):
-                        ret["return"] = await ret["return"]
-                    if ret["return"] is not None:
-                        break
+                ret["return"] = await salt.utils.minion.run_executors(
+                    self.minion.executors,
+                    executors,
+                    self.opts,
+                    data,
+                    func,
+                    args,
+                    kwargs,
+                )
             except TypeError as exc:
                 sys.stderr.write(f"\nPassed invalid arguments: {exc}.\n\nUsage:\n")
                 salt.utils.stringutils.print_cli(func.__doc__)
@@ -375,9 +373,9 @@ class BaseCaller:
         # 1. Run the function on the managing minion if it matches the target.
         if minion_matches:
             try:
-                minion_ret = self.minion.functions[fun](*args, **kwargs)
-                if inspect.isawaitable(minion_ret):
-                    minion_ret = await minion_ret
+                minion_ret = await await_result(
+                    self.minion.functions[fun](*args, **kwargs)
+                )
             except KeyError:
                 minion_ret = f"Function '{fun}' is not available on the managing minion"
             except Exception as exc:  # pylint: disable=broad-except
@@ -425,9 +423,7 @@ class BaseCaller:
                         exc,
                     )
             try:
-                result = loader[fun](*args, **kwargs)
-                if inspect.isawaitable(result):
-                    result = await result
+                result = await await_result(loader[fun](*args, **kwargs))
                 results[rid] = result
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception("Resource %s raised running %s", rid, fun)
