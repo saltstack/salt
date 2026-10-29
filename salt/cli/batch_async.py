@@ -300,7 +300,7 @@ class BatchAsync:
         if not task.cancelled() and task.exception() is not None:
             log.error("Batch task failed: %s", task.exception())
             if not self._closing:
-                self._create_task(self.close_safe())
+                self._create_task(self.close())
 
     async def __set_event_handler(self):
         await self.events_channel.subscribe(
@@ -411,7 +411,7 @@ class BatchAsync:
                 ex,
                 exc_info=True,
             )
-            await self.close_safe()
+            await self.close()
 
     async def start(self):
         """
@@ -455,7 +455,7 @@ class BatchAsync:
                 await self.start_batch()
         except BaseException:  # pylint: disable=broad-except
             if not self._closing:
-                await self.close_safe()
+                await self.close()
             raise
         finally:
             self._tasks.discard(current)
@@ -499,9 +499,10 @@ class BatchAsync:
         }
         await self.event.fire_event_async(data, f"salt/batch/{self.batch_jid}/done")
 
-        await self.close_safe()
+        await self.close()
 
-    async def close_safe(self):
+    async def close(self):
+        """Drain batch tasks and release this batch's shared event channel usage."""
         current = asyncio.current_task()
         if self._closing:
             if current not in self._tasks:
@@ -577,4 +578,4 @@ class BatchAsync:
                 exc_info=True,
             )
             self.active = self.active.difference(next_batch)
-            await self.close_safe()
+            await self.close()
