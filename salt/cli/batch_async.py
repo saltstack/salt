@@ -189,11 +189,14 @@ class SharedEventsChannel:
         self._used_by.discard(subscriber_id)
 
     async def destroy_unused(self):
+        """Drain reconnection before destroying a channel with no remaining users."""
         log.trace("SharedEventsChannel.destroy_unused called")
         if self._used_by:
             return False
         if self.master_event is None:
             return True
+        # SaltEvent.destroy() only tracks its initial connection attempt, not
+        # a later retry started by another batch after that attempt was cancelled.
         await cancel_tasks(self._reconnect_task)
         if self._used_by:
             return False
@@ -300,7 +303,7 @@ class BatchAsync:
         if not task.cancelled() and task.exception() is not None:
             log.error("Batch task failed: %s", task.exception())
             if not self._closing:
-                self._create_task(self.close())
+                self._create_task(self.close_safe())
 
     async def __set_event_handler(self):
         await self.events_channel.subscribe(
@@ -411,7 +414,7 @@ class BatchAsync:
                 ex,
                 exc_info=True,
             )
-            await self.close()
+            await self.close_safe()
 
     async def start(self):
         """
@@ -455,7 +458,7 @@ class BatchAsync:
                 await self.start_batch()
         except BaseException:  # pylint: disable=broad-except
             if not self._closing:
-                await self.close()
+                await self.close_safe()
             raise
         finally:
             self._tasks.discard(current)
@@ -499,9 +502,9 @@ class BatchAsync:
         }
         await self.event.fire_event_async(data, f"salt/batch/{self.batch_jid}/done")
 
-        await self.close()
+        await self.close_safe()
 
-    async def close(self):
+    async def close_safe(self):
         """Drain batch tasks and release this batch's shared event channel usage."""
         current = asyncio.current_task()
         if self._closing:
@@ -578,4 +581,4 @@ class BatchAsync:
                 exc_info=True,
             )
             self.active = self.active.difference(next_batch)
-            await self.close()
+            await self.close_safe()

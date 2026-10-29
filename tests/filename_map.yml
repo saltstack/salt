@@ -119,6 +119,7 @@ salt/cli/*:
   - integration.shell.test_arguments
 
 salt/cli/batch_async.py:
+  - pytests.integration.cli.test_batch_async
   - pytests.unit.cli.test_batch_async
 
 salt/cli/call.py:
