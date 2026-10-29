@@ -732,29 +732,27 @@ class TestRemoteCLIACLScenarios:
         """
         import salt.acl
 
-        # Configure ACL with explicit denials
+        # Configure ACL using publisher_acl-style positive whitelists: only
+        # the patterns listed below are allowed; everything else is denied by
+        # omission.
         acl_config = {
             "junior-admin-client": {
-                "runners": [
-                    "!cmd.run",
-                    "!cmd.shell",
-                    "!salt.execute",
-                    "!file.remove",
-                    "*",
+                "runner": [
+                    "test.*",
+                    "jobs.*",
+                    "cache.*",
                 ],
                 "wheel": [
-                    "!key.delete",
-                    "!key.reject",
-                    "*",
+                    "key.list_all",
+                    "key.accept",
                 ],
                 "minions": [
-                    "!prod-db-*",
-                    "!prod-master-*",
-                    "*",
+                    "dev-*",
+                    "staging-*",
                 ],
             },
             "contractor-client": {
-                "runners": ["test.ping", "jobs.list_jobs"],
+                "runner": ["test.ping", "jobs.list_jobs"],
                 "wheel": ["key.list_all"],
                 "minions": ["contractor-*"],
             },
@@ -762,7 +760,7 @@ class TestRemoteCLIACLScenarios:
 
         client_acl = salt.acl.ClientACL(acl_config)
 
-        # Junior admin - verify blocked operations
+        # Junior admin - verify blocked operations (not in whitelist)
         assert not client_acl.client_can_run_runner("junior-admin-client", "cmd.run")
         assert not client_acl.client_can_run_runner("junior-admin-client", "cmd.shell")
         assert not client_acl.client_can_run_wheel("junior-admin-client", "key.delete")
@@ -770,7 +768,7 @@ class TestRemoteCLIACLScenarios:
             "junior-admin-client", "prod-db-01"
         )
 
-        # Junior admin - verify allowed operations
+        # Junior admin - verify allowed operations (in whitelist)
         assert client_acl.client_can_run_runner("junior-admin-client", "test.ping")
         assert client_acl.client_can_run_runner("junior-admin-client", "jobs.list_jobs")
         assert client_acl.client_can_run_wheel("junior-admin-client", "key.accept")

@@ -80,6 +80,11 @@ class ClientACL:
 
         return matched_perms if found_match else None
 
+    _CMD_TYPE_ALIASES = {
+        "runner": ("runner", "runners"),
+        "wheel": ("wheel", "wheels"),
+    }
+
     def client_is_allowed(self, client_id, cmd, cmd_type):
         """
         Check if a client ID is allowed to run a specific command.
@@ -102,11 +107,15 @@ class ClientACL:
         if client_perms is None:
             return False
 
-        # If cmd_type is not configured for this client, deny access
-        if cmd_type not in client_perms:
+        # Accept both singular and plural forms (``runner``/``runners``,
+        # ``wheel``/``wheels``), matching the ``minion``/``minions`` alias
+        # already supported in ``client_can_target_minion``.
+        aliases = self._CMD_TYPE_ALIASES.get(cmd_type, (cmd_type,))
+        key = next((k for k in aliases if k in client_perms), None)
+        if key is None:
             return False
 
-        allowed_cmds = client_perms[cmd_type]
+        allowed_cmds = client_perms[key]
 
         # Empty list means deny all (explicit empty permissions)
         if not allowed_cmds:
