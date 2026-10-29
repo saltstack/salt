@@ -277,7 +277,9 @@ class TestRemoteRunnerExecution:
         _, pub = salt.crypt.gen_keys(4096)
 
         with salt.key.ClientKey(salt_master.config) as ckey:
-            ckey.cache.store("client_keys", client_id, {"pub": pub, "state": "accepted"})
+            ckey.cache.store(
+                "client_keys", client_id, {"pub": pub, "state": "accepted"}
+            )
 
             try:
                 # Create runner config with client auth
@@ -301,9 +303,9 @@ class TestRemoteRunnerExecution:
                     result = runner.run()
                     # If we get here, runner executed successfully
                     assert result is True or result is not None
-                except Exception as e:
-                    # Even if execution fails, verify it tried the network path
-                    # (not an IPC error)
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    # Execution may raise for reasons unrelated to transport; we
+                    # only need to confirm the network path was taken (no IPC error).
                     assert (
                         "ipc" not in str(e).lower()
                     ), f"Should not have IPC errors with network events: {e}"
@@ -331,7 +333,9 @@ class TestRemoteKeyManagement:
         _, pub = salt.crypt.gen_keys(4096)
 
         with salt.key.ClientKey(salt_master.config) as ckey:
-            ckey.cache.store("client_keys", client_id, {"pub": pub, "state": "accepted"})
+            ckey.cache.store(
+                "client_keys", client_id, {"pub": pub, "state": "accepted"}
+            )
 
             try:
                 # Create KeyCLI config with client auth
@@ -358,8 +362,9 @@ class TestRemoteKeyManagement:
                         # For now, verify the setup is correct for execution
                         assert keycli.opts["client_auth"] is True
                         assert keycli.opts["__role"] == "client"
-                    except Exception as e:
-                        # Even if execution fails, verify network path was attempted
+                    except Exception as e:  # pylint: disable=broad-exception-caught
+                        # Execution may raise for reasons unrelated to transport;
+                        # we only need to confirm the network path was taken.
                         assert (
                             "ipc" not in str(e).lower()
                         ), f"Should not have IPC errors with network events: {e}"

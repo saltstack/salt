@@ -88,9 +88,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         # Create REP socket for client authentication
         auth_socket = context.socket(zmq.REP)
         auth_socket.setsockopt(zmq.LINGER, 1000)
-        auth_uri = (
-            f"tcp://{self.opts['interface']}:{client_event_port + 1}"
-        )
+        auth_uri = f"tcp://{self.opts['interface']}:{client_event_port + 1}"
         auth_socket.bind(auth_uri)
 
         # Track authenticated clients and their subscriptions
