@@ -560,6 +560,7 @@ def shared_channel(io_loop):
     ) as event:
         event.return_value.subscriber._stream = MagicMock()
         event.return_value.subscriber.connected = False
+        event.return_value._connect_task = None
         instance = SharedEventsChannel({"conf_file": "master"}, io_loop)
         yield instance
         salt.utils.asynchronous.aioloop(io_loop).run_until_complete(
@@ -650,3 +651,27 @@ async def test_new_user_keeps_shared_channel_during_reconnect_cleanup(shared_cha
     with pytest.raises(asyncio.CancelledError):
         await pending
     shared_channel.unuse("new batch")
+
+
+async def test_subscription_joins_initial_event_connection(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def connect():
+        started.set()
+        await release.wait()
+        subscriber.connected = True
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    initial = asyncio.create_task(subscriber.connect())
+    shared_channel.master_event._connect_task = initial
+    await started.wait()
+    subscription = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    await asyncio.sleep(0)
+    assert subscriber.connect.await_count == 1
+    release.set()
+    await subscription
+    subscriber.connect.assert_awaited_once()
