@@ -4,14 +4,11 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
 import uuid
-
-import tornado.gen
-import tornado.ioloop
-import tornado.locks
 
 import salt.crypt
 import salt.exceptions
@@ -79,7 +76,9 @@ class AsyncReqChannel:
             opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop)
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -122,7 +121,7 @@ class AsyncReqChannel:
         # cache.  Holding this lock across the send + decrypt window makes
         # the request/reply pair atomic w.r.t. any other coroutine on the
         # same io_loop.  See issue #69753.
-        self._req_lock = tornado.locks.Lock()
+        self._req_lock = asyncio.Lock()
 
     @property
     def crypt(self):
@@ -496,7 +495,9 @@ class AsyncPubChannel:
 
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop)
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
         host = opts.get("master_ip", "127.0.0.1")
@@ -732,4 +733,4 @@ class AsyncPubChannel:
         return self
 
     async def __aexit__(self, *_):
-        await self.close()
+        self.close()

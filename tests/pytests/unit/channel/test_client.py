@@ -1,12 +1,12 @@
+import asyncio
+
 import pytest
-import tornado.concurrent
-import tornado.gen
-import tornado.ioloop
 
 import salt.channel.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
+from tests.support.mock import MagicMock, patch
 
 
 def test_async_methods():
@@ -27,7 +27,7 @@ def test_async_methods():
                 assert hasattr(cls, name)
 
 
-def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_path):
+async def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_path):
     """
     Ensure AsyncPubChannel raises a SaltClientError when it encounters a bad key.
 
@@ -44,7 +44,9 @@ def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_path):
     minion_opts["master_ip"] = "127.0.0.1"
 
     # This will initialize the singleton with a valid key.
-    salt.channel.client.AsyncPubChannel.factory(minion_opts, crypt="aes")
+    with patch("salt.transport.publish_client"):
+        channel = salt.channel.client.AsyncPubChannel.factory(minion_opts, crypt="aes")
+        channel.close()
 
     # Now we need to overwrite the bad key with the new one. When gen_token
     # gets called a SaltClientError will ge traised
@@ -57,7 +59,6 @@ def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_path):
         salt.channel.client.AsyncPubChannel.factory(minion_opts, crypt="aes")
 
 
-@pytest.mark.asyncio
 async def test_async_pub_channel_decode_payload_drops_undecrypted_payload():
     """
     When a payload cannot be decrypted even after re-authenticating the master it
@@ -95,10 +96,9 @@ class _StubTransport:
         self._replies = list(replies)
         self.sent = []
 
-    @tornado.gen.coroutine
-    def send(self, payload, timeout=None):  # pylint: disable=unused-argument
+    async def send(self, payload, timeout=None):  # pylint: disable=unused-argument
         self.sent.append(payload)
-        raise tornado.gen.Return(self._replies.pop(0))
+        return self._replies.pop(0)
 
 
 class _StubAuth:
@@ -113,9 +113,8 @@ class _StubAuth:
     def gen_token(self, clear_tok):  # pragma: no cover - unused
         return b""
 
-    @tornado.gen.coroutine
-    def authenticate(self):  # pragma: no cover - unused
-        raise tornado.gen.Return(None)
+    async def authenticate(self):  # pragma: no cover - unused
+        return None
 
 
 def _make_channel(minion_opts, tmp_path, transport, auth):
@@ -128,7 +127,7 @@ def _make_channel(minion_opts, tmp_path, transport, auth):
     )
 
 
-def test_do_transfer_reauth_mid_flight_uses_same_crypticle(minion_opts, tmp_path):
+async def test_do_transfer_reauth_mid_flight_uses_same_crypticle(minion_opts, tmp_path):
     """
     Regression for issue #69753: if ``self.auth.session_crypticle`` is
     swapped between the ``dumps`` on the send path and the ``loads`` on the
@@ -146,8 +145,7 @@ def test_do_transfer_reauth_mid_flight_uses_same_crypticle(minion_opts, tmp_path
     nonce_holder = {}
 
     class _CapturingTransport(_StubTransport):
-        @tornado.gen.coroutine
-        def send(self, payload, timeout=None):
+        async def send(self, payload, timeout=None):
             self.sent.append(payload)
             # Extract the actual nonce the channel used by decrypting the
             # outbound load with the *old* key (which must have been used
@@ -159,7 +157,7 @@ def test_do_transfer_reauth_mid_flight_uses_same_crypticle(minion_opts, tmp_path
             decrypted = master_old.loads(enc_load)
             nonce_holder["nonce"] = decrypted["nonce"]
             reply = master_old.dumps({"result": "ok"}, nonce=decrypted["nonce"])
-            raise tornado.gen.Return(reply)
+            return reply
 
     minion_old = salt.crypt.Crypticle(minion_opts, old_key)
     minion_new = salt.crypt.Crypticle(minion_opts, new_key)
@@ -168,38 +166,21 @@ def test_do_transfer_reauth_mid_flight_uses_same_crypticle(minion_opts, tmp_path
 
     channel = _make_channel(minion_opts, tmp_path, transport, auth)
 
-    io_loop = tornado.ioloop.IOLoop()
+    original_transport_send = transport.send
 
-    @tornado.gen.coroutine
-    def _drive():
-        # Simulate a concurrent re-auth: swap in a *new* session_crypticle
-        # after the send path pinned the reference but before the reply
-        # is decrypted.  With the fix, _do_transfer must use the pinned
-        # (old) crypticle for both dumps and loads; without it, loads
-        # would use the new one and raise AuthenticationError (HMAC).
-        original_transport_send = transport.send
+    async def _rotate_and_send(payload, timeout=None):
+        reply = await original_transport_send(payload, timeout=timeout)
+        auth.session_crypticle = minion_new
+        return reply
 
-        @tornado.gen.coroutine
-        def _rotate_and_send(payload, timeout=None):
-            reply = yield original_transport_send(payload, timeout=timeout)
-            # Rotate the auth mid-flight.
-            auth.session_crypticle = minion_new
-            raise tornado.gen.Return(reply)
-
-        transport.send = _rotate_and_send
-        result = yield channel._crypted_transfer({"cmd": "test"}, timeout=1)
-        raise tornado.gen.Return(result)
-
-    try:
-        result = io_loop.run_sync(_drive)
-    finally:
-        io_loop.close(all_fds=True)
+    transport.send = _rotate_and_send
+    result = await channel._crypted_transfer({"cmd": "test"}, timeout=1)
 
     assert result == {"result": "ok"}
     assert nonce_holder["nonce"]  # sanity: request had a nonce
 
 
-def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
+async def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
     """
     Regression for issue #69753: two concurrent ``_crypted_transfer``
     calls on the same channel must not overlap.  We assert the second
@@ -211,18 +192,15 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
     minion = salt.crypt.Crypticle(minion_opts, key)
 
     events = []
-    # ``gate`` must be created inside the running io_loop; modern tornado's
-    # ``Future`` binds to the currently-running asyncio event loop, which
-    # only exists once ``run_sync`` has installed one.
-    gate_holder = {}
+    gate = asyncio.Event()
+    started = asyncio.Event()
 
     class _OrderingTransport(_StubTransport):
         def __init__(self):
             super().__init__([])
             self.call = 0
 
-        @tornado.gen.coroutine
-        def send(self, payload, timeout=None):
+        async def send(self, payload, timeout=None):
             self.call += 1
             events.append(f"send-start-{self.call}")
             outer = (
@@ -233,43 +211,22 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
             nonce = decrypted["nonce"]
             reply = master.dumps({"n": self.call}, nonce=nonce)
             if self.call == 1:
-                # Suspend the first send until the second send starts
-                # (would-be race) -- with the lock, the second send
-                # cannot begin, so this future is completed by the test
-                # driver after a small delay via io_loop.call_later.
-                yield gate_holder["gate"]
+                started.set()
+                await gate.wait()
             events.append(f"send-end-{self.call}")
-            raise tornado.gen.Return(reply)
+            return reply
 
     auth = _StubAuth(minion_opts, minion)
     transport = _OrderingTransport()
     channel = _make_channel(minion_opts, tmp_path, transport, auth)
 
-    io_loop = tornado.ioloop.IOLoop()
-
-    @tornado.gen.coroutine
-    def _drive():
-        # Fire both transfers "concurrently".  Under the lock, transfer2
-        # must wait for transfer1 to fully finish (including decrypt)
-        # before its send even begins.
-        gate_holder["gate"] = tornado.concurrent.Future()
-        fut1 = channel._crypted_transfer({"cmd": "one"}, timeout=5)
-        fut2 = channel._crypted_transfer({"cmd": "two"}, timeout=5)
-
-        def _release():
-            gate = gate_holder["gate"]
-            if not gate.done():
-                gate.set_result(None)
-
-        io_loop.call_later(0.05, _release)
-        r1 = yield fut1
-        r2 = yield fut2
-        raise tornado.gen.Return((r1, r2))
-
-    try:
-        r1, r2 = io_loop.run_sync(_drive)
-    finally:
-        io_loop.close(all_fds=True)
+    first = asyncio.create_task(channel._crypted_transfer({"cmd": "one"}, timeout=5))
+    await started.wait()
+    second = asyncio.create_task(channel._crypted_transfer({"cmd": "two"}, timeout=5))
+    await asyncio.sleep(0)
+    assert events == ["send-start-1"]
+    gate.set()
+    r1, r2 = await asyncio.gather(first, second)
 
     # With the lock, ordering must be: send-start-1, send-end-1,
     # send-start-2, send-end-2.  If the lock is missing, we'd see
@@ -282,3 +239,72 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
     ], events
     assert r1 == {"n": 1}
     assert r2 == {"n": 2}
+
+
+@pytest.mark.parametrize("crypt", ["clear", "aes"])
+async def test_request_factory_uses_callers_loop(minion_opts, crypt):
+    loop = asyncio.get_running_loop()
+    with patch("salt.crypt.AsyncAuth") as auth, patch(
+        "salt.transport.request_client"
+    ) as transport:
+        channel = salt.channel.client.AsyncReqChannel.factory(minion_opts, crypt=crypt)
+        transport.assert_called_once_with(minion_opts, io_loop=loop)
+        if crypt == "aes":
+            auth.assert_called_once_with(minion_opts, io_loop=loop)
+        else:
+            auth.assert_not_called()
+        channel.close()
+    assert not loop.is_closed()
+
+
+async def test_publish_factory_uses_callers_loop(minion_opts):
+    loop = asyncio.get_running_loop()
+    with patch("salt.crypt.AsyncAuth"), patch(
+        "salt.transport.publish_client"
+    ) as transport, patch("salt.utils.event.get_event"):
+        channel = salt.channel.client.AsyncPubChannel.factory(minion_opts)
+        assert channel.io_loop is loop
+        assert transport.call_args.args[1] is loop
+        channel.close()
+    assert not loop.is_closed()
+
+
+async def test_cancelled_transfer_releases_channel(minion_opts, tmp_path):
+    """Cancelling the active request must allow the next encrypted request to run."""
+    key = salt.crypt.Crypticle.generate_key_string()
+    crypticle = salt.crypt.Crypticle(minion_opts, key)
+    started = asyncio.Event()
+    calls = []
+
+    async def send(payload, timeout=None):
+        calls.append(payload)
+        if len(calls) == 1:
+            started.set()
+            await asyncio.Event().wait()
+        load = crypticle.loads(payload["load"])
+        return crypticle.dumps({"result": "ok"}, nonce=load["nonce"])
+
+    transport = MagicMock(send=send)
+    channel = _make_channel(
+        minion_opts, tmp_path, transport, _StubAuth(minion_opts, crypticle)
+    )
+    first = asyncio.create_task(channel._crypted_transfer({"cmd": "one"}, timeout=5))
+    await started.wait()
+    second = asyncio.create_task(channel._crypted_transfer({"cmd": "two"}, timeout=5))
+    await asyncio.sleep(0)
+    assert len(calls) == 1
+    first.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    assert await asyncio.wait_for(second, 1) == {"result": "ok"}
+    assert len(calls) == 2
+
+
+async def test_publish_async_context_closes_resources(minion_opts):
+    with patch("salt.crypt.AsyncAuth"), patch(
+        "salt.transport.publish_client"
+    ) as transport, patch("salt.utils.event.get_event") as event:
+        async with salt.channel.client.AsyncPubChannel.factory(minion_opts):
+            transport.return_value.close.assert_not_called()
+        transport.return_value.close.assert_called_once_with()
+        event.return_value.destroy.assert_called_once_with()
