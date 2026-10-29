@@ -4,6 +4,8 @@ import multiprocessing
 import os
 import socket
 import time
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 import aiohttp
 import aiohttp.web
@@ -25,6 +27,8 @@ from salt.transport.tcp import (
 )
 
 log = logging.getLogger(__name__)
+
+_ResultT = TypeVar("_ResultT")
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -713,7 +717,9 @@ class RequestClient(salt.transport.base.RequestClient):
         except asyncio.TimeoutError as exc:
             raise SaltReqTimeoutError("WebSocket request timed out") from exc
 
-    def _start_operation(self, operation, *args):
+    def _start_operation(
+        self, operation: Callable[..., Awaitable[_ResultT]], *args: Any
+    ) -> asyncio.Task[_ResultT]:
         """Own the I/O task so shutdown never cancels the caller's entire task."""
         if self._closing:
             raise ClosingError("Request client is closed")
@@ -722,7 +728,9 @@ class RequestClient(salt.transport.base.RequestClient):
         task.add_done_callback(self._operation_tasks.discard)
         return task
 
-    async def _run_operation(self, operation, *args):
+    async def _run_operation(
+        self, operation: Callable[..., Awaitable[_ResultT]], *args: Any
+    ) -> _ResultT:
         # One connection has no request IDs: keep each exchange indivisible.
         async with self._send_lock:
             if self._closing:
