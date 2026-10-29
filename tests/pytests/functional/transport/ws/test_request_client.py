@@ -108,6 +108,17 @@ async def test_concurrent_requests_keep_their_own_replies(client, websocket_serv
     assert websocket_server["connections"] == 1
 
 
+async def test_connect_and_send_share_one_connection(client, websocket_server):
+    loads = [{"request": index} for index in range(10)]
+    results = await asyncio.gather(
+        *(client.connect() for _ in range(10)),
+        *(client.send(load) for load in loads),
+    )
+    assert all(ws is client.ws for ws in results[:10])
+    assert results[10:] == loads
+    assert websocket_server["connections"] == 1
+
+
 async def test_timeout_discards_connection_and_allows_retry(client, websocket_server):
     with pytest.raises(SaltReqTimeoutError):
         await client.send("wait", timeout=0.02)
@@ -148,8 +159,9 @@ async def test_peer_close_is_an_error_and_allows_reconnect(client):
     assert await client.send("next") == "next"
 
 
-async def test_close_async_drains_active_request(client, websocket_server):
-    active = asyncio.create_task(client.send("wait"))
+@pytest.mark.parametrize("timeout", [60, None])
+async def test_close_async_drains_active_request(client, websocket_server, timeout):
+    active = asyncio.create_task(client.send("wait", timeout=timeout))
     await websocket_server["waiting"].wait()
     session = client.session
     await client.close_async()
@@ -174,7 +186,7 @@ async def test_async_channel_exit_awaits_websocket_cleanup(websocket_server):
     assert session.closed
     assert transport._closed
     assert transport.ws is None
-    assert transport.close_task is None
+    assert transport.close_task.done()
 
 
 async def test_sync_close_is_awaitable_through_close_async(client):
@@ -196,6 +208,79 @@ async def test_failed_connect_closes_new_session(client):
     assert session.closed
     assert client.session is None
     assert client.ws is None
+
+
+async def test_close_drains_queued_requests_and_connect(client, websocket_server):
+    active = asyncio.create_task(client.send("wait"))
+    await websocket_server["waiting"].wait()
+    queued = [asyncio.create_task(client.send(index)) for index in range(5)]
+    queued.append(asyncio.create_task(client.connect()))
+    await asyncio.sleep(0)
+    await asyncio.sleep(0)
+    await asyncio.wait_for(client.close_async(), 1)
+    results = await asyncio.gather(active, *queued, return_exceptions=True)
+    assert all(isinstance(result, asyncio.CancelledError) for result in results)
+    assert websocket_server["received"] == ["wait"]
+    assert not client._operation_tasks
+    assert client._closed
+
+
+async def test_close_during_connect_drains_child_before_channel_exit(client):
+    started, finalized = asyncio.Event(), asyncio.Event()
+    session = aiohttp.ClientSession()
+
+    async def handshake(*args, **kwargs):
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            finalized.set()
+
+    async def caller():
+        with patch("salt.transport.request_client", return_value=client):
+            async with salt.channel.client.AsyncReqChannel.factory(
+                {"transport": "ws"}, crypt="clear"
+            ) as channel:
+                await channel.connect()
+
+    with patch("aiohttp.ClientSession", return_value=session), patch.object(
+        session, "ws_connect", handshake
+    ):
+        task = asyncio.create_task(caller())
+        await started.wait()
+        await asyncio.wait_for(client.close_async(), 1)
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(task, 1)
+    assert finalized.is_set()
+    assert session.closed
+    assert not client._operation_tasks
+
+
+async def test_close_waiters_share_cleanup_when_one_is_cancelled(client):
+    await client.send("ping")
+    started, release = asyncio.Event(), asyncio.Event()
+    close_connection = client._close_connection
+
+    async def cleanup():
+        started.set()
+        await release.wait()
+        await close_connection()
+
+    with patch.object(
+        client, "_close_connection", AsyncMock(side_effect=cleanup)
+    ) as close:
+        first = asyncio.create_task(client.close_async())
+        await started.wait()
+        second = asyncio.create_task(client.close_async())
+        await asyncio.sleep(0)
+        first.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        assert not client.close_task.cancelled()
+        release.set()
+        await asyncio.wait_for(second, 1)
+        close.assert_awaited_once_with()
+    assert client._closed
 
 
 @pytest.mark.parametrize("websocket_server", ["tls"], indirect=True)
