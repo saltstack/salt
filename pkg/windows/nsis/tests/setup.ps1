@@ -160,6 +160,17 @@ if ( Test-Path -Path "$BUILDENV_DIR\salt-minion.exe" ) {
     exit 1
 }
 
+# Build a salt-pip stub that records arguments, config and service state, and
+# returns a test-controlled exit code without accessing the network.
+Write-Host "Building salt-pip.exe stub: " -NoNewline
+& go build -C "$SCRIPT_DIR\stubs\pip" -o "$BUILDENV_DIR\salt-pip.exe" .
+if ( $LASTEXITCODE -eq 0 -and (Test-Path -Path "$BUILDENV_DIR\salt-pip.exe") ) {
+    Write-Result "Success"
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
 # Build the exit stub (vcredist): a real PE that exits immediately with code 0
 # so ExecWait succeeds and the installer does not abort during VCRedist install.
 $prereq_files = "vcredist_x86_2022.exe",
