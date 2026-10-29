@@ -1,4 +1,5 @@
 import asyncio
+import collections
 import ctypes
 import multiprocessing
 import pathlib
@@ -1435,6 +1436,123 @@ async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
         "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
         "at the end of MasterKeys._setup_keys)."
     )
+
+
+async def test_auth_errors_replayed_under_their_own_tag(cluster_master_opts):
+    """
+    Regression test for issue #70569.
+
+    A parked event must be replayed under the tag it arrived with.
+    """
+    import hashlib
+
+    from tests.support.mock import AsyncMock, MagicMock
+
+    bare_id = cluster_master_opts["id"].removesuffix("_master")
+    aes_bytes = b"shared-aes-secret"
+    digest = salt.utils.stringutils.to_bytes(hashlib.sha256(aes_bytes).hexdigest())
+
+    announce_tag = salt.utils.event.tagify("salt-master-2", "peer", "cluster")
+    payload = salt.utils.event.SaltEvent.pack(
+        announce_tag,
+        {
+            "peer_id": "salt-master-2",
+            "peers": {bare_id: {"aes": b"encrypted-aes", "sig": b"signature"}},
+        },
+    )
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.peer_keys = {}
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock()
+    channel.master_key = MagicMock()
+    channel.master_key.master_key.decrypt.return_value = aes_bytes
+    channel.send_aes_key_event = lambda: None
+
+    # One event forwarded by salt-master-2 while we still had no key for it.
+    parked_tag = "cluster/event/salt-master-2/salt/job/20260101/ret"
+    channel.auth_errors = {
+        "salt-master-2": collections.deque([(parked_tag, b"parked-payload")]),
+        "salt-master-3": collections.deque(),
+    }
+
+    # Record what the replay asks to decrypt instead of driving a Crypticle,
+    # so the peer-id the replay derived is directly observable.
+    extracted = []
+
+    def fake_extract(peer_id, data):
+        extracted.append((peer_id, data))
+        return {"event_payload_marker": True}
+
+    channel.extract_cluster_event = fake_extract
+
+    fake_peer_key = MagicMock()
+    fake_peer_key.decrypt.return_value = digest
+
+    # 3008.x fetches peer public keys through ``MasterKeys`` (cache-backed),
+    # not via ``salt.crypt.PublicKey(path)`` as earlier branches did.  Stub
+    # ``master_key.fetch`` so the signature check uses our fake peer key.
+    channel.master_key.fetch.return_value = fake_peer_key
+    (
+        pathlib.Path(cluster_master_opts["cluster_pki_dir"])
+        / "peers"
+        / "salt-master-2.pub"
+    ).write_text("dummy")
+    await channel.handle_pool_publish(payload)
+
+    assert extracted == [
+        ("salt-master-2", b"parked-payload")
+    ], "the replay must derive the peer-id from the parked event's own tag"
+
+    channel.transport.publish_payload.assert_called_once()
+    republished_tag, _ = salt.utils.event.SaltEvent.unpack(
+        channel.transport.publish_payload.call_args.args[0]
+    )
+    assert republished_tag == "salt/job/20260101/ret", (
+        "the parked event must go back on the bus under its own stripped tag, "
+        f"not something derived from the announce tag {announce_tag!r}"
+    )
+
+
+def test_request_peer_key_is_throttled(cluster_master_opts):
+    """
+    Regression test for issue #70569.
+
+    Re-announcing on an undecryptable event must be rate limited.
+    """
+    from tests.support.mock import patch
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel._peer_key_requests = {}
+    calls = []
+    channel.send_aes_key_event = lambda: calls.append(True)
+
+    with patch("salt.channel.server.time.monotonic", return_value=1000.0):
+        channel._request_peer_key("salt-master-2")
+        channel._request_peer_key("salt-master-2")
+        channel._request_peer_key("salt-master-2")
+        # A different peer is throttled independently.
+        channel._request_peer_key("salt-master-3")
+    assert len(calls) == 2
+
+    # Still inside the interval for salt-master-2.
+    with patch(
+        "salt.channel.server.time.monotonic",
+        return_value=1000.0 + channel.PEER_KEY_REQUEST_INTERVAL - 0.1,
+    ):
+        channel._request_peer_key("salt-master-2")
+    assert len(calls) == 2
+
+    # Past it: the peer is asked again, so a key that never arrives keeps
+    # being chased rather than being given up on after one try.
+    with patch(
+        "salt.channel.server.time.monotonic",
+        return_value=1000.0 + channel.PEER_KEY_REQUEST_INTERVAL,
+    ):
+        channel._request_peer_key("salt-master-2")
+    assert len(calls) == 3
 
 
 async def test_send_state_sync_chunks_closes_its_pusher(cluster_master_opts):

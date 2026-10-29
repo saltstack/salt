@@ -3142,6 +3142,7 @@ class MasterPubServerChannel:
         if self.opts.get("cluster_id"):
             self.tcp_master_pool_port = self.opts["cluster_pool_port"]
             self.auth_errors = collections.defaultdict(collections.deque)
+            self._peer_key_requests = {}
             self.peer_map = {}
 
             for peer in self.opts.get("cluster_peers", []):
@@ -4057,8 +4058,8 @@ class MasterPubServerChannel:
                         self.peer_keys[peer] = key_str
                         self.send_aes_key_event()
                         while self.auth_errors[peer]:
-                            key, data = self.auth_errors[peer].popleft()
-                            peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                            parked_tag, data = self.auth_errors[peer].popleft()
+                            peer_id, parsed_tag = self.parse_cluster_tag(parked_tag)
                             try:
                                 event_data = self.extract_cluster_event(peer_id, data)
                             except salt.exceptions.AuthenticationError:
@@ -4075,8 +4076,8 @@ class MasterPubServerChannel:
                     self.peer_keys[peer] = key_str
                     self.send_aes_key_event()
                     while self.auth_errors[peer]:
-                        key, data = self.auth_errors[peer].popleft()
-                        peer_id, parsed_tag = self.parse_cluster_tag(tag)
+                        parked_tag, data = self.auth_errors[peer].popleft()
+                        peer_id, parsed_tag = self.parse_cluster_tag(parked_tag)
                         try:
                             event_data = self.extract_cluster_event(peer_id, data)
                         except salt.exceptions.AuthenticationError:
@@ -4093,6 +4094,7 @@ class MasterPubServerChannel:
                     event_data = self.extract_cluster_event(peer_id, data)
                 except salt.exceptions.AuthenticationError:
                     self.auth_errors[peer_id].append((tag, data))
+                    self._request_peer_key(peer_id)
                 else:
                     await self.transport.publish_payload(
                         salt.utils.event.SaltEvent.pack(parsed_tag, event_data)
@@ -4107,6 +4109,33 @@ class MasterPubServerChannel:
         peer_id = tag.replace("cluster/event/", "").split("/")[0]
         stripped_tag = tag.replace(f"cluster/event/{peer_id}/", "")
         return peer_id, stripped_tag
+
+    #: Seconds to wait before asking one peer again for its AES key.
+    PEER_KEY_REQUEST_INTERVAL = 10
+
+    def _request_peer_key(self, peer_id):
+        """
+        Announce our AES key to *peer_id*.
+
+        If the node was not listening for peer's AES key announcement, every event
+        that peer forwards cannot be decrypted and is parked in ``auth_errors`` so
+        the cluster stays split. To avoid this we reannounce our key to the peer
+        if we received an event that we can't decrypt. The peer will also share
+        its key to us, so we would be able to decrypt the parked events.
+
+        Requests are throttled to avoid flooding peers with announcements.
+        """
+        now = time.monotonic()
+        if (
+            now - self._peer_key_requests.get(peer_id, 0)
+            < self.PEER_KEY_REQUEST_INTERVAL
+        ):
+            return
+        self._peer_key_requests[peer_id] = now
+        log.warning(
+            "No AES key for peer %s; re-announcing ours to request theirs", peer_id
+        )
+        self.send_aes_key_event()
 
     def extract_cluster_event(self, peer_id, data):
         if peer_id in self.peer_keys:
