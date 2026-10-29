@@ -16,6 +16,7 @@ import psutil
 import pytest
 
 import salt.modules.gpg as gpg
+import salt.utils.secret
 from tests.support.mock import MagicMock, Mock, call, patch
 
 pytest.importorskip("gnupg")
@@ -1185,3 +1186,133 @@ def test_get_user_gnupghome_respects_shell_env_setup(user, envvar):
     ):
         res = gpg._get_user_gnupghome(user)
     assert res == expected
+
+
+@pytest.fixture
+def masking_pillar_mock():
+    """
+    Fake pillar.get that behaves like the 3008 masking machinery: scalar
+    string values come back redacted unless the caller passes unmask=True.
+    """
+
+    def _pillar_get(key, default=None, **kwargs):
+        if kwargs.get("unmask"):
+            return salt.utils.secret.expose(GPG_TEST_KEY_PASSPHRASE)
+        return salt.utils.secret.serial(GPG_TEST_KEY_PASSPHRASE)
+
+    return MagicMock(side_effect=_pillar_get)
+
+
+def test_create_key_unmasks_pillar_passphrase(masking_pillar_mock, tmp_path):
+    """
+    gpg.create_key must pass the real pillar passphrase to gen_key_input,
+    not the masking placeholder.
+    """
+    user_info = MagicMock(
+        return_value={"name": "salt", "home": str(tmp_path), "uid": 1000, "gid": 1000}
+    )
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.gen_key_input.return_value = "%commit\n"
+        create.return_value.gen_key.return_value.fingerprint = "F" * 40
+        with patch.dict(
+            gpg.__salt__,
+            {
+                "pillar.get": masking_pillar_mock,
+                "config.option": MagicMock(return_value="salt"),
+                "user.info": user_info,
+            },
+        ):
+            ret = gpg.create_key(use_passphrase=True, gnupghome=str(tmp_path))
+    assert ret["res"] is True
+    passed = create.return_value.gen_key_input.call_args.kwargs["passphrase"]
+    assert passed == GPG_TEST_KEY_PASSPHRASE
+    assert passed != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_delete_key_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.delete_key must pass the real pillar passphrase to delete_keys,
+    not the masking placeholder.
+    """
+    fingerprint = "F" * 40
+    key = {"fingerprint": fingerprint}
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.delete_keys.return_value = "ok"
+        with patch.object(gpg, "get_key", return_value=key), patch.object(
+            gpg, "get_secret_key", return_value=key
+        ):
+            with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+                ret = gpg.delete_key(fingerprint=fingerprint, delete_secret=True)
+    assert ret["res"] is True
+    create.return_value.delete_keys.assert_any_call(
+        fingerprint, True, passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_export_key_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.export_key must pass the real pillar passphrase to export_keys,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.export_keys.return_value = "exported key data"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.export_key(keyids="ABCDEF01", secret=True, use_passphrase=True)
+    assert ret["res"] is True
+    create.return_value.export_keys.assert_called_once_with(
+        ["ABCDEF01"], True, passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_sign_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.sign must pass the real pillar passphrase to gnupg's sign,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        create.return_value.sign.return_value.data = b"signed"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.sign(keyid="ABCDEF01", text="foo", use_passphrase=True)
+    assert ret == b"signed"
+    create.return_value.sign.assert_called_once_with(
+        "foo", keyid="ABCDEF01", passphrase=GPG_TEST_KEY_PASSPHRASE
+    )
+
+
+def test_encrypt_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.encrypt with sign=True must pass the real pillar passphrase to
+    gnupg's encrypt, not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        result = create.return_value.encrypt.return_value
+        result.ok = True
+        result.data = b"encrypted"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.encrypt(
+                text="foo",
+                recipients="person@example.com",
+                sign=True,
+                use_passphrase=True,
+            )
+    assert ret["res"] is True
+    passed = create.return_value.encrypt.call_args.kwargs["passphrase"]
+    assert passed == GPG_TEST_KEY_PASSPHRASE
+    assert passed != salt.utils.secret.REDACT_PLACEHOLDER
+
+
+def test_decrypt_unmasks_pillar_passphrase(masking_pillar_mock):
+    """
+    gpg.decrypt must pass the real pillar passphrase to gnupg's decrypt,
+    not the masking placeholder.
+    """
+    with patch("salt.modules.gpg._create_gpg") as create:
+        result = create.return_value.decrypt.return_value
+        result.ok = True
+        result.data = b"decrypted"
+        with patch.dict(gpg.__salt__, {"pillar.get": masking_pillar_mock}):
+            ret = gpg.decrypt(text="foo", use_passphrase=True)
+    assert ret["res"] is True
+    create.return_value.decrypt.assert_called_once_with(
+        "foo", passphrase=GPG_TEST_KEY_PASSPHRASE
+    )

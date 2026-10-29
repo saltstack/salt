@@ -69,9 +69,25 @@ class Roster:
             self.backends = backends
         if not backends:
             self.backends = ["flat"]
-        utils = salt.loader.utils(self.opts)
-        runner = salt.loader.runner(self.opts, utils=utils)
-        self.rosters = salt.loader.roster(self.opts, runner=runner, utils=utils)
+        self.utils = salt.loader.utils(self.opts)
+        self.runner = salt.loader.runner(self.opts, utils=self.utils)
+        self.rosters = salt.loader.roster(
+            self.opts, runner=self.runner, utils=self.utils
+        )
+
+    def destroy(self):
+        if hasattr(self, "rosters") and self.rosters is not None:
+            if hasattr(self.rosters, "destroy"):
+                self.rosters.destroy()
+            self.rosters = {}
+        if hasattr(self, "runner") and self.runner is not None:
+            if hasattr(self.runner, "destroy"):
+                self.runner.destroy()
+            self.runner = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     def _gen_back(self):
         """

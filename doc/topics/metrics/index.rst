@@ -184,6 +184,25 @@ Prometheus pull::
 ``curl -s http://127.0.0.1:9464/metrics | grep '^salt_'`` then shows
 the salt-namespaced metrics.
 
+Multi-process semantics
+-----------------------
+
+The master parent and each MWorker are separate processes and each one
+exports its own metrics.  To keep their series apart, every process sets
+``service.instance.id`` to ``<hostname>/<process name>``, for example
+``salt-master-01/Master`` for the master parent and
+``salt-master-01/MWorker-2`` for a worker.  The process name is the same
+after a worker restarts, so a restarted worker continues its own series.
+The hostname keeps processes on different masters apart.  Processes that are
+not given a name fall back to ``<hostname>/<pid>``.
+
+A ``service.instance.id`` set in ``resource_attributes`` takes precedence.
+
+With OTLP the collector receives one series per instance.  Series are not
+summed for you.  Aggregate in the query, for example
+``sum by (cmd) (rate(salt_master_requests_handled_total[5m]))``, or
+``sum without (service_instance_id, instance, job) (...)`` to get one total.
+
 Fork handling
 -------------
 

@@ -3,6 +3,7 @@ import importlib
 import logging
 import os
 import pathlib
+import stat
 import textwrap
 from collections import OrderedDict
 
@@ -10,6 +11,7 @@ import pytest
 
 import salt.modules.aptpkg as aptpkg
 import salt.modules.pkg_resource as pkg_resource
+import salt.utils.files
 import salt.utils.path
 from salt.exceptions import (
     CommandExecutionError,
@@ -481,11 +483,16 @@ def test_add_repo_key_failed(repo_keys_var):
                 aptpkg.add_repo_key(**kwargs)
 
 
-def test_add_repo_key_keydir_not_exists(repo_keys_var, tmp_path, caplog):
+def test_add_repo_key_keydir_autocreated(repo_keys_var, tmp_path, caplog):
     """
-    Test - Add a repo key when aptkey is False
-    and the keydir does not exist
+    Test - Add a repo key when aptkey is False and the keydir does not
+    yet exist.  As of the fix for the Debian 11 / Ubuntu 22.04 apt
+    convention gap (see :func:`salt.modules.aptpkg.add_repo_key`),
+    the missing ``/etc/apt/keyrings/``-style directory is created
+    on the operator's behalf with root-owned mode 0755.
     """
+    missing = tmp_path / "doesnotexist"
+    assert not missing.exists()
     with patch(
         "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
     ):
@@ -496,10 +503,43 @@ def test_add_repo_key_keydir_not_exists(repo_keys_var, tmp_path, caplog):
                 keyid="FBB75451",
                 keyfile="test-key.gpg",
                 aptkey=False,
-                keydir=str(tmp_path / "doesnotexist"),
+                keydir=str(missing),
             )
-            assert "does not exist. Please create this directory" in caplog.text
-            assert ret is False
+    # The auto-creation succeeds and the function proceeds through the
+    # normal keyserver import path -- the ``FBB75451`` keyid is one of
+    # the fixture-provided already-present keys, so the return is the
+    # ``already present`` short-circuit True.
+    assert missing.is_dir()
+    assert oct(missing.stat().st_mode)[-3:] == "755"
+    assert ret is True
+
+
+def test_add_repo_key_keydir_autocreate_failure(repo_keys_var, tmp_path, caplog):
+    """
+    Test - When ``add_repo_key`` cannot create the missing keydir (e.g.
+    read-only fs, EPERM), it falls through to the pre-existing
+    error-and-return-False path so the caller sees an actionable error
+    instead of a silent success.
+    """
+    with patch(
+        "salt.modules.aptpkg.get_repo_keys", MagicMock(return_value=repo_keys_var)
+    ):
+        with patch(
+            "pathlib.Path.mkdir",
+            MagicMock(side_effect=PermissionError("Permission denied")),
+        ):
+            mock = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+            with patch.dict(aptpkg.__salt__, {"cmd.run_all": mock}):
+                ret = aptpkg.add_repo_key(
+                    keyserver="keyserver.ubuntu.com",
+                    keyid="FBB75451",
+                    keyfile="test-key.gpg",
+                    aptkey=False,
+                    keydir=str(tmp_path / "cannot-create"),
+                )
+    assert ret is False
+    assert "could not be created" in caplog.text
+    assert "Permission denied" in caplog.text
 
 
 @pytest.mark.parametrize(
@@ -529,6 +569,158 @@ def test_add_repo_key_keyserver_keyid_not_sepcified(
             with pytest.raises(SaltInvocationError) as err:
                 aptpkg.add_repo_key(**kwargs)
         assert err_msg in err.value.message
+
+
+def test_add_repo_key_ascii_armored_asc_keeps_armor_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    When ``add_repo_key`` is called with ``aptkey=False`` and the cached
+    source file is an ASCII-armored key whose destination keyfile uses the
+    ``.asc`` extension (as ``signed-by=/etc/apt/keyrings/foo.asc`` does),
+    the key must be copied verbatim. ``gpg --dearmor`` must NOT be invoked,
+    and the absence of the ``gpg`` binary must not cause the call to fail
+    -- per the apt-secure spec, ``.asc`` files are accepted ASCII-armored.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-unified-streaming.asc"
+    armored_payload = (
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAxyz1234=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cached.write_text(armored_payload)
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cp.cache_file": MagicMock(return_value=str(cached)),
+            "cmd.run_all": cmd_run_all,
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.utils.path.which",
+        # apt-key absent (forces aptkey=False branch); gpg also absent
+        # to mimic the reporter's onedir minion where gpg is not bundled.
+        MagicMock(return_value=None),
+    ):
+        ret = aptpkg.add_repo_key(
+            path="salt://files/etc/apt/keyrings/unified-streaming.asc",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    # gpg --dearmor must never have been invoked.
+    for call_args in cmd_run_all.call_args_list:
+        cmd = call_args.args[0] if call_args.args else call_args.kwargs.get("cmd", [])
+        assert "--dearmor" not in cmd, f"gpg --dearmor was called: {cmd}"
+    # The destination file must exist with the original armored bytes intact.
+    dest = keydir / "cached-unified-streaming.asc"
+    assert dest.is_file()
+    assert dest.read_text() == armored_payload
+
+
+def test_add_repo_key_copied_key_is_world_readable(tmp_path):
+    """
+    Regression test for #66731.
+
+    ``shutil.copyfile()`` (used to write the keyring file when ``path`` is
+    given and ``aptkey=False``) does not copy permission bits, so the
+    resulting mode depends on the process umask. On systems hardened with
+    a restrictive umask (e.g. 077), this left the keyring unreadable by
+    the unprivileged ``_apt`` user, breaking ``apt-get update`` with
+    ``NO_PUBKEY`` errors. The keyring file must always end up
+    world-readable (0o644), regardless of the umask in effect.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+    cached = tmp_path / "cached-test.gpg"
+    cached.write_bytes(b"\x99\x01\x04not-actually-a-key")
+
+    with salt.utils.files.set_umask(0o077):
+        with patch.dict(
+            aptpkg.__salt__, {"cp.cache_file": MagicMock(return_value=str(cached))}
+        ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})):
+            ret = aptpkg.add_repo_key(
+                path="salt://files/test.gpg",
+                aptkey=False,
+                keydir=keydir,
+                keyfile="test.gpg",
+            )
+
+    assert ret is True
+    dest = keydir / "test.gpg"
+    assert dest.is_file()
+    assert stat.S_IMODE(dest.stat().st_mode) == 0o644
+
+
+def test_add_repo_key_keyserver_chmods_keyring_file(tmp_path):
+    """
+    Regression test for #66731.
+
+    When ``aptkey=False`` and a ``keyserver`` is used, ``gpg`` itself
+    creates the destination keyring file, which is likewise subject to
+    the process umask. The resulting file must be chmod'd to 0o644 after
+    a successful ``gpg --recv-keys``.
+    """
+    keydir = tmp_path / "keyrings"
+    keydir.mkdir()
+
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": "OK"})
+    with patch.dict(
+        aptpkg.__salt__,
+        {
+            "cmd.run_all": cmd_run_all,
+            "config.get": MagicMock(return_value=False),
+        },
+    ), patch("salt.modules.aptpkg.get_repo_keys", MagicMock(return_value={})), patch(
+        "salt.modules.aptpkg.os.chmod"
+    ) as chmod_mock:
+        ret = aptpkg.add_repo_key(
+            keyserver="keyserver.ubuntu.com",
+            keyid="FBB75451",
+            keyfile="test-key.gpg",
+            aptkey=False,
+            keydir=keydir,
+        )
+
+    assert ret is True
+    chmod_mock.assert_called_once_with(str(keydir / "test-key.gpg"), 0o644)
+
+
+def test_decrypt_key_skips_dearmor_for_asc_destination_68464(tmp_path):
+    """
+    Regression test for #68464.
+
+    ``_decrypt_key`` is the inner helper that decides whether to dearmor.
+    When invoked with an ASCII-armored key whose destination extension is
+    ``.asc``, it must return the input path unchanged (no dearmor) instead
+    of failing because the gpg binary is unavailable.
+    """
+    armored = tmp_path / "unified-streaming.asc"
+    armored.write_text(
+        "-----BEGIN PGP PUBLIC KEY BLOCK-----\n"
+        "\n"
+        "mDMEY1m4AhYJKwYBBAHaRw8BAQdAabcdefg=\n"
+        "-----END PGP PUBLIC KEY BLOCK-----\n"
+    )
+    cmd_run_all = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": cmd_run_all}), patch(
+        "salt.utils.path.which", MagicMock(return_value=None)
+    ):
+        # New signature: pass the destination keyfile name so the helper
+        # can decide based on its extension.
+        result = aptpkg._decrypt_key(str(armored), keyfile="unified-streaming.asc")
+    assert result == str(armored)
+    # gpg must not have been invoked.
+    assert not cmd_run_all.called
 
 
 def test_get_repo_keys(repo_keys_var):
@@ -810,6 +1002,40 @@ def test_install(install_var):
                 assert expected_call in mock_call_apt.mock_calls
 
 
+def test_install_preserves_multiarch_pkg_names_when_split_arch_is_false():
+    """
+    Test aptpkg.install preserves explicit multiarch package names.
+    """
+    patch_kwargs = {
+        "__salt__": {
+            "pkg_resource.parse_targets": MagicMock(
+                return_value=({"libnvidia-cfg1-570-server:amd64": None}, "repository")
+            ),
+            "pkg_resource.sort_pkglist": MagicMock(),
+            "pkg_resource.stringify": MagicMock(),
+            "cmd.run_stdout": MagicMock(return_value=""),
+        }
+    }
+    mock_call_apt = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    mock_parse_targets = patch_kwargs["__salt__"]["pkg_resource.parse_targets"]
+
+    with patch.multiple(
+        aptpkg, list_pkgs=MagicMock(side_effect=[{}, {}]), **patch_kwargs
+    ):
+        with patch(
+            "salt.modules.aptpkg.get_selections", MagicMock(return_value={"hold": []})
+        ):
+            with patch("salt.modules.aptpkg._call_apt", mock_call_apt):
+                aptpkg.install(
+                    pkgs=["libnvidia-cfg1-570-server:amd64"],
+                    refresh=False,
+                    split_arch=False,
+                )
+
+    assert mock_parse_targets.call_args.kwargs["normalize"] is False
+    assert "libnvidia-cfg1-570-server:amd64" in mock_call_apt.mock_calls[0].args[0]
+
+
 def test_remove(uninstall_var):
     """
     Test - Remove packages.
@@ -1089,20 +1315,24 @@ def test_mod_repo_enabled():
                         create=True,
                     ):
                         with patch("pathlib.Path", MagicMock()):
-                            repo = aptpkg.mod_repo("foo", enabled=False)
-                            data_is_true.assert_called_with(False)
-                            # with disabled=True; should call salt.utils.data.is_true True
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", disabled=True)
-                            data_is_true.assert_called_with(True)
-                            # with enabled=True; should call salt.utils.data.is_true with False
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", enabled=True)
-                            data_is_true.assert_called_with(True)
-                            # with disabled=True; should call salt.utils.data.is_true False
-                            data_is_true.reset_mock()
-                            repo = aptpkg.mod_repo("foo", disabled=False)
-                            data_is_true.assert_called_with(False)
+                            with patch(
+                                "salt.utils.path.which",
+                                MagicMock(return_value="/usr/bin/apt-key"),
+                            ):
+                                repo = aptpkg.mod_repo("foo", enabled=False)
+                                data_is_true.assert_called_with(False)
+                                # with disabled=True; should call salt.utils.data.is_true True
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", disabled=True)
+                                data_is_true.assert_called_with(True)
+                                # with enabled=True; should call salt.utils.data.is_true with False
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", enabled=True)
+                                data_is_true.assert_called_with(True)
+                                # with disabled=True; should call salt.utils.data.is_true False
+                                data_is_true.reset_mock()
+                                repo = aptpkg.mod_repo("foo", disabled=False)
+                                data_is_true.assert_called_with(False)
 
 
 def test_mod_repo_match():

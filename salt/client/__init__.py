@@ -251,8 +251,6 @@ def get_local_client(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
 
-    :param bool keep_loop: Do not destroy the event loop when closing the event
-                           subsriber.
 
     :param bool auto_reconnect: When True the event subscriber will reconnect
                                 automatically if a disconnect error is raised.
@@ -688,7 +686,13 @@ class LocalClient:
         random.shuffle(minions)
         f_tgt = []
         for minion in minions:
-            if fun in minion_ret[minion]:
+            # Minions that failed to respond to ``sys.list_functions`` are
+            # represented as ``False`` (see the failed-minion handling in
+            # ``cmd``). Skip them rather than letting ``in`` raise.
+            functions = minion_ret[minion]
+            if not isinstance(functions, (list, tuple, set, dict)):
+                continue
+            if fun in functions:
                 f_tgt.append(minion)
             if len(f_tgt) >= subset:
                 break
@@ -2211,7 +2215,7 @@ class LocalClient:
             + str(self.opts["ret_port"])
         )
 
-        with salt.channel.client.AsyncReqChannel.factory(
+        async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
@@ -2276,6 +2280,18 @@ class LocalClient:
         if self.event is not None:
             self.event.destroy()
             self.event = None
+        if hasattr(self, "returners") and self.returners is not None:
+            if hasattr(self.returners, "destroy"):
+                self.returners.destroy()
+            self.returners = {}
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+        if hasattr(self, "utils") and self.utils is not None:
+            if hasattr(self.utils, "destroy"):
+                self.utils.destroy()
+            self.utils = {}
 
     def __enter__(self):
         return self

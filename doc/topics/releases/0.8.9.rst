@@ -100,7 +100,7 @@ moosefs
 ~~~~~~~
 
 Initial support for reporting on aspects of the distributed file system,
-MooseFS. For more information on MooseFS please see: http://www.moosefs.org
+MooseFS. For more information on MooseFS please see: https://moosefs.com
 
 Thanks to Joseph Hall for his work on MooseFS support.
 

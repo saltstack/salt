@@ -197,11 +197,7 @@ def apply_template(template_dir, output_dir, context):
     Apply the template from the template directory to the output
     using the supplied context dict.
 
-    :param src: The source path
-    :type  src: ``str``
 
-    :param dst: The destination path
-    :type  dst: ``str``
 
     :param context: The dictionary to inject into the Jinja template as context
     :type  context: ``dict``

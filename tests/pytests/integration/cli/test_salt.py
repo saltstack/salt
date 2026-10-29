@@ -41,8 +41,20 @@ def salt_minion_2(salt_master):
         },
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    with factory.started(start_timeout=120):
-        yield factory
+    try:
+        with factory.started(start_timeout=120):
+            yield factory
+    finally:
+        # ``factory.started()`` stops the minion daemon on exit but leaves the
+        # minion's accepted key under ``{master_pki_dir}/minions/minion-2``.
+        # The subsequent ``test_salt_key.py::test_list_*`` tests in the same
+        # session enumerate PKI keys and fail their expected-list assertions
+        # when this stale key is present.  Delete it via the master's
+        # salt-key CLI so the master pki dir is clean for the next test.
+        # ``salt_master.salt_key_cli`` is a *factory* method on the saltfactories
+        # ``SaltMaster``, not an attribute -- it must be called to obtain a
+        # runnable ``SaltKey`` CLI factory.
+        salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
     # Clean up the key so it doesn't affect subsequent tests like test_salt_key.py
     key_file = os.path.join(salt_master.config["pki_dir"], "minions", "minion-2")
@@ -159,8 +171,9 @@ def test_exit_status_correct_usage(salt_cli, salt_minion):
 
 
 @pytest.mark.skip_on_windows(reason="Windows does not support SIGINT")
-@pytest.mark.skip_initial_onedir_failure
-def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
+def test_interrupt_on_long_running_job(
+    event_listener, salt_cli, salt_master, salt_minion
+):
     """
     Ensure that a call to ``salt`` that is taking too long, when a user
     hits CTRL-C, that the JID is printed to the console.
@@ -186,6 +199,10 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
         "test.sleep",
         "30",
     ]
+
+    # Track the moment we spawn the CLI so ``event_listener`` only considers
+    # events published after this point.
+    launch_time = time.time()
 
     # If this test starts failing, commend the following block of code
     proc = subprocess.Popen(
@@ -219,7 +236,25 @@ def test_interrupt_on_long_running_job(salt_cli, salt_master, salt_minion):
         terminate_process(proc.pid, kill_children=True)
         pytest.fail("The test process failed to start")
 
-    time.sleep(2)
+    # Wait until the master publishes the new job before sending SIGINT.
+    # A fixed ``time.sleep`` here is racy on slow CI hosts: the salt CLI has
+    # not yet set ``pub_data`` when the signal arrives, so its signal
+    # handler falls back to just ``Exiting gracefully on Ctrl-c`` with no
+    # jid, and the ``This job's jid is`` assertion below fails. Waiting on
+    # the ``salt/job/*/new`` event guarantees ``pub_data`` is populated in
+    # the CLI process before we interrupt it.
+    matched_events = event_listener.wait_for_events(
+        [(salt_master.id, "salt/job/*/new")],
+        after_time=launch_time,
+        timeout=30,
+    )
+    if not matched_events.found_all_events:
+        terminate_process(proc.pid, kill_children=True)
+        pytest.fail(
+            "The salt CLI never published a job; cannot exercise the "
+            "SIGINT path. Matched events: {}".format(matched_events.matches)
+        )
+
     # Send CTRL-C to the process
     os.kill(proc.pid, signal.SIGINT)
     with proc:

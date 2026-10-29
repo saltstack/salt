@@ -241,7 +241,10 @@ def _gather_pillar(pillarenv, pillar_override):
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    ret = pillar.compile_pillar()
+    try:
+        ret = pillar.compile_pillar()
+    finally:
+        pillar.destroy()
     if pillar_override and isinstance(pillar_override, dict):
         ret.update(pillar_override)
     return ret
@@ -304,6 +307,122 @@ def _prep_powershell_cmd(win_shell, cmd, encoded_cmd):
 
     log.debug(new_cmd)
     return new_cmd
+
+
+def _ps_single_quote(value):
+    """Escape a string for use inside a PowerShell single-quoted literal."""
+    return str(value).replace("'", "''")
+
+
+def _is_powershell_shell(shell):
+    """Return True if shell names Windows PowerShell or PowerShell Core."""
+    if not shell:
+        return False
+    shell_l = str(shell).lower().strip()
+    return shell_l in ("powershell", "pwsh") or shell_l.endswith(
+        ("powershell.exe", "pwsh.exe")
+    )
+
+
+def _is_cmd_shell(shell):
+    """Return True if shell names cmd.exe."""
+    if not shell:
+        return False
+    shell_l = str(shell).lower().strip()
+    return shell_l in ("cmd", "cmd.exe") or shell_l.endswith("cmd.exe")
+
+
+def _prepare_bg_script(path, args, shell=None, win_cwd=None, cwd=None):
+    """
+    Build a self-cleaning command for ``cmd.script`` when ``bg=True``.
+
+    The parent must not delete ``path`` (or ``win_cwd``) after spawning the
+    background process. Instead we invoke a wrapper that runs the real script
+    and removes the tempfile(s) when finished. Refs #69959 #50273.
+    """
+    args = list(args) if args else []
+
+    if salt.utils.platform.is_windows() and _is_powershell_shell(shell):
+        wrapper_dir = cwd if cwd else None
+        wrapper_path = salt.utils.files.mkstemp(dir=wrapper_dir, suffix=".ps1")
+        script_q = _ps_single_quote(path)
+        win_cwd_block = ""
+        if win_cwd:
+            cwd_q = _ps_single_quote(win_cwd)
+            win_cwd_block = (
+                f"    Set-Location $env:TEMP\n"
+                f"    Remove-Item -LiteralPath '{cwd_q}' -Recurse -Force "
+                f"-ErrorAction SilentlyContinue\n"
+            )
+        content = (
+            f"$script = '{script_q}'\n"
+            "try {\n"
+            "    & $script @args\n"
+            "    exit $LASTEXITCODE\n"
+            "} finally {\n"
+            "    Remove-Item -LiteralPath $script -Force "
+            "-ErrorAction SilentlyContinue\n"
+            "    $wrapper = $PSCommandPath\n"
+            f"{win_cwd_block}"
+            "    Remove-Item -LiteralPath $wrapper -Force "
+            "-ErrorAction SilentlyContinue\n"
+            "}\n"
+        )
+        with salt.utils.files.fopen(wrapper_path, "w") as fh_:
+            fh_.write(content)
+        log.debug(
+            "cmd.script: bg=True PowerShell wrapper %s for script %s",
+            wrapper_path,
+            path,
+        )
+        return [wrapper_path, *args]
+
+    if salt.utils.platform.is_windows() and (
+        _is_cmd_shell(shell) or str(path).lower().endswith((".bat", ".cmd"))
+    ):
+        wrapper_dir = cwd if cwd else None
+        wrapper_path = salt.utils.files.mkstemp(dir=wrapper_dir, suffix=".cmd")
+        lines = [
+            "@echo off",
+            f'set "SALT_BG_SCRIPT={path}"',
+            'call "%SALT_BG_SCRIPT%" %*',
+            "set SALT_BG_EC=%ERRORLEVEL%",
+            'del /f /q "%SALT_BG_SCRIPT%" >nul 2>&1',
+        ]
+        if win_cwd:
+            lines.append(f'set "SALT_BG_CWD={win_cwd}"')
+            lines.append("cd /d %TEMP%")
+            lines.append('rd /s /q "%SALT_BG_CWD%" >nul 2>&1')
+        lines.extend(
+            [
+                'del /f /q "%~f0" >nul 2>&1',
+                "exit /b %SALT_BG_EC%",
+            ]
+        )
+        with salt.utils.files.fopen(wrapper_path, "w") as fh_:
+            fh_.write("\r\n".join(lines) + "\r\n")
+        log.debug(
+            "cmd.script: bg=True cmd wrapper %s for script %s",
+            wrapper_path,
+            path,
+        )
+        return [wrapper_path, *args]
+
+    # POSIX: wrap with /bin/sh. Do not use exec — replacing the shell would
+    # skip the EXIT trap and leave the tempfile behind.
+    # argv: sh -c BODY salt-cmd-script "$path" "$path" args...
+    # $1 is the tempfile to remove; "$@" after shift is the real script argv.
+    sh_body = 'script="$1"; shift; trap \'rm -f -- "$script"\' EXIT; "$@"'
+    log.debug("cmd.script: bg=True POSIX /bin/sh wrapper for script %s", path)
+    return [
+        "/bin/sh",
+        "-c",
+        sh_body,
+        "salt-cmd-script",
+        path,
+        path,
+        *args,
+    ]
 
 
 def _run(
@@ -623,15 +742,22 @@ def _run(
 
             msg = f"env command: {env_cmd}"
             log.debug(log_callback(msg))
-            env_bytes, env_encoded_err = subprocess.Popen(
-                env_cmd,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            try:
+                env_bytes, env_encoded_err = subprocess.Popen(
+                    env_cmd,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                ).communicate(salt.utils.stringutils.to_bytes(py_code), timeout=10)
+            except subprocess.TimeoutExpired:
+                marker_count = 0
+                env_encoded_err = None
+                env_bytes = None
+            else:
+                marker_count = env_bytes.count(marker_b)
+
             if salt.utils.pkg.check_bundled():
                 os.remove(fp.name)
-            marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
                 log.error(
@@ -1222,6 +1348,18 @@ def run(
 
                 cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
 
+        .. note::
+
+            On Linux ``runas`` switches the effective user but does **not**
+            run a login shell, so the supplementary groups, ``$HOME`` and
+            ``$PATH`` of the target account are not loaded. The primary
+            group of the salt-minion process (typically ``root``) is kept,
+            which is why ``id`` from inside the executed command may report
+            ``gid=0(root)``. Pass ``group=`` to switch the primary group as
+            well, or invoke a login shell explicitly (for example
+            ``su - <user> -c '...'``) when the full target environment is
+            required.
+
     :param str group: Group to run command as. Not currently supported
         on Windows.
 
@@ -1231,6 +1369,14 @@ def run(
         privileges it can obtain a logon token for the target user through
         Windows impersonation APIs without needing their credentials. This
         parameter is ignored on non-Windows platforms.
+
+        .. note::
+
+            On Windows, when ``runas`` is supplied but no logon token is
+            available (i.e. the salt-minion is not running as SYSTEM or as
+            an elevated Administrator), ``password`` must also be provided.
+            Omitting it surfaces as an opaque "embedded null character"
+            error.
 
         .. versionadded:: 2016.3.0
 
@@ -3086,10 +3232,20 @@ def script(
 
     win_cwd = False
     if salt.utils.platform.is_windows() and runas:
-        # Let's make sure the user exists first
+        # user.info uses NetUserGetInfo which only resolves local-machine
+        # accounts (and, when a DC is reachable, accounts in the joined
+        # domain). It silently returns an empty dict for many valid runas
+        # forms such as DOMAIN\user, user@DOMAIN and SIDs. Treat a missing
+        # lookup as advisory: log it and continue. salt.utils.win_runas
+        # uses LookupAccountName / LogonUser downstream and will surface a
+        # precise Win32 error if the account is truly invalid.
         if not __salt__["user.info"](runas):
-            msg = f"Invalid user: {runas}"
-            raise CommandExecutionError(msg)
+            log.warning(
+                "cmd.script: user.info did not return information for "
+                "runas user '%s'; continuing and letting the underlying "
+                "runas implementation validate the account.",
+                runas,
+            )
         if cwd is None:
             # Create a temp working directory
             cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])
@@ -3165,7 +3321,12 @@ def script(
     if isinstance(args, str):
         args = salt.utils.args.shlex_split(args)
 
-    new_cmd = [path, *args] if args else [path]
+    if bg:
+        new_cmd = _prepare_bg_script(
+            path, args, shell=shell, win_cwd=cwd if win_cwd else None, cwd=cwd
+        )
+    else:
+        new_cmd = [path, *args] if args else [path]
 
     ret = {}
     try:
@@ -3200,10 +3361,13 @@ def script(
             exc,
             exc_info_on_loglevel=logging.DEBUG,
         )
-    _cleanup_tempfile(path)
-    # If a temp working directory was created (Windows), let's remove that
-    if win_cwd:
-        _cleanup_tempfile(cwd)
+    # Background runs own tempfile cleanup via _prepare_bg_script wrappers.
+    # Deleting here races the child and causes missing-file errors (#69959).
+    if not bg:
+        _cleanup_tempfile(path)
+        # If a temp working directory was created (Windows), let's remove that
+        if win_cwd:
+            _cleanup_tempfile(cwd)
 
     if hide_output:
         ret["stdout"] = ret["stderr"] = ""

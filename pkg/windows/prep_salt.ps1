@@ -242,28 +242,18 @@ $directories | ForEach-Object {
 }
 
 #-------------------------------------------------------------------------------
-# Remove pywin32 components not needed by Salt
+# Remove test directories from third-party packages
 #-------------------------------------------------------------------------------
 
-$directories = "cheroot\test",
-               "cherrypy\test",
-               "gitdb\test",
-               "psutil\tests",
-               "smmap\test",
-               "tempora\tests",
-               "win32\test",
-               "win32com\test",
-               "zmq\tests"
-$directories | ForEach-Object {
-    if ( Test-Path -Path "$SITE_PKGS_DIR\$_" ) {
-        Write-Host "Removing $_ directory: " -NoNewline
-        Remove-Item -Path "$SITE_PKGS_DIR\$_" -Recurse | Out-Null
-        if ( ! (Test-Path -Path "$SITE_PKGS_DIR\$_") ) {
-            Write-Result "Success" -ForegroundColor Green
-        } else {
-            Write-Result "Failed" -ForegroundColor Red
-            exit 1
-        }
+$test_dirs = Get-ChildItem -Path "$SITE_PKGS_DIR" -Directory -Include "test", "tests" -Recurse
+$test_dirs | ForEach-Object {
+    Write-Host "Removing $($_.Parent.Name)\$($_.Name) directory: " -NoNewline
+    Remove-Item -Path "$($_.FullName)" -Recurse -Force | Out-Null
+    if ( Test-Path -Path "$($_.FullName)" ) {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    } else {
+        Write-Result "Success" -ForegroundColor Green
     }
 }
 

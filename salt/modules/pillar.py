@@ -254,7 +254,10 @@ def items(
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
     unmask
-        If set to ``True``, the pillar data will be unmasked.
+        If set to ``True``, the pillar data will be unmasked. If not set, the
+        default is unmasked when either the current render context has
+        already disabled masking, or the :conf_minion:`pillar_mask_output`
+        config option is set to ``False``.
 
         .. versionadded:: 3008.0
 
@@ -295,9 +298,19 @@ def items(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    ret = pillar.compile_pillar()
+    try:
+        ret = pillar.compile_pillar()
+    finally:
+        pillar.destroy()
     if unmask is None:
-        unmask = not salt.utils.secret.mask_pillar.get()
+        # VCOPS-98852: pillar_mask_output only changes items()'s *default*
+        # when the caller didn't explicitly request masked/unmasked output —
+        # it does not disable masking elsewhere (pillar.get/item/raw/ext,
+        # no_log states, or the general output safety net keep their own
+        # existing behavior regardless of this option).
+        unmask = not salt.utils.secret.mask_pillar.get() or not __opts__.get(
+            "pillar_mask_output", True
+        )
     if unmask:
         return salt.utils.secret.expose(ret)
     else:
@@ -376,7 +389,14 @@ def _obfuscate_inner(var):
         return f"<{var.__class__.__name__}>"
 
 
-def obfuscate(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def obfuscate(
+    *args,
+    pillar=None,
+    pillar_enc=None,
+    pillarenv=None,
+    saltenv=None,
+    unmask=None,
+):
     """
     .. versionadded:: 2015.8.0
 
@@ -396,6 +416,14 @@ def obfuscate(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None)
     * ``{'login': 'somelogin', 'pwd': 'secret'}`` becomes
       ``{'login': '<str>', 'pwd': '<str>'}``
 
+    unmask
+        Forwarded to :py:func:`items` when sourcing the pillar data. The
+        returned structure is then obfuscated, so the practical effect of
+        this flag is limited; it is accepted for API consistency with the
+        other ``pillar`` functions.
+
+        .. versionadded:: 3008.2
+
     CLI Examples:
 
     .. code-block:: bash
@@ -410,13 +438,21 @@ def obfuscate(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None)
             pillar_enc=pillar_enc,
             pillarenv=pillarenv,
             saltenv=saltenv,
+            unmask=unmask,
         )
     )
 
 
 # naming chosen for consistency with grains.ls, although it breaks the short
 # identifier rule.
-def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
+def ls(
+    *args,
+    pillar=None,
+    pillar_enc=None,
+    pillarenv=None,
+    saltenv=None,
+    unmask=None,
+):
     """
     .. versionadded:: 2015.8.0
 
@@ -454,6 +490,14 @@ def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
         Included only for compatibility with
         :conf_minion:`pillarenv_from_saltenv`, and is otherwise ignored.
 
+    unmask
+        Forwarded to :py:func:`items` when sourcing the pillar data. Top-level
+        pillar keys are not masked, so this flag is a practical no-op for
+        ``ls``; it is accepted for API consistency with the other ``pillar``
+        functions.
+
+        .. versionadded:: 3008.2
+
     CLI Examples:
 
     .. code-block:: bash
@@ -468,6 +512,7 @@ def ls(*args, pillar=None, pillar_enc=None, pillarenv=None, saltenv=None):
             pillar_enc=pillar_enc,
             pillarenv=pillarenv,
             saltenv=saltenv,
+            unmask=unmask,
         )
     )
 
@@ -563,12 +608,19 @@ def item(
         return salt.utils.secret.serial(ret)
 
 
-def raw(key=None):
+def raw(key=None, unmask=None):
     """
     Return the raw pillar data that is currently loaded into the minion.
 
     Contrast with :py:func:`items` which calls the master to fetch the most
     up-to-date Pillar.
+
+    unmask
+        Defaults to ``True``: ``pillar.raw`` has historically returned
+        unmasked data, since the intent of the call is to inspect the in-memory
+        pillar verbatim. Set to ``False`` to receive masked values instead.
+
+        .. versionadded:: 3008.2
 
     CLI Example:
 
@@ -581,15 +633,20 @@ def raw(key=None):
 
         salt '*' pillar.raw key='roles'
     """
+    if unmask is None:
+        unmask = True
+
     if key:
-        ret = salt.utils.secret.expose(__pillar__.get(key, {}))
+        value = __pillar__.get(key, {})
     else:
-        ret = dict(salt.utils.secret.expose(__pillar__))
+        value = dict(__pillar__)
 
-    return ret
+    if unmask:
+        return salt.utils.secret.expose(value)
+    return salt.utils.secret.serial(value)
 
 
-def ext(external, pillar=None):
+def ext(external, pillar=None, unmask=None):
     '''
     .. versionchanged:: 2016.3.6,2016.11.3,2017.7.0
         The supported ext_pillar types are now tunable using the
@@ -633,6 +690,15 @@ def ext(external, pillar=None):
 
         .. versionadded:: 2015.5.0
 
+    unmask
+        If set to ``True``, the pillar data will be returned unmasked. If set
+        to ``False``, masked values are returned. The default of ``None``
+        auto-detects from the :func:`salt.utils.secret.mask_pillar` context
+        variable so direct user invocations see plain values while invocations
+        from inside the renderer/state pipeline stay masked.
+
+        .. versionadded:: 3008.2
+
     CLI Examples:
 
     .. code-block:: bash
@@ -652,12 +718,20 @@ def ext(external, pillar=None):
         pillar_override=pillar,
     )
 
-    ret = pillar_obj.compile_pillar()
+    try:
+        ret = pillar_obj.compile_pillar()
+    finally:
+        pillar_obj.destroy()
 
+    if unmask is None:
+        unmask = not salt.utils.secret.mask_pillar.get()
+
+    if unmask:
+        return salt.utils.secret.expose(ret)
     return salt.utils.secret.serial(ret)
 
 
-def keys(key, delimiter=DEFAULT_TARGET_DELIM):
+def keys(key, delimiter=DEFAULT_TARGET_DELIM, unmask=None):
     """
     .. versionadded:: 2015.8.0
 
@@ -669,12 +743,23 @@ def keys(key, delimiter=DEFAULT_TARGET_DELIM):
     delimiter
         Specify an alternate delimiter to use when traversing a nested dict
 
+    unmask
+        Nested pillar keys are not masked, so this flag is a practical no-op
+        for ``keys``; it is accepted for API consistency with the other
+        ``pillar`` functions.
+
+        .. versionadded:: 3008.2
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pillar.keys web:sites
     """
+    # ``unmask`` is accepted purely for API uniformity; keys themselves are
+    # never masked. Reference the parameter so static analyzers don't flag it.
+    del unmask
+
     ret = salt.utils.data.traverse_dict_and_list(__pillar__, key, KeyError, delimiter)
 
     if ret is KeyError:

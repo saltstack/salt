@@ -127,7 +127,11 @@ def test_two_minions_queue_jobs_isolated(minion_opts, tmp_path):
 
     files_a = os.listdir(salt.utils.state.job_queue_dir(opts_a))
     files_b = os.listdir(salt.utils.state.job_queue_dir(opts_b))
-    assert any("100" in fn for fn in files_a)
-    assert not any("200" in fn for fn in files_a)
-    assert any("200" in fn for fn in files_b)
-    assert not any("100" in fn for fn in files_b)
+    # Match on the trailing "_<jid>.p" suffix only. Substring-matching the
+    # whole filename is unsafe because the microsecond timestamp embedded in
+    # the prefix (queued_<ts>_<jid>.p) routinely contains digit sequences
+    # like "100" or "200".
+    assert any(fn.endswith("_100.p") for fn in files_a)
+    assert not any(fn.endswith("_200.p") for fn in files_a)
+    assert any(fn.endswith("_200.p") for fn in files_b)
+    assert not any(fn.endswith("_100.p") for fn in files_b)

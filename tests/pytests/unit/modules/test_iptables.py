@@ -242,6 +242,108 @@ def test_build_rule():
             )
 
 
+def test_build_rule_after_jump_arguments():
+    """
+    Test that jump-target arguments for SYNPROXY, CT, SET and SNAT
+    (regression for issue #46616) are rendered after the --jump target
+    rather than before it.
+    """
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        # SYNPROXY: --mss, --wscale, --sack-perm, --timestamp
+        assert (
+            iptables.build_rule(
+                jump="SYNPROXY",
+                **{"sack-perm": "", "timestamp": "", "wscale": 7, "mss": 1460},
+            )
+            == "--jump SYNPROXY --mss 1460 --sack-perm --timestamp --wscale 7"
+        )
+
+        # CT: --zone-orig / --zone-reply
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-orig": 1})
+            == "--jump CT --zone-orig 1"
+        )
+        assert (
+            iptables.build_rule(jump="CT", **{"zone-reply": 2})
+            == "--jump CT --zone-reply 2"
+        )
+
+        # SET: --map-set
+        assert (
+            iptables.build_rule(jump="SET", **{"map-set": "myset src"})
+            == '--jump SET --map-set "myset src"'
+        )
+
+        # SNAT: --random-fully
+        assert (
+            iptables.build_rule(jump="SNAT", **{"random-fully": None})
+            == "--jump SNAT --random-fully"
+        )
+
+
+def test_build_rule_synproxy_state_append_46616():
+    """
+    Test issue #46616 through the exact argument shape used by the
+    iptables.append state (salt/states/iptables.py), which is the
+    production caller of build_rule.
+    """
+    # The state passes full="True" (a string, not a bool) together with
+    # command="A" and family, plus name/table/chain kwargs that build_rule
+    # must strip; full="True" is the decisive flag because it exercises the
+    # complete command line the state hands to iptables.append/check.
+    kwargs = {
+        "name": "synproxy web traffic",
+        "table": "filter",
+        "chain": "INPUT",
+        "protocol": "tcp",
+        "dport": 443,
+        "match": "state",
+        "connstate": "INVALID,UNTRACKED",
+        "jump": "SYNPROXY",
+        "mss": 1460,
+        "wscale": 7,
+        "sack-perm": "",
+        "timestamp": "",
+    }
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        with patch.object(
+            iptables, "_iptables_cmd", MagicMock(return_value="/sbin/iptables")
+        ):
+            assert iptables.build_rule(
+                full="True", family="ipv4", command="A", **kwargs
+            ) == (
+                "/sbin/iptables --wait -t filter -A INPUT  "
+                "-p tcp -m state --state INVALID,UNTRACKED --dport 443 "
+                "--jump SYNPROXY --mss 1460 --sack-perm --timestamp --wscale 7"
+            )
+
+
+def test_build_rule_non_jump_options_unaffected_46616():
+    """
+    Guard against overcorrection of the #46616 fix: options that are not
+    on the after-jump whitelist must keep rendering before the --jump
+    target, and whitelist entries that predate the fix must render
+    exactly as before. This test passes with and without the fix.
+    """
+    with patch.object(iptables, "_has_option", MagicMock(return_value=True)):
+        # "mark" (the mark match option) is a near-miss sibling of the
+        # newly whitelisted "mask"/"mss" names and must stay before the
+        # jump target.
+        assert (
+            iptables.build_rule(match="mark", mark="0x64", jump="RETURN")
+            == "-m mark --mark 0x64 --jump RETURN"
+        )
+
+        # Pre-existing whitelist entries (SNAT --to-source/--random) must
+        # be rendered unchanged by the additions.
+        assert (
+            iptables.build_rule(
+                jump="SNAT", **{"to-source": "192.168.0.1", "random": ""}
+            )
+            == "--jump SNAT --random --to-source 192.168.0.1"
+        )
+
+
 # 'get_saved_rules' function tests: 2
 
 
@@ -286,6 +388,101 @@ def test_get_saved_rules_nilinuxrt():
         with patch.object(iptables.salt.utils.files, "fopen", file_mock):
             rules = iptables.get_saved_rules()
             assert expected_input_rules == rules["filter"]["INPUT"]["rules"]
+
+
+def test_parse_conf_missing_file_54459():
+    """
+    _parse_conf must return an empty dict (not raise) when the OS-default
+    conf file does not exist on disk. conf_file=None, family="ipv4" is the
+    exact argument shape get_saved_rules passes it from state.iptables.insert
+    and state.iptables.append when save=True is set on a minion that has no
+    /etc/sysconfig/iptables.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert iptables._parse_conf(conf_file=None, family="ipv4") == {}
+
+
+def test_get_saved_rules_missing_file_54459():
+    """
+    Reproducer for the issue as reported: a state calling iptables.insert with
+    save=True on a minion lacking the OS-default conf file must not abort with
+    IOError [Errno 2]. get_saved_rules should return an empty dict.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert iptables.get_saved_rules(family="ipv4") == {}
+
+
+def test_parse_conf_present_file_no_regression_54459():
+    """
+    Inverse / must-not-regress: when the conf file exists, the try/except
+    added for the missing-file case must not swallow the happy path. This
+    passes both with and without the fix. Twin of test_get_saved_rules_nilinuxrt
+    that explicitly drives the OS-default path via a mocked _conf.
+    """
+    data = {
+        "/etc/sysconfig/iptables": textwrap.dedent(
+            """\
+            *filter
+            :INPUT ACCEPT [2958:584773]
+            :FORWARD ACCEPT [0:0]
+            :OUTPUT ACCEPT [92:23648]
+            -A INPUT -p tcp -m tcp --dport 80 -j ACCEPT
+            COMMIT
+            """
+        )
+    }
+    expected_input_rules = [
+        {
+            "protocol": ["tcp"],
+            "jump": ["ACCEPT"],
+            "match": ["tcp"],
+            "destination_port": ["80"],
+        }
+    ]
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files, "fopen", mock_open(read_data=data)
+        ):
+            rules = iptables.get_saved_rules(family="ipv4")
+            assert expected_input_rules == rules["filter"]["INPUT"]["rules"]
+
+
+def test_get_saved_policy_missing_file_54459():
+    """
+    Peripheral coverage: with _parse_conf returning {} for a missing conf
+    file, get_saved_policy must resolve to None (its KeyError fallback) rather
+    than raising, since {} has no [table][chain] entry.
+    """
+    with patch.object(
+        iptables, "_conf", MagicMock(return_value="/etc/sysconfig/iptables")
+    ):
+        with patch.object(
+            iptables.salt.utils.files,
+            "fopen",
+            MagicMock(side_effect=FileNotFoundError(2, "No such file or directory")),
+        ):
+            assert (
+                iptables.get_saved_policy(
+                    table="filter", chain="INPUT", conf_file=None, family="ipv4"
+                )
+                is None
+            )
 
 
 # 'get_rules' function tests: 1

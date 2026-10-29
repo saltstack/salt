@@ -17,6 +17,39 @@ def configure_loader_modules():
     return {pip_state: {"__env__": "base", "__opts__": {"test": False}}}
 
 
+@pytest.mark.parametrize("proxy", [None, False, "http://proxy.example.invalid:8080"])
+def test_installed_upgrade_passes_proxy_to_version_query(proxy):
+    versions = MagicMock(return_value=["1.0"])
+    install = MagicMock()
+    with patch.dict(
+        pip_state.__salt__,
+        {
+            "pip.list": MagicMock(return_value={"example": "1.0"}),
+            "pip.version": MagicMock(return_value="26.2"),
+            "pip.normalize": pip_module.normalize,
+            "pip.list_all_versions": versions,
+            "pip.install": install,
+        },
+    ):
+        ret = pip_state.installed("example", upgrade=True, proxy=proxy)
+
+    assert ret["result"] is True
+    assert ret["changes"] == {}
+    versions.assert_called_once_with(
+        "example",
+        bin_env=None,
+        include_alpha=False,
+        include_beta=False,
+        include_rc=False,
+        user=None,
+        cwd=None,
+        index_url=None,
+        extra_index_url=None,
+        proxy=proxy,
+    )
+    install.assert_not_called()
+
+
 def test_issue_64169(caplog):
     pkg_to_install = "nonexistent_package"
     exception_message = "Invalid JSON (test_issue_64169)"
@@ -71,3 +104,89 @@ def test_issue_64169(caplog):
         # Confirm that the state continued to install the package as expected.
         # Only check the 'pkgs' parameter of pip.install
         assert mock_pip_install.call_args.kwargs["pkgs"] == pkg_to_install
+
+
+def test_already_satisfied_not_reported_as_change():
+    """
+    When pip outputs 'Requirement already satisfied' (modern pip >= 10) for a
+    package that ended up in target_pkgs, the state must NOT report it as a
+    change. Previously only the old 'Requirement already up-to-date' message
+    was checked, causing the state to always report the package as installed.
+    """
+    pkg_name = "my-package"
+    pkg_version = "1.0.0"
+
+    mock_pip_list = MagicMock(
+        side_effect=[
+            {},  # pre-cache: empty → package goes to target_pkgs
+            {},  # _check_if_installed fallback: package not found
+            {pkg_name: pkg_version},  # post-install verification
+        ]
+    )
+    mock_pip_version = MagicMock(return_value="24.0.0")
+    mock_pip_install = MagicMock(
+        return_value={
+            "retcode": 0,
+            "stdout": f"Requirement already satisfied: {pkg_name} in /path/to/site-packages",
+        }
+    )
+
+    with patch.dict(
+        pip_state.__salt__,
+        {
+            "pip.list": mock_pip_list,
+            "pip.version": mock_pip_version,
+            "pip.install": mock_pip_install,
+            "pip.normalize": pip_module.normalize,
+        },
+    ):
+        ret = pip_state.installed(name=pkg_name)
+
+    assert ret["result"] is True
+    # The package was already satisfied — no changes should be reported
+    assert (
+        ret["changes"] == {}
+    ), "Package reported as 'Requirement already satisfied' must not appear in changes"
+
+
+def test_already_satisfied_with_version_spec_not_reported_as_change():
+    """
+    When pip outputs 'Requirement already satisfied: pkg==x.y.z ...' (with a
+    version specifier in the message), the version suffix must be stripped when
+    checking against already_installed_packages so the package is still
+    correctly excluded from changes.
+    """
+    pkg_name = "my-package"
+    pkg_version = "1.0.0"
+
+    mock_pip_list = MagicMock(
+        side_effect=[
+            {},  # pre-cache: empty
+            {},  # _check_if_installed fallback
+            {pkg_name: pkg_version},  # post-install verification
+        ]
+    )
+    mock_pip_version = MagicMock(return_value="24.0.0")
+    mock_pip_install = MagicMock(
+        return_value={
+            "retcode": 0,
+            # pip includes the version spec in the satisfied message
+            "stdout": f"Requirement already satisfied: {pkg_name}=={pkg_version} in /path",
+        }
+    )
+
+    with patch.dict(
+        pip_state.__salt__,
+        {
+            "pip.list": mock_pip_list,
+            "pip.version": mock_pip_version,
+            "pip.install": mock_pip_install,
+            "pip.normalize": pip_module.normalize,
+        },
+    ):
+        ret = pip_state.installed(name=pkg_name)
+
+    assert ret["result"] is True
+    assert (
+        ret["changes"] == {}
+    ), "Package with version spec in satisfied message must not appear in changes"

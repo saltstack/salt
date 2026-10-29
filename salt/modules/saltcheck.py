@@ -87,8 +87,13 @@ Saltcheck Keywords
 **kwargs:**
     (dict) Optional keyword arguments to be passed to the salt module
 **assertion:**
-    (str) One of the supported assertions and required except for ``saltcheck.state_apply``
-    Tests which fail the assertion and expected_return, cause saltcheck to exit which a non-zero exit code.
+    (str) The name of one of the supported assertions (for example
+    ``assertEqual``, ``assertTrue``, ``assertIn``). Required for every
+    test except those whose ``module_and_function`` is
+    ``saltcheck.state_apply`` (which represents a setup/teardown step
+    rather than an assertion). When a test fails its assertion (or its
+    ``expected_return`` does not match) the overall ``saltcheck`` run
+    exits with a non-zero status code.
 **expected_return:**
     (str) Required except by ``assertEmpty``, ``assertNotEmpty``, ``assertTrue``,
     ``assertFalse``. The return of module_and_function is compared to this value in the assertion.
@@ -160,39 +165,6 @@ Example with setup state including pillar
       args:
         - common
       pillar_data:
-        data: value
-
-    verify_vim:
-      module_and_function: pkg.version
-      args:
-        - vim
-      assertion: assertNotEmpty
-
-Example with jinja
-------------------
-
-.. code-block:: jinja
-
-    {% for package in ["apache2", "openssh"] %}
-    {# or another example #}
-    {# for package in salt['pillar.get']("packages") #}
-    test_{{ package }}_latest:
-      module_and_function: pkg.upgrade_available
-      args:
-        - {{ package }}
-      assertion: assertFalse
-    {% endfor %}
-
-Example with setup state including pillar
------------------------------------------
-
-.. code-block:: yaml
-
-    setup_test_environment:
-      module_and_function: saltcheck.state_apply
-      args:
-        - common
-      pillar-data:
         data: value
 
     verify_vim:
@@ -326,13 +298,19 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-try:
-    __context__
-except NameError:
-    __context__ = {}
-__context__["global_scheck"] = None
-
 __virtualname__ = "saltcheck"
+
+
+def __init__(opts):
+    # Initialise ``global_scheck`` in the loader's ``__context__`` on every
+    # load, but only if no previous load has already populated it.  Doing
+    # this at module top-level would be unsafe: module-level code runs
+    # *before* the loader's pack loop binds ``__context__`` to the loader's
+    # ``NamedLoaderContext``, so a fresh dict created there is orphaned when
+    # the pack loop rewires ``__context__``.  It would also unconditionally
+    # reset the entry on every ``exec_module``, clobbering the ``SaltCheck``
+    # instance a running call has already stored.
+    __context__.setdefault("global_scheck", None)
 
 
 def __virtual__():

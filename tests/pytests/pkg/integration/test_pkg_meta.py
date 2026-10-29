@@ -174,6 +174,15 @@ def test_requires(
         "manual: dmidecode",
         "manual: openssl",
         "manual: pciutils",
+        # Scriptlet-only tool dependencies declared via Requires(pre)/
+        # Requires(post)/Requires(preun)/Requires(posttrans) on the base
+        # package (see pkg/rpm/salt.spec).
+        "pre: /usr/bin/getent",
+        "pre: coreutils",
+        "pre: grep",
+        "post: coreutils",
+        "preun: findutils",
+        "posttrans: findutils",
         # Not sure how often these will change, if this check causes things to
         # break often we'll want to re-factor.
         "rpmlib: rpmlib(CompressedFileNames) <= 3.0.4-1",
@@ -181,10 +190,13 @@ def test_requires(
         "rpmlib: rpmlib(PayloadFilesHavePrefix) <= 4.0-1",
         "manual: which",
     ]
-    proc = subprocess.run(
-        ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+    requires_lines = proc = (
+        subprocess.run(
+            ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+        )
+        .stdout.decode()
+        .splitlines()
     )
-    requires_lines = proc.stdout.decode().splitlines()
     # ``rpmlib(TildeInVersions)`` appears only for some packages (e.g. ``~`` in
     # NEVRA) and the bound varies by ``rpm`` version; accept the exact line from
     # this RPM so GA packages (no such line) and future ``rpm`` strings stay valid.

@@ -1,13 +1,73 @@
+import socketserver
 import sys
+import threading
 import urllib
+from http.server import BaseHTTPRequestHandler
 
 import pytest
 import requests
+import tornado.httpclient
 from pytestshellutils.utils import ports
 from werkzeug.wrappers import Response  # pylint: disable=3rd-party-module-not-gated
 
 import salt.utils.http as http
 from tests.support.mock import MagicMock, patch
+
+
+class _FakeFetchResponse:
+    """Simple object mimicking the bits of tornado's HTTPResponse we rely on."""
+
+    def __init__(self, code=200, body=b"payload", headers=None):
+        self.code = code
+        self.body = body
+        self.headers = headers or {"Content-Type": "text/plain; charset=utf-8"}
+
+
+@pytest.fixture
+def syncwrapper_stub(monkeypatch):
+    """Patch ``salt.utils.http.SyncWrapper`` with a controllable test double."""
+
+    class SyncWrapperStub:
+        fetch_return = _FakeFetchResponse()
+        fetch_side_effect = None
+        enter_calls = 0
+        close_calls = 0
+        fetch_calls = 0
+
+        def __init__(self, *args, **kwargs):
+            # Mirror SyncWrapper signature but we only need to track usage.
+            pass
+
+        def __enter__(self):
+            SyncWrapperStub.enter_calls += 1
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            self.close()
+            # Propagate exceptions so http.query can handle them
+            return False
+
+        def close(self):
+            SyncWrapperStub.close_calls += 1
+
+        def fetch(self, *args, **kwargs):
+            SyncWrapperStub.fetch_calls += 1
+            if SyncWrapperStub.fetch_side_effect is not None:
+                raise SyncWrapperStub.fetch_side_effect
+            return SyncWrapperStub.fetch_return
+
+        @classmethod
+        def reset_counters(cls, *, clear_fetch=True):
+            cls.enter_calls = 0
+            cls.close_calls = 0
+            cls.fetch_calls = 0
+            if clear_fetch:
+                cls.fetch_side_effect = None
+                cls.fetch_return = _FakeFetchResponse()
+
+    monkeypatch.setattr(http, "SyncWrapper", SyncWrapperStub)
+    SyncWrapperStub.reset_counters()
+    return SyncWrapperStub
 
 
 def test_requests_session_verify_ssl_false(ssl_webserver, integration_files_dir):
@@ -184,6 +244,9 @@ def test_query_tornado_httperror_no_response():
 
     mock_client = MagicMock()
     mock_client.fetch.side_effect = http_error
+    # http.query() uses SyncWrapper as a context manager; ensure
+    # __enter__() returns the mock_client itself.
+    mock_client.__enter__.return_value = mock_client
 
     # http.query() wraps tornado's AsyncHTTPClient in a SyncWrapper before
     # calling .fetch(); patch the wrapper so .fetch() raises the HTTPError.
@@ -194,6 +257,184 @@ def test_query_tornado_httperror_no_response():
     assert ret.get("status") == 599
     assert "Timeout while connecting" in ret.get("error", "")
     assert "body" not in ret
+
+
+def test_query_tornado_closes_syncwrapper_on_success(syncwrapper_stub):
+    syncwrapper_stub.reset_counters()
+    syncwrapper_stub.fetch_return = _FakeFetchResponse(body=b"test-body")
+
+    ret = http.query("http://example.com", backend="tornado", status=True)
+
+    assert syncwrapper_stub.enter_calls == 1
+    assert syncwrapper_stub.close_calls == 1
+    assert syncwrapper_stub.fetch_calls == 1
+    assert ret["body"] == "test-body"
+    assert ret["status"] == 200
+
+
+def test_query_tornado_closes_syncwrapper_on_http_error(syncwrapper_stub):
+    syncwrapper_stub.reset_counters()
+    response = MagicMock(body=b"", headers={"Content-Type": "text/plain"})
+    syncwrapper_stub.fetch_side_effect = tornado.httpclient.HTTPError(
+        599, "Unit test failure", response=response
+    )
+
+    ret = http.query(
+        "http://example.com",
+        backend="tornado",
+        status=True,
+        raise_error=True,
+    )
+
+    assert syncwrapper_stub.enter_calls == 1
+    assert syncwrapper_stub.close_calls == 1
+    assert syncwrapper_stub.fetch_calls == 1
+    assert ret["status"] == 599
+    assert "Unit test failure" in ret["error"]
+
+
+class _CloseWithoutContentLengthHandler(BaseHTTPRequestHandler):
+    """
+    Serves a response of a given size with no Content-Length header,
+    forcing the client to read until the connection is closed.
+    """
+
+    response_size = 0
+
+    def do_GET(self):  # noqa: N802
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.end_headers()
+        remaining = self.response_size
+        chunk = b"x" * (1024 * 1024)
+        while remaining:
+            to_write = chunk[: min(len(chunk), remaining)]
+            try:
+                self.wfile.write(to_write)
+            except OSError:
+                # Client gave up (e.g. it hit a read buffer limit); nothing
+                # left to do but stop serving this request.
+                return
+            remaining -= len(to_write)
+
+    def log_message(self, *args):  # pylint: disable=arguments-differ
+        pass
+
+
+@pytest.mark.slow_test
+def test_query_tornado_no_content_length_large_body_not_truncated():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    Tornado's ``SimpleAsyncHTTPClient`` enforces a default ``max_buffer_size``
+    of 100MiB independently of ``max_body_size``/``http_max_body``. When a
+    server does not send a ``Content-Length`` header (forcing Salt to read
+    until the connection closes), downloads larger than 100MiB were silently
+    truncated at ~100MiB instead of completing or raising an error.
+    """
+    # Comfortably larger than Tornado's 100MiB (104857600 byte) default
+    # max_buffer_size, so a truncation would be reliably detected.
+    response_size = 101 * 1024 * 1024
+
+    handler = type(
+        "Handler",
+        (_CloseWithoutContentLengthHandler,),
+        {"response_size": response_size},
+    )
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), handler)
+    port = httpd.server_address[1]
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    received = []
+
+    def on_chunk(chunk):
+        received.append(chunk)
+
+    try:
+        ret = http.query(
+            f"http://127.0.0.1:{port}/",
+            backend="tornado",
+            stream=True,
+            streaming_callback=on_chunk,
+            opts={},
+        )
+    finally:
+        httpd.shutdown()
+        server_thread.join(timeout=5)
+
+    assert "error" not in ret, ret.get("error")
+    total_received = sum(len(chunk) for chunk in received)
+    assert total_received == response_size, (
+        f"Expected {response_size} bytes but received {total_received}; "
+        "the download was truncated (see #69916)"
+    )
+
+
+class _TruncatedContentLengthHandler(BaseHTTPRequestHandler):
+    """
+    Serves half of the advertised Content-Length and then drops the
+    connection, simulating a mid-download failure.
+    """
+
+    body = b""
+
+    def do_GET(self):  # noqa: N802
+        truncated_at = len(self.body) // 2
+        self.send_response(200)
+        self.send_header("Content-Type", "application/octet-stream")
+        self.send_header("Content-Length", str(len(self.body)))
+        self.end_headers()
+        self.wfile.write(self.body[:truncated_at])
+        self.connection.close()
+
+    def log_message(self, *args):  # pylint: disable=arguments-differ
+        pass
+
+
+def test_query_requests_connection_error_returns_error_dict():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    The ``requests`` backend is the documented workaround for the Tornado
+    ``max_buffer_size`` truncation bug, but unlike the ``tornado`` backend it
+    did not catch connection errors: when a server closed the connection
+    before delivering the full ``Content-Length``, the underlying
+    ``requests`` exception propagated unhandled out of ``http.query()``
+    instead of being reported the same way the ``tornado`` backend reports
+    HTTP errors (via the returned dict's ``error``/``status`` keys).
+    """
+    handler = type(
+        "Handler", (_TruncatedContentLengthHandler,), {"body": b"x" * (256 * 1024)}
+    )
+    httpd = socketserver.TCPServer(("127.0.0.1", 0), handler)
+    port = httpd.server_address[1]
+    server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    server_thread.start()
+
+    received = []
+
+    def on_chunk(chunk):
+        received.append(chunk)
+
+    def on_header(hdr):
+        pass
+
+    try:
+        ret = http.query(
+            f"http://127.0.0.1:{port}/",
+            backend="requests",
+            stream=True,
+            streaming_callback=on_chunk,
+            header_callback=on_header,
+            opts={},
+        )
+    finally:
+        httpd.shutdown()
+        server_thread.join(timeout=5)
+
+    assert "handle" not in ret
+    assert ret.get("error")
 
 
 def test_parse_cookie_header():

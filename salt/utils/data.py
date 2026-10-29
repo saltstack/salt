@@ -753,7 +753,12 @@ def filter_by(lookup_dict, lookup, traverse, merge=None, default="default", base
         for key in lookup_dict:
             test_key = key if isinstance(key, str) else str(key)
             test_each = each if isinstance(each, str) else str(each)
-            if fnmatch.fnmatchcase(test_each, test_key):
+            # Prefer an exact match before treating the key as an fnmatch glob,
+            # so literal keys containing glob metacharacters (e.g. the "[" and
+            # "]" in GPU/PCI model strings like "GP104GL [Quadro P4000]") still
+            # match their own value instead of being parsed as a character
+            # class (#60976).
+            if test_each == test_key or fnmatch.fnmatchcase(test_each, test_key):
                 ret = lookup_dict[key]
                 break
         if ret is not None:
@@ -932,6 +937,13 @@ def subdict_match(
             ret = True
         if not ret and pattern in target:
             # We might want to search for a key
+            ret = True
+        if not ret and any(
+            _match(key, pattern, regex_match=regex_match, exact_match=exact_match)
+            for key in target
+        ):
+            # The pattern may be a regex/glob that matches one of the keys,
+            # just like list members are matched below
             ret = True
         if not ret and subdict_match(
             target, pattern, regex_match=regex_match, exact_match=exact_match

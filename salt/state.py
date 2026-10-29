@@ -13,6 +13,16 @@ The data sent to the state calls is as follows:
 
 from __future__ import annotations
 
+try:
+    import contextvars
+except (ImportError, SyntaxError):
+    # Some salt-ssh targets (notably Python 3.6, which lacks a stdlib
+    # contextvars) resolve ``import contextvars`` to the thin's bundled backport,
+    # which pulls in immutables/typing_extensions that can be missing or
+    # syntactically incompatible on the target. Degrade to a shared stack there
+    # -- salt-ssh runs one execution per target, so the per-context isolation
+    # contextvars provides (#63056) is not needed.
+    contextvars = None
 import copy
 import datetime
 import fnmatch
@@ -934,6 +944,8 @@ class State:
         # running dict because the ParallelState objects, which filter unpicklable objects
         # out of the context dict when necessary, are not picklable themselves.
         self.procs = {}
+        # Fix for Issue #30971: Track processed SLS files to handle empty SLS files
+        self._processed_sls_files = set()
 
     def _destroy_fileclient_on_init_failure(self):
         """
@@ -978,8 +990,14 @@ class State:
         }
 
         if not isinstance(self.global_state_conditions, dict):
+            # ``config.option`` / ``match.compound`` are trusted engine
+            # internals (see VCOPS-90587 audit); read them via the
+            # unfiltered ``_trusted_functions`` so ``whitelist_modules``
+            # doesn't have to enumerate them for global state
+            # conditioning to work.
             self.global_state_conditions = (
-                self.functions["config.option"]("global_state_conditions") or {}
+                self._trusted_functions["config.option"]("global_state_conditions")
+                or {}
             )
 
         for state_match, conditions in self.global_state_conditions.items():
@@ -988,7 +1006,7 @@ class State:
                     conditions = [conditions]
                 if isinstance(conditions, list):
                     matches.extend(
-                        self.functions["match.compound"](condition)
+                        self._trusted_functions["match.compound"](condition)
                         for condition in conditions
                     )
 
@@ -1123,7 +1141,25 @@ class State:
             if run_cmd_arg not in cmd_opts_exclude:
                 cmd_opts[run_cmd_arg] = low.get(run_cmd_arg)
 
-        if "shell" in low and "shell" not in cmd_opts_exclude:
+        # NOTE: low.get("state") != "user" is a deliberately narrow,
+        # state-name-based carve-out, not a general mechanism. "shell" here
+        # means two different things depending on which state declared it:
+        # for cmd.run it is (correctly) the shell to run the check command
+        # in, but for user.present it is the user's login shell and has
+        # nothing to do with how the check command should execute (see
+        # #59420). A more general solution -- e.g. a registry of state
+        # modules that opt out of shell inheritance, or handling this
+        # entirely inside salt/states/user.py via a custom mod_run_check --
+        # would avoid naming a specific state module here, but no such
+        # mechanism exists today (mod_run_check is unused anywhere in the
+        # codebase), so this targeted check was chosen to fix the reported
+        # bug without introducing new, untested extensibility. Revisit if a
+        # third state module develops the same shell-name collision.
+        if (
+            "shell" in low
+            and "shell" not in cmd_opts_exclude
+            and low.get("state") != "user"
+        ):
             cmd_opts["shell"] = low["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -1405,6 +1441,13 @@ class State:
                 # In non-resource context this is None and the dunder isn't
                 # packed.
                 minion_mods=self.minion_functions,
+                # Two-loader propagation for ``whitelist_modules``:  give
+                # state modules the unfiltered inner exec-module loader as
+                # ``__salt__`` so trusted shipped code (e.g. ``file.managed``
+                # calling ``__salt__['file.source_list']``) is not gated,
+                # while wire dispatch and any ``__wire_salt__`` consumer
+                # (``salt.states.module.run`` / ``.function``) stay gated.
+                dunder_salt=getattr(self.functions, "_dunder_salt", None),
             )
 
     def load_modules(self, data=None, proxy=None):
@@ -1473,6 +1516,23 @@ class State:
                 proxy=self.proxy,
                 file_client=salt.fileclient.ContextlessFileClient(self.file_client),
             )
+        # ``self._trusted_functions`` is the unfiltered inner exec-module
+        # loader (built by :func:`salt.loader.minion_mods` when
+        # ``whitelist_modules`` is set).  It is used only for
+        # state-engine internal composition -- ``config.option`` reads,
+        # requisite/aggregate machinery, ``saltutil.refresh_modules``,
+        # ``event.fire_master``, ``test.sleep`` in the retry loop --
+        # so those trusted salt-core-authored call sites keep working
+        # when the operator's whitelist doesn't happen to include the
+        # helper modules they need.  User-facing dispatch
+        # (``unless``/``onlyif``/``check_cmd``, ``__slot__:salt:...``,
+        # ``module.run``, Jinja renderer context) still uses
+        # ``self.functions`` and stays wire-filtered.  Falls back to
+        # ``self.functions`` on loaders that don't expose the inner
+        # loader (master-side compile, older salt versions).
+        self._trusted_functions = (
+            getattr(self.functions, "_dunder_salt", None) or self.functions
+        )
         if isinstance(data, dict):
             if data.get("provider", False):
                 if isinstance(data["provider"], str):
@@ -1522,7 +1582,9 @@ class State:
                 )
         self.load_modules()
         if not self.opts.get("local", False) and self.opts.get("multiprocessing", True):
-            self.functions["saltutil.refresh_modules"]()
+            # Trusted internal refresh; do not depend on the operator
+            # putting ``saltutil`` on the wire whitelist (VCOPS-90587).
+            self._trusted_functions["saltutil.refresh_modules"]()
 
     def check_refresh(self, data: dict, ret: dict) -> None:
         """
@@ -1622,19 +1684,9 @@ class State:
         else:
             # First verify that the parameters are met
             aspec = salt.utils.args.get_function_argspec(self.states[full])
-            arglen = 0
-            deflen = 0
-            if isinstance(aspec.args, list):
-                arglen = len(aspec.args)
-            if isinstance(aspec.defaults, tuple):
-                deflen = len(aspec.defaults)
-            for ind in range(arglen - deflen):
-                if aspec.args[ind] not in data:
-                    errors.append(
-                        "Missing parameter {} for state {}".format(
-                            aspec.args[ind], full
-                        )
-                    )
+            for arg in aspec.allreq:
+                if arg not in data:
+                    errors.append(f"Missing parameter {arg} for state {full}")
         return errors
 
     def verify_high(self, high: dict) -> list[str]:
@@ -1659,8 +1711,11 @@ class State:
             disabled_reqs = [disabled_reqs]
         if not self.dependency_dag.dag:
             # if order_chunks was called without calling compile_high_data then
-            # we need to add the chunks to the dag
-            agg_opt = self.functions["config.option"]("state_aggregate")
+            # we need to add the chunks to the dag.  ``config.option`` is
+            # trusted engine internal (VCOPS-90587); route through
+            # ``_trusted_functions`` so a minion whose whitelist excludes
+            # ``config`` still gets aggregate ordering.
+            agg_opt = self._trusted_functions["config.option"]("state_aggregate")
             for chunk in chunks:
                 self.dependency_dag.add_chunk(
                     chunk, self._allow_aggregate(chunk, agg_opt)
@@ -1715,10 +1770,19 @@ class State:
         self.dependency_dag = DependencyGraph()
         chunks = []
         disabled = {}
-        agg_opt = self.functions["config.option"]("state_aggregate")
+        # ``config.option`` here reads a salt-core aggregate opt.  Route
+        # through ``_trusted_functions`` (unfiltered) so
+        # ``compile_high_data`` doesn't KeyError under a strict
+        # ``whitelist_modules`` that omits ``config`` (VCOPS-90587).
+        agg_opt = self._trusted_functions["config.option"]("state_aggregate")
         for id_, body in high.items():
             if id_.startswith("__"):
                 continue
+            # Track SLS files from the high data, even if they produce no chunks.
+            # This is needed to handle SLS files that produce no output but are
+            # still required by other states (Issue #30971).
+            if "__sls__" in body:
+                self._processed_sls_files.add(body["__sls__"])
             for state, run in body.items():
                 # This should be a single value instead of a set
                 # because multiple functions of the same state
@@ -2033,6 +2097,12 @@ class State:
                                     else:
                                         found = False
                                         for _id in iter(high):
+                                            # Skip non-state entries such as
+                                            # __exclude__ (a list), whose values
+                                            # are not state bodies -- mirrors the
+                                            # guard in the top-level loop above.
+                                            if not isinstance(high[_id], dict):
+                                                continue
                                             for st8 in [
                                                 _st8
                                                 for _st8 in iter(high[_id])
@@ -2528,7 +2598,10 @@ class State:
                             "state will be re-run in %s seconds",
                             interval,
                         )
-                        self.functions["test.sleep"](interval)
+                        # Retry sleep is engine-internal (VCOPS-90587
+                        # audit); don't require ``test`` on the wire
+                        # whitelist just to retry a failed state.
+                        self._trusted_functions["test.sleep"](interval)
                         retry_ret = self.call(low, chunks, running, retries=retries + 1)
                         orig_ret = ret
                         ret = retry_ret
@@ -2598,7 +2671,7 @@ class State:
             return_get = slot_text[slot_text.rindex(")") + 1 :]
         except ValueError:
             pass
-        if return_get:
+        if "." in (return_get or ""):
             # remove first period
             return_get = return_get.split(".", 1)[1].strip()
             log.debug("Searching slot result %s for %s", slot_return, return_get)
@@ -2610,6 +2683,12 @@ class State:
             if isinstance(slot_return, str):
                 # Append text to slot string result
                 append_data = " ".join(append_data).strip()
+                if (
+                    len(append_data) >= 2
+                    and append_data[0] == append_data[-1]
+                    and append_data[0] in ('"', "'")
+                ):
+                    append_data = append_data[1:-1]
                 log.debug("appending to slot result: %s", append_data)
                 slot_return += append_data
             else:
@@ -2960,16 +3039,18 @@ class State:
                     if run_dict[tag]["result"] is True:
                         req_stats.add("onfail")  # At least one state is OK
                         continue
-                else:
-                    if run_dict[tag]["result"] is False:
-                        req_stats.add("fail")
-                        continue
-                if r_type_base == RequisiteType.ONCHANGES.value:
-                    if not run_dict[tag]["changes"]:
+                elif r_type_base == RequisiteType.ONCHANGES.value:
+                    # onchanges is a soft trigger: a failed target is treated
+                    # the same as a target with no changes, not a hard failure.
+                    if run_dict[tag]["result"] is False or not run_dict[tag]["changes"]:
                         req_stats.add("onchanges")
                     else:
                         req_stats.add("onchangesmet")
                     continue
+                else:
+                    if run_dict[tag]["result"] is False:
+                        req_stats.add("fail")
+                        continue
                 if (
                     r_type_base == RequisiteType.WATCH.value
                     and run_dict[tag]["changes"]
@@ -3061,7 +3142,11 @@ class State:
                         _evt.fire_event(ret, tag)
 
             else:
-                ev_func = self.functions["event.fire_master"]
+                # State result event firing is engine internal
+                # (VCOPS-90587); use the unfiltered dunder so a strict
+                # whitelist that omits ``event`` still gets state-result
+                # events on the master bus.
+                ev_func = self._trusted_functions["event.fire_master"]
 
             ret: dict[str, Any] = {"ret": chunk_ret}
             if fire_event is True:
@@ -3288,10 +3373,30 @@ class State:
                     return running, pending
         if low.get("__prereq__"):
             status, _ = self._check_requisites(low, running)
-            self.pre[tag] = self.call(low, chunks, running)
-            if not self.pre[tag]["changes"] and status == "change":
-                self.pre[tag]["changes"] = {"watch": "watch"}
-                self.pre[tag]["result"] = None
+            if status == "pre":
+                # The prereq chain for this state reported no changes, so
+                # this state should not run either. Mark it as having no
+                # changes so a state prerequiring this one does not run.
+                # Fixes #68438.
+                start_time, duration = _calculate_fake_duration()
+                pre_ret = {
+                    "changes": {},
+                    "result": True,
+                    "duration": duration,
+                    "start_time": start_time,
+                    "comment": "No changes detected",
+                    "__run_num__": self.__run_num,
+                    "__state_ran__": False,
+                }
+                for key in ("__sls__", "__id__", "name"):
+                    pre_ret[key] = low.get(key)
+                self.pre[tag] = pre_ret
+                self.__run_num += 1
+            else:
+                self.pre[tag] = self.call(low, chunks, running)
+                if not self.pre[tag]["changes"] and status == "change":
+                    self.pre[tag]["changes"] = {"watch": "watch"}
+                    self.pre[tag]["result"] = None
         else:
             depth += 1
             # even this depth is being generous. This shouldn't exceed 1 no
@@ -3673,6 +3778,52 @@ class BaseHighState:
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
+
+    # Fallback shared stack, used only when contextvars is unavailable (see the
+    # guarded import at the top of the module). salt-ssh runs one execution per
+    # target, so a shared stack there is safe.
+    _shared_active_stack = []
+
+    @classmethod
+    def _active_stack(cls):
+        if _active_highstates is None:
+            return BaseHighState._shared_active_stack
+        # The active-HighState stack for the current execution context, created
+        # lazily on first use. A default= on the ContextVar would share one
+        # list object across every context, defeating the isolation, so the
+        # per-context list is set explicitly here instead.
+        try:
+            return _active_highstates.get()
+        except LookupError:
+            stack = []
+            _active_highstates.set(stack)
+            return stack
+
+    def push_active(self):
+        self._active_stack().append(self)
+
+    @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the active-HighState stack for the current execution
+        # context. Used primarily by the test runner but also useful in custom
+        # wrappers of the HighState class, to reset the stack to a fresh state.
+        if _active_highstates is None:
+            BaseHighState._shared_active_stack.clear()
+        else:
+            _active_highstates.set([])
+
+    @classmethod
+    def pop_active(cls):
+        cls._active_stack().pop()
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls._active_stack()[-1]
+        except IndexError:
+            return None
 
     def __gather_avail(self):
         """
@@ -4097,10 +4248,12 @@ class BaseHighState:
                     "The top file matches for saltenv {} are not "
                     "formatted as a dict".format(saltenv)
                 )
-            for slsmods in matches.values():
+            for match, slsmods in matches.items():
                 if not isinstance(slsmods, list):
                     errors.append(
-                        "Malformed topfile (state declarations not formed as a list)"
+                        "Malformed topfile: state declarations for matcher"
+                        " {!r} in saltenv {!r} are not formed as a list (got"
+                        " {})".format(match, saltenv, type(slsmods).__name__)
                     )
                     continue
                 for slsmod in slsmods:
@@ -4291,6 +4444,12 @@ class BaseHighState:
                 mods.add(f"{saltenv}:{sls}")
             except AttributeError:
                 pass
+
+            # Track SLS files that were rendered, even if they produce no
+            # output (empty state), so they can satisfy requisites
+            # (Issue #30971)
+            if hasattr(self.state, "_processed_sls_files"):
+                self.state._processed_sls_files.add(sls)
 
         if state:
             if not isinstance(state, dict):
@@ -4665,10 +4824,10 @@ class BaseHighState:
                         " conflicting ID is '{}' and is found in SLS"
                         " '{}:{}' and SLS '{}:{}'".format(
                             id_,
-                            highstate[id_]["__env__"],
-                            highstate[id_]["__sls__"],
-                            state[id_]["__env__"],
-                            state[id_]["__sls__"],
+                            highstate[id_].get("__env__"),
+                            highstate[id_].get("__sls__"),
+                            state[id_].get("__env__"),
+                            state[id_].get("__sls__"),
                         )
                     )
         try:
@@ -4888,6 +5047,17 @@ class BaseHighState:
         self.destroy()
 
 
+# The stack of active HighState objects during a state run is kept per
+# execution context rather than on the class, so concurrent runs -- e.g.
+# reactor orchestrations rendered in parallel reactor worker threads -- each
+# get their own stack instead of corrupting a shared class-level list
+# (#63056). This mirrors salt.loader's loader_ctxvar.
+if contextvars is not None:
+    _active_highstates = contextvars.ContextVar("salt_active_highstates")
+else:
+    _active_highstates = None
+
+
 class HighState(BaseHighState):
     """
     Generate and execute the salt "High State". The High State is the
@@ -4895,8 +5065,9 @@ class HighState(BaseHighState):
     salt master or in the local cache.
     """
 
-    # a stack of active HighState objects during a state.highstate run
-    stack = []
+    # The stack of active HighState objects during a state run is stored per
+    # execution context in the module-level ``_active_highstates`` ContextVar;
+    # see ``_active_stack`` and the push/pop/get/clear accessors below.
 
     def __init__(
         self,
@@ -4956,28 +5127,10 @@ class HighState(BaseHighState):
         # a stack of current rendering Sls objects, maintained and used by the pydsl renderer.
         self._pydsl_render_stack = []
 
-    def push_active(self):
-        self.stack.append(self)
-
-    @classmethod
-    def clear_active(cls):
-        # Nuclear option
-        #
-        # Blow away the entire stack. Used primarily by the test runner but also
-        # useful in custom wrappers of the HighState class, to reset the stack
-        # to a fresh state.
-        cls.stack = []
-
-    @classmethod
-    def pop_active(cls):
-        cls.stack.pop()
-
-    @classmethod
-    def get_active(cls):
-        try:
-            return cls.stack[-1]
-        except IndexError:
-            return None
+        # cached top-file matches for pydsl includes, computed once per run.
+        # Held on the instance (not a module global) so concurrent runs do not
+        # share one another's matches (#63056).
+        self._pydsl_sls_matches = None
 
     def destroy(self):
         if not self.preserve_client:
@@ -5007,6 +5160,10 @@ class MasterState(State):
         # from the minion, but uses remote execution
         #
         self.functions = salt.client.FunctionWrapper(self.opts, self.opts["id"])
+        # Master-side compile has no two-loader model (FunctionWrapper
+        # doesn't expose ``_dunder_salt``); trusted internal composition
+        # falls back to the same wrapper the wire uses.
+        self._trusted_functions = self.functions
         # Load the states, but they should not be used in this class apart
         # from inspection
         self.utils = salt.loader.utils(self.opts)

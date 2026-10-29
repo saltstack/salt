@@ -107,10 +107,19 @@ def _changes(
     allow_gid_change=False,
     password_lock=None,
     local=False,
+    win_password_never_expires=None,
+    win_disallow_change_password=None,
+    win_account_disabled=None,
+    win_unlock_account=None,
+    win_expiration_date=None,
 ):
     """
     Return a dict of the changes required for a user if the user is present,
     otherwise return False.
+
+    Updated in 3008.5 to include support for windows password_never_expires,
+    disallow_change_password, account_disabled, unlock_account, and
+    expiration_date fields.
 
     Updated in 2015.8.0 to include support for windows homedrive, profile,
     logonscript, and description fields.
@@ -248,6 +257,38 @@ def _changes(
         change["win_logonscript"] = win_logonscript
     if win_description and lusr["description"] != win_description:
         change["win_description"] = win_description
+    # Booleans must use "is not None" (unlike the string fields above) since
+    # False is a meaningful, intentional value for these flags.
+    if (
+        win_password_never_expires is not None
+        and lusr.get("password_never_expires") != win_password_never_expires
+    ):
+        change["win_password_never_expires"] = win_password_never_expires
+    if (
+        win_disallow_change_password is not None
+        and lusr.get("disallow_change_password") != win_disallow_change_password
+    ):
+        change["win_disallow_change_password"] = win_disallow_change_password
+    if (
+        win_account_disabled is not None
+        and lusr.get("account_disabled") != win_account_disabled
+    ):
+        change["win_account_disabled"] = win_account_disabled
+    # win_useradd.update()'s unlock_account only supports unlocking (True);
+    # False/locking via this path is a documented no-op, so only emit a
+    # change when the account is currently locked and the desired state is
+    # True -- otherwise this state would never converge (flip-flop).
+    if win_unlock_account and lusr.get("account_locked"):
+        change["win_unlock_account"] = win_unlock_account
+    if win_expiration_date:
+        cur_expiration = lusr.get("expiration_date")
+        if win_expiration_date == "Never" or cur_expiration == "Never":
+            if win_expiration_date != cur_expiration:
+                change["win_expiration_date"] = win_expiration_date
+        elif salt.utils.dateutils.strftime(
+            cur_expiration
+        ) != salt.utils.dateutils.strftime(win_expiration_date):
+            change["win_expiration_date"] = win_expiration_date
 
     # MacOS doesn't have full GECOS support, so check for the "ch" functions
     # and ignore these parameters if these functions do not exist.
@@ -332,6 +373,11 @@ def present(
     win_profile=None,
     win_logonscript=None,
     win_description=None,
+    win_password_never_expires=None,
+    win_disallow_change_password=None,
+    win_account_disabled=None,
+    win_unlock_account=None,
+    win_expiration_date=None,
     nologinit=False,
     allow_uid_change=False,
     allow_gid_change=False,
@@ -348,18 +394,33 @@ def present(
         The user id to assign. If not specified, and the user does not exist,
         then the next available uid will be assigned.
 
+        .. note::
+            Not supported on Windows. On Windows the account SID is fixed by
+            the operating system at user creation time and cannot be chosen
+            or changed; ``uid`` and ``allow_uid_change`` have no effect there
+            and will surface as a permissions error if used.
+
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
+        .. note::
+            Not supported on Windows.
+
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
+
+        .. note::
+            Not supported on Windows -- see ``uid``.
 
         .. versionadded:: 2018.3.1
 
     allow_gid_change : False
         Set to ``True`` to allow the state to update the gid.
+
+        .. note::
+            Not supported on Windows.
 
         .. versionadded:: 2018.3.1
 
@@ -547,6 +608,37 @@ def present(
         A brief description of the purpose of the users account.
 
         .. versionchanged:: 2015.8.0
+
+    win_password_never_expires (Windows Only)
+        ``True`` sets the password to never expire. ``False`` allows the
+        password to expire.
+
+        .. versionadded:: 3008.5
+
+    win_disallow_change_password (Windows Only)
+        ``True`` blocks the user from changing their own password. ``False``
+        allows the user to change the password.
+
+        .. versionadded:: 3008.5
+
+    win_account_disabled (Windows Only)
+        ``True`` disables the account. ``False`` enables it.
+
+        .. versionadded:: 3008.5
+
+    win_unlock_account (Windows Only)
+        ``True`` unlocks a locked-out account. ``False`` is ignored -- there
+        is no supported way to lock an account via this parameter.
+
+        .. versionadded:: 3008.5
+
+    win_expiration_date (Windows Only)
+        The date/time the account expires. Accepts any date/time string
+        parseable by Salt, or the literal string ``'Never'``. This is the
+        Windows ``acct_expires`` field and is unrelated to the POSIX
+        ``expire`` (shadow) parameter above.
+
+        .. versionadded:: 3008.5
     """
     # First check if a password is set. If password is set, check if
     # hash_password is True, then hash it.
@@ -606,21 +698,36 @@ def present(
     }
 
     # the comma is used to separate field in GECOS, thus resulting into
-    # salt adding the end of fullname each time this function is called
-    for gecos_field in [fullname, roomnumber, workphone]:
-        if isinstance(gecos_field, str) and "," in gecos_field:
-            ret["comment"] = f"Unsupported char ',' in {gecos_field}"
-            ret["result"] = False
-            return ret
+    # salt adding the end of fullname each time this function is called.
+    # This is a POSIX/GECOS-only restriction (roomnumber/workphone do not
+    # even exist on Windows); skip it there so Windows "Last, First" style
+    # full names are not rejected.
+    if not salt.utils.platform.is_windows():
+        for gecos_field in [fullname, roomnumber, workphone]:
+            if isinstance(gecos_field, str) and "," in gecos_field:
+                ret["comment"] = f"Unsupported char ',' in {gecos_field}"
+                ret["result"] = False
+                return ret
 
+    missing_groups = []
     if groups:
         missing_groups = [x for x in groups if not __salt__["group.info"](x)]
         if missing_groups:
-            ret["comment"] = "The following group(s) are not present: {}".format(
-                ",".join(missing_groups)
-            )
-            ret["result"] = False
-            return ret
+            if __opts__.get("test"):
+                # In test mode, a missing group is not necessarily an error:
+                # a `group.present` requisite may create it during the real
+                # run. Note the missing groups in the result, drop them from
+                # the membership check below (they cannot be diffed against
+                # the user's current groups since they do not yet exist),
+                # and let the rest of the function report whatever else
+                # would change. Issue #68110.
+                groups = [x for x in groups if x not in missing_groups]
+            else:
+                ret["comment"] = "The following group(s) are not present: {}".format(
+                    ",".join(missing_groups)
+                )
+                ret["result"] = False
+                return ret
 
     if optional_groups:
         present_optgroups = [x for x in optional_groups if __salt__["group.info"](x)]
@@ -687,6 +794,11 @@ def present(
             allow_gid_change,
             password_lock=password_lock,
             local=local,
+            win_password_never_expires=win_password_never_expires,
+            win_disallow_change_password=win_disallow_change_password,
+            win_account_disabled=win_account_disabled,
+            win_unlock_account=win_unlock_account,
+            win_expiration_date=win_expiration_date,
         )
     except CommandExecutionError as exc:
         ret["result"] = False
@@ -703,6 +815,10 @@ def present(
                 elif key == "group" and not remove_groups:
                     key = "ensure groups"
                 ret["comment"] += f"{key}: {val}\n"
+            if missing_groups:
+                ret["comment"] += "groups (pending creation): {}\n".format(
+                    ",".join(missing_groups)
+                )
             return ret
         # The user is present
         if "shadow.info" in __salt__:
@@ -795,6 +911,33 @@ def present(
                 name=name, description=changes.pop("win_description")
             )
 
+        if "win_password_never_expires" in changes:
+            __salt__["user.update"](
+                name=name,
+                password_never_expires=changes.pop("win_password_never_expires"),
+            )
+
+        if "win_disallow_change_password" in changes:
+            __salt__["user.update"](
+                name=name,
+                disallow_change_password=changes.pop("win_disallow_change_password"),
+            )
+
+        if "win_account_disabled" in changes:
+            __salt__["user.update"](
+                name=name, account_disabled=changes.pop("win_account_disabled")
+            )
+
+        if "win_unlock_account" in changes:
+            __salt__["user.update"](
+                name=name, unlock_account=changes.pop("win_unlock_account")
+            )
+
+        if "win_expiration_date" in changes:
+            __salt__["user.update"](
+                name=name, expiration_date=changes.pop("win_expiration_date")
+            )
+
         # Do the changes that have "ch" functions for them, but skip changing
         # groups for now. Changing groups before changing the chgid could cause
         # unpredictable results, including failure to set the proper groups.
@@ -872,6 +1015,11 @@ def present(
             allow_gid_change=True,
             password_lock=password_lock,
             local=local,
+            win_password_never_expires=win_password_never_expires,
+            win_disallow_change_password=win_disallow_change_password,
+            win_account_disabled=win_account_disabled,
+            win_unlock_account=win_unlock_account,
+            win_expiration_date=win_expiration_date,
         )
         # allow_uid_change and allow_gid_change passed as True to avoid race
         # conditions where a uid/gid is modified outside of Salt. If an
@@ -885,9 +1033,28 @@ def present(
 
     if changes is False:
         # The user is not present, make it!
+        if salt.utils.platform.is_windows() and __salt__["group.info"](name):
+            # Windows shares one namespace for local users and local groups.
+            # NetUserAdd will fail with winerror 2220 if a group with this
+            # name already exists. Fail fast with a clear message instead of
+            # ever calling user.add/NetUserAdd. This is a hard OS-level
+            # restriction that cannot be worked around, so it is checked
+            # unconditionally -- even in test mode -- unlike missing_groups
+            # above, which can resolve itself via a group.present requisite.
+            ret["result"] = False
+            ret["comment"] = (
+                f"Cannot create user {name}: a local group named '{name}' "
+                "already exists. Windows does not allow a local user and a "
+                "local group to share the same name."
+            )
+            return ret
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = f"User {name} set to be added"
+            if missing_groups:
+                ret["comment"] += " (pending groups: {})".format(
+                    ",".join(missing_groups)
+                )
             return ret
         if groups and present_optgroups:
             groups.extend(present_optgroups)
@@ -928,6 +1095,11 @@ def present(
                 "homedrive": win_homedrive,
                 "profile": win_profile,
                 "logonscript": win_logonscript,
+                "expiration_date": win_expiration_date,
+                "account_disabled": win_account_disabled,
+                "unlock_account": win_unlock_account,
+                "password_never_expires": win_password_never_expires,
+                "disallow_change_password": win_disallow_change_password,
             }
         result = __salt__["user.add"](**params)
         if result is True:

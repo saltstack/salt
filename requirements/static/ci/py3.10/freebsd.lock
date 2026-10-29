@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -32,9 +32,10 @@ async-timeout==4.0.3 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -48,6 +49,7 @@ backports-tarfile==1.2.0 ; python_full_version < '3.12'
     #   jaraco-context
 bcrypt==4.0.1
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/static/ci/common.txt
     #   paramiko
 boto==2.49.0
@@ -62,9 +64,10 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1 ; sys_platform != 'win32'
@@ -78,9 +81,10 @@ cffi==2.0.0
     #   cryptography
     #   pynacl
     #   pyzmq
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via -r requirements/static/ci/common.txt
@@ -111,7 +115,7 @@ croniter==6.2.2 ; sys_platform != 'win32'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -169,11 +173,10 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
@@ -240,11 +243,19 @@ jmespath==1.1.0
     #   boto3
     #   botocore
 jsonschema==3.2.0
-    # via -r requirements/static/ci/common.txt
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 junit-xml==1.9
     # via -r requirements/static/ci/common.txt
-junos-eznc==2.7.1 ; sys_platform != 'win32'
-    # via -r requirements/static/ci/common.txt
+junos-eznc==2.5.4 ; python_full_version == '3.11.*' and sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
+junos-eznc==2.7.1 ; python_full_version != '3.11.*' and sys_platform != 'win32'
+    # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/static/ci/common.txt
 jxmlease==1.0.3 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
 kazoo==2.9.0 ; sys_platform != 'darwin' and sys_platform != 'win32'
@@ -307,20 +318,23 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
     #   junos-eznc
+netaddr==1.3.0 ; python_full_version == '3.11.*' and sys_platform != 'win32'
+    # via junos-eznc
 oauthlib==3.3.1
     # via requests-oauthlib
 opentelemetry-api==1.42.1
@@ -365,14 +379,17 @@ packaging==24.0 ; python_full_version >= '3.11'
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 packaging==26.2 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
+    #   junos-eznc
     #   ncclient
     #   scp
 passlib==1.7.4
@@ -382,7 +399,6 @@ pathspec==0.12.1
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -413,7 +429,7 @@ psutil==7.2.2
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -445,7 +461,7 @@ pynacl==1.5.0
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -457,7 +473,7 @@ pyrsistent==0.19.3
     # via jsonschema
 pyserial==3.5 ; sys_platform != 'win32'
     # via junos-eznc
-pytest==9.0.3
+pytest==8.4.2
     # via
     #   -r requirements/pytest.txt
     #   pytest-benchmark
@@ -507,7 +523,7 @@ python-dateutil==2.9.0.post0
     #   croniter
     #   kubernetes
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   virtualenv
@@ -566,8 +582,7 @@ requests==2.31.0 ; python_full_version < '3.11'
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
-requests==2.33.1 ; python_full_version >= '3.11'
+requests==2.34.2 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -580,7 +595,6 @@ requests==2.33.1 ; python_full_version >= '3.11'
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.23.1
@@ -593,10 +607,6 @@ rich==15.0.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   typer
-rpm-vercmp==0.1.2 ; sys_platform == 'linux'
-    # via
-    #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   -r requirements/base.txt
 s3transfer==0.18.0
     # via boto3
 scp==0.14.5 ; sys_platform != 'win32'
@@ -652,7 +662,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1 ; python_full_version < '3.11'
     # via pytest
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -680,6 +690,7 @@ typing-extensions==4.14.1
     #   aiohttp
     #   aiosignal
     #   cryptography
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
@@ -687,7 +698,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -699,16 +710,12 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0

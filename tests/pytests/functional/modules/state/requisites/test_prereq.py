@@ -755,3 +755,51 @@ def test_requisites_prereq_fail_in_prereq(state, state_tree):
             ret["test_|-State C_|-State C_|-nop"].full_return["comment"]
             == "State was not run because none of the onchanges reqs changed"
         )
+
+
+def test_requisites_prereq_chain_no_changes_at_tail_68438(state, state_tree):
+    """
+    Test that a prereq chain in which the tail state produces no changes
+    does not cause the head state to run, even when an intermediate state
+    in the chain always produces (test-mode) changes.
+
+    Regression test for #68438.
+
+    Chain:
+
+        state1  --prereq--> state2  --prereq--> state3
+
+    state3 produces no changes, so state2's prereq is satisfied with no
+    pending changes, so state1's prereq should also report no pending
+    changes and state1 should NOT run.
+    """
+    sls_contents = """
+    state1:
+      test.succeed_with_changes:
+        - prereq:
+          - test: state2
+
+    state2:
+      test.succeed_with_changes:
+        - prereq:
+          - test: state3
+
+    state3:
+      test.succeed_without_changes: []
+    """
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        state1_tag = "test_|-state1_|-state1_|-succeed_with_changes"
+        state2_tag = "test_|-state2_|-state2_|-succeed_with_changes"
+        state3_tag = "test_|-state3_|-state3_|-succeed_without_changes"
+
+        # state3 has no changes; state2's prereq on state3 is satisfied
+        # with no pending changes, so state2 should not run; therefore
+        # state1's prereq on state2 should also report no pending changes
+        # and state1 should not run.
+        assert ret[state1_tag].full_return["changes"] == {}
+        assert ret[state2_tag].full_return["changes"] == {}
+        assert ret[state3_tag].full_return["changes"] == {}
+        assert ret[state1_tag].result is True
+        assert ret[state2_tag].result is True
+        assert ret[state3_tag].result is True

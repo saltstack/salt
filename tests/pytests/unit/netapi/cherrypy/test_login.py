@@ -30,6 +30,12 @@ class MockNetapiClient:
     def _is_master_running(self):
         return True
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
 
 class MockResolver:
     def __init__(self, *args, **kwargs):

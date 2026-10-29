@@ -56,6 +56,21 @@ def store(bank, key, data, cachedir):
             )
 
     outfile = salt.utils.path.join(base, f"{key}.p")
+    # A ``key`` may legitimately contain path separators (e.g. the pillar
+    # cache uses ``<minion_id>:<pillarenv>`` as its key, and ``pillarenv``
+    # may itself contain ``/`` when pillar_roots use hierarchical names).
+    # In that case ``outfile`` lands in a subdirectory that may not exist
+    # yet -- create it so the atomic rename below can succeed. See
+    # issue #69741.
+    outdir = os.path.dirname(outfile)
+    if outdir and outdir != base:
+        try:
+            os.makedirs(outdir, exist_ok=True)
+        except OSError as exc:
+            raise SaltCacheError(
+                f"The cache directory, {outdir}, could not be created: {exc}"
+            )
+
     tmpfh, tmpfname = tempfile.mkstemp(dir=base)
     os.close(tmpfh)
     try:
@@ -67,6 +82,19 @@ def store(bank, key, data, cachedir):
         raise SaltCacheError(
             f"There was an error writing the cache file, {base}: {exc}"
         )
+    finally:
+        # ``atomic_rename`` moves ``tmpfname`` to ``outfile`` on success, so
+        # the tmp file is only left behind when the write or rename failed.
+        # Not cleaning this up caused the pillar cache to accumulate
+        # millions of leaked ``tmp*`` files (issue #69741).
+        if os.path.exists(tmpfname):
+            try:
+                os.remove(tmpfname)
+            except OSError:
+                log.debug(
+                    "Could not remove leftover localfs cache tmp file %s",
+                    tmpfname,
+                )
 
 
 def fetch(bank, key, cachedir):

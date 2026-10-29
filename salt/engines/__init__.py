@@ -4,13 +4,21 @@ complex services to be encapsulated within the salt plugin environment
 """
 
 import logging
+import os
+import time
 
 import salt
 import salt.loader
 import salt.utils.platform
 import salt.utils.process
+from salt.exceptions import SaltSystemExit
 
 log = logging.getLogger(__name__)
+
+# How long a minion engine waits for the minion to create its key pair before
+# resolving ``master_uri``. Generous on purpose: RSA key generation on slow
+# hardware can take a while, and the wait only happens on a first start.
+MINION_KEY_WAIT_TIMEOUT = 60
 
 
 def start_engines(opts, proc_mgr, proxy=None):
@@ -80,10 +88,112 @@ class Engine(salt.utils.process.SignalHandlingProcess):
         self.runners = runners
         self.proxy = proxy
 
+    def _ensure_master_uri(self):
+        """
+        Complete the transport opts for a minion engine.
+
+        A minion forks its engines early in startup -- before it has connected
+        and resolved ``master_uri`` into its opts -- so the engine runs against
+        a snapshot that lacks it. Any ``__salt__`` call that needs the master
+        transport (e.g. ``pillar.data``) then raises ``KeyError: 'master_uri'``
+        (#57952). Resolve it here, in the engine's own process, before the
+        execution modules are loaded/used.
+
+        This is deliberately best-effort so it can never block or break engine
+        startup: master engines have a different role (and no master),
+        masterless minions need no transport, and DNS is resolved once without
+        the minion connect loop's retry so a transport-less engine still starts
+        even when the master is not resolvable.
+
+        A list ``master`` (``master_type: failover``/``distributed``) is left
+        alone: the engine cannot know which master the minion will pick, and
+        ``resolve_dns`` raises ``SaltSystemExit`` (a ``SystemExit``, not an
+        ``Exception``) for a list, which would kill the engine process.
+
+        Once the master resolves, it waits for the minion's key pair before
+        setting ``master_uri`` (see ``_wait_for_minion_keys``), so the engine
+        never generates keys of its own on a first start. The master is
+        resolved first because the minion also resolves it before creating its
+        keys: when it does not resolve, the minion has no keys to wait for.
+        """
+        if (
+            self.opts.get("__role") != "minion"
+            or "master_uri" in self.opts
+            or (
+                self.opts.get("file_client") == "local"
+                and not self.opts.get("use_master_when_local")
+            )
+        ):
+            return
+        if isinstance(self.opts.get("master"), list):
+            log.debug(
+                "%s: master is a list (master_type %s); not resolving master_uri "
+                "in the engine",
+                self.name,
+                self.opts.get("master_type"),
+            )
+            return
+        try:
+            import salt.minion
+
+            resolved = salt.minion.resolve_dns(
+                dict(self.opts, retry_dns=0), fallback=False
+            )
+        except (Exception, SaltSystemExit) as exc:  # pylint: disable=broad-except
+            log.warning(
+                "%s: could not resolve master_uri; salt functions that need "
+                "the master transport may not work in this engine: %s",
+                self.name,
+                exc,
+            )
+            return
+        if not self._wait_for_minion_keys():
+            log.warning(
+                "%s: the minion key pair did not appear in %s within %s seconds; "
+                "not setting master_uri, so salt functions that need the "
+                "master transport may not work in this engine",
+                self.name,
+                self.opts.get("pki_dir"),
+                MINION_KEY_WAIT_TIMEOUT,
+            )
+            return
+        self.opts.update(resolved)
+
+    def _wait_for_minion_keys(self):
+        """
+        Wait, for a bounded time, until the minion's key pair exists on disk.
+
+        Once ``master_uri`` is set, anything in the engine that uses the master
+        transport creates an ``AsyncAuth``, which generates a key pair if
+        ``minion.pem`` is missing. Engines start before the minion has
+        connected, so on a first start the engine and the minion could both
+        generate keys at once and end up with different ones, leaving one of
+        them unable to authenticate. The minion writes ``minion.pem`` and then
+        ``minion.pub``, each atomically. ``AsyncAuth`` generates keys when
+        ``minion.pub`` is missing at construction or ``minion.pem`` is missing
+        in ``get_keys``, so once both exist the engine always loads the
+        minion's keys instead of creating its own.
+
+        Returns ``True`` when both files exist, ``False`` on timeout.
+        """
+        pki_dir = self.opts.get("pki_dir")
+        if not pki_dir:
+            return False
+        pem = os.path.join(pki_dir, "minion.pem")
+        pub = os.path.join(pki_dir, "minion.pub")
+        deadline = time.monotonic() + MINION_KEY_WAIT_TIMEOUT
+        while True:
+            if os.path.exists(pem) and os.path.exists(pub):
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            time.sleep(0.5)
+
     def run(self):
         """
         Run the master service!
         """
+        self._ensure_master_uri()
         self.utils = salt.loader.utils(self.opts, proxy=self.proxy)
         if salt.utils.platform.spawning_platform():
             # Calculate function references since they can't be pickled.

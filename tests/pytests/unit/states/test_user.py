@@ -462,6 +462,66 @@ def test_present_password_unlock():
             unlock_account.assert_not_called()
 
 
+def test_present_test_mode_missing_group_new_user():
+    """
+    Regression test for #68110: user.present should not fail in test mode
+    when a referenced group does not yet exist (e.g. it will be created by
+    a group.present requisite during the actual run). When the user also
+    does not yet exist, the state should report it would be added and that
+    the missing groups are pending.
+    """
+    mock_false = MagicMock(return_value=False)
+    mock_empty_list = MagicMock(return_value=[])
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__,
+        {
+            "group.info": mock_false,
+            "user.info": mock_empty_list,
+            "user.chkey": mock_empty_list,
+            "user.add": mock_false,
+        },
+    ), patch.dict(user.__opts__, {"test": True}):
+        ret = user.present("foo", groups=["foo"])
+        assert ret["result"] is None, ret
+        assert "set to be added" in ret["comment"], ret
+        assert "foo" in ret["comment"], ret
+
+
+def test_present_test_mode_missing_group_existing_user():
+    """
+    Regression test for #68110: when the user already exists, a missing
+    required group should not cause a hard failure in test mode. The
+    pending group(s) should appear in the test-mode comment.
+    """
+    mock_info = MagicMock(
+        return_value={
+            "uid": 5000,
+            "gid": 5000,
+            "groups": ["bar"],
+            "home": "/home/baz",
+            "fullname": "Baz",
+        }
+    )
+    # group.info: "foo" missing, "bar" exists.
+    group_info = MagicMock(
+        side_effect=lambda name: False if name == "foo" else {"gid": 5000}
+    )
+    dunder_salt = {
+        "group.info": group_info,
+        "user.info": mock_info,
+        "file.group_to_gid": MagicMock(return_value=5000),
+        "file.gid_to_group": MagicMock(return_value="bar"),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}):
+        ret = user.present("baz", groups=["foo", "bar"])
+        assert ret["result"] is not False, ret
+        assert "not present" not in ret["comment"], ret
+        # Pending group should be reported somewhere in the comment.
+        assert "foo" in ret["comment"], ret
+
+
 @pytest.mark.parametrize(
     "current,wanted,remove,return_value,expected",
     [
@@ -500,3 +560,265 @@ def test__group_changes(current, wanted, remove, return_value, expected):
     with patch.dict(user.__salt__, {"group.info": return_value}):
         ret = user._group_changes(current, wanted, remove)
     assert ret == expected
+
+
+def test_present_windows_group_name_collision():
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups, so creating a user with the same name as an existing
+    local group must fail fast with a clear message instead of ever calling
+    user.add/NetUserAdd.
+    """
+    mock_add = MagicMock()
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": "S-1-5-32-547"}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is False
+        assert "bob114" in ret["comment"]
+        assert "already exists" in ret["comment"]
+        mock_add.assert_not_called()
+
+
+def test_present_windows_group_name_collision_test_mode():
+    """
+    The group/user name collision on Windows is a hard OS restriction that
+    cannot be resolved by a later group.present requisite (unlike
+    missing_groups), so it must fail fast even in test mode.
+    """
+    mock_add = MagicMock()
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": "S-1-5-32-547"}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is False
+        assert "already exists" in ret["comment"]
+        mock_add.assert_not_called()
+
+
+def test_present_no_group_collision_on_posix():
+    """
+    The Windows-only group/user name collision check must never fire on
+    POSIX, where a same-named user and primary group is the normal idiom.
+    """
+    mock_add = MagicMock(return_value=True)
+    dunder_salt = {
+        "user.info": MagicMock(return_value={}),
+        "group.info": MagicMock(return_value={"gid": 5000}),
+        "user.add": mock_add,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=False
+    ):
+        ret = user.present("bob114")
+        assert ret["result"] is True
+        mock_add.assert_called_once()
+
+
+def _windows_lusr(**overrides):
+    lusr = {
+        "uid": 5000,
+        "gid": 5000,
+        "groups": [],
+        "home": None,
+        "fullname": "Foo Bar",
+        "homedrive": None,
+        "profile": None,
+        "logonscript": None,
+        "description": None,
+        "password_never_expires": False,
+        "disallow_change_password": False,
+        "account_disabled": False,
+        "account_locked": False,
+        "expiration_date": "Never",
+    }
+    lusr.update(overrides)
+    return lusr
+
+
+def test_changes_windows_fields():
+    """
+    Test salt.states.user._changes diff logic for the new Windows-only
+    win_password_never_expires/win_disallow_change_password/
+    win_account_disabled/win_unlock_account/win_expiration_date parameters.
+    """
+    dunder_salt = {
+        "user.info": MagicMock(return_value=_windows_lusr()),
+        "file.group_to_gid": MagicMock(return_value=5000),
+        "file.gid_to_group": MagicMock(return_value="somegroup"),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user._changes(
+            "foo",
+            fullname=None,
+            createhome=False,
+            win_password_never_expires=True,
+            win_disallow_change_password=True,
+            win_account_disabled=True,
+            win_unlock_account=True,
+            win_expiration_date="2030-01-01",
+        )
+        assert ret == {
+            "win_password_never_expires": True,
+            "win_disallow_change_password": True,
+            "win_account_disabled": True,
+            "win_expiration_date": "2030-01-01",
+        }
+
+        # Nothing requested -> no diff keys.
+        ret = user._changes("foo", fullname=None, createhome=False)
+        assert ret == {}
+
+        # Matching current state -> no diff keys.
+        ret = user._changes(
+            "foo",
+            fullname=None,
+            createhome=False,
+            win_password_never_expires=False,
+            win_disallow_change_password=False,
+            win_account_disabled=False,
+        )
+        assert ret == {}
+
+
+def test_changes_win_unlock_account_asymmetry():
+    """
+    win_useradd.update()'s unlock_account only supports unlocking (True);
+    _changes() must only surface a change when the account is currently
+    locked and the desired state is True, never for False, and never when
+    already unlocked.
+    """
+    dunder_salt_base = {
+        "file.group_to_gid": MagicMock(return_value=5000),
+        "file.gid_to_group": MagicMock(return_value="somegroup"),
+    }
+
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__opts__, {"test": False}
+    ), patch("salt.utils.platform.is_windows", return_value=True):
+        # Not locked + unlock requested -> no change.
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(
+                    return_value=_windows_lusr(account_locked=False)
+                ),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=True
+            )
+            assert "win_unlock_account" not in ret
+
+        # Locked + unlock requested -> change.
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(return_value=_windows_lusr(account_locked=True)),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=True
+            )
+            assert ret["win_unlock_account"] is True
+
+        # Locked + win_unlock_account=False -> never emits a change (documented no-op).
+        with patch.dict(
+            user.__salt__,
+            {
+                **dunder_salt_base,
+                "user.info": MagicMock(return_value=_windows_lusr(account_locked=True)),
+            },
+        ):
+            ret = user._changes(
+                "foo", fullname=None, createhome=False, win_unlock_account=False
+            )
+            assert "win_unlock_account" not in ret
+
+
+def test_present_dispatches_windows_update_fields():
+    """
+    When _changes() reports a win_account_disabled-style change, present()
+    must dispatch it via user.update with the plain (non win_-prefixed)
+    kwarg name.
+    """
+    mock_changes = MagicMock(
+        side_effect=[
+            {"win_account_disabled": True},
+            {},
+        ]
+    )
+    mock_update = MagicMock(return_value=True)
+    dunder_salt = {
+        "user.info": MagicMock(return_value=_windows_lusr()),
+        "user.update": mock_update,
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": False}), patch.object(
+        user, "_changes", mock_changes
+    ), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        user.present("bob")
+        mock_update.assert_any_call(name="bob", account_disabled=True)
+
+
+def test_gecos_comma_check_skipped_on_windows():
+    """
+    Bonus fix: Windows "Full Name" is not comma-delimited GECOS data, so a
+    comma in fullname must not be rejected there.
+    """
+    dunder_salt = {
+        "group.info": MagicMock(return_value=False),
+        "user.info": MagicMock(return_value={}),
+        "user.add": MagicMock(return_value=True),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Windows"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ):
+        ret = user.present("bob", fullname="Doe, John")
+        assert "Unsupported char" not in ret["comment"]
+
+
+def test_gecos_comma_check_rejected_on_posix():
+    """
+    The comma-in-GECOS-field restriction must still apply on POSIX.
+    """
+    dunder_salt = {
+        "group.info": MagicMock(return_value=False),
+        "user.info": MagicMock(return_value={}),
+        "user.add": MagicMock(return_value=True),
+    }
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__, dunder_salt
+    ), patch.dict(user.__opts__, {"test": True}), patch(
+        "salt.utils.platform.is_windows", return_value=False
+    ):
+        ret = user.present("bob", fullname="Doe, John")
+        assert ret["result"] is False
+        assert "Unsupported char" in ret["comment"]

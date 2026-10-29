@@ -740,6 +740,118 @@ def test_state_failed_and_expected_minions():
     assert ret == expected
 
 
+def test_state_minion_ret_false_includes_detail_in_comment():
+    """
+    When a targeted minion's state return value is the scalar ``False``
+    (for example because the minion timed out at the master level or
+    because state.sls on the minion failed before any state ran), the
+    ``salt.state`` orchestrate state must surface that detail in its
+    comment instead of leaving the user with only ``Run failed on
+    minions: <minion>`` and an opaque ``False`` in ``changes``.
+
+    Regression test for #68326.
+    """
+    name = "state"
+    tgt = "minion1"
+
+    cmd_ret = {
+        "10.0.0.1": {
+            "jid": "20170406104341210934",
+            "retcode": 1,
+            "ret": False,
+            "out": "highstate",
+        },
+    }
+
+    with patch.dict(saltmod.__opts__, {"test": False}):
+        mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock}):
+            ret = saltmod.state(name, tgt, highstate=True)
+
+    assert ret["result"] is False
+    assert ret["changes"] == {"out": "highstate", "ret": {"10.0.0.1": False}}
+    # The bare "Run failed on minions: ..." comment from before the fix
+    # is exactly what the issue complains about. The comment must now
+    # include the minion identifier *and* useful detail about what came
+    # back so that the user can begin to diagnose the failure.
+    assert "10.0.0.1" in ret["comment"]
+    assert ret["comment"] != "Run failed on minions: 10.0.0.1"
+    lowered = ret["comment"].lower()
+    assert "false" in lowered or "no return" in lowered or "did not return" in lowered
+
+
+def test_state_minion_failed_flag_includes_detail_in_comment():
+    """
+    When ``saltutil.cmd`` flags a minion's response with ``failed: True``
+    but no useful ``ret`` payload was attached, the orchestrate state
+    must say so in its comment instead of returning a bare
+    "Run failed on minions: <minion>" line.
+
+    Regression test for #68326.
+    """
+    name = "state"
+    tgt = "minion1"
+
+    cmd_ret = {
+        "10.0.0.1": {
+            "jid": "20170406104341210934",
+            "retcode": 1,
+            "failed": True,
+            "out": "highstate",
+        },
+    }
+
+    with patch.dict(saltmod.__opts__, {"test": False}):
+        mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock}):
+            ret = saltmod.state(name, tgt, highstate=True)
+
+    assert ret["result"] is False
+    assert "10.0.0.1" in ret["comment"]
+    assert ret["comment"] != "Run failed on minions: 10.0.0.1"
+    assert (
+        "did not return" in ret["comment"].lower()
+        or "no return" in ret["comment"].lower()
+    )
+
+
+def test_state_minion_ret_error_list_includes_detail_in_comment():
+    """
+    When a minion's state return value is a list of error strings (for
+    example pillar render errors, or a state.sls queue conflict), the
+    orchestrate state must include those error messages in its comment
+    so the user can see why the run failed.
+
+    Regression test for #68326.
+    """
+    name = "state"
+    tgt = "minion1"
+
+    error_msg = (
+        'The function "state.highstate" is running as PID 1234 and was '
+        "started at 2025, Sep 12 22:23:04.123456 with jid 20250912142302454180"
+    )
+    cmd_ret = {
+        "10.0.0.1": {
+            "jid": "20170406104341210934",
+            "retcode": 1,
+            "ret": [error_msg],
+            "out": "highstate",
+        },
+    }
+
+    with patch.dict(saltmod.__opts__, {"test": False}):
+        mock = MagicMock(return_value=cmd_ret)
+        with patch.dict(saltmod.__salt__, {"saltutil.cmd": mock}):
+            ret = saltmod.state(name, tgt, highstate=True)
+
+    assert ret["result"] is False
+    assert "10.0.0.1" in ret["comment"]
+    # The error message text must appear in the orchestrate comment,
+    # not just be hidden inside `changes`.
+    assert error_msg in ret["comment"]
+
+
 def test_state_allow_fail():
 
     name = "state"

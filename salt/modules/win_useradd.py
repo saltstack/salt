@@ -81,6 +81,11 @@ def add(
     homedrive=None,
     profile=None,
     logonscript=None,
+    expiration_date=None,
+    account_disabled=None,
+    unlock_account=None,
+    password_never_expires=None,
+    disallow_change_password=None,
 ):
     """
     Add a user to the minion.
@@ -129,6 +134,43 @@ def add(
 
             Default is ``None``.
 
+        expiration_date (:obj:`date`, optional):
+            The date the account expires. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        account_disabled (:obj:`bool`, optional):
+            ``True`` disables the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        unlock_account (:obj:`bool`, optional):
+            ``True`` unlocks the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        password_never_expires (:obj:`bool`, optional):
+            ``True`` sets the password to never expire. See ``user.update``
+            for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        disallow_change_password (:obj:`bool`, optional):
+            ``True`` blocks the user from changing the password. See
+            ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -160,9 +202,25 @@ def add(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
+        if exc.winerror == 2220:  # NERR_GroupExists
+            return (
+                f"Cannot create user '{name}': a local group with this name "
+                "already exists. Windows does not allow a local user and a "
+                "local group to share the same name."
+            )
         return exc.strerror
 
-    update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
+    update(
+        name=name,
+        homedrive=homedrive,
+        profile=profile,
+        fullname=fullname,
+        expiration_date=expiration_date,
+        account_disabled=account_disabled,
+        unlock_account=unlock_account,
+        password_never_expires=password_never_expires,
+        disallow_change_password=disallow_change_password,
+    )
 
     ret = chgroups(name, groups) if groups else True
 
@@ -305,7 +363,7 @@ def update(
         user_info["comment"] = description
     if logonscript:
         user_info["script_path"] = logonscript
-    if fullname:
+    if fullname is not None:
         user_info["full_name"] = fullname
     if profile:
         user_info["profile"] = profile
@@ -533,7 +591,15 @@ def setpassword(name, password):
 
         salt '*' user.setpassword jsnuffy sup3rs3cr3t
     """
-    return update(name=name, password=password)
+    # update() returns the Win32 error string on failure (e.g. when the user
+    # does not exist), which is truthy and would otherwise be misreported as
+    # success by callers that check the return value as a boolean. Verify the
+    # user exists first so we can return a proper ``False`` and surface a
+    # clear log message.
+    if not info(name):
+        log.error("User '%s' does not exist", name)
+        return False
+    return update(name=name, password=password) is True
 
 
 def addgroup(name, group):

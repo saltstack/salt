@@ -64,32 +64,41 @@ def test_cluster_key_rotation(
         master_id=cluster_master_1.config["id"],
     )
     assert dfpath.exists()
-    timeout = 2 * cluster_master_1.config["loop_interval"]
+
+    # Wait for the cluster to converge on a new aes session key.  Master 1
+    # rotates locally and removes ``.dfn`` when its main loop next ticks;
+    # masters 2 and 3 then pick up the rotated key via the cluster sync
+    # channel asynchronously, and on slow runners (FIPS/Arm64 in particular)
+    # that propagation can lag the local rotation by several seconds.  Poll
+    # for full cluster convergence rather than the local dropfile signal
+    # alone -- the previous ``2 * loop_interval`` (~2 s default) window was
+    # tight enough to false-positive ``len(keys) == 2`` on those runners.
+    convergence_timeout = 60
     start = time.monotonic()
-    while True:
-        if not dfpath.exists():
-            break
-        if time.monotonic() - start > timeout:
-            assert False, f"Drop file never removed {dfpath}"
-
     keys = set()
+    while True:
+        keys = set()
+        for master in (
+            cluster_master_1,
+            cluster_master_2,
+            cluster_master_3,
+        ):
+            config = cluster_minion_1.config.copy()
+            config["master_uri"] = (
+                f"tcp://{master.config['interface']}:{master.config['ret_port']}"
+            )
+            auth = salt.crypt.SAuth(config)
+            auth.authenticate()
+            assert "aes" in auth._creds
+            keys.add(auth._creds["aes"])
+        if not dfpath.exists() and len(keys) == 1 and next(iter(keys)) != orig_aes:
+            break
+        if time.monotonic() - start > convergence_timeout:
+            break  # fall through to the assertions below for useful state
+        time.sleep(1)
 
-    # Validate the aes session key for all masters match
-    for master in (
-        cluster_master_1,
-        cluster_master_2,
-        cluster_master_3,
-    ):
-        config = cluster_minion_1.config.copy()
-        config["master_uri"] = (
-            f"tcp://{master.config['interface']}:{master.config['ret_port']}"
-        )
-        auth = salt.crypt.SAuth(config)
-        auth.authenticate()
-        assert "aes" in auth._creds
-        keys.add(auth._creds["aes"])
-
-    assert len(keys) == 1
+    assert not dfpath.exists(), f"Drop file never removed {dfpath}"
+    assert len(keys) == 1, f"Cluster did not converge on a single aes key: {keys}"
     # Validate the aes session key actually changed
     assert orig_aes != keys.pop()
 

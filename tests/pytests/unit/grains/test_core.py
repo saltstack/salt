@@ -3,7 +3,7 @@ tests.pytests.unit.grains.test_core
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     :codeauthor: Erik Johnson <erik@saltstack.com>
-    :codeauthor: David Murphy <damurphy@vmware.com>
+    :codeauthor: David Murphy
 """
 
 import errno
@@ -13,6 +13,7 @@ import os
 import pathlib
 import platform
 import socket
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -3680,7 +3681,7 @@ def test_linux_gpus(caplog):
     Test GPU detection on Linux systems
     """
 
-    def _cmd_side_effect(cmd):
+    def _cmd_side_effect(cmd, *args, **kwargs):
         ret = ""
         for device in devices:
             ret += textwrap.dedent(
@@ -3694,7 +3695,7 @@ def test_linux_gpus(caplog):
                                       NUMANode:	0"""
             ).format(*device)
             ret += "\n"
-        return ret.strip()
+        return subprocess.CompletedProcess(cmd, 0, stdout=ret.strip(), stderr="")
 
     devices = [
         [
@@ -3757,7 +3758,10 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=_cmd_side_effect)}):
+    ), patch(
+        "salt.grains.core.subprocess.run",
+        MagicMock(side_effect=_cmd_side_effect),
+    ):
         ret = core._linux_gpu_data()["gpus"]
         count = 0
         for device in devices:
@@ -3769,7 +3773,7 @@ def test_linux_gpus(caplog):
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(core.__salt__, {"cmd.run": MagicMock(side_effect=OSError)}):
+    ), patch("salt.grains.core.subprocess.run", MagicMock(side_effect=OSError)):
         ret = core._linux_gpu_data()
         assert ret == {"num_gpus": 0, "gpus": []}
 
@@ -3783,11 +3787,14 @@ def test_linux_gpus(caplog):
         Rev: c1
         NUMANode:	0"""
     )
+    bad_gpu_proc = subprocess.CompletedProcess(
+        ["/usr/sbin/lspci", "-vmm"], 0, stdout=bad_gpu_data, stderr=""
+    )
 
     with patch(
         "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
-    ), patch.dict(
-        core.__salt__, {"cmd.run": MagicMock(return_value=bad_gpu_data)}
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(return_value=bad_gpu_proc)
     ), caplog.at_level(
         logging.WARN
     ):
@@ -3797,6 +3804,28 @@ def test_linux_gpus(caplog):
             "check that you have a valid shell configured and permissions "
             "to run lspci command" in caplog.messages
         )
+
+
+def test_linux_gpus_lspci_timeout(caplog):
+    """
+    If ``lspci`` hangs, the subprocess call must time out, kill the child,
+    log a warning, and return an empty grain (matching the behavior when
+    ``lspci`` is not installed). Regression for the orphan-lspci leak that
+    accumulates task_structs on every grains refresh.
+    """
+    timeout_exc = subprocess.TimeoutExpired(cmd=["/usr/sbin/lspci", "-vmm"], timeout=5)
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/sbin/lspci")
+    ), patch(
+        "salt.grains.core.subprocess.run", MagicMock(side_effect=timeout_exc)
+    ), caplog.at_level(
+        logging.WARNING
+    ):
+        ret = core._linux_gpu_data()
+        assert ret == {}
+        assert any(
+            "lspci" in msg and "timed out" in msg for msg in caplog.messages
+        ), f"expected timeout warning in log; got: {caplog.messages!r}"
 
 
 def test_get_server_id():
@@ -4473,6 +4502,27 @@ def test_pythonversion():
     ret = core.pythonversion()
     assert "pythonversion" in ret
     assert ret["pythonversion"] == python_version
+
+
+def test_pythonrelease():
+    """
+    test pythonrelease and pythonrelease_info
+
+    These follow the ``<foo>release`` / ``<foo>release_info`` convention used
+    by the other version grains, unlike the older list-valued
+    ``pythonversion`` grain which is retained for backwards compatibility.
+    """
+    ret = core.pythonversion()
+
+    assert "pythonrelease" in ret
+    assert ret["pythonrelease"] == platform.python_version()
+    # dotted major.minor.micro, matching the shape of e.g. osrelease
+    assert ret["pythonrelease"] == "{}.{}.{}".format(*sys.version_info[:3])
+
+    assert "pythonrelease_info" in ret
+    assert ret["pythonrelease_info"] == [*sys.version_info]
+    # the pre-existing grain keeps working and stays in sync
+    assert ret["pythonrelease_info"] == ret["pythonversion"]
 
 
 @pytest.mark.skip_unless_on_linux
@@ -5314,6 +5364,54 @@ em0: link state changed to UP"""
                     ]
 
 
+def test__bsd_cpudata_freebsd_non_utf8(tmp_path):
+    """
+    Regression test for #66764.
+
+    /var/run/dmesg.boot can contain non-UTF-8 bytes (e.g. when a connected
+    device exposes a serial number with non-UTF-8 characters). Loading the
+    "cpu_flags" grain on FreeBSD must not raise UnicodeDecodeError in that
+    case; the offending bytes should be skipped and the readable CPU
+    features still extracted.
+    """
+    boot = tmp_path / "dmesg.boot"
+    # The CPU: line contains non-UTF-8 bytes (0xff, 0xfe) that would crash
+    # a strict utf-8 decode. The Features= line is valid ASCII and must
+    # still be parsed.
+    boot.write_bytes(
+        b"CPU: Intel(R) Test CPU \xff\xfe garbage\n"
+        b'  Origin="GenuineIntel"\n'
+        b"  Features=0x1<FPU,VME,DE>\n"
+        b"real memory = 0\n"
+    )
+
+    osdata = {"kernel": "FreeBSD"}
+    mock_cmd_run = ["1", "amd64", "Intel(R) Test CPU"]
+
+    # Delegate to the real open() so the encoding/errors kwargs added by
+    # the fix are actually exercised against the non-UTF-8 bytes on disk.
+    # Using open() directly here (rather than salt.utils.files.fopen) is
+    # intentional: salt.utils.files.fopen is what we are patching.
+    def _real_fopen(_path, *args, **kwargs):
+        return open(  # pylint: disable=resource-leakage,unspecified-encoding
+            str(boot), *args, **kwargs
+        )
+
+    with patch("salt.utils.path.which", return_value="/sbin/sysctl"):
+        with patch.dict(
+            core.__salt__,
+            {"cmd.run": MagicMock(side_effect=mock_cmd_run)},
+        ):
+            with patch("os.path.isfile", return_value=True):
+                with patch("salt.utils.files.fopen", side_effect=_real_fopen):
+                    # The pre-fix code raised UnicodeDecodeError here.
+                    ret = core._bsd_cpudata(osdata)
+
+    assert "cpu_flags" in ret
+    assert ret["cpu_flags"] == ["FPU", "VME", "DE"]
+    assert ret["num_cpus"] == 1
+
+
 def test__bsd_cpudata_netbsd():
     """
     test _bsd_cpudata for NetBSD
@@ -5640,3 +5738,87 @@ def test_fibre_channel_host(status):
         grains = core.fibre_channel_host()
         assert "fibre_channel_host" in grains
         assert grains["fibre_channel_host"] is status
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux",
+        "PRETTY_NAME": "alfaLinux",
+        "ID": "alfalinux",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux",
+        "oscodename": "alfaLinux",
+        "osfinger": "alfaLinux-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alfalinux_rise_os_grains():
+    _os_release_data = {
+        "NAME": "alfaLinux Rise",
+        "PRETTY_NAME": "alfaLinux Rise",
+        "ID": "alfalinux-rise",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "alfaLinux Rise",
+        "os_family": "Suse",
+        "osfullname": "alfaLinux Rise",
+        "oscodename": "alfaLinux Rise",
+        "osfinger": "alfaLinux Rise-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_alteros_os_grains():
+    _os_release_data = {
+        "NAME": "AlterOS",
+        "PRETTY_NAME": "AlterOS",
+        "ID": "alteros",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "AlterOS",
+        "os_family": "RedHat",
+        "osfullname": "AlterOS",
+        "oscodename": "AlterOS",
+        "osfinger": "AlterOS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)
+
+
+@pytest.mark.skip_unless_on_linux
+def test_red_os_os_grains():
+    _os_release_data = {
+        "NAME": "RED OS",
+        "PRETTY_NAME": "RED OS",
+        "ID": "redos",
+        "VERSION_ID": "1",
+    }
+    expectation = {
+        "os": "RED OS",
+        "os_family": "RedHat",
+        "osfullname": "RED OS",
+        "oscodename": "RED OS",
+        "osfinger": "RED OS-1",
+        "osrelease": "1",
+        "osrelease_info": (1,),
+        "osmajorrelease": 1,
+    }
+    _run_os_grains_tests(_os_release_data, {}, expectation)

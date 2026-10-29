@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -92,10 +92,11 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   httpcore
     #   httpx
     #   kubernetes
@@ -413,10 +414,11 @@ msgpack==1.1.2
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1
@@ -678,7 +680,6 @@ requests==2.31.0
     #   responses
     #   twilio
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -704,12 +705,6 @@ rich==15.0.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   typer
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -807,7 +802,7 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -847,6 +842,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   astroid
     #   cryptography
+    #   multidict
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
@@ -854,7 +850,7 @@ typing-extensions==4.14.1
     #   pyjwt
     #   pyopenssl
     #   virtualenv
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
@@ -875,11 +871,6 @@ virtualenv==21.4.2
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.10/linux.lock
-    #   -c requirements/static/pkg/py3.10/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock

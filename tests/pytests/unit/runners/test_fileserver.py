@@ -4,6 +4,7 @@ unit tests for the fileserver runner
 
 import pytest
 
+import salt.fileserver
 import salt.loader
 import salt.runners.fileserver as fileserver
 import salt.utils.files
@@ -132,3 +133,71 @@ def test_clear_file_list_cache_vcs_limited(cachedir):
     assert (cachedir / "file_lists" / "roots" / "base.p").exists()
     assert (cachedir / "file_lists" / "roots" / "dev.p").exists()
     assert (cachedir / "file_lists" / "roots" / "foo.txt").exists()
+
+
+@pytest.fixture
+def mock_fileserver():
+    """
+    Patch salt.fileserver.Fileserver so update() calls can be inspected
+    without touching real fileserver backends.
+    """
+    instance = MagicMock()
+    with patch.object(salt.fileserver, "Fileserver", MagicMock(return_value=instance)):
+        yield instance
+
+
+def test_update_returns_true(mock_fileserver):
+    """
+    update() returns True and forwards the call to the fileserver backends.
+    """
+    with patch.dict(fileserver.__opts__, {}):
+        assert fileserver.update() is True
+    mock_fileserver.update.assert_called_once_with(back=None)
+
+
+def test_update_forwards_backend_and_kwargs(mock_fileserver):
+    """
+    The backend is forwarded as ``back`` and any genuine keyword arguments
+    are passed through to the fileserver backends unchanged.
+    """
+    with patch.dict(fileserver.__opts__, {}):
+        assert fileserver.update(backend="git", remotes="myrepo") is True
+    mock_fileserver.update.assert_called_once_with(back="git", remotes="myrepo")
+
+
+def test_update_strips_pub_kwargs(mock_fileserver):
+    """
+    Regression test for #66793.
+
+    When fileserver.update is invoked through saltutil.runner or an
+    orchestration, the runner client injects publisher metadata into the
+    kwargs as ``__pub_*`` keys. Those keys must be stripped before the call
+    is forwarded to the fileserver backends, whose update() signatures (e.g.
+    ``roots.update()`` / ``gitfs.update(remotes=None)``) reject unknown
+    keyword arguments and would otherwise raise
+    ``TypeError: update() got an unexpected keyword argument '__pub_user'``.
+    """
+    with patch.dict(fileserver.__opts__, {}):
+        ret = fileserver.update(
+            backend="git",
+            remotes="myrepo",
+            __pub_user="root",
+            __pub_fun="fileserver.update",
+            __pub_jid="20240808000000000000",
+            __pub_pid=12345,
+            __pub_tgt="salt_master",
+        )
+    assert ret is True
+    # Only the genuine arguments survive; every __pub_* key is dropped.
+    mock_fileserver.update.assert_called_once_with(back="git", remotes="myrepo")
+
+
+def test_update_strips_pub_kwargs_without_backend(mock_fileserver):
+    """
+    The publisher metadata is stripped even when no backend is specified, so
+    a bare ``saltutil.runner fileserver.update`` call succeeds.
+    """
+    with patch.dict(fileserver.__opts__, {}):
+        ret = fileserver.update(__pub_user="root", __pub_jid="20240808000000000000")
+    assert ret is True
+    mock_fileserver.update.assert_called_once_with(back=None)

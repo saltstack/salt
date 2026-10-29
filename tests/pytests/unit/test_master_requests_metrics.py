@@ -133,9 +133,13 @@ def test_handle_aes_records_request_metrics(in_memory_reader):
     worker = _make_worker()
     # Use a lock-free shim for ``salt.utils.ctx.request_context``: the
     # real one wraps ``contextvars`` and needs no opts validation.
-    worker._handle_aes({"cmd": "_return", "fun": "test.ping", "success": True})
-    worker._handle_aes({"cmd": "_return", "fun": "test.ping", "success": False})
-    worker._handle_aes({"cmd": "_serve_file"})
+    asyncio.run(
+        worker._handle_aes({"cmd": "_return", "fun": "test.ping", "success": True})
+    )
+    asyncio.run(
+        worker._handle_aes({"cmd": "_return", "fun": "test.ping", "success": False})
+    )
+    asyncio.run(worker._handle_aes({"cmd": "_serve_file"}))
 
     counts = _by_cmd(in_memory_reader, "salt.master.requests.handled")
     assert sum(counts.get("_return", [])) == 2
@@ -150,7 +154,7 @@ def test_metrics_disabled_remains_noop(in_memory_reader):
     metrics.configure({"metrics": {"enabled": False}, "__role": "master"})
     worker = _make_worker()
     asyncio.run(worker._handle_clear({"cmd": "publish", "fun": "test.ping"}))
-    worker._handle_aes({"cmd": "_return", "fun": "test.ping"})
+    asyncio.run(worker._handle_aes({"cmd": "_return", "fun": "test.ping"}))
 
     assert _by_cmd(in_memory_reader, "salt.master.requests.handled") == {}
     assert _by_cmd(in_memory_reader, "salt.master.requests.duration") == {}

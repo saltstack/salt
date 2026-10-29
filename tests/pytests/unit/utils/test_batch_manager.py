@@ -86,7 +86,7 @@ class TestHandleEvent:
     def test_batch_new_calls_handle_new(self, manager):
         manager._handle_new = MagicMock()
         manager._handle_event({"tag": "salt/batch/JID1/new", "data": {}})
-        manager._handle_new.assert_called_once_with("JID1")
+        manager._handle_new.assert_called_once_with("JID1", {})
 
     def test_batch_stop_calls_handle_stop(self, manager):
         manager._handle_stop = MagicMock()
@@ -140,10 +140,42 @@ class TestHandleNew:
         assert "JID1" in manager.active_batches
         assert salt.utils.batch_state.read_active_index(opts) == {"JID1"}
 
-    def test_ignores_cli_driven_batch(self, manager, opts):
+    def test_registers_cli_driven_batch_without_adopting(self, manager, opts):
+        """
+        Sync CLI batches arrive at the manager via
+        ``salt/batch/<jid>/new`` carrying ``data["state"]``.  The
+        manager persists them and adds to the active index so
+        ``batch.status`` / ``batch.list_active`` see them, but does
+        not adopt them into ``self.active_batches`` (the CLI owns
+        the state machine).
+        """
+        # Build the state inline — the CLI never wrote .batch.p, the
+        # manager is supposed to write it on receipt of the event.
+        state = salt.utils.batch_state.create_batch_state(
+            {"batch": 1, "fun": "test.ping", "tgt": "*"},
+            ["m1"],
+            "JID-CLI",
+            driver="cli",
+            now=1000.0,
+        )
+        manager._handle_new("JID-CLI", {"state": state})
+        assert "JID-CLI" not in manager.active_batches
+        assert salt.utils.batch_state.read_active_index(opts) == {"JID-CLI"}
+        on_disk = salt.utils.batch_state.read_batch_state("JID-CLI", opts)
+        assert on_disk is not None
+        assert on_disk["driver"] == "cli"
+
+    def test_cli_handle_new_falls_back_to_disk_state(self, manager, opts):
+        """
+        Belt-and-braces: if a ``salt/batch/<jid>/new`` event arrives
+        without an embedded ``state`` payload (older CLI, or the
+        event was triggered some other way) and ``.batch.p`` happens
+        to already exist, we still register the JID in the index.
+        """
         _write_state(opts, ["m1"], "JID-CLI", driver="cli")
         manager._handle_new("JID-CLI")
         assert "JID-CLI" not in manager.active_batches
+        assert "JID-CLI" in salt.utils.batch_state.read_active_index(opts)
 
     def test_handles_missing_batch_file(self, manager, opts):
         manager._handle_new("NONEXISTENT")
@@ -361,3 +393,149 @@ class TestTick:
         assert set(state["failed"].keys()) == {"m1", "m2"}
         assert state["failed"]["m1"] == "timeout"
         assert "JID1" not in manager.active_batches
+
+    def test_tick_does_not_adopt_cli_driven_batches(self, manager, opts):
+        """
+        ``_tick`` reconciles the in-memory active set with the
+        on-disk index but must never adopt a sync CLI batch
+        (``driver="cli"``).  The CLI process owns the state machine
+        for those — adopting them would cause the manager to either
+        re-publish or false-timeout in-flight minions (issue #69418).
+        """
+        _write_state(opts, ["m1", "m2"], "JID-CLI", batch_size=1, driver="cli")
+        salt.utils.batch_state.add_to_active_index("JID-CLI", opts)
+
+        manager._tick(now=1.0)
+
+        assert "JID-CLI" not in manager.active_batches
+        manager.local.run_job.assert_not_called()
+        # The index entry is preserved so ``batch.list_active``
+        # still sees it.
+        assert "JID-CLI" in salt.utils.batch_state.read_active_index(opts)
+
+    def test_tick_prunes_index_entries_with_no_state_file(self, manager, opts):
+        """
+        Reconcile-time housekeeping: if an active-index entry has
+        no readable ``.batch.p`` (e.g. left over from a crashed
+        process), drop it.  Maintenance does the same pass on its
+        slower cadence; this just lets ``_tick`` close the gap.
+        """
+        salt.utils.batch_state.add_to_active_index("GHOST", opts)
+        manager._tick(now=1.0)
+        assert "GHOST" not in salt.utils.batch_state.read_active_index(opts)
+        assert "GHOST" not in manager.active_batches
+
+
+# ---------------------------------------------------------------------------
+# _handle_progress / _handle_terminal — sync CLI persistence handoff
+# ---------------------------------------------------------------------------
+
+
+class TestHandleProgressAndTerminal:
+    def test_handle_progress_persists_cli_state(self, manager, opts):
+        """
+        ``salt/batch/<jid>/progress`` from the sync CLI carries the
+        full post-tick state in ``data["state"]``.  The manager
+        writes it so ``batch.status <jid>`` reflects the latest
+        snapshot.
+        """
+        state = salt.utils.batch_state.create_batch_state(
+            {"batch": 1, "fun": "test.ping", "tgt": "*"},
+            ["m1", "m2"],
+            "JID-CLI",
+            driver="cli",
+            now=1000.0,
+        )
+        state["done"] = {"m1": {"ret": True, "retcode": 0}}
+        manager._handle_progress("JID-CLI", {"state": state})
+
+        on_disk = salt.utils.batch_state.read_batch_state("JID-CLI", opts)
+        assert on_disk is not None
+        assert on_disk["done"] == {"m1": {"ret": True, "retcode": 0}}
+
+    def test_handle_progress_ignores_master_driven_state(self, manager, opts):
+        """
+        Master-driven batches don't fire ``salt/batch/<jid>/progress``
+        from outside the manager — guard against a misuse that would
+        let an external actor overwrite the manager's own state.
+        """
+        state = salt.utils.batch_state.create_batch_state(
+            {"batch": 1, "fun": "test.ping", "tgt": "*"},
+            ["m1"],
+            "JID-MGR",
+            driver="master",
+            now=1000.0,
+        )
+        manager._handle_progress("JID-MGR", {"state": state})
+        # Nothing written.
+        assert salt.utils.batch_state.read_batch_state("JID-MGR", opts) is None
+
+    def test_handle_progress_drops_payload_without_state(self, manager):
+        # No raise, no write.
+        manager._handle_progress("JID-CLI", {})
+
+    def test_handle_terminal_complete_removes_index_entry(self, manager, opts):
+        state = salt.utils.batch_state.create_batch_state(
+            {"batch": 1, "fun": "test.ping", "tgt": "*"},
+            ["m1"],
+            "JID-CLI",
+            driver="cli",
+            now=1000.0,
+        )
+        salt.utils.batch_state.add_to_active_index("JID-CLI", opts)
+        manager._handle_terminal("JID-CLI", {"state": state}, "complete")
+
+        assert "JID-CLI" not in salt.utils.batch_state.read_active_index(opts)
+        on_disk = salt.utils.batch_state.read_batch_state("JID-CLI", opts)
+        assert on_disk is not None
+        assert on_disk["driver"] == "cli"
+
+    def test_handle_terminal_halted_removes_index_entry(self, manager, opts):
+        state = salt.utils.batch_state.create_batch_state(
+            {"batch": 1, "fun": "test.ping", "tgt": "*"},
+            ["m1"],
+            "JID-CLI",
+            driver="cli",
+            now=1000.0,
+        )
+        state["halted"] = True
+        state["halted_reason"] = "stop"
+        salt.utils.batch_state.add_to_active_index("JID-CLI", opts)
+        manager._handle_terminal("JID-CLI", {"state": state}, "halted")
+
+        assert "JID-CLI" not in salt.utils.batch_state.read_active_index(opts)
+
+
+# ---------------------------------------------------------------------------
+# Event dispatch — sync CLI events route to the right handlers
+# ---------------------------------------------------------------------------
+
+
+class TestSyncCLIEventDispatch:
+    def test_batch_progress_dispatches_to_handle_progress(self, manager):
+        manager._handle_progress = MagicMock()
+        manager._handle_event(
+            {
+                "tag": "salt/batch/JID1/progress",
+                "data": {"state": {"jid": "JID1", "driver": "cli"}},
+            }
+        )
+        manager._handle_progress.assert_called_once_with(
+            "JID1", {"state": {"jid": "JID1", "driver": "cli"}}
+        )
+
+    def test_batch_complete_dispatches_to_handle_terminal(self, manager):
+        manager._handle_terminal = MagicMock()
+        manager._handle_event(
+            {"tag": "salt/batch/JID1/complete", "data": {"state": {}}}
+        )
+        manager._handle_terminal.assert_called_once_with(
+            "JID1", {"state": {}}, "complete"
+        )
+
+    def test_batch_halted_dispatches_to_handle_terminal(self, manager):
+        manager._handle_terminal = MagicMock()
+        manager._handle_event({"tag": "salt/batch/JID1/halted", "data": {"state": {}}})
+        manager._handle_terminal.assert_called_once_with(
+            "JID1", {"state": {}}, "halted"
+        )

@@ -16,6 +16,10 @@ common:
     - "**/site-packages/*/tests"
     - "**/site-packages/ansible_collections/*/*/test"
     - "**/site-packages/ansible_collections/*/*/tests"
+    # cryptography sdist ships its top-level docs/ dir, which lands at
+    # site-packages/docs/ and includes Java/Rust test-vector sources that
+    # trip FIPS-compliance scanners (e.g. VerifyRSAOAEPSHA2.java).
+    - "**/site-packages/docs"
     # Bundled Tornado Test Suite
 
   file_patterns: &common_file_patterns

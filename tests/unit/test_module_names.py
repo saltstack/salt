@@ -18,6 +18,9 @@ EXCLUDED_DIRS = [
     os.path.join("tests", "monitoring"),
     os.path.join("tests", "perf"),
     os.path.join("tests", "pkg"),
+    os.path.join(
+        "tests", "pytests", "scenarios", "master_unavailable_wedge", "wedge_beacons"
+    ),
     os.path.join("tests", "support"),
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "unit", "modules", "inspectlib"),
@@ -49,6 +52,9 @@ EXCLUDED_FILES = [
     os.path.join("tests", "pytests", "unit", "states", "virt", "helpers.py"),
     os.path.join(
         "tests", "pytests", "unit", "utils", "batch_state", "batch_state_scenarios.py"
+    ),
+    os.path.join(
+        "tests", "pytests", "stress", "master_subprocess", "pubchannel", "helpers.py"
     ),
 ]
 

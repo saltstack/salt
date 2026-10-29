@@ -146,6 +146,13 @@ Set this independently of ``cache``.  The two backends share an
 implementation but live in different bank trees, so you can switch one
 without the other.
 
+``mmap_key`` is the recommended driver for isolated-filesystem master
+clusters (:conf_master:`cluster_isolated_filesystem`).  Its deterministic
+per-bank layout makes the key files safe to push between peers as opaque
+blobs over the cluster transport, which is what the cluster state-sync
+relies on.  See :ref:`tutorial-master-cluster` for the migration
+walkthrough.
+
 Migrating an existing master
 ============================
 
@@ -246,4 +253,6 @@ See also
 * :py:mod:`salt.utils.mmap_cache` — underlying ``MmapCache`` index/heap/roster
   implementation.
 * :conf_master:`cache` — master option to select the cache backend.
-* ``keys.cache_driver`` — master option to select the keys backend.
+* :conf_master:`keys.cache_driver` — master option to select the keys backend.
+* :ref:`tutorial-master-cluster` — isolated-filesystem master clusters use
+  ``mmap_key`` for the minion-key store.

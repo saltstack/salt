@@ -498,7 +498,32 @@ def last_run(
     """
     .. versionadded:: 2015.8.0
 
-    List all detectable jobs and associated functions
+    Return the most recent job (the one with the highest JID) that matches
+    the supplied filters. With no filters this returns the single most
+    recent job recorded by the active master job cache.
+
+    ext_source
+        The external job cache to read from. Defaults to the master job
+        cache configured via ``master_job_cache``.
+
+    outputter
+        Override the default outputter when returning the job result.
+
+    metadata
+        A dictionary of metadata values to filter on. Only jobs whose
+        recorded metadata matches every key/value pair will be considered.
+
+    function
+        Only consider jobs that invoked the named execution function (for
+        example ``cmd.run``).
+
+    target
+        Only consider jobs that ran against the specified target.
+
+    display_progress
+        When ``True``, display progress events while scanning jobs.
+
+    Returns ``False`` when no matching job is found.
 
     CLI Example:
 
@@ -558,10 +583,22 @@ def _format_job_instance(job):
 
     if "metadata" in job:
         ret["Metadata"] = job.get("metadata", {})
+    elif "kwargs" in job and "metadata" in job["kwargs"]:
+        ret["Metadata"] = job["kwargs"].get("metadata", {})
     else:
-        if "kwargs" in job:
-            if "metadata" in job["kwargs"]:
-                ret["Metadata"] = job["kwargs"].get("metadata", {})
+        # When ``metadata`` is passed as a keyword argument on the CLI
+        # (e.g. ``salt '*' state.apply foo metadata='{...}'``) it is
+        # carried inside ``arg`` as a ``__kwarg__: True`` dict rather
+        # than at the top of the job payload. Surface it as ``Metadata``
+        # so ``jobs.list_jobs search_metadata=...`` can match it.
+        for arg in job.get("arg", []) or []:
+            if (
+                isinstance(arg, dict)
+                and arg.get("__kwarg__") is True
+                and "metadata" in arg
+            ):
+                ret["Metadata"] = arg.get("metadata", {})
+                break
 
     if "Minions" in job:
         ret["Minions"] = job["Minions"]

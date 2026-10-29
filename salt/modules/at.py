@@ -261,6 +261,11 @@ def at(*args, **kwargs):  # pylint: disable=C0103
         stdin = "### SALT: {}\n{}".format(kwargs["tag"], " ".join(args[1:]))
     else:
         stdin = " ".join(args[1:])
+    # Ensure the command is terminated with a newline. Distro-patched at
+    # (Fedora/RHEL, BZ 486844) appends its job delimiter immediately after the
+    # last stdin byte; without a trailing newline the marker concatenates onto
+    # the final command and produces a job that never executes.
+    stdin += "\n"
     cmd = [binary, args[0]]
 
     cmd_kwargs = {"stdin": stdin, "python_shell": False}

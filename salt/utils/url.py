@@ -4,7 +4,7 @@ URL utils
 
 import re
 import sys
-from urllib.parse import urlparse, urlunparse, urlunsplit
+from urllib.parse import quote, urlparse, urlunparse, urlunsplit
 
 import salt.utils.data
 import salt.utils.path
@@ -29,6 +29,13 @@ def parse(url):
         path, saltenv = resource.split("?saltenv=", 1)
     else:
         path, saltenv = resource, None
+
+    # Treat an empty authority (``salt:///foo``) the same as ``salt://foo``.
+    # Per RFC 3986 ``scheme:///path`` is a valid form, and historically Salt
+    # accepted it; without this normalization the surplus leading slashes
+    # propagate to the master fileserver which rejects absolute paths in
+    # ``find_file`` (CVE-2024-22231 / CVE-2024-22232 hardening).
+    path = path.lstrip("/")
 
     if salt.utils.platform.is_windows():
         path = salt.utils.path.sanitize_win_path(path)
@@ -154,12 +161,16 @@ def add_http_basic_auth(url, user=None, password=None, https_only=False):
         urltuple = urlparse(url)
         if https_only and urltuple.scheme != "https":
             raise ValueError("Basic Auth only supported for HTTPS")
+        # Percent-encode the userinfo so reserved characters (e.g. "/", "@",
+        # ":") in the user or password do not corrupt the resulting URL.
         if password is None:
-            netloc = f"{user}@{urltuple.netloc}"
+            netloc = f"{quote(user, safe='')}@{urltuple.netloc}"
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
         else:
-            netloc = f"{user}:{password}@{urltuple.netloc}"
+            netloc = (
+                f"{quote(user, safe='')}:{quote(password, safe='')}@{urltuple.netloc}"
+            )
             urltuple = urltuple._replace(netloc=netloc)
             return urlunparse(urltuple)
 

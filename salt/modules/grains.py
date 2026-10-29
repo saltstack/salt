@@ -19,11 +19,13 @@ from functools import reduce  # pylint: disable=redefined-builtin
 
 import yaml
 
+import salt.utils.atomicfile
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -280,8 +282,14 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             grains[key] = val
             __grains__[key] = val
     try:
-        with salt.utils.files.fopen(gfn, "w+", encoding="utf-8") as fp_:
-            salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
+        # Write a temporary file and rename it over the grains file, so a
+        # process killed mid-write cannot leave a truncated (empty) file behind.
+        with salt.utils.atomicfile.atomic_open(gfn, "wb") as fp_:
+            fp_.write(
+                salt.utils.stringutils.to_bytes(
+                    salt.utils.yaml.safe_dump(grains, default_flow_style=False)
+                )
+            )
     except OSError:
         log.error("Unable to write to grains file at %s. Check permissions.", gfn)
     fn_ = os.path.join(__opts__["cachedir"], "module_refresh")
@@ -374,7 +382,14 @@ def append(key, val, convert=False, delimiter=DEFAULT_TARGET_DELIM):
 
     while delimiter in key:
         key, rest = key.rsplit(delimiter, 1)
-        _grain = get(key, _infinitedict(), delimiter)
+        # NOTE: default must be a plain dict, not `_infinitedict()`. A
+        # `collections.defaultdict` returned here (when `key` does not yet
+        # exist) is later persisted via `setval` and, on subsequent lookups
+        # through `salt.utils.data.traverse_dict_and_list`, auto-materializes
+        # empty children instead of raising `KeyError`. That silent-insert
+        # made sibling nested `grains.append`/`grains.list_present` calls
+        # fail with "not a valid list". See #64017.
+        _grain = get(key, {}, delimiter)
         if isinstance(_grain, dict):
             _grain.update({rest: grains})
         grains = _grain

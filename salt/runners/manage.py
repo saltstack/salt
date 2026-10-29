@@ -52,10 +52,21 @@ def _ping(tgt, tgt_type, timeout, gather_job_timeout):
             tgt,
             tgt_type,
             gather_job_timeout=gather_job_timeout,
+            # ``get_cli_event_returns`` defaults ``expect_minions`` to True so
+            # the ``salt`` CLI emits per-target timeout rows. The manage
+            # runner derives ``up`` / ``down`` from actual returns and
+            # treating the synthesized ``no_return`` rows as returns would
+            # report every targeted minion as up (issue #69582).
+            expect_minions=False,
         ):
 
             if fn_ret:
-                for mid, _ in fn_ret.items():
+                for mid, min_ret in fn_ret.items():
+                    # Defense in depth: drop synthesized timeout rows in case
+                    # a caller passes ``expect_minions=True`` through kwargs
+                    # or a future change re-enables them by default.
+                    if isinstance(min_ret, dict) and min_ret.get("out") == "no_return":
+                        continue
                     log.debug("minion '%s' returned from ping", mid)
                     returned.add(mid)
 

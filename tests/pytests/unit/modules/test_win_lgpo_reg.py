@@ -751,3 +751,78 @@ def test_delete_value_warns_on_domain_gpo(reg_pol_mach):
     ) as mock_log:
         lgpo_reg.delete_value(key="SOFTWARE\\MyKey1", v_name="MyValue1")
     mock_log.warning.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# _policy_lock integration — verify each RMW function acquires the lock
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def _mock_rmw():
+    """Patch out read/write and _policy_lock so RMW functions run without I/O."""
+    from contextlib import contextmanager
+
+    lock_calls = []
+
+    @contextmanager
+    def fake_lock(machine=True):
+        lock_calls.append(machine)
+        yield
+
+    with patch(
+        "salt.utils.win_lgpo_reg._policy_lock", side_effect=fake_lock
+    ), patch.object(lgpo_reg, "read_reg_pol", return_value={}), patch.object(
+        lgpo_reg, "write_reg_pol", return_value=True
+    ):
+        yield lock_calls
+
+
+def test_set_value_acquires_machine_lock(_mock_rmw):
+    """set_value acquires the machine critical section for policy_class=Machine."""
+    lgpo_reg.set_value(
+        key="SOFTWARE\\MyKey",
+        v_name="MyVal",
+        v_data=1,
+        v_type="REG_DWORD",
+        policy_class="Machine",
+    )
+    assert _mock_rmw == [True]
+
+
+def test_set_value_acquires_user_lock(_mock_rmw):
+    """set_value acquires the user critical section for policy_class=User."""
+    lgpo_reg.set_value(
+        key="SOFTWARE\\MyKey",
+        v_name="MyVal",
+        v_data="x",
+        v_type="REG_SZ",
+        policy_class="User",
+    )
+    assert _mock_rmw == [False]
+
+
+def test_disable_value_acquires_machine_lock(_mock_rmw):
+    """disable_value acquires the machine critical section."""
+    lgpo_reg.disable_value(
+        key="SOFTWARE\\MyKey", v_name="MyVal", policy_class="Machine"
+    )
+    assert _mock_rmw == [True]
+
+
+def test_disable_value_acquires_user_lock(_mock_rmw):
+    """disable_value acquires the user critical section."""
+    lgpo_reg.disable_value(key="SOFTWARE\\MyKey", v_name="MyVal", policy_class="User")
+    assert _mock_rmw == [False]
+
+
+def test_delete_value_acquires_machine_lock(_mock_rmw):
+    """delete_value acquires the machine critical section."""
+    lgpo_reg.delete_value(key="SOFTWARE\\MyKey", v_name="MyVal", policy_class="Machine")
+    assert _mock_rmw == [True]
+
+
+def test_delete_value_acquires_user_lock(_mock_rmw):
+    """delete_value acquires the user critical section."""
+    lgpo_reg.delete_value(key="SOFTWARE\\MyKey", v_name="MyVal", policy_class="User")
+    assert _mock_rmw == [False]

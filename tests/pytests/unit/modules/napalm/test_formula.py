@@ -196,3 +196,20 @@ def test_render_fields():
     )
     ret = napalm_formula.render_fields(config, "mtu", "description", quotes=True)
     assert ret == expected_render
+
+
+def test_container_path_uses_delim(set_model):
+    # Regression: container_path dropped its delim (and key/container), always
+    # using the default ':'. With delim='//' no ':' should appear in the paths.
+    with patch("salt.utils.napalm.is_proxy", MagicMock(return_value=True)):
+        ret = napalm_formula.container_path(set_model.copy(), delim="//")
+    assert "interfaces//interface//Ethernet1//config" in ret
+    assert not any(":" in path for path in ret)
+
+
+def test_render_field_no_os_grain():
+    # 'os' grain absent must not raise KeyError; no junos trailing ';'.
+    config = {"description": "Interface description"}
+    with patch.dict(napalm_formula.__grains__, {}, clear=True):
+        ret = napalm_formula.render_field(config, "description", quotes=True)
+    assert ret == 'description "Interface description"'

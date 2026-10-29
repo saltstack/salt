@@ -133,6 +133,19 @@ class _AtomicWFile:
     def close(self):
         if self._fh.closed:
             return
+        # Flush user-space buffers and fsync the file's data + metadata
+        # before the atomic rename. Without this, a crash after the rename
+        # can expose a written-but-unsynced (truncated/partial) file:
+        # POSIX does not require an implicit fsync on rename, and the
+        # fsync-on-rename heuristic of ext4 et al. is not universal. The
+        # fileno() / fsync() pair is guarded because some file-like objects
+        # do not expose a real fd (e.g. an in-memory wrapper); in that case
+        # there is nothing useful to sync at the fd level.
+        try:
+            self._fh.flush()
+            os.fsync(self._fh.fileno())
+        except (AttributeError, OSError, ValueError):
+            pass
         self._fh.close()
         if salt.utils.win_dacl.HAS_WIN32:
             if os.path.isfile(self._filename):

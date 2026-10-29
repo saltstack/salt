@@ -545,3 +545,361 @@ def test_run_batch_wait_delays_next_dispatch(batch):
     # dispatch.  Without batch_wait, the second dispatch would happen
     # immediately and no 0.02s sleeps would be issued.
     assert spin_sleeps[0] >= 1
+
+
+def test_run_waits_for_live_iterator_past_timeout_window(batch):
+    """
+    A synchronous batch must not free a slot merely because the master's
+    timeout window elapsed while the return iterator is still tracking the
+    job.
+
+    The ``None`` values model an iterator which has not received the job
+    return yet (including while ``saltutil.find_job`` reports it as running).
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 10,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2"], [], []],
+    )
+
+    first_returned = False
+    dispatches = []
+
+    def _make_iter(minions, *args, **kwargs):
+        nonlocal first_returned
+        targets = list(minions)
+        dispatches.append((targets, first_returned))
+
+        def _ret_iter():
+            nonlocal first_returned
+            if targets == ["m1"]:
+                # Batch._poll_iterators consumes at most six empty polls per
+                # pass. Keep this iterator alive across two passes so the
+                # clock can advance beyond timeout + gather_job_timeout.
+                for _ in range(12):
+                    yield None
+                first_returned = True
+                yield {"m1": {"ret": True, "retcode": 0, "failed": False}}
+            else:
+                yield {"m2": {"ret": True, "retcode": 0, "failed": False}}
+
+        return _ret_iter()
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+
+    # create_batch_state and the first dispatch occur at t=1. Subsequent
+    # progress checks are beyond the 15-second timeout window.
+    clock = iter([1.0, 1.0, 17.0])
+    with patch("salt.cli.batch.time.time", side_effect=lambda: next(clock, 17.0)):
+        ret = list(Batch.run(batch))
+
+    assert len(ret) == 2
+    assert dispatches == [(["m1"], False), (["m2"], True)]
+
+
+def test_run_does_not_write_to_master_cachedir(batch):
+    """
+    Regression test for issue #69418.
+
+    The sync CLI batch driver must not write batch-state persistence
+    files (``.batch.p``, ``batch_active.p``) under the master's
+    ``cachedir`` from the CLI process.  The salt-master daemon is the
+    sole owner of that directory tree.  When the CLI is invoked as
+    ``root`` against a master running as user ``salt``, any
+    CLI-initiated write (or directory creation) under the master's
+    cachedir produces root-owned files that the master cannot
+    subsequently update — which surfaces as a ``PermissionError`` in
+    ``local_cache.prep_jid`` and ultimately as
+    ``SaltClientError: Some exception handling minion payload`` on
+    the user's terminal.
+
+    Assert that ``write_batch_state`` and ``add_to_active_index`` /
+    ``remove_from_active_index`` are not called by ``Batch.run()``.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+
+    with patch("salt.utils.batch_state.write_batch_state") as write_state, patch(
+        "salt.utils.batch_state.add_to_active_index"
+    ) as add_index, patch(
+        "salt.utils.batch_state.remove_from_active_index"
+    ) as remove_index:
+        list(Batch.run(batch))
+
+    write_state.assert_not_called()
+    add_index.assert_not_called()
+    remove_index.assert_not_called()
+
+
+def test_run_fires_new_progress_and_complete_events(batch):
+    """
+    The sync CLI batch driver replaces direct disk writes with
+    event-bus emissions to the master-side ``BatchManager``.  Every
+    state transition gets a ``salt/batch/<jid>/{new,progress,complete,
+    halted}`` event carrying the full state in ``data["state"]``;
+    the manager persists ``.batch.p`` / updates the active index on
+    the CLI's behalf so ``batch.list_active`` and ``batch.status``
+    have something to read.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    # Halted-event poll must return None for the batch to actually
+    # run (MagicMock's default truthy return would short-circuit the
+    # loop into the halt path).
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    list(Batch.run(batch))
+
+    fire_calls = batch.local.event.fire_event.call_args_list
+    tags = [c.args[1] for c in fire_calls]
+    assert any(t.startswith("salt/batch/") and t.endswith("/new") for t in tags)
+    assert any(t.startswith("salt/batch/") and t.endswith("/progress") for t in tags)
+    assert any(t.startswith("salt/batch/") and t.endswith("/complete") for t in tags)
+    # /halted only fires when the run halts.
+    assert not any(t.endswith("/halted") for t in tags)
+
+    # Every payload should embed the full state dict so the manager
+    # can persist it without having to read its own disk.
+    new_call = next(c for c in fire_calls if c.args[1].endswith("/new"))
+    assert "state" in new_call.args[0]
+    assert new_call.args[0]["state"]["driver"] == "cli"
+
+
+def test_run_subscribes_and_unsubscribes_to_halted(batch):
+    """
+    The CLI subscribes to ``salt/batch/<jid>/halted`` for the run's
+    duration so it can react to a ``batch.stop`` request from the
+    runner; on teardown it unsubscribes.
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    list(Batch.run(batch))
+
+    sub_args = batch.local.event.subscribe.call_args.args
+    unsub_args = batch.local.event.unsubscribe.call_args.args
+    assert sub_args[0].endswith("/halted")
+    assert unsub_args[0].endswith("/halted")
+    # Same tag both ways.
+    assert sub_args[0] == unsub_args[0]
+
+
+def test_run_halts_when_stop_event_arrives(batch):
+    """
+    When ``batch.stop <jid>`` is invoked, the master-side
+    ``BatchManager._handle_stop`` fires ``salt/batch/<jid>/halted``.
+    The CLI polls for that tag every loop iteration and halts the
+    run when one arrives — and the teardown event must be the
+    ``/halted`` variant, not ``/complete``.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1", "m2", "m3", "m4"], [], []])
+
+    # Iterator that never returns; the run can only end via halt.
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=lambda *a, **k: iter([None]))
+
+    # First poll → no halt; second poll → halt event for our jid.
+    poll_box = {"n": 0, "captured_jid": None}
+
+    def _capture_jid(payload, tag):
+        if tag.endswith("/new"):
+            poll_box["captured_jid"] = payload["jid"]
+
+    batch.local.event.fire_event = MagicMock(side_effect=_capture_jid)
+
+    def _get_event(*args, **kwargs):
+        poll_box["n"] += 1
+        if poll_box["n"] < 2:
+            return None
+        return {"jid": poll_box["captured_jid"], "reason": "stop"}
+
+    batch.local.event.get_event = MagicMock(side_effect=_get_event)
+
+    list(Batch.run(batch))
+
+    fire_calls = batch.local.event.fire_event.call_args_list
+    tags = [c.args[1] for c in fire_calls]
+    assert any(t.endswith("/halted") for t in tags)
+    assert not any(t.endswith("/complete") for t in tags)
+
+
+def test_run_event_failures_are_swallowed(batch):
+    """
+    The CLI batch must remain functional even when the master event
+    bus is broken or unreachable: every fire / subscribe / poll path
+    must catch and log instead of propagating.  This preserves the
+    3007.x behavior of "no visibility but the batch still works."
+    """
+    batch.opts = {
+        "batch": "100%",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["m1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        for m in args[0]:
+            yield {m: {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.fire_event = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.subscribe = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.unsubscribe = MagicMock(side_effect=OSError("bus down"))
+    batch.local.event.get_event = MagicMock(side_effect=OSError("bus down"))
+
+    # Should not raise; should yield m1's return.
+    results = list(Batch.run(batch))
+    assert len(results) == 1
+    assert next(iter(results[0][0].values())) is True
+
+
+def test_gather_minions_ignores_error_payload(batch):
+    """
+    Transport-level error payloads (e.g. ``{"error": "...", "jid": "..."}``
+    or ``{"error": "Authentication failure"}``) must not be treated as
+    minion IDs in gather_minions().
+
+    Regression for issues #46876, #48509, #50238, #60724.
+    """
+    ping_returns = [
+        # Transport-level error payload — must be ignored
+        {"error": "Authentication failure", "jid": "20260101000000"},
+        # Legit discovery payload — emitted before individual pings
+        {"minions": ["minion1"], "jid": "20260101000001"},
+        # Individual minion ping reply
+        {"minion1": {"ret": True}},
+    ]
+
+    batch.local.cmd_iter = MagicMock(return_value=iter(ping_returns))
+
+    batch.opts.update(
+        {
+            "tgt": "*",
+            "tgt_type": "glob",
+            "timeout": 5,
+            "gather_job_timeout": 5,
+        }
+    )
+
+    minions, _, _ = batch.gather_minions()
+
+    assert "error" not in minions
+    assert minions == ["minion1"]
+
+
+def test_gather_minions_fixes_minions_jid_check(batch):
+    """
+    The Python expression ``("minions" and "jid") in ret`` evaluates to
+    ``"jid" in ret`` — a bug that causes the discovery payload to be
+    processed as a minion return rather than skipped.
+
+    The fix replaces it with ``"minions" in ret and "jid" in ret`` so
+    the full-list discovery packet is handled correctly.
+    """
+    # A payload that has "jid" but NOT "minions" — the old buggy check
+    # would have treated it as a discovery payload; the fixed check must
+    # fall through to the else branch.
+    ping_returns = [
+        {"jid": "20260101000000"},  # has "jid", no "minions" — old code would skip
+        {"minion1": {"ret": True}},
+    ]
+
+    batch.local.cmd_iter = MagicMock(return_value=iter(ping_returns))
+
+    batch.opts.update(
+        {
+            "tgt": "*",
+            "tgt_type": "glob",
+            "timeout": 5,
+            "gather_job_timeout": 5,
+        }
+    )
+
+    minions, _, _ = batch.gather_minions()
+
+    # minion1 must be discovered; the jid-only dict must not be treated as a
+    # discovery packet that feeds "minion1" into nret (it has no "minions" key).
+    assert "minion1" in minions
+
+
+def test_run_ignores_error_payload_in_cmd_returns(batch):
+    """
+    When ``cmd_iter_no_block`` yields a transport-level error dict
+    (keyed by ``"error"`` instead of a real minion ID) the batch run
+    must silently skip it rather than treating ``"error"`` as a minion.
+
+    Regression for the ``KeyError: 'ret'`` crash described in #46876.
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 5,
+    }
+    batch.gather_minions = MagicMock(return_value=[["minion1"], [], []])
+
+    def _make_iter(*args, **kwargs):
+        # First yield is a transport-level error payload
+        yield {"error": "Publish failed", "failed": True}
+        # Second yield is the real minion return
+        yield {"minion1": {"ret": True, "retcode": 0}}
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+    batch.local.event.get_event = MagicMock(return_value=None)
+
+    results = list(Batch.run(batch))
+
+    returned_minions = [next(iter(d.keys())) for d, _rc in results]
+    assert "error" not in returned_minions
+    assert "minion1" in returned_minions

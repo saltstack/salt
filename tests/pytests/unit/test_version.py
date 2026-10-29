@@ -301,9 +301,6 @@ def test_full_info_all_versions(vstr, full_info):
         (3000, None, b"v3000.0rc2-0-g44fe283a77\n", "3000rc2"),
         (3000, None, b"v3000", "3000"),
         (3000, None, b"1234567", "3000-0na-1234567"),
-        # New branch (e.g. 3008.x) before the first v3008* tag: describe still
-        # anchors on the previous line; version must follow the codename.
-        (3008, None, b"v3007.13-1100-gabcdef12\n", "3008.0+1100.gabcdef12"),
         (2019, 2, b"v2019.2.0rc2-12-g44fe283a77\n", "2019.2.0rc2-12-g44fe283a77"),
         (2019, 2, b"v2019.2.0", "2019.2.0"),
         (2019, 2, b"afc9830198dj", "2019.2.0-0na-afc9830198dj"),
@@ -430,6 +427,46 @@ def test_previous_and_next_releases():
         assert SaltVersionsInfo.current_release() == SaltVersionsInfo.NEPTUNIUM
         assert SaltVersionsInfo.next_release() == SaltVersionsInfo.PLUTONIUM
         assert SaltVersionsInfo.previous_release() == SaltVersionsInfo.URANIUM
+
+
+def test_current_release_matches_maintenance_branch_67061():
+    """
+    Regression for #67061.
+
+    On a maintenance branch, the bookkeeping in ``SaltVersionsInfo`` marks
+    only the branch's own codename as released and leaves every subsequent
+    codename at ``released=False``.  The pre-fix ``current_release()``
+    walked the table and returned the *first* un-released codename, which
+    is the next major (e.g. Argon on 3007.x).  When a checkout has neither
+    ``salt/_version.txt`` nor a usable ``.git`` directory, that wrong
+    codename leaked into ``__saltstack_version__`` and was baked into the
+    built distribution.  Pin ``current_release()`` to the branch's own
+    codename so the default version always matches the branch's calver
+    series.
+
+    This asserts the *contract* -- current_release() returns the last
+    codename with released=True -- rather than a hardcoded codename.
+    That way the assertion tracks the released-flag state automatically
+    on every branch and doesn't need editing when new codenames flip
+    to released=True.
+    """
+    # Reset any cached _current_release that an earlier import set so we
+    # exercise the real lookup path.
+    with patch.multiple(
+        SaltVersionsInfo,
+        _previous_release=None,
+        _next_release=None,
+        _current_release=None,
+    ):
+        released = [v for v in SaltVersionsInfo.versions() if v.released]
+        assert released, "SaltVersionsInfo table has no released codenames"
+        expected = released[-1]
+        current = SaltVersionsInfo.current_release()
+        assert current == expected, (
+            f"current_release() must return the last codename with "
+            f"released=True (expected {expected.name} / {expected.info[0]}), "
+            f"got {current.name} / {current.info[0]}."
+        )
 
 
 @pytest.mark.skip_unless_on_linux

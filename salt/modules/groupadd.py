@@ -2,10 +2,12 @@
 Manage groups on Linux, OpenBSD and NetBSD
 
 .. important::
-    If you feel that Salt should be using this module to manage groups on a
-    minion, and it is using a different module (or gives an error similar to
-    *'group.info' is not available*), see :ref:`here
-    <module-provider-override>`.
+    This module is loaded under the ``group`` virtual name. Address it as
+    ``group.<function>`` (for example ``group.add``) and not as
+    ``groupadd.<function>``. If you feel that Salt should be using this
+    module to manage groups on a minion, and it is using a different
+    module (or gives an error similar to *'group.info' is not available*),
+    see :ref:`here <module-provider-override>`.
 """
 
 import functools

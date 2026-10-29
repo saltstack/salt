@@ -256,7 +256,7 @@ def _kernel_type():
     """
     Parse the kernel name and return its type
     """
-    return re.match(r"^[\d.-]+-(.+)$", active()).group(1)
+    return re.match(r"^[\w.+\-~]+-([^-]+)$", active()).group(1)
 
 
 def _cmp_version(item1, item2):

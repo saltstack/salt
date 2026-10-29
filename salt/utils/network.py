@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import Version
+from salt.utils.versions import Version, warn_until
 
 try:
     import salt.utils.win_network
@@ -72,7 +72,18 @@ def sanitize_host(host):
     """
     Sanitize host string.
     https://tools.ietf.org/html/rfc1123#section-2.1
+
+    If ``host`` is already a valid IP address (IPv4 or IPv6) it is returned
+    unchanged so that characters like ``:`` in IPv6 addresses are not
+    stripped.
     """
+    if isinstance(host, str):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            pass
+        else:
+            return host
     RFC952_characters = ascii_letters + digits + ".-_"
     return "".join([c for c in host[0:255] if c in RFC952_characters])
 
@@ -285,13 +296,15 @@ def ip_to_host(ip):
 def is_reachable_host(entity_name):
     """
     Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
-    :param hostname:
+    :param entity_name:
     :return:
     """
     try:
         assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
         ret = True
-    except socket.gaierror:
+    except (socket.gaierror, UnicodeError):
+        # UnicodeError is raised (not a subclass of socket.gaierror) when the
+        # name has an overlong IDNA label, e.g. a long salt-ssh -E/--pcre target.
         ret = False
 
     return ret
@@ -2367,3 +2380,31 @@ def ip_bracket(addr, strip=False):
     addr = addr.rstrip("]")
     addr = ipaddress.ip_address(addr)
     return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)
+
+
+def neigh_expand_warning(func_name, expand):
+    """
+    Warn about the upcoming neighbour table return shape change when the
+    caller did not pass ``expand`` explicitly, and return the effective
+    value of ``expand``.
+    """
+    if expand is None:
+        warn_until(
+            3011,
+            f"In salt 3011, {func_name} will return a list of neighbour entry "
+            "dicts by default instead of a mac-to-ip mapping, which silently "
+            "drops entries whenever several IP addresses share a MAC address. "
+            "Pass expand=True to opt in to the new shape now, or expand=False "
+            "to keep the current shape and silence this warning.",
+        )
+        return False
+    return expand
+
+
+def neighs_flatten(entries):
+    """
+    Flatten neighbour entry dicts into the legacy ``{mac: ip}`` shape. When
+    several entries share a MAC address, the last one wins, matching the
+    historical behaviour.
+    """
+    return {entry["mac"]: entry["ip"] for entry in entries}

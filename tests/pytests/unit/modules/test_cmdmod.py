@@ -303,6 +303,87 @@ def test_run_user_not_available():
                     cmdmod._run("foo", "bar", runas="baz")
 
 
+@pytest.mark.skip_on_windows
+def test_run_runas_env_retrieval_timeout(caplog):
+    """
+    Regression test for issue #63901 / PR #63912.
+
+    When ``runas`` is supplied, ``_run`` shells out to fetch the user's
+    environment by piping a Python snippet through ``su``/``sudo`` and
+    reading the result back with ``subprocess.Popen.communicate()``. On
+    misconfigured PAM stacks (e.g. WINBIND), that subprocess can hang
+    indefinitely.
+
+    The fix adds ``timeout=10`` to that ``communicate()`` call and routes
+    a ``subprocess.TimeoutExpired`` into the existing "Environment could
+    not be retrieved" branch so execution continues with an empty
+    runas env rather than wedging the minion.
+
+    This test pins that behavior: the ``TimeoutExpired`` is swallowed,
+    the documented log.error is emitted, and ``_run`` proceeds to
+    invoke the actual command via ``TimedProc`` instead of raising.
+    """
+    import subprocess as _subprocess
+
+    mock_true = MagicMock(return_value=True)
+
+    # subprocess.Popen used for env retrieval; .communicate() must raise
+    # TimeoutExpired to drive the new except branch.
+    env_popen_instance = MagicMock()
+    env_popen_instance.communicate.side_effect = _subprocess.TimeoutExpired(
+        cmd=["su", "-", "baz", "-c"], timeout=10
+    )
+    env_popen_cls = MagicMock(return_value=env_popen_instance)
+
+    # After env retrieval falls back to empty env, the actual command runs
+    # via salt.utils.timed_subprocess.TimedProc -- mock that out so the
+    # test does not execute a real subprocess.
+    mock_timed_proc = MockTimedProc(stdout=b"ok\n", stderr=b"")
+
+    # pwd.getpwnam must succeed so the runas user is considered valid.
+    fake_pw = MagicMock(pw_name="baz", pw_shell="/bin/sh")
+
+    with patch("salt.modules.cmdmod._is_valid_shell", mock_true), patch(
+        "salt.utils.platform.is_windows", MagicMock(return_value=False)
+    ), patch("os.path.isfile", mock_true), patch("os.access", mock_true), patch(
+        "os.path.isabs", mock_true
+    ), patch(
+        "os.path.isdir", mock_true
+    ), patch(
+        "pwd.getpwnam", MagicMock(return_value=fake_pw)
+    ), patch(
+        "pwd.getpwall", MagicMock(return_value=[fake_pw])
+    ), patch(
+        "salt.utils.pkg.check_bundled", MagicMock(return_value=False)
+    ), patch.dict(
+        cmdmod.__grains__, {"os": "Linux", "os_family": "Debian"}, clear=False
+    ), patch(
+        "subprocess.Popen", env_popen_cls
+    ), patch(
+        "salt.utils.timed_subprocess.TimedProc",
+        MagicMock(return_value=mock_timed_proc),
+    ):
+        with caplog.at_level(logging.ERROR, logger="salt.modules.cmdmod"):
+            # Must not raise; TimeoutExpired must be caught inside _run.
+            ret = cmdmod._run("echo hi", "bar", runas="baz", python_shell=True)
+
+    # The fix routes the TimeoutExpired into the existing "Environment
+    # could not be retrieved" error log.
+    assert any(
+        "Environment could not be retrieved for user" in record.getMessage()
+        and "baz" in record.getMessage()
+        for record in caplog.records
+    ), (
+        "Expected 'Environment could not be retrieved' log.error to fire "
+        "when env-retrieval subprocess times out; got: "
+        f"{[r.getMessage() for r in caplog.records]}"
+    )
+
+    # Sanity: _run returned the dict shape callers expect (no exception
+    # propagated past the timeout handler).
+    assert isinstance(ret, dict)
+
+
 def test_run_zero_umask():
     """
     Tests error raised when umask is set to zero
@@ -1044,6 +1125,49 @@ def test_cmd_script_saltenv_from_config_windows():
                     assert mock_run.call_args[1]["saltenv"] == "base"
 
 
+def test_cmd_script_runas_domain_user_windows_68578(tmp_path, caplog):
+    """
+    Regression test for #68578.
+
+    On Windows ``cmd.script`` used to abort with ``Invalid user: <runas>``
+    whenever the ``user.info`` precheck returned an empty dict. ``user.info``
+    (NetUserGetInfo) only sees local-machine accounts, so domain users
+    (``DOMAIN\\user``, ``user@DOMAIN``, SIDs) were rejected even though the
+    underlying ``win_runas`` machinery can authenticate them.
+
+    The precheck must not abort execution when ``user.info`` returns empty;
+    instead the script should proceed and let ``win_runas`` raise a precise
+    error if the user is truly invalid.
+    """
+    mock_cp_cache_file = MagicMock(return_value="fnord")
+    with patch.dict(cmdmod.__opts__, {"saltenv": "base", "cachedir": str(tmp_path)}):
+        with patch.dict(
+            cmdmod.__salt__,
+            {
+                "cp.cache_file": mock_cp_cache_file,
+                "file.remove": MagicMock(),
+                # user.info returns {} for domain users on Windows when the
+                # local SAM and DC lookups can't resolve the account; the
+                # precheck must not treat that as a fatal error.
+                "user.info": MagicMock(return_value={}),
+            },
+        ):
+            with patch("salt.utils.platform.is_windows", return_value=True):
+                with patch(
+                    "salt.utils.win_dacl.set_permissions", MagicMock(create=True)
+                ):
+                    with patch("salt.modules.cmdmod._run") as mock_run:
+                        mock_run.return_value = {
+                            "pid": 1,
+                            "retcode": 0,
+                            "stdout": "",
+                            "stderr": "",
+                        }
+                        with patch("shutil.copyfile", MagicMock()):
+                            cmdmod.script("salt://test.ps1", runas="DOMAIN\\someuser")
+                            assert mock_run.call_count == 1
+
+
 @pytest.mark.parametrize("bundled", [True, False])
 @pytest.mark.parametrize(
     "test_os,test_family",
@@ -1385,3 +1509,71 @@ def test_prep_powershell_json(text, expected):
     """
     result = cmdmod._prep_powershell_json(text)
     assert result == expected
+
+
+def test_ps_single_quote():
+    assert cmdmod._ps_single_quote(r"C:\temp\file.ps1") == r"C:\temp\file.ps1"
+    assert cmdmod._ps_single_quote("O'Brien") == "O''Brien"
+
+
+@pytest.mark.parametrize(
+    "shell, expected",
+    [
+        ("powershell", True),
+        ("pwsh", True),
+        (r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe", True),
+        ("cmd", False),
+        (None, False),
+    ],
+)
+def test_is_powershell_shell(shell, expected):
+    assert cmdmod._is_powershell_shell(shell) is expected
+
+
+def test_prepare_bg_script_posix():
+    path = "/tmp/__salt.tmp.abc123.sh"
+    ret = cmdmod._prepare_bg_script(path, ["arg1", "arg two"], shell="/bin/sh")
+    assert ret[0] == "/bin/sh"
+    assert ret[1] == "-c"
+    assert "trap" in ret[2]
+    # exec would replace /bin/sh and skip the EXIT trap (tempfile leak).
+    assert "exec" not in ret[2]
+    assert ret[3] == "salt-cmd-script"
+    assert ret[4] == path
+    assert ret[5] == path
+    assert ret[6:] == ["arg1", "arg two"]
+
+
+@pytest.mark.skip_unless_on_windows
+def test_prepare_bg_script_powershell(tmp_path):
+    script = tmp_path / "__salt.tmp.real.ps1"
+    script.write_text("Write-Output hi\n", encoding="utf-8")
+    ret = cmdmod._prepare_bg_script(
+        str(script), ["-OutFile", "x"], shell="powershell", cwd=str(tmp_path)
+    )
+    assert len(ret) == 3
+    wrapper = ret[0]
+    assert wrapper.endswith(".ps1")
+    assert ret[1:] == ["-OutFile", "x"]
+    with salt.utils.files.fopen(wrapper) as fh_:
+        content = fh_.read()
+    assert str(script) in content
+    assert "& $script @args" in content
+    assert "Remove-Item -LiteralPath $script" in content
+    os.remove(wrapper)
+
+
+@pytest.mark.skip_unless_on_windows
+def test_prepare_bg_script_cmd(tmp_path):
+    script = tmp_path / "__salt.tmp.real.bat"
+    script.write_text("@echo off\necho hi\n", encoding="utf-8")
+    ret = cmdmod._prepare_bg_script(
+        str(script), ["a", "b"], shell="cmd", cwd=str(tmp_path)
+    )
+    assert ret[0].endswith(".cmd")
+    assert ret[1:] == ["a", "b"]
+    with salt.utils.files.fopen(ret[0]) as fh_:
+        content = fh_.read()
+    assert str(script) in content
+    assert "SALT_BG_SCRIPT" in content
+    os.remove(ret[0])

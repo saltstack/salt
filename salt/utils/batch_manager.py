@@ -33,7 +33,9 @@ import salt.utils.process
 log = logging.getLogger(__name__)
 
 
-_BATCH_LIFECYCLE_TAG = re.compile(r"^salt/batch/([^/]+)/(new|stop|recover)$")
+_BATCH_LIFECYCLE_TAG = re.compile(
+    r"^salt/batch/([^/]+)/(new|stop|recover|progress|complete|halted)$"
+)
 _JOB_RETURN_TAG = re.compile(r"^salt/job/([^/]+)/ret/([^/]+)$")
 
 DEFAULT_LOOP_INTERVAL = 5
@@ -153,11 +155,15 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
         if lifecycle:
             jid, action = lifecycle.group(1), lifecycle.group(2)
             if action == "new":
-                self._handle_new(jid)
+                self._handle_new(jid, data)
             elif action == "stop":
                 self._handle_stop(jid, data)
             elif action == "recover":
                 self._handle_recover(jid)
+            elif action == "progress":
+                self._handle_progress(jid, data)
+            elif action in ("complete", "halted"):
+                self._handle_terminal(jid, data, action)
             return
 
         ret = _JOB_RETURN_TAG.match(tag)
@@ -170,27 +176,65 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
     # Handlers
     # ------------------------------------------------------------------
 
-    def _handle_new(self, jid):
+    def _handle_new(self, jid, data=None):
         """
-        Adopt a new async batch.
+        Register a new batch.
 
-        The CLI writes ``.batch.p`` before firing ``salt/batch/<jid>/new``,
-        so this handler reads the on-disk state to confirm and registers
-        the JID in the in-memory active set.  Sync batches
-        (``driver="cli"``) are ignored.
+        Two paths:
+
+        * **Async** (``driver="master"``) — the async CLI path writes
+          ``.batch.p`` itself (it runs ``run_job`` first, so the
+          master has already created the JID directory with the right
+          ownership) and then fires ``salt/batch/<jid>/new`` with no
+          ``state`` field.  This handler reads from disk to confirm
+          and adopts the JID into the in-memory active set.
+        * **Sync CLI** (``driver="cli"``) — the sync CLI cannot
+          safely write under the master's ``cachedir`` (see issue
+          #69418), so it ships the full state in the event data
+          under ``data["state"]``.  This handler persists that state
+          to ``.batch.p``, registers the JID in the active index,
+          but does **not** add it to ``self.active_batches`` — the
+          CLI process owns the iterator and driving the state
+          machine.  The manager only acts as a visibility layer for
+          the ``batch.status`` / ``batch.list_active`` runners and as
+          the recipient of ``batch.stop`` requests, which it
+          translates into ``salt/batch/<jid>/halted`` events the CLI
+          observes.
         """
-        if jid in self.active_batches:
-            return
-        state = salt.utils.batch_state.read_batch_state(jid, self.opts)
+        if data is None:
+            data = {}
+        state = data.get("state")
+        if state is not None:
+            # Trust the event payload over any stale on-disk state —
+            # the sync CLI ships its in-memory state with every
+            # lifecycle event.
+            state = dict(state)
+            salt.utils.batch_state.write_batch_state(jid, state, self.opts)
+        else:
+            state = salt.utils.batch_state.read_batch_state(jid, self.opts)
         if state is None:
             log.warning("salt/batch/%s/new received but .batch.p is not readable", jid)
             return
-        if state.get("driver") != "master":
+        driver = state.get("driver")
+        if driver == "cli":
+            # Persistence-only adoption: keep the JID in the on-disk
+            # active index so ``batch.list_active`` sees it, but do
+            # not drive the state machine — the CLI is doing that.
+            salt.utils.batch_state.add_to_active_index(jid, self.opts)
+            log.info(
+                "Registered sync CLI batch %s on behalf of %s",
+                jid,
+                state.get("user"),
+            )
+            return
+        if driver != "master":
             log.debug(
                 "Ignoring salt/batch/%s/new — driver=%s is not master-driven",
                 jid,
-                state.get("driver"),
+                driver,
             )
+            return
+        if jid in self.active_batches:
             return
         self._adopt(jid)
         log.info("Adopted async batch %s on behalf of %s", jid, state.get("user"))
@@ -240,6 +284,49 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
         self._adopt(jid)
         self._progress_one(jid, {})
 
+    def _handle_progress(self, jid, data):
+        """
+        Sync CLI driver progress update.
+
+        The sync CLI fires ``salt/batch/<jid>/progress`` after every
+        ``progress_batch()`` step, embedding the post-tick state under
+        ``data["state"]``.  The manager just persists it so
+        ``batch.status`` reflects the latest snapshot.
+
+        Master-driven (``driver="master"``) progress is internal to
+        the manager and never arrives here.
+        """
+        state = data.get("state") if isinstance(data, dict) else None
+        if state is None:
+            return
+        state = dict(state)
+        if state.get("driver") != "cli":
+            return
+        salt.utils.batch_state.write_batch_state(jid, state, self.opts)
+
+    def _handle_terminal(self, jid, data, action):
+        """
+        Sync CLI driver teardown.
+
+        Fired as ``salt/batch/<jid>/complete`` (normal drain) or
+        ``salt/batch/<jid>/halted`` (failhard / external stop).  The
+        manager persists the final state and removes the JID from
+        the active index so ``batch.list_active`` stops listing it.
+
+        The CLI itself fires the lifecycle event on the bus; we do
+        not re-emit it here (the manager would otherwise be
+        subscribed to its own emission, which would loop).
+        """
+        del action  # for symmetry with _handle_stop; future use
+        state = data.get("state") if isinstance(data, dict) else None
+        if state is None:
+            return
+        state = dict(state)
+        if state.get("driver") != "cli":
+            return
+        salt.utils.batch_state.write_batch_state(jid, state, self.opts)
+        salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+
     def _handle_batch_return(self, jid, minion_id, data):
         """
         Process a minion return event for an active batch.
@@ -258,6 +345,11 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
         """
         Read ``.batch.p``, advance the state machine, persist the
         result, publish any new sub-batch, and fire progress events.
+
+        Sync CLI batches (``driver="cli"``) are never advanced here
+        — their state machine is owned by the CLI process.  This
+        method short-circuits if it's called for one anyway (e.g.
+        defensive callers, or a leftover entry in the active index).
         """
         state = salt.utils.batch_state.read_batch_state(jid, self.opts)
         if state is None:
@@ -266,6 +358,8 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
                 jid,
             )
             self._retire(jid)
+            return
+        if state.get("driver") == "cli":
             return
         if state.get("halted"):
             self._retire(jid)
@@ -294,11 +388,15 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
         Three things happen, in order:
 
         1. Reconcile the in-memory active set with the on-disk index.
-           Batches registered by other processes (the CLI at
-           batch-creation time, the ``batch.stop`` runner, a previously
-           crashed manager) can be adopted without requiring an
-           event.  This closes the race where a ``salt/batch/<jid>/new``
-           event is lost before we're listening.
+           Master-driven batches registered by other processes (the
+           async CLI at batch-creation time, the ``batch.stop``
+           runner, a previously crashed manager) can be adopted
+           without requiring an event.  This closes the race where a
+           ``salt/batch/<jid>/new`` event is lost before we're
+           listening.  Sync CLI batches (``driver="cli"``) are kept
+           in the on-disk index for visibility but are never added
+           to the in-memory active set — they're driven by the CLI
+           process, not by us.
         2. Advance each active batch by one tick — drives timeout
            detection and ``batch_wait`` expiry when no return events
            are arriving.
@@ -307,6 +405,15 @@ class BatchManager(salt.utils.process.SignalHandlingProcess):
         """
         on_disk = salt.utils.batch_state.read_active_index(self.opts)
         for jid in on_disk - self.active_batches:
+            state = salt.utils.batch_state.read_batch_state(jid, self.opts)
+            if state is None:
+                # No state file for an indexed JID.  Drop the stale
+                # index entry; Maintenance would otherwise prune it
+                # eventually but the tick can do it now for free.
+                salt.utils.batch_state.remove_from_active_index(jid, self.opts)
+                continue
+            if state.get("driver") != "master":
+                continue
             log.info(
                 "BatchManager adopting batch %s discovered via active index",
                 jid,

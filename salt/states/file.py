@@ -136,11 +136,14 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - mode: '0644'
         - attrs: i
 
-.. warning::
+.. note::
 
-    When using a mode that includes a leading zero you must wrap the
-    value in single quotes. If the value is not wrapped in quotes it
-    will be read by YAML as an integer and evaluated as an octal.
+    Salt's YAML loader special-cases octal-looking file modes, so all of
+    ``644``, ``0644``, ``0o644``, ``'644'``, ``'0644'`` and ``'0o644'``
+    resolve to the same value (octal ``0o644``). Quoting a mode with a
+    leading zero is therefore not required for correctness; some operators
+    still prefer to quote (for example ``'0644'``) so the literal mode is
+    visually obvious in the SLS file.
 
 .. _use-names-parameter:
 
@@ -834,7 +837,9 @@ def _gen_keep_files(name, require, walk_d=None):
 
     keep = set()
     if isinstance(require, list):
-        required_files = [comp for comp in require if "file" in comp]
+        required_files = [
+            comp for comp in require if isinstance(comp, dict) and "file" in comp
+        ]
         for comp in required_files:
             for low in __lowstate__:
                 # A requirement should match either the ID and the name of
@@ -4264,7 +4269,7 @@ def directory(
     Because ``cmd.run`` has no way of communicating that it's creating a file,
     ``will_always_clean`` will remove the newly created file. Of course, every
     time the states run the same thing will happen - the
-    ``silly_way_of_creating_a_file`` will crete the file and
+    ``silly_way_of_creating_a_file`` will create the file and
     ``will_always_clean`` will always remove it. Over and over again, no matter
     how many times you run it.
 
@@ -4646,9 +4651,6 @@ def directory(
             file_mode = None
             dir_mode = None
 
-        if "silent" in recurse_set:
-            ret["changes"] = {"recursion": "Changes silenced"}
-
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
 
@@ -4696,6 +4698,9 @@ def directory(
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
                             errors.append(exc.strerror)
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
@@ -6467,6 +6472,14 @@ def blockreplace(
         marker will be replaced, so it's important to ensure that your marker
         includes the beginning of the text you wish to replace.
 
+        .. note::
+
+            ``marker_end`` must not contain ``marker_start`` as a substring,
+            and the two markers must not be equal. When the start marker is
+            also present inside the end marker the block cannot be located
+            and the state fails with ``Unterminated marked block. End of
+            file reached before marker_end.``.
+
     content
         The content to be used between the two lines identified by
         ``marker_start`` and ``marker_end``
@@ -6721,7 +6734,15 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
+def comment(
+    name,
+    regex,
+    char="#",
+    backup=".bak",
+    ignore_missing=False,
+    encoding=None,
+    encoding_errors="strict",
+):
     """
     .. versionadded:: 0.9.5
     .. versionchanged:: 3005
@@ -6756,6 +6777,28 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         file.
 
         .. versionadded:: 3005
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Usage:
 
@@ -6803,7 +6846,9 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines(True)
 
     # Perform the edit
@@ -6811,7 +6856,9 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines(True)
 
     # Check the result
@@ -6941,6 +6988,8 @@ def append(
     context=None,
     ignore_whitespace=True,
     show_changes=True,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the end of a file.
@@ -7037,6 +7086,28 @@ def append(
 
         Output a unified diff of the old file and the new file.
         Set this option to  ``False`` to disable this.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -7147,7 +7218,9 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines()
 
     append_lines = []
@@ -7195,7 +7268,9 @@ def append(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines()
 
     if slines != nlines:
@@ -7225,6 +7300,8 @@ def prepend(
     context=None,
     header=None,
     show_changes=True,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the beginning of a file
@@ -7325,6 +7402,28 @@ def prepend(
 
         Output a unified diff of the old file and the new file.
         Set this option to  ``False`` to disable this.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -7447,7 +7546,9 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
+        slines = slines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         slines = slines.splitlines(True)
 
     count = 0
@@ -7497,7 +7598,9 @@ def prepend(
         with salt.utils.files.fopen(name, "rb") as fp_:
             # read as many lines of target file as length of user input
             contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__)
+            contents = contents.decode(
+                encoding or __salt_system_encoding__, errors=encoding_errors
+            )
             contents = contents.splitlines(True)
             target_head = contents[0 : len(preface)]
             target_lines = []
@@ -7516,7 +7619,9 @@ def prepend(
 
     with salt.utils.files.fopen(name, "rb") as fp_:
         nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
+        nlines = nlines.decode(
+            encoding or __salt_system_encoding__, errors=encoding_errors
+        )
         nlines = nlines.splitlines(True)
 
     if slines != nlines:
@@ -8059,7 +8164,10 @@ def copy_(
     .. note::
         This state only copies files from one location on a minion to another
         location on the same minion. For copying files from the master, use a
-        :py:func:`file.managed <salt.states.file.managed>` state.
+        :py:func:`file.managed <salt.states.file.managed>` state. To fetch
+        a single file from the master inside an execution module, runner or
+        Jinja template, use
+        :py:func:`cp.get_file <salt.modules.cp.get_file>`.
 
     name
         The location of the file to copy to
@@ -8288,15 +8396,17 @@ def copy_(
 
 def rename(name, source, force=False, makedirs=False, **kwargs):
     """
-    If the source file exists on the system, rename it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the source path exists on the system, rename it to the named path.
+    Both files and directories are supported. The named path will not be
+    overwritten if it already exists unless the force option is set to
+    ``True``.
 
     name
-        The location of the file to rename to
+        The location to rename the source to (file or directory)
 
     source
-        The location of the file to move to the location specified with name
+        The location of the file or directory to move to the location
+        specified with ``name``
 
     force
         If the target location is present then the file will not be moved,
@@ -8762,7 +8872,10 @@ def serialize(
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
 
     if dataset_pillar:
-        dataset = __salt__["pillar.get"](dataset_pillar)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the real values are serialized into the file instead
+        # of the redaction placeholder, matching file.managed contents_pillar.
+        dataset = __salt__["pillar.get"](dataset_pillar, unmask=True)
 
     if dataset is None:
         return _error(ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
@@ -9255,7 +9368,10 @@ def decode(
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
-        content = __salt__["pillar.get"](contents_pillar, False)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the decoded data written to the file is the real
+        # value rather than the redaction placeholder.
+        content = __salt__["pillar.get"](contents_pillar, False, unmask=True)
         if content is False:
             raise CommandExecutionError("Pillar data not found.")
     else:

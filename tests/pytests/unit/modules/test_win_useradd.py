@@ -9,8 +9,17 @@ from tests.support.mock import MagicMock, patch
 
 try:
     import pywintypes
+    import win32net
 
     WINAPI = True
+
+    class _WinNetError(win32net.error):
+        """Subclass that lets us instantiate a win32net.error in tests."""
+
+        winerror = 2221  # NERR_UserNotFound
+        funcname = "NetUserGetInfo"
+        strerror = "The user name could not be found."
+
 except ImportError:
     WINAPI = False
 
@@ -83,3 +92,73 @@ def test_info_error(account, caplog):
         account.username = f"{domain}\\{account.username}"
         win_useradd.info(account.username)
     assert f"DC not found. Using username: {account.username}" in caplog.text
+
+
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
+def test_setpassword_user_not_found(caplog):
+    """
+    Regression test for #68428.
+
+    ``user.setpassword`` must return ``False`` (not the Win32 error string)
+    when the target user does not exist, so the CLI and the ``user.present``
+    state correctly report failure instead of a bogus success.
+    """
+    missing_user = random_string("missing-account-", uppercase=False)
+
+    # Force info() to behave as it does when the user doesn't exist: the
+    # NetUserGetInfo lookup raises win32net.error and info() returns an empty
+    # dict. We patch the underlying win32net call so the production code path
+    # in both info() and update() is exercised.
+    with caplog.at_level(logging.ERROR), patch(
+        "win32net.NetUserGetInfo",
+        MagicMock(
+            side_effect=_WinNetError(
+                2221, "NetUserGetInfo", "The user name could not be found."
+            )
+        ),
+    ):
+        result = win_useradd.setpassword(missing_user, "P@ssw0rd")
+
+    assert (
+        result is False
+    ), f"setpassword on a missing user must return False, got {result!r}"
+    assert f"User '{missing_user}' does not exist" in caplog.text
+
+
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
+def test_add_group_name_collision():
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups. When NetUserAdd fails because a local group with the
+    same name already exists (winerror 2220), user.add must return a clear,
+    actionable message instead of the raw pywin32 strerror.
+    """
+    with patch(
+        "win32net.NetUserAdd",
+        MagicMock(
+            side_effect=_WinNetError(
+                2220, "NetUserAdd", "The specified local group already exists."
+            )
+        ),
+    ):
+        result = win_useradd.add("bob114")
+
+    assert isinstance(result, str)
+    assert "bob114" in result
+    assert "local group" in result
+    assert "already exists" in result
+
+
+@pytest.mark.skipif(not WINAPI, reason="pywin32 not available")
+def test_update_clear_fullname(account):
+    """
+    Regression test: update() used a truthy check (`if fullname:`) which
+    silently ignored an explicit empty fullname, so the Windows "Full Name"
+    field could never be cleared. It must now accept fullname="".
+    """
+    win_useradd.chfullname(account.username, "Something")
+    assert win_useradd.info(account.username)["fullname"] == "Something"
+
+    result = win_useradd.update(account.username, fullname="")
+    assert result is True
+    assert win_useradd.info(account.username)["fullname"] == ""

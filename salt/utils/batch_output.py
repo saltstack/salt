@@ -32,6 +32,7 @@ _BATCH_PROGRESS = "salt/batch/{jid}/progress"
 _BATCH_COMPLETE = "salt/batch/{jid}/complete"
 _BATCH_HALTED = "salt/batch/{jid}/halted"
 _BATCH_RECOVER = "salt/batch/{jid}/recover"
+_BATCH_STOP = "salt/batch/{jid}/stop"
 
 
 def tag_new(jid):
@@ -59,6 +60,11 @@ def tag_recover(jid):
     return _BATCH_RECOVER.format(jid=jid)
 
 
+def tag_stop(jid):
+    """Tag fired by the ``batch.stop`` runner to request a halt."""
+    return _BATCH_STOP.format(jid=jid)
+
+
 # ---------------------------------------------------------------------------
 # Payload builders — keep event bodies consistent between drivers.
 # ---------------------------------------------------------------------------
@@ -84,6 +90,28 @@ def new_payload(state):
             "batch_size": state.get("batch_size"),
             "driver": state.get("driver"),
             "created": state.get("created"),
+        }
+    )
+    return payload
+
+
+def state_payload(state):
+    """
+    Payload that embeds the full ``BatchState`` dict under ``state``.
+
+    Used by the sync CLI driver to ship its in-memory state to the
+    master-side ``BatchManager`` so the manager can persist
+    ``.batch.p`` on the CLI's behalf.  The CLI process — typically
+    running as ``root`` while the master runs as ``salt`` — must not
+    write under the master's ``cachedir`` directly (see issue
+    #69418); shipping the state in the event keeps all FS writes on
+    the master daemon's side of the trust boundary.
+    """
+    payload = _base_payload(state)
+    payload.update(
+        {
+            "driver": state.get("driver"),
+            "state": dict(state),
         }
     )
     return payload

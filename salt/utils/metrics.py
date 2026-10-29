@@ -38,6 +38,13 @@ The default ``otlp-http`` exporter is pure-Python and ships in salt's
 base requirements.  The ``otlp-grpc`` exporter is opt-in: install
 ``opentelemetry-exporter-otlp-proto-grpc`` separately to use it.
 
+**Multi-process semantics**: every salt process that records metrics
+(the master parent and each MWorker) is its own OpenTelemetry producer.
+Each one carries a distinct ``service.instance.id`` resource attribute
+(``<hostname>/<process name>``, e.g. ``salt-master-01/MWorker-2``) so
+cumulative series from different processes do not overwrite each other.
+Aggregate across processes with ``sum by (...)``.
+
 **Cardinality**: every instrument's labels must come from a bounded
 domain.  Acceptable: ``fun`` (bounded by the salt module space),
 ``result`` (small enum), ``returner`` (configured returner names).
@@ -48,6 +55,7 @@ span attributes if you need them.
 import atexit
 import logging
 import os
+import socket
 import threading
 from types import SimpleNamespace
 
@@ -182,6 +190,9 @@ def configure(opts):
     metrics_opts = (opts or {}).get("metrics") or {}
     _cached_opts = dict(metrics_opts)
     _cached_opts.setdefault("service_name", _default_service_name(opts))
+    instance = (opts or {}).get("__metrics_instance")
+    if isinstance(instance, dict):
+        _cached_opts["_instance"] = {**instance, "pid": os.getpid()}
     if not _cached_opts.get("enabled"):
         log.debug(
             "metrics.configure called but metrics.enabled is false (pid=%d, service=%s)",
@@ -328,12 +339,47 @@ def _build_provider():
     _meter = provider.get_meter(_INSTRUMENTATION_NAME)
 
 
+def _own_instance(opts):
+    """
+    Return the instance info supplied to :func:`configure`, but only if it
+    was supplied by this very process.  A fork child that never called
+    ``configure`` itself must not reuse its parent's identity.
+    """
+    instance = opts.get("_instance") or {}
+    if instance.get("pid") != os.getpid():
+        return {}
+    return instance
+
+
+def _instance_id(opts):
+    """
+    Return a stable per-process identity, ``<hostname>/<process name>``,
+    e.g. ``salt-master-01/MWorker-2``.
+
+    The name is stable across restarts, so a restarted worker continues its
+    own series instead of starting a new one.  The hostname keeps processes
+    with the same name on different masters apart.  Falls back to
+    ``<hostname>/<pid>`` when the caller did not supply a name.
+    """
+    host = socket.gethostname()
+    ident = _own_instance(opts).get("id")
+    if ident:
+        return f"{host}/{ident}"
+    return f"{host}/{os.getpid()}"
+
+
 def _build_resource(opts):
     attrs = {"service.name": opts.get("service_name") or "salt"}
     extra = opts.get("resource_attributes") or {}
     if isinstance(extra, dict):
         attrs.update(extra)
-    return _otel.Resource.create(attrs)
+    instance_id = attrs.pop("service.instance.id", None) or _instance_id(opts)
+    # ``Resource.create`` may fill ``service.instance.id`` itself (SDK >= 1.43)
+    # and some releases overrode a value passed in.  ``merge`` lets the right
+    # side win on every SDK version.
+    return _otel.Resource.create(attrs).merge(
+        _otel.Resource({"service.instance.id": instance_id})
+    )
 
 
 def _build_views(opts):

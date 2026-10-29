@@ -25,8 +25,13 @@ def store_job(opts, load, event=None, mminion=None):
     if not salt.utils.verify.valid_id(opts, load["id"]):
         return False
     if mminion is None:
-        mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
+        with salt.minion.MasterMinion(opts, states=False, rend=False) as mminion:
+            return _store_job(opts, load, event, mminion, endtime=endtime)
+    else:
+        return _store_job(opts, load, event, mminion, endtime=endtime)
 
+
+def _store_job(opts, load, event, mminion, endtime=None):
     job_cache = opts["master_job_cache"]
     if load["jid"] == "req":
         # The minion is returning a standalone job, request a jobid
@@ -158,7 +163,13 @@ def store_minions(opts, jid, minions, mminion=None, syndic_id=None):
     master_job_cache
     """
     if mminion is None:
-        mminion = salt.minion.MasterMinion(opts, states=False, rend=False)
+        with salt.minion.MasterMinion(opts, states=False, rend=False) as mminion:
+            return _store_minions(opts, jid, minions, mminion, syndic_id)
+    else:
+        return _store_minions(opts, jid, minions, mminion, syndic_id)
+
+
+def _store_minions(opts, jid, minions, mminion, syndic_id=None):
     job_cache = opts["master_job_cache"]
     minions_fstr = f"{job_cache}.save_minions"
 

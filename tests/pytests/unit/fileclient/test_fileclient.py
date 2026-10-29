@@ -10,6 +10,7 @@ import pytest
 
 import salt.utils.files
 from salt import fileclient
+from salt.exceptions import MinionError
 from tests.support.mock import AsyncMock, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -179,6 +180,34 @@ def test_cache_extrn_path_invalid(client_opts):
     assert ret == "Invalid path"
 
 
+def test_cache_extrn_path_windows_embedded_url(client_opts):
+    """
+    Regression test for #68273.
+
+    When a URL path embeds another URL (e.g. an archive.org snapshot of a
+    ``https://...`` resource), the resulting extrn_files cache path contains
+    characters illegal on Windows (``:`` from the embedded scheme, etc.) and
+    ``file.managed`` fails with ``WinError 123``. Ensure that on Windows the
+    URL-path-derived portion of the cache path is sanitised the same way the
+    netloc already is.
+    """
+    file_name = (
+        "https://web.archive.org/web/20190720195601/"
+        "https://download.microsoft.com/download/7/9/6/"
+        "796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi"
+    )
+    with patch("salt.utils.platform.is_windows", return_value=True):
+        ret = fileclient.Client(client_opts)._extrn_path(file_name, "base")
+    # None of the characters illegal in a Windows filename should appear in
+    # the cache path (the drive-letter colon would be in the cachedir, which
+    # this test never sets).
+    for illegal in "<>:|?*":
+        assert (
+            illegal not in ret
+        ), f"illegal Windows path character {illegal!r} in cache path: {ret}"
+    assert ret.endswith("VCForPython27.msi")
+
+
 def test_extrn_path_with_long_filename(client_opts):
     safe_file_name = os.path.split(
         fileclient.Client(client_opts)._extrn_path(
@@ -257,6 +286,34 @@ def test_on_header(file_client, header, result):
 
     file_client._on_header(header, write_body, False, False)
     assert write_body[0] == result
+
+
+def test_get_url_raises_on_truncated_content_length(tmp_path):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    If the server advertises a ``Content-Length`` but delivers fewer bytes
+    than that, ``get_url`` must not silently write the truncated data to
+    the minion's file cache; it should clean up the partial download and
+    raise a clear error instead.
+    """
+    dest = os.path.join(tmp_path, "downloaded_file")
+
+    def fake_query(url, stream, streaming_callback, header_callback, **kwargs):
+        header_callback("HTTP/1.1 200 OK")
+        header_callback("Content-Length: 1000")
+        header_callback("")
+        streaming_callback(b"x" * 500)
+        return {"handle": object()}
+
+    client = fileclient.Client({"cachedir": str(tmp_path)})
+
+    with patch("salt.utils.http.query", side_effect=fake_query):
+        with pytest.raises(MinionError, match="truncated"):
+            client.get_url("http://example.com/file", dest)
+
+    assert not os.path.exists(dest)
+    assert not os.path.exists(f"{dest}.part")
 
 
 def test_get_url_with_hash(client_opts):

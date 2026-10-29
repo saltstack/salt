@@ -510,7 +510,7 @@ def _maybe_disable_subprocess_coverage(request, monkeypatch):
 
 
 # ----- PyTest Tweaks ----------------------------------------------------------------------------------------------->
-def set_max_open_files_limits(min_soft=3072, min_hard=4096):
+def set_max_open_files_limits(min_soft=8192, min_hard=16384):
 
     # Get current limits
     if salt.utils.platform.is_windows():
@@ -1254,15 +1254,31 @@ def salt_syndic_master_factory(
 
 @pytest.fixture(scope="session")
 def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
-    config_defaults = {"master": None, "minion": None, "syndic": None}
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic")) as rfh:
-        opts = yaml.deserialize(rfh.read())
-
-        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-        opts["transport"] = salt_syndic_master_factory.config["transport"]
-        config_defaults["syndic"] = opts
+    # The syndic subscribes to the master of masters on its own master's
+    # publish_port, so both masters need the same publish_port, and the
+    # syndic's master listens on another address. The syndic's config goes
+    # in its master's master.d, so the master picks these up too.
+    interface = "127.0.0.2"
+    publish_port = salt_syndic_master_factory.config["publish_port"]
+    config_defaults = {
+        "transport": salt_syndic_master_factory.config["transport"],
+        "interface": interface,
+        "publish_port": publish_port,
+    }
     config_overrides = {"log_level_logfile": "info"}
+    master_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
+    minion_overrides = {
+        "master": interface,
+        "publish_port": publish_port,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory_kwargs = {}
     if salt_factories.system_service is False:
         factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
@@ -1273,8 +1289,14 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         "syndic",
         defaults=config_defaults,
         overrides=config_overrides,
+        master_overrides=master_overrides,
+        minion_overrides=minion_overrides,
         **factory_kwargs,
     )
+    # The syndic starts its own master and minion before it starts, but
+    # doesn't stop them when it's terminated.
+    factory.after_terminate(factory.minion.terminate)
+    factory.after_terminate(factory.master.terminate)
     return factory
 
 
@@ -1527,10 +1549,38 @@ def pytest_sessionstart(session):
     _remove_redundant_salt_utils_vault_py()
 
 
+def _destroy_live_zmq_asyncio_contexts():
+    # pyzmq's asyncio integration registers atexit/event-loop-close handlers
+    # that call zmq.Context.term().  Salt's transport leaves sockets with
+    # LINGER=-1, so term() blocks indefinitely and the test session never
+    # exits -- it hangs at finalization until the CI job is force-cancelled.
+    # This surfaces in the long-lived scenarios suites (multimaster, syndic)
+    # which keep zmq.asyncio.Context instances alive.  Proactively
+    # force-destroy every live zmq.asyncio.Context with linger=0 here, before
+    # those handlers run, so the interpreter can shut down promptly.
+    try:
+        import gc
+
+        import zmq.asyncio
+    except ImportError:
+        return
+    for obj in gc.get_objects():
+        try:
+            if not isinstance(obj, zmq.asyncio.Context):
+                continue
+            if not obj.closed:
+                obj.destroy(linger=0)
+        except Exception:  # pylint: disable=broad-except
+            # Never let cleanup raise or block: dead weakref proxies,
+            # already-terminated contexts, etc. are all safe to ignore.
+            continue
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_sessionfinish(session, exitstatus):
     """
-    Install an exit-watchdog so a hung post-test cleanup phase doesn't
+    Force-destroy live zmq.asyncio contexts and then install an
+    exit-watchdog so a hung post-test cleanup phase doesn't
     eat the entire CI workflow budget.
 
     Pytest's exit sequence after ``pytest_sessionfinish`` is:
@@ -1577,6 +1627,10 @@ def pytest_sessionfinish(session, exitstatus):
     ``SALT_PYTEST_EXIT_GRACE_SECONDS`` (default 120) and
     ``SALT_PYTEST_HARD_KILL_EXTRA_SECONDS`` (default 60).
     """
+    # Always run the zmq.asyncio context cleanup -- it addresses the
+    # scenarios-suite finalization hang documented in 3007.x commit
+    # 135701f9325, and benefits developer-machine runs as well as CI.
+    _destroy_live_zmq_asyncio_contexts()
     if not (os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS")):
         return
     try:

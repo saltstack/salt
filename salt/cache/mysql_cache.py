@@ -36,7 +36,7 @@ could be set in the master config. These are the defaults:
     # This may be enabled to create a fresh connection on every call
     mysql.fresh_connection: false
 
-Related docs can be found in the `python-mysql documentation`_.
+Related docs can be found in the `PyMySQL documentation`_.
 
 To use the mysql as a minion data cache backend, set the master ``cache`` config
 value to ``mysql``:
@@ -47,7 +47,7 @@ value to ``mysql``:
 
 
 .. _`MySQL documentation`: https://github.com/coreos/mysql
-.. _`python-mysql documentation`: http://python-mysql.readthedocs.io/en/latest/
+.. _`PyMySQL documentation`: https://pymysql.readthedocs.io/en/latest/
 
 """
 

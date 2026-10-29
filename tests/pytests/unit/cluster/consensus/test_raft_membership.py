@@ -358,7 +358,7 @@ class TestMaxVotersCap:
         opts = salt.config.master_config("/dev/null")
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
-        opts["cluster_port"] = 55597
+        opts["cluster_pool_port"] = 55597
         opts["cachedir"] = tmpdir
         opts["cluster_max_voters"] = 3
 
@@ -420,7 +420,7 @@ class TestMaxVotersCap:
         opts = salt.config.master_config("/dev/null")
         opts["interface"] = my_addr
         opts["cluster_peers"] = list(peer_addrs)
-        opts["cluster_port"] = 55596
+        opts["cluster_pool_port"] = 55596
         opts["cachedir"] = tmpdir
         if max_voters is not None:
             opts["cluster_max_voters"] = max_voters
@@ -554,7 +554,7 @@ class TestNotifyPeerJoined:
         opts = salt.config.master_config("/dev/null")
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
-        opts["cluster_port"] = 55596
+        opts["cluster_pool_port"] = 55596
         opts["cachedir"] = tmpdir
 
         loop = asyncio.new_event_loop()

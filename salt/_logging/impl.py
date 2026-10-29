@@ -113,6 +113,19 @@ class SaltLogRecord(logging.LogRecord):
         self.bracketname = f"[{str(self.name):<17}]"
         self.bracketlevel = f"[{str(self.levelname):<8}]"
         self.bracketprocess = f"[{str(self.process):>5}]"
+        # Always provide the color* attributes so that a formatter using
+        # ``%(colorlevel)s`` / ``%(colormsg)s`` / etc. does not blow up when
+        # formatting a record that was created before
+        # ``SaltColorLogRecord`` was installed as the active log record
+        # factory (for example, log records buffered by the temporary
+        # ``DeferredStreamHandler`` that are flushed once the console
+        # handler has been set up with a color format).  These defaults
+        # have no color escapes; ``SaltColorLogRecord`` overrides them
+        # with colorized values.
+        self.colorname = self.bracketname
+        self.colorlevel = self.bracketlevel
+        self.colorprocess = self.bracketprocess
+        self.colormsg = self.getMessage()
 
 
 class SaltColorLogRecord(SaltLogRecord):
@@ -391,7 +404,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         _args = tuple(_args)
 
         logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-            self, name, level, fn, lno, _msg, _args, exc_info, func, sinfo
+            self, name, level, fn, lno, _msg, _args, exc_info, func, extra, sinfo
         )
 
         if exc_info_on_loglevel is not None:
@@ -449,6 +462,8 @@ def set_logging_options_dict(opts):
     """
     Create a logging related options dictionary based off of the loaded salt config
     """
+    if opts is None:
+        return
     try:
         if isinstance(set_logging_options_dict.__options_dict__, ImmutableDict):
             raise RuntimeError(
@@ -999,7 +1014,7 @@ def setup_log_granular_levels(log_granular_levels):
 def setup_logging():
     opts = get_logging_options_dict()
     if not opts:
-        raise RuntimeError("The logging options have not been set yet.")
+        return
     if (
         opts.get("configure_console_logger", True)
         and not is_console_handler_configured()

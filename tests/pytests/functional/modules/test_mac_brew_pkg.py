@@ -1,18 +1,62 @@
 """
     :codeauthor: Nicole Thomas <nicole@saltstack.com>
-    :codeauthor: Gareth J. Greenaway <greenaway@vmware.com>
+    :codeauthor: Gareth J. Greenaway
 """
+
+import platform
+import subprocess
+import time
 
 import pytest
 
+# ``brew update`` on a cold runner regularly needs more than 120s, especially
+# after a ``brew install``/``brew remove`` chain. When pytest-timeout kills a
+# mid-flight brew subprocess the global ``locks/update`` flock stays held by
+# the detached child, poisoning every downstream brew-touching test with
+# ``lockf: 200: already locked``. Give the brew tests enough budget to finish
+# naturally -- 5 minutes matches other salt network-dependent fixtures.
 pytestmark = [
     pytest.mark.slow_test,
-    pytest.mark.timeout(120, func_only=True),
+    pytest.mark.timeout(300, func_only=True),
     pytest.mark.destructive_test,
     pytest.mark.skip_if_not_root,
     pytest.mark.skip_unless_on_darwin,
     pytest.mark.skip_if_binaries_missing("brew"),
+    # Homebrew no longer builds bottles for macOS Intel (x86_64), so installing
+    # even a small formula there pulls in source builds of its dependencies
+    # (e.g. openssl@4). Those exceed the test timeout and leave the
+    # ``brew update`` lock held, failing every later brew test.
+    pytest.mark.skipif(
+        platform.machine() == "x86_64",
+        reason="Homebrew no longer provides bottles for macOS Intel (x86_64)",
+    ),
 ]
+
+
+@pytest.fixture(autouse=True)
+def _wait_for_brew_lock():
+    """
+    Make sure no other ``brew update`` is holding ``locks/update`` before a
+    test runs. If a prior test timed out mid-update the brew child can
+    outlive the pytest worker; wait briefly, then forcibly reap any
+    orphaned brew processes so the next test starts clean.
+    """
+    deadline = time.monotonic() + 60
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            ["pgrep", "-f", "brew update"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            break
+        time.sleep(2)
+    else:
+        subprocess.run(
+            ["pkill", "-9", "-f", "brew update"], check=False, capture_output=True
+        )
+    yield
 
 
 @pytest.fixture(scope="module")

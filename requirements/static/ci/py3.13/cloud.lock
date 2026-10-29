@@ -5,7 +5,7 @@ aiohappyeyeballs==2.6.1
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -35,10 +35,11 @@ asn1crypto==1.5.1
     #   -c requirements/static/ci/py3.13/linux.lock
     #   certvalidator
     #   oscrypto
-attrs==25.4.0
+attrs==26.1.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   jsonschema
     #   pytest-salt-factories
@@ -68,10 +69,11 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1
@@ -86,10 +88,11 @@ cffi==2.0.0
     #   -r requirements/static/ci/common.txt
     #   cryptography
     #   pynacl
-charset-normalizer==3.4.4
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cheetah3==3.2.6.post1
     # via
@@ -118,7 +121,7 @@ croniter==6.2.2
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -191,12 +194,11 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
@@ -364,7 +366,7 @@ moto==5.2.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -374,6 +376,7 @@ multidict==6.7.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 ncclient==0.7.1
@@ -439,6 +442,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 paramiko==5.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
@@ -453,7 +457,6 @@ platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via
@@ -495,7 +498,7 @@ py-cpuinfo==9.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -532,7 +535,7 @@ pynacl==1.6.2
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
     #   paramiko
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -554,7 +557,7 @@ pyspnego==0.12.0
     #   -r requirements/static/ci/cloud.txt
     #   requests-ntlm
     #   smbprotocol
-pytest==9.0.2
+pytest==8.4.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/pytest.txt
@@ -624,7 +627,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -667,7 +670,7 @@ referencing==0.37.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   jsonschema
     #   jsonschema-specifications
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -684,7 +687,6 @@ requests==2.33.1
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-ntlm==1.3.0
     # via pywinrm
 requests-oauthlib==2.0.0
@@ -713,12 +715,6 @@ rpds-py==0.30.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   jsonschema
     #   referencing
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.13/linux.lock
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/pkg/linux.txt
 s3transfer==0.18.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
@@ -795,7 +791,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -832,7 +828,7 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -847,18 +843,13 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/ci/py3.13/linux.lock
-    #   -c requirements/static/pkg/py3.13/linux.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock

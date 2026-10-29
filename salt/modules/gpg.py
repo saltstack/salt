@@ -593,7 +593,7 @@ def create_key(
         create_params["expire_date"] = expire_date
 
     if use_passphrase:
-        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
         if not gpg_passphrase:
             ret["res"] = False
             ret["message"] = "gpg_passphrase not available in pillar."
@@ -703,7 +703,7 @@ def delete_key(
 
     def __delete_key(fingerprint, secret, use_passphrase):
         if secret and use_passphrase:
-            gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+            gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
             if not gpg_passphrase:
                 return "gpg_passphrase not available in pillar."
             else:
@@ -1017,7 +1017,7 @@ def export_key(
         keyids = keyids.split(",")
 
     if secret and use_passphrase:
-        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
         result = gpg.export_keys(keyids, secret, passphrase=gpg_passphrase)
@@ -1372,7 +1372,7 @@ def sign(
 
     """
     if use_passphrase:
-        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:
@@ -1671,7 +1671,7 @@ def encrypt(
     """
     ret = {"res": True, "comment": ""}
     if sign and use_passphrase:
-        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:
@@ -1776,7 +1776,7 @@ def decrypt(
     """
     ret = {"res": True, "comment": ""}
     if use_passphrase:
-        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase")
+        gpg_passphrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
         if not gpg_passphrase:
             raise SaltInvocationError("gpg_passphrase not available in pillar.")
     else:

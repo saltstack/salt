@@ -1649,6 +1649,16 @@ class VirtualEnv:
                 environ["CC"] = cc
             if cxx and "CXX" not in environ:
                 environ["CXX"] = cxx
+            # The relenv toolchain's bundled binutils (2.33) assembler on $PATH
+            # is older than the host gcc (e.g. gcc 15 on Ubuntu 26.04), which
+            # emits assembler input (``--gdwarf-5``, ``.base64``, ...) that the
+            # old assembler cannot parse. Prepend host /usr/bin so gcc resolves
+            # ``x86_64-linux-gnu-as`` to the host's modern binutils first.
+            path_parts = environ.get("PATH", "").split(os.pathsep)
+            for host_dir in ("/usr/bin", "/bin"):
+                if host_dir not in path_parts[:2]:
+                    path_parts.insert(0, host_dir)
+            environ["PATH"] = os.pathsep.join(path_parts)
         return environ
 
     @venv_python.default
@@ -1805,14 +1815,19 @@ class SaltVirtualEnv(VirtualEnv):
         self.install(
             "--prefer-binary",
             "-r",
-            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.txt",
+            code_dir / "requirements" / "static" / "pkg" / py_version / "linux.lock",
         )
         self.install(RUNTIME_VARS.CODE_DIR)
 
     def install(self, *args, **kwargs):
         env = kwargs.pop("env", None) or {}
         env["USE_STATIC_REQUIREMENTS"] = "1"
-        # Add relenv toolchain to PATH if it exists
+        # Append the relenv toolchain to PATH so cross-prefixed binaries
+        # (e.g. ``x86_64-linux-gnu-gcc``) remain resolvable, but keep the
+        # host /usr/bin ahead of it. Prepending the toolchain breaks sdist
+        # builds (timelib) on hosts whose gcc emits assembler input the
+        # relenv-bundled binutils (2.33) can't parse -- see the matching
+        # host-first PATH logic in ``VirtualEnv._default_environ``.
         toolchains_dir = pathlib.Path.home() / ".cache" / "relenv" / "toolchains"
         if toolchains_dir.exists():
             # Find any toolchain subdirectory (e.g., x86_64-linux-gnu, aarch64-linux-gnu)
@@ -1821,7 +1836,7 @@ class SaltVirtualEnv(VirtualEnv):
                     toolchain_bin = toolchain / "bin"
                     if toolchain_bin.exists():
                         current_path = env.get("PATH", os.environ.get("PATH", ""))
-                        env["PATH"] = f"{toolchain_bin}:{current_path}"
+                        env["PATH"] = f"{current_path}{os.pathsep}{toolchain_bin}"
                         break
         kwargs["env"] = env
         # Add --prefer-binary to avoid building from source when possible

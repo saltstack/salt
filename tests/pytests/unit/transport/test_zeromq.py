@@ -10,7 +10,10 @@ import uuid
 
 import msgpack
 import pytest
+import tornado.concurrent
+import tornado.gen
 import tornado.ioloop
+import zmq
 import zmq.eventloop.future
 from pytestshellutils.utils import ports
 
@@ -1283,7 +1286,7 @@ async def test_req_serv_auth_v1(pki_dir, minion_opts, master_opts):
         "enc_algo": minion_opts["encryption_algorithm"],
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    ret = server._auth(load, sign_messages=False)
+    ret = await server._auth(load, sign_messages=False)
     try:
         assert "load" not in ret
     finally:
@@ -1350,7 +1353,7 @@ async def test_req_serv_auth_v2(pki_dir, minion_opts, master_opts):
         "enc_algo": minion_opts["encryption_algorithm"],
         "sig_algo": minion_opts["signing_algorithm"],
     }
-    ret = server._auth(load, sign_messages=True)
+    ret = await server._auth(load, sign_messages=True)
     try:
         assert "sig" in ret
         assert "load" in ret
@@ -1411,7 +1414,7 @@ async def test_req_chan_auth_v2(pki_dir, io_loop, minion_opts, master_opts):
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert "aes" in ret
@@ -1488,7 +1491,7 @@ async def test_req_chan_auth_v2_with_master_signing(
         assert "version" in pload
         assert pload["version"] == 3
 
-        server_reply = server._auth(pload["load"], sign_messages=True)
+        server_reply = await server._auth(pload["load"], sign_messages=True)
         # With version 2 we always get a clear signed response
         assert "enc" in server_reply
         assert server_reply["enc"] == "clear"
@@ -1518,7 +1521,7 @@ async def test_req_chan_auth_v2_with_master_signing(
         signin_payload = client.auth.minion_sign_in_payload()
 
         pload = auth_client._package_load(signin_payload)
-        server_reply = server._auth(pload["load"], sign_messages=True)
+        server_reply = await server._auth(pload["load"], sign_messages=True)
         ret = client.auth.handle_signin_response(signin_payload, server_reply)
 
         assert "aes" in ret
@@ -1594,7 +1597,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert ret == "retry"
@@ -1671,7 +1674,7 @@ async def test_req_chan_auth_v2_new_minion_with_master_pub_bad_sig(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         with pytest.raises(salt.crypt.SaltClientError, match="Invalid signature"):
             ret = client.auth.handle_signin_response(signin_payload, ret)
@@ -1742,7 +1745,7 @@ async def test_req_chan_auth_v2_new_minion_without_master_pub(
         assert "version" in pload
         assert pload["version"] == 3
 
-        ret = server._auth(pload["load"], sign_messages=True)
+        ret = await server._auth(pload["load"], sign_messages=True)
         assert "sig" in ret
         ret = client.auth.handle_signin_response(signin_payload, ret)
         assert ret == "retry"
@@ -1869,6 +1872,163 @@ async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
         client.close()
 
 
+async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opts):
+    """
+    Regression test for #68506.
+
+    When ``_timeout_message`` has already marked the per-message future done
+    (callbacks consumed, ``_callbacks`` set to ``None`` by tornado's
+    ``Future._set_done``), a subsequent ``socket.send`` failure inside
+    ``_send_recv`` must not call ``future.set_exception`` again. Doing so
+    triggers ``TypeError: 'NoneType' object is not iterable`` from tornado's
+    ``Future._set_done`` and aborts the minion connect loop.
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    future = tornado.concurrent.Future()
+    # Simulate _timeout_message having fired first: future is now done and
+    # tornado has cleared its callback list to None.
+    future.set_exception(salt.exceptions.SaltReqTimeoutError("Message timed out"))
+    assert future.done()
+
+    try:
+        client.socket = AsyncMock()
+        client.socket.send.side_effect = zmq.ZMQError(zmq.ETERM)
+        client._queue.put_nowait((future, {"meh": "bah"}))
+        # Before the fix this raises TypeError from tornado's _set_done.
+        await client._send_recv(client.socket)
+        # The timeout exception must be preserved, not overwritten.
+        assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
+def test_async_req_message_client_close_never_connected(minion_opts):
+    """
+    close() must not hang when connect() was never called (#68637).
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    assert client._closed is True
+    assert client.socket is None
+
+
+def test_async_req_message_client_close_idempotent(minion_opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+    client.close()
+    client.close()
+    assert client._closed is True
+
+
+def test_async_req_message_client_graceful_close_idle(minion_opts):
+    """
+    With connect() only, close() must run graceful shutdown (Tornado Queue path).
+
+    Pytest async tests execute the coroutine body while ``IOLoop.run_sync`` has the
+    default loop marked as running, so ``AsyncReqMessageClient`` would take the
+    deferred shutdown branch and return before the socket is cleared. Use a
+    dedicated loop, pump one iteration so ``_send_recv`` is scheduled, then call
+    ``close()`` while the loop is stopped so ``run_sync`` completes teardown.
+    """
+    loop = tornado.ioloop.IOLoop()
+    loop.make_current()
+    try:
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+        client.connect()
+
+        @tornado.gen.coroutine
+        def pump():
+            yield tornado.gen.sleep(0)
+
+        loop.run_sync(pump, timeout=5)
+        assert getattr(loop, "_running", False) is False
+
+        client.close()
+        assert client._closed is True
+        assert client.socket is None
+        assert client.context is None
+    finally:
+        loop.clear_current()
+        try:
+            loop.close(all_fds=True)
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+
+def test_async_req_message_client_close_while_ioloop_running(minion_opts):
+    """
+    Closing on the I/O loop thread while ``IOLoop.start()`` is active must not call
+    ``run_sync`` (``RuntimeError: IOLoop is already running``).
+
+    This matches the minion / ``AsyncPubChannel.connect_callback`` nested
+    ``AsyncReqChannel`` context where short-lived REQ clients are torn down on a
+    live loop (#68637 follow-up).
+    """
+    loop = tornado.ioloop.IOLoop()
+    errors = []
+
+    def run_loop_thread():
+        loop.make_current()
+        client = salt.transport.zeromq.AsyncReqMessageClient(
+            minion_opts, "tcp://127.0.0.1:4506", io_loop=loop
+        )
+
+        def work():
+            try:
+                client.connect()
+                # Newer tornado IOLoop subclasses (AsyncIOLoop on tornado 6+)
+                # no longer expose the ``_running`` internal flag the 3006.x
+                # variant of this test polled. Inside an add_callback the
+                # loop is in start(), which is the case we want to exercise.
+                client.close()
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+                loop.stop()
+                return
+
+            attempts = [0]
+
+            def finalize_check():
+                # Same-thread close() schedules teardown; allow a few iterations.
+                if client.socket is not None and attempts[0] < 300:
+                    attempts[0] += 1
+                    loop.call_later(0.01, finalize_check)
+                    return
+                try:
+                    assert client.socket is None
+                    assert client.context is None
+                    assert client._closed is True
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(exc)
+                loop.stop()
+
+            loop.call_later(0.01, finalize_check)
+
+        loop.add_callback(work)
+        try:
+            loop.start()
+        finally:
+            try:
+                loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    thread = threading.Thread(target=run_loop_thread, name="ReqClientTestIOLoop")
+    thread.start()
+    thread.join(timeout=60)
+    assert not thread.is_alive(), "IOLoop thread did not stop"
+    if errors:
+        raise errors[0]
+
+
 def test_pub_client_init(minion_opts, io_loop):
     minion_opts["id"] = "minion"
     minion_opts["__role"] = "syndic"
@@ -1879,6 +2039,86 @@ def test_pub_client_init(minion_opts, io_loop):
         minion_opts, io_loop, host=minion_opts["master_ip"], port=121212
     ) as client:
         client.send(b"asf")
+
+
+def test_request_client_close_never_connected(minion_opts, io_loop):
+    """
+    close() must not raise when connect() was never called.
+    """
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    client.close()
+    assert client.socket is None
+    assert client.context is None
+
+
+def test_request_client_close_idempotent(minion_opts, io_loop):
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    client.close()
+    client.close()
+    assert client._closing is True
+
+
+def test_request_client_close_cross_thread_drains_send_recv(minion_opts):
+    """
+    close() called from a different thread than the one running the
+    io_loop must block until _send_recv actually releases the socket,
+    rather than scheduling teardown and returning immediately -- the
+    latter is what let a Windows abort or an fd leak race the still-
+    running task (#69991; matches
+    test_async_req_message_client_close_while_ioloop_running for the
+    deprecated AsyncReqMessageClient).
+    """
+    minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
+    loop = tornado.ioloop.IOLoop()
+    errors = []
+
+    def run_loop_thread():
+        loop.make_current()
+        client = salt.transport.zeromq.RequestClient(minion_opts, loop)
+        connected = threading.Event()
+
+        def work():
+            async def connect_it():
+                await client.connect()
+                connected.set()
+
+            loop.add_callback(connect_it)
+
+        loop.add_callback(work)
+
+        def close_from_other_thread():
+            connected.wait(timeout=10)
+            client.close()
+            # close() on the cross-thread path blocks until the drain
+            # completes -- by the time it returns, the socket/context
+            # must already be torn down.
+            try:
+                assert client.socket is None
+                assert client.context is None
+            except Exception as exc:  # pylint: disable=broad-except
+                errors.append(exc)
+            finally:
+                loop.add_callback(loop.stop)
+
+        closer = threading.Thread(target=close_from_other_thread)
+        closer.start()
+        try:
+            loop.start()
+        finally:
+            closer.join(timeout=10)
+            try:
+                loop.close(all_fds=True)
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+    thread = threading.Thread(target=run_loop_thread, name="ReqClientCloseTestIOLoop")
+    thread.start()
+    thread.join(timeout=60)
+    assert not thread.is_alive(), "IOLoop thread did not stop"
+    if errors:
+        raise errors[0]
 
 
 async def test_unclosed_request_client(minion_opts, io_loop):
@@ -1912,7 +2152,7 @@ async def test_unclosed_publish_client(minion_opts, io_loop):
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
-def test_req_server_auth_unsupported_sig_algo(
+async def test_req_server_auth_unsupported_sig_algo(
     pki_dir, minion_opts, master_opts, caplog
 ):
     minion_opts.update(
@@ -1980,7 +2220,7 @@ def test_req_server_auth_unsupported_sig_algo(
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion tried to authenticate with unsupported signing algorithm: PKCS1v15-SHA1"
                 in caplog.text
@@ -1992,7 +2232,9 @@ def test_req_server_auth_unsupported_sig_algo(
         server.close()
 
 
-def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, caplog):
+async def test_req_server_auth_garbage_sig_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -2058,7 +2300,7 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion tried to authenticate with unsupported signing algorithm: IAMNOTANALGO"
                 in caplog.text
@@ -2071,7 +2313,7 @@ def test_req_server_auth_garbage_sig_algo(pki_dir, minion_opts, master_opts, cap
 
 
 @pytest.mark.skipif(not FIPS_TESTRUN, reason="Only run on fips enabled platforms")
-def test_req_server_auth_unsupported_enc_algo(
+async def test_req_server_auth_unsupported_enc_algo(
     pki_dir, minion_opts, master_opts, caplog
 ):
     minion_opts.update(
@@ -2142,7 +2384,7 @@ def test_req_server_auth_unsupported_enc_algo(
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion minion tried to authenticate with unsupported encryption algorithm: OAEP-SHA1"
                 in caplog.text
@@ -2154,7 +2396,9 @@ def test_req_server_auth_unsupported_enc_algo(
         server.close()
 
 
-def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, caplog):
+async def test_req_server_auth_garbage_enc_algo(
+    pki_dir, minion_opts, master_opts, caplog
+):
     minion_opts.update(
         {
             "master_uri": "tcp://127.0.0.1:4506",
@@ -2223,7 +2467,7 @@ def test_req_server_auth_garbage_enc_algo(pki_dir, minion_opts, master_opts, cap
     }
     try:
         with caplog.at_level(logging.INFO):
-            ret = server._auth(load, sign_messages=True)
+            ret = await server._auth(load, sign_messages=True)
             assert (
                 "Minion minion tried to authenticate with unsupported encryption algorithm: IAMNOTAENCALGO"
                 in caplog.text
@@ -2369,3 +2613,154 @@ def test_backoff_timer():
         next_iteration += next_iteration * percent * ourcount
     assert ourcount == 39
     assert backoff() == maximum
+
+
+# ---------------------------------------------------------------------------
+# AsyncReqMessageClient ZMQ identity gate.
+#
+# A salt CLI process invoked from a master host loads /etc/salt/master
+# and therefore inherits __role=master, which used to make it
+# indistinguishable from the master daemon at the point where
+# AsyncReqMessageClient decides whether to set a stable routing identity.
+# The role-only gate would then fall through and every CLI connection to
+# the master's MWorkerQueue ROUTER got libzmq's default per-connection
+# random routing-id -- which the master's ROUTER accepts but never frees
+# the underlying socket FD for.  ``salt._process_role.is_cli()`` now
+# overrides the role gate so the identity is set even when __role is
+# ``master`` in opts.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def clean_process_role():
+    """Save and restore the module-level ``_IS_CLI`` flag."""
+    import salt._process_role
+
+    original = salt._process_role._IS_CLI
+    salt._process_role._IS_CLI = False
+    try:
+        yield salt._process_role
+    finally:
+        salt._process_role._IS_CLI = original
+
+
+def _connected_client_identity(opts):
+    client = salt.transport.zeromq.AsyncReqMessageClient(opts, "tcp://127.0.0.1:4506")
+    client.connect()
+    try:
+        return client.socket.getsockopt(zmq.IDENTITY)
+    finally:
+        client.close()
+
+
+def test_reqclient_identity_set_when_cli_on_master_host(
+    minion_opts, clean_process_role
+):
+    """
+    A salt CLI running on a master host inherits __role=master from the
+    master config it loads.  Once salt.scripts has flipped is_cli() to
+    True the identity gate must still fire, so the socket gets the
+    stable ``salt-req/master/...`` identity and the master's MWorkerQueue
+    ROUTER can reuse the routing-id slot on reconnect.
+    """
+    clean_process_role.mark_as_cli()
+    minion_opts["__role"] = "master"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity.startswith(b"salt-req/master/"), identity
+
+
+def test_reqclient_identity_not_set_for_master_daemon(minion_opts, clean_process_role):
+    """
+    A genuine master daemon (is_cli() False, __role=master) must NOT
+    get a shared stable identity: multiple concurrent
+    AsyncReqMessageClient instances in the master process (peer-master
+    forwarding, engines, etc.) would otherwise all share a routing-id
+    and ROUTER_HANDOVER on the upstream ROUTER would silently drop any
+    reply still in flight.  The socket must fall through with libzmq's
+    default (empty) IDENTITY so libzmq assigns a random per-connection
+    routing-id.
+    """
+    assert clean_process_role.is_cli() is False
+    minion_opts["__role"] = "master"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity == b""
+
+
+def test_reqclient_identity_set_for_bare_cli_without_role(
+    minion_opts, clean_process_role
+):
+    """
+    Historical fallback: if ``__role`` was never populated (older
+    embedded uses, tests, etc.) the gate still fires -- this matches
+    the pre-existing behavior and is why the ``not _role`` branch stays
+    in the code.
+    """
+    assert clean_process_role.is_cli() is False
+    minion_opts.pop("__role", None)
+    minion_opts["id"] = "cli-caller"
+
+    identity = _connected_client_identity(minion_opts)
+
+    assert identity.startswith(b"salt-req/cli-caller/"), identity
+
+
+def test_cli_identity_slot_is_wide_enough_to_avoid_pid_collisions():
+    """
+    Regression test for #69753.
+
+    The CLI-mode ZMQ IDENTITY slot must be wide enough that two concurrent
+    ``salt-call`` processes do not claim the same routing-id on the master's
+    ROUTER (``ROUTER_HANDOVER=1``).  Previously the slot was
+    ``os.getpid() % 256`` -- 8 bits -- which collides trivially under bursty
+    CLI load (adjacent PIDs mod 256 wrap after 256 spawns, and the birthday
+    bound gives ~50% collision odds at ~19 concurrent CLIs).
+
+    The slot must:
+
+    * be stable across ZMQ-level reconnects within one process (so libzmq's
+      peer-table entry is reused instead of leaked), i.e. cached at import
+      time rather than recomputed per socket, and
+    * be at least 24 bits wide so a realistic concurrent CLI fleet does not
+      hit the birthday bound.
+    """
+    slot = salt.transport.zeromq._CLI_IDENTITY_SLOT
+    assert isinstance(slot, int)
+    assert 0 <= slot < 2**24
+    # Import-time cached: two accesses return the same value.
+    assert slot == salt.transport.zeromq._CLI_IDENTITY_SLOT
+
+
+def test_minion_daemon_identity_includes_pid_to_disambiguate_forks(minion_opts):
+    """
+    Regression test for #69753.
+
+    The minion / syndic daemon branch of ``_init_socket`` assigns each
+    ``AsyncReqMessageClient`` a fresh ``uuid.uuid4().hex`` as its ZMQ
+    IDENTITY slot.  A per-instance UUID matches the client's own
+    open/close lifetime, and each forked child draws its own UUID, so
+    the identity-collision retry class that motivated #69753 is
+    impossible by construction.  ``os.getpid()`` is also included as a
+    second disambiguator so the identity is human-parseable back to a
+    process.
+    """
+    opts = dict(minion_opts)
+    opts["__role"] = "minion"
+    opts["id"] = "test-minion"
+    client = salt.transport.zeromq.AsyncReqMessageClient(opts, "tcp://127.0.0.1:4506")
+    try:
+        client.connect()
+        ident = client.socket.getsockopt(zmq.IDENTITY).decode("utf-8")
+        # Format: salt-req/minion/<minion_id>/<pid>/<uuid-hex>
+        parts = ident.split("/")
+        assert parts[0] == "salt-req"
+        assert parts[1] == "minion"
+        assert parts[2] == "test-minion"
+        assert parts[3] == str(os.getpid())
+        assert len(parts[4]) == 32
+        assert all(c in "0123456789abcdef" for c in parts[4])
+    finally:
+        client.close()

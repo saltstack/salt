@@ -74,6 +74,76 @@ def test_tar():
                 )
 
 
+def test_tar_dest_precedes_sources_on_create():
+    """
+    When packing, the ``-C <dest>`` option must come before the source
+    operands or tar ignores it and archives the wrong directory (#57847).
+    """
+    with patch("glob.glob", lambda pathname: [pathname]):
+        with patch("salt.utils.path.which", lambda exe: exe):
+            mock = MagicMock(return_value="salt")
+            with patch.dict(archive.__salt__, {"cmd.run": mock}):
+                archive.tar("jpcf", "/srv/img/foo.tar.bz2", ".", dest="/tmp/foo/bar")
+                mock.assert_called_once_with(
+                    [
+                        "tar",
+                        "jpcf",
+                        "/srv/img/foo.tar.bz2",
+                        "-C",
+                        "/tmp/foo/bar",
+                        ".",
+                    ],
+                    runas=None,
+                    python_shell=False,
+                    template=None,
+                    cwd=None,
+                )
+
+
+def test_tar_dest_precedes_sources_on_extract():
+    """
+    On extraction of specific members the ``-C <dest>`` option must also
+    precede the member operands so they land in the destination directory.
+    """
+    with patch("glob.glob", lambda pathname: [pathname]):
+        with patch("salt.utils.path.which", lambda exe: exe):
+            mock = MagicMock(return_value="salt")
+            with patch.dict(archive.__salt__, {"cmd.run": mock}):
+                archive.tar("xf", "foo.tar", "somefile", dest="/target/directory")
+                mock.assert_called_once_with(
+                    [
+                        "tar",
+                        "xf",
+                        "foo.tar",
+                        "-C",
+                        "/target/directory",
+                        "somefile",
+                    ],
+                    runas=None,
+                    python_shell=False,
+                    template=None,
+                    cwd=None,
+                )
+
+
+def test_tar_dest_without_sources():
+    """
+    The documented extract-into-dest case (no sources) is unchanged: the
+    archive is followed directly by ``-C <dest>``.
+    """
+    with patch("salt.utils.path.which", lambda exe: exe):
+        mock = MagicMock(return_value="salt")
+        with patch.dict(archive.__salt__, {"cmd.run": mock}):
+            archive.tar("xf", "foo.tar", dest="/target/directory")
+            mock.assert_called_once_with(
+                ["tar", "xf", "foo.tar", "-C", "/target/directory"],
+                runas=None,
+                python_shell=False,
+                template=None,
+                cwd=None,
+            )
+
+
 def test_tar_raises_exception_if_not_found():
     with patch("salt.utils.path.which", lambda exe: None):
         mock = MagicMock(return_value="salt")

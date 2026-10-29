@@ -6,6 +6,7 @@ expected to return
 import fnmatch
 import logging
 import re
+import time
 
 import salt.cache
 import salt.payload
@@ -31,6 +32,29 @@ except ImportError:
     pass
 
 log = logging.getLogger(__name__)
+
+# Cache bank holding ``{"ts": <epoch seconds>}`` per minion id, written by the
+# master's request server when ``presence_id_tracking`` is enabled.
+PRESENCE_BANK = "presence"
+
+
+def presence_is_fresh(record, ttl, now=None):
+    """
+    Return ``True`` if ``record`` is a presence record that was written less
+    than ``ttl`` seconds before ``now``.
+
+    Anything that is not a dict with a numeric ``ts`` is treated as stale, so a
+    corrupt or foreign cache entry can never make a minion appear present.
+    """
+    if not isinstance(record, dict):
+        return False
+    ts = record.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return False
+    if now is None:
+        now = time.time()
+    return now - ts < ttl
+
 
 TARGET_REX = re.compile(
     r"""(?x)
@@ -560,10 +584,18 @@ class CkMinions:
         minions=None,
     ):
         """
-        Helper function to search for minions in master caches If 'greedy',
-        then return accepted minions matched by the condition or those absent
-        from the cache.  If not 'greedy' return the only minions have cache
-        data and matched by the condition.
+        Helper function to search for minions in master caches.
+
+        Return only minions whose cached ``search_type`` data exists and
+        matches the expression. Minions with no cache entry are excluded
+        from the result regardless of ``greedy`` — otherwise grain/pillar
+        targeting silently matches any offline minion whose cache directory
+        has been pruned (#68976).
+
+        ``greedy`` still controls which minions are *considered*: when
+        greedy, every accepted minion key is considered (and any without
+        cached data is dropped); when not greedy, only minions that already
+        have a cache entry are considered.
         """
         cache_enabled = self.opts.get("minion_data_cache", False)
 
@@ -585,15 +617,20 @@ class CkMinions:
             else:
                 cminions = minions
             if not cminions:
-                return {"minions": minions, "missing": []}
+                return {"minions": [], "missing": []}
             minions = set(minions)
+            # Track which accepted minions have cache data we can evaluate.
+            # Any accepted minion not present in ``cminions`` has no cache
+            # entry and must be excluded; otherwise grain/pillar targeting
+            # would match every minion whose cache dir is missing (#68976).
+            evaluated = set()
             for id_ in cminions:
-                if greedy and id_ not in minions:
+                if id_ not in minions:
                     continue
+                evaluated.add(id_)
                 mdata = self.cache.fetch(search_type, id_)
                 if mdata is None:
-                    if not greedy:
-                        minions.remove(id_)
+                    minions.discard(id_)
                     continue
                 if not salt.utils.data.subdict_match(
                     mdata,
@@ -602,7 +639,9 @@ class CkMinions:
                     regex_match=regex_match,
                     exact_match=exact_match,
                 ):
-                    minions.remove(id_)
+                    minions.discard(id_)
+            # Drop minions that were never evaluated (no cache entry at all).
+            minions &= evaluated
             minions = list(minions)
         return {"minions": minions, "missing": []}
 
@@ -987,6 +1026,56 @@ class CkMinions:
     def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
+
+        Minions are detected by matching the addresses connected to the publish
+        port against the addresses in the minions' cached grains. If
+        ``presence_id_tracking`` is enabled, accepted minions that
+        authenticated to the master within the last ``presence_id_ttl``
+        seconds are included as well. That covers minions whose connecting
+        address is not in their grains, such as NAT'd or internet-facing
+        minions. See issue #58592.
+        """
+        minions = self._connected_ids_by_address(subset=subset, show_ip=show_ip)
+        if self.opts.get("presence_id_tracking", False):
+            found = {minion[0] for minion in minions} if show_ip else minions
+            for id_ in self._recently_seen_ids(subset):
+                if id_ in found:
+                    continue
+                minions.add((id_, None) if show_ip else id_)
+        return minions
+
+    def _recently_seen_ids(self, subset=None):
+        """
+        Return the accepted minion ids with a fresh record in the presence
+        cache bank, optionally within a subset.
+        """
+        ttl = self.opts.get("presence_id_ttl", 600)
+        # Don't use ``self.cache``: it may be a MemCache which would serve
+        # stale presence records.
+        cache = salt.cache.Cache(self.opts)
+        try:
+            candidates = set(cache.list(PRESENCE_BANK) or [])
+        except SaltCacheError as exc:
+            log.warning("Unable to list minion presence records: %s", exc)
+            return set()
+        candidates &= self._pki_minions()
+        if subset:
+            candidates &= set(subset)
+        now = time.time()
+        recent = set()
+        for id_ in candidates:
+            try:
+                record = cache.fetch(PRESENCE_BANK, id_)
+            except SaltCacheError:
+                continue
+            if presence_is_fresh(record, ttl, now):
+                recent.add(id_)
+        return recent
+
+    def _connected_ids_by_address(self, subset=None, show_ip=False):
+        """
+        Return the minion ids (or ``(id, ip)`` tuples if ``show_ip``) whose
+        cached grains contain an address connected to the publish port.
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):
@@ -1229,6 +1318,7 @@ class CkMinions:
                 if ssh_minions:
                     _res["minions"].extend(ssh_minions)
                     _res["ssh_minions"] = True
+                roster.destroy()
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Failed matching available minions with %s pattern: %s", tgt_type, expr

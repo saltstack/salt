@@ -71,7 +71,11 @@ PROCESSES = [
 # (typically < 3 s each) so they only trigger when something is genuinely stuck.
 PROC_WAIT_SECS = 30  # installer/uninstaller processes to exit
 INST_DIR_WAIT_SECS = 30  # install dir to be deleted by Un.exe
-SCM_WAIT_SECS = 15  # SCM to remove the salt-minion service registry key
+# SCM to remove the salt-minion service registry key. Raised from 15s to 60s
+# -- CI stress runs have observed this window climbing past 35s under
+# sustained load (see PR #70238 stress run 33911838747, iteration 88), which
+# is what a prior iteration's failure here ultimately traces back to.
+SCM_WAIT_SECS = 60
 
 
 def _kill_lingering_processes():
@@ -266,9 +270,15 @@ def clean_env(inst_dir=INST_DIR):
                     with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, scm_key):
                         pass  # key still present
                 except OSError:
+                    print(f"\nService key removed after {scm_elapsed:.1f}s")
                     break  # key gone — SCM cleanup complete
                 scm_elapsed += 0.5
                 time.sleep(0.5)
+            else:
+                print(
+                    f"\nWARNING: salt-minion service key still present after "
+                    f"{SCM_WAIT_SECS}s — continuing anyway"
+                )
 
             try:
                 clean_fragments(inst_dir=install_dir)
@@ -349,6 +359,41 @@ def install_salt(args):
         pass
 
 
+SALT_INSTALLER_LOG_DIR = os.path.join(os.environ.get("TEMP", ""), "SaltInstaller")
+
+
+def _print_latest_installer_log(tail_lines=100):
+    """
+    Print the tail of the most recently modified NSIS install/uninstall log.
+
+    ${LogMsg} in the NSIS script writes a timestamped log for every
+    install/uninstall run to %TEMP%\\SaltInstaller. Surfacing the tail here
+    means a failure (e.g. an Abort during service registration) shows the
+    NSIS-side detail -- including ssm.exe's exit code and stdout -- directly
+    in the pytest failure output, without needing to dig through CI
+    artifacts or reproduce locally.
+    """
+    if not os.path.isdir(SALT_INSTALLER_LOG_DIR):
+        return
+    try:
+        logs = [
+            os.path.join(SALT_INSTALLER_LOG_DIR, name)
+            for name in os.listdir(SALT_INSTALLER_LOG_DIR)
+            if name.endswith(".log")
+        ]
+        if not logs:
+            return
+        latest = max(logs, key=os.path.getmtime)
+        with open(latest, encoding="utf-8", errors="replace") as fp:
+            lines = fp.readlines()
+        print(f"\n----- tail of {latest} -----")
+        for line in lines[-tail_lines:]:
+            print(line.rstrip())
+        print("----- end of log -----")
+    except OSError as exc:
+        print(f"\nWARNING: could not read installer log: {exc}")
+
+
 def is_file_locked(path):
     """
     Try to see if a file is locked
@@ -418,6 +463,7 @@ def run_command(cmd_args, timeout=60):
             print(
                 f"\nWARNING: process exited with code {proc.returncode}: {cmd_args[:120]}"
             )
+            _print_latest_installer_log()
             return False
         return True
     except subprocess.TimeoutExpired:
@@ -426,5 +472,6 @@ def run_command(cmd_args, timeout=60):
         print(
             f"\nWARNING: process timed out after {timeout}s — force-killing: {cmd_args[:120]}"
         )
+        _print_latest_installer_log()
         _kill_process_tree(proc)
         return False

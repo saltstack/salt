@@ -68,6 +68,21 @@ MODULE_KIND_MAP = {
 
 SALT_BASE_PATH = pathlib.Path(salt.syspaths.INSTALL_DIR).resolve()
 LOADED_BASE_NAME = "salt.loaded"
+
+
+def _is_salt_internal_path(path):
+    """
+    Return True if ``path`` is the Salt install directory or lives under it.
+
+    Uses a path-component boundary (not a raw string prefix), so a sibling
+    directory whose name merely begins with the Salt package name -- e.g. the
+    ``saltext.*`` extensions, which install next to the ``salt`` package in
+    site-packages -- is correctly treated as external.
+    """
+    salt_base = str(SALT_BASE_PATH)
+    return path == salt_base or path.startswith(salt_base + os.sep)
+
+
 PY3_PRE_EXT = re.compile(r"\.cpython-{}{}(\.opt-[1-9])?".format(*sys.version_info[:2]))
 
 # Will be set to pyximport module at runtime if cython is enabled in config.
@@ -132,7 +147,7 @@ class LoadedFunc:
       - Makes sure functions are called with the correct loader's context.
       - Provides access to a wrapped func's __global__ attribute
 
-    :param func str: The function name to wrap
+    :param str name: The function name to wrap
     :param LazyLoader loader: The loader instance to use in the context when the wrapped callable is called.
     """
 
@@ -350,6 +365,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         # names of modules that we don't have (errors, __virtual__, etc.)
         self.missing_modules = {}  # mapping of name -> error
+        # mapping of __virtualname__ -> list of error reasons from every file
+        # that claimed the virtualname and whose __virtual__() returned False.
+        # Kept separate from missing_modules so a failed sibling (e.g.
+        # deb_postgres) does not poison the shared virtualname (e.g. postgres)
+        # and prevent the real module from loading.  Consulted by
+        # missing_fun_string() to surface every failure reason.
+        self.missing_virtualnames = {}
         self.loaded_modules = set()
         self.loaded_files = set()  # TODO: just remove them from file_mapping?
         self.static_modules = static_modules if static_modules else []
@@ -391,6 +413,54 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def _get_lock(self):
         return threading.RLock()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.destroy()
+
+    def destroy(self):
+        """
+        Destroy the loader.
+
+        This is intentionally a no-op. The earlier 3006.x leak-fix
+        (``33ad623aa4a``) added internal-state clearing here -- calling
+        ``clean_modules()`` (sys.modules eviction), ``self.pack.clear()``,
+        ``self._dict.clear()``, ``self.loaded_modules.clear()`` and
+        ``self.missing_modules.clear()`` -- so callers like
+        ``LocalClient.destroy()`` / ``MasterMinion.destroy()`` /
+        ``RunnerClient.__exit__`` would proactively free LazyLoader memory.
+
+        After dropping ``clean_modules()`` (commit ``2d119bba048``) the
+        rest_tornado functional suite still timed out (CI 28333916927 had
+        the same 86 failures as the prior round). Round-6 investigation
+        narrowed the remaining cost to the LazyLoader state-clearing
+        itself: ``LocalClient.__del__`` runs synchronously during Python
+        GC inside the tornado io_loop, and the cascading destroy() chain
+        (LocalClient -> functions/utils/returners LazyLoaders ->
+        ``pack.clear`` / ``_dict.clear`` / ``loaded_modules.clear``) stalls
+        the loop for several seconds per request -- exactly the symptom
+        reported in CI (~6-7 s per ``http_client.fetch`` vs ~30 ms on the
+        3007.x baseline).
+
+        Reverting ``destroy()`` to a no-op restores the 3007.x behavior
+        (LazyLoader objects are reclaimed by Python's normal GC when their
+        owner dies) without re-introducing the original ``clean_modules``
+        sys.modules thrash. The ``__enter__``/``__exit__`` shape is kept so
+        the per-request ``with RunnerClient(...) as runner:`` / ``with
+        WheelClient(...) as wheel:`` blocks added in
+        ``salt/netapi/__init__.py`` and ``salt/daemons/masterapi.py``
+        continue to compile and run without raising AttributeError --
+        their ``__exit__`` paths just stop interfering with the loader.
+
+        ``clean_modules()`` remains a public method for the one caller
+        that still needs sys.modules eviction (``loader.grains`` after a
+        grains refresh). Long-term cleanup of LazyLoader memory in
+        long-running daemons should be handled at the daemon scope
+        (Maintenance / MWorker recycle), not on the per-request
+        ``LocalClient.__del__`` hot path.
+        """
 
     def clean_modules(self):
         """
@@ -487,6 +557,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         except AttributeError:
             pass
 
+        # Whitelist gate for attribute-style access (VCOPS-90587):
+        # ``__getitem__`` reaches ``_load`` which enforces ``self.whitelist``,
+        # but attribute-style access -- used by Jinja's ``salt.cmd.run(...)``
+        # syntax via :class:`salt.utils.templates.AliasedLoader` / the
+        # ``LoadedMod`` wrapper -- bypasses ``_load`` and returns a
+        # ``LoadedMod`` whose per-function ``getattr`` never touches the
+        # gate.  Reject non-whitelisted modules here with ``AttributeError``
+        # so ``hasattr(salt, 'cmd')`` / Jinja's ``undefined`` fallthrough
+        # behave correctly.
+        if self.whitelist and mod_name not in self.whitelist:
+            raise AttributeError(mod_name)
+
         # otherwise we assume its jinja template access
         if mod_name not in self.loaded_modules and not self.loaded:
             for name in self._iter_files(mod_name):
@@ -514,18 +596,34 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         mod_name = function_name.split(".")[0]
         if mod_name in self.loaded_modules:
             return f"'{function_name}' is not available."
-        else:
-            try:
-                reason = self.missing_modules[mod_name]
-            except KeyError:
-                return f"'{function_name}' is not available."
-            else:
-                if reason is not None:
-                    return "'{}' __virtual__ returned False: {}".format(
-                        mod_name, reason
-                    )
-                else:
-                    return f"'{mod_name}' __virtual__ returned False"
+
+        # Collect reasons from missing_modules (keyed by file basename) and
+        # from missing_virtualnames (keyed by shared __virtualname__).  The
+        # latter lets us surface every failure reason when multiple files
+        # collide on a single virtualname (e.g. x509 and x509_v2).
+        reasons = []
+        seen = set()
+        primary = self.missing_modules.get(mod_name, KeyError)
+        if primary is not KeyError and primary is not None:
+            reason_str = str(primary)
+            if reason_str not in seen:
+                seen.add(reason_str)
+                reasons.append(reason_str)
+        for reason in self.missing_virtualnames.get(mod_name, ()):
+            if reason is None:
+                continue
+            reason_str = str(reason)
+            if reason_str not in seen:
+                seen.add(reason_str)
+                reasons.append(reason_str)
+
+        if reasons:
+            return "'{}' __virtual__ returned False: {}".format(
+                mod_name, "; ".join(reasons)
+            )
+        if mod_name in self.missing_modules or mod_name in self.missing_virtualnames:
+            return f"'{mod_name}' __virtual__ returned False"
+        return f"'{function_name}' is not available."
 
     def _refresh_file_mapping(self):
         """
@@ -693,6 +791,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             super().clear()  # clear the lazy loader
             self.loaded_files = set()
             self.missing_modules = {}
+            self.missing_virtualnames = {}
             self.loaded_modules = set()
             # if we have been loaded before, lets clear the file mapping since
             # we obviously want a re-do
@@ -778,6 +877,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
     def __populate_sys_path(self):
         for directory in self.extra_module_dirs:
+            # Never put a Salt-internal module dir (e.g. salt/utils) on
+            # sys.path. Internal modules are imported via their fully-qualified
+            # ``salt.*`` names, so they gain nothing from this, and their
+            # single-file modules (salt/utils/ssh.py, salt/utils/yaml.py, ...)
+            # would shadow same-named third-party/stdlib top-level packages for
+            # any bare import triggered while a module body runs -- which then
+            # gets cached in sys.modules for the life of the process. Only
+            # external (custom/extension) dirs need to be importable this way.
+            if _is_salt_internal_path(directory):
+                continue
             if directory not in sys.path:
                 sys.path.append(directory)
                 self._clean_module_dirs.append(directory)
@@ -791,8 +900,20 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self._clean_module_dirs = []
 
         # Be sure that sys.path_importer_cache do not contains any
-        # invalid FileFinder references
-        importlib.invalidate_caches()
+        # invalid FileFinder references.
+        #
+        # When several loaders run in the same process and load modules
+        # concurrently -- e.g. a deltaproxy hosting many sub-proxy minions --
+        # they share the global sys.path_importer_cache. Another loader may
+        # already have invalidated or removed an entry that CPython's
+        # invalidate_caches() is walking, which surfaces as a KeyError (or a
+        # RuntimeError if the mapping changed size mid-iteration). Tolerate it
+        # rather than failing the module load that triggered the cleanup
+        # (#61734); the entry was going to be invalidated anyway.
+        try:
+            importlib.invalidate_caches()
+        except (KeyError, RuntimeError):
+            pass
 
         # Because we are mangling with importlib, we can find from
         # time to time an invalidation issue with
@@ -800,11 +921,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # FileFinder that remain None for the extra_module_dirs
         if invalidate_path_importer_cache:
             for directory in self.extra_module_dirs:
-                if (
-                    directory in sys.path_importer_cache
-                    and sys.path_importer_cache[directory] is None
-                ):
-                    del sys.path_importer_cache[directory]
+                if sys.path_importer_cache.get(directory) is None:
+                    # pop() rather than del: a concurrent loader may already
+                    # have removed this entry (same shared-cache race as above).
+                    sys.path_importer_cache.pop(directory, None)
 
     def _load_module(self, name):
         mod = None
@@ -817,9 +937,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # but the log will get spammed with "Bad Magic Number" messages that
         # can be very misleading if the user is debugging another problem.
         try:
-            (implementation_tag, cache_tag_ver) = sys.implementation.cache_tag.split(
-                "-"
-            )
+            implementation_tag, cache_tag_ver = sys.implementation.cache_tag.split("-")
             if cache_tag_ver not in fpath and implementation_tag in fpath:
                 log.trace(
                     "Trying to load %s on %s, returning False.",
@@ -833,9 +951,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.loaded_files.add(name)
         fpath_dirname = os.path.dirname(fpath)
+        fpath_appended = False
         try:
             self.__populate_sys_path()
-            sys.path.append(fpath_dirname)
+            # Only append external module dirs, so a custom module's bare
+            # sibling imports resolve. A Salt-internal dir (salt/modules,
+            # salt/utils, ...) must never go on sys.path: a file such as
+            # salt/modules/ssh.py would shadow a same-named third-party/stdlib
+            # top-level package for any bare import made while this module
+            # executes. Internal modules import siblings via ``salt.*`` names.
+            if not _is_salt_internal_path(fpath) and fpath_dirname not in sys.path:
+                sys.path.append(fpath_dirname)
+                fpath_appended = True
             if suffix == ".pyx":
                 mod = pyximport.load_module(name, fpath, tempfile.gettempdir())
             elif suffix == ".o":
@@ -973,7 +1100,8 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.missing_modules[name] = error
             return False
         finally:
-            sys.path.remove(fpath_dirname)
+            if fpath_appended:
+                sys.path.remove(fpath_dirname)
             self.__clean_sys_path()
 
         loader_context = salt.loader.context.LoaderContext()
@@ -1080,10 +1208,29 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
                 # if _process_virtual returned a non-True value then we are
                 # supposed to not process this module
-                if virtual_ret is not True and module_name not in self.missing_modules:
-                    # If a module has information about why it could not be loaded, record it
-                    self.missing_modules[module_name] = virtual_err
+                if virtual_ret is not True:
+                    # Record the failure under both the file path (`name`)
+                    # and the file basename (`module_name`).  We intentionally
+                    # do NOT record it under __virtualname__ in
+                    # missing_modules: a sibling file failing (e.g.
+                    # deb_postgres on RHEL) must never poison the shared
+                    # virtualname (e.g. postgres) and block the real module
+                    # from loading (issue #69806).
                     self.missing_modules[name] = virtual_err
+                    if module_name not in self.missing_modules:
+                        self.missing_modules[module_name] = virtual_err
+                    # For error-message quality (issue #68625), track every
+                    # failure reason for a shared __virtualname__ in a
+                    # separate structure that missing_fun_string() consults.
+                    virtualname = getattr(mod, "__virtualname__", None)
+                    if (
+                        isinstance(virtualname, str)
+                        and virtualname
+                        and virtualname != module_name
+                    ):
+                        reasons = self.missing_virtualnames.setdefault(virtualname, [])
+                        if virtual_err not in reasons:
+                            reasons.append(virtual_err)
                     return False
         else:
             virtual_aliases = ()
@@ -1341,6 +1488,18 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                             module_name,
                         )
 
+                    # NOTE: Do NOT reassign ``module_name`` to the module's
+                    # __virtualname__ on failure here.  Doing so caused the
+                    # caller to poison ``missing_modules[virtualname]`` (issue
+                    # #69806): when a sibling module (e.g. deb_postgres on a
+                    # non-Debian host) failed its __virtual__ check first, the
+                    # real module claiming the same virtualname (postgres) was
+                    # skipped by ``_load()`` because that virtualname was
+                    # already marked missing.  The caller now tracks failure
+                    # reasons per-__virtualname__ separately (see
+                    # ``missing_virtualnames``) so error surfacing for
+                    # collisions (issue #68625) is preserved without the
+                    # poisoning race.
                     return (False, module_name, error_reason, virtual_aliases)
 
                 # At this point, __virtual__ did not return a

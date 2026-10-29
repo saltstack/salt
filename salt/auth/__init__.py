@@ -71,6 +71,31 @@ class LoadAuth:
     def ckminions(self):
         return self._ckminions or salt.utils.minions.CkMinions(self.opts)
 
+    def destroy(self):
+        """
+        Clean up resources
+        """
+        if hasattr(self, "auth") and self.auth is not None:
+            if hasattr(self.auth, "destroy"):
+                self.auth.destroy()
+            self.auth = {}
+        if hasattr(self, "tokens") and self.tokens is not None:
+            if hasattr(self.tokens, "destroy"):
+                self.tokens.destroy()
+            self.tokens = {}
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
     def load_name(self, load):
         """
         Return the primary name associate with the load, if an empty string
@@ -104,9 +129,18 @@ class LoadAuth:
         _valid = ["username", "password", "eauth", "token"]
         _load = {key: value for (key, value) in load.items() if key in _valid}
 
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
-        )
+        try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
+            )
+        except salt.exceptions.SaltInvocationError as e:
+            log.debug(
+                "Authentication request for eauth '%s' is missing required "
+                "arguments: %s",
+                load.get("eauth"),
+                e,
+            )
+            return False
         try:
             if "kwargs" in fcall:
                 return self.auth[fstr](*fcall["args"], **fcall["kwargs"])
@@ -253,7 +287,15 @@ class LoadAuth:
             new_token = str(hash_type(os.urandom(512)).hexdigest())
             tdata["token"] = new_token
             try:
-                self.cache.store("tokens", new_token, tdata, expires=tdata["expire"])
+                # ``Cache.store``'s ``expires`` is a *relative* duration in
+                # seconds, not an absolute epoch. Passing ``tdata["expire"]``
+                # here -- which is ``time.time() + token_expire`` -- caused
+                # the envelope ``_expires`` to be set to ``now + (now +
+                # token_expire)`` (~ year 4090), and combined with the
+                # broken ``Cache.clean_expired`` fallback resulted in tokens
+                # being deleted within a single master loop interval.
+                # Issue #69307.
+                self.cache.store("tokens", new_token, tdata, expires=token_expire)
             except salt.exceptions.SaltCacheError as err:
                 log.error(
                     "Cannot mk_token from tokens cache using %s: %s",
@@ -731,17 +773,17 @@ class Resolver:
             )
             return ret
 
-        args = salt.utils.args.arg_lookup(self.auth[fstr])
-        for arg in args["args"]:
+        aspec = salt.utils.args.get_function_argspec(self.auth[fstr])
+        for arg in aspec.allreq:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
                 ret[arg] = getpass.getpass(f"{arg}: ")
             else:
                 ret[arg] = input(f"{arg}: ")
-        for kwarg, default in list(args["kwargs"].items()):
+        for kwarg, default in aspec.alldefaults.items():
             if kwarg in self.opts:
-                ret["kwarg"] = self.opts[kwarg]
+                ret[kwarg] = self.opts[kwarg]
             else:
                 ret[kwarg] = input(f"{kwarg} [{default}]: ")
 

@@ -6,7 +6,10 @@ disable_value, and set_value across the relevant pol/registry state combinations
 import pytest
 
 import salt.modules.win_lgpo_reg as lgpo_reg_mod
+import salt.utils.win_functions
+import salt.utils.win_lgpo_reg
 import salt.utils.win_reg
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -331,3 +334,159 @@ def test_set_value_enable_disabled():
     assert _pol_active()
     assert not _pol_disabled()
     assert _reg_data() == TEST_DATA
+
+
+# ---------------------------------------------------------------------------
+# set_value: write_registry
+# ---------------------------------------------------------------------------
+
+
+def test_set_value_write_registry_false_skips_registry():
+    """write_registry=False: pol entry created, registry left untouched."""
+    ret = lgpo_reg_mod.set_value(
+        key=TEST_KEY,
+        v_name=TEST_NAME,
+        v_data=TEST_DATA,
+        v_type=TEST_TYPE,
+        policy_class=POLICY_CLASS,
+        write_registry=False,
+    )
+    assert ret is True
+    assert _pol_active()
+    assert not _reg_present()
+
+
+def test_set_value_write_registry_false_preserves_existing_reg():
+    """write_registry=False: pol updated, pre-existing registry value untouched."""
+    _set_reg_only(data=TEST_DATA)
+    ret = lgpo_reg_mod.set_value(
+        key=TEST_KEY,
+        v_name=TEST_NAME,
+        v_data=TEST_DATA_ALT,
+        v_type=TEST_TYPE,
+        policy_class=POLICY_CLASS,
+        write_registry=False,
+    )
+    assert ret is True
+    assert _pol_active()
+    assert _reg_data() == TEST_DATA  # old value preserved
+
+
+def test_set_value_write_registry_none_non_dc_writes_registry():
+    """write_registry=None on a non-DC: auto-detects and writes registry."""
+    with patch.object(
+        salt.utils.win_functions, "is_domain_controller", return_value=False
+    ):
+        ret = lgpo_reg_mod.set_value(
+            key=TEST_KEY,
+            v_name=TEST_NAME,
+            v_data=TEST_DATA,
+            v_type=TEST_TYPE,
+            policy_class=POLICY_CLASS,
+        )
+    assert ret is True
+    assert _pol_active()
+    assert _reg_data() == TEST_DATA
+
+
+def test_set_value_write_registry_none_dc_skips_registry():
+    """write_registry=None on a DC: auto-detects and skips registry write."""
+    with patch.object(
+        salt.utils.win_functions, "is_domain_controller", return_value=True
+    ):
+        ret = lgpo_reg_mod.set_value(
+            key=TEST_KEY,
+            v_name=TEST_NAME,
+            v_data=TEST_DATA,
+            v_type=TEST_TYPE,
+            policy_class=POLICY_CLASS,
+        )
+    assert ret is True
+    assert _pol_active()
+    assert not _reg_present()
+
+
+# ---------------------------------------------------------------------------
+# set_value: refresh_policy
+# ---------------------------------------------------------------------------
+
+
+def test_set_value_refresh_policy_calls_util():
+    """refresh_policy=True: util refresh_policy() is invoked after pol write."""
+    with patch.object(
+        salt.utils.win_lgpo_reg, "refresh_policy", return_value=True
+    ) as mock_refresh:
+        lgpo_reg_mod.set_value(
+            key=TEST_KEY,
+            v_name=TEST_NAME,
+            v_data=TEST_DATA,
+            v_type=TEST_TYPE,
+            policy_class=POLICY_CLASS,
+            write_registry=True,
+            refresh_policy=True,
+        )
+    mock_refresh.assert_called_once()
+
+
+def test_set_value_refresh_policy_false_does_not_call_util():
+    """refresh_policy=False (default): util refresh_policy() is never called."""
+    with patch.object(
+        salt.utils.win_lgpo_reg, "refresh_policy", return_value=True
+    ) as mock_refresh:
+        lgpo_reg_mod.set_value(
+            key=TEST_KEY,
+            v_name=TEST_NAME,
+            v_data=TEST_DATA,
+            v_type=TEST_TYPE,
+            policy_class=POLICY_CLASS,
+            write_registry=True,
+        )
+    mock_refresh.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# disable_value / delete_value: write_registry
+# ---------------------------------------------------------------------------
+
+
+def test_disable_value_write_registry_false_preserves_registry():
+    """disable_value write_registry=False: pol disabled, registry value preserved."""
+    _set_pol_and_reg()
+    ret = lgpo_reg_mod.disable_value(
+        key=TEST_KEY,
+        v_name=TEST_NAME,
+        policy_class=POLICY_CLASS,
+        write_registry=False,
+    )
+    assert ret is True
+    assert _pol_disabled()
+    assert _reg_present()  # registry must NOT be deleted
+
+
+def test_delete_value_write_registry_false_preserves_registry():
+    """delete_value write_registry=False: pol removed, registry value preserved."""
+    _set_pol_and_reg()
+    ret = lgpo_reg_mod.delete_value(
+        key=TEST_KEY,
+        v_name=TEST_NAME,
+        policy_class=POLICY_CLASS,
+        write_registry=False,
+    )
+    assert ret is True
+    assert not _pol_active()
+    assert _reg_present()  # registry must NOT be deleted
+
+
+# ---------------------------------------------------------------------------
+# standalone refresh_policy
+# ---------------------------------------------------------------------------
+
+
+def test_refresh_policy_module_function():
+    """lgpo_reg.refresh_policy() delegates to util and returns bool."""
+    with patch.object(
+        salt.utils.win_lgpo_reg, "refresh_policy", return_value=True
+    ) as mock_refresh:
+        ret = lgpo_reg_mod.refresh_policy()
+    assert ret is True
+    mock_refresh.assert_called_once()

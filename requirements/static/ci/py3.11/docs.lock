@@ -6,7 +6,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -24,9 +24,10 @@ apache-libcloud==3.9.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-attrs==23.2.0
+attrs==26.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
 babel==2.12.1
     # via
@@ -38,18 +39,20 @@ backports-tarfile==1.2.0
     #   jaraco-context
 beautifulsoup4==4.14.3
     # via pydata-sphinx-theme
-certifi==2024.7.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cffi==2.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   cryptography
-charset-normalizer==3.2.0
+charset-normalizer==3.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   requests
 cheroot==11.1.2
     # via
@@ -65,7 +68,7 @@ croniter==6.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-cryptography==48.0.0
+cryptography==50.0.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -98,7 +101,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   gitpython
-gitpython==3.1.60
+gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -166,6 +169,7 @@ markupsafe==3.0.3
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/static/ci/docs.txt
     #   jinja2
 mdit-py-plugins==0.6.1
     # via myst-docutils
@@ -181,13 +185,14 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.1.2
+msgpack==1.2.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 myst-docutils==5.1.0
@@ -232,10 +237,10 @@ packaging==24.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   sphinx
+    #   virtualenv
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -259,7 +264,7 @@ psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -284,7 +289,7 @@ pygments==2.20.0
     #   pydata-sphinx-theme
     #   rich
     #   sphinx
-pyopenssl==26.2.0
+pyopenssl==26.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -293,7 +298,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   virtualenv
@@ -314,22 +319,17 @@ pyzmq==27.1.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/zeromq.txt
-requests==2.33.1
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   apache-libcloud
     #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
-    #   vultr
 rich==15.0.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   typer
-rpm-vercmp==0.1.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -r requirements/base.txt
 setproctitle==1.3.7
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -380,7 +380,7 @@ timelib==0.3.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -410,16 +410,12 @@ typing-extensions==4.14.1
     #   pyopenssl
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
-    # via
-    #   -c requirements/static/ci/py3.11/linux.lock
-    #   -r requirements/base.txt
-vultr==1.0.1
+virtualenv==21.14.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
