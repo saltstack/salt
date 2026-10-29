@@ -53,6 +53,8 @@ class AsyncReqChannel:
     master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
     """
 
+    # TODO(#70366): Remove these SyncWrapper method lists once the remaining
+    # ReqChannel callers migrate to AsyncReqChannel and SyncWrapper is removed.
     async_methods = [
         "crypted_transfer_decode_dictentry",
         "_crypted_transfer",
