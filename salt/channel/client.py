@@ -49,8 +49,9 @@ class AsyncReqChannel:
     Factory class to create a asynchronous communication channels to the
     master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
 
-    Pass an asyncio event loop as ``io_loop``. Tornado IOLoop arguments are
-    deprecated and will be removed in Salt 3009.2.
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -468,8 +469,9 @@ class AsyncPubChannel:
     """
     Factory class to create subscription channels to the master's Publisher
 
-    Pass an asyncio event loop as ``io_loop``. Tornado IOLoop arguments are
-    deprecated and will be removed in Salt 3009.2.
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
