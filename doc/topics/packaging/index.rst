@@ -239,7 +239,7 @@ directory, but this is unsupported: site-packages is replaced on every
 Salt upgrade, so anything installed there is lost.
 
 Restoring local dependencies on upgrade
---------------------------------------
+---------------------------------------
 
 The extras directory is specific to the bundled Python major/minor version.
 Its contents survive ordinary package upgrades, but an upgrade from, for
