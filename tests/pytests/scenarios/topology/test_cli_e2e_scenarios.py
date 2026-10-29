@@ -251,6 +251,42 @@ def test_scenario_cli_c_at_peer_publish_round_trip_with_peered_topology(
     minion = attach_minion(west, minion_id="web-west")
     assert minion.is_running()
 
+    # Wait for the east<->west topology handshake to attach the peer
+    # on both sides before the CLI fires -- Windows CI occasionally
+    # saw an empty-stdout timeout here because the publish daemon
+    # had not yet registered its ``_INBOUND[west]`` entry when the
+    # publish arrived, so the forwarded ``topology/pub`` never left
+    # east.  ``salt-run topology.peers`` returns a list of
+    # ``{"cluster_id": ..., "state": ...}`` dicts; the handshake has
+    # completed when the peer's state is ``"attached"``.
+    import time as _time
+
+    def _peer_attached(cluster, peer_cluster_id):
+        run_cli = cluster.masters[0].salt_run_cli(timeout=30)
+        ret = run_cli.run("topology.peers")
+        if ret.returncode != 0 or not isinstance(ret.data, list):
+            return False
+        for entry in ret.data:
+            if (
+                entry.get("cluster_id") == peer_cluster_id
+                and entry.get("state") == "attached"
+            ):
+                return True
+        return False
+
+    deadline = _time.monotonic() + 60
+    while _time.monotonic() < deadline:
+        if _peer_attached(east, west.cluster_id) and _peer_attached(
+            west, east.cluster_id
+        ):
+            break
+        _time.sleep(1)
+    else:
+        pytest.fail(
+            "east<->west topology handshake did not attach within 60s "
+            "after restart; CLI publish would have no outbound link"
+        )
+
     salt_cli = east.masters[0].salt_cli(timeout=120)
     ret = salt_cli.run("--compound", "test.ping", minion_tgt="C@west")
 
