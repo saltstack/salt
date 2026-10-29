@@ -5,7 +5,6 @@ import os
 import socket
 import time
 from enum import Enum
-from typing import Any
 
 import aiohttp
 import aiohttp.web
@@ -722,9 +721,11 @@ class RequestClient(salt.transport.base.RequestClient):
         except asyncio.TimeoutError as exc:
             raise SaltReqTimeoutError("WebSocket request timed out") from exc
 
-    def _start_operation(
-        self, operation: _RequestOperation, load: Any = None
-    ) -> asyncio.Task[Any]:
+    # TODO (#70367): type these helpers together with _connect, _send and salt.payload.
+    # CONNECT returns aiohttp.ClientWebSocketResponse; SEND returns a decoded payload
+    # (scalars, nested containers or Salt extension values). Preserve that distinction
+    # when defining the payload and return types.
+    def _start_operation(self, operation, load=None):
         """Own the I/O task so shutdown never cancels the caller's entire task."""
         if not isinstance(operation, _RequestOperation):
             raise TypeError("Expected a WebSocket request operation")
@@ -735,9 +736,7 @@ class RequestClient(salt.transport.base.RequestClient):
         task.add_done_callback(self._operation_tasks.discard)
         return task
 
-    async def _run_operation(
-        self, operation: _RequestOperation, load: Any = None
-    ) -> Any:
+    async def _run_operation(self, operation, load=None):
         # One connection has no request IDs: keep each exchange indivisible.
         async with self._send_lock:
             if self._closing:
