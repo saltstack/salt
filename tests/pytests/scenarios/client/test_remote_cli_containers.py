@@ -46,7 +46,7 @@ def minion_container(salt_factories, master_container):
     """Create a Salt minion connected to the master."""
     factory = salt_factories.salt_minion_daemon(
         "remote-test-minion",
-        master_id=master_container.id,
+        master=master_container,
     )
 
     with factory.started():
@@ -857,9 +857,9 @@ class TestRemoteCLIACLScenarios:
             )
 
         # Verify restricted access
-        import salt.acl
+        from salt import acl as _acl
 
-        client_acl = salt.acl.ClientACL(restricted_acl)
+        client_acl = _acl.ClientACL(restricted_acl)
 
         assert client_acl.client_can_run_runner(new_client_id, "test.ping")
         assert not client_acl.client_can_run_runner(new_client_id, "cmd.run")

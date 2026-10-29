@@ -291,13 +291,13 @@ class TestClusterRemoteCLI:
             ), "RemoteClient should have cmd_async method"
 
             # CRITICAL: Verify using network events for remote execution
-            import salt.utils.client_event
+            from salt.utils import client_event as _client_event
 
             assert (
                 client._use_network_events is True
             ), "RemoteClient must use network events in cluster scenario"
             assert isinstance(
-                client.event, salt.utils.client_event.ClientEventSubscriber
+                client.event, _client_event.ClientEventSubscriber
             ), "RemoteClient should use ClientEventSubscriber for cluster operations"
 
             # In production environment with running minions:
