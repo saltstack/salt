@@ -376,6 +376,11 @@ class PublishClient(salt.transport.base.PublishClient):
             self._tcp_client = None
         self._closed = True
 
+    async def close_async(self):
+        tasks = (self.on_recv_task, self._read_task)
+        self.close()
+        await salt.utils.asynchronous.cancel_tasks(*tasks)
+
     async def getstream(self, **kwargs):
         if self.source_ip or self.source_port:
             kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
@@ -1818,6 +1823,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
     async_methods = [
+        "connect",
         "publish",
     ]
     close_methods = [
@@ -1839,7 +1845,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ssl=None,
     ):
         self.opts = opts
-        self.pub_sock = None
+        self._async_pub_by_loop = weakref.WeakKeyDictionary()
         self.pub_host = pub_host
         self.pub_port = pub_port
         self.pub_path = pub_path
@@ -1855,7 +1861,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.started = started
         self.pub_server = None
-        self.io_loop = None
         self._closing = False
         # Record creating pid so a forked child that inherits this instance
         # via copy-on-write does NOT touch (close) or warn on the shared FDs
@@ -1918,6 +1923,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pass
         finally:
             self.close()
+            io_loop.close(all_fds=True)
 
     async def publisher(
         self,
@@ -2004,203 +2010,59 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             payload, topic_list, raw_payload=raw_payload
         )
 
-    def connect(self, timeout=None):
-        # ``ipc_write_buffer`` caps the publisher-side (MWorker fire_event
-        # -> EP pull) tornado write buffer.  Without a cap the buffer is
-        # unbounded and a wedged EP io_loop lets MWorkers grow RSS
-        # without exception until the process is OOM-killed.  Opt-in
-        # (falsy preserves prior behavior) mirrors the accept-side caps.
-        max_write_buffer_size = self.opts.get("ipc_write_buffer") or None
-        self.pub_sock = salt.utils.asynchronous.SyncWrapper(
-            _TCPPubServerPublisher,
-            (
-                self.pull_host,
-                self.pull_port,
-                self.pull_path,
-            ),
-            kwargs={"max_write_buffer_size": max_write_buffer_size},
-            loop_kwarg="io_loop",
+    def _new_publisher(self, loop):
+        return _TCPPubServerPublisher(
+            self.pull_host,
+            self.pull_port,
+            self.pull_path,
+            io_loop=loop,
+            max_write_buffer_size=self.opts.get("ipc_write_buffer") or None,
         )
-        self.pub_sock.connect(timeout=timeout)
+
+    def _publisher_for_loop(self):
+        if self._closing:
+            raise ClosingError("Publish server is closed")
+        loop = asyncio.get_running_loop()
+        entry = self._async_pub_by_loop.get(loop)
+        if entry is None:
+            # Legacy event callers can still share a server across loops.
+            # Each connection and its send lock belong to the calling loop.
+            entry = (self._new_publisher(loop), asyncio.Lock())
+            self._async_pub_by_loop[loop] = entry
+        return loop, entry
+
+    async def connect(self, timeout=None):  # pylint: disable=invalid-overridden-method
+        loop, (_, lock) = self._publisher_for_loop()
+        async with lock:
+            if self._closing:
+                raise ClosingError("Publish server is closed")
+            publisher, _ = self._async_pub_by_loop[loop]
+            await publisher.connect(timeout=timeout)
 
     async def publish(
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
-        """
-        Publish "load" to minions
-        """
-        # LTS default: sync publish path preserved; async-context bypass is
-        # opt-in via ``master_async_mworker``. The bypass exists to avoid a
-        # nested-SyncWrapper deadlock that can only happen when async
-        # handlers invoke ``PublishServer.publish`` from a running
-        # asyncio loop -- which is only true when the async-mworker path
-        # is active. With ``master_async_mworker`` off, handlers are sync
-        # and reach here via SyncWrapper exactly as they did pre-PR.
-        opts = getattr(self, "opts", None) or {}
-        async_mworker = bool(opts.get("master_async_mworker", False))
-        if not async_mworker:
-            if not self.pub_sock:
-                self.connect()
-            self.pub_sock.send(payload)
-            return
-        # PATCH: avoid the nested-SyncWrapper deadlock in the
-        # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
-        # chain.  ``self.pub_sock`` is a ``SyncWrapper(_TCPPubServerPublisher)``.
-        # When ``publish`` is invoked from async context (which is the
-        # case in every ``MWorker._return`` -> ``store_job`` ->
-        # ``fire_event`` path), the outer ``SaltEvent.pusher`` SyncWrapper
-        # spawned a worker thread that ran this coroutine, then
-        # ``self.pub_sock.send`` invokes SyncWrapper *again* -- it detects
-        # the inner thread's running io_loop, spawns yet another thread,
-        # and both threads deadlock on ``threading.Thread.join()``.  All
-        # MWorkers wedge, MWQ's DEALER send() blocks (queue backlog),
-        # minions time out and reconnect, dead-peer TCP conns pile up.
-        #
-        # Fix: when we're already in an async context, bypass the outer
-        # SyncWrapper entirely and use the raw async
-        # ``_TCPPubServerPublisher`` directly.  Cache per running loop
-        # because ``asyncio.Lock`` bound to one loop hangs when awaited
-        # from another (this ``PublishServer`` is shared across the
-        # sync-mode SyncWrapper thread's io_loop and the main asyncio
-        # loop).  A per-loop lock serializes concurrent ``fire_event``
-        # tasks so their length-prefixed frames don't interleave on the
-        # shared stream (the framing corruption would otherwise surface
-        # as bogus ~GB length prefixes on the puller side).
-        try:
-            asyncio.get_running_loop()
-            in_async = True
-        except RuntimeError:
-            in_async = False
-        if in_async:
-            loop = asyncio.get_running_loop()
-            per_loop = getattr(self, "_async_pub_by_loop", None)
-            if per_loop is None:
-                # PATCH: WeakKeyDictionary so entries drop when the loop
-                # is GC'd.  Earlier revision keyed on ``id(loop)`` which
-                # is unsafe because CPython recycles integer ids after
-                # GC -- a fresh ``SyncWrapper.asyncio_loop`` could land
-                # on the same id as a dead one and inherit that dead
-                # loop's cached (dead) publisher.  Symptom was a
-                # persistent flood of ``StreamClosedError`` on the local
-                # IPC event bus after the first stream failure.
-                per_loop = self._async_pub_by_loop = weakref.WeakKeyDictionary()
-
-            entry = per_loop.get(loop)
-            if entry is not None:
-                pub, _lock = entry
-                # PATCH: also invalidate on a dead stream.  If the
-                # puller side went away (slow-subscriber discard, ZMTP
-                # heartbeat failure, subscriber process restart) the
-                # stream is closed but the entry is still cached -- next
-                # ``send`` raises ``StreamClosedError`` forever until we
-                # rebuild.  A closed stream is unrecoverable in
-                # tornado's ``IOStream``; drop the entry so we
-                # reconnect below.
-                stream = getattr(pub, "stream", None)
-                if stream is None or stream.closed():
-                    # PATCH: close the stale publisher explicitly so
-                    # its Python object graph (``Unpacker``,
-                    # ``_connecting_future``) is released now rather
-                    # than lingering until the next GC pass.  See the
-                    # matching close in the ``StreamClosedError``
-                    # rebuild branch below.
-                    try:
-                        pub.close()
-                    except Exception:  # pylint: disable=broad-except
-                        pass
-                    del per_loop[loop]
-                    entry = None
-
-            if entry is None:
-                pub = _TCPPubServerPublisher(
-                    self.pull_host,
-                    self.pull_port,
-                    self.pull_path,
-                )
-                await pub.connect()
-                lock = asyncio.Lock()
-                entry = (pub, lock)
-                per_loop[loop] = entry
-            pub, lock = entry
-            async with lock:
-                try:
-                    await pub.send(payload)
-                except tornado.iostream.StreamClosedError:
-                    # PATCH: puller closed on us mid-send.  Drop the
-                    # cached publisher and rebuild once so the next call
-                    # (or the retry here) can succeed.  We do a single
-                    # retry inside the lock to preserve message ordering
-                    # for concurrent callers on this loop.
-                    #
-                    # PATCH: explicitly ``close()`` the stale publisher
-                    # before dropping it.  Tornado's ``StreamClosedError``
-                    # guarantees the underlying socket FD is already
-                    # released, so this is not an FD-leak fix -- but the
-                    # publisher still owns a Python object graph
-                    # (``stream``, ``Unpacker``, ``_connecting_future``)
-                    # that would otherwise linger across reconnect until
-                    # the next GC cycle.  Under a flapping puller (auth
-                    # storm + slow-subscriber prune) that graph
-                    # accumulates.  ``close()`` is idempotent-safe on an
-                    # already-closed stream (EBADF is swallowed) and
-                    # resolves any pending ``_connecting_future`` so
-                    # awaiters don't hang.
-                    stale_pub = per_loop.pop(loop, (None,))[0]
-                    if stale_pub is not None:
-                        try:
-                            stale_pub.close()
-                        except Exception:  # pylint: disable=broad-except
-                            pass
-                    pub = _TCPPubServerPublisher(
-                        self.pull_host,
-                        self.pull_port,
-                        self.pull_path,
-                    )
-                    await pub.connect()
-                    per_loop[loop] = (pub, lock)
-                    await pub.send(payload)
-            return
-        if not self.pub_sock:
-            self.connect()
-        self.pub_sock.send(payload)
+        """Await IPC delivery, serializing frames and reconnecting once on failure."""
+        loop, (_, lock) = self._publisher_for_loop()
+        async with lock:
+            if self._closing:
+                raise ClosingError("Publish server is closed")
+            # A preceding sender may have replaced the connection while we waited.
+            publisher, _ = self._async_pub_by_loop[loop]
+            try:
+                await publisher.connect()
+                await publisher.send(payload)
+            except tornado.iostream.StreamClosedError:
+                publisher.close()
+                if self._closing:
+                    raise ClosingError("Publish server is closed") from None
+                publisher = self._new_publisher(loop)
+                self._async_pub_by_loop[loop] = (publisher, lock)
+                await publisher.connect()
+                await publisher.send(payload)
 
     def close(self):
         self._closing = True
-        if self.pub_sock:
-            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself.
-            # Guarded because ``__del__`` may drive this during GC when the
-            # SyncWrapper's io_loop / asyncio_loop is in a torn-down state.
-            import salt.utils.asynchronous
-
-            try:
-                if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
-                    salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
-                else:
-                    self.pub_sock.close()
-            except Exception:  # pylint: disable=broad-except
-                pass
-            self.pub_sock = None
-        # PATCH: Bug 1's async-context bypass caches a raw
-        # ``_TCPPubServerPublisher`` per running loop in
-        # ``self._async_pub_by_loop``.  Each cached publisher owns an
-        # IPC/TCP socket FD.  Without this, every
-        # ``Minion._return_pub`` cycle leaks one Unix-socket FD on the
-        # minion's local event bus (~450 leaked pull.ipc client FDs
-        # under sustained stress -> ulimit trip).  Close every cached
-        # publisher we still hold before dropping the map.
-        #
-        # PATCH (#70175 round 2): call ``pub.close()`` rather than reaching
-        # into ``pub.stream`` directly.  The stream-only close released
-        # the socket FD but never flipped ``pub._closing = True``, so
-        # every cached publisher tripped ``_TCPPubServerPublisher.__del__``
-        # at GC and emitted the "unclosed publisher client"
-        # ``ResourceWarning`` -- the third warning of the cascade the
-        # user reported on 3008.2+506 (round 1 closed the outer
-        # ``PublishServer`` + ``pub_sock`` SyncWrapper via
-        # ``MinionManager.destroy``; the raw cached publishers were
-        # still leaking their own warning).  ``_TCPPubServerPublisher.close``
-        # is idempotent (early-return on ``_closing``) and subsumes the
-        # stream close.
         per_loop = getattr(self, "_async_pub_by_loop", None)
         if per_loop is not None:
             for pub, _lock in list(per_loop.values()):
@@ -2225,22 +2087,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             except Exception:  # pylint: disable=broad-except
                 pass
             self.pull_sock = None
-        if self.io_loop:
-            # Each io_loop step can raise during GC-time close when the
-            # loop has already been half-torn-down (e.g. by a
-            # ``__del__``-driven cleanup on a partially freed C
-            # extension).  Guard each step individually so a failure in
-            # ``stop()`` does not leak the underlying fds that
-            # ``close(all_fds=True)`` would otherwise release.
-            try:
-                self.io_loop.stop()
-            except Exception:  # pylint: disable=broad-except
-                pass
-            try:
-                self.io_loop.close(all_fds=True)
-            except Exception:  # pylint: disable=broad-except
-                pass
-            self.io_loop = None
         # Drop the multiprocessing.Event reference so its internal pipe FDs can be
         # released when no other references remain.
         if hasattr(self, "started"):
@@ -2289,9 +2135,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         try:
             self.close()
         except Exception:  # pylint: disable=broad-except
-            # Finalizer must never raise.  ``close()`` walks pub_sock,
+            # Finalizer must never raise.  ``close()`` walks
             # ``_async_pub_by_loop`` cached publishers, pub_server,
-            # pull_sock, io_loop -- each step is guarded individually
+            # pull_sock -- each step is guarded individually
             # inside ``close()``.  This outer handler catches any
             # residual failure from a partially-freed C extension
             # during interpreter shutdown.
@@ -2334,19 +2180,18 @@ class _TCPPubServerPublisher:
         ``opts['ipc_write_buffer']`` here; ``None`` / ``0`` preserves
         the historical unbounded behavior.
         """
-        if io_loop is None:
-            self.io_loop = salt.utils.asynchronous.aioloop(
-                tornado.ioloop.IOLoop.current()
-            )
-        else:
-            self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
+        self.io_loop = (
+            asyncio.get_event_loop()
+            if io_loop is None
+            else salt.utils.asynchronous.aioloop(io_loop)
+        )
         self.host = host
         self.port = port
         self.path = path
         self._closing = False
         self.stream = None
         self.unpacker = salt.utils.msgpack.Unpacker(raw=False)
-        self._connecting_future = None
+        self._connect_lock = asyncio.Lock()
         self.max_write_buffer_size = max_write_buffer_size or None
         # Record creating pid so a forked child that inherits this instance
         # via copy-on-write does NOT touch (close) or warn on the shared FD
@@ -2356,83 +2201,55 @@ class _TCPPubServerPublisher:
     def connected(self):
         return self.stream is not None and not self.stream.closed()
 
-    def connect(self, callback=None, timeout=None):
-        """
-        Connect to the IPC socket
-        """
-        if self._connecting_future is not None and not self._connecting_future.done():
-            future = self._connecting_future
-        else:
-            if self._connecting_future is not None:
-                # read previous future result to prevent the "unhandled future exception" error
-                self._connecting_future.exception()  # pylint: disable=E0203
-            future = tornado.concurrent.Future()
-            self._connecting_future = future
-            # self._connect(timeout)
-            self.io_loop.create_task(self._connect(timeout))
-
-        if callback is not None:
-
-            def handle_future(future):
-                response = future.result()
-                self.io_loop.add_callback(callback, response)
-
-            future.add_done_callback(handle_future)
-
-        return future
-
-    async def _connect(self, timeout=None):
-        """
-        Connect to a running IPCServer
-        """
-        timeout_at = None
-        if self.path:
-            sock_type = socket.AF_UNIX
-            sock_addr = self.path
-            log.debug("Publisher connecting to %s", self.path)
-        else:
-            sock_type = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
-            sock_addr = (self.host, self.port)
-            log.debug("Publisher connecting to %s:%s", self.host, self.port)
-
-        self.stream = None
-        if timeout is not None:
-            timeout_at = time.monotonic() + timeout
-
-        while True:
+    async def connect(self, timeout=None):
+        """Connect on the caller's loop without a detached connection task."""
+        async with self._connect_lock:
             if self._closing:
-                break
-
-            if self.stream is None:
-                # with salt.utils.asynchronous.current_ioloop(self.io_loop):
+                raise ClosingError("Publisher is closed")
+            if self.connected():
+                return True
+            if self.path:
+                sock_type, sock_addr = socket.AF_UNIX, self.path
+            else:
+                sock_type = (
+                    socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
+                )
+                sock_addr = (self.host, self.port)
+            deadline = None if timeout is None else self.io_loop.time() + timeout
+            while True:
+                if self._closing:
+                    raise ClosingError("Publisher is closed")
                 sock = socket.socket(sock_type, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.stream = tornado.iostream.IOStream(sock)
                 if self.max_write_buffer_size:
                     self.stream.max_write_buffer_size = self.max_write_buffer_size
-            try:
-                await self.stream.connect(sock_addr)
-                # ``close()`` may have run while we were awaiting
-                # ``stream.connect()``; it nulls ``_connecting_future``. Issue
-                # #69187: skip the result-setting in that case rather than
-                # blowing up with ``'NoneType' object has no attribute
-                # 'set_result'``.
-                if self._connecting_future is not None:
-                    self._connecting_future.set_result(True)
-                break
-            except Exception as e:  # pylint: disable=broad-except
-                if self.stream.closed():
+                try:
+                    remaining = (
+                        None
+                        if deadline is None
+                        else max(0, deadline - self.io_loop.time())
+                    )
+                    await asyncio.wait_for(self.stream.connect(sock_addr), remaining)
+                    if self._closing:
+                        raise ClosingError("Publisher closed before connect completed")
+                    return True
+                except asyncio.CancelledError:
+                    self.stream.close()
                     self.stream = None
-
-                if timeout is None or time.monotonic() > timeout_at:
-                    if self.stream is not None:
-                        self.stream.close()
-                        self.stream = None
-                    # Same race as above (issue #69187): if ``close()`` ran
-                    # while we were awaiting, ``_connecting_future`` is None.
-                    if self._connecting_future is not None:
-                        self._connecting_future.set_exception(e)
-                    break
+                    raise
+                except Exception:  # pylint: disable=broad-except
+                    self.stream.close()
+                    self.stream = None
+                    if self._closing:
+                        raise ClosingError(
+                            "Publisher closed before connect completed"
+                        ) from None
+                    if deadline is None or self.io_loop.time() >= deadline:
+                        raise
+                    await asyncio.sleep(
+                        min(0.1, max(0, deadline - self.io_loop.time()))
+                    )
 
     def close(self):
         """
@@ -2444,22 +2261,6 @@ class _TCPPubServerPublisher:
             return
 
         self._closing = True
-        # Resolve the in-flight connect future BEFORE nulling it, so any
-        # caller that ``await``s the future returned by ``connect()``
-        # gets a definitive answer instead of hanging on an orphaned
-        # future.  Without this, ``_connect()`` would either see
-        # ``_closing`` at the top of its next loop and break silently
-        # (leaving the original future unresolved) or, when
-        # ``stream.connect()`` unparked, hit the ``is not None`` guards
-        # added below and skip setting the result/exception -- either
-        # way the awaiter deadlocks.  See issue #69187.
-        connecting_future = self._connecting_future
-        self._connecting_future = None
-        if connecting_future is not None and not connecting_future.done():
-            connecting_future.set_exception(
-                ClosingError("Publisher closed before connect completed")
-            )
-
         log.debug("Closing %s instance", self.__class__.__name__)
 
         if self.stream is not None and not self.stream.closed():
@@ -2525,7 +2326,7 @@ class _TCPPubServerPublisher:
         # ``ResourceWarning``) AND falls back to calling ``close()`` as
         # a safety net, so callers that historically relied on GC-time
         # cleanup do not silently leak the underlying ``IOStream``
-        # socket FD and the in-flight ``_connecting_future``.
+        # socket FD.
         #
         # Motivation: raw ``_TCPPubServerPublisher`` instances get
         # cached per-loop in ``PublishServer._async_pub_by_loop`` on
@@ -2566,7 +2367,7 @@ class _TCPPubServerPublisher:
             self.close()
         except Exception:  # pylint: disable=broad-except
             # Finalizer must never raise.  ``close()`` handles the
-            # ``_connecting_future`` and ``stream.close()`` steps
+            # ``stream.close()`` steps
             # individually with try/except-pass; this outer handler is
             # a last resort for partially-freed C extensions during
             # interpreter shutdown.

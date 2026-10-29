@@ -315,6 +315,11 @@ salt/utils/vt.py:
   - pytests.integration.netapi.test_ssh_client
   - pytests.integration.ssh.test_state
 
+salt/(utils/event|transport/tcp)\.py:
+  - pytests.unit.utils.event.test_async_session
+  - pytests.functional.utils.test_async_event
+  - pytests.unit.test_minion
+
 salt/wheel/*:
   - pytests.integration.wheel.test_client
 
@@ -324,6 +329,11 @@ salt/(minion\.py|channel/.+|transport/.+):
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+salt/transport/tcp.py:
+  - pytests.unit.transport.test_tcp
+  - pytests.functional.transport.tcp.test_pub_server
+  - pytests.functional.transport.tcp.test_native_publisher
 
 tests/support/mock.py:
   - unit.test_mock
