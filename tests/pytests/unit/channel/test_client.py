@@ -308,3 +308,15 @@ async def test_publish_async_context_closes_resources(minion_opts):
             transport.return_value.close.assert_not_called()
         transport.return_value.close.assert_called_once_with()
         event.return_value.destroy.assert_called_once_with()
+
+
+async def test_publish_factory_failure_closes_transport(minion_opts):
+    with patch("salt.crypt.AsyncAuth") as auth, patch(
+        "salt.transport.publish_client"
+    ) as transport:
+        auth.return_value.gen_token.side_effect = salt.exceptions.InvalidKeyError(
+            "bad key"
+        )
+        with pytest.raises(salt.exceptions.SaltClientError, match="bad key"):
+            salt.channel.client.AsyncPubChannel.factory(minion_opts)
+        transport.return_value.close.assert_called_once_with()

@@ -503,7 +503,11 @@ class AsyncPubChannel:
         host = opts.get("master_ip", "127.0.0.1")
         port = int(opts.get("publish_port", 4506))
         transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
-        return cls(opts, transport, auth, io_loop)
+        try:
+            return cls(opts, transport, auth, io_loop)
+        except BaseException:
+            transport.close()
+            raise
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
@@ -560,6 +564,7 @@ class AsyncPubChannel:
         """
         Close the channel
         """
+        self._closing = True
         self.transport.close()
         if self.event is not None:
             self.event.destroy()
@@ -630,7 +635,7 @@ class AsyncPubChannel:
             await self.send_id(self.token, self._reconnected)
             self.connected = True
             if self.event:
-                self.event.fire_event(
+                await self.event.fire_event_async(
                     {"master": self.opts["master"]}, "__master_connected"
                 )
             if self._reconnected:
