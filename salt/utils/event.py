@@ -743,8 +743,6 @@ class SaltEvent:
         """Await one matching event within a total timeout, using the sync API's filters."""
         if self._run_io_loop_sync or self.io_loop is not asyncio.get_running_loop():
             raise SaltInvocationError("get_event_async requires the caller's io_loop")
-        if no_block and self._event_read_lock.locked():
-            return None
         timeout = None if no_block or wait == 0 else wait
         operation = self._start_event_task(
             self._get_event_async(tag, match_type, no_block), self._event_read_tasks
@@ -757,6 +755,8 @@ class SaltEvent:
 
     async def _get_event_async(self, tag, match_type, no_block):
         try:
+            if no_block and self._event_read_lock.locked():
+                return None
             async with self._event_read_lock:
                 matcher = self._get_match_func(match_type)
                 event = self._check_pending(tag, matcher)

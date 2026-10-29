@@ -92,11 +92,15 @@ async def test_waiting_reader_timeout_does_not_cancel_active_reader(session):
     assert await active == {"result": 1}
 
 
-async def test_nonblocking_read_does_not_wait_for_active_reader(session):
+@pytest.mark.parametrize("reader_started", [False, True])
+async def test_nonblocking_read_does_not_wait_for_active_reader(
+    session, reader_started
+):
     event, queue, _ = session
     active = asyncio.create_task(event.get_event_async(wait=0))
-    await asyncio.sleep(0)
-    await asyncio.sleep(0)
+    if reader_started:
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
     assert await asyncio.wait_for(event.get_event_async(no_block=True), 1) is None
     assert not active.done()
     queue.put_nowait(event.pack("next", {"result": True}))
