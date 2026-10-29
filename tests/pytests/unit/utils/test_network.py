@@ -1638,7 +1638,7 @@ def test_ip_addrs(linux_interfaces_dict):
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
 
 
-def test_nm_managed_70354():
+def test_nm_managed_detects_networkmanager_without_network_scripts():
     """
     nm_managed is what nm_ip and rh_ip call from __virtual__; it must exist and
     be True only with nmcli + /run/NetworkManager + no ifup/ifdown.
