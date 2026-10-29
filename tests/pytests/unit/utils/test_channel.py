@@ -45,6 +45,23 @@ def test_create_server_transport(transport):
 @pytest.mark.parametrize(
     "factory",
     [
+        salt.utils.channel.create_client_transport,
+        salt.utils.channel.create_request_client,
+    ],
+)
+async def test_pool_factory_deprecates_tornado_loop(factory, io_loop):
+    opts = {"transport": "tcp", "pool_name": "pool"}
+    with patch("salt.transport.tcp.RequestClient") as client:
+        with pytest.warns(DeprecationWarning, match="removed in Salt 3009.2") as caught:
+            assert factory(opts, io_loop) is client.return_value
+        assert len(caught) == 1
+        assert caught[0].filename == __file__
+        assert client.call_args.kwargs["io_loop"] is asyncio.get_running_loop()
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
         salt.utils.channel.create_server_transport,
         salt.utils.channel.create_client_transport,
         salt.utils.channel.create_request_client,

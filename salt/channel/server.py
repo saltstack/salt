@@ -1030,6 +1030,7 @@ class PoolRoutingChannel:
         from salt.utils.channel import create_request_client
 
         self.io_loop = io_loop
+        client_loop = salt.utils.asynchronous.aioloop(io_loop)
 
         # Routing process only (not pool workers): needs cache-backed auth helpers.
         self._ensure_auth_support()
@@ -1131,7 +1132,7 @@ class PoolRoutingChannel:
                     if async_mworker and per_opts.get("ipc_mode") != "tcp":
                         per_opts["workers_ipc_name"] = f"workers-{pool_name}-{idx}.ipc"
                     # Use our dedicated request client factory for routing
-                    clients.append(create_request_client(per_opts, io_loop))
+                    clients.append(create_request_client(per_opts, client_loop))
                 self.pool_clients[pool_name] = clients
                 self.pool_client_next[pool_name] = 0
                 log.info(

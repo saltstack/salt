@@ -48,6 +48,9 @@ class AsyncReqChannel:
     """
     Factory class to create a asynchronous communication channels to the
     master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
+
+    Pass an asyncio event loop as ``io_loop``. Tornado IOLoop arguments are
+    deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -78,7 +81,7 @@ class AsyncReqChannel:
         if io_loop is None:
             io_loop = asyncio.get_event_loop()
         else:
-            io_loop = aioloop(io_loop)
+            io_loop = aioloop(io_loop, warn=True)
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -464,6 +467,9 @@ class AsyncReqChannel:
 class AsyncPubChannel:
     """
     Factory class to create subscription channels to the master's Publisher
+
+    Pass an asyncio event loop as ``io_loop``. Tornado IOLoop arguments are
+    deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -497,7 +503,7 @@ class AsyncPubChannel:
         if io_loop is None:
             io_loop = asyncio.get_event_loop()
         else:
-            io_loop = aioloop(io_loop)
+            io_loop = aioloop(io_loop, warn=True)
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
         host = opts.get("master_ip", "127.0.0.1")
@@ -511,7 +517,7 @@ class AsyncPubChannel:
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = aioloop(io_loop)
+        self.io_loop = aioloop(io_loop, warn=True)
         self.auth = auth
         try:
             # This loads or generates the minion's public key.

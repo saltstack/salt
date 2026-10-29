@@ -51,7 +51,7 @@ def create_server_transport(opts):
 def create_client_transport(opts, io_loop):
     """Create a request client for pool routing, otherwise a publish client."""
     _validate_transport(opts)
-    io_loop = aioloop(io_loop)
+    io_loop = aioloop(io_loop, warn=True)
     if opts.get("workers_ipc_name") or opts.get("pool_name"):
         return salt.transport.request_client(opts, io_loop=io_loop)
     return salt.transport.publish_client(opts, io_loop)
@@ -60,5 +60,7 @@ def create_client_transport(opts, io_loop):
 def create_request_client(opts, io_loop=None):
     """Create a request client on the caller's event loop for pool routing."""
     _validate_transport(opts)
-    io_loop = asyncio.get_event_loop() if io_loop is None else aioloop(io_loop)
+    io_loop = (
+        asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+    )
     return salt.transport.request_client(opts, io_loop=io_loop)

@@ -22,6 +22,35 @@ import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
 
 
+@pytest.mark.parametrize("warn", [False, True])
+async def test_aioloop_preserves_native_loop_without_warning(warn):
+    loop = asyncio.get_running_loop()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert asynchronous.aioloop(loop, warn=warn) is loop
+
+
+def test_aioloop_tornado_deprecation_deadline(io_loop, monkeypatch):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "1")
+    with patch("salt.version.__version_info__", (3009, 2)):
+        with pytest.raises(RuntimeError, match="Please remove the warning"):
+            asynchronous.aioloop(io_loop, warn=True)
+
+
+def test_sync_wrapper_passes_its_native_loop_to_constructor():
+    class NativeClient:
+        def __init__(self, io_loop):
+            self.io_loop = io_loop
+            self.current_loop = asyncio.get_event_loop()
+
+    with asynchronous.SyncWrapper(NativeClient, loop_kwarg="io_loop") as wrapper:
+        loop = wrapper.asyncio_loop
+        assert isinstance(wrapper.obj.io_loop, asyncio.AbstractEventLoop)
+        assert wrapper.obj.io_loop is wrapper.asyncio_loop
+        assert wrapper.obj.current_loop is wrapper.asyncio_loop
+    assert loop.is_closed()
+
+
 class HelperA:
     async_methods = [
         "sleep",

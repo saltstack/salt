@@ -1,4 +1,5 @@
 import asyncio
+import warnings
 
 import pytest
 
@@ -267,6 +268,48 @@ async def test_publish_factory_uses_callers_loop(minion_opts):
         assert transport.call_args.args[1] is loop
         channel.close()
     assert not loop.is_closed()
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        salt.channel.client.AsyncReqChannel.factory,
+        salt.channel.client.AsyncPubChannel.factory,
+    ],
+)
+async def test_channel_factory_deprecates_tornado_loop(minion_opts, io_loop, factory):
+    loop = asyncio.get_running_loop()
+    with patch("salt.crypt.AsyncAuth"), patch(
+        "salt.transport.request_client"
+    ) as request_client, patch(
+        "salt.transport.publish_client"
+    ) as publish_client, patch(
+        "salt.utils.event.get_event"
+    ):
+        with pytest.warns(DeprecationWarning, match="removed in Salt 3009.2") as caught:
+            channel = factory(minion_opts, io_loop=io_loop, crypt="clear")
+        try:
+            assert len(caught) == 1
+            assert caught[0].filename == __file__
+            if request_client.called:
+                assert request_client.call_args.kwargs["io_loop"] is loop
+            else:
+                assert publish_client.call_args.args[1] is loop
+                assert channel.io_loop is loop
+        finally:
+            channel.close()
+    assert not loop.is_closed()
+
+
+def test_sync_request_factory_supplies_native_loop(minion_opts):
+    with patch("salt.transport.request_client") as transport:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            channel = salt.channel.client.ReqChannel.factory(minion_opts, crypt="clear")
+        try:
+            assert transport.call_args.kwargs["io_loop"] is channel.asyncio_loop
+        finally:
+            channel.close()
 
 
 async def test_cancelled_transfer_releases_channel(minion_opts, tmp_path):
