@@ -1,14 +1,15 @@
 import asyncio
+import contextlib
 import logging
 import multiprocessing
 import os
 import socket
-import time
 
 import aiohttp
 import aiohttp.web
 import tornado.ioloop
 
+import salt.exceptions
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
@@ -21,249 +22,240 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.utils.asynchronous import cancel_tasks, resolve_result
 
 log = logging.getLogger(__name__)
 
 
 class PublishClient(salt.transport.base.PublishClient):
-    """
-    Tornado based TCP Pub Client
-    """
+    """WebSocket subscription client whose I/O belongs to the caller's loop."""
 
     ttype = "ws"
+    async_methods = ["connect", "recv", "send"]
+    close_methods = ["close"]
 
-    async_methods = [
-        "connect",
-        "connect_uri",
-        "recv",
-        # "close",
-    ]
-    close_methods = [
-        "close",
-    ]
-
-    def __init__(self, opts, io_loop, **kwargs):  # pylint: disable=W0231
+    def __init__(
+        self, opts, io_loop, **kwargs
+    ):  # pylint: disable=super-init-not-called
         self.opts = opts
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
-        self.io_loop = io_loop
-        self.asyncio_loop = salt.utils.asynchronous.aioloop(io_loop)
-
+        self.io_loop = (
+            asyncio.get_event_loop()
+            if io_loop is None
+            else salt.utils.asynchronous.aioloop(io_loop)
+        )
+        self.asyncio_loop = self.io_loop
+        self.host = kwargs.get("host")
+        self.port = kwargs.get("port")
+        self.path = kwargs.get("path")
+        self.ssl = kwargs.get("ssl")
+        if not (
+            (self.host and self.port and not self.path)
+            or (self.path and self.host is None and self.port is None)
+        ):
+            raise ValueError("Provide a host and port, or a Unix socket path")
+        self.backoff = opts.get("tcp_reconnect_backoff", 1)
+        self.source_ip = opts.get("source_ip")
+        self.source_port = opts.get("source_publish_port")
         self.connected = False
         self._closing = False
-        self._closing = False
         self._closed = False
-
-        self.backoff = opts.get("tcp_reconnect_backoff", 1)
-        self.poller = None
-
-        self.host = kwargs.get("host", None)
-        self.port = kwargs.get("port", None)
-        self.path = kwargs.get("path", None)
-        self.ssl = kwargs.get("ssl", None)
-        self.source_ip = self.opts.get("source_ip")
-        self.source_port = self.opts.get("source_publish_port")
-        self.connect_callback = None
-        self.disconnect_callback = None
-        if self.host is None and self.port is None:
-            if self.path is None:
-                raise Exception("A host and port or a path must be provided")
-        elif self.host and self.port:
-            if self.path:
-                raise Exception("A host and port or a path must be provided, not both")
-        self._ws = None
-        self._session = None
-        self._closing = False
-        self.on_recv_task = None
+        self._ws = self._session = None
+        self.connect_callback = self.disconnect_callback = None
+        self.on_recv_task = self.close_task = None
+        self._connect_lock = asyncio.Lock()
+        self._recv_lock = asyncio.Lock()
+        self._close_lock = asyncio.Lock()
+        self._io_tasks = {}
+        self._recv_tasks = set()
         self._creator_pid = os.getpid()
 
-    def close(self):
-        if self._closing:
-            return
-        self._closing = True
-        # Cancel the receive task but don't await it (like TCP does)
-        if self.on_recv_task:
-            self.on_recv_task.cancel()
-            self.on_recv_task = None
-        # Schedule async cleanup but don't wait for it
-        if self._session is not None or self._ws is not None:
-            self.asyncio_loop.create_task(self._async_cleanup())
-        self._closed = True
-
-    async def _async_cleanup(self):
-        """Background cleanup of async resources"""
+    @contextlib.contextmanager
+    def _track_io(self):
+        task = asyncio.current_task()
+        self._io_tasks[task] = self._io_tasks.get(task, 0) + 1
         try:
-            if self._session is not None:
-                await self._session.close()
-                self._session = None
-            if self._ws is not None:
-                await self._ws.close()
-                self._ws = None
-        except Exception:  # pylint: disable=broad-except
-            pass  # Cleanup is best-effort
+            yield
+        finally:
+            remaining = self._io_tasks[task] - 1
+            if remaining:
+                self._io_tasks[task] = remaining
+            else:
+                del self._io_tasks[task]
 
-    # pylint: disable=W1701
-    def __del__(self):
-        if getattr(self, "_creator_pid", None) is not None and (
-            os.getpid() != self._creator_pid
-        ):
-            # Forked child: the parent still owns the underlying FDs; do NOT
-            # close them here (that would break the parent's transport) and
-            # do NOT emit a leak warning (this object is not our responsibility).
-            return
-        if not getattr(self, "_closing", True):
-            salt.utils.resource_warnings.warn_until_close(
-                f"unclosed publish client {self!r}", source=self, log=log
-            )
+    async def _close_connection(self):
+        ws, session = self._ws, self._session
+        self._ws = self._session = None
+        self.connected = False
+        try:
+            # Abort the HTTP connection before the WebSocket handshake on shutdown.
+            if session is not None:
+                await session.close()
+        finally:
+            if ws is not None:
+                await ws.close()
 
-    # pylint: enable=W1701
-    def _decode_messages(self, messages):
-        if not isinstance(messages, dict):
-            body = salt.payload.loads(messages)
-        else:
-            body = messages
-        return body
-
-    async def getstream(self, **kwargs):
-        if self.source_ip or self.source_port:
-            kwargs.update(source_ip=self.source_ip, source_port=self.source_port)
-        ws = None
-        session = None
-        start = time.monotonic()
-        timeout = kwargs.get("timeout", None)
-        while ws is None and (not self._closed and not self._closing):
+    async def getstream(self, timeout=None):
+        deadline = None if timeout is None else self.io_loop.time() + timeout
+        while not self._closing:
+            session = None
             try:
-                ctx = None
-                if self.ssl is not None:
-                    ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
-                if self.host and self.port:
-                    conn = aiohttp.TCPConnector()
-                    session = aiohttp.ClientSession(connector=conn)
-                    if self.ssl:
-                        url = f"https://{self.host}:{self.port}/ws"
-                    else:
-                        url = f"http://{self.host}:{self.port}/ws"
+                ctx = (
+                    True
+                    if self.ssl is None
+                    else salt.transport.base.ssl_context(self.ssl, server_side=False)
+                )
+                if self.path:
+                    connector = aiohttp.UnixConnector(path=self.path)
+                    url = "http://ipc.saltproject.io/ws"
                 else:
-                    conn = aiohttp.UnixConnector(path=self.path)
-                    session = aiohttp.ClientSession(connector=conn)
-                    if self.ssl:
-                        url = "https://ipc.saltproject.io/ws"
-                    else:
-                        url = "http://ipc.saltproject.io/ws"
-                log.debug("pub client connect %r %r", url, ctx)
-                ws = await asyncio.wait_for(
-                    session.ws_connect(url, ssl=ctx),
-                    timeout if timeout is not None else 5,
+                    local_addr = (
+                        (self.source_ip or "0.0.0.0", self.source_port or 0)
+                        if self.source_ip or self.source_port
+                        else None
+                    )
+                    connector = aiohttp.TCPConnector(local_addr=local_addr)
+                    scheme = "https" if self.ssl is not None else "http"
+                    url = f"{scheme}://{self.host}:{self.port}/ws"
+                session = aiohttp.ClientSession(connector=connector)
+                remaining = (
+                    5 if deadline is None else max(0, deadline - self.io_loop.time())
                 )
-                # For SSL connections, give handshake time to complete and fail if invalid
-                if ws and self.ssl:
-                    await asyncio.sleep(0.1)
-                    if ws.closed:
-                        log.debug("WS closed after SSL handshake")
-                        ws = None
-                        await session.close()
-                        continue
-            except Exception as exc:  # pylint: disable=broad-except
-                log.warning(
-                    "WS Message Client encountered an exception while connecting to"
-                    " %s:%s %s: %r, will reconnect in %d seconds",
-                    self.host,
-                    self.port,
-                    self.path,
-                    exc,
-                    self.backoff,
-                )
-                if session:
+                ws = await asyncio.wait_for(session.ws_connect(url, ssl=ctx), remaining)
+                return ws, session
+            except asyncio.CancelledError:
+                if session is not None:
                     await session.close()
-                if timeout and time.monotonic() - start > timeout:
-                    break
-                await asyncio.sleep(self.backoff)
-        return ws, session
-
-    async def _connect(self, timeout=None):
-        if self._ws is None:
-            self._ws, self._session = await self.getstream(timeout=timeout)
-            if self.connect_callback:
-                self.connect_callback(True)  # pylint: disable=not-callable
-            self.connected = True
+                raise
+            except (aiohttp.ClientError, OSError, asyncio.TimeoutError):
+                if session is not None:
+                    await session.close()
+                if self._closing or (
+                    deadline is not None and self.io_loop.time() >= deadline
+                ):
+                    raise
+                delay = (
+                    self.backoff
+                    if deadline is None
+                    else min(self.backoff, max(0, deadline - self.io_loop.time()))
+                )
+                await asyncio.sleep(delay)
+        raise salt.exceptions.SaltClientError("Publish client is closed")
 
     async def connect(
-        self,
-        port=None,
-        connect_callback=None,
-        disconnect_callback=None,
-        timeout=None,
+        self, port=None, connect_callback=None, disconnect_callback=None, timeout=None
     ):
         if port is not None:
             self.port = port
-        if connect_callback:
-            self.connect_callback = None
-        if disconnect_callback:
-            self.disconnect_callback = None
-        await self._connect(timeout=timeout)
+        if connect_callback is not None:
+            self.connect_callback = connect_callback
+        if disconnect_callback is not None:
+            self.disconnect_callback = disconnect_callback
+        with self._track_io():
+            async with self._connect_lock:
+                if self._closing:
+                    raise salt.exceptions.SaltClientError("Publish client is closed")
+                if self._ws is not None and not self._ws.closed:
+                    return
+                await self._close_connection()
+                self._ws, self._session = await self.getstream(timeout)
+                self.connected = True
+            if self.connect_callback is not None:
+                await resolve_result(self.connect_callback(True))
 
     async def send(self, msg):
-        await self.message_client.send(msg, reply=False)
+        with self._track_io():
+            await self.connect()
+            await self._ws.send_bytes(msg)
+
+    async def _recv(self):
+        while not self._closing:
+            await self.connect()
+            ws = self._ws
+            response = await ws.receive()
+            if response.type == aiohttp.WSMsgType.BINARY:
+                return salt.payload.loads(response.data, raw=True)
+            if response.type in (
+                aiohttp.WSMsgType.CLOSE,
+                aiohttp.WSMsgType.CLOSED,
+                aiohttp.WSMsgType.CLOSING,
+                aiohttp.WSMsgType.ERROR,
+            ) or (response.type == aiohttp.WSMsgType.TEXT and response.data == "close"):
+                await self._close_connection()
+                if self.disconnect_callback is not None and not self._closing:
+                    await resolve_result(self.disconnect_callback())
+        return None
 
     async def recv(self, timeout=None):
-        while self._ws is None:
-            await self.connect()
-            await asyncio.sleep(0.001)
-        if timeout == 0:
-            try:
-                raw_msg = await asyncio.wait_for(self._ws.receive(), 0.0001)
-            except TimeoutError:
-                return
-            if raw_msg.type == aiohttp.WSMsgType.TEXT:
-                if raw_msg.data == "close":
-                    await self._ws.close()
-            if raw_msg.type == aiohttp.WSMsgType.BINARY:
-                return salt.payload.loads(raw_msg.data, raw=True)
-            elif raw_msg.type == aiohttp.WSMsgType.ERROR:
-                log.error(
-                    "ws connection closed with exception %s", self._ws.exception()
-                )
-        elif timeout:
-            return await asyncio.wait_for(self.recv(), timeout=timeout)
-        else:
-            while True:
-                raw_msg = await self._ws.receive()
-                if raw_msg.type == aiohttp.WSMsgType.TEXT:
-                    if raw_msg.data == "close":
-                        await self._ws.close()
-                if raw_msg.type == aiohttp.WSMsgType.BINARY:
-                    return salt.payload.loads(raw_msg.data, raw=True)
-                elif raw_msg.type == aiohttp.WSMsgType.ERROR:
-                    log.error(
-                        "ws connection closed with exception %s",
-                        self._ws.exception(),
+        with self._track_io():
+            async with self._recv_lock:
+                try:
+                    return await asyncio.wait_for(
+                        self._recv(), 0.0001 if timeout == 0 else timeout
                     )
+                except asyncio.TimeoutError:
+                    return None
 
     async def on_recv_handler(self, callback):
-        while not self._ws:
-            await asyncio.sleep(0.003)
-        while True:
-            msg = await self.recv()
-            await callback(msg)
+        while not self._closing:
+            message = await self.recv()
+            if message is not None:
+                await resolve_result(callback(message))
 
     def on_recv(self, callback):
-        """
-        Register a callback for received messages (that we didn't initiate)
-        """
-        if self.on_recv_task:
-            # XXX: We are not awaiting this canceled task. This still needs to
-            # be addressed.
+        if self.on_recv_task is not None:
             self.on_recv_task.cancel()
-        if callback is None:
+        if callback is None or self._closing:
             self.on_recv_task = None
         else:
-            self.on_recv_task = asyncio.create_task(self.on_recv_handler(callback))
+            task = self.io_loop.create_task(self.on_recv_handler(callback))
+            self.on_recv_task = task
+            self._recv_tasks.add(task)
+            task.add_done_callback(self._recv_tasks.discard)
+
+    async def close_async(self):
+        current = asyncio.current_task()
+        if self.close_task is not None and self.close_task is not current:
+            await asyncio.shield(self.close_task)
+            return
+        async with self._close_lock:
+            if self._closed:
+                return
+            self._closing = True
+            await cancel_tasks(*self._io_tasks, *self._recv_tasks)
+            await self._close_connection()
+            self.on_recv_task = None
+            self._closed = True
+
+    def close(self):
+        if not self._closing:
+            self._closing = True
+            if not self._io_tasks and not self._recv_tasks and self._session is None:
+                self._closed = True
+            else:
+                self.close_task = self.io_loop.create_task(self.close_async())
+
+    def _decode_messages(self, messages):
+        return messages if isinstance(messages, dict) else salt.payload.loads(messages)
 
     def __enter__(self):
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args):
         self.close()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_async()
+
+    def __del__(self):  # pylint: disable=no-dunder-del
+        if getattr(self, "_creator_pid", None) == os.getpid() and not getattr(
+            self, "_closing", True
+        ):
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed publish client {self!r}", source=self, log=log
+            )
 
 
 class PublishServer(salt.transport.base.DaemonizedPublishServer):
