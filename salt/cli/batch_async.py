@@ -11,6 +11,7 @@ from tornado.iostream import StreamClosedError
 import salt.client
 import salt.utils.event
 from salt.cli.batch import batch_get_eauth, batch_get_opts, get_bnum
+from salt.utils.asynchronous import cancel_tasks
 
 log = logging.getLogger(__name__)
 
@@ -193,10 +194,7 @@ class SharedEventsChannel:
             return False
         if self.master_event is None:
             return True
-        task = self._reconnect_task
-        if task is not None and task is not asyncio.current_task():
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
+        await cancel_tasks(self._reconnect_task)
         if self._used_by:
             return False
         self.master_event.destroy()
@@ -513,10 +511,7 @@ class BatchAsync:
         self.event = None
         channel, self.events_channel = self.events_channel, None
         try:
-            tasks = [task for task in self._tasks if task is not current]
-            for task in tasks:
-                task.cancel()
-            await asyncio.gather(*tasks, return_exceptions=True)
+            await cancel_tasks(*self._tasks)
             if channel is not None:
                 channel.unsubscribe(None, None, id(self))
                 channel.unuse(id(self))
