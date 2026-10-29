@@ -2,6 +2,7 @@ import asyncio
 import logging
 import multiprocessing
 import os
+import signal
 import socket
 import time
 
@@ -9,6 +10,7 @@ import aiohttp
 import aiohttp.web
 import tornado.ioloop
 
+import salt.exceptions
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
@@ -21,6 +23,7 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.utils.asynchronous import cancel_tasks, resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -272,13 +275,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
-    async_methods = [
-        "publish",
-        # "close",
-    ]
-    close_methods = [
-        "close",
-    ]
+    async_methods = ["connect", "publish", "close_async"]
+    close_methods = ["close_async"]
 
     def __init__(
         self,
@@ -313,7 +311,18 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self._shutdown = _shutdown
         self.pub_writer = None
         self.pub_reader = None
-        self._connecting = None
+        self._connect_lock = asyncio.Lock()
+        self._publish_lock = asyncio.Lock()
+        self._close_lock = asyncio.Lock()
+        self._connect_tasks = set()
+        self._publish_tasks = set()
+        self._ipc_connections = {}
+        self._publisher_task = None
+        self._publisher_done = asyncio.Event()
+        self._monitor_task = None
+        self._loop = None
+        self._closing = self._closed = False
+        self.close_task = None
         self.runner = None
         self.site = None
         self.puller = None
@@ -358,26 +367,39 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         secrets=None,
         started=None,
     ):
-        """
-        Bind to the interface specified in the configuration file
-        """
         if started is not None:
             self.started = started
-        # Use asyncio event loop directly like ZeroMQ does
-        io_loop = salt.utils.asynchronous.aioloop(tornado.ioloop.IOLoop())
-
-        # Set up asyncio signal handler to stop the loop on SIGTERM
-        import signal
-
-        io_loop.add_signal_handler(signal.SIGTERM, io_loop.stop)
-
-        publisher_task = io_loop.create_task(
-            self.publisher(publish_payload, io_loop=io_loop)
+        asyncio.run(
+            self._run_daemon(
+                publish_payload, presence_callback, remove_presence_callback
+            )
         )
+
+    async def _run_daemon(
+        self, publish_payload, presence_callback, remove_presence_callback
+    ):
+        loop = asyncio.get_running_loop()
         try:
-            io_loop.run_forever()
+            loop.add_signal_handler(signal.SIGTERM, self.close)
+        except NotImplementedError:
+            pass
+        try:
+            await self.publisher(
+                publish_payload, presence_callback, remove_presence_callback
+            )
         finally:
-            self.close()
+            try:
+                loop.remove_signal_handler(signal.SIGTERM)
+            except NotImplementedError:
+                pass
+
+    async def _watch_shutdown(self):
+        while not self._shutdown.is_set():
+            # Bound the blocking process-event wait so cancellation cannot leave
+            # asyncio.run() waiting forever for an executor thread to exit.
+            if await asyncio.to_thread(self._shutdown.wait, 0.1):
+                break
+        self._run.set()
 
     async def publisher(
         self,
@@ -386,77 +408,96 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         remove_presence_callback=None,
         io_loop=None,
     ):
-        if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
-        if self._run is None:
-            self._run = asyncio.Event()
-
-        # Monitor the multiprocessing shutdown event and stop the loop
-        async def monitor_shutdown():
-            loop = asyncio.get_running_loop()
-            # Wait for shutdown signal in executor to avoid blocking
-            await loop.run_in_executor(None, self._shutdown.wait)
-            self._run.set()
-            loop.stop()
-
-        asyncio.create_task(monitor_shutdown())
-
-        ctx = None
-        if self.ssl is not None:
-            ctx = salt.transport.base.ssl_context(self.ssl, server_side=True)
-        if self.pub_path:
-            server = aiohttp.web.Server(self.handle_request)
-            self.runner = aiohttp.web.ServerRunner(server)
-            await self.runner.setup()
-            with salt.utils.files.set_umask(0o177):
-                log.info("Publisher binding to socket %s", self.pub_path)
-                self.site = aiohttp.web.UnixSite(
-                    self.runner, self.pub_path, ssl_context=ctx
-                )
-                await self.site.start()
-                os.chmod(self.pub_path, self.pub_path_perms)
-        else:
-            sock = _get_socket(self.opts)
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            # _set_tcp_keepalive(sock, self.opts)
-            sock.setblocking(0)
-            sock.bind((self.pub_host, self.pub_port))
-            sock.listen(self.backlog)
-            server = aiohttp.web.Server(self.handle_request)
-            self.runner = aiohttp.web.ServerRunner(server)
-            await self.runner.setup()
-            self.site = aiohttp.web.SockSite(self.runner, sock, ssl_context=ctx)
-            log.info("Publisher binding to socket %s:%s", self.pub_host, self.pub_port)
-            await self.site.start()
-
+        if self._shutdown.is_set():
+            return
+        self._loop = asyncio.get_running_loop()
+        if (
+            io_loop is not None
+            and salt.utils.asynchronous.aioloop(io_loop) is not self._loop
+        ):
+            raise RuntimeError("Publisher must run on its owning loop")
+        self._publisher_task = asyncio.current_task()
+        self._run = asyncio.Event()
         self._pub_payload = publish_payload
-        if self.pull_path:
-            with salt.utils.files.set_umask(0o177):
-                self.puller = await asyncio.start_unix_server(
-                    self.pull_handler, self.pull_path
-                )
-                os.chmod(self.pull_path, self.pull_path_perms)
-        else:
-            self.puller = await asyncio.start_server(
-                self.pull_handler, self.pull_host, self.pull_port
+        try:
+            ctx = (
+                None
+                if self.ssl is None
+                else salt.transport.base.ssl_context(self.ssl, server_side=True)
             )
-        self.started.set()
-        # Wait for shutdown signal instead of polling
-        await self._run.wait()
-        # Properly shut down aiohttp server
-        await self.site.stop()
-        await self.runner.cleanup()
-        # Close the puller server
-        self.puller.close()
-        await self.puller.wait_closed()
+            server = aiohttp.web.Server(self.handle_request)
+            self.runner = aiohttp.web.ServerRunner(server, shutdown_timeout=1)
+            await self.runner.setup()
+            if self.pub_path:
+                with salt.utils.files.set_umask(0o177):
+                    self.site = aiohttp.web.UnixSite(
+                        self.runner, self.pub_path, ssl_context=ctx
+                    )
+                    await self.site.start()
+                    os.chmod(self.pub_path, self.pub_path_perms)
+            else:
+                sock = _get_socket(self.opts)
+                try:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    sock.setblocking(False)
+                    sock.bind((self.pub_host, self.pub_port))
+                    sock.listen(self.backlog)
+                    self.site = aiohttp.web.SockSite(self.runner, sock, ssl_context=ctx)
+                    await self.site.start()
+                    self.pub_port = sock.getsockname()[1]
+                except BaseException:
+                    sock.close()
+                    raise
+            if self.pull_path:
+                with salt.utils.files.set_umask(0o177):
+                    self.puller = await asyncio.start_unix_server(
+                        self._accept_ipc, self.pull_path
+                    )
+                    os.chmod(self.pull_path, self.pull_path_perms)
+            else:
+                self.puller = await asyncio.start_server(
+                    self._accept_ipc, self.pull_host, self.pull_port
+                )
+                self.pull_port = self.puller.sockets[0].getsockname()[1]
+            self._monitor_task = self._loop.create_task(self._watch_shutdown())
+            self.started.set()
+            await self._run.wait()
+        finally:
+            self._closing = True
+            self._shutdown.set()
+            try:
+                await self._close_resources()
+            finally:
+                self._publisher_done.set()
+
+    def _accept_ipc(self, reader, writer):
+        if self._closing:
+            writer.close()
+            return
+        task = asyncio.create_task(self.pull_handler(reader, writer))
+        self._ipc_connections[task] = writer
+        task.add_done_callback(self._ipc_done)
+
+    def _ipc_done(self, task):
+        writer = self._ipc_connections.pop(task, None)
+        if writer is not None:
+            writer.close()
+        if not task.cancelled() and task.exception() is not None:
+            log.error("Publisher IPC connection failed: %s", task.exception())
 
     async def pull_handler(self, reader, writer):
         unpacker = salt.utils.msgpack.Unpacker(raw=True)
-        while True:
-            data = await reader.read(1024)
-            unpacker.feed(data)
-            for msg in unpacker:
-                await self._pub_payload(msg)
+        try:
+            while not self._closing:
+                data = await reader.read(65536)
+                if not data:
+                    return
+                unpacker.feed(data)
+                for message in unpacker:
+                    await resolve_result(self._pub_payload(message))
+        finally:
+            writer.close()
+            await writer.wait_closed()
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -492,33 +533,50 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self.clients.discard(ws)
         return ws
 
-    async def _connect(self):
-        if self.pull_path:
-            self.pub_reader, self.pub_writer = await asyncio.open_unix_connection(
-                self.pull_path
-            )
-        else:
-            self.pub_reader, self.pub_writer = await asyncio.open_connection(
-                self.pull_host, self.pull_port
-            )
-        self._connecting = None
+    async def _disconnect_pusher(self):
+        writer, self.pub_writer = self.pub_writer, None
+        self.pub_reader = None
+        if writer is not None:
+            writer.close()
+            try:
+                await writer.wait_closed()
+            except ConnectionError:
+                pass
 
-    def connect(self, timeout=None):
-        log.debug("Connect pusher %s", self.pull_path)
-        if self._connecting is None:
-            self._connecting = asyncio.create_task(self._connect())
-        return self._connecting
+    async def connect(self, timeout=None):  # pylint: disable=invalid-overridden-method
+        task = asyncio.current_task()
+        self._connect_tasks.add(task)
+        self._loop = asyncio.get_running_loop()
+        try:
+            async with self._connect_lock:
+                if self._closing:
+                    raise salt.exceptions.SaltClientError("Publish server is closed")
+                if self.pub_writer is not None and not self.pub_writer.is_closing():
+                    return
+                await self._disconnect_pusher()
+                connection = (
+                    asyncio.open_unix_connection(self.pull_path)
+                    if self.pull_path
+                    else asyncio.open_connection(self.pull_host, self.pull_port)
+                )
+                self.pub_reader, self.pub_writer = await asyncio.wait_for(
+                    connection, timeout
+                )
+        finally:
+            self._connect_tasks.discard(task)
 
     async def publish(
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
-        """
-        Publish "load" to minions
-        """
-        if not self.pub_writer:
-            await self.connect()
-        self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
-        await self.pub_writer.drain()
+        task = asyncio.current_task()
+        self._publish_tasks.add(task)
+        try:
+            async with self._publish_lock:
+                await self.connect()
+                self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
+                await self.pub_writer.drain()
+        finally:
+            self._publish_tasks.discard(task)
 
     async def publish_payload(self, payload, topic_list=None, raw_payload=None):
         # ``raw_payload`` is accepted for interface parity with the
@@ -533,15 +591,64 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             except ConnectionResetError:
                 self.clients.discard(ws)
 
+    async def _close_resources(self):
+        async with self._close_lock:
+            if self._closed:
+                return
+            if self.puller is not None:
+                self.puller.close()
+                await self.puller.wait_closed()
+                self.puller = None
+            connections = tuple(self._ipc_connections.items())
+            await cancel_tasks(
+                self._monitor_task,
+                *self._connect_tasks,
+                *self._publish_tasks,
+                *(task for task, _ in connections),
+            )
+            for _, writer in connections:
+                writer.close()
+                await writer.wait_closed()
+            await self._disconnect_pusher()
+            if self.runner is not None:
+                await self.runner.cleanup()
+                self.runner = self.site = None
+            self.clients.clear()
+            self._closed = True
+
+    async def close_async(self):
+        self.close()
+        if (
+            self.close_task is not None
+            and self.close_task is not asyncio.current_task()
+        ):
+            await asyncio.shield(self.close_task)
+        elif (
+            self._publisher_task is not None
+            and self._publisher_task is not asyncio.current_task()
+        ):
+            await self._publisher_done.wait()
+        else:
+            await self._close_resources()
+
     def close(self):
-        if self.pub_writer:
-            self.pub_writer.close()
-            self.pub_writer = None
-            self.pub_reader = None
-        # Signal shutdown across processes
+        if self._closing:
+            return
+        self._closing = True
         self._shutdown.set()
-        if self._connecting:
-            self._connecting.cancel()
+        if self._run is not None:
+            self._run.set()
+        if self._publisher_task is None:
+            if self._loop is not None:
+                self.close_task = self._loop.create_task(self._close_resources())
+            else:
+                self._closed = True
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close_async()
 
 
 class RequestServer(salt.transport.base.DaemonizedRequestServer):
