@@ -591,7 +591,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
     def post_fork(
         self,
         message_handler,
-        io_loop: asyncio.AbstractEventLoop | tornado.ioloop.IOLoop,
+        io_loop,
         **kwargs,
     ):
         """Schedule the worker's server on the loop created by its entry point."""
