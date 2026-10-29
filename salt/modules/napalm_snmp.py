@@ -129,7 +129,14 @@ def remove_config(
         salt '*' snmp.remove_config community='abcd'
     """
 
-    dic = {"template_name": "delete_snmp_config", "test": test, "commit": commit}
+    resolved = salt.utils.napalm.template_path(
+        napalm_device, "delete_snmp_config"  # pylint: disable=undefined-variable
+    )
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "delete_snmp_config", napalm_device  # pylint: disable=undefined-variable
+        )
+    dic = {"template_name": resolved, "test": test, "commit": commit}
 
     if chassis_id:
         dic["chassis_id"] = chassis_id
@@ -206,7 +213,14 @@ def update_config(
                 True
     """
 
-    dic = {"template_name": "snmp_config", "test": test, "commit": commit}
+    resolved = salt.utils.napalm.template_path(
+        napalm_device, "snmp_config"  # pylint: disable=undefined-variable
+    )
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "snmp_config", napalm_device  # pylint: disable=undefined-variable
+        )
+    dic = {"template_name": resolved, "test": test, "commit": commit}
 
     if chassis_id:
         dic["chassis_id"] = chassis_id

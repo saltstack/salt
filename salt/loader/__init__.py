@@ -1031,7 +1031,6 @@ def auth(opts, whitelist=None, loaded_base_name=None):
 
     :param dict opts: The Salt options dictionary
 
-    :param LazyLoader functions: A LazyLoader instance returned from ``minion_mods``.
     :param list whitelist: A list of modules which should be whitelisted.
     :param str loaded_base_name: The imported modules namespace when imported
                                  by the salt loader.
@@ -1153,7 +1152,6 @@ def states(
         outer loader; it is packed as ``__wire_salt__`` on every loaded state
         module so state code that legitimately dispatches an SLS-supplied
         function name (e.g. ``salt.states.module.run``) stays whitelist-gated.
-    :param LazyLoader runners: A LazyLoader instance returned from ``runner``.
     :param LazyLoader utils: A LazyLoader instance returned from ``utils``.
     :param LazyLoader serializers: An optional LazyLoader instance returned from ``serializers``.
     :param LazyLoader proxy: An optional LazyLoader instance returned from ``proxy``.
@@ -1548,7 +1546,7 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         pre_opts.update(
             salt.config.include_config(include, opts["conf_file"], verbose=True)
         )
-        if "grains" in pre_opts:
+        if "grains" in pre_opts and isinstance(pre_opts["grains"], dict):
             opts["grains"] = pre_opts["grains"]
         else:
             opts["grains"] = {}
@@ -1583,8 +1581,22 @@ def grains(opts, force_refresh=False, proxy=None, context=None, loaded_base_name
         else:
             grains_data.update(ret)
 
-    # Run the rest of the grains
+    # Run the rest of the grains. Evaluate built-in ("int") grain modules before
+    # custom ("ext", i.e. extension_modules/_grains) ones so that a custom grain
+    # overrides a built-in grain of the same name, matching the documented
+    # precedence (see #54694). Relative order within each group is preserved. The
+    # origin is taken from each function's namespaced __module__
+    # (<base>.int.grains.<name> vs <base>.ext.grains.<name>), the same signal the
+    # loader uses when importing the module.
+    ext_prefix = f"{funcs.loaded_base_name}.ext."
+    builtin_keys = []
+    custom_keys = []
     for key in funcs:
+        if getattr(funcs[key], "__module__", "").startswith(ext_prefix):
+            custom_keys.append(key)
+        else:
+            builtin_keys.append(key)
+    for key in builtin_keys + custom_keys:
         if key.startswith("core.") or key == "_errors":
             continue
         try:

@@ -51,17 +51,36 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         )
 
     def destroy(self):
+        # Each resource's teardown is isolated in its own try/except and its
+        # attribute is unconditionally reset afterward, so one resource
+        # raising during teardown can never prevent the others (in
+        # particular _mminion) from being destroyed too.
         if self.event is not None:
-            self.event.destroy()
+            try:
+                self.event.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying RunnerClient event: %s", exc)
             self.event = None
         if hasattr(self, "_functions") and self._functions is not None:
-            if hasattr(self._functions, "destroy"):
-                self._functions.destroy()
+            try:
+                if hasattr(self._functions, "destroy"):
+                    self._functions.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying RunnerClient functions: %s", exc)
             self._functions = {}
         if hasattr(self, "utils") and self.utils is not None:
-            if hasattr(self.utils, "destroy"):
-                self.utils.destroy()
+            try:
+                if hasattr(self.utils, "destroy"):
+                    self.utils.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying RunnerClient utils: %s", exc)
             self.utils = {}
+        if hasattr(self, "_mminion") and self._mminion is not None:
+            try:
+                self._mminion.destroy()
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error destroying RunnerClient mminion: %s", exc)
+            self._mminion = None
 
     def __enter__(self):
         return self
