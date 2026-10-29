@@ -3,7 +3,10 @@
 
 aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
 aiohttp>=3.14.2; python_version >= '3.10'
-certifi>=2026.5.20
+# certifi>=2026.10.23 picks up the latest Mozilla CA bundle; the 2026.10.19
+# release dropped the eMudhra/emSign root CA after its intermediates were
+# found to have critically weak EC private keys.
+certifi>=2026.10.23
 cffi>=2.0.0
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
 cheroot>=11.1.2
@@ -57,7 +60,7 @@ msgpack>=1.2.0; python_version >= '3.10'
 # `/` parameter syntax which is a SyntaxError on Python <3.8. Keep at
 # 24.0 to preserve salt-ssh compatibility against legacy target
 # Pythons; salt 3006.x still promises this matrix.
-packaging==24.0
+packaging>=24.0
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; salt 3006.x

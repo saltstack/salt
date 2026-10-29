@@ -14,7 +14,7 @@ attrs==26.1.0
     # via
     #   -r requirements/base.txt
     #   aiohttp
-certifi==2026.5.20
+certifi==2026.10.23
     # via
     #   -r requirements/base.txt
     #   requests

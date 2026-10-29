@@ -1,3 +1,23 @@
+salt (3006.30) stable; urgency=medium
+
+
+  # Security
+
+  * Updated certifi to 2026.10.23 to pick up the latest Mozilla CA bundle. [#70571](https://github.com/saltstack/salt/issues/70571)
+
+
+ -- Salt Project <saltproject.pdl@broadcom.com>  Mon, 26 Oct 2026 22:18:54 +0000
+
+salt (3006.29) stable; urgency=medium
+
+
+  # Security
+
+  * Upgraded certifi to 2026.10.19 and the packaged pip to 26.2.2 for the eMudhra/emSign CA incident (intermediates found to have critically weak EC private keys). [#70465](https://github.com/saltstack/salt/issues/70465)
+
+
+ -- Salt Project <saltproject.pdl@broadcom.com>  Fri, 23 Oct 2026 21:29:04 +0000
+
 salt (3006.28) stable; urgency=medium
 
 
