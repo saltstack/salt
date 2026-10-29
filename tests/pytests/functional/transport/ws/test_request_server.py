@@ -152,3 +152,25 @@ async def test_worker_cleanup_continues_after_channel_error():
     ]
     await worker._close_channels()
     assert closed == [True]
+
+
+async def test_pool_channel_retains_server_until_async_cleanup():
+    state = []
+
+    async def finish():
+        await asyncio.sleep(0)
+        state.append("drained")
+
+    server = SimpleNamespace(close=lambda: state.append("stop"), close_async=finish)
+    channel = object.__new__(salt.channel.server.PoolRoutingChannel)
+    channel.pool_clients = {}
+    channel.pool_client_next = {}
+    channel.pool_servers = {"default": server}
+    channel.event = None
+    channel.transport = SimpleNamespace(close=lambda: None)
+    channel.close()
+    assert not channel.pool_servers
+    assert state == ["stop"]
+    await channel.close_async()
+    assert state == ["stop", "drained"]
+    assert not channel._closing_transports
