@@ -12,7 +12,7 @@ from tests.support.mock import AsyncMock, MagicMock
 def auth(io_loop):
     instance = object.__new__(salt.crypt.AsyncAuth)
     instance.io_loop = salt.utils.asynchronous.aioloop(io_loop)
-    instance._authenticate_waiters = 0
+    instance._authenticate_waiters = {}
     return instance
 
 
@@ -35,7 +35,7 @@ async def test_concurrent_callers_share_authentication(auth):
     assert await asyncio.gather(first, second) == [True, True]
     auth._authenticate.assert_awaited_once()
     assert auth.authenticated
-    assert auth._authenticate_waiters == 0
+    assert auth._authenticate_waiters == {}
 
 
 async def test_cancel_one_waiter_keeps_peer_authentication(auth):
@@ -172,3 +172,41 @@ async def test_authentication_waits_for_credential_event(minion_opts):
         assert await waiter is True
         channel.return_value.__aexit__.assert_awaited_once()
         assert instance.authenticated
+
+
+async def test_cancel_new_attempt_while_old_waiter_is_resuming(auth):
+    from tests.support.mock import patch
+
+    old_complete = asyncio.Event()
+    release_old = asyncio.Event()
+    new_started = asyncio.Event()
+    new_cleaned = asyncio.Event()
+    shield = asyncio.shield
+
+    async def hold_completed_attempt(future):
+        result = await shield(future)
+        old_complete.set()
+        await release_old.wait()
+        return result
+
+    async def new_attempt():
+        try:
+            new_started.set()
+            await asyncio.Event().wait()
+        finally:
+            new_cleaned.set()
+
+    auth._authenticate = AsyncMock(return_value=True)
+    with patch("asyncio.shield", hold_completed_attempt):
+        old_waiter = asyncio.create_task(auth.authenticate())
+        await old_complete.wait()
+        auth._authenticate = AsyncMock(side_effect=new_attempt)
+        new_waiter = asyncio.create_task(auth.authenticate())
+        await new_started.wait()
+        new_waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await new_waiter
+        assert new_cleaned.is_set()
+        release_old.set()
+        assert await old_waiter is True
+    assert auth._authenticate_waiters == {}
