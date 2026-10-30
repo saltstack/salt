@@ -30,10 +30,11 @@ param(
     [String] $Version,
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x86", "x64", "amd64")]
+    [ValidateSet("x86", "x64", "amd64", "arm64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
-    # "x64" will build a 64-bit installer. Default is: x64
+    # "x64" will build a 64-bit installer. "arm64" will build a native
+    # ARM64 installer. Default is: x64
     $Architecture = "x64",
 
     [Parameter(Mandatory=$false)]
@@ -250,11 +251,22 @@ if ( $CICD ) {
     $KeywordArguments["CICD"] = $true
 }
 
-& "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
+# TEMPORARY: the .nsi script's own architecture detection (CPUARCH,
+# separate from this script's) only recognizes x64/AMD64/x86 and
+# silently falls back to x86 for anything else, producing an installer
+# whose filename build_pkg.ps1 then can't find. NSIS was never actually
+# requested for arm64 - skip it there rather than widen scope into
+# auditing/fixing the .nsi script for a component nobody asked for.
+# $KeywordArguments is reused below for the MSI build either way.
+if ( $Architecture -eq "arm64" ) {
+    Write-Host "Skipping NSIS package for arm64 (not yet supported by installer.nsi)"
+} else {
+    & "$SCRIPT_DIR\nsis\build_pkg.ps1" @KeywordArguments
 
-if ( ! $? ) {
-    Write-Host "Failed to build NSIS package"
-    exit 1
+    if ( ! $? ) {
+        Write-Host "Failed to build NSIS package"
+        exit 1
+    }
 }
 
 #-------------------------------------------------------------------------------

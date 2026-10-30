@@ -250,7 +250,7 @@ jobs:
 
   windows-dependencies:
     name: Windows
-    runs-on: windows-latest
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
     if: ${{ toJSON(fromJSON(inputs.matrix)['windows']) != '[]' }}
     env:
       USE_S3_CACHE: 'false'
