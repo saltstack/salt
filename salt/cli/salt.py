@@ -59,61 +59,26 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ""
 
-            # Intelligent client selection:
-            # 1. If --client-auth is explicitly set, use that
-            # 2. Otherwise, auto-detect based on environment:
-            #    - Try LocalClient if we have master access/permissions
-            #    - Fall back to RemoteClient if client keys exist
+            # Config decides which client to use.  ``client_config()`` sets
+            # ``client_auth=True`` when ``/etc/salt/client`` is loaded (remote
+            # workstation), False when it falls back to ``/etc/salt/master``
+            # (master host local use).  No separate CLI flag.
             profile = self.config.get("profile")
 
             if self.config.get("client_auth"):
-                # Explicit client auth requested
                 self.client = salt.client.get_remote_client(
                     self.get_config_file_path(),
                     skip_perm_errors=skip_perm_errors,
                     auto_reconnect=True,
                     profile=profile,
                 )
-            elif self.config.get("client_auth") is False:
-                # Explicitly disabled, use local only
+            else:
                 self.client = salt.client.get_local_client(
                     self.get_config_file_path(),
                     skip_perm_errors=skip_perm_errors,
                     auto_reconnect=True,
                     profile=profile,
                 )
-            else:
-                # Auto-detect: try local first, fall back to remote if needed
-                try:
-                    self.client = salt.client.get_local_client(
-                        self.get_config_file_path(),
-                        skip_perm_errors=skip_perm_errors,
-                        auto_reconnect=True,
-                        profile=profile,
-                    )
-                except (SaltClientError, PermissionError) as exc:
-                    # LocalClient failed, try RemoteClient if client keys exist
-                    import salt.syspaths
-                    import salt.config
-
-                    opts = salt.config.client_config(self.get_config_file_path())
-                    pki_dir = opts.get(
-                        "pki_dir",
-                        os.path.join(salt.syspaths.CONFIG_DIR, "pki", "master"),
-                    )
-                    client_key = os.path.join(pki_dir, "client.pem")
-
-                    if os.path.exists(client_key):
-                        # Client keys exist, use RemoteClient
-                        self.client = salt.client.get_remote_client(
-                            self.get_config_file_path(),
-                            skip_perm_errors=skip_perm_errors,
-                            auto_reconnect=True,
-                            profile=profile,
-                        )
-                    else:
-                        # No client keys, re-raise original error
-                        raise exc
         except SaltClientError as exc:
             self.exit(2, f"{exc}\n")
             return

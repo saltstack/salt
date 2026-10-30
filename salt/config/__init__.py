@@ -4824,12 +4824,31 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
     client_config_path = os.path.join(config_dir, "client")
 
     if os.path.isfile(client_config_path):
-        # Use dedicated client config
+        # Use dedicated client config.  Mark the opts so downstream dispatch
+        # (``salt`` / ``salt-run`` / ``salt-key``) selects the RemoteClient
+        # path without needing a user-facing flag.
         opts.update(master_config(client_config_path, defaults=defaults))
+        opts["__role"] = "client"
+        opts["client_auth"] = True
         config_used = client_config_path
     else:
-        # Fall back to master config (backwards compatible)
+        # Backwards-compatibility fallback: load the master config as a CLI
+        # client-config source.  Scheduled for removal in Salt 3011 -- users
+        # should create /etc/salt/client with ``master:`` and ``id:`` entries.
+        # LocalClient on the master host continues to use these opts
+        # (client_auth=False -> LocalClient path at the CLI dispatch).
+        # ``as _versions`` so this nested import doesn't shadow the
+        # module-level ``salt`` binding used elsewhere in this function.
+        from salt.utils import versions as _versions
+
+        _versions.warn_until(
+            3011,
+            "Loading the Salt master config as a CLI client-config source is "
+            "deprecated. Create /etc/salt/client with 'master:' and 'id:' "
+            "entries. This fallback will be removed in Salt {version}.",
+        )
         opts.update(master_config(path, defaults=defaults))
+        opts["client_auth"] = False
         config_used = path
 
     # If profile is specified, load and apply profile settings
