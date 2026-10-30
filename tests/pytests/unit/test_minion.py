@@ -195,6 +195,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
                 minion.destroy()
 
 
+@pytest.mark.no_blocking(reason="Minion.start_engines() blocks briefly during setup")
 async def test_send_req_async_regression_62453(minion_opts):
 
     class MockEvent:
