@@ -471,6 +471,22 @@ def _prior_running_states(jid):
     return salt.utils.state.check_prior_running_states(__opts__, jid, active)
 
 
+def _caller_args():
+    """
+    Return the named arguments the state function calling ``_check_queue``
+    was invoked with, minus ``queue``. Used to rebuild a queued job when the
+    call carries no ``__pub_arg`` (scheduler, salt-call).
+    """
+    frame = sys._getframe(2)
+    code = frame.f_code
+    names = code.co_varnames[: code.co_argcount + code.co_kwonlyargcount]
+    return {
+        name: frame.f_locals[name]
+        for name in names
+        if name != "queue" and frame.f_locals.get(name) is not None
+    }
+
+
 def _check_queue(queue, kwargs):
     """
     Utility function to queue the state run if requested
@@ -520,9 +536,19 @@ def _check_queue(queue, kwargs):
                 if "queue" in kwarg:
                     del kwarg["queue"]
 
+                # __pub_arg is only set for master-published jobs. Otherwise
+                # recover the caller's arguments and replay them as keywords,
+                # since the minion only reads "arg" when running the job.
+                arg = kwargs.get("__pub_arg")
+                if arg is None:
+                    arg = []
+                    recovered = {**_caller_args(), **kwarg}
+                    if recovered:
+                        arg = [{"__kwarg__": True, **recovered}]
+
                 payload = {
                     "fun": kwargs.get("__pub_fun"),
-                    "arg": kwargs.get("__pub_arg", []),
+                    "arg": arg,
                     "tgt": kwargs.get("__pub_tgt"),
                     "jid": queued_jid,
                     "ret": kwargs.get("__pub_ret", ""),
