@@ -437,34 +437,8 @@ class BatchAsync:
             if not self.event:
                 return
             await self.__set_event_handler()
-            ping_return = await self.events_channel.local_client.run_job_async(
-                self.opts["tgt"],
-                "test.ping",
-                [],
-                self.opts.get(
-                    "selected_target_option", self.opts.get("tgt_type", "glob")
-                ),
-                gather_job_timeout=self.opts["gather_job_timeout"],
-                jid=self.ping_jid,
-                metadata=self.metadata,
-                io_loop=self.io_loop,
-                listen=False,
-                **self.eauth,
-            )
-            self.targeted_minions = set(ping_return["minions"])
-            # start batching even if not all minions respond to ping
-            timeout_secs = (
-                self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
-            )
-
-            if self.targeted_minions == self.minions:
-                self._presence_complete.set()
-            try:
-                await asyncio.wait_for(self._presence_complete.wait(), timeout_secs)
-            except asyncio.TimeoutError:
-                # Some minions are down, scheduling batch anyway
-                pass
-
+            await self.__ping_minions()
+            await self.__wait_for_presence()
             if self.event:
                 await self.start_batch()
         except BaseException:  # pylint: disable=broad-except
@@ -473,6 +447,41 @@ class BatchAsync:
             raise
         finally:
             self._tasks.discard(current)
+
+    async def __ping_minions(self):
+        """Send the presence ping and remember which minions should respond."""
+        target_type = (
+            self.opts.get("selected_target_option")
+            or self.opts.get("tgt_type")
+            or "glob"
+        )
+        ping_job = await self.events_channel.local_client.run_job_async(
+            self.opts["tgt"],
+            "test.ping",
+            [],
+            target_type,
+            gather_job_timeout=self.opts["gather_job_timeout"],
+            jid=self.ping_jid,
+            metadata=self.metadata,
+            io_loop=self.io_loop,
+            listen=False,
+            **self.eauth,
+        )
+        self.targeted_minions = set(ping_job["minions"])
+
+    async def __wait_for_presence(self):
+        """Wait for ping replies, allowing unavailable minions to time out."""
+        timeout_secs = (
+            self.batch_presence_ping_timeout or self.opts["gather_job_timeout"]
+        )
+        # Replies may arrive before the ping publication returns its target list.
+        if self.targeted_minions == self.minions:
+            self._presence_complete.set()
+        try:
+            await asyncio.wait_for(self._presence_complete.wait(), timeout_secs)
+        except asyncio.TimeoutError:
+            # Continue with the minions that replied.
+            pass
 
     async def start_batch(self):
         """

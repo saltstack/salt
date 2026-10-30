@@ -117,6 +117,63 @@ async def test_batch_starts_after_presence_timeout(batch, presence_timeout):
     )
 
 
+@pytest.mark.parametrize(
+    "target_options,expected_type",
+    [
+        pytest.param({}, "glob", id="default"),
+        pytest.param({"tgt_type": "list"}, "list", id="configured-type"),
+        pytest.param(
+            {"selected_target_option": "list", "tgt_type": "glob"},
+            "list",
+            id="selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": None, "tgt_type": "list"},
+            "list",
+            id="unset-selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": "", "tgt_type": "list"},
+            "list",
+            id="empty-selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": None, "tgt_type": None},
+            "glob",
+            id="unset-types",
+        ),
+        pytest.param({"tgt_type": ""}, "glob", id="empty-type"),
+    ],
+)
+async def test_batch_ping_resolves_target_type(batch, target_options, expected_type):
+    batch.opts.update(target_options)
+    with patch.object(batch, "start_batch", AsyncMock()):
+        await batch.start()
+    assert batch.events_channel.local_client.run_job_async.call_args.args[:4] == (
+        "*",
+        "test.ping",
+        [],
+        expected_type,
+    )
+
+
+async def test_batch_starts_when_ping_reply_precedes_publication_result(batch):
+    batch.batch_presence_ping_timeout = 30
+
+    async def publish(*args, **kwargs):
+        assert batch.events_channel.subscribe.await_count == 2
+        await batch._BatchAsync__event_handler(
+            f"salt/job/{batch.ping_jid}/ret/foo", {"id": "foo"}, "ping_return"
+        )
+        return {"minions": ["foo"]}
+
+    batch.events_channel.local_client.run_job_async = AsyncMock(side_effect=publish)
+    with patch.object(batch, "start_batch", AsyncMock()) as start_batch:
+        await asyncio.wait_for(batch.start(), 2)
+    start_batch.assert_awaited_once()
+    assert batch.targeted_minions == batch.minions == {"foo"}
+
+
 async def test_batch_fire_start_event(batch):
     batch.minions = {"foo", "bar"}
     batch.opts = {"batch": "2", "timeout": 5}
@@ -524,13 +581,22 @@ async def test_close_drains_pending_batch_jobs(batch):
     assert not asyncio.get_running_loop().is_closed()
 
 
-async def test_start_failure_releases_shared_channel(batch):
+@pytest.mark.parametrize(
+    "target_type,error",
+    [
+        ("list", OSError("publish failed")),
+        ("unknown", ValueError("invalid target type")),
+    ],
+)
+async def test_start_failure_releases_shared_channel(batch, target_type, error):
     channel = batch.events_channel
-    channel.local_client.run_job_async = AsyncMock(
-        side_effect=OSError("publish failed")
-    )
-    with pytest.raises(OSError, match="publish failed"):
+    batch.opts.update(selected_target_option=target_type, tgt_type="glob")
+    channel.local_client.run_job_async = AsyncMock(side_effect=error)
+    with pytest.raises(type(error), match=str(error)) as caught:
         await batch.start()
+    assert caught.value is error
+    channel.local_client.run_job_async.assert_awaited_once()
+    assert channel.local_client.run_job_async.call_args.args[3] == target_type
     channel.unuse.assert_called_once()
     assert batch.event is None
 
