@@ -44,13 +44,39 @@ def master_container(salt_factories):
 @pytest.fixture
 def minion_container(salt_factories, master_container):
     """Create a Salt minion connected to the master."""
+    import salt.cache
+
+    minion_id = "remote-test-minion"
     factory = salt_factories.salt_minion_daemon(
-        "remote-test-minion",
+        minion_id,
         master=master_container,
     )
 
+    # master_container has auto_accept=False and open_mode=False; pre-generate
+    # the minion keypair, drop it in the minion's pki_dir, and seed the
+    # master's keys cache as "accepted" so factory.started() doesn't block
+    # waiting for a human to run `salt-key -a`. The ACL/key-management tests
+    # that depend on the deliberate manual-accept flow do not use this
+    # fixture -- they operate on the separate client_keys namespace.
+    minion_pki_dir = factory.config["pki_dir"]
+    os.makedirs(minion_pki_dir, exist_ok=True)
+    priv_pem = os.path.join(minion_pki_dir, "minion.pem")
+    pub_pem = os.path.join(minion_pki_dir, "minion.pub")
+    if not os.path.exists(priv_pem):
+        priv_key, pub_key = salt.crypt.gen_keys(2048)
+        with salt.utils.files.fopen(priv_pem, "w") as fp:
+            fp.write(priv_key)
+        with salt.utils.files.fopen(pub_pem, "w") as fp:
+            fp.write(pub_key)
+        os.chmod(priv_pem, 0o400)
+    else:
+        with salt.utils.files.fopen(pub_pem) as fp:
+            pub_key = fp.read()
+
+    cache = salt.cache.Cache(master_container.config)
+    cache.store("keys", minion_id, {"pub": pub_key, "state": "accepted"})
+
     with factory.started():
-        # Wait for minion to connect
         yield factory
 
 
