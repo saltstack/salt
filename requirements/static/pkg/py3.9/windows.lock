@@ -49,6 +49,7 @@ distro==1.9.0
     # via -r requirements/base.txt
 filelock==3.19.1
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv

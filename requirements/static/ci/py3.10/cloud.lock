@@ -190,6 +190,7 @@ exceptiongroup==1.3.1
     #   pytest
 filelock==4.0.12
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
