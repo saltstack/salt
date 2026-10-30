@@ -71,7 +71,7 @@ class SharedEventsChannel:
         )
         self.master_event.set_event_handler(self.__handle_event)
         if self.master_event.subscriber._stream:
-            self.master_event.subscriber._stream.set_close_callback(self.__handle_close)
+            self.__set_close_callback()
         self._re_tag_ret_event = re.compile(r"salt\/job\/(\d+)\/ret\/.*")
         self._subscribers = {}
         self._subscriptions = {}
@@ -148,38 +148,46 @@ class SharedEventsChannel:
                 return
             self._reconnect_task = asyncio.current_task()
             try:
-                # SaltEvent starts the first connection during construction.
-                # Join that attempt before opening another connection.
-                initial = self.master_event._connect_task
-                if initial is not None and not initial.cancelled():
-                    try:
-                        await initial
-                    except StreamClosedError:
-                        pass
-                    if self.master_event.subscriber.connected:
-                        self.master_event.subscriber._stream.set_close_callback(
-                            self.__handle_close
-                        )
-                        return
-                max_tries = max(1, int(self._subscriber_reconnect_tries))
-                for attempt in range(1, max_tries + 1):
-                    try:
-                        await self.master_event.subscriber.connect()
-                    except StreamClosedError:
-                        log.warning(
-                            "Unable to reconnect to event publisher (try %d of %d)",
-                            attempt,
-                            max_tries,
-                        )
-                    if self.master_event.subscriber.connected:
-                        self.master_event.subscriber._stream.set_close_callback(
-                            self.__handle_close
-                        )
-                        return
-                    if attempt < max_tries:
-                        await asyncio.sleep(self._subscriber_reconnect_interval)
+                connected = await self.__wait_for_initial_connection()
+                if not connected:
+                    connected = await self.__connect_subscriber()
+                if connected:
+                    self.__set_close_callback()
             finally:
                 self._reconnect_task = None
+
+    async def __wait_for_initial_connection(self):
+        """Join SaltEvent's initial connection before starting another attempt."""
+        initial = self.master_event._connect_task
+        if initial is None or initial.cancelled():
+            return False
+        try:
+            await initial
+        except StreamClosedError:
+            pass
+        return self.master_event.subscriber.connected
+
+    async def __connect_subscriber(self):
+        """Try connecting with the configured retry count and interval."""
+        subscriber = self.master_event.subscriber
+        max_tries = max(1, int(self._subscriber_reconnect_tries))
+        for attempt in range(1, max_tries + 1):
+            try:
+                await subscriber.connect()
+            except StreamClosedError:
+                log.warning(
+                    "Unable to reconnect to event publisher (try %d of %d)",
+                    attempt,
+                    max_tries,
+                )
+            if subscriber.connected:
+                return True
+            if attempt < max_tries:
+                await asyncio.sleep(self._subscriber_reconnect_interval)
+        return False
+
+    def __set_close_callback(self):
+        self.master_event.subscriber._stream.set_close_callback(self.__handle_close)
 
     def use(self, subscriber_id):
         self._used_by.add(subscriber_id)
