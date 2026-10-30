@@ -2,7 +2,7 @@
 #    uv pip compile requirements/base.txt requirements/zeromq.txt requirements/crypto.txt requirements/static/pkg/linux.txt --constraint requirements/constraints.txt --no-emit-index-url --python-platform=linux --python-version=3.11 -o=requirements/static/pkg/py3.11/linux.lock
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.5
     # via -r requirements/base.txt
 aiosignal==1.4.0
     # via aiohttp
@@ -111,36 +111,42 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.2.1
+msgpack==1.2.4
     # via -r requirements/base.txt
 multidict==6.7.1
     # via
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-opentelemetry-api==1.42.1
+opentelemetry-api==1.45.2
     # via
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-http-transport==0.66b2
     # via opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-common==0.66b2
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.45.2
+    # via opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.45.2
     # via -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.66b2
     # via -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.45.2
     # via
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.45.2
     # via
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-common
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.66b2
     # via opentelemetry-sdk
 packaging==24.0
     # via -r requirements/base.txt
@@ -200,6 +206,7 @@ requests==2.34.2
     # via
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
 rich==15.0.0
     # via typer
@@ -240,7 +247,7 @@ typing-extensions==4.14.1
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pyopenssl
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
@@ -248,7 +255,7 @@ virtualenv==21.4.2
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt
-yarl==1.20.1
+yarl==1.25.1
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy

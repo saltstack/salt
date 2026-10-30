@@ -10,7 +10,7 @@ aiohttp==3.13.5 ; python_full_version < '3.10'
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   etcd3-py
-aiohttp==3.14.1 ; python_full_version >= '3.10'
+aiohttp==3.14.5 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -425,7 +425,7 @@ msgpack==1.1.2 ; python_full_version < '3.10'
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-msgpack==1.2.1 ; python_full_version >= '3.10'
+msgpack==1.2.4 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -464,19 +464,28 @@ opentelemetry-api==1.41.1 ; python_full_version < '3.10'
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-api==1.42.1 ; python_full_version >= '3.10'
+opentelemetry-api==1.45.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+opentelemetry-exporter-http-transport==0.66b2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-common==0.66b2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   opentelemetry-exporter-otlp-proto-http
 opentelemetry-exporter-otlp-proto-common==1.41.1 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-common==1.42.1 ; python_full_version >= '3.10'
+opentelemetry-exporter-otlp-proto-common==1.45.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-http
@@ -484,7 +493,7 @@ opentelemetry-exporter-otlp-proto-http==1.41.1 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-otlp-proto-http==1.42.1 ; python_full_version >= '3.10'
+opentelemetry-exporter-otlp-proto-http==1.45.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -492,7 +501,7 @@ opentelemetry-exporter-prometheus==0.62b1 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1 ; python_full_version >= '3.10'
+opentelemetry-exporter-prometheus==0.66b2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -501,7 +510,7 @@ opentelemetry-proto==1.41.1 ; python_full_version < '3.10'
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-proto==1.42.1 ; python_full_version >= '3.10'
+opentelemetry-proto==1.45.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-exporter-otlp-proto-common
@@ -512,17 +521,18 @@ opentelemetry-sdk==1.41.1 ; python_full_version < '3.10'
     #   -r requirements/base.txt
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-sdk==1.42.1 ; python_full_version >= '3.10'
+opentelemetry-sdk==1.45.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-common
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.62b1 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-sdk
-opentelemetry-semantic-conventions==0.63b1 ; python_full_version >= '3.10'
+opentelemetry-semantic-conventions==0.66b2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   opentelemetry-sdk
@@ -770,19 +780,6 @@ referencing==0.36.2 ; python_full_version != '3.11.*'
     # via
     #   jsonschema
     #   jsonschema-specifications
-requests==2.31.0 ; python_full_version == '3.10.*'
-    # via
-    #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   -r requirements/base.txt
-    #   apache-libcloud
-    #   docker
-    #   etcd3-py
-    #   kubernetes
-    #   moto
-    #   opentelemetry-exporter-otlp-proto-http
-    #   requests-oauthlib
-    #   responses
-    #   vcert
 requests==2.32.5 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -797,7 +794,7 @@ requests==2.32.5 ; python_full_version < '3.10'
     #   requests-oauthlib
     #   responses
     #   vcert
-requests==2.34.2 ; python_full_version >= '3.11'
+requests==2.34.2 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -806,6 +803,7 @@ requests==2.34.2 ; python_full_version >= '3.11'
     #   etcd3-py
     #   kubernetes
     #   moto
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   requests-oauthlib
     #   responses
@@ -955,7 +953,7 @@ urllib3==1.26.20 ; python_full_version < '3.10'
     #   kubernetes
     #   requests
     #   responses
-urllib3==2.7.0 ; python_full_version >= '3.10'
+urllib3==2.8.0 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
@@ -1006,7 +1004,11 @@ yamlordereddictloader==0.4.2 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
     #   junos-eznc
-yarl==1.20.1
+yarl==1.20.1 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   aiohttp
+yarl==1.25.1 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   aiohttp

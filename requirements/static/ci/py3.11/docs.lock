@@ -6,7 +6,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -185,7 +185,7 @@ more-itertools==11.1.0
     #   cherrypy
     #   jaraco-functools
     #   jaraco-text
-msgpack==1.2.1
+msgpack==1.2.4
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -197,38 +197,48 @@ multidict==6.7.1
     #   yarl
 myst-docutils==5.1.0
     # via -r requirements/static/ci/docs.txt
-opentelemetry-api==1.42.1
+opentelemetry-api==1.45.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.42.1
+opentelemetry-exporter-http-transport==0.66b2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-exporter-otlp-proto-http==1.42.1
+opentelemetry-exporter-otlp-common==0.66b2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-common==1.45.2
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   opentelemetry-exporter-otlp-proto-http
+opentelemetry-exporter-otlp-proto-http==1.45.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-opentelemetry-exporter-prometheus==0.63b1
+opentelemetry-exporter-prometheus==0.66b2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-opentelemetry-proto==1.42.1
+opentelemetry-proto==1.45.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   opentelemetry-exporter-otlp-proto-common
     #   opentelemetry-exporter-otlp-proto-http
-opentelemetry-sdk==1.42.1
+opentelemetry-sdk==1.45.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
+    #   opentelemetry-exporter-otlp-common
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-exporter-prometheus
-opentelemetry-semantic-conventions==0.63b1
+opentelemetry-semantic-conventions==0.66b2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   opentelemetry-sdk
@@ -324,6 +334,7 @@ requests==2.34.2
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   apache-libcloud
+    #   opentelemetry-exporter-http-transport
     #   opentelemetry-exporter-otlp-proto-http
     #   sphinx
 rich==15.0.0
@@ -410,7 +421,7 @@ typing-extensions==4.14.1
     #   pyopenssl
 uc-micro-py==1.0.1
     # via linkify-it-py
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -423,7 +434,7 @@ xxhash==3.7.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
-yarl==1.20.1
+yarl==1.25.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   aiohttp
