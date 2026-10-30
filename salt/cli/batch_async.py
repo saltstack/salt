@@ -28,10 +28,11 @@ def _get_shared_events_channel(opts, io_loop):
 
 async def _destroy_unused_shared_events_channel():
     global __SHARED_EVENTS_CHANNEL
-    if (
-        __SHARED_EVENTS_CHANNEL is not None
-        and await __SHARED_EVENTS_CHANNEL.destroy_unused()
-    ):
+    channel = __SHARED_EVENTS_CHANNEL
+    if channel is None:
+        return
+    # A new channel may have been created while this cleanup was waiting.
+    if await channel.destroy_unused() and __SHARED_EVENTS_CHANNEL is channel:
         __SHARED_EVENTS_CHANNEL = None
 
 
@@ -86,6 +87,7 @@ class SharedEventsChannel:
             "subscriber_reconnect_interval", 1.0
         )
         self._reconnect_lock = asyncio.Lock()
+        self._destroy_lock = asyncio.Lock()
         self._reconnect_task = None
 
     async def subscribe(self, jid, op, subscriber_id, handler):
@@ -199,20 +201,21 @@ class SharedEventsChannel:
     async def destroy_unused(self):
         """Drain reconnection before destroying a channel with no remaining users."""
         log.trace("SharedEventsChannel.destroy_unused called")
-        if self._used_by:
-            return False
-        if self.master_event is None:
+        # A second cancellation could interrupt the reconnect task's cleanup.
+        async with self._destroy_lock:
+            if self._used_by:
+                return False
+            if self.master_event is None:
+                return True
+            # SaltEvent tracks the initial connection, not later batch retries.
+            await cancel_tasks(self._reconnect_task)
+            if self._used_by:
+                return False
+            self.master_event.destroy()
+            self.master_event = None
+            self.local_client.destroy()
+            self.local_client = None
             return True
-        # SaltEvent.destroy() only tracks its initial connection attempt, not
-        # a later retry started by another batch after that attempt was cancelled.
-        await cancel_tasks(self._reconnect_task)
-        if self._used_by:
-            return False
-        self.master_event.destroy()
-        self.master_event = None
-        self.local_client.destroy()
-        self.local_client = None
-        return True
 
 
 class BatchAsync:
