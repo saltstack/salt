@@ -253,6 +253,7 @@ salt/minion.py:
   - pytests.functional.pillar.test_top
   - pytests.functional.pillar.test_gpg
   - pytests.integration.modules.test_pillar
+  - pytests.unit.utils.test_metrics_prometheus
 
 salt/modules/*_sysctl.py:
   - pytests.unit.states.test_sysctl

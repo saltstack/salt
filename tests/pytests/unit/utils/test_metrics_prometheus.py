@@ -9,9 +9,11 @@ import subprocess
 import sys
 import threading
 import urllib.request
+from types import SimpleNamespace
 
 import pytest
 
+import salt.minion
 import salt.utils.metrics as metrics
 import salt.utils.metrics_prometheus as backend
 
@@ -149,6 +151,85 @@ def test_concurrent_threads_lose_no_counts(tmp_path):
     assert series == {
         f'salt_test_threads_total{{cmd="c{n}"}}': float(per_thread * 4)
         for n in range(4)
+    }
+
+
+def test_minion_threads_export_metrics_when_multiprocessing_is_false(
+    tmp_path, monkeypatch
+):
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+    directory = tmp_path / "prom"
+    opts = {
+        "multiprocessing": False,
+        "cachedir": str(tmp_path),
+        "__role": "minion",
+        "metrics": {
+            "enabled": True,
+            "exporter": "prometheus",
+            "prometheus": {
+                "host": "127.0.0.1",
+                "port": port,
+                "multiproc_dir": str(directory),
+            },
+        },
+    }
+    metrics.configure(opts)
+    threads_count, per_thread = 16, 1000
+    barrier = threading.Barrier(threads_count)
+    errors = []
+
+    def unexpected_process(*args, **kwargs):
+        pytest.fail("multiprocessing=False must not create a job process")
+
+    monkeypatch.setattr(salt.minion, "SignalHandlingProcess", unexpected_process)
+
+    def record_job(instance, job_opts, data, connected, creds_map):
+        try:
+            # _thread_return configures metrics at the start of every job.
+            metrics.configure({**job_opts, "__role": "minion"})
+            counter = metrics.counter("salt.test.thread_jobs")
+            duration = metrics.histogram("salt.test.thread_duration", unit="ms")
+            barrier.wait(timeout=10)
+            for _ in range(per_thread):
+                counter.add(1, attributes={"fun": "test.ping"})
+                duration.record(10, attributes={"fun": "test.ping"})
+        except Exception as exc:  # pylint: disable=broad-except
+            errors.append(exc)
+
+    minion = SimpleNamespace(
+        opts=opts,
+        connected=False,
+        _target=record_job,
+        subprocess_list=set(),
+    )
+    threads = []
+    try:
+        for index in range(threads_count):
+            thread = salt.minion.Minion._invoke_execution(minion, {"jid": str(index)})
+            threads.append(thread)
+            assert isinstance(thread, threading.Thread)
+        for thread in threads:
+            thread.join(timeout=30)
+            assert not thread.is_alive()
+    finally:
+        barrier.abort()
+        for thread in threads:
+            thread.join(timeout=30)
+
+    assert not errors, errors
+    body = _scrape(port)
+    total = float(threads_count * per_thread)
+    for name, value in (
+        ("salt_test_thread_jobs_total", total),
+        ("salt_test_thread_duration_milliseconds_count", total),
+        ("salt_test_thread_duration_milliseconds_sum", total * 10),
+    ):
+        assert _series(body, name) == {f'{name}{{fun="test.ping"}}': value}
+    assert {path.name for path in directory.glob("*.db")} == {
+        f"counter_{os.getpid()}.db",
+        f"histogram_{os.getpid()}.db",
     }
 
 
