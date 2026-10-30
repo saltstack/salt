@@ -1805,6 +1805,7 @@ def test_neigh_expand_warning_none_warns_and_returns_false():
     assert result is False
 
 
+@pytest.mark.skip_on_windows
 @pytest.mark.parametrize(
     "uname_release",
     [
