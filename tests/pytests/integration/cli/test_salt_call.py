@@ -746,3 +746,109 @@ def test_cve_2024_37088(salt_master_alt, salt_call_alt, caplog):
         assert ret.returncode == 1
         assert ret.data is None
         assert "Got a bad pillar from master, type str, expecting dict" in caplog.text
+
+
+@pytest.fixture
+def custom_grains_minion(salt_master):
+    """
+    A minion with its own state and pillar trees. It must not be the shared
+    ``salt_minion``: that minion is package scoped, stopping it here would break
+    every later test that uses it.
+    """
+    minion = salt_master.salt_minion_daemon(
+        random_string("minion-"),
+        overrides={
+            "fips_mode": FIPS_TESTRUN,
+            "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+        },
+    )
+    minion.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, minion.id
+    )
+    with minion.started():
+        yield minion
+
+
+def test_state_highstate_custom_grains_masterless_mode(
+    salt_master, custom_grains_minion
+):
+    """
+    This test ensure that custom grains in salt://_grains are loaded before pillar compilation
+    to ensure that any use of custom grains in pillar files are available when in masterless mode,
+    this implies that a sync of grains occurs before loading the regular
+    /etc/salt/grains or configuration file grains, as well as the usual grains.
+    Note: cannot use salt_minion and salt_call_cli, since these will be loaded before
+    the pillar and custom_grains files are written, hence the dedicated minion.
+    """
+    pillar_top_sls = """
+    base:
+      '*':
+        - defaults
+        """
+
+    pillar_defaults_sls = """
+    mypillar: "{{ grains['custom_grain'] }}"
+    """
+
+    salt_top_sls = """
+    base:
+      '*':
+        - test
+        """
+
+    salt_test_sls = """
+    "donothing":
+      test.nop: []
+    """
+
+    salt_custom_grains_py = """
+    def main():
+        return {'custom_grain': 'test_value'}
+    """
+
+    assert salt_master.is_running()
+    salt_minion = custom_grains_minion
+    salt_call_cli = salt_minion.salt_call_cli()
+    with salt_minion.pillar_tree.base.temp_file(
+        "top.sls", pillar_top_sls
+    ), salt_minion.pillar_tree.base.temp_file(
+        "defaults.sls", pillar_defaults_sls
+    ), salt_minion.state_tree.base.temp_file(
+        "top.sls", salt_top_sls
+    ), salt_minion.state_tree.base.temp_file(
+        "test.sls", salt_test_sls
+    ), salt_minion.state_tree.base.temp_file(
+        "_grains/custom_grain.py", salt_custom_grains_py
+    ):
+        # Masterless: the very first --local call must already see the
+        # custom grain in pillar, nothing has run saltutil.sync_grains.
+        ret = salt_call_cli.run("--local", "pillar.items")
+        assert ret.returncode == 0
+        assert ret.data
+        pillar_items = ret.data
+        assert "mypillar" in pillar_items
+        assert pillar_items["mypillar"] == "test_value"
+
+        ret = salt_call_cli.run("--local", "state.highstate")
+        assert ret.returncode == 0
+
+        # A minion that uses the master is not affected. Its trees are private
+        # to the minion, so the master has no top file for it: run a single
+        # state rather than a highstate.
+        ret = salt_call_cli.run("state.single", "test.nop", "name=donothing")
+        assert ret.returncode == 0
+        assert ret.data["test_|-donothing_|-donothing_|-nop"]["result"] is True
+
+
+def test_salt_call_versions(salt_call_cli, caplog):
+    """
+    Call test.versions without '--local' to test grains
+    are sync'd without any missing keys in opts
+    """
+    with caplog.at_level(logging.DEBUG):
+        ret = salt_call_cli.run("test.versions")
+        assert ret.returncode == 0
+        assert "Failed to sync grains module: 'master_uri'" not in caplog.messages
