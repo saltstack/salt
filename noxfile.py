@@ -1756,8 +1756,8 @@ def docs_html(session, compress, clean):
         linux_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "linux.lock"
         )
-        base_requirements_file = os.path.join("requirements", "base.in")
-        zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
         docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.lock"
         )
@@ -1794,8 +1794,8 @@ def docs_man(session, compress, update, clean):
         linux_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "linux.lock"
         )
-        base_requirements_file = os.path.join("requirements", "base.in")
-        zeromq_requirements_file = os.path.join("requirements", "zeromq.in")
+        base_requirements_file = os.path.join("requirements", "base.txt")
+        zeromq_requirements_file = os.path.join("requirements", "zeromq.txt")
         docs_requirements_file = os.path.join(
             "requirements", "static", "ci", _get_pydir(session), "docs.lock"
         )
