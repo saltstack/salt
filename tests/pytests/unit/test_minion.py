@@ -25,6 +25,7 @@ import salt.payload
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.doc
+import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
 import salt.utils.json
@@ -3731,3 +3732,119 @@ def test_masterminion_destroy_isolates_component_failures():
     assert mm.functions == {}
     utils.destroy.assert_called_once()
     assert mm.utils == {}
+
+
+def _master_alive_minion(minion_opts, master_alive_interval):
+    minion_opts.update(
+        {
+            "master": "master1",
+            "master_type": "str",
+            "master_alive_interval": master_alive_interval,
+            "transport": "zeromq",
+        }
+    )
+    minion = salt.minion.Minion(
+        minion_opts, io_loop=MagicMock(spec=asyncio.AbstractEventLoop)
+    )
+    minion.ready = True
+    minion.schedule = MagicMock()
+    return minion
+
+
+def _alive_job_calls(mock_method):
+    return [
+        call
+        for call in mock_method.call_args_list
+        if call.kwargs.get("name", "").startswith("__master_alive")
+    ]
+
+
+async def test_master_disconnect_deletes_per_master_alive_job(minion_opts):
+    """
+    The master_alive job is named after the master, so the disconnect
+    handler has to delete it using that name.
+    """
+    minion = _master_alive_minion(minion_opts, 30)
+    minion.connected = True
+    with patch.object(
+        minion, "eval_master", MagicMock(side_effect=SaltClientError("down"))
+    ):
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
+        await minion.handle_event(package)
+
+    minion.schedule.delete_job.assert_any_call(name="__master_alive_master1")
+    assert minion.connected is False
+
+
+@pytest.mark.parametrize("master_alive_interval", [0, 30])
+async def test_master_reconnect_respects_master_alive_interval(
+    minion_opts, master_alive_interval
+):
+    """
+    When the connection is re-established, the master_alive job should
+    only come back if master_alive_interval is enabled, same as at startup.
+    """
+    minion = _master_alive_minion(minion_opts, master_alive_interval)
+    minion.connected = False
+    package = salt.utils.event.SaltEvent.pack(
+        "__master_connected", {"master": "master1"}
+    )
+    await minion.handle_event(package)
+
+    assert minion.connected is True
+    calls = _alive_job_calls(minion.schedule.modify_job)
+    if master_alive_interval:
+        assert len(calls) == 1
+        assert calls[0].kwargs["name"] == "__master_alive_master1"
+        assert calls[0].kwargs["schedule"]["seconds"] == master_alive_interval
+    else:
+        assert not calls
+
+
+@pytest.mark.parametrize("master_alive_interval", [0, 30])
+async def test_master_failover_reinit_respects_master_alive_interval(
+    minion_opts, master_alive_interval
+):
+    """
+    After a disconnect, re-initialising for the (new) master must not add
+    a master_alive job with "seconds: 0" when master_alive_interval is 0.
+    """
+    minion = _master_alive_minion(minion_opts, master_alive_interval)
+    minion.connected = True
+    pub_channel = MagicMock()
+
+    @tornado.gen.coroutine
+    def fake_eval_master(*args, **kwargs):
+        minion.connected = True
+        return "master2", pub_channel
+
+    @tornado.gen.coroutine
+    def fake_coro(*args, **kwargs):
+        return None
+
+    req_channel = MagicMock()
+    req_channel.connect = fake_coro
+    with patch.object(minion, "eval_master", fake_eval_master), patch.object(
+        minion, "_fire_master_minion_start", fake_coro
+    ), patch.object(minion, "_register_resources_with_master", fake_coro), patch.object(
+        minion, "_load_modules", MagicMock(return_value=(None, None, None, None))
+    ), patch(
+        "salt.channel.client.AsyncReqChannel.factory",
+        MagicMock(return_value=req_channel),
+    ):
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
+        await minion.handle_event(package)
+
+    assert minion.opts["master"] == "master2"
+    minion.schedule.delete_job.assert_any_call(name="__master_alive_master1")
+    calls = _alive_job_calls(minion.schedule.modify_job)
+    if master_alive_interval:
+        assert len(calls) == 1
+        assert calls[0].kwargs["name"] == "__master_alive_master2"
+        assert calls[0].kwargs["schedule"]["seconds"] == master_alive_interval
+    else:
+        assert not calls

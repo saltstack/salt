@@ -5080,7 +5080,9 @@ class Minion(MinionBase):
                 self.connected = False
                 log.info("Connection to master %s lost", self.opts["master"])
                 if self.opts["transport"] != "tcp":
-                    self.schedule.delete_job(name=master_event(type="alive"))
+                    self.schedule.delete_job(
+                        name=master_event(type="alive", master=self.opts["master"])
+                    )
 
                 log.info("Trying to tune in to next master from master-list")
 
