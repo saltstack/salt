@@ -106,7 +106,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0 ; python_full_version < '3.10'
     # via opentelemetry-exporter-otlp-proto-http
