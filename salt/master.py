@@ -5664,13 +5664,15 @@ class ClearFuncs(TransportMethods):
                 )
             return err
 
-        # Check if this is a client request (for client ACL enforcement)
+        # Check if this is a client request (for client ACL enforcement).
+        # ``auth_check`` returns the identity under the generic key
+        # ``username`` because the auth system was built for human users;
+        # in the client-auth path that identity is actually a client_id.
         is_client = False
-        username = auth_check.get("username")
-        if auth_type == "user" and username:
-            # Check if username is in client_keys cache (indicates client authentication)
+        auth_identity = auth_check.get("username")
+        if auth_type == "user" and auth_identity:
             try:
-                client_key = self.key_cache.fetch("client_keys", username)
+                client_key = self.key_cache.fetch("client_keys", auth_identity)
                 if client_key:
                     is_client = True
             except Exception:  # pylint: disable=broad-except
@@ -5679,10 +5681,11 @@ class ClearFuncs(TransportMethods):
 
         # If this is a client, check client ACL for minion targeting and module execution
         if is_client:
+            client_id = auth_identity
             # Check blacklist first (takes precedence)
             client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
-            if client_acl_blacklist and username in client_acl_blacklist:
-                blacklist_config = client_acl_blacklist[username]
+            if client_acl_blacklist and client_id in client_acl_blacklist:
+                blacklist_config = client_acl_blacklist[client_id]
 
                 # Check if function is blacklisted
                 if (
@@ -5702,7 +5705,7 @@ class ClearFuncs(TransportMethods):
                             "error": {
                                 "name": "ClientAuthorizationError",
                                 "message": (
-                                    f'Client "{username}" is blacklisted from executing '
+                                    f'Client "{client_id}" is blacklisted from executing '
                                     f'function "{clear_load["fun"]}".'
                                 ),
                             }
@@ -5716,14 +5719,14 @@ class ClearFuncs(TransportMethods):
 
             # Use the ClientACL helper to check publish permissions
             acl_result = self.client_acl.client_can_publish(
-                username, minions, clear_load["fun"]
+                client_id, minions, clear_load["fun"]
             )
 
             if not acl_result["allowed"]:
                 # Client ACL denied the request
                 log.warning(
                     'Client "%s" denied: %s',
-                    username,
+                    client_id,
                     acl_result["error"]["message"],
                 )
                 err = {"error": acl_result["error"]}
@@ -5734,11 +5737,15 @@ class ClearFuncs(TransportMethods):
                     )
                 return err
 
-            # Client ACL passed - set user in clear_load for logging
-            clear_load["user"] = username
+            # Client ACL passed - record the client identity in clear_load
+            # for logging/returners.  TODO: split into a dedicated
+            # ``clear_load["client_id"]`` field once the deferred
+            # human-user forwarding story lands (#3), so audit logs
+            # distinguish "which client" from "which human".
+            clear_load["user"] = client_id
             log.info(
                 'Client "%s" authorized to execute "%s" on target "%s" (%d minions)',
-                username,
+                client_id,
                 clear_load["fun"],
                 clear_load["tgt"],
                 len(minions),

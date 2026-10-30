@@ -1230,10 +1230,11 @@ class LocalFuncs:
 
         username = auth_check.get("username")
 
-        # Check if this is a client request (for client ACL enforcement)
+        # Check if this is a client request (for client ACL enforcement).
+        # ``check_authentication`` returns the identity under ``username``;
+        # for the client-auth path that identity is actually a client_id.
         is_client = False
         if auth_type == "user" and username:
-            # Check if username is in client_keys cache (indicates client authentication)
             try:
                 key_cache = salt.cache.Cache(
                     self.opts, driver=self.opts["keys.cache_driver"]
@@ -1247,29 +1248,30 @@ class LocalFuncs:
 
         # If this is a client, check client ACL
         if is_client:
+            client_id = username
             # Check blacklist first (takes precedence)
             client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
             if client_acl_blacklist:
                 if self.client_acl.client_is_blacklisted(
-                    username, load["fun"], "runner", client_acl_blacklist
+                    client_id, load["fun"], "runner", client_acl_blacklist
                 ):
                     return {
                         "error": {
                             "name": "ClientAuthorizationError",
                             "message": (
-                                f'Client "{username}" is blacklisted from executing '
+                                f'Client "{client_id}" is blacklisted from executing '
                                 f'runner function "{load["fun"]}".'
                             ),
                         }
                     }
 
             # Check whitelist
-            if not self.client_acl.client_is_allowed(username, load["fun"], "runner"):
+            if not self.client_acl.client_is_allowed(client_id, load["fun"], "runner"):
                 return {
                     "error": {
                         "name": "ClientAuthorizationError",
                         "message": (
-                            f'Client "{username}" is not authorized to execute '
+                            f'Client "{client_id}" is not authorized to execute '
                             f'runner function "{load["fun"]}".'
                         ),
                     }
@@ -1327,10 +1329,11 @@ class LocalFuncs:
 
         username = auth_check.get("username")
 
-        # Check if this is a client request (for client ACL enforcement)
+        # Check if this is a client request (for client ACL enforcement).
+        # ``check_authentication`` returns the identity under ``username``;
+        # for the client-auth path that identity is actually a client_id.
         is_client = False
         if auth_type == "user" and username:
-            # Check if username is in client_keys cache (indicates client authentication)
             try:
                 key_cache = salt.cache.Cache(
                     self.opts, driver=self.opts["keys.cache_driver"]
@@ -1344,29 +1347,30 @@ class LocalFuncs:
 
         # If this is a client, check client ACL
         if is_client:
+            client_id = username
             # Check blacklist first (takes precedence)
             client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
             if client_acl_blacklist:
                 if self.client_acl.client_is_blacklisted(
-                    username, load["fun"], "wheel", client_acl_blacklist
+                    client_id, load["fun"], "wheel", client_acl_blacklist
                 ):
                     return {
                         "error": {
                             "name": "ClientAuthorizationError",
                             "message": (
-                                f'Client "{username}" is blacklisted from executing '
+                                f'Client "{client_id}" is blacklisted from executing '
                                 f'wheel function "{load["fun"]}".'
                             ),
                         }
                     }
 
             # Check whitelist
-            if not self.client_acl.client_is_allowed(username, load["fun"], "wheel"):
+            if not self.client_acl.client_is_allowed(client_id, load["fun"], "wheel"):
                 return {
                     "error": {
                         "name": "ClientAuthorizationError",
                         "message": (
-                            f'Client "{username}" is not authorized to execute '
+                            f'Client "{client_id}" is not authorized to execute '
                             f'wheel function "{load["fun"]}".'
                         ),
                     }
