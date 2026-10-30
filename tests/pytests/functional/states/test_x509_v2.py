@@ -1,6 +1,7 @@
 import base64
 import pathlib
 import shutil
+from datetime import timedelta
 
 import pytest
 
@@ -2571,30 +2572,53 @@ def test_pem_managed_newline_fix_no_changes(x509, ca_cert, tmp_path):
     assert tgt.read_text() == ca_cert
 
 
-# Removed-in-3009.0 (Potassium) kwargs and signing-policy aliases.
-# The deprecation warnings for these were emitted through 3007.x and
-# 3008.x; the compat shims were dropped in 3009.0, so each of the
-# following must now raise rather than silently accept.
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_certificate_managed_defaults(
+    x509, cert_args, rsa_privkey, monkeypatch, raise_deprecations
+):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    cert_args["private_key"] = rsa_privkey
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
+    cert = _get_cert(cert_args["name"])
+    assert cert.not_valid_after_utc - cert.not_valid_before_utc == timedelta(days=30)
+    ret = x509.certificate_managed(**cert_args)
+    assert ret.result is True
+    assert not ret.changes
+
+
+@pytest.mark.parametrize("raise_deprecations", ["0", "1"])
+def test_crl_managed_defaults(x509, crl_args, monkeypatch, raise_deprecations):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", raise_deprecations)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is True
+    crl = _get_crl(crl_args["name"])
+    assert crl.next_update_utc - crl.last_update_utc == timedelta(days=7)
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is True
+    assert not ret.changes
+
+
+# Arguments removed in Salt 3009
 
 
 @pytest.mark.parametrize("arg", [{"version": 3}, {"serial_bits": 64}, {"text": True}])
-def test_certificate_managed_rejects_removed_kwargs(x509, cert_args, rsa_privkey, arg):
+def test_certificate_managed_rejects_removed_args(x509, cert_args, rsa_privkey, arg):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
     ret = x509.certificate_managed(**cert_args, **arg)
     assert ret.result is False
-    assert "was removed in 3009.0" in ret.comment
+    assert "Unrecognized keyword arguments" in ret.comment
 
 
-def test_certificate_managed_rejects_algorithm_kwarg(x509, cert_args, rsa_privkey):
+def test_certificate_managed_rejects_algorithm(x509, cert_args, rsa_privkey):
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
     ret = x509.certificate_managed(**cert_args, algorithm="sha512")
     assert ret.result is False
-    assert "`algorithm` was removed in 3009.0" in ret.comment
-    assert "Use `digest`" in ret.comment
+    assert "Use `digest` instead" in ret.comment
 
 
 def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_privkey):
@@ -2604,7 +2628,7 @@ def test_certificate_managed_rejects_long_name_attributes(x509, cert_args, rsa_p
     cert_args["private_key"] = rsa_privkey
     ret = x509.certificate_managed(**cert_args)
     assert ret.result is False
-    assert "`commonName` was removed in 3009.0" in ret.comment
+    assert "Use `CN` instead" in ret.comment
 
 
 def test_certificate_managed_rejects_long_extensions(x509, cert_args, rsa_privkey):
@@ -2614,43 +2638,43 @@ def test_certificate_managed_rejects_long_extensions(x509, cert_args, rsa_privke
     cert_args["private_key"] = rsa_privkey
     ret = x509.certificate_managed(**cert_args)
     assert ret.result is False
-    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
+    assert "Use `basicConstraints` instead" in ret.comment
 
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
-def test_csr_managed_rejects_removed_kwargs(x509, arg, csr_args):
+def test_csr_managed_rejects_removed_args(x509, arg, csr_args):
     ret = x509.csr_managed(**csr_args, **arg)
     assert ret.result is False
-    assert "was removed in 3009.0" in ret.comment
+    assert "Unrecognized keyword arguments" in ret.comment
 
 
-def test_csr_managed_rejects_algorithm_kwarg(x509, csr_args):
+def test_csr_managed_rejects_algorithm(x509, csr_args):
     ret = x509.csr_managed(**csr_args, algorithm="sha512")
     assert ret.result is False
-    assert "`algorithm` was removed in 3009.0" in ret.comment
-    assert "Use `digest`" in ret.comment
+    assert "Use `digest` instead" in ret.comment
 
 
 def test_csr_managed_rejects_long_name_attributes(x509, csr_args):
     csr_args.pop("CN", None)
     ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
     assert ret.result is False
-    assert "`commonName` was removed in 3009.0" in ret.comment
+    assert "Use `CN` instead" in ret.comment
 
 
 def test_csr_managed_rejects_long_extensions(x509, csr_args):
     csr_args["X509v3 Basic Constraints"] = "critical CA:FALSE"
     ret = x509.csr_managed(**csr_args)
     assert ret.result is False
-    assert "`X509v3 Basic Constraints` was removed in 3009.0" in ret.comment
+    assert "Use `basicConstraints` instead" in ret.comment
 
 
-def test_crl_managed_rejects_text_kwarg(x509, crl_args):
+@pytest.mark.parametrize("arg", [{"text": True}])
+def test_crl_managed_rejects_removed_args(x509, arg, crl_args):
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    ret = x509.crl_managed(**crl_args, text=True)
+    ret = x509.crl_managed(**crl_args, **arg)
     assert ret.result is False
-    assert "`text` was removed in 3009.0" in ret.comment
+    assert "Unrecognized keyword arguments" in ret.comment
 
 
 def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
@@ -2663,7 +2687,28 @@ def test_crl_managed_rejects_old_style_revoked(x509, crl_args, crl_revoked):
     crl_args["days_valid"] = 7
     ret = x509.crl_managed(**crl_args)
     assert ret.result is False
-    assert "flat list of" in ret.comment
+    assert "simple list of dicts" in ret.comment
+
+
+@pytest.mark.usefixtures("existing_crl_rev")
+def test_crl_managed_rejects_old_style_revoked_for_change_detection(
+    x509, crl_args, crl_revoked
+):
+    revoked = [
+        {
+            f"key_{i}": [
+                {"serial_number": rev["serial_number"]},
+                {"extensions": rev["extensions"]},
+            ]
+        }
+        for i, rev in enumerate(crl_revoked)
+    ]
+    crl_args["revoked"] = revoked
+    crl_args["days_remaining"] = 3
+    crl_args["days_valid"] = 7
+    ret = x509.crl_managed(**crl_args)
+    assert ret.result is False
+    assert "simple list of dicts" in ret.comment
 
 
 def test_crl_managed_rejects_old_style_reason(x509, crl_args):
@@ -2673,23 +2718,22 @@ def test_crl_managed_rejects_old_style_reason(x509, crl_args):
     crl_args["days_valid"] = 7
     ret = x509.crl_managed(**crl_args)
     assert ret.result is False
-    assert "`reason` key" in ret.comment
+    assert "extensions:CRLReason" in ret.comment
 
 
 @pytest.mark.parametrize(
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
-def test_private_key_managed_rejects_removed_kwargs(x509, arg, pk_args):
+def test_private_key_managed_rejects_removed_args(x509, arg, pk_args):
     ret = x509.private_key_managed(**pk_args, **arg)
     assert ret.result is False
-    assert "was removed in 3009.0" in ret.comment
+    assert "Unrecognized keyword arguments" in ret.comment
 
 
-def test_private_key_managed_rejects_bits_kwarg(x509, pk_args):
+def test_private_key_managed_rejects_bits(x509, pk_args):
     ret = x509.private_key_managed(**pk_args, bits=3072)
     assert ret.result is False
-    assert "`bits` was removed in 3009.0" in ret.comment
-    assert "Use `keysize`" in ret.comment
+    assert "Unrecognized keyword arguments" in ret.comment
 
 
 def _assert_cert_created_basic(

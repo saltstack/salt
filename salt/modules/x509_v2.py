@@ -126,8 +126,15 @@ or compound matcher (for the latter, see the notes above).
       with the items taken from the signing policy having priority.
 
 
-Breaking changes versus the previous ``x509`` modules
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. _x509-migration-3009:
+
+Migration from older x509 modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The following changes were introduced by the cryptography-based
+``x509_v2`` modules, available since Salt 3006.0 and the default since
+Salt 3008.0:
+
 * The ``public_key`` parameter to ``x509.certificate_managed`` (and corresponding
   ``x509.create_certificate``) used to accept a private key.
   The new modules require an actual public key if this parameter is specified.
@@ -160,19 +167,76 @@ Breaking changes versus the previous ``x509`` modules
       ca_server:
         - match.compound_matches
 
-Note that when a ``ca_server`` is involved, both peers must use the updated module version.
+When using remote signing with ``ca_server``, both the requesting minion
+and the CA minion must use the ``x509_v2`` implementation.
 
-Revert to old modules
-~~~~~~~~~~~~~~~~~~~~~
-Until they are removed, you can still revert to the deprecated ``x509`` modules
-by setting the following minion configuration value:
+The remaining compatibility behavior was removed in Salt 3009:
 
-.. code-block:: yaml
+.. versionchanged:: 3009.0
 
-    # /etc/salt/minion.d/x509.conf
+    Removed compatibility with deprecated arguments, attribute and extension
+    names, and CRL entry formats. The announced validity and renewal defaults
+    now apply unconditionally.
 
-    features:
-      x509_v2: false
+The original M2Crypto-based execution and state modules have been removed.
+The cryptography-based ``x509_v2`` modules are now the only implementation
+of ``x509``. Remove ``features: {x509_v2: false}`` from minion configuration;
+it no longer selects the old implementation.
+
+These changes apply to the ``x509_v2`` execution and state modules, exposed as
+``x509``, and to the Salt SSH wrapper. Update requests, state declarations,
+and signing policies that use the removed forms:
+
+* Use ``digest`` instead of ``algorithm`` when creating certificates or CSRs.
+* Use ``keysize`` instead of ``bits`` when creating or managing private keys.
+* Remove obsolete arguments: ``text``, ``version``, and ``serial_bits`` for
+  certificates; ``text`` and ``version`` for CSRs; ``text`` for CRLs; and
+  ``cipher``, ``verbose``, and ``text`` for private keys. These arguments are
+  rejected instead of being ignored.
+* Remove ``asObj`` from calls to ``x509.get_public_key``. The function returns
+  a PEM-encoded public key.
+* Use canonical attribute names, such as ``CN`` instead of ``commonName`` and
+  ``O`` instead of ``organizationName``. Use canonical extension names, such
+  as ``basicConstraints`` instead of ``X509v3 Basic Constraints`` and
+  ``issuerAltName`` instead of the misspelled ``issuserAltName``. This also
+  applies to attributes and extensions in signing policies.
+* Specify revoked certificates as a simple list of dictionaries, rather than
+  a mapping containing a list of individual fields. Move the legacy
+  ``reason`` field into ``extensions:CRLReason``. For example:
+
+  .. code-block:: yaml
+
+      revoked:
+        - certificate: /etc/pki/certs/revoked.crt
+          extensions:
+            CRLReason: keyCompromise
+
+The default validity and renewal periods have changed:
+
+.. list-table:: Default periods in days
+   :header-rows: 1
+
+   * - Parameter
+     - Before Salt 3009
+     - Salt 3009
+   * - Certificate ``days_valid``
+     - 365
+     - 30
+   * - Certificate state ``days_remaining``
+     - 90
+     - 7
+   * - CRL ``days_valid``
+     - 100
+     - 7
+   * - CRL state ``days_remaining``
+     - 30
+     - 3
+
+Set these parameters explicitly if your deployment requires different
+periods. A certificate's explicit ``not_after`` takes precedence over
+``days_valid``. ``days_remaining`` controls when the corresponding state
+renews an existing certificate or CRL.
+
 
 .. _x509-setup:
 """
@@ -198,7 +262,6 @@ except ImportError:
 
 from collections import OrderedDict
 
-import salt.utils.dictupdate
 import salt.utils.files
 import salt.utils.functools
 import salt.utils.stringutils
@@ -509,20 +572,7 @@ def create_certificate(
 
         For more information, visit the `OpenSSL docs <https://www.openssl.org/docs/man3.0/man5/x509v3_config.html>`_.
     """
-    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
-    # use `digest`. `text`, `version`, and `serial_bits` were ignored kwargs
-    # removed in the same release.
-    for removed in ("algorithm", "text", "version", "serial_bits"):
-        if removed in kwargs:
-            raise SaltInvocationError(
-                f"Keyword argument `{removed}` was removed in 3009.0. "
-                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
-            )
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
-
-    if "days_valid" not in kwargs and "not_after" not in kwargs:
-        # Default changed from 365 to 30 in 3009.0 (Potassium).
-        kwargs["days_valid"] = 30
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -891,7 +941,7 @@ def create_crl(
 
     days_valid
         The number of days the CRL should be valid for. This sets the ``Next Update``
-        field. Defaults to ``100`` (until v3009) or ``7`` (from v3009 onwards).
+        field. Defaults to ``7``.
 
     digest
         The hashing algorithm to use for the signature. Valid values are:
@@ -950,8 +1000,6 @@ def create_crl(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # `text` was ignored (compat with the pre-x509_v2 module). Removed in
-    # 3009.0 (Potassium); unknown kwargs are rejected.
     if kwargs:
         unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
         if unknown:
@@ -960,26 +1008,9 @@ def create_crl(
             )
 
     if days_valid is None:
-        # Default changed from 100 to 7 in 3009.0 (Potassium).
         days_valid = 7
 
-    # ``revoked`` must be a flat list of dicts and must spell the revocation
-    # reason via ``extensions:CRLReason``. The dict-of-key-to-list wrapper
-    # and the top-level ``reason`` key were accepted (with a deprecation
-    # warning) through 3008.x; both were removed in 3009.0 (Potassium).
-    for rev in revoked:
-        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
-            raise SaltInvocationError(
-                "Revoked certificates must be specified as a flat list of "
-                "dicts. The {<key>: [<dict>, ...]} wrapper is no longer "
-                "accepted (removed in 3009.0)."
-            )
-        if "reason" in rev:
-            raise SaltInvocationError(
-                "The top-level `reason` key for revoked certificates is no "
-                "longer accepted (removed in 3009.0). Specify the reason "
-                "via `extensions:CRLReason` instead."
-            )
+    x509util.validate_revoked(revoked)
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1119,16 +1150,7 @@ def create_csr(
         (``authorityInfoAccess``, ``authorityKeyIdentifier``,
         ``issuerAltName``, ``crlDistributionPoints``).
     """
-    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
-    # use `digest`. `text` and `version` were ignored kwargs removed in the
-    # same release.
-    for removed in ("algorithm", "text", "version"):
-        if removed in kwargs:
-            raise SaltInvocationError(
-                f"Keyword argument `{removed}` was removed in 3009.0. "
-                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
-            )
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem"]:
         raise CommandExecutionError(
@@ -1263,9 +1285,6 @@ def create_private_key(
     raw
         Return the encoded raw bytes instead of a string. Defaults to false.
     """
-    # `bits` was deprecated in 3007.0 and removed in 3009.0 (Potassium); use
-    # `keysize`. `cipher`, `verbose`, and `text` were ignored kwargs removed
-    # in the same release.
     unknown = [kwarg for kwarg in kwargs if not kwarg.startswith("_")]
     if unknown:
         raise SaltInvocationError(f"Unrecognized keyword arguments: {list(unknown)}")
@@ -1580,7 +1599,6 @@ def get_public_key(key, passphrase=None):
     passphrase
         If ``key`` is encrypted, the passphrase to decrypt it.
     """
-    # `asObj` was deprecated in 3007.0 and removed in 3009.0 (Potassium).
     try:
         return x509util.to_pem(x509util.load_pubkey(key)).decode()
     except (CommandExecutionError, SaltInvocationError):
@@ -1657,26 +1675,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Long-form name-attribute and extension aliases (e.g. ``commonName``
-    # for ``CN``, ``X509v3 Basic Constraints`` for ``basicConstraints``)
-    # were accepted with a deprecation warning through 3008.x and removed
-    # in 3009.0 (Potassium). Signing policies must use short names.
-    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                raise CommandExecutionError(
-                    f"{signing_policy} contains the long-form name "
-                    f"attribute `{long_name}` which was removed in 3009.0."
-                    f" Use the short name `{name}` instead."
-                )
-    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                raise CommandExecutionError(
-                    f"{signing_policy} contains the long-form extension "
-                    f"`{long_name}` which was removed in 3009.0. Use the "
-                    f"short name `{extname}` instead."
-                )
+    x509util.validate_cert_kwargs(policy)
     return policy
 
 

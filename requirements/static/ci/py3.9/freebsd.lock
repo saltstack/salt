@@ -191,9 +191,7 @@ distro==1.9.0
     #   -r requirements/static/pkg/freebsd.txt
     #   pytest-skip-markers
 dnspython==2.7.0
-    # via
-    #   -r requirements/static/ci/common.txt
-    #   python-etcd
+    # via -r requirements/static/ci/common.txt
 docker==7.1.0
     # via -r requirements/pytest.txt
 durationpy==0.10
@@ -591,6 +589,8 @@ psutil==7.2.2 ; python_full_version >= '3.10'
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.12 ; sys_platform != 'win32'
+    # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
     # via pytest-benchmark
 pyasn1==0.6.4
@@ -719,8 +719,6 @@ python-discovery==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   virtualenv
-python-etcd==0.4.5
-    # via -r requirements/static/ci/common.txt
 python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -955,7 +953,6 @@ urllib3==1.26.20 ; python_full_version < '3.10'
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 urllib3==2.7.0 ; python_full_version >= '3.10'
@@ -965,7 +962,6 @@ urllib3==2.7.0 ; python_full_version >= '3.10'
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'

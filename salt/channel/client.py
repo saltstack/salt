@@ -115,7 +115,7 @@ class AsyncReqChannel:
         # Serialize concurrent send()/decode_dictentry() calls on this
         # channel so that the AES nonce embedded in the encrypted reply is
         # matched with the request that produced it.  The underlying
-        # transport (AsyncReqMessageClient) already queues sends FIFO, but
+        # transport (``RequestClient``) already queues sends FIFO, but
         # the channel-layer crypt uses ``self.auth.session_crypticle`` which
         # can be swapped mid-flight by a concurrent re-auth, and the master
         # encrypts each reply with a session key drawn from a rotating

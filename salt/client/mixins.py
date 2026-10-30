@@ -528,6 +528,7 @@ class AsyncClientMixin(ClientStateMixin):
         tag,
         jid,
         daemonize=True,
+        print_event=True,
         full_return=False,
     ):
         """
@@ -553,7 +554,7 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return instance.low(fun, low, full_return=full_return)
+        return instance.low(fun, low, print_event=print_event, full_return=full_return)
 
     def cmd_async(self, low):
         """

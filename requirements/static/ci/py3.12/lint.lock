@@ -168,7 +168,6 @@ dnspython==2.8.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-    #   python-etcd
 docker==7.1.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -515,6 +514,10 @@ psutil==7.2.2
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
+psycopg2-binary==2.9.12
+    # via
+    #   -c requirements/static/ci/py3.12/linux.lock
+    #   -r requirements/static/ci/common.txt
 pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -602,10 +605,6 @@ python-discovery==1.4.0
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   virtualenv
-python-etcd==0.4.5
-    # via
-    #   -c requirements/static/ci/py3.12/linux.lock
-    #   -r requirements/static/ci/common.txt
 python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
@@ -826,7 +825,6 @@ urllib3==2.7.0
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 vcert==0.9.1
