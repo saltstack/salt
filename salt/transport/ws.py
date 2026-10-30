@@ -1,5 +1,4 @@
 import asyncio
-import contextlib
 import logging
 import multiprocessing
 import os
@@ -65,22 +64,16 @@ class PublishClient(salt.transport.base.PublishClient):
         self._connect_lock = asyncio.Lock()
         self._recv_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
-        self._io_tasks = {}
+        self._io_tasks = set()
         self._recv_tasks = set()
         self._creator_pid = os.getpid()
 
-    @contextlib.contextmanager
-    def _track_io(self):
-        task = asyncio.current_task()
-        self._io_tasks[task] = self._io_tasks.get(task, 0) + 1
-        try:
-            yield
-        finally:
-            remaining = self._io_tasks[task] - 1
-            if remaining:
-                self._io_tasks[task] = remaining
-            else:
-                del self._io_tasks[task]
+    def _start_io(self, coroutine):
+        """Own the I/O task so close never cancels the caller's entire task."""
+        task = self.io_loop.create_task(coroutine)
+        self._io_tasks.add(task)
+        task.add_done_callback(self._io_tasks.discard)
+        return task
 
     async def _close_connection(self):
         ws, session = self._ws, self._session
@@ -150,26 +143,34 @@ class PublishClient(salt.transport.base.PublishClient):
             self.connect_callback = connect_callback
         if disconnect_callback is not None:
             self.disconnect_callback = disconnect_callback
-        with self._track_io():
-            async with self._connect_lock:
-                if self._closing:
-                    raise salt.exceptions.SaltClientError("Publish client is closed")
-                if self._ws is not None and not self._ws.closed:
-                    return
-                await self._close_connection()
-                self._ws, self._session = await self.getstream(timeout)
-                self.connected = True
-            if self.connect_callback is not None:
-                await resolve_result(self.connect_callback(True))
+        if self._closing:
+            raise salt.exceptions.SaltClientError("Publish client is closed")
+        if self._ws is not None and not self._ws.closed:
+            return
+        return await self._start_io(self._connect(timeout))
+
+    async def _connect(self, timeout=None):
+        async with self._connect_lock:
+            if self._closing:
+                raise salt.exceptions.SaltClientError("Publish client is closed")
+            if self._ws is not None and not self._ws.closed:
+                return
+            await self._close_connection()
+            self._ws, self._session = await self.getstream(timeout)
+            self.connected = True
+        if self.connect_callback is not None:
+            await resolve_result(self.connect_callback(True))
 
     async def send(self, msg):
-        with self._track_io():
-            await self.connect()
-            await self._ws.send_bytes(msg)
+        return await self._start_io(self._send(msg))
+
+    async def _send(self, msg):
+        await self._connect()
+        await self._ws.send_bytes(msg)
 
     async def _recv(self):
         while not self._closing:
-            await self.connect()
+            await self._connect()
             ws = self._ws
             response = await ws.receive()
             if response.type == aiohttp.WSMsgType.BINARY:
@@ -186,14 +187,16 @@ class PublishClient(salt.transport.base.PublishClient):
         return None
 
     async def recv(self, timeout=None):
-        with self._track_io():
-            async with self._recv_lock:
-                try:
-                    return await asyncio.wait_for(
-                        self._recv(), 0.0001 if timeout == 0 else timeout
-                    )
-                except asyncio.TimeoutError:
-                    return None
+        return await self._start_io(self._recv_with_timeout(timeout))
+
+    async def _recv_with_timeout(self, timeout):
+        async with self._recv_lock:
+            try:
+                return await asyncio.wait_for(
+                    self._recv(), 0.0001 if timeout == 0 else timeout
+                )
+            except asyncio.TimeoutError:
+                return None
 
     async def on_recv_handler(self, callback):
         while not self._closing:

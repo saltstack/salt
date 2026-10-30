@@ -115,6 +115,36 @@ async def test_close_drains_direct_receive(client):
     assert not client._io_tasks
 
 
+async def test_close_does_not_wait_for_receivers_context_exit(client):
+    """Closing I/O must finish while its caller exits the same client context."""
+    waiting = asyncio.Event()
+    exited = asyncio.Event()
+
+    async def receive():
+        try:
+            async with client:
+                await client.connect()
+                waiting.set()
+                await client.recv()
+        finally:
+            exited.set()
+
+    read = asyncio.create_task(receive())
+    closing = None
+    try:
+        await asyncio.wait_for(waiting.wait(), 2)
+        # Let recv() reach its first wait before shutdown takes its task snapshot.
+        await asyncio.sleep(0)
+        closing = asyncio.create_task(client.close_async())
+        await asyncio.wait_for(asyncio.shield(closing), 1)
+        with pytest.raises(asyncio.CancelledError):
+            await read
+        assert exited.is_set()
+        assert client._closed
+    finally:
+        await salt.utils.asynchronous.cancel_tasks(read, closing)
+
+
 async def test_close_drains_replaced_receive_callbacks(client):
     await client.connect()
     first = AsyncMock()
