@@ -3,6 +3,7 @@ import asyncio
 import pytest
 from tornado.iostream import StreamClosedError
 
+import salt.cli.batch_async as batch_async
 import salt.utils.asynchronous
 from salt.cli.batch_async import BatchAsync, batch_async_required
 from tests.support.mock import AsyncMock, MagicMock, call, patch
@@ -652,6 +653,96 @@ async def test_new_user_keeps_shared_channel_during_reconnect_cleanup(shared_cha
     with pytest.raises(asyncio.CancelledError):
         await pending
     shared_channel.unuse("new batch")
+
+
+@pytest.mark.parametrize(
+    "new_user_closes", [False, True], ids=["reuse", "reuse-and-close"]
+)
+async def test_concurrent_shared_channel_cleanup(shared_channel, new_user_closes):
+    subscriber = shared_channel.master_event.subscriber
+    event = shared_channel.master_event
+    local = shared_channel.local_client
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def connect():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+            cleaned.set()
+
+    subscriber.connect = connect
+    pending = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    closing = []
+    try:
+        with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", shared_channel):
+            await started.wait()
+            closing.append(
+                asyncio.create_task(batch_async._destroy_unused_shared_events_channel())
+            )
+            await cleaning.wait()
+            assert batch_async._get_shared_events_channel({}, None) is shared_channel
+            shared_channel.use("new batch")
+            if new_user_closes:
+                shared_channel.unuse("new batch")
+            closing.append(
+                asyncio.create_task(batch_async._destroy_unused_shared_events_channel())
+            )
+            await asyncio.sleep(0)
+            release.set()
+            await asyncio.wait_for(asyncio.gather(*closing), 2)
+
+            assert cleaned.is_set()
+            if new_user_closes:
+                event.destroy.assert_called_once()
+                local.destroy.assert_called_once()
+                assert batch_async.__SHARED_EVENTS_CHANNEL is None
+            else:
+                event.destroy.assert_not_called()
+                local.destroy.assert_not_called()
+                assert batch_async.__SHARED_EVENTS_CHANNEL is shared_channel
+    finally:
+        release.set()
+        shared_channel.unuse("new batch")
+        await salt.utils.asynchronous.cancel_tasks(pending, *closing)
+
+
+async def test_late_cleanup_preserves_replacement_shared_channel():
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def destroy():
+        started.set()
+        await release.wait()
+        return True
+
+    original = MagicMock(destroy_unused=AsyncMock(side_effect=destroy))
+    replacement = MagicMock()
+    closing = None
+    try:
+        with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", original):
+            closing = asyncio.create_task(
+                batch_async._destroy_unused_shared_events_channel()
+            )
+            await started.wait()
+            # Another cleanup has completed and a new batch creates its channel.
+            with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", None), patch(
+                "salt.cli.batch_async.SharedEventsChannel", return_value=replacement
+            ):
+                assert batch_async._get_shared_events_channel({}, None) is replacement
+                release.set()
+                await closing
+                assert batch_async.__SHARED_EVENTS_CHANNEL is replacement
+    finally:
+        release.set()
+        await salt.utils.asynchronous.cancel_tasks(closing)
 
 
 async def test_subscription_joins_initial_event_connection(shared_channel):
