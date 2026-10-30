@@ -148,32 +148,6 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
     if pk_file is None:
         pk_file = f"{sk_file}.pub"
 
-    if sk_file and pk_file is None:
-        if not os.path.isfile(sk_file):
-            kp = nacl.public.PrivateKey.generate()
-            with salt.utils.files.fopen(sk_file, "wb") as keyf:
-                keyf.write(base64.b64encode(kp.encode()))
-            if salt.utils.platform.is_windows():
-                cur_user = salt.utils.win_functions.get_current_user()
-                salt.utils.win_dacl.set_owner(sk_file, cur_user)
-                salt.utils.win_dacl.set_permissions(
-                    sk_file,
-                    cur_user,
-                    "full_control",
-                    "grant",
-                    reset_perms=True,
-                    protected=True,
-                )
-            else:
-                # chmod 0600 file
-                os.chmod(sk_file, 1536)
-            return f"saved sk_file: {sk_file}"
-        else:
-            raise Exception(f"sk_file:{sk_file} already exist.")
-
-    if sk_file is None and pk_file:
-        raise Exception("sk_file: Must be set inorder to generate a public key.")
-
     if os.path.isfile(sk_file) and os.path.isfile(pk_file):
         raise Exception(f"sk_file:{sk_file} and pk_file:{pk_file} already exist.")
 
@@ -198,7 +172,7 @@ def keygen(sk_file=None, pk_file=None, **kwargs):
         )
     else:
         # chmod 0600 file
-        os.chmod(sk_file, 1536)
+        os.chmod(sk_file, 0o600)
     with salt.utils.files.fopen(pk_file, "wb") as keyf:
         keyf.write(base64.b64encode(kp.public_key.encode()))
     return f"saved sk_file:{sk_file}  pk_file: {pk_file}"
