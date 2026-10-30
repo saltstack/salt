@@ -412,9 +412,22 @@ class ClientEventSubscriber:
             return None
 
     def destroy(self):
-        """Close connections and clean up."""
-        if self.sub_socket:
-            self.sub_socket.close()
-        if self.auth_socket:
-            self.auth_socket.close()
-        self.context.term()
+        """Close connections and clean up.
+
+        Uses ``linger=0`` for the socket closes and
+        ``context.destroy(linger=0)`` instead of ``context.term()`` so this
+        never blocks finalisation.  ``term()`` waits indefinitely for any
+        pending socket operations to drain, which deadlocks the pytest
+        process at teardown when ``__del__`` collects an orphan
+        ``RemoteClient`` whose counterpart master/minion was already
+        SIGTERMed and left ZMQ fds in a half-closed state.
+        """
+        if self.sub_socket is not None:
+            self.sub_socket.close(linger=0)
+            self.sub_socket = None
+        if self.auth_socket is not None:
+            self.auth_socket.close(linger=0)
+            self.auth_socket = None
+        if self.context is not None:
+            self.context.destroy(linger=0)
+            self.context = None
