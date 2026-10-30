@@ -521,6 +521,16 @@ def test_handle_inbound_dispatches_ret_evt_sum(opts, clean_state, monkeypatch):
         fake = _FakeRouter()
         monkeypatch.setattr(router_mod, "_ROUTER", fake)
         _install_fake_inbound_link("east", session_generation=3)
+        # ``_dispatch_ret`` iterates a ``batch`` of per-minion returns and
+        # calls ``route_return(item)`` for each item with a ``jid`` (items
+        # without a jid are dropped before the router sees them).  Craft
+        # a minimal valid batch so the dispatch exercises ``route_return``.
+        # ``_dispatch_evt`` / ``_dispatch_sum`` still take an opaque load.
+        payloads = {
+            "topology/ret": {"batch": [{"jid": "20260101000000000001", "id": "m"}]},
+            "topology/evt": {"blob": "topology/evt"},
+            "topology/sum": {"blob": "topology/sum"},
+        }
         for tag, bucket in (
             ("topology/ret", fake.route_return_calls),
             ("topology/evt", fake.route_event_calls),
@@ -530,7 +540,7 @@ def test_handle_inbound_dispatches_ret_evt_sum(opts, clean_state, monkeypatch):
                 "tag": tag,
                 "origin_cluster_id": "east",
                 "session_generation": 3,
-                "load": {"blob": tag},
+                "load": payloads[tag],
             }
             loop.run_until_complete(
                 link_manager._handle_inbound(payload)

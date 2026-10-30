@@ -251,7 +251,7 @@ def test_send_return_increments_and_decrements_inflight(io_loop):
         def __init__(self, link):
             self._link = link
 
-        async def send(self, payload):
+        async def send(self, payload, **kwargs):
             # Observe the counter mid-send.
             assert self._link._inflight_returns == 1
             return {"ok": True}
@@ -267,7 +267,7 @@ def test_send_return_decrements_on_exception(io_loop):
     link._rotate_session(b"\x00" * 32)
 
     class _FakeReq:
-        async def send(self, payload):
+        async def send(self, payload, **kwargs):
             raise RuntimeError("transport down")
 
     link._req_channel = _FakeReq()

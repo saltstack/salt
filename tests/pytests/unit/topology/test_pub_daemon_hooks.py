@@ -249,16 +249,22 @@ def test_sync_return_envelope_detection_ignores_jid_shape(tmp_path, jid):
     ), f"topology event tag not fired for jid={jid!r}; saw {tags!r}"
 
 
-def test_sync_return_without_envelope_never_parses_jid(tmp_path):
+def test_sync_return_without_envelope_consults_breadcrumb(tmp_path):
     """
-    A return with NO topology envelope must not even open the breadcrumb
-    cache --- that proves detection is envelope-first, not jid-parsing.
+    A return with NO topology envelope MUST consult the breadcrumb
+    cache to decide whether this master forwarded the publish.  Minions
+    rebuild ``load`` from the function result in
+    ``_prepare_return_pub`` and drop ``load["topology"]`` -- so every
+    cross-cluster minion return hits this master with no envelope.  The
+    breadcrumb table is the only authoritative "did we forward this
+    jid" signal; falling back to parsing the jid string would be
+    fragile and format-coupled.
     """
     opts = _return_opts(tmp_path, cluster_id="east")
     inst = _aes_funcs_stub(opts)
 
     # jid intentionally shaped to look like a cluster-prefixed string so
-    # a naive implementation would try to parse it.
+    # we can confirm detection does NOT try to parse it.
     load = {
         "id": "minion-01",
         "jid": "west:20260101000000000001",
@@ -268,14 +274,16 @@ def test_sync_return_without_envelope_never_parses_jid(tmp_path):
     }
 
     with patch("salt.topology.breadcrumbs.open_reader") as reader, patch(
-        "salt.utils.job.store_job"
-    ):
+        "salt.topology.breadcrumbs.lookup", return_value=None
+    ) as lookup, patch("salt.utils.job.store_job"):
         inst._sync_return(load)
 
-    assert not reader.called, (
-        "_sync_return opened the breadcrumb reader for a non-topology return; "
-        "detection may be falling back to jid-string parsing"
+    assert reader.called, (
+        "_sync_return did NOT consult the breadcrumb reader; minions drop "
+        "the topology envelope on return, so breadcrumb lookup is the only "
+        "reliable signal of transit vs origin"
     )
+    assert lookup.called, "breadcrumb lookup should have been attempted"
 
 
 def test_sync_return_origin_is_only_decision_input(tmp_path):
