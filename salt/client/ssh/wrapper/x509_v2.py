@@ -7,6 +7,12 @@ Manage X.509 certificates
 General configuration instructions and general remarks are documented
 in the :ref:`execution module docs <x509-setup>`.
 
+.. versionchanged:: 3009.0
+
+    Deprecated arguments and legacy X.509 input formats are no longer
+    accepted. See :ref:`x509-migration-3009` for replacements and changes
+    to the default validity and renewal periods.
+
 .. note::
 
     Compound matching allowed callers is **not supported** with salt-ssh
@@ -337,20 +343,7 @@ def create_certificate(
             **kwargs,
         )
 
-    # `algorithm` was deprecated in 3007.0 and removed in 3009.0 (Potassium);
-    # use `digest`. `text`, `version`, and `serial_bits` were ignored kwargs
-    # removed in the same release.
-    for removed in ("algorithm", "text", "version", "serial_bits"):
-        if removed in kwargs:
-            raise SaltInvocationError(
-                f"Keyword argument `{removed}` was removed in 3009.0. "
-                f"{'Use `digest` instead.' if removed == 'algorithm' else 'Remove it from the call.'}"
-            )
-    kwargs = x509util.ensure_cert_kwargs_compat(kwargs)
-
-    if "days_valid" not in kwargs and "not_after" not in kwargs:
-        # Default changed from 365 to 30 in 3009.0 (Potassium).
-        kwargs["days_valid"] = 30
+    x509util.validate_cert_kwargs(kwargs)
 
     if encoding not in ["der", "pem", "pkcs7_der", "pkcs7_pem", "pkcs12"]:
         raise CommandExecutionError(
@@ -522,26 +515,7 @@ def get_signing_policy(signing_policy, ca_server=None):
         # only hand out copies of the cached policy
         policy = copy.deepcopy(__context__[ckey][ca_server][signing_policy])
 
-    # Long-form name-attribute and extension aliases (e.g. ``commonName``
-    # for ``CN``, ``X509v3 Basic Constraints`` for ``basicConstraints``)
-    # were accepted with a deprecation warning through 3008.x and removed
-    # in 3009.0 (Potassium). Signing policies must use short names.
-    for name, long_names in x509util.NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                raise CommandExecutionError(
-                    f"{signing_policy} contains the long-form name "
-                    f"attribute `{long_name}` which was removed in 3009.0."
-                    f" Use the short name `{name}` instead."
-                )
-    for extname, long_names in x509util.EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in policy:
-                raise CommandExecutionError(
-                    f"{signing_policy} contains the long-form extension "
-                    f"`{long_name}` which was removed in 3009.0. Use the "
-                    f"short name `{extname}` instead."
-                )
+    x509util.validate_cert_kwargs(policy)
     return policy
 
 

@@ -20,7 +20,6 @@ from cryptography.x509.oid import SubjectInformationAccessOID
 import salt.utils.files
 import salt.utils.immutabletypes as immutabletypes
 import salt.utils.stringutils
-import salt.utils.versions
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 
 try:
@@ -284,29 +283,34 @@ class SuperfluousPassword(PasswordError):
         super().__init__("Private key is unencrypted. Please remove the password.")
 
 
-def ensure_cert_kwargs_compat(kwargs):
-    """
-    Reject the long form of Name Attribute and extension definitions.
-
-    These were accepted with a deprecation warning through 3008.x and
-    removed in 3009.0 (Potassium). Callers must use the short names.
-    """
-    for name, long_names in NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in kwargs:
-                raise CommandExecutionError(
-                    f"Keyword argument `{long_name}` was removed in 3009.0."
-                    f" Use the short name `{name}` instead."
+def validate_cert_kwargs(kwargs):
+    """Reject legacy X.509 arguments removed in Salt 3009."""
+    for name, aliases in {**NAME_ATTRS_ALT_NAMES, **EXTENSIONS_ALT_NAMES}.items():
+        for alias in aliases:
+            if alias in kwargs:
+                raise SaltInvocationError(
+                    f"`{alias}` is no longer supported. Use `{name}` instead."
                 )
+    if "algorithm" in kwargs:
+        raise SaltInvocationError(
+            "`algorithm` is no longer supported. Use `digest` instead."
+        )
+    removed = sorted({"text", "version", "serial_bits"}.intersection(kwargs))
+    if removed:
+        raise SaltInvocationError(f"Unrecognized keyword arguments: {removed}")
 
-    for extname, long_names in EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in kwargs:
-                raise CommandExecutionError(
-                    f"Keyword argument `{long_name}` was removed in 3009.0."
-                    f" Use the short name `{extname}` instead."
-                )
-    return kwargs
+
+def validate_revoked(revoked):
+    """Reject legacy CRL entries rather than silently dropping their fields."""
+    for rev in revoked:
+        if len(rev) == 1 and isinstance(rev[next(iter(rev))], list):
+            raise SaltInvocationError(
+                "Revoked certificates must be specified as a simple list of dicts."
+            )
+        if "reason" in rev:
+            raise SaltInvocationError(
+                "The `reason` parameter must be specified in extensions:CRLReason."
+            )
 
 
 def build_crt(
@@ -478,7 +482,7 @@ def build_crl(
     signing_cert=None,
     signing_private_key_passphrase=None,
     include_expired=False,
-    days_valid=100,
+    days_valid=7,
     extensions=None,
 ):
     """
@@ -941,24 +945,8 @@ def merge_signing_policy(policy, kwargs):
     # ensure we don't modify data that is used elsewhere
     policy = copy.deepcopy(policy)
 
-    # Long-form name-attribute and extension aliases were accepted with a
-    # deprecation warning through 3008.x and removed in 3009.0 (Potassium);
-    # callers must use short names.
-    for name, long_names in NAME_ATTRS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in kwargs:
-                raise CommandExecutionError(
-                    f"Keyword argument `{long_name}` was removed in 3009.0."
-                    f" Use the short name `{name}` instead."
-                )
-
-    for extname, long_names in EXTENSIONS_ALT_NAMES.items():
-        for long_name in long_names:
-            if long_name in kwargs:
-                raise CommandExecutionError(
-                    f"Keyword argument `{long_name}` was removed in 3009.0."
-                    f" Use the short name `{extname}` instead."
-                )
+    validate_cert_kwargs(policy)
+    validate_cert_kwargs(kwargs)
 
     if "subject" in kwargs:
         # a) ensure subject in kwargs does not override CN etc from signing policy
