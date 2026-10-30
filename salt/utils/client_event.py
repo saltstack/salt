@@ -592,18 +592,38 @@ class ClientEventSubscriber:
             self.auth_socket.recv_pyobj()
             self.subscribed_jobs.discard(jid)
 
-    def get_event(self, wait=5, tag="", full=False, no_block=False):
+    def get_event(
+        self,
+        wait=5,
+        tag="",
+        full=False,
+        no_block=False,
+        match_type=None,
+        auto_reconnect=False,
+        **kwargs,
+    ):
         """
         Get a single event from the event stream.
 
+        Mirrors :meth:`salt.utils.event.SaltEvent.get_event` enough that
+        :class:`salt.client.LocalClient`'s event loops can call this
+        without caring whether ``self.event`` is an IPC bus or a
+        :class:`ClientEventSubscriber`.  Extra kwargs (``match_type``,
+        ``auto_reconnect``) are accepted for interface compatibility and
+        ignored -- filtering is done server-side by the
+        :class:`ClientEventPublisher` based on the subscriber's job
+        subscriptions.
+
         Args:
-            wait: Timeout in seconds (not used for network events)
-            tag: Event tag filter (not used, filtering done server-side)
-            full: Return full event dict
-            no_block: Non-blocking mode
+            wait: Timeout in seconds
+            tag: Event tag filter (applied client-side as a prefix match
+                against the delivered tag so callers that filter on a
+                specific tag still see only matching events)
+            full: Return the full ``{tag, data}`` event dict
+            no_block: Non-blocking mode (zero wait)
 
         Returns:
-            dict: Event data or None
+            dict | None: Event data or ``None`` on timeout
         """
         if not self.sub_socket:
             return None
@@ -615,14 +635,27 @@ class ClientEventSubscriber:
             else:
                 self.sub_socket.setsockopt(zmq.RCVTIMEO, int(wait * 1000))
 
-            # Receive event (multipart: [client_id, payload])
+            # Receive event (multipart: [subscriber_id, payload])
             parts = self.sub_socket.recv_multipart()
 
-            if len(parts) >= 2:
-                event_data = salt.payload.loads(parts[1])
-                if full:
-                    return event_data
-                return event_data.get("data")
+            if len(parts) < 2:
+                return None
+
+            event_data = salt.payload.loads(parts[1])
+            # Client-side tag filter: a bus caller that asks for a
+            # specific tag only wants matching events.  The publisher
+            # already filtered by job subscription, but a single job
+            # fires multiple event tags (``.../new``, ``.../ret/<id>``).
+            # Without this filter, callers reading in a tight loop
+            # would see each event they didn't ask for as a bogus
+            # response.
+            if tag:
+                event_tag = event_data.get("tag", "")
+                if not event_tag.startswith(tag):
+                    return None
+            if full:
+                return event_data
+            return event_data.get("data")
 
         except zmq.Again:
             # Timeout

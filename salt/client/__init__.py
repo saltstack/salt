@@ -2369,6 +2369,15 @@ class RemoteClient(LocalClient):
         self._use_network_events = True
         self._setup_network_events(listen)
 
+    def returns_for_job(self, jid):
+        """
+        Master-local job-cache check that LocalClient uses to verify a
+        published jid landed in the returner store.  On a truly remote
+        client we have no local access to the master's job cache, so
+        trust that the publish succeeded if we received a jid.
+        """
+        return [{"jid": jid}]
+
     def _setup_network_events(self, listen):
         """
         Set up network-based event subscription for remote clients.
