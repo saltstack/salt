@@ -219,8 +219,16 @@ def check_prior_running_states(opts, jid, active_jobs):
             # oldest queued JID without deadlocking on younger siblings.
             # Salt JIDs are usually timestamp-based strings (e.g.
             # 20230524100000) which sort correctly as strings OR ints.
+            #
+            # A running job that is itself waiting in the ``queue=<int>``
+            # path has a queue flag file (see ``state._set_queue_flag``).
+            # It is not executing a state run yet, so treat it like a queued
+            # placeholder; otherwise two waiting jobs wait on each other
+            # forever.
             pid = data.get("pid")
-            if pid:
+            if pid and not os.path.exists(
+                os.path.join(state_queue_dir(opts), str(data_jid))
+            ):
                 ret.append(data)
             elif str(data_jid) < str(jid):
                 ret.append(data)
