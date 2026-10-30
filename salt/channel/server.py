@@ -4038,8 +4038,17 @@ class MasterPubServerChannel:
                 if peer == master_id:
                     log.debug("Skip our own cluster peer event %s", tag)
                     return
-                aes = data["peers"][master_id]["aes"]
-                sig = data["peers"][master_id]["sig"]
+                entry = data["peers"].get(master_id) or {}
+                if "aes" not in entry:
+                    # The sender records an empty entry for a peer whose public
+                    # key it does not hold yet. It re-announces once the key
+                    # arrives, so skip this round.
+                    log.info(
+                        "Peer %s has no AES key for us yet, awaiting re-announce", peer
+                    )
+                    return
+                aes = entry["aes"]
+                sig = entry["sig"]
                 key_str = self.master_key.master_key.decrypt(
                     aes, algorithm=self.opts["cluster_encryption_algorithm"]
                 )

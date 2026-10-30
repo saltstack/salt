@@ -1,5 +1,6 @@
 import asyncio
 import ctypes
+import logging
 import multiprocessing
 import pathlib
 import time
@@ -1435,6 +1436,56 @@ async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
         "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
         "at the end of MasterKeys._setup_keys)."
     )
+
+
+@pytest.mark.parametrize(
+    "our_entry",
+    [
+        # ``send_aes_key_event`` records an empty entry if there is no public key.
+        {},
+        # The host is not yet in the ``peers`` dict at all.
+        None,
+    ],
+)
+async def test_handle_pool_publish_peer_without_our_key_yet(
+    cluster_master_opts, caplog, our_entry
+):
+    """
+    Regression test for issue #70565.
+
+    A peer that has not learned our public key yet must not raise out of the
+    event-polling loop.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+
+    bare_id = cluster_master_opts["id"].removesuffix("_master")
+    peers = {} if our_entry is None else {bare_id: our_entry}
+    sibling_data = {"peer_id": "salt-master-2", "peers": peers}
+    tag = salt.utils.event.tagify("salt-master-2", "peer", "cluster")
+    payload = salt.utils.event.SaltEvent.pack(tag, sibling_data)
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.peer_keys = {}
+    channel.auth_errors = {"salt-master-2": [], "salt-master-3": []}
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock()
+    # Never reached once the empty entry is recognised; a bare mock is enough
+    # to prove the handler returns before any crypto is attempted.
+    channel.master_key = MagicMock()
+
+    with caplog.at_level(logging.INFO):
+        await channel.handle_pool_publish(payload)
+
+    assert (
+        "salt-master-2" not in channel.peer_keys
+    ), "nothing should be cached from an announce that carries no key for us"
+    assert not [
+        record for record in caplog.records if record.levelno >= logging.ERROR
+    ], "a peer that has not learned our key yet is a transient, not an error"
+    assert any(
+        "no AES key for us yet" in record.getMessage() for record in caplog.records
+    ), "the skipped round must say why it was skipped"
 
 
 async def test_send_state_sync_chunks_closes_its_pusher(cluster_master_opts):
