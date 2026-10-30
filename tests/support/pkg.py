@@ -253,6 +253,7 @@ class SaltPkgInstall:
         ):
             return "yum"
         elif self.distro_id in ("ubuntu", "debian"):
+            self._ensure_fast_ubuntu_mirror()
             ret = self.proc.run("apt-get", "update")
             self._check_retcode(ret)
             return "apt-get"
@@ -661,6 +662,40 @@ class SaltPkgInstall:
         if platform.is_darwin():
             return pathlib.Path("/opt/salt")
         return pathlib.Path("/")
+
+    def _ensure_fast_ubuntu_mirror(self):
+        """
+        On Ubuntu 24.04 the CI container image ships /etc/apt/sources.list.d/
+        ubuntu.sources pointing at archive.ubuntu.com and security.ubuntu.com,
+        which the GitHub-hosted runner network reaches at ~30 kB/s. Any
+        subsequent ``apt-get update`` / ``apt-get install`` easily crosses
+        the 240s subprocess timeout wrapping our apt calls, and every
+        Ubuntu 24.04 install / upgrade / downgrade matrix cell trips
+        FactoryTimeout on the first apt operation.
+
+        Redirect to Canonical's azure.archive.ubuntu.com mirror (what the
+        GitHub-hosted Ubuntu VMs use by default). It responds in under 1s
+        from GitHub runners and drops apt-get update to ~2s inside the
+        container. Idempotent -- safe to call multiple times.
+
+        No-op on non-Ubuntu, non-24.04, and when the sources file is absent
+        (older Debian layouts use /etc/apt/sources.list, which the CI
+        images already ship with fast mirrors baked in).
+        """
+        if self.distro_id != "ubuntu":
+            return
+        if not str(self.distro_version).startswith("24.04"):
+            return
+        sources_file = pathlib.Path("/etc/apt/sources.list.d/ubuntu.sources")
+        if not sources_file.is_file():
+            return
+        self.proc.run(
+            "sed",
+            "-i",
+            r"s|http://\(archive\|security\)\.ubuntu\.com/ubuntu/"
+            r"|http://azure.archive.ubuntu.com/ubuntu/|g",
+            str(sources_file),
+        )
 
     def _check_retcode(self, ret):
         """
@@ -1184,6 +1219,7 @@ class SaltPkgInstall:
 
         elif distro_name in ["debian", "ubuntu"]:
             self.proc.run("dpkg", "--configure", "-a")
+            self._ensure_fast_ubuntu_mirror()
             ret = self.proc.run(self.pkg_mngr, "install", "curl", "-y")
             self._check_retcode(ret)
             ret = self.proc.run(self.pkg_mngr, "install", "apt-transport-https", "-y")
