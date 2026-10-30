@@ -14,6 +14,7 @@ Architecture:
 
 import logging
 import os
+import re
 
 import zmq
 
@@ -328,6 +329,78 @@ class ClientEventSubscriber:
             log.info("Successfully authenticated with event publisher")
         else:
             raise Exception("Failed to authenticate with event publisher")
+
+    @property
+    def cpub(self):
+        """
+        True when the subscriber socket is open.
+
+        Mirrors ``salt.utils.event.SaltEvent.cpub``: callers inspect this
+        before issuing a listen=True publish so they can decide whether to
+        call ``close_pub()`` afterwards.
+        """
+        return self.sub_socket is not None
+
+    def connect_pub(self, timeout=None):
+        """
+        Connect the pub (subscriber) channel.
+
+        Mirrors ``salt.utils.event.SaltEvent.connect_pub``: returns True on
+        success, False on failure.  ``timeout`` is accepted for interface
+        compatibility; the underlying ``connect()`` does not poll.
+        """
+        if self.cpub:
+            return True
+        try:
+            self.connect()
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error("Failed to connect to event publisher: %s", exc)
+            return False
+        return self.cpub
+
+    def close_pub(self):
+        """
+        Close the subscriber socket.
+
+        Called by ``LocalClient`` after a ``listen=True`` publish to tear
+        down a connection it opened just for that call.  Keep the auth
+        socket and the ZMQ context alive so a subsequent ``connect_pub()``
+        on the same subscriber instance works.
+        """
+        if self.sub_socket is not None:
+            self.sub_socket.close(linger=0)
+            self.sub_socket = None
+
+    def subscribe(self, tag, match_type=None):
+        """
+        Subscribe to events with the given tag.
+
+        Mirrors ``salt.utils.event.SaltEvent.subscribe``.  For the network
+        subscriber the subscription is server-side (the publisher filters
+        events by client-id + job-id); if ``tag`` contains a JID we treat
+        it as a job subscribe request, otherwise the call is a no-op (the
+        server already forwards all events authorised for this client).
+        """
+        jid = self._extract_jid(tag)
+        if jid is not None:
+            self.subscribe_job(jid)
+
+    def unsubscribe(self, tag, match_type=None):
+        """
+        Unsubscribe from events with the given tag.  Symmetric with
+        ``subscribe``.
+        """
+        jid = self._extract_jid(tag)
+        if jid is not None:
+            self.unsubscribe_job(jid)
+
+    @staticmethod
+    def _extract_jid(tag):
+        """Return the 20-digit JID embedded in ``tag`` or None."""
+        if not tag:
+            return None
+        match = re.search(r"\b(\d{20})\b", tag)
+        return match.group(1) if match else None
 
     def subscribe_job(self, jid):
         """

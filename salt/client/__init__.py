@@ -2421,15 +2421,9 @@ class RemoteClient(LocalClient):
             minions:
                 A set, the targets that the tgt passed should match.
         """
-        # Make sure the publisher is running by checking the unix socket
-        if self.opts.get("ipc_mode", "") != "tcp" and not os.path.exists(
-            os.path.join(self.opts["sock_dir"], "publish_pull.ipc")
-        ):
-            log.error(
-                "Unable to connect to the salt master publisher at %s",
-                self.opts["sock_dir"],
-            )
-            raise SaltClientError
+        # RemoteClient does not depend on the master's IPC publisher socket
+        # (that check is appropriate for LocalClient on the master host).
+        # The connection to the master is via network transport below.
 
         payload_kwargs = self._prep_pub(
             tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
