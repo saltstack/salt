@@ -176,3 +176,68 @@ def test_create_task_from_xml_error():
     finally:
         result = win_task.delete_task(task_name)
         assert result is not True
+
+
+def test_create_task_compatibility():
+    task_name = "SaltTest"
+    try:
+        # Default compatibility level is 2
+        result = win_task.create_task(
+            task_name,
+            user_name="System",
+            force=True,
+            action_type="Execute",
+            cmd="cmd.exe",
+        )
+        assert result is True
+
+        result = win_task.info(task_name)
+        assert result["settings"]["compatibility"] == 2
+
+        # Explicit compatibility level
+        result = win_task.create_task(
+            task_name,
+            user_name="System",
+            force=True,
+            action_type="Execute",
+            cmd="cmd.exe",
+            compatibility=4,
+        )
+        assert result is True
+
+        result = win_task.info(task_name)
+        assert result["settings"]["compatibility"] == 4
+    finally:
+        result = win_task.delete_task(task_name)
+        assert result is True
+
+
+def test_edit_task_compatibility(base_task):
+    # The base task is created with the default compatibility level
+    result = win_task.info(base_task)
+    assert result["settings"]["compatibility"] == 2
+
+    result = win_task.edit_task(base_task, compatibility=3)
+    assert result is True
+
+    result = win_task.info(base_task)
+    assert result["settings"]["compatibility"] == 3
+
+    result = win_task.edit_task(base_task, compatibility=4)
+    assert result is True
+
+    result = win_task.info(base_task)
+    assert result["settings"]["compatibility"] == 4
+
+    # Invalid values are rejected and leave the level unchanged
+    result = win_task.edit_task(base_task, compatibility=0)
+    assert result == 'Invalid value for "compatibility"'
+
+    result = win_task.info(base_task)
+    assert result["settings"]["compatibility"] == 4
+
+    result = win_task.edit_task(base_task, compatibility=1)
+    assert result == 'Invalid value for "compatibility"'
+
+    result = win_task.info(base_task)
+    assert result["settings"]["compatibility"] == 4
