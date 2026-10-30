@@ -305,6 +305,31 @@ def test_find_libcrypto_darwin_bigsur_packaged():
                 lib_path = _find_libcrypto()
 
 
+def test_find_libcrypto_darwin_brew_lib():
+    """
+    Test _find_libcrypto on a macOS host where libcrypto lives directly
+    under the Homebrew prefix lib directory (e.g. after 'brew install openssl'
+    without the versioned opt symlink).
+    """
+    expected = "/test/homebrew/prefix/lib/libcrypto.dylib"
+    mock_env = {"HOMEBREW_PREFIX": "/test/homebrew/prefix"}
+
+    def test_glob(pattern):
+        if fnmatch.fnmatch(expected, pattern):
+            return [expected]
+        return []
+
+    with patch.object(salt.utils.platform, "is_darwin", lambda: True), patch.object(
+        platform, "mac_ver", lambda: ("14.0.0", (), "")
+    ), patch.object(sys, "platform", "macosx"), patch.dict(
+        os.environ, mock_env
+    ), patch.object(
+        glob, "glob", test_glob
+    ):
+        lib_path = _find_libcrypto()
+    assert lib_path == expected
+
+
 def test_find_libcrypto_unsupported():
     """
     Ensure that _find_libcrypto works correctly on an unsupported host OS.
