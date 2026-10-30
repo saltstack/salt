@@ -314,6 +314,7 @@ packaging==24.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   pytest
     #   virtualenv
 passlib==1.7.4
