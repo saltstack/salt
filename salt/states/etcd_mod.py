@@ -4,7 +4,7 @@ Manage etcd Keys
 
 .. versionadded:: 2015.8.0
 
-:depends:  - python-etcd or etcd3-py
+:depends:  - etcd3-py
 
 This state module supports setting and removing keys from etcd.
 
@@ -172,7 +172,7 @@ NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
 
 def __virtual__():
     """
-    Only return if python-etcd is installed
+    Only return if etcd3-py is installed
     """
     if HAS_LIBS:
         return __virtualname__
@@ -364,7 +364,7 @@ def wait_rm(name, recurse=False, profile=None, **kwargs):
         The etcd key name to remove, for example ``/foo/bar/baz``.
     recurse
         Optional, defaults to ``False``. If ``True`` performs a recursive
-        delete, see: https://python-etcd.readthedocs.io/en/latest/#delete-a-key.
+        delete of keys under the given prefix.
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.
