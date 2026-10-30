@@ -65,6 +65,13 @@ filelock==3.29.1 ; python_full_version < '3.11'
     #   virtualenv
 filelock==4.2.6 ; python_full_version >= '3.11'
     # via
+    #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
+    #   python-discovery
+    #   virtualenv
+filelock==4.2.4 ; python_full_version >= '3.11'
+    # via
+    #   -c requirements/constraints.txt
     #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv
