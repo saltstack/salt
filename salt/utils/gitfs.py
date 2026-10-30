@@ -1350,6 +1350,19 @@ class GitProvider:
     def fetch_request_check(self):
         fetch_request = salt.utils.path.join(self._salt_working_dir, "fetch_request")
         if os.path.isfile(fetch_request):
+            if getattr(self, "repo", None) is None:
+                # The repo has not yet been initialized (e.g. we are being
+                # called from GitProvider.__init__ before the provider's
+                # init_remote() has run). Leave the fetch request in place
+                # so that a later call to this method (e.g. from checkout())
+                # can honor it once self.repo exists.
+                log.debug(
+                    "Fetch request present for %s remote '%s', but repo is "
+                    "not yet initialized; deferring",
+                    self.role,
+                    self.id,
+                )
+                return False
             log.debug("Fetch request: %s", self._salt_working_dir)
             try:
                 os.remove(fetch_request)
