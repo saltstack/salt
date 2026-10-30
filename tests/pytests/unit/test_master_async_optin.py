@@ -1,14 +1,9 @@
 """
-Regression tests for the ``master_async_mworker`` opt-in flag.
+Regression tests for the ``master_async_mworker`` dispatch flag.
 
-PR #70129 converted every ``AESFuncs`` / ``ClearFuncs`` / ``AuthFuncs``
-handler on 3008.x to ``async def``.  On the LTS (3008.x) branch that
-behaviour must be strictly opt-in: with ``master_async_mworker`` off
-(the default) the dispatch tables, method signatures, and IPC socket
-topology have to look exactly like Argon v3008.2 and earlier.
-
-These tests exercise the OFF path only.  The ON path is covered by
-``test_master.py`` and ``test_master_async_error_paths.py``.
+With the flag disabled, AESFuncs, ClearFuncs and AuthFuncs retain their
+synchronous worker handlers. Enabling the flag selects their asynchronous
+dispatch. TCP IPC publishing awaits delivery with either flag value.
 """
 
 import inspect
@@ -18,6 +13,7 @@ import pytest
 import salt.channel.server
 import salt.config
 import salt.master
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -260,26 +256,29 @@ def test_pool_routing_sync_mode_avoids_pool_worker_count_option(sync_master_opts
     assert "pool_worker_count" not in sync_master_opts
 
 
-def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
-    """
-    ``PublishServer.publish`` async-context bypass (per-loop
-    ``_TCPPubServerPublisher`` cache) exists to defuse a nested-
-    SyncWrapper deadlock that can only happen when async handlers
-    invoke ``publish`` from a running asyncio loop.  With the flag off
-    the sync path must run ``self.pub_sock.send(payload)`` directly.
-    """
+@pytest.mark.parametrize("async_mworker", [False, True])
+async def test_publishserver_awaits_native_ipc_in_both_worker_modes(
+    master_opts, async_mworker
+):
+    """Both worker modes await IPC delivery without creating an inner wrapper."""
     import salt.transport.tcp
 
-    ps = salt.transport.tcp.PublishServer(
-        sync_master_opts,
+    opts = dict(master_opts, master_async_mworker=async_mworker)
+    server = salt.transport.tcp.PublishServer(
+        opts,
         pub_host="127.0.0.1",
         pub_port=0,
         pull_host="127.0.0.1",
         pull_port=0,
     )
-    # Instance MUST NOT hold the per-loop cache when the flag is off
-    # (it is only allocated inside the async branch of ``publish``).
-    assert getattr(ps, "_async_pub_by_loop", None) is None
-    # And the opts we passed in must be visible so ``publish`` can
-    # branch on them.
-    assert ps.opts.get("master_async_mworker") is False
+    with patch(
+        "salt.utils.asynchronous.SyncWrapper",
+        side_effect=AssertionError("Unexpected nested SyncWrapper"),
+    ), patch("salt.transport.tcp._TCPPubServerPublisher", autospec=True) as publisher:
+        try:
+            await server.publish(b"event")
+            publisher.return_value.connect.assert_awaited_once()
+            publisher.return_value.send.assert_awaited_once_with(b"event")
+        finally:
+            server.close()
+        publisher.return_value.close.assert_called_once()
