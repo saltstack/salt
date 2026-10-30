@@ -30,6 +30,9 @@ async def test_async_pub_channel_connect_cb(minion_opts):
 
         with patch("salt.channel.client.AsyncReqChannel.factory", return_value=mock):
             await channel.connect_callback(None)
-            event_factory.return_value.fire_event_async.assert_awaited_once()
+            event_factory.return_value.fire_event.assert_called_once_with(
+                {"master": minion_opts["master"]}, "__master_connected"
+            )
+            event_factory.return_value.fire_event_async.assert_not_awaited()
             mock.send.assert_called_once()
             mock.__aexit__.assert_called_once()

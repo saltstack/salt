@@ -78,3 +78,44 @@ def test_unsupported_transport(factory, io_loop):
     args = (io_loop,) if factory is salt.utils.channel.create_client_transport else ()
     with pytest.raises(ValueError, match="Unsupported transport type: unknown"):
         factory({"transport": "unknown"}, *args)
+
+
+@pytest.mark.parametrize("kind", ["server", "request", "pool", "publish"])
+@pytest.mark.parametrize("explicit", [None, "tcp"])
+@pytest.mark.parametrize("pillar", ["ws", "unknown"])
+async def test_pool_transport_selection_ignores_pillar(kind, explicit, pillar):
+    secret = object()
+    opts = {"pillar": {"master": {"transport": pillar}}, "secrets": secret}
+    if explicit is not None:
+        opts["transport"] = explicit
+    if kind == "pool":
+        opts["pool_name"] = "pool"
+    before = opts.copy()
+    selected = explicit or "zeromq"
+    constructor = {
+        "server": "RequestServer",
+        "request": "RequestClient",
+        "pool": "RequestClient",
+        "publish": "PublishClient",
+    }[kind]
+    factory = {
+        "server": salt.utils.channel.create_server_transport,
+        "request": salt.utils.channel.create_request_client,
+        "pool": salt.utils.channel.create_client_transport,
+        "publish": salt.utils.channel.create_client_transport,
+    }[kind]
+    with patch(f"salt.transport.{selected}.{constructor}") as transport:
+        assert factory(opts) is transport.return_value
+    passed_opts = transport.call_args.args[0]
+    assert passed_opts["transport"] == selected
+    assert passed_opts["secrets"] is secret
+    assert passed_opts["pillar"] is opts["pillar"]
+    assert opts == before
+
+
+@pytest.mark.parametrize("transport", ["tcp", "ws"])
+async def test_pool_publish_factory_does_not_enable_tls_from_opts(transport):
+    opts = {"transport": transport, "ssl": {"certfile": "unused"}}
+    with patch(f"salt.transport.{transport}.PublishClient") as client:
+        salt.utils.channel.create_client_transport(opts)
+    assert client.call_args.kwargs["ssl"] is None

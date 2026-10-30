@@ -35,33 +35,38 @@ def iter_transport_opts(opts):
         yield transport, t_opts
 
 
-def _validate_transport(opts):
-    """Retain the pool routing API's error for unsupported transports."""
+def _pool_transport_opts(opts):
+    """Preserve pool selection without mutating options or copying shared secrets."""
     ttype = opts.get("transport", "zeromq")
     if ttype not in salt.transport.TRANSPORTS:
         raise ValueError(f"Unsupported transport type: {ttype}")
+    if "transport" not in opts:
+        # Common factories also consult pillar; pool routing historically did not.
+        return dict(opts, transport=ttype)
+    return opts
 
 
 def create_server_transport(opts):
     """Create a request server for pool routing."""
-    _validate_transport(opts)
+    opts = _pool_transport_opts(opts)
     return salt.transport.request_server(opts)
 
 
 def create_client_transport(opts, io_loop=None):
     """Create a request client for pool routing, otherwise a publish client."""
-    _validate_transport(opts)
+    opts = _pool_transport_opts(opts)
     io_loop = (
         asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
     )
     if opts.get("workers_ipc_name") or opts.get("pool_name"):
         return salt.transport.request_client(opts, io_loop=io_loop)
-    return salt.transport.publish_client(opts, io_loop)
+    # The former direct constructors did not enable TLS from opts here.
+    return salt.transport.publish_client(opts, io_loop, ssl=None)
 
 
 def create_request_client(opts, io_loop=None):
     """Create a request client on the caller's event loop for pool routing."""
-    _validate_transport(opts)
+    opts = _pool_transport_opts(opts)
     io_loop = (
         asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
     )

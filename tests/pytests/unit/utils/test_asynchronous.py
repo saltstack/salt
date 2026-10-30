@@ -18,6 +18,8 @@ import pytest
 import tornado.gen
 import tornado.ioloop
 
+import salt.transport
+import salt.transport.tcp
 import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
 
@@ -48,6 +50,33 @@ def test_sync_wrapper_passes_its_native_loop_to_constructor():
         assert isinstance(wrapper.obj.io_loop, asyncio.AbstractEventLoop)
         assert wrapper.obj.io_loop is wrapper.asyncio_loop
         assert wrapper.obj.current_loop is wrapper.asyncio_loop
+    assert loop.is_closed()
+
+
+@pytest.mark.parametrize("transport", ["tcp", "zeromq", "ws"])
+def test_sync_wrapper_constructs_native_publish_clients(transport):
+    with asynchronous.SyncWrapper(
+        salt.transport.publish_client,
+        args=({"transport": transport},),
+        kwargs={"host": "127.0.0.1", "port": 4506},
+        loop_kwarg="io_loop",
+    ) as wrapper:
+        loop = wrapper.asyncio_loop
+        assert wrapper.obj.io_loop is loop
+        assert not loop.is_closed()
+    assert loop.is_closed()
+
+
+def test_sync_wrapper_constructs_native_tcp_ipc_publisher():
+    with asynchronous.SyncWrapper(
+        salt.transport.tcp._TCPPubServerPublisher,
+        args=("127.0.0.1", 4506, None),
+        loop_kwarg="io_loop",
+        close_methods=["close"],
+    ) as wrapper:
+        loop = wrapper.asyncio_loop
+        assert wrapper.obj.io_loop is loop
+        assert wrapper.obj.stream is None
     assert loop.is_closed()
 
 

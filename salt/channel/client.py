@@ -514,7 +514,10 @@ class AsyncPubChannel:
         try:
             return cls(opts, transport, auth, io_loop)
         except BaseException:
-            transport.close()
+            try:
+                transport.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                log.exception("Failed to close transport after channel initialization")
             raise
 
     def __init__(self, opts, transport, auth, io_loop=None):
@@ -645,7 +648,7 @@ class AsyncPubChannel:
             await self.send_id(self.token, self._reconnected)
             self.connected = True
             if self.event:
-                await self.event.fire_event_async(
+                self.event.fire_event(
                     {"master": self.opts["master"]}, "__master_connected"
                 )
             if self._reconnected:

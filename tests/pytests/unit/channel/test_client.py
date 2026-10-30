@@ -7,7 +7,7 @@ import salt.channel.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 def test_async_methods():
@@ -383,3 +383,125 @@ async def test_publish_factory_failure_closes_transport(minion_opts):
         with pytest.raises(salt.exceptions.SaltClientError, match="bad key"):
             salt.channel.client.AsyncPubChannel.factory(minion_opts)
         transport.return_value.close.assert_called_once_with()
+
+
+async def test_publish_factory_cleanup_does_not_mask_initialization_error(minion_opts):
+    with patch("salt.crypt.AsyncAuth") as auth, patch(
+        "salt.transport.publish_client"
+    ) as transport:
+        auth.return_value.gen_token.side_effect = salt.exceptions.InvalidKeyError(
+            "original key failure"
+        )
+        transport.return_value.close.side_effect = OSError("cleanup failure")
+        with pytest.raises(
+            salt.exceptions.SaltClientError, match="original key failure"
+        ):
+            salt.channel.client.AsyncPubChannel.factory(minion_opts)
+        transport.return_value.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize("reconnected", [False, True])
+@pytest.mark.parametrize("failed", [False, True])
+async def test_connected_event_does_not_gate_connection_callback(
+    minion_opts, reconnected, failed
+):
+    release = asyncio.Event()
+    started = asyncio.Event()
+    publications = []
+
+    async def publish():
+        started.set()
+        await release.wait()
+        if failed:
+            raise OSError("event publication failed")
+
+    def fire_event(*args):
+        publications.append(asyncio.create_task(publish()))
+        return True
+
+    with patch("salt.crypt.AsyncAuth"), patch("salt.transport.publish_client"), patch(
+        "salt.utils.event.get_event"
+    ) as event:
+        channel = salt.channel.client.AsyncPubChannel.factory(minion_opts)
+    channel.send_id = AsyncMock()
+    channel._reconnected = reconnected
+    event.return_value.fire_event.side_effect = fire_event
+    event.return_value.fire_event_async = AsyncMock(side_effect=publish)
+    request = MagicMock(send=AsyncMock())
+    request.__aenter__ = AsyncMock(return_value=request)
+    request.__aexit__ = AsyncMock(return_value=None)
+    try:
+        with patch("salt.channel.client.AsyncReqChannel.factory", return_value=request):
+            await asyncio.wait_for(channel.connect_callback(True), 1)
+        await asyncio.wait_for(started.wait(), 1)
+        assert channel.connected
+        assert channel._reconnected
+        assert len(publications) == 1
+        assert not publications[0].done()
+        event.return_value.fire_event_async.assert_not_awaited()
+        assert request.send.await_count == int(reconnected)
+        release.set()
+        results = await asyncio.gather(*publications, return_exceptions=True)
+        if failed:
+            assert isinstance(results[0], OSError)
+        assert channel.connected
+        assert channel._reconnected
+    finally:
+        release.set()
+        await asyncio.gather(*publications, return_exceptions=True)
+        channel.close()
+
+
+@pytest.mark.parametrize("queued_cancel", [False, True])
+async def test_request_lock_recovers_after_failure_or_queued_cancellation(
+    minion_opts, tmp_path, queued_cancel
+):
+    key = salt.crypt.Crypticle.generate_key_string()
+    crypticle = salt.crypt.Crypticle(minion_opts, key)
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    calls = []
+
+    async def send(payload, timeout=None):
+        calls.append(payload)
+        if len(calls) == 1:
+            entered.set()
+            await release.wait()
+            raise OSError("first request failed")
+        load = crypticle.loads(payload["load"])
+        return crypticle.dumps({"result": "ok"}, nonce=load["nonce"])
+
+    channel = _make_channel(
+        minion_opts, tmp_path, MagicMock(send=send), _StubAuth(minion_opts, crypticle)
+    )
+    first = asyncio.create_task(channel._crypted_transfer({"cmd": "one"}, timeout=1))
+    second = None
+    try:
+        await asyncio.wait_for(entered.wait(), 1)
+        second = asyncio.create_task(
+            channel._crypted_transfer({"cmd": "two"}, timeout=1)
+        )
+        await asyncio.sleep(0)
+        assert len(calls) == 1
+        if queued_cancel:
+            second.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await second
+        release.set()
+        with pytest.raises(OSError, match="first request failed"):
+            await first
+        if not queued_cancel:
+            assert await asyncio.wait_for(second, 1) == {"result": "ok"}
+        assert await asyncio.wait_for(
+            channel._crypted_transfer({"cmd": "last"}, timeout=1), 1
+        ) == {"result": "ok"}
+    finally:
+        release.set()
+        for task in (first, second):
+            if task is not None:
+                task.cancel()
+        await asyncio.gather(
+            *(task for task in (first, second) if task is not None),
+            return_exceptions=True,
+        )
+        channel.close()
