@@ -2,8 +2,11 @@
 Unit tests for RequestRouter class
 """
 
+from types import SimpleNamespace
+
 import pytest
 
+import salt.crypt
 from salt.master import RequestRouter
 
 
@@ -129,3 +132,20 @@ class TestRequestRouter:
         }
         with pytest.raises(ValueError, match="exactly one pool with catchall"):
             RequestRouter(opts)
+
+
+def test_router_extracts_command_from_aes_payload():
+    """AES payloads are decrypted and unpickled so the command maps to its pool"""
+    opts = {
+        "worker_pools": {
+            "default": {"worker_count": 1, "commands": ["*"]},
+            "files": {"worker_count": 1, "commands": ["_serve_file"]},
+        }
+    }
+    key = salt.crypt.Crypticle.generate_key_string()
+    crypticle = salt.crypt.Crypticle(opts, key)
+    router = RequestRouter(opts, {"aes": {"secret": SimpleNamespace(value=key)}})
+    payload = {"enc": "aes", "load": crypticle.dumps({"cmd": "_serve_file"})}
+
+    assert router._extract_command(payload) == "_serve_file"
+    assert router.route_request(payload) == "files"
