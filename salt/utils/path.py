@@ -10,6 +10,7 @@ import re
 from collections.abc import Iterable
 
 import salt.utils.args
+import salt.utils.data
 import salt.utils.platform
 import salt.utils.stringutils
 from salt.exceptions import CommandNotFoundError
@@ -382,10 +383,24 @@ def os_walk(top, *args, **kwargs):
     """
     This is a helper than ensures that all paths returned from os.walk are
     unicode.
+
+    ``salt.utils.data.decode`` builds new lists, so the directory names yielded
+    here are not the list ``os.walk`` recurses into. In-place edits of that
+    yielded list (``dirs[:] = []``, ``dirs.clear()``, ``dirs.remove(...)``)
+    are copied back after the caller resumes. That keeps pruning working for
+    callers such as ``file.find`` maxdepth.
     """
     top_query = salt.utils.stringutils.to_str(top)
-    for item in os.walk(top_query, *args, **kwargs):
-        yield salt.utils.data.decode(item, preserve_tuples=True)
+    for root, dirs, files in os.walk(top_query, *args, **kwargs):
+        decoded_dirs = salt.utils.data.decode(dirs)
+        yield (
+            salt.utils.data.decode(root),
+            decoded_dirs,
+            salt.utils.data.decode(files),
+        )
+        # os.walk consults dirs only after a top-down yield. Re-encode so a
+        # caller that pruned or reordered the decoded list changes the walk.
+        dirs[:] = [salt.utils.stringutils.to_str(name) for name in decoded_dirs]
 
 
 def expand(path):
