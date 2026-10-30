@@ -50,6 +50,17 @@ _LINKS = {}
 # Key is peer ``cluster_id`` after handshake.
 _INBOUND = {}
 
+# Timeout for outbound ``topology/pub`` / ``topology/ret`` sends.
+# The publish daemon's io_loop also drives the IPC pull-socket read
+# and every topology dispatcher coroutine.  A single unbounded
+# ``await`` on a slow / wedged peer (whose link's REQ.send never
+# resolves) stalls everything co-scheduled -- in the worst case
+# the pub-pull reader stops picking up new publishes for minutes
+# at a time, which surfaces as "one leaf cluster's minions
+# silently miss a publish".  Bound every outbound topology send
+# so a wedged peer only costs us this many seconds.
+_TOPOLOGY_AWAIT_TIMEOUT = 10.0
+
 # Inbound listener state.  Owned here --- not a separate module ---
 # because inbound and outbound lifecycle are intertwined (both come
 # up together, both tear down together) and both share the single
@@ -107,6 +118,12 @@ def _reset_module_state():
     global _LINKS, _INBOUND, _LISTENER, _LISTENER_SOCKET, _OWNER_PID
     global _REGISTRY_CACHE, _BREADCRUMB_CACHE, _IO_LOOP, _RAFT_SERVICE
     global _CONFIG, _OPTS, _RETURN_SUBSCRIBER
+    for chan in _PUB_CHANNEL_CACHE.values():
+        try:
+            chan.close()
+        except Exception:  # pylint: disable=broad-except
+            log.debug("topology: cached PubServerChannel close failed", exc_info=True)
+    _PUB_CHANNEL_CACHE.clear()
     _LINKS = {}
     _INBOUND = {}
     _LISTENER = None
@@ -712,7 +729,18 @@ async def _handle_topology_return_event(package):
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: forward_return_once raised for jid=%r", jid)
     try:
-        await upstream.send_return([load], [router.cluster_id])
+        await asyncio.wait_for(
+            upstream.send_return([load], [router.cluster_id]),
+            timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "topology: send_return to upstream=%r timed out for jid=%r "
+            "after %ss; recovering loop",
+            getattr(upstream, "peer_cluster_id", None),
+            jid,
+            _TOPOLOGY_AWAIT_TIMEOUT,
+        )
     except Exception:  # pylint: disable=broad-except
         log.exception(
             "topology: send_return to upstream=%r failed for jid=%r",
@@ -990,9 +1018,10 @@ async def _dispatch_pub(payload):
         if _jid_is_local_origin(load.get("jid")):
             # Origin: store locally, skip forward_publish so we
             # don't fan the return to our other peers (who have no
-            # interest in it).
+            # interest in it).  Offload to a thread -- the inner
+            # ``store_job`` does synchronous disk I/O.
             try:
-                _store_forwarded_return(load)
+                await _store_forwarded_return_offload(load)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "topology: store_job for forwarded return failed for jid=%r",
@@ -1017,7 +1046,18 @@ async def _dispatch_pub(payload):
                 first_time = True
             if first_time:
                 try:
-                    await upstream.send_publish(load, [router.cluster_id])
+                    await asyncio.wait_for(
+                        upstream.send_publish(load, [router.cluster_id]),
+                        timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+                    )
+                except asyncio.TimeoutError:
+                    log.warning(
+                        "topology: upstream return forward to %r timed out "
+                        "for jid=%r after %ss; recovering loop",
+                        getattr(upstream, "peer_cluster_id", None),
+                        load.get("jid"),
+                        _TOPOLOGY_AWAIT_TIMEOUT,
+                    )
                 except Exception:  # pylint: disable=broad-except
                     log.exception(
                         "topology: upstream return forward failed for jid=%r",
@@ -1047,7 +1087,7 @@ async def _dispatch_pub(payload):
         # :func:`_publish_to_local_minions`.
         if _looks_like_minion_return(load):
             try:
-                _store_forwarded_return(load)
+                await _store_forwarded_return_offload(load)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "topology: store_job for forwarded return failed for jid=%r",
@@ -1089,7 +1129,18 @@ async def _dispatch_pub(payload):
 
         async def _transit_send(_link, _load):
             try:
-                await _link.send_publish(_load, [cluster_id])
+                await asyncio.wait_for(
+                    _link.send_publish(_load, [cluster_id]),
+                    timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+                )
+            except asyncio.TimeoutError:
+                log.warning(
+                    "topology: transit send_publish to peer=%r timed out "
+                    "for jid=%r after %ss; dropping forward",
+                    getattr(_link, "peer_cluster_id", None),
+                    _load.get("jid") if isinstance(_load, dict) else None,
+                    _TOPOLOGY_AWAIT_TIMEOUT,
+                )
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "topology: transit forward to peer=%r failed for jid=%r",
@@ -1152,6 +1203,23 @@ def _jid_is_local_origin(jid):
 
 
 _MMINION_CACHE = None
+
+
+async def _store_forwarded_return_offload(load):
+    """Run :func:`_store_forwarded_return` on the default executor.
+
+    ``store_job`` + ``save_minions`` both perform synchronous disk I/O
+    (atomic write with ``os.fsync`` + ``os.rename``) that, when called
+    directly from the publish daemon's single-threaded ``asyncio``
+    event loop, blocks the IPC pull-socket reader from picking up
+    further publishes.  Under rapid-fire load those blocking windows
+    accumulate into multi-minute stalls where new publishes queue
+    on ``publish_pull.ipc`` but the daemon never wakes up to
+    service them.  Offloading to a thread lets the loop stay
+    responsive while the disk write completes in the background.
+    """
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _store_forwarded_return, load)
 
 
 def _store_forwarded_return(load):
@@ -1246,9 +1314,31 @@ async def _publish_to_local_minions(load):
         log.debug(
             "topology: strip_cluster_scope failed; publishing raw tgt", exc_info=True
         )
-    _seed_local_cache_for_forwarded_publish(stripped)
+    # Offload the seed to a thread.  ``CkMinions.check_minions`` scans
+    # the PKI directory and ``save_load`` does fsync + atomic rename;
+    # both are synchronous disk I/O that blocks the publish daemon's
+    # io_loop and starves the IPC pull-socket reader under load.
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(
+            None, _seed_local_cache_for_forwarded_publish, stripped
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.debug("topology: seed_local_cache offload failed", exc_info=True)
+    # Reuse a cached per-transport :class:`PubServerChannel` -- do NOT
+    # construct a fresh one per publish.  The transport's PUSH socket
+    # that writes to ``publish_pull.ipc`` sets ``zmq.LINGER=1`` (one
+    # millisecond, see ``salt/transport/zeromq.py`` PublishServer.connect).
+    # A transient channel garbage-collected between publishes closes its
+    # PUSH socket with that 1 ms grace window, and under rapid-fire load
+    # any un-flushed queued message is **silently discarded** when the
+    # pub-daemon's PULL reader doesn't drain within the window.  This
+    # manifests as a per-master "chan.publish returned OK but minions
+    # never executed" flake, where the entire local minion set misses the
+    # publish.  Caching keeps the PUSH socket open for the lifetime of
+    # the pub-daemon, so LINGER=1 never applies.
     for transport, opts in salt.utils.channel.iter_transport_opts(_OPTS or {}):
-        chan = salt.channel.server.PubServerChannel.factory(opts)
+        chan = _get_cached_pub_channel(transport, opts)
         try:
             await chan.publish(stripped)
         except Exception:  # pylint: disable=broad-except
@@ -1256,6 +1346,29 @@ async def _publish_to_local_minions(load):
                 "topology: PubServerChannel.publish failed on transport %r",
                 transport,
             )
+
+
+#: Cache of per-transport long-lived :class:`PubServerChannel` instances
+#: used by :func:`_publish_to_local_minions`.  See the comment there for
+#: why reusing matters.
+_PUB_CHANNEL_CACHE = {}
+
+
+def _get_cached_pub_channel(transport, opts):
+    """Return a cached :class:`PubServerChannel` for *transport*.
+
+    First call per transport constructs via ``factory(opts)``; subsequent
+    calls return the cached instance.  The channel's underlying PUSH
+    socket to ``publish_pull.ipc`` therefore stays open across publishes,
+    bypassing the ``LINGER=1`` close-time discard window.
+    """
+    chan = _PUB_CHANNEL_CACHE.get(transport)
+    if chan is None:
+        import salt.channel.server  # pylint: disable=import-outside-toplevel
+
+        chan = salt.channel.server.PubServerChannel.factory(opts)
+        _PUB_CHANNEL_CACHE[transport] = chan
+    return chan
 
 
 def _seed_local_cache_for_forwarded_publish(load):
@@ -1349,7 +1462,7 @@ async def _dispatch_ret(payload):
             continue
         if _jid_is_local_origin(jid):
             try:
-                _store_forwarded_return(item)
+                await _store_forwarded_return_offload(item)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "topology: store_job for inbound topology/ret failed for jid=%r",
@@ -1374,7 +1487,18 @@ async def _dispatch_ret(payload):
         except Exception:  # pylint: disable=broad-except
             log.exception("topology: forward_return_once raised for jid=%r", jid)
         try:
-            await upstream.send_return([item], [router.cluster_id])
+            await asyncio.wait_for(
+                upstream.send_return([item], [router.cluster_id]),
+                timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+            )
+        except asyncio.TimeoutError:
+            log.warning(
+                "topology: send_return (transit) to upstream=%r timed out "
+                "for jid=%r after %ss; recovering loop",
+                getattr(upstream, "peer_cluster_id", None),
+                jid,
+                _TOPOLOGY_AWAIT_TIMEOUT,
+            )
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "topology: send_return to upstream=%r failed for jid=%r",

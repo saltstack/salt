@@ -1452,24 +1452,26 @@ class LocalClient:
                     yield ret
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
+            #
+            # Topology forwarding (:mod:`salt.topology`) can add minions
+            # to the job's ``.minions.p`` file *after* publish time, as
+            # peer-cluster returns stream in via
+            # :func:`salt.topology.link_manager._store_forwarded_return`
+            # calling ``save_minions``.  Those appended minions grow
+            # both the expected ``minions`` set (via the shared
+            # ``.minions.p`` -> ``get_minions`` read-back path) and the
+            # ``found`` set.  As long as this loop re-reads
+            # ``.minions.p`` and keeps ``minions`` current, the ordinary
+            # ``found >= minions`` check behaves correctly: it only
+            # fires once BOTH the expected set has been fully populated
+            # AND every expected minion has returned.  Nothing special
+            # is required beyond that -- the earlier override that
+            # suppressed this short-circuit on every topology-enabled
+            # publish is removed because it forced the CLI to wait the
+            # full ``--timeout`` even on 1-minion local-only publishes.
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
-                # When topology is enabled the master cannot pre-compute
-                # the peer-cluster minions matched by a glob/compound
-                # publish -- those come back asynchronously via
-                # :func:`salt.topology.link_manager._store_forwarded_return`
-                # on the origin.  Short-circuiting on
-                # ``found >= local-minions`` means a plain ``salt '*'
-                # test.ping`` returns only the origin's minions and
-                # exits before cross-cluster returns arrive.  Fall
-                # through to the timeout path so cross-cluster returns
-                # have the full ``--timeout`` window to arrive.
-                #
-                # (Explicit minion-id targets still return instantly
-                # because the saltutil.find_job gather_job_timeout path
-                # below takes over.)
-                and not self.opts.get("topology_enabled")
             ):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)
