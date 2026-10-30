@@ -11,6 +11,7 @@ import salt.client.mixins
 import salt.config
 import salt.loader
 import salt.utils.error
+import salt.utils.event
 import salt.utils.network
 import salt.utils.resource_warnings
 import salt.utils.user
@@ -46,78 +47,15 @@ class WheelClient(
     tag_prefix = "wheel"
 
     def __init__(self, opts, context=None):
-        # If client auth is enabled, load client config and set role
-        if opts.get("client_auth"):
-            import salt.syspaths as syspaths
-            from salt import config as salt_config
-
-            # Load client config if it exists
-            client_config_path = os.path.join(
-                syspaths.CONFIG_DIR, opts.get("conf_file", "master")
-            )
-            if os.path.exists(client_config_path):
-                client_opts = salt_config.client_config(client_config_path)
-                client_opts.update(opts)
-                opts = client_opts
-            # Set client role for PKI authentication
-            opts["__role"] = "client"
-
         salt.client.mixins.SyncClientMixin.__init__(self, opts, context=context)
         salt.client.mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
         self.context = context or {}
-        self.event = None
         self.salt_user = salt.utils.user.get_specific_user()
-
-        # Detect if we need network events (for remote execution)
-        self._use_network_events = self._should_use_network_events()
-
-        if self._use_network_events:
-            # Use network event subscriber for remote execution
-            from salt.utils import client_event
-
-            self.event = client_event.ClientEventSubscriber(self.opts)
-        else:
-            # Use IPC event subscriber for local execution
-            self.event = salt.utils.event.get_event(
-                "master", self.opts["sock_dir"], opts=self.opts, listen=False
-            )
-
+        self.event = salt.utils.event.get_event(
+            "master", self.opts["sock_dir"], opts=self.opts, listen=False
+        )
         self.functions = salt.loader.wheels(opts, context=self.context)
-
-    def _should_use_network_events(self):
-        """
-        Determine if we should use network events instead of IPC.
-
-        Returns True if:
-        - Client auth is enabled (remote client), OR
-        - Master is not localhost/127.0.0.1 (remote master)
-        """
-        # If explicitly using client auth, we're remote
-        if self.opts.get("__role") == "client":
-            return True
-
-        # Check if master is remote
-        master = self.opts.get("master", "localhost")
-        if master not in ("localhost", "127.0.0.1", "::1"):
-            return True
-
-        # Check if IPC socket exists (if not, we're probably remote)
-        sock_dir = self.opts.get("sock_dir")
-        if sock_dir and not os.path.exists(
-            os.path.join(sock_dir, "master_event_pub.ipc")
-        ):
-            # IPC socket doesn't exist, try network events if client keys exist
-            import salt.syspaths
-
-            pki_dir = self.opts.get(
-                "pki_dir", os.path.join(salt.syspaths.CONFIG_DIR, "pki", "master")
-            )
-            client_key = os.path.join(pki_dir, "client.pem")
-            if os.path.exists(client_key):
-                return True
-
-        return False
 
     def destroy(self):
         # Each resource's teardown is isolated in its own try/except and its
