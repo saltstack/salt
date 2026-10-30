@@ -67,7 +67,13 @@ class KeyCLI:
         self.opts = opts
         import salt.wheel
 
-        self.client = salt.wheel.WheelClient(opts)
+        # Config decides which wheel client to use: ``RemoteWheelClient`` for
+        # workstation operators (``__role=client``), the master-local
+        # ``WheelClient`` otherwise.  No branch inside WheelClient itself.
+        if opts.get("__role") == "client":
+            self.client = salt.wheel.RemoteWheelClient(opts)
+        else:
+            self.client = salt.wheel.WheelClient(opts)
         # instantiate the key object for masterless mode
         if not opts.get("eauth") and not opts.get("client_auth"):
             self.key = get_key(opts)

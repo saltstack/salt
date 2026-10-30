@@ -20,7 +20,15 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
         profiling_enabled = self.options.profiling_enabled
 
-        with salt.runner.Runner(self.config) as runner:
+        # ``client_config()`` sets ``opts["__role"] = "client"`` when the CLI
+        # is pointed at ``/etc/salt/client``.  Pick the remote-only sibling
+        # class in that case so the master-local path stays untouched.
+        if self.config.get("__role") == "client":
+            runner_cls = salt.runner.RemoteRunner
+        else:
+            runner_cls = salt.runner.Runner
+
+        with runner_cls(self.config) as runner:
             if self.options.doc:
                 runner.print_docs()
                 self.exit(salt.defaults.exitcodes.EX_OK)
