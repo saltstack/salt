@@ -1109,6 +1109,60 @@ def test_list_upgrades_yum():
         )
 
 
+def test_list_upgrades_passes_extra_options_to_yum():
+    """
+    Regression for #70235: ``pkg.list_upgrades`` must forward extra kwargs
+    (e.g. ``exclude='kernel*'``, ``security=True``) to the underlying
+    yum/dnf command, matching the behavior of ``pkg.upgrade``.  Previously
+    ``_get_options(**kwargs)`` was called without ``get_extra_options=True``
+    so ``exclude`` and friends were silently dropped, which made
+    ``state.test=True`` previews of ``pkg.uptodate`` diverge from the real
+    apply.
+    """
+    cmd = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_all": cmd, "config.get": MagicMock(return_value=False)},
+    ):
+        yumpkg.list_upgrades(
+            refresh=False, exclude="kernel*", security=True, fromrepo="good"
+        )
+        cmd.assert_called_once_with(
+            [
+                "dnf",
+                "--quiet",
+                "--disablerepo=*",
+                "--enablerepo=good",
+                "--exclude=kernel*",
+                "--security",
+                "list",
+                "--upgrades",
+            ],
+            env={},
+            output_loglevel="trace",
+            ignore_retcode=True,
+            python_shell=False,
+        )
+
+
+def test_list_upgrades_extra_options_without_fromrepo():
+    """
+    Same contract as above but without the ``fromrepo`` short-circuit: the
+    extra kwargs must land in the yum/dnf command regardless of whether
+    repo-selection options are present.
+    """
+    cmd = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    with patch.dict(yumpkg.__context__, {"yum_bin": "dnf"}), patch.dict(
+        yumpkg.__salt__,
+        {"cmd.run_all": cmd, "config.get": MagicMock(return_value=False)},
+    ):
+        yumpkg.list_upgrades(refresh=False, exclude="kernel*")
+        args, _ = cmd.call_args
+        assert (
+            "--exclude=kernel*" in args[0]
+        ), f"list_upgrades dropped the extra --exclude option: {args[0]}"
+
+
 def test_modified():
     mock = MagicMock()
     with patch.dict(yumpkg.__salt__, {"lowpkg.modified": mock}):
