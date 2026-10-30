@@ -741,6 +741,76 @@ async def test_scheduler_before_connect(minion_opts):
             minion.destroy()
 
 
+@pytest.mark.slow_test
+async def test_scheduler_not_run_when_not_schedule_leader(minion_opts):
+    """
+    Tests that a minion that is not the schedule_leader, ie. a minion spawned
+    by a MinionManager in a multimaster configuration connected to every master
+    but the first one, does not have its scheduler initialized.
+    """
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.minion.Minion.sync_connect_master",
+        MagicMock(side_effect=RuntimeError("stop execution")),
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
+    ):
+        minion_opts["scheduler_before_connect"] = True
+        minion_opts["schedule_leader"] = False
+        io_loop = tornado.ioloop.IOLoop()
+        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+        try:
+            try:
+                await minion.tune_in(start=True)
+            except RuntimeError:
+                pass
+
+            # Make sure the scheduler was not initialized
+            assert "schedule" not in minion.periodic_callbacks
+        finally:
+            minion.destroy()
+
+
+async def test_spawn_minions_schedule_leader(minion_opts):
+    """
+    Tests that, in a multimaster configuration, only the minion connected to
+    the first master is the schedule_leader.
+    """
+    minion_opts["master"] = ["10.0.0.1", "10.0.0.2"]
+
+    created_opts = []
+
+    def _create_minion_object(opts, *args, **kwargs):
+        created_opts.append(dict(opts))
+        minion = MagicMock(name="minion")
+        minion.opts = opts
+        return minion
+
+    async def _connect_minion(minion):
+        return None
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        with patch.object(
+            mm, "_create_minion_object", _create_minion_object
+        ), patch.object(mm, "_connect_minion", _connect_minion):
+            mm._spawn_minions()
+            # Give the fake connect coroutines a chance to run
+            await asyncio.sleep(0)
+    finally:
+        mm.io_loop = MagicMock()
+        mm.destroy()
+
+    assert len(created_opts) == 2
+    assert created_opts[0]["beacons_leader"] is True
+    assert created_opts[0]["schedule_leader"] is True
+    assert created_opts[1]["beacons_leader"] is False
+    assert created_opts[1]["schedule_leader"] is False
+
+
 def test_minion_module_refresh(minion_opts):
     """
     Tests that the 'module_refresh' just return in case there is no 'schedule'
