@@ -55,3 +55,7 @@ junos-eznc < 2.7; python_version == "3.11"
 # env, so capping Cython here keeps the pyzmq wheel compiling until pyzmq
 # ships a Cython 3.3-compatible release.
 Cython < 3.4
+# filelock 4.2.x requires Python 3.11+; 3.10 stays on the 4.0.x series.
+filelock <= 3.19.1; python_version <= "3.9"
+filelock <= 4.1.0; python_version == "3.10"
+filelock >= 4.2.1; python_version >= "3.11"

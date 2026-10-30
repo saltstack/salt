@@ -83,6 +83,7 @@ docutils==0.22.4
     #   sphinx
 filelock==4.2.6
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   python-discovery
