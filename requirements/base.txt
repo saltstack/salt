@@ -8,7 +8,10 @@ apache-libcloud>=3.9.1; python_version >= '3.10'
 # attrs and charset-normalizer are pulled in transitively by aiohttp/requests.
 # Explicit floors on py>=3.10 keep them at the current CVE-patched line.
 attrs>=26.1.0; python_version >= '3.10'
-certifi>=2026.5.20
+# certifi>=2026.10.23 picks up the latest Mozilla CA bundle; the 2026.10.19
+# release dropped the eMudhra/emSign root CA after its intermediates were
+# found to have critically weak EC private keys.
+certifi>=2026.10.23
 cffi>=2.0.0
 charset-normalizer>=3.4.7; python_version >= '3.10'
 # cheroot 8.5.2 fails to build with modern setuptools due to setuptools_scm_git_archive dependency
@@ -55,7 +58,7 @@ msgpack>=1.1.2,<1.2.1; python_version < '3.10'
 msgpack>=1.1.2; python_version >= '3.10'
 # Packaging 24.1 imports annotations from __future__ which breaks salt ssh
 # tests on target hosts with older python versions.
-packaging==26.2
+packaging>=26.2
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
 pyasn1>=0.6.4

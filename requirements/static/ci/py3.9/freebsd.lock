@@ -93,7 +93,7 @@ botocore==1.43.25 ; python_full_version >= '3.10'
     #   s3transfer
 cachetools==5.5.2 ; python_full_version < '3.10'
     # via google-auth
-certifi==2026.5.20
+certifi==2026.10.23
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt

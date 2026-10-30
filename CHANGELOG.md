@@ -7,6 +7,20 @@ Versions are `MAJOR.PATCH`.
 
 # Changelog
 
+## 3007.17 (2026-10-26)
+
+
+### Security
+
+- Updated certifi to 2026.10.23 to pick up the latest Mozilla CA bundle. [#70571](https://github.com/saltstack/salt/issues/70571)
+
+## 3007.16 (2026-10-23)
+
+
+### Security
+
+- Upgraded certifi to 2026.10.19 and the packaged pip to 26.2.2 for the eMudhra/emSign CA incident (intermediates found to have critically weak EC private keys). [#70465](https://github.com/saltstack/salt/issues/70465)
+
 ## 3007.15 (2026-09-30)
 
 
