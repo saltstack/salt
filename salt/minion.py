@@ -5130,8 +5130,6 @@ class Minion(MinionBase):
                     )
                     await self.req_channel.connect()
 
-                    # put the current schedule into the new loaders
-                    self.opts["schedule"] = self.schedule.option("schedule")
                     (
                         self.functions,
                         self.returners,
