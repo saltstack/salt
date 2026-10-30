@@ -23,11 +23,13 @@ def shell():
     if salt.utils.platform.is_windows():
         env_var = "COMSPEC"
         default = r"C:\Windows\system32\cmd.exe"
-    else:
-        env_var = "SHELL"
-        default = "/bin/sh"
-
-    return {"shell": os.environ.get(env_var, default)}
+        return {"shell": os.environ.get(env_var, default)}
+    try:
+        import pwd
+        shell = pwd.getpwuid(os.getuid()).pw_shell
+        return {"shell": shell or "/bin/sh"}
+    except (ImportError, KeyError, AttributeError):
+        return {"shell": "/bin/sh"}
 
 
 def config():
