@@ -17,7 +17,7 @@ def pkgrepo(states, grains):
 
 
 @pytest.fixture
-def suse_state_tree(grains, pkgrepo, state_tree):
+def suse_state_tree(grains, pkgrepo, state_tree, modules):
     managed_sls_contents = """
     salttest:
       pkgrepo.managed:
@@ -72,11 +72,11 @@ def suse_state_tree(grains, pkgrepo, state_tree):
         "pkgrepo/modified.sls", modified_sls_contents, state_tree
     )
 
-    try:
-        with managed_state_file, absent_state_file, modified_state_file:
+    with managed_state_file, absent_state_file, modified_state_file:
+        try:
             yield
-    finally:
-        pass
+        finally:
+            modules.state.sls(mods="pkgrepo.absent")
 
 
 @pytest.mark.requires_salt_states("pkgrepo.managed", "pkgrepo.absent")
