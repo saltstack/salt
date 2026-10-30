@@ -429,6 +429,67 @@ class ClientACL:
             f"{type_name} '{target}'"
         )
 
+    def authorize_runner(self, client_id, fun):
+        """
+        Return a ``{"allowed": bool, "error": dict|None}`` decision for a
+        client calling a specific runner function.  Shape matches
+        :meth:`client_can_publish` so :func:`stacked_authorize` can compose
+        it with an eauth decision uniformly across publish/runner/wheel.
+        """
+        if self.client_is_allowed(client_id, fun, "runner"):
+            return {"allowed": True, "error": None}
+        return {
+            "allowed": False,
+            "error": {
+                "name": "ClientAuthorizationError",
+                "message": (
+                    f'Client "{client_id}" is not authorized to execute '
+                    f'runner function "{fun}".'
+                ),
+            },
+        }
+
+    def authorize_wheel(self, client_id, fun):
+        """
+        Return a ``{"allowed": bool, "error": dict|None}`` decision for a
+        client calling a specific wheel function.  Shape matches
+        :meth:`authorize_runner` and :meth:`client_can_publish`.
+        """
+        if self.client_is_allowed(client_id, fun, "wheel"):
+            return {"allowed": True, "error": None}
+        return {
+            "allowed": False,
+            "error": {
+                "name": "ClientAuthorizationError",
+                "message": (
+                    f'Client "{client_id}" is not authorized to execute '
+                    f'wheel function "{fun}".'
+                ),
+            },
+        }
+
+
+def stacked_authorize(client_decision, eauth_decision):
+    """
+    Compose two authorization decisions with AND semantics.
+
+    Both ``client_decision`` and ``eauth_decision`` are dicts in the shape
+    returned by :meth:`ClientACL.client_can_publish` /
+    :meth:`ClientACL.authorize_runner` /
+    :meth:`ClientACL.authorize_wheel`:
+    ``{"allowed": bool, "error": dict|None}``.
+
+    Returns ``(ok, error_dict)``: ``ok`` is True iff both inputs allow;
+    on denial, ``error_dict`` is the first non-``None`` error (client
+    first, then eauth) so callers can attribute which policy denied.
+    """
+    client_ok = bool(client_decision.get("allowed"))
+    eauth_ok = bool(eauth_decision.get("allowed"))
+    if client_ok and eauth_ok:
+        return True, None
+    err = client_decision.get("error") or eauth_decision.get("error")
+    return False, err
+
 
 class PublisherACL:
     """

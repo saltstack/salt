@@ -5624,14 +5624,35 @@ class ClearFuncs(TransportMethods):
 
         auth_key = clear_load.get("key", None)
 
-        # Check for external auth calls and authenticate
-        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
+        # Check for external auth calls and authenticate.  ``want_stacked``
+        # flags when the same load carries BOTH user-key (PKI) AND
+        # eauth/token creds and ``stacked_auth: true`` is enabled on the
+        # master -- in that case we evaluate both axes and require both
+        # to authorize (handled in the is_client branch below).
+        (  # pylint: disable=unbalanced-tuple-unpacking
+            auth_type,
+            err_name,
+            key,
+            sensitive_load_keys,
+            stacked_possible,
+            secondary_auth_type,
+        ) = self._prep_auth_info(extra, want_stacked=True)
         if auth_type == "user":
             auth_check = self.loadauth.check_authentication(
                 clear_load, auth_type, key=key
             )
         else:
             auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # When stacking is active, also run the secondary axis check so we
+        # have both an eauth ``auth_list`` and a user identity available
+        # when gating the request.  The secondary axis is always ``user``
+        # (see ``_prep_auth_info``); the primary is token or eauth.
+        secondary_auth_check = None
+        if stacked_possible and secondary_auth_type == "user":
+            secondary_auth_check = self.loadauth.check_authentication(
+                clear_load, "user", key=self.key
+            )
 
         # Setup authorization list
         syndic_auth_list = None
@@ -5668,20 +5689,36 @@ class ClearFuncs(TransportMethods):
         # ``auth_check`` returns the identity under the generic key
         # ``username`` because the auth system was built for human users;
         # in the client-auth path that identity is actually a client_id.
+        # When stacking is active the user-key auth may have landed in
+        # ``secondary_auth_check`` instead, so look there first.
         is_client = False
         auth_identity = auth_check.get("username")
-        if auth_type == "user" and auth_identity:
+        client_identity = None
+        if secondary_auth_check is not None and not secondary_auth_check.get("error"):
+            # Stacked mode: client identity comes from the user-key check.
+            client_identity = secondary_auth_check.get("username")
+            if client_identity:
+                try:
+                    client_key_entry = self.key_cache.fetch(
+                        "client_keys", client_identity
+                    )
+                    if client_key_entry:
+                        is_client = True
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        elif auth_type == "user" and auth_identity:
             try:
-                client_key = self.key_cache.fetch("client_keys", auth_identity)
-                if client_key:
+                client_key_entry = self.key_cache.fetch("client_keys", auth_identity)
+                if client_key_entry:
                     is_client = True
+                    client_identity = auth_identity
             except Exception:  # pylint: disable=broad-except
                 # If we can't check, assume not a client
                 pass
 
         # If this is a client, check client ACL for minion targeting and module execution
         if is_client:
-            client_id = auth_identity
+            client_id = client_identity
             # Check blacklist first (takes precedence)
             client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
             if client_acl_blacklist and client_id in client_acl_blacklist:
@@ -5717,13 +5754,55 @@ class ClearFuncs(TransportMethods):
                             )
                         return err
 
-            # Use the ClientACL helper to check publish permissions
-            acl_result = self.client_acl.client_can_publish(
+            # ClientACL decision (always evaluated for client requests).
+            client_decision = self.client_acl.client_can_publish(
                 client_id, minions, clear_load["fun"]
             )
 
+            if stacked_possible and auth_type in ("token", "eauth"):
+                # Stacked mode: also require the human (eauth) axis to
+                # authorize via its auth_list.  Compose with the ClientACL
+                # decision; both must pass.
+                eauth_authorized = self.ckminions.auth_check(
+                    auth_list,
+                    clear_load["fun"],
+                    clear_load["arg"],
+                    clear_load["tgt"],
+                    clear_load.get("tgt_type", "glob"),
+                    minions=minions,
+                    whitelist=["saltutil.find_job"],
+                )
+                if isinstance(eauth_authorized, dict) and eauth_authorized.get("error"):
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": eauth_authorized["error"],
+                    }
+                elif eauth_authorized:
+                    eauth_decision = {"allowed": True, "error": None}
+                else:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": (
+                                f'User "{auth_identity}" is not authorized to '
+                                f'execute "{clear_load["fun"]}" on target '
+                                f'"{clear_load["tgt"]}".'
+                            ),
+                        },
+                    }
+                allowed, err_payload = salt.acl.stacked_authorize(
+                    client_decision, eauth_decision
+                )
+                acl_result = {
+                    "allowed": allowed,
+                    "error": err_payload,
+                }
+            else:
+                acl_result = client_decision
+
             if not acl_result["allowed"]:
-                # Client ACL denied the request
+                # ACL denied the request
                 log.warning(
                     'Client "%s" denied: %s',
                     client_id,
@@ -5737,15 +5816,20 @@ class ClearFuncs(TransportMethods):
                     )
                 return err
 
-            # Client ACL passed - record the client identity in clear_load
-            # for logging/returners.  TODO: split into a dedicated
-            # ``clear_load["client_id"]`` field once the deferred
-            # human-user forwarding story lands (#3), so audit logs
-            # distinguish "which client" from "which human".
-            clear_load["user"] = client_id
+            # Record both identities for logging/returners/audit.  In
+            # stacked mode, ``user`` is the human (eauth) and
+            # ``client_id`` is the workstation; in PKI-only mode both are
+            # the same client identity (preserved for backwards compat).
+            clear_load["client_id"] = client_id
+            if stacked_possible and auth_identity:
+                clear_load["user"] = auth_identity
+            else:
+                clear_load["user"] = client_id
             log.info(
-                'Client "%s" authorized to execute "%s" on target "%s" (%d minions)',
+                'Client "%s" (user "%s") authorized to execute "%s" on '
+                'target "%s" (%d minions)',
                 client_id,
+                clear_load["user"],
                 clear_load["fun"],
                 clear_load["tgt"],
                 len(minions),
@@ -5850,14 +5934,35 @@ class ClearFuncs(TransportMethods):
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},
         }
 
-    def _prep_auth_info(self, clear_load):
+    def _prep_auth_info(self, clear_load, want_stacked=False):
+        """
+        Pick the primary auth_type for ``clear_load``.
+
+        Default return (``want_stacked=False``): the historical 4-tuple
+        ``(auth_type, err_name, key, sensitive_load_keys)`` with priority
+        ``token > eauth > user``.
+
+        When ``want_stacked=True`` the return is extended to a 6-tuple
+        ``(..., stacked_possible, secondary_auth_type)``.  ``stacked_possible``
+        is True when ``stacked_auth`` is enabled on the master opts AND
+        the load carries both a user ``key`` AND either ``token``/``eauth``
+        credentials.  ``secondary_auth_type`` names the non-primary axis
+        in that case, or is ``None``.
+
+        Only the publish/runner/wheel dispatchers that implement the
+        two-axis authorization need the extended form; everyone else can
+        keep unpacking four values.
+        """
         sensitive_load_keys = []
         key = None
-        if "token" in clear_load:
+        has_user = "key" in clear_load
+        has_token = "token" in clear_load
+        has_eauth = "eauth" in clear_load
+        if has_token:
             auth_type = "token"
             err_name = "TokenAuthenticationError"
             sensitive_load_keys = ["token"]
-        elif "eauth" in clear_load:
+        elif has_eauth:
             auth_type = "eauth"
             err_name = "EauthAuthenticationError"
             sensitive_load_keys = ["username", "password"]
@@ -5866,7 +5971,30 @@ class ClearFuncs(TransportMethods):
             err_name = "UserAuthenticationError"
             key = self.key
 
-        return auth_type, err_name, key, sensitive_load_keys
+        if not want_stacked:
+            return auth_type, err_name, key, sensitive_load_keys
+
+        stacked_possible = False
+        secondary_auth_type = None
+        if self.opts.get("stacked_auth") and has_user and (has_token or has_eauth):
+            stacked_possible = True
+            # Primary is whatever was picked above; user is the secondary.
+            # The exclusive priority above prefers token/eauth over user,
+            # so when stacking is on and both are present the user axis
+            # becomes the secondary.
+            secondary_auth_type = "user"
+            # Mark the user-key field sensitive alongside the primary
+            # axis's secrets so logging strips both.
+            sensitive_load_keys = list(sensitive_load_keys) + ["key"]
+
+        return (
+            auth_type,
+            err_name,
+            key,
+            sensitive_load_keys,
+            stacked_possible,
+            secondary_auth_type,
+        )
 
     def _prep_jid(self, clear_load, extra):
         """
