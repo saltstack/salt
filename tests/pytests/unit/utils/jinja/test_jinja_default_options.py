@@ -77,3 +77,13 @@ def test_statement_prefix(minion_opts, local_salt):
         template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
     )
     assert rendered == "onetwothree"
+
+def test_no_extra_trailing_newline(minion_opts, local_salt):
+    template = """{% for item in ['one', 'two', 'three'] -%}
+{{ item }}
+{% endfor -%}
+"""
+    rendered = render_jinja_tmpl(
+        template, dict(opts=minion_opts, saltenv="test", salt=local_salt)
+    )
+    assert rendered == "one\ntwo\nthree\n"
