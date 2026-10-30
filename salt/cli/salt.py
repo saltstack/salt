@@ -60,12 +60,16 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             skip_perm_errors = self.options.eauth != ""
 
             # Config decides which client to use.  ``client_config()`` sets
-            # ``client_auth=True`` when ``/etc/salt/client`` is loaded (remote
-            # workstation), False when it falls back to ``/etc/salt/master``
-            # (master host local use).  No separate CLI flag.
+            # ``__role=client`` when ``/etc/salt/client`` is loaded (remote
+            # workstation), leaves it at ``master`` otherwise.  Any
+            # client-role invocation goes through RemoteClient regardless
+            # of whether the operator is authenticating via PKI
+            # (``client_auth: True``) or eauth creds (``client_auth: False``
+            # + ``eauth: ...``) -- RemoteClient's publish payload carries
+            # whichever credentials the operator provided.
             profile = self.config.get("profile")
 
-            if self.config.get("client_auth"):
+            if self.config.get("__role") == "client":
                 self.client = salt.client.get_remote_client(
                     self.get_config_file_path(),
                     skip_perm_errors=skip_perm_errors,
@@ -166,20 +170,23 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             kwargs["start_event"] = True
 
         # If using eauth and a token hasn't already been loaded into
-        # kwargs, prompt the user to enter auth credentials
+        # kwargs, prompt the user to enter auth credentials.  When the
+        # CLI is running as a remote client (``__role=client``), always
+        # mint a token so the RemoteClient's event subscriber can
+        # authenticate on the token path (no client.pem needed).
         if "token" not in kwargs and "key" not in kwargs and self.options.eauth:
-            # This is expensive. Don't do it unless we need to.
             import salt.auth
 
             resolver = salt.auth.Resolver(self.config)
             res = resolver.cli(self.options.eauth)
-            if self.options.mktoken and res:
-                tok = resolver.token_cli(self.options.eauth, res)
-                if tok:
-                    kwargs["token"] = tok.get("token", "")
             if not res:
                 sys.stderr.write("ERROR: Authentication failed\n")
                 sys.exit(2)
+            is_remote_client = self.config.get("__role") == "client"
+            if self.options.mktoken or is_remote_client:
+                tok = resolver.token_cli(self.options.eauth, res)
+                if tok and tok.get("token"):
+                    kwargs["token"] = tok["token"]
             kwargs.update(res)
             kwargs["eauth"] = self.options.eauth
 

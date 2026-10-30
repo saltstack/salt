@@ -2436,14 +2436,37 @@ class RemoteClient(LocalClient):
         master_uri = "tcp://{}:{}".format(
             salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
         )
+        # The master's ``publish`` method is exposed on ClearFuncs only;
+        # AES-encrypted payloads dispatch to AESFuncs, which doesn't
+        # include ``publish``.  LocalClient uses ``crypt="clear"`` for
+        # the same reason -- mirror that here.  Credentials for the
+        # master's publish-time auth (eauth username/password, token, or
+        # the per-client identity in ``client_id``) travel inside the
+        # clear-channel payload and are evaluated by
+        # :meth:`salt.master.ClearFuncs.publish`.
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="aes", master_uri=master_uri
+            self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
             try:
-                # For network events, ensure we're connected
+                # For network events, ensure we're connected.  Prefer
+                # token-auth when a Salt token is in the publish payload
+                # (eauth-only remote clients that have no client.pem to
+                # sign the PKI handshake with); fall back to PKI auth
+                # otherwise.  LocalClient._prep_pub nests kwargs under
+                # ``payload_kwargs["kwargs"]``, so check both locations.
                 if listen and self._use_network_events:
                     if not self.event.authenticated:
-                        self.event.connect()
+                        inner_kwargs = payload_kwargs.get("kwargs") or {}
+                        salt_token = payload_kwargs.get("token") or inner_kwargs.get(
+                            "token"
+                        )
+                        salt_eauth = payload_kwargs.get("eauth") or inner_kwargs.get(
+                            "eauth"
+                        )
+                        if salt_token:
+                            self.event.connect(salt_token=salt_token, eauth=salt_eauth)
+                        else:
+                            self.event.connect()
                 # For IPC events (shouldn't happen), use original logic
                 elif listen and not self.event.connect_pub(timeout=timeout):
                     raise SaltReqTimeoutError()

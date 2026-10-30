@@ -590,23 +590,54 @@ class RemoteRunner(RemoteRunnerClient):
 
         # Client-auth path uses the PKI identity already on the ReqChannel;
         # eauth path collects credentials and attaches them to the load.
-        if not self.opts.get("client_auth") and self.opts.get("eauth"):
-            if "token" in self.opts:
+        # When eauth is in play we also need a Salt token to authenticate
+        # the event subscriber (otherwise the ClientEventSubscriber would
+        # fall back to its PKI handshake and block on a missing client.pem).
+        if self.opts.get("eauth"):
+            # Aliased import -- a bare ``import salt.auth`` here would
+            # shadow the module-level ``salt`` binding used earlier in
+            # this function for ``salt.utils.args`` / ``salt.minion``.
+            from salt import auth as _auth
+
+            if "token" in self.opts and self.opts["token"]:
                 low["token"] = self.opts["token"]
             if "token" not in low and self.opts["eauth"]:
-                import salt.auth
-
-                resolver = salt.auth.Resolver(self.opts)
-                res = resolver.cli(self.opts["eauth"])
-                if self.opts.get("mktoken") and res:
-                    tok = resolver.token_cli(self.opts["eauth"], res)
-                    if tok:
-                        low["token"] = tok.get("token", "")
-                if not res:
+                resolver = _auth.Resolver(self.opts)
+                creds = resolver.cli(self.opts["eauth"])
+                if not creds:
                     log.error("Authentication failed")
                     return {}
-                low.update(res)
+                # Always mint a token so the event subscriber can
+                # authenticate on the token path.  ``--make-token`` only
+                # controls whether the token is persisted to disk.
+                tok = resolver.token_cli(self.opts["eauth"], creds)
+                if tok and tok.get("token"):
+                    low["token"] = tok["token"]
+                else:
+                    # Could not mint a token; fall back to passing creds
+                    # directly in the publish load.  Event stream will be
+                    # unusable in this mode -- caller gets JID only.
+                    low.update(creds)
                 low["eauth"] = self.opts["eauth"]
+
+            # If we have a token, pre-authenticate the event subscriber
+            # on the token path so cmd_sync's event.connect() succeeds
+            # without needing a client PKI key.
+            if (
+                "token" in low
+                and self.event is not None
+                and not getattr(self.event, "authenticated", False)
+            ):
+                try:
+                    self.event.connect(
+                        salt_token=low["token"], eauth=self.opts.get("eauth")
+                    )
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Could not pre-authenticate event subscriber on "
+                        "the token path: %s. Event stream may be unusable.",
+                        exc,
+                    )
 
         if self.opts.get("async", False):
             async_pub = self.master_call(**low)

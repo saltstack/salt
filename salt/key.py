@@ -192,28 +192,34 @@ class KeyCLI:
                     low["token"] = self.opts["token"]
 
             # If using eauth and a token hasn't already been loaded into
-            # low, prompt the user to enter auth credentials
+            # low, prompt the user to enter auth credentials.  Aliased
+            # imports -- bare ``import salt.auth`` here would shadow the
+            # module-level ``salt`` binding used earlier in this function
+            # for ``salt.utils.files`` / ``salt.utils.stringutils``.
             if "token" not in low and "key" not in low and self.opts["eauth"]:
-                # This is expensive. Don't do it unless we need to.
-                import salt.auth
+                from salt import auth as _auth
 
-                resolver = salt.auth.Resolver(self.opts)
+                resolver = _auth.Resolver(self.opts)
                 res = resolver.cli(self.opts["eauth"])
-                if self.opts["mktoken"] and res:
+                # Mint a token so the WheelClient event path (if used)
+                # can authenticate without a client PKI key.
+                tok = None
+                if res:
                     tok = resolver.token_cli(self.opts["eauth"], res)
-                    if tok:
-                        low["token"] = tok.get("token", "")
+                    if tok and tok.get("token"):
+                        low["token"] = tok["token"]
                 if not res:
                     log.error("Authentication failed")
                     return {}
                 low.update(res)
                 low["eauth"] = self.opts["eauth"]
         else:
-            # late import to avoid circular import
-            import salt.utils.master
+            # Late import to avoid circular import; aliased for the same
+            # shadowing reason noted above.
+            from salt.utils import master as _master_utils
 
             low["user"] = salt.utils.user.get_specific_user()
-            low["key"] = salt.utils.master.get_master_key(
+            low["key"] = _master_utils.get_master_key(
                 low["user"], self.opts, skip_perm_errors
             )
 

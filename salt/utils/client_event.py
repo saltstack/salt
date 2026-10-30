@@ -49,14 +49,16 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
     - Client ACLs can further restrict event access
     """
 
-    def __init__(self, opts):
+    def __init__(self, opts, **kwargs):
         """
         Initialize the client event publisher.
 
         Args:
             opts: Master configuration dictionary
+            **kwargs: Forwarded to ``SignalHandlingProcess`` (e.g. ``name``
+                passed by ``process_manager.add_process``).
         """
-        super().__init__()
+        super().__init__(**kwargs)
         self.opts = opts
 
     def run(self):

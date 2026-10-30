@@ -4829,7 +4829,11 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
         # path without needing a user-facing flag.
         opts.update(master_config(client_config_path, defaults=defaults))
         opts["__role"] = "client"
-        opts["client_auth"] = True
+        # client_auth defaults to True for /etc/salt/client (PKI client
+        # identity).  Operators can opt into eauth-only mode by setting
+        # ``client_auth: False`` in their client config.
+        if "client_auth" not in opts:
+            opts["client_auth"] = True
         config_used = client_config_path
     else:
         # Backwards-compatibility fallback: load the master config as a CLI
