@@ -1,5 +1,6 @@
 import asyncio
 import ctypes
+import logging
 import multiprocessing
 import pathlib
 import time
@@ -1435,3 +1436,128 @@ async def test_join_reply_refreshes_master_keys_cache_70090(tmp_path, key_data):
         "cluster_key (mirrors the ``self.key = self.cluster_key`` line "
         "at the end of MasterKeys._setup_keys)."
     )
+
+
+@pytest.mark.parametrize(
+    "our_entry",
+    [
+        # ``send_aes_key_event`` records an empty entry if there is no public key.
+        {},
+        # The host is not yet in the ``peers`` dict at all.
+        None,
+    ],
+)
+async def test_handle_pool_publish_peer_without_our_key_yet(
+    cluster_master_opts, caplog, our_entry
+):
+    """
+    Regression test for issue #70565.
+
+    A peer that has not learned our public key yet must not raise out of the
+    event-polling loop.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+
+    bare_id = cluster_master_opts["id"].removesuffix("_master")
+    peers = {} if our_entry is None else {bare_id: our_entry}
+    sibling_data = {"peer_id": "salt-master-2", "peers": peers}
+    tag = salt.utils.event.tagify("salt-master-2", "peer", "cluster")
+    payload = salt.utils.event.SaltEvent.pack(tag, sibling_data)
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.peer_keys = {}
+    channel.auth_errors = {"salt-master-2": [], "salt-master-3": []}
+    channel.transport = MagicMock()
+    channel.transport.publish_payload = AsyncMock()
+    # Never reached once the empty entry is recognised; a bare mock is enough
+    # to prove the handler returns before any crypto is attempted.
+    channel.master_key = MagicMock()
+
+    with caplog.at_level(logging.INFO):
+        await channel.handle_pool_publish(payload)
+
+    assert (
+        "salt-master-2" not in channel.peer_keys
+    ), "nothing should be cached from an announce that carries no key for us"
+    assert not [
+        record for record in caplog.records if record.levelno >= logging.ERROR
+    ], "a peer that has not learned our key yet is a transient, not an error"
+    assert any(
+        "no AES key for us yet" in record.getMessage() for record in caplog.records
+    ), "the skipped round must say why it was skipped"
+
+
+async def test_send_state_sync_chunks_closes_its_pusher(cluster_master_opts):
+    """
+    Regression test for issue #70561.
+
+    The state-sync sender must close the pusher it created.
+    """
+    from tests.support.mock import MagicMock, patch
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = cluster_master_opts
+    channel.transport = MagicMock()
+
+    fake_pusher = MagicMock()
+    channel.pusher = MagicMock(return_value=fake_pusher)
+
+    secrets = {"cluster_aes": {"secret": MagicMock()}}
+    with patch.object(SMaster, "secrets", secrets), patch.object(
+        salt.crypt, "Crypticle", MagicMock()
+    ), patch(
+        "salt.cluster.state_sync.iter_keys_chunks",
+        side_effect=RuntimeError("state-sync unavailable"),
+    ), patch(
+        "salt.cluster.state_sync.iter_root_chunks",
+        side_effect=RuntimeError("state-sync unavailable"),
+    ):
+        # Must not raise -- the handler logs the abort and cleans up.
+        await channel._send_state_sync_chunks("session-1", "salt-master-2")
+
+    channel.pusher.assert_called_once_with("salt-master-2")
+    fake_pusher.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize(
+    "interface,expected_bind",
+    [
+        ("[::]", "::"),
+        ("[2001:db8::1]", "2001:db8::1"),
+        ("0.0.0.0", "0.0.0.0"),
+        ("2001:db8::1", "2001:db8::1"),
+    ],
+)
+def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_bind):
+    """
+    Regression test for issue #70559.
+
+    The cluster pool puller must bind a bare address even if given a bracketed IPv6 one.
+    """
+    from tests.support.mock import MagicMock, patch
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = {
+        "event_publisher_niceness": 0,
+        "cluster_id": "testcluster",
+        "cluster_pool_port": 4520,
+        "cluster_peers": [],
+        "interface": interface,
+    }
+    channel.transport = MagicMock()
+    # Skip the ``if hasattr(self.transport, "publisher"):`` branch in
+    # ``_publish_daemon`` -- it calls ``salt.utils.asynchronous.aioloop``
+    # on ``self.io_loop``, which rejects a bare MagicMock.  This test only
+    # exercises the cluster pool-puller bind path, not the local IPC
+    # publisher setup.
+    del channel.transport.publisher
+
+    # A MagicMock io_loop makes ``start()`` return immediately, so the daemon
+    # runs to its ``finally: self.close()`` without driving tornado.
+    with patch("tornado.ioloop.IOLoop.current", return_value=MagicMock()), patch(
+        "salt.transport.tcp.TCPPuller"
+    ) as fake_puller:
+        channel._publish_daemon()
+
+    assert fake_puller.call_args.kwargs["host"] == expected_bind

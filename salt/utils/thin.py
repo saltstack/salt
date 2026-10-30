@@ -248,7 +248,6 @@ def _add_dependency(container, obj, namespace=None):
     Add a dependency to the top list.
 
     :param obj:
-    :param is_file:
     :param namespace: Optional tuple of parent namespaces for namespace packages
     :return:
     """
@@ -263,8 +262,6 @@ def gte():
     This function is called externally from the alternative
     Python interpreter from within _get_tops function.
 
-    :param extra_mods:
-    :param so_mods:
     :return:
     """
     extra = salt.utils.json.loads(sys.argv[1])

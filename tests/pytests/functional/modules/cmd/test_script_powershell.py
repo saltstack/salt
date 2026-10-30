@@ -1,3 +1,5 @@
+import os
+import time
 from textwrap import dedent
 
 import pytest
@@ -49,6 +51,26 @@ def echo_script(state_tree):
     )
     with pytest.helpers.temp_file("echo.ps1", script_contents, state_tree):
         yield exit_code
+
+
+@pytest.fixture(scope="module")
+def marker_script(state_tree):
+    """
+    Write a marker file so bg=True tests can observe that the real script ran.
+    Also records $PSCommandPath so we can assert tempfile cleanup.
+    """
+    script_contents = dedent(
+        """\
+        param (
+            [Parameter(Mandatory=$true)]
+            [string]$OutFile,
+            [string]$Payload = "ok"
+        )
+        Set-Content -LiteralPath $OutFile -Value "$Payload|$PSCommandPath"
+        """
+    )
+    with pytest.helpers.temp_file("marker.ps1", script_contents, state_tree):
+        yield
 
 
 @pytest.fixture(params=["powershell", "pwsh"])
@@ -115,3 +137,45 @@ def test_echo_runas(cmd, shell, account, echo_script, args, expected):
     assert ret["retcode"] == 0
     assert ret["stderr"] == ""
     assert ret["stdout"] == expected
+
+
+def _wait_for_marker(marker_path, timeout=30):
+    """Poll until the background script writes the marker file."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if marker_path.is_file() and marker_path.stat().st_size > 0:
+            return marker_path.read_text(encoding="utf-8").strip()
+        time.sleep(0.1)
+    raise AssertionError(f"Marker file not written within {timeout}s: {marker_path}")
+
+
+def _wait_until_gone(path, timeout=30):
+    """Poll until path is removed by the bg self-cleanup wrapper."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not os.path.exists(path):
+            return
+        time.sleep(0.1)
+    raise AssertionError(f"Temp path still present after {timeout}s: {path}")
+
+
+def test_script_bg_writes_marker_and_cleans_temp(cmd, shell, marker_script, tmp_path):
+    """
+    Regression for #69959 / #50273: cmd.script bg=True must not delete the
+    tempfile before PowerShell can open it, and must still clean up afterward.
+    """
+    marker = tmp_path / "marker.txt"
+    ret = cmd.script(
+        "salt://marker.ps1",
+        args=["-OutFile", str(marker), "-Payload", "bg-ok"],
+        shell=shell,
+        saltenv="base",
+        bg=True,
+    )
+    assert isinstance(ret["pid"], int)
+    # Background runs do not wait for the process; retcode is not meaningful.
+    contents = _wait_for_marker(marker)
+    payload, script_path = contents.split("|", 1)
+    assert payload == "bg-ok"
+    assert script_path.lower().endswith(".ps1")
+    _wait_until_gone(script_path)

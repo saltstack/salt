@@ -8222,7 +8222,7 @@ def add_host_to_dvs(
         )
         host_ref = _get_host_ref(service_instance, host, host_name)
         if not host_ref:
-            ret[host_name].update({"message": "Host {1} not found".format(host_name)})
+            ret[host_name].update({"message": "Host {} not found".format(host_name)})
             ret["success"] = False
             continue
 
