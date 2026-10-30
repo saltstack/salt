@@ -7,7 +7,10 @@ instead of requiring access to local IPC sockets.
 
 Architecture:
 - Listens on configurable port (default: 4507)
-- Requires client authentication via PKI keys
+- Requires client authentication via either:
+    - a client PKI key signature (``action="auth"``), or
+    - a Salt eauth token (``action="auth_token"``), validated against the
+      master's standard tokens cache via :class:`salt.auth.LoadAuth`.
 - Filters events based on client identity and job ownership
 - Publishes events only to authorized clients
 """
@@ -15,9 +18,11 @@ Architecture:
 import logging
 import os
 import re
+import secrets
 
 import zmq
 
+import salt.auth
 import salt.cache
 import salt.crypt
 import salt.payload
@@ -92,14 +97,29 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         auth_uri = f"tcp://{self.opts['interface']}:{client_event_port + 1}"
         auth_socket.bind(auth_uri)
 
-        # Track authenticated clients and their subscriptions
-        # Format: {client_id: {jobs: set(), authorized: bool}}
+        # Track authenticated clients and their subscriptions.
+        # Entries from PKI-auth are keyed by the client_id string; entries
+        # from token-auth are keyed by a per-session synthetic id so that
+        # concurrent sessions for the same eauth user don't collide and
+        # token values never land on the wire as a SUB prefix.
+        # Format:
+        #   {subscriber_id: {
+        #        "jobs": set(),
+        #        "authorized": bool,
+        #        "auth_mode": "pki" | "token",
+        #        "auth_list": list,       # populated only in token mode
+        #        "expire": float | None,  # populated only in token mode
+        #    }}
         clients = {}
 
-        # Initialize crypto for client authentication
+        # Initialize crypto for client authentication (PKI path)
         key_cache = salt.cache.Cache(
             self.opts, driver=self.opts.get("keys.cache_driver", "localfs_key")
         )
+        # LoadAuth for the token-auth path.  Shares the master's tokens
+        # cache dir because this publisher is a child of the master
+        # process and inherits opts["token_dir"] / cachedir.
+        loadauth = salt.auth.LoadAuth(self.opts)
 
         log.info("Client event publisher started on %s", pub_uri)
 
@@ -114,67 +134,110 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
 
                 # Handle client authentication
                 if auth_socket in socks:
-                    self._handle_auth_request(auth_socket, key_cache, clients)
+                    self._handle_auth_request(auth_socket, key_cache, loadauth, clients)
 
                 # Get events from master event bus
                 event = event_bus.get_event(wait=0.1, full=True)
                 if event:
-                    self._publish_filtered_event(pub_socket, event, clients)
+                    self._publish_filtered_event(pub_socket, event, clients, loadauth)
 
         except (KeyboardInterrupt, SystemExit):
             log.info("Client event publisher shutting down")
         finally:
             log.debug("Cleaning up client event publisher resources")
-            pub_socket.close()
-            auth_socket.close()
-            context.term()
+            pub_socket.close(linger=0)
+            auth_socket.close(linger=0)
+            context.destroy(linger=0)
             event_bus.destroy()
 
-    def _handle_auth_request(self, auth_socket, key_cache, clients):
+    def _handle_auth_request(self, auth_socket, key_cache, loadauth, clients):
         """
         Handle client authentication request.
 
         Args:
             auth_socket: ZeroMQ REP socket for authentication
-            key_cache: Key cache for client key lookups
+            key_cache: Key cache for client key lookups (PKI path)
+            loadauth: LoadAuth for Salt token validation (token path)
             clients: Dictionary tracking authenticated clients
         """
         try:
             # Receive authentication payload
             payload = auth_socket.recv_pyobj()
 
-            client_id = payload.get("id")
-            token = payload.get("token")
             action = payload.get("action")
 
             if action == "auth":
-                # Verify client
+                client_id = payload.get("id")
+                token = payload.get("token")
+                # PKI client key authentication: subscriber_id == client_id.
                 authorized = self._verify_client(client_id, token, key_cache)
-
                 if authorized:
-                    clients[client_id] = {"jobs": set(), "authorized": True}
+                    clients[client_id] = {
+                        "jobs": set(),
+                        "authorized": True,
+                        "auth_mode": "pki",
+                        "auth_list": None,
+                        "expire": None,
+                    }
                     log.info("Client %s authenticated for event streaming", client_id)
                     auth_socket.send_pyobj({"authorized": True})
                 else:
                     log.warning(
-                        "Client %s failed authentication for event streaming", client_id
+                        "Client %s failed authentication for event streaming",
+                        client_id,
                     )
                     auth_socket.send_pyobj({"authorized": False})
 
+            elif action == "auth_token":
+                # Eauth token authentication.  Validate via LoadAuth
+                # against the master's tokens cache; mint a session id so
+                # the token itself never travels on the SUB prefix.
+                salt_token = payload.get("token")
+                eauth = payload.get("eauth")
+                token_check = loadauth.check_authentication(
+                    {"token": salt_token, "eauth": eauth}, "token"
+                )
+                if token_check.get("error"):
+                    log.warning(
+                        "Event-stream token auth failed: %s",
+                        token_check["error"].get("message", "unknown"),
+                    )
+                    auth_socket.send_pyobj({"authorized": False})
+                    return
+                session_id = secrets.token_urlsafe(16)
+                tok_data = loadauth.get_tok(salt_token) or {}
+                clients[session_id] = {
+                    "jobs": set(),
+                    "authorized": True,
+                    "auth_mode": "token",
+                    "auth_list": token_check.get("auth_list") or [],
+                    "username": token_check.get("username"),
+                    "expire": tok_data.get("expire"),
+                }
+                log.info(
+                    "Eauth user %s authenticated for event streaming (session %s)",
+                    token_check.get("username"),
+                    session_id,
+                )
+                auth_socket.send_pyobj({"authorized": True, "session_id": session_id})
+
             elif action == "subscribe_job":
-                # Client wants to subscribe to events for a specific job
+                # Client wants to subscribe to events for a specific job.
+                # Caller passes ``id`` (= client_id for PKI, = session_id
+                # for token auth) alongside the jid.
+                subscriber_id = payload.get("id")
                 jid = payload.get("jid")
-                if client_id in clients and clients[client_id]["authorized"]:
-                    clients[client_id]["jobs"].add(jid)
+                if subscriber_id in clients and clients[subscriber_id]["authorized"]:
+                    clients[subscriber_id]["jobs"].add(jid)
                     auth_socket.send_pyobj({"subscribed": True})
                 else:
                     auth_socket.send_pyobj({"subscribed": False})
 
             elif action == "unsubscribe_job":
-                # Client wants to unsubscribe from job events
+                subscriber_id = payload.get("id")
                 jid = payload.get("jid")
-                if client_id in clients:
-                    clients[client_id]["jobs"].discard(jid)
+                if subscriber_id in clients:
+                    clients[subscriber_id]["jobs"].discard(jid)
                     auth_socket.send_pyobj({"unsubscribed": True})
                 else:
                     auth_socket.send_pyobj({"unsubscribed": False})
@@ -215,7 +278,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
 
         return False
 
-    def _publish_filtered_event(self, pub_socket, event, clients):
+    def _publish_filtered_event(self, pub_socket, event, clients, loadauth=None):
         """
         Publish event to authorized clients after filtering.
 
@@ -223,7 +286,12 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
             pub_socket: ZeroMQ PUB socket
             event: Event dictionary from master event bus
             clients: Dictionary of authenticated clients
+            loadauth: Optional :class:`salt.auth.LoadAuth` for the extra
+                ``auth_check`` on token-mode sessions.  When omitted, the
+                auth_list filter is skipped (PKI-only deployments).
         """
+        import time
+
         tag = event.get("tag", "")
         data = event.get("data", {})
 
@@ -237,19 +305,55 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                     jid = parts[2]
                 break
 
-        # Publish to clients subscribed to this job
-        for client_id, client_info in clients.items():
-            if not client_info["authorized"]:
+        # Publish to subscribers whose job filter matches.  Token-auth
+        # sessions also pass through an auth_list check so the eauth
+        # user's authorization applies to the stream.
+        now = time.time()
+        expired = []
+        for subscriber_id, info in clients.items():
+            if not info["authorized"]:
                 continue
 
-            # Check if client is subscribed to this job
-            if jid and jid in client_info["jobs"]:
-                # Publish event to this client
-                try:
-                    msg = salt.payload.dumps({"tag": tag, "data": data})
-                    pub_socket.send_multipart([client_id.encode(), msg])
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.error("Error publishing event to client %s: %s", client_id, exc)
+            # Evict expired token sessions lazily.
+            expire = info.get("expire")
+            if expire is not None and expire < now:
+                expired.append(subscriber_id)
+                continue
+
+            # Must be subscribed to this specific job.
+            if not (jid and jid in info["jobs"]):
+                continue
+
+            # Extra auth_list gate for token-auth sessions: the eauth user
+            # must be authorized for the event's function on the event's
+            # target.  Best-effort: fall through to deliver if the event
+            # does not carry enough context for a check (e.g. non-job
+            # /ret events).
+            if info.get("auth_mode") == "token" and loadauth is not None:
+                auth_list = info.get("auth_list") or []
+                if auth_list and isinstance(data, dict):
+                    fun = data.get("fun")
+                    tgt = data.get("tgt", "")
+                    tgt_type = data.get("tgt_type", "glob")
+                    if fun:
+                        allowed = loadauth.ckminions.auth_check(
+                            auth_list, fun, data.get("arg") or [], tgt, tgt_type
+                        )
+                        if isinstance(allowed, dict) or not allowed:
+                            # Deny this event for this subscriber.
+                            continue
+
+            try:
+                msg = salt.payload.dumps({"tag": tag, "data": data})
+                pub_socket.send_multipart([subscriber_id.encode(), msg])
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error(
+                    "Error publishing event to subscriber %s: %s", subscriber_id, exc
+                )
+
+        for sid in expired:
+            clients.pop(sid, None)
+            log.info("Evicted expired token session %s", sid)
 
 
 class ClientEventSubscriber:
@@ -273,37 +377,53 @@ class ClientEventSubscriber:
         self.auth_socket = None
         self.authenticated = False
         self.subscribed_jobs = set()
+        # Populated by token-auth path.  When set, the subscriber uses
+        # this as its SUB filter prefix (not the opts["id"] client_id).
+        self.session_id = None
 
-    def connect(self):
-        """Connect to the event publisher and authenticate."""
+    def connect(self, salt_token=None, eauth=None):
+        """
+        Connect to the event publisher and authenticate.
+
+        Args:
+            salt_token: Optional Salt eauth token.  When provided, the
+                subscriber authenticates via the publisher's token-auth
+                path (``action="auth_token"``) and uses the returned
+                session_id as its SUB filter.  Without a token, the
+                subscriber falls back to the PKI client-key signature
+                path (``action="auth"``).
+            eauth: Optional eauth driver name, carried alongside the
+                token for logging on the server side.
+        """
         master = self.opts.get("master", "localhost")
         port = self.opts.get("client_event_port", 4507)
 
-        # Connect subscriber socket
+        # Connect subscriber socket (filter set after auth)
         self.sub_socket = self.context.socket(zmq.SUB)
         sub_uri = f"tcp://{master}:{port}"
         self.sub_socket.connect(sub_uri)
-
-        # Subscribe with client ID as filter
-        client_id = self.opts.get("id", "client")
-        self.sub_socket.setsockopt(zmq.SUBSCRIBE, client_id.encode())
 
         # Connect authentication socket
         self.auth_socket = self.context.socket(zmq.REQ)
         auth_uri = f"tcp://{master}:{port + 1}"
         self.auth_socket.connect(auth_uri)
 
-        # Authenticate
-        self._authenticate()
+        if salt_token:
+            self._authenticate_token(salt_token, eauth)
+            # Token path: subscribe on the session_id prefix.
+            if self.session_id:
+                self.sub_socket.setsockopt(zmq.SUBSCRIBE, self.session_id.encode())
+        else:
+            # PKI path: subscribe on the client's own ID.
+            self._authenticate()
+            client_id = self.opts.get("id", "client")
+            self.sub_socket.setsockopt(zmq.SUBSCRIBE, client_id.encode())
 
         log.info("Connected to event publisher at %s", sub_uri)
 
     def _authenticate(self):
         """Authenticate with the event publisher using client keys."""
         client_id = self.opts.get("id", "client")
-
-        # Load client private key
-        import salt.crypt
 
         pki_dir = self.opts.get("pki_dir")
         client_key_path = os.path.join(pki_dir, "client.pem")
@@ -329,6 +449,28 @@ class ClientEventSubscriber:
             log.info("Successfully authenticated with event publisher")
         else:
             raise Exception("Failed to authenticate with event publisher")
+
+    def _authenticate_token(self, salt_token, eauth=None):
+        """
+        Authenticate with the event publisher using a Salt eauth token.
+
+        The server returns a per-session ``session_id`` which the
+        subscriber uses as its SUB filter prefix.  The token value itself
+        is never sent on the SUB channel.
+        """
+        auth_payload = {"action": "auth_token", "token": salt_token}
+        if eauth:
+            auth_payload["eauth"] = eauth
+
+        self.auth_socket.send_pyobj(auth_payload)
+        response = self.auth_socket.recv_pyobj()
+
+        if response.get("authorized"):
+            self.authenticated = True
+            self.session_id = response.get("session_id")
+            log.info("Successfully authenticated with event publisher via token")
+        else:
+            raise Exception("Failed to authenticate with event publisher via token")
 
     @property
     def cpub(self):
@@ -412,8 +554,11 @@ class ClientEventSubscriber:
         if not self.authenticated:
             raise Exception("Not authenticated with event publisher")
 
+        # ``id`` is the session_id in token mode, the client_id in PKI
+        # mode -- the publisher keys ``clients`` by whichever we sent on
+        # the initial auth.
         subscribe_payload = {
-            "id": self.opts.get("id", "client"),
+            "id": self.session_id or self.opts.get("id", "client"),
             "action": "subscribe_job",
             "jid": jid,
         }
@@ -436,7 +581,7 @@ class ClientEventSubscriber:
         """
         if jid in self.subscribed_jobs:
             unsubscribe_payload = {
-                "id": self.opts.get("id", "client"),
+                "id": self.session_id or self.opts.get("id", "client"),
                 "action": "unsubscribe_job",
                 "jid": jid,
             }
