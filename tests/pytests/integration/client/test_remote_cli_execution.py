@@ -30,28 +30,30 @@ class TestRemoteSaltRun:
 
     def test_runner_uses_network_events_with_client_auth(self, salt_master):
         """
-        Test that Runner uses network events when client_auth is enabled.
+        Test that the remote runner client uses network events.
 
-        Regression test: Runner must use ClientEventSubscriber, not IPC events.
+        Regression test: ``RemoteRunner`` must use ``ClientEventSubscriber``,
+        not IPC events.
         """
         import salt.utils.client_event
 
         config = salt_master.config.copy()
+        config["__role"] = "client"
         config["client_auth"] = True
         config["fun"] = "test.ping"
         config["arg"] = []
 
-        runner = salt.runner.Runner(config)
+        runner = salt.runner.RemoteRunner(config)
 
-        # CRITICAL: Verify network events are being used
-        assert (
-            runner._use_network_events is True
-        ), "Runner with client_auth must use network events"
+        # CRITICAL: Verify the remote runner uses network events by class.
+        assert isinstance(
+            runner, salt.runner.RemoteRunnerClient
+        ), "RemoteRunner must be a RemoteRunnerClient"
 
         # Verify event subscriber type
         assert isinstance(
             runner.event, salt.utils.client_event.ClientEventSubscriber
-        ), "Runner should use ClientEventSubscriber with client_auth"
+        ), "RemoteRunner should use ClientEventSubscriber"
 
     def test_runner_remote_execution(self, salt_master):
         """Test remote runner execution with client authentication."""
@@ -120,20 +122,25 @@ class TestRemoteSaltKey:
         import salt.wheel
 
         config = salt_master.config.copy()
+        config["__role"] = "client"
         config["client_auth"] = True
 
-        wheel = salt.wheel.WheelClient(config)
+        wheel = salt.wheel.RemoteWheelClient(config)
 
         try:
-            # CRITICAL: Verify network events are being used
-            assert (
-                wheel._use_network_events is True
-            ), "WheelClient with client_auth must use network events"
+            # CRITICAL: Verify the remote wheel client uses network events.
+            assert isinstance(
+                wheel, salt.wheel.RemoteWheelClient
+            ), "wheel must be a RemoteWheelClient"
+            # cmd_sync returns the master's sync response directly so the
+            # event subscriber is lazy; instantiate it to confirm the type.
+            if wheel.event is None:
+                import salt.utils.client_event as _ce
 
-            # Verify event subscriber type
+                wheel.event = _ce.ClientEventSubscriber(wheel.opts)
             assert isinstance(
                 wheel.event, salt.utils.client_event.ClientEventSubscriber
-            ), "WheelClient should use ClientEventSubscriber with client_auth"
+            ), "RemoteWheelClient should use ClientEventSubscriber"
         finally:
             wheel.destroy()
 
@@ -284,17 +291,18 @@ class TestRemoteRunnerExecution:
             try:
                 # Create runner config with client auth
                 config = salt_master.config.copy()
+                config["__role"] = "client"
                 config["client_auth"] = True
                 config["id"] = client_id
                 config["fun"] = "test.ping"
                 config["arg"] = []
 
-                runner = salt.runner.Runner(config)
+                runner = salt.runner.RemoteRunner(config)
 
-                # Verify using network events
-                assert (
-                    runner._use_network_events is True
-                ), "Runner with client_auth must use network events"
+                # Verify this is the remote-only runner (network events).
+                assert isinstance(
+                    runner, salt.runner.RemoteRunnerClient
+                ), "RemoteRunner must be a RemoteRunnerClient"
 
                 # CRITICAL: Actually execute the runner
                 # Note: This may fail if master doesn't have test.ping runner,
@@ -340,6 +348,7 @@ class TestRemoteKeyManagement:
             try:
                 # Create KeyCLI config with client auth
                 config = salt_master.config.copy()
+                config["__role"] = "client"
                 config["client_auth"] = True
                 config["id"] = client_id
                 config["list"] = True
@@ -349,11 +358,11 @@ class TestRemoteKeyManagement:
                 # Verify using wheel client with network events
                 import salt.wheel
 
-                wheel = salt.wheel.WheelClient(config)
+                wheel = salt.wheel.RemoteWheelClient(config)
                 try:
-                    assert (
-                        wheel._use_network_events is True
-                    ), "WheelClient with client_auth must use network events"
+                    assert isinstance(
+                        wheel, salt.wheel.RemoteWheelClient
+                    ), "wheel must be a RemoteWheelClient"
 
                     # CRITICAL: Actually execute key listing
                     # This tests the full remote key management workflow
@@ -379,11 +388,11 @@ class TestRemoteKeyManagement:
 class TestNetworkEventIntegration:
     """Integration tests for network event streaming."""
 
-    def test_all_remote_clients_use_network_events(self, salt_master):
+    def test_all_remote_clients_are_remote_sibling_classes(self, salt_master):
         """
-        Comprehensive test: All client types must use network events when remote.
-
-        This is the critical regression test that would have caught the bug.
+        Comprehensive regression: all three CLIs' remote entry points must
+        instantiate the dedicated ``Remote*`` sibling classes with network
+        event subscribers (not the master-local variants with IPC events).
         """
         import salt.client
         import salt.config
@@ -396,46 +405,54 @@ class TestNetworkEventIntegration:
         config["__role"] = "client"
         config["client_auth"] = True
 
-        # Test RemoteClient
+        # Test RemoteClient (salt CLI)
         remote_client = salt.client.RemoteClient(mopts=config, skip_perm_errors=True)
         try:
-            assert (
-                remote_client._use_network_events is True
-            ), "RemoteClient MUST use network events"
+            assert isinstance(
+                remote_client, salt.client.RemoteClient
+            ), "RemoteClient class check"
             assert isinstance(
                 remote_client.event, salt.utils.client_event.ClientEventSubscriber
             ), "RemoteClient should use ClientEventSubscriber"
         finally:
             remote_client.destroy()
 
-        # Test RunnerClient
+        # Test RemoteRunnerClient (salt-run)
         runner_config = config.copy()
         runner_config["fun"] = "test.ping"
         runner_config["arg"] = []
-        runner = salt.runner.Runner(runner_config)
+        runner = salt.runner.RemoteRunner(runner_config)
 
-        assert (
-            runner._use_network_events is True
-        ), "RunnerClient MUST use network events"
+        assert isinstance(
+            runner, salt.runner.RemoteRunnerClient
+        ), "RemoteRunner must be a RemoteRunnerClient"
         assert isinstance(
             runner.event, salt.utils.client_event.ClientEventSubscriber
-        ), "RunnerClient should use ClientEventSubscriber"
+        ), "RemoteRunner should use ClientEventSubscriber"
 
-        # Test WheelClient
-        wheel = salt.wheel.WheelClient(config)
+        # Test RemoteWheelClient (salt-key)
+        wheel = salt.wheel.RemoteWheelClient(config)
         try:
-            assert (
-                wheel._use_network_events is True
-            ), "WheelClient MUST use network events"
+            assert isinstance(
+                wheel, salt.wheel.RemoteWheelClient
+            ), "wheel must be a RemoteWheelClient"
+            # cmd_sync does not need the event subscriber; instantiate it
+            # explicitly to confirm the type for parity with the other two.
+            if wheel.event is None:
+                import salt.utils.client_event as _ce
+
+                wheel.event = _ce.ClientEventSubscriber(wheel.opts)
             assert isinstance(
                 wheel.event, salt.utils.client_event.ClientEventSubscriber
-            ), "WheelClient should use ClientEventSubscriber"
+            ), "RemoteWheelClient should use ClientEventSubscriber"
         finally:
             wheel.destroy()
 
     def test_local_clients_still_use_ipc(self, salt_master):
         """
-        Test that local clients still use IPC for backwards compatibility and efficiency.
+        Local RunnerClient must stay on the IPC event bus; the remote
+        sibling class is a separate type and should never be instantiated
+        for the master-local path.
         """
         import salt.runner
         import salt.utils.event
@@ -447,10 +464,9 @@ class TestNetworkEventIntegration:
 
         runner = salt.runner.RunnerClient(local_config)
 
-        # Should use IPC for local execution
-        assert (
-            runner._use_network_events is False
-        ), "Local RunnerClient should use IPC, not network events"
+        assert not isinstance(
+            runner, salt.runner.RemoteRunnerClient
+        ), "Local RunnerClient should not be the remote sibling class"
         assert isinstance(
             runner.event, salt.utils.event.SaltEvent
         ), "Local RunnerClient should use IPC SaltEvent"

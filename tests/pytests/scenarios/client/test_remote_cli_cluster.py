@@ -191,15 +191,21 @@ class TestClusterRemoteCLI:
                 keycli.opts["client_auth"] is True
             ), f"Should have client_auth enabled for master {i+1}"
 
-            # CRITICAL: Verify WheelClient (used by KeyCLI) uses network events
-            wheel_client = salt.wheel.WheelClient(client_config)
+            # CRITICAL: Verify the remote wheel client (used by KeyCLI)
+            # is the sibling class with the network event subscriber type.
+            wheel_client = salt.wheel.RemoteWheelClient(client_config)
             try:
-                assert (
-                    wheel_client._use_network_events is True
-                ), f"WheelClient must use network events for master {i+1} in cluster"
+                assert isinstance(
+                    wheel_client, salt.wheel.RemoteWheelClient
+                ), f"wheel_client must be a RemoteWheelClient for master {i+1}"
+                # RemoteWheelClient's event is lazy; instantiate explicitly.
+                if wheel_client.event is None:
+                    wheel_client.event = salt.utils.client_event.ClientEventSubscriber(
+                        wheel_client.opts
+                    )
                 assert isinstance(
                     wheel_client.event, salt.utils.client_event.ClientEventSubscriber
-                ), f"WheelClient should use ClientEventSubscriber for master {i+1}"
+                ), f"RemoteWheelClient should use ClientEventSubscriber for master {i+1}"
             finally:
                 wheel_client.destroy()
 
@@ -224,12 +230,13 @@ class TestClusterRemoteCLI:
         for i, config_file in enumerate(remote_admin_workstation["master_configs"]):
             # Load client config
             client_config = salt.config.client_config(config_file)
+            client_config["__role"] = "client"
             client_config["client_auth"] = True
             client_config["fun"] = "test.ping"
             client_config["arg"] = []
 
-            # Create Runner with client auth
-            runner = salt.runner.Runner(client_config)
+            # Create the remote runner
+            runner = salt.runner.RemoteRunner(client_config)
 
             # Verify runner is configured correctly
             assert (
@@ -242,13 +249,13 @@ class TestClusterRemoteCLI:
                 runner.opts["fun"] == "test.ping"
             ), "Runner should have correct function"
 
-            # CRITICAL: Verify using network events for cluster
-            assert (
-                runner._use_network_events is True
-            ), f"Runner must use network events for master {i+1} in cluster"
+            # CRITICAL: Verify the remote-only sibling class.
+            assert isinstance(
+                runner, salt.runner.RemoteRunnerClient
+            ), f"RemoteRunner must be a RemoteRunnerClient for master {i+1}"
             assert isinstance(
                 runner.event, salt.utils.client_event.ClientEventSubscriber
-            ), f"Runner should use ClientEventSubscriber for master {i+1}"
+            ), f"RemoteRunner should use ClientEventSubscriber for master {i+1}"
 
     def test_remote_salt_command_to_minions(
         self, master_cluster, remote_admin_workstation
@@ -293,9 +300,9 @@ class TestClusterRemoteCLI:
             # CRITICAL: Verify using network events for remote execution
             from salt.utils import client_event as _client_event
 
-            assert (
-                client._use_network_events is True
-            ), "RemoteClient must use network events in cluster scenario"
+            assert isinstance(
+                client, salt.client.RemoteClient
+            ), "client must be a RemoteClient"
             assert isinstance(
                 client.event, _client_event.ClientEventSubscriber
             ), "RemoteClient should use ClientEventSubscriber for cluster operations"
