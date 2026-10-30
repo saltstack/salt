@@ -1897,10 +1897,101 @@ async def test_client_send_recv_no_double_set_exception_after_timeout(minion_opt
         client.socket = AsyncMock()
         client.socket.send.side_effect = zmq.ZMQError(zmq.ETERM)
         client._queue.put_nowait((future, {"meh": "bah"}))
+        # Since #68660 a request whose future is already done is dropped before
+        # it reaches socket.send, so this repro no longer exercises the send
+        # failure path -- the double-set it guarded against is now structurally
+        # unreachable here. The invariant still asserted below is that the
+        # original timeout exception survives untouched.
+        client._queue.put_nowait(
+            (
+                tornado.concurrent.Future(),
+                salt.transport.zeromq._REQ_QUEUE_SHUTDOWN,
+            )
+        )
         # Before the fix this raises TypeError from tornado's _set_done.
         await client._send_recv(client.socket)
         # The timeout exception must be preserved, not overwritten.
         assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
+async def test_client_send_recv_drops_abandoned_request(minion_opts):
+    """
+    Regression test for #68660.
+
+    ``send()`` enqueues ``(future, message)`` and arms ``_timeout_message``.
+    When the caller's timeout fires the future is completed, but its queue
+    entry remains and keeps pinning the serialized payload until the drain
+    loop reaches it. ``self._queue`` has no maxsize and a REQ socket permits
+    one request/reply in flight, so under sustained load the enqueue rate
+    outruns the drain rate and the queue grows without bound.
+
+    ``_send_recv`` must drop a request whose future is already done rather
+    than spend a round trip on a reply nobody can receive.
+    """
+    client = salt.transport.zeromq.AsyncReqMessageClient(
+        minion_opts, "tcp://127.0.0.1:4506"
+    )
+
+    abandoned = tornado.concurrent.Future()
+    # Exactly what _timeout_message does when the caller's timeout expires.
+    client._timeout_message(abandoned)
+    assert abandoned.done()
+
+    # Keep our own reference: without the fix ``_send_recv`` takes its error
+    # path and ``_reconnect()`` swaps ``client.socket`` for a real socket, so
+    # asserting against ``client.socket`` afterwards would inspect the wrong
+    # object and fail for the wrong reason.
+    sock = AsyncMock()
+    try:
+        client.socket = sock
+        client._queue.put_nowait((abandoned, {"meh": "bah"}))
+        # Sentinel stops the drain loop after the abandoned entry is handled.
+        client._queue.put_nowait(
+            (
+                tornado.concurrent.Future(),
+                salt.transport.zeromq._REQ_QUEUE_SHUTDOWN,
+            )
+        )
+        await client._send_recv(sock)
+        # The abandoned payload must never reach the wire.
+        sock.send.assert_not_called()
+        # And its timeout exception must be left intact.
+        assert isinstance(abandoned.exception(), salt.exceptions.SaltReqTimeoutError)
+    finally:
+        client.close()
+
+
+async def test_request_client_send_recv_drops_abandoned_request(minion_opts, io_loop):
+    """
+    Regression test for #68660 on the RequestClient path.
+
+    The 3006.x fix lives on AsyncReqMessageClient, which is deprecated and
+    unreferenced on 3008.x. RequestClient.``_send_recv`` is the active
+    primary path, so the drop-abandoned invariant is asserted here against
+    that class's async ``_send_recv(socket, queue)`` API.
+    """
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+
+    abandoned = tornado.concurrent.Future()
+    abandoned.set_exception(
+        salt.exceptions.SaltReqTimeoutError("Message timed out")
+    )
+    assert abandoned.done()
+
+    sock = AsyncMock()
+    try:
+        client.socket = sock
+        client._queue.put_nowait((abandoned, {"meh": "bah"}))
+        # ``future is None`` is RequestClient's shutdown sentinel; drop the
+        # abandoned entry first, then exit the loop.
+        client._queue.put_nowait((None, None))
+        await client._send_recv(client.socket, client._queue)
+        # The abandoned payload must never reach the wire.
+        sock.send.assert_not_called()
+        # And its timeout exception must be left intact.
+        assert isinstance(abandoned.exception(), salt.exceptions.SaltReqTimeoutError)
     finally:
         client.close()
 
