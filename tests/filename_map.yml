@@ -8,6 +8,20 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/__init__.py:
+  - pytests.unit.test_nacl_importer
+
+salt/(modules|runners|pillar|renderers|utils)/nacl\.py:
+  - pytests.unit.modules.test_nacl
+  - pytests.unit.runners.test_nacl
+  - pytests.unit.pillar.test_nacl
+  - pytests.unit.renderers.test_nacl
+  - pytests.unit.utils.test_nacl
+  - pytests.unit.utils.test_nacl_permissions
+  - pytests.unit.test_nacl_files
+  - pytests.integration.runners.test_nacl
+  - pytests.integration.pillar.test_nacl
+
 salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_jid_logging
   - pytests.integration._logging.test_multiple_processes_logging
