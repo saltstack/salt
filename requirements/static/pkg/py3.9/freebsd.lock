@@ -22,7 +22,7 @@ attrs==26.1.0
     #   aiohttp
 backports-tarfile==1.2.0 ; python_full_version < '3.12'
     # via jaraco-context
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -r requirements/base.txt
     #   requests
@@ -227,11 +227,7 @@ opentelemetry-semantic-conventions==0.62b1 ; python_full_version < '3.10'
     # via opentelemetry-sdk
 opentelemetry-semantic-conventions==0.63b1 ; python_full_version >= '3.10'
     # via opentelemetry-sdk
-packaging==24.0 ; python_full_version >= '3.11'
-    # via
-    #   -r requirements/base.txt
-    #   virtualenv
-packaging==26.2 ; python_full_version < '3.11'
+packaging==26.2
     # via
     #   -r requirements/base.txt
     #   virtualenv

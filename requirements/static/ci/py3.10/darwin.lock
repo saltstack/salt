@@ -63,7 +63,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
