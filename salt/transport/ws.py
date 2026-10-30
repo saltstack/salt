@@ -23,7 +23,7 @@ from salt.transport.tcp import (
     _get_socket,
     _set_tcp_keepalive,
 )
-from salt.utils.asynchronous import cancel_tasks, resolve_result
+from salt.utils.asynchronous import cancel_tasks, close_stream_writer, resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -496,8 +496,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 for message in unpacker:
                     await resolve_result(self._pub_payload(message))
         finally:
-            writer.close()
-            await writer.wait_closed()
+            await close_stream_writer(writer)
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -537,9 +536,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         writer, self.pub_writer = self.pub_writer, None
         self.pub_reader = None
         if writer is not None:
-            writer.close()
             try:
-                await writer.wait_closed()
+                await close_stream_writer(writer)
             except ConnectionError:
                 pass
 
@@ -607,8 +605,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 *(task for task, _ in connections),
             )
             for _, writer in connections:
-                writer.close()
-                await writer.wait_closed()
+                await close_stream_writer(writer)
             await self._disconnect_pusher()
             if self.runner is not None:
                 await self.runner.cleanup()

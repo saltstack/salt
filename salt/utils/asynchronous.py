@@ -77,6 +77,12 @@ async def cancel_tasks(*tasks):
         await asyncio.gather(*tasks, return_exceptions=True)
 
 
+async def close_stream_writer(writer):
+    """Close an asyncio stream writer and await closure without suppressing errors."""
+    writer.close()
+    await writer.wait_closed()
+
+
 class SyncWrapper:
     """
     A wrapper to make Async classes synchronous

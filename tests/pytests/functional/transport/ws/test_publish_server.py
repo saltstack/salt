@@ -8,7 +8,7 @@ import pytest
 import salt.payload
 import salt.transport.ws
 import salt.utils.asynchronous
-from tests.support.mock import AsyncMock, patch
+from tests.support.mock import AsyncMock, Mock, patch
 
 
 @pytest.fixture
@@ -78,6 +78,26 @@ async def test_ipc_eof_finishes_handler(publisher, pusher):
     await pusher.close_async()
     await asyncio.wait_for(asyncio.gather(*handlers), 2)
     assert not publisher._ipc_connections
+
+
+@pytest.mark.parametrize(
+    "error", [ConnectionResetError, RuntimeError, asyncio.CancelledError]
+)
+async def test_disconnect_pusher_handles_only_connection_errors(pusher, error):
+    failure = error("stream closure failed")
+    writer = Mock(wait_closed=AsyncMock(side_effect=failure))
+    pusher.pub_reader = object()
+    pusher.pub_writer = writer
+
+    if issubclass(error, ConnectionError):
+        await pusher._disconnect_pusher()
+    else:
+        with pytest.raises(error) as exc:
+            await pusher._disconnect_pusher()
+        assert exc.value is failure
+
+    assert pusher.pub_reader is None
+    assert pusher.pub_writer is None
 
 
 async def test_partial_ipc_frames_are_reassembled(publisher):

@@ -19,7 +19,7 @@ import tornado.gen
 import tornado.ioloop
 
 import salt.utils.asynchronous as asynchronous
-from tests.support.mock import patch
+from tests.support.mock import AsyncMock, Mock, patch
 
 
 class HelperA:
@@ -79,6 +79,36 @@ async def test_cancel_tasks_accepts_current_missing_and_completed_tasks():
     future.set_exception(OSError("already failed"))
     await asynchronous.cancel_tasks(None, asyncio.current_task(), future, future)
     assert not asyncio.current_task().cancelled()
+
+
+async def test_close_stream_writer_waits_for_closure():
+    closing = asyncio.Event()
+    closed = asyncio.Event()
+
+    async def wait_closed():
+        closing.set()
+        await closed.wait()
+
+    writer = Mock(wait_closed=AsyncMock(side_effect=wait_closed))
+    task = asyncio.create_task(asynchronous.close_stream_writer(writer))
+    try:
+        await closing.wait()
+        writer.close.assert_called_once_with()
+        assert not task.done()
+    finally:
+        closed.set()
+        await task
+
+
+@pytest.mark.parametrize(
+    "error", [ConnectionResetError, RuntimeError, asyncio.CancelledError]
+)
+async def test_close_stream_writer_propagates_errors(error):
+    failure = error("stream closure failed")
+    writer = Mock(wait_closed=AsyncMock(side_effect=failure))
+    with pytest.raises(error) as exc:
+        await asynchronous.close_stream_writer(writer)
+    assert exc.value is failure
 
 
 class _LoopProbe:
