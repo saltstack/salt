@@ -1,10 +1,11 @@
 import asyncio
 
 import pytest
+from tornado.iostream import StreamClosedError
 
 import salt.utils.asynchronous
 from salt.cli.batch_async import BatchAsync, batch_async_required
-from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, call, patch
 
 
 @pytest.fixture
@@ -655,6 +656,7 @@ async def test_new_user_keeps_shared_channel_during_reconnect_cleanup(shared_cha
 
 async def test_subscription_joins_initial_event_connection(shared_channel):
     subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
     started = asyncio.Event()
     release = asyncio.Event()
 
@@ -675,3 +677,74 @@ async def test_subscription_joins_initial_event_connection(shared_channel):
     release.set()
     await subscription
     subscriber.connect.assert_awaited_once()
+    subscriber._stream.set_close_callback.assert_called_once()
+
+
+@pytest.mark.parametrize("cancelled", [False, True], ids=["failed", "cancelled"])
+async def test_subscription_reconnects_after_unsuccessful_initial_connection(
+    shared_channel, cancelled
+):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    initial = asyncio.get_running_loop().create_future()
+    if cancelled:
+        initial.cancel()
+    else:
+        initial.set_exception(StreamClosedError())
+    shared_channel.master_event._connect_task = initial
+
+    async def connect():
+        subscriber.connected = True
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    subscriber.connect.assert_awaited_once()
+    subscriber._stream.set_close_callback.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "reconnect_tries,success_on,expected_calls",
+    [(3, 2, 2), (3, None, 3), (0, None, 1)],
+    ids=["second-attempt-succeeds", "exhausted", "at-least-one-attempt"],
+)
+async def test_subscription_respects_reconnect_policy(
+    shared_channel, reconnect_tries, success_on, expected_calls
+):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    shared_channel._subscriber_reconnect_tries = reconnect_tries
+    shared_channel._subscriber_reconnect_interval = 0.25
+
+    async def connect():
+        if subscriber.connect.await_count == success_on:
+            subscriber.connected = True
+        else:
+            raise StreamClosedError()
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    with patch("salt.cli.batch_async.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    assert subscriber.connect.await_count == expected_calls
+    assert sleep.await_args_list == [call(0.25)] * (expected_calls - 1)
+    assert subscriber.connected is (success_on is not None)
+    assert subscriber._stream.set_close_callback.call_count == int(
+        success_on is not None
+    )
+
+
+async def test_unexpected_initial_connection_error_propagates(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    subscriber.connect = AsyncMock()
+    initial = asyncio.get_running_loop().create_future()
+    initial.set_exception(ValueError("initial connection failed"))
+    shared_channel.master_event._connect_task = initial
+
+    with pytest.raises(ValueError, match="initial connection failed"):
+        await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    subscriber.connect.assert_not_awaited()
+    subscriber._stream.set_close_callback.assert_not_called()
+    assert shared_channel._reconnect_task is None
