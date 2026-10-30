@@ -16,8 +16,10 @@ certifi==2026.1.4
     # via requests
 charset-normalizer==3.4.4
     # via requests
-filelock==3.20.3
-    # via python-tools-scripts
+filelock==4.2.4
+    # via
+    #   -c requirements/constraints.txt
+    #   python-tools-scripts
 idna==3.11
     # via requests
 jinja2==3.1.6

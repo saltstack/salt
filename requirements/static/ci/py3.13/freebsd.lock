@@ -146,8 +146,9 @@ durationpy==0.11
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==4.0.12
+filelock==4.2.4
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt

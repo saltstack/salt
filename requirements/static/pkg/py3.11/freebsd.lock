@@ -56,8 +56,9 @@ distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==4.0.12
+filelock==4.2.4
     # via
+    #   -c requirements/constraints.txt
     #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv

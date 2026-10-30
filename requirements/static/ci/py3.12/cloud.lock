@@ -175,8 +175,9 @@ etcd3-py==0.1.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-filelock==4.0.12
+filelock==4.2.4
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt

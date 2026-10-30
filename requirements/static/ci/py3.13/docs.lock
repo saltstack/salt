@@ -81,8 +81,9 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==4.0.12
+filelock==4.2.4
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   python-discovery
