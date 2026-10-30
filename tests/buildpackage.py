@@ -394,7 +394,7 @@ if __name__ == "__main__":
     msg = f"Build complete. Artifacts will be stored in {opts.artifact_dir}"
     log.info(msg)
     print(msg)  # pylint: disable=C0325
-    for artifact in artifacts:
+    for artifact in artifacts:  # pylint: disable=used-before-assignment
         shutil.copy(artifact, opts.artifact_dir)
         log.info("Copied %s to artifact directory", artifact)
     log.info("Done!")
