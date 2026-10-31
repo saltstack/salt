@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -57,7 +57,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -357,6 +357,7 @@ packaging==24.0
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
@@ -369,7 +370,6 @@ pathspec==1.0.3
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via pytest
@@ -493,7 +493,7 @@ python-dateutil==2.9.0.post0
     #   kubernetes
     #   tempora
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   virtualenv
@@ -645,7 +645,7 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt
@@ -657,7 +657,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/pkg/py3.13/freebsd.lock
     #   -r requirements/base.txt

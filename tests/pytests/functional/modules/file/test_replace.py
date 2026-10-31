@@ -211,3 +211,17 @@ def test_replace_no_modify_time_update_on_no_change(file, multiline_file):
 def test_backslash_literal(file, multiline_file):
     file.replace(str(multiline_file), r"Etiam", "Emma", backslash_literal=True)
     assert "Emma" in multiline_file.read_text()
+
+
+def test_replace_count_no_deprecation_warning(file, multiline_file):
+    """
+    Regression test for https://github.com/saltstack/salt/pull/69497.
+    file.replace must not emit a DeprecationWarning for passing 'count'
+    as a positional argument to re.subn.
+    """
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        file.replace(str(multiline_file), r"Etiam", "Salticus", count=1)
+    assert "Salticus" in multiline_file.read_text()

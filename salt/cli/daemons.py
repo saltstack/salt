@@ -352,8 +352,34 @@ class Minion(
             try:
                 self._real_start()
             except SaltClientError as exc:
+                # The minion lost its master connection and tune_in()
+                # returned without ever going through shutdown(). Destroy
+                # the MinionManager's resources (event_publisher, event,
+                # minions) deterministically here -- both before retrying
+                # and before falling through to the final break/return --
+                # instead of leaving them for __del__'s GC-time safety net,
+                # which is what logs the "unclosed publish server"/
+                # "unclosed SyncWrapper"/"unclosed publisher client"
+                # warnings. See #70175.
+                if hasattr(self.minion, "destroy"):
+                    self.minion.destroy()
                 # Restart for multi_master failover when daemonized
                 if self.options.daemon:
+                    # self.minion's io_loop was already closed by
+                    # tune_in()'s own finally clause -- re-entering
+                    # tune_in() on this same, now-stale MinionManager
+                    # would immediately raise "RuntimeError: Event loop
+                    # is closed". Build a fresh MinionManager instead
+                    # (mirroring the narrow construction step from
+                    # prepare(), NOT self.prepare() itself, which would
+                    # re-daemonize/re-fork the already-running process).
+                    # Reassign self.minion as the very next statement
+                    # after destroy(), with nothing interposed, to keep
+                    # the SIGTERM race window (see MinionManager.stop())
+                    # as tight as possible. See #70178.
+                    import salt.minion
+
+                    self.minion = salt.minion.MinionManager(self.config)
                     continue
             break
 

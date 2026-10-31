@@ -335,6 +335,7 @@ class SyncClientMixin(ClientStateMixin):
                 "__jid_event__": weakref.proxy(namespaced_event),
             }
 
+            proc_fn = None
             try:
                 self_functions = copy.copy(self.functions)
                 salt.utils.lazy.verify_fun(self_functions, fun)
@@ -407,7 +408,7 @@ class SyncClientMixin(ClientStateMixin):
                     data["success"] = salt.utils.state.check_result(
                         data["return"]["data"]
                     )
-            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
+            except Exception as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
                 else:
@@ -420,10 +421,13 @@ class SyncClientMixin(ClientStateMixin):
                 data["retcode"] = 1
             finally:
                 # Job has finished or issue found, so let's clean up after ourselves
-                try:
-                    os.remove(proc_fn)
-                except OSError as err:
-                    log.debug("Error attempting to remove master job tracker: %s", err)
+                if proc_fn is not None:
+                    try:
+                        os.remove(proc_fn)
+                    except OSError as err:
+                        log.debug(
+                            "Error attempting to remove master job tracker: %s", err
+                        )
 
             if self.store_job:
                 try:

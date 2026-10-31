@@ -27,6 +27,19 @@ from salt.utils.asynchronous import SyncWrapper, aioloop
 
 log = logging.getLogger(__name__)
 
+
+def _cluster_retry(data):
+    """
+    Check if ``data`` is a clustered master's "come back later" reply.
+    """
+    return (
+        isinstance(data, dict)
+        and data.get("enc") == "clear"
+        and isinstance(data.get("load"), dict)
+        and data["load"].get("cluster_retry")
+    )
+
+
 REQUEST_CHANNEL_TIMEOUT = 60
 REQUEST_CHANNEL_TRIES = 3
 
@@ -255,11 +268,7 @@ class AsyncReqChannel:
             # otherwise blow up at ``ret["key"]`` below.
             raise salt.crypt.AuthenticationError(
                 "Master did not return a session key for pillar request"
-                + (
-                    " (cluster not ready)"
-                    if isinstance(ret, dict) and ret.get("cluster_retry")
-                    else ""
-                )
+                + (" (cluster not ready)" if _cluster_retry(ret) else "")
             )
         aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
@@ -316,6 +325,8 @@ class AsyncReqChannel:
                 self._package_load(load, nonce, session_crypticle=session_crypticle),
                 timeout=timeout,
             )
+            if _cluster_retry(data):
+                return data
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
@@ -333,13 +344,22 @@ class AsyncReqChannel:
         # (send, decrypt-reply) pair atomic w.r.t. any other coroutine
         # driving this same channel.  See issue #69753.
         async with self._req_lock:
-            try:
-                # We did not get data back the first time. Retry.
-                ret = await _do_transfer()
-            except salt.crypt.AuthenticationError:
-                # If auth error, return control back to the caller, continue when authentication succeeds
-                await self.auth.authenticate()
-                ret = await _do_transfer()
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    # We did not get data back the first time. Retry.
+                    ret = await _do_transfer()
+                except salt.crypt.AuthenticationError:
+                    # If auth error, return control back to the caller, continue when authentication succeeds
+                    await self.auth.authenticate()
+                    ret = await _do_transfer()
+                if not _cluster_retry(ret):
+                    break
+                # If master is not ready, try retrying until the deadline is reached.
+                if time.monotonic() >= deadline:
+                    raise salt.crypt.AuthenticationError("master cluster is not ready")
+                log.debug("Master cluster is not ready yet, retrying request")
+                await tornado.gen.sleep(self.opts.get("acceptance_wait_time", 10))
         return ret
 
     async def _uncrypted_transfer(self, load, timeout):

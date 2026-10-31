@@ -363,3 +363,43 @@ def test_ext_forwards_unmask_to_expose():
         masked = pillarmod.ext({"libvirt": "_"}, unmask=False)
         for key in compiled:
             assert "*" in masked[key]
+
+
+@pytest.mark.parametrize("func", ["items", "ext"])
+def test_pillar_object_is_destroyed(func):
+    """
+    ``items`` and ``ext`` build a ``RemotePillar`` that owns a ``ReqChannel``.
+    It must be destroyed explicitly, otherwise the channel's ``SyncWrapper``
+    is only reclaimed at interpreter shutdown and logs
+    ``unclosed SyncWrapper`` (#70355).
+    """
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(return_value={"a": 1})
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.object(pillarmod, "__grains__", grains, create=True):
+        with patch.dict(
+            pillarmod.__opts__,
+            {"id": "minion", "saltenv": "base", "pillarenv": None},
+        ):
+            getattr(pillarmod, func)(**({"external": {}} if func == "ext" else {}))
+    pillar_obj.destroy.assert_called_once_with()
+
+
+def test_items_destroys_pillar_object_on_error():
+    pillar_obj = MagicMock()
+    pillar_obj.compile_pillar = MagicMock(side_effect=RuntimeError("boom"))
+    grains = MagicMock()
+    grains.value = MagicMock(return_value={})
+    with patch(
+        "salt.pillar.get_pillar", MagicMock(return_value=pillar_obj)
+    ), patch.object(pillarmod, "__grains__", grains, create=True):
+        with patch.dict(
+            pillarmod.__opts__,
+            {"id": "minion", "saltenv": "base", "pillarenv": None},
+        ):
+            with pytest.raises(RuntimeError):
+                pillarmod.items()
+    pillar_obj.destroy.assert_called_once_with()

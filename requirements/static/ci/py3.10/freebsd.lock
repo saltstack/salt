@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   aiohttp
-aiohttp==3.14.1
+aiohttp==3.14.3
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -64,7 +64,7 @@ botocore==1.43.25
     #   boto3
     #   moto
     #   s3transfer
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -374,16 +374,12 @@ opentelemetry-semantic-conventions==0.63b1
     #   opentelemetry-sdk
 oscrypto==1.3.0 ; sys_platform != 'win32'
     # via certvalidator
-packaging==24.0 ; python_full_version >= '3.11'
+packaging==26.2
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
     #   pytest
-packaging==26.2 ; python_full_version < '3.11'
-    # via
-    #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   -r requirements/base.txt
-    #   pytest
+    #   virtualenv
 paramiko==5.0.0 ; sys_platform != 'win32'
     # via
     #   -r requirements/static/ci/common.txt
@@ -397,7 +393,6 @@ pathspec==0.12.1
 platformdirs==4.5.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -522,7 +517,7 @@ python-dateutil==2.9.0.post0
     #   croniter
     #   kubernetes
     #   vcert
-python-discovery==1.4.0
+python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   virtualenv
@@ -697,7 +692,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt
@@ -709,7 +704,7 @@ urllib3==2.7.0
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.4.2
+virtualenv==21.14.5
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   -r requirements/base.txt

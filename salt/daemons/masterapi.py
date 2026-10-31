@@ -309,6 +309,7 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
+                keyfile = os.path.join(opts["cachedir"], f".{user}_key")
                 if os.path.exists(keyfile):
                     with salt.utils.files.fopen(keyfile, "r") as fp:
                         keys[user] = salt.utils.stringutils.to_unicode(fp.read())
