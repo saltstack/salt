@@ -4,9 +4,11 @@ import asyncio
 import queue
 import socketserver
 import threading
+from types import SimpleNamespace
 
 import pytest
 
+import salt.client
 import salt.config
 import salt.modules.status as status
 import salt.payload
@@ -160,3 +162,29 @@ async def test_unresponsive_master_releases_transport_without_failback(
         assert clients[0].context is None and clients[0].socket is None
     else:
         assert clients[0]._stream is None and clients[0].task is None
+
+
+@pytest.mark.parametrize("reply", [False, True])
+def test_public_caller_ping_returns_bool_over_real_transport(
+    master_server, ping_client, reply
+):
+    _, _, requests, server = master_server
+    opts, event, clients = ping_client
+    server.reply = reply
+    opts["auth_timeout"] = 0.1 if not reply else 2
+    caller = object.__new__(salt.client.Caller)
+    caller.sminion = SimpleNamespace(
+        functions={"status.ping_master": status.ping_master}
+    )
+    assert caller.cmd("status.ping_master", "127.0.0.1") is reply
+    assert requests.qsize() == 1
+    assert clients[0]._closing
+    assert event.fire_event_async.await_count == int(reply)
+
+
+def test_public_caller_empty_master_is_false():
+    caller = object.__new__(salt.client.Caller)
+    caller.sminion = SimpleNamespace(
+        functions={"status.ping_master": status.ping_master}
+    )
+    assert caller.cmd("status.ping_master", "") is False

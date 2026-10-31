@@ -83,7 +83,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
-from salt.utils.asynchronous import resolve_result
+from salt.utils.asynchronous import resolve_result, resolve_result_sync
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -6442,12 +6442,12 @@ class ProxyMinion(Minion):
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         mp_call = _metaproxy_call(opts, "thread_return")
-        return asyncio.run(mp_call(cls, minion_instance, opts, data))
+        return resolve_result_sync(mp_call(cls, minion_instance, opts, data))
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
         mp_call = _metaproxy_call(opts, "thread_multi_return")
-        return asyncio.run(mp_call(cls, minion_instance, opts, data))
+        return resolve_result_sync(mp_call(cls, minion_instance, opts, data))
 
 
 class SProxyMinion(SMinion):

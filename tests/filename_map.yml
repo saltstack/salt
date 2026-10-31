@@ -133,6 +133,8 @@ salt/cli/salt.py:
   - pytests.integration.cli.test_matcher
 
 salt/client/*:
+  - pytests.unit.test_async_execution
+  - pytests.unit.client.test_init
   - integration.client.test_kwarg
   - integration.client.test_standard
   - pytests.integration.client.test_runner

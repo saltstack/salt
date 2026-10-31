@@ -6,11 +6,66 @@ from types import SimpleNamespace
 import pytest
 
 import salt.cli.caller
+import salt.client
 import salt.executors.direct_call
 import salt.loader.lazy
 import salt.minion
 from salt.exceptions import SaltInvocationError
 from tests.support.mock import patch
+
+
+def _sync_caller(entry, functions):
+    cls = salt.client.ProxyCaller if entry == "proxy" else salt.client.Caller
+    caller = object.__new__(cls)
+    caller.opts = {}
+    caller.sminion = SimpleNamespace(
+        functions=functions,
+        executors={"direct_call.execute": salt.executors.direct_call.execute},
+    )
+    return caller.function if entry == "function" else caller.cmd
+
+
+@pytest.mark.parametrize("entry", ["cmd", "function", "proxy"])
+def test_sync_client_resolves_loaded_coroutine_and_preserves_errors(functions, entry):
+    call = _sync_caller(entry, functions)
+    assert call("native.result") is False
+    assert functions.pack["__context__"]["retcode"] == 7
+    with pytest.raises(OSError, match="request failed"):
+        call("native.fail")
+
+
+@pytest.mark.parametrize("entry", ["cmd", "function", "proxy"])
+async def test_sync_client_from_running_loop_preserves_loader_context(functions, entry):
+    loop = asyncio.get_running_loop()
+    call = _sync_caller(entry, functions)
+    assert call("native.result") is False
+    assert functions.pack["__context__"]["retcode"] == 7
+    with pytest.raises(OSError, match="request failed"):
+        call("native.fail")
+    assert asyncio.get_running_loop() is loop
+
+
+@pytest.mark.parametrize("entry", ["_thread_return", "_thread_multi_return"])
+@pytest.mark.parametrize("native", [False, True])
+def test_proxy_worker_accepts_sync_and_async_metaproxy_hooks(entry, native):
+    calls = []
+
+    def sync_hook(cls, instance, opts, data):
+        calls.append((instance, opts, data))
+        return None
+
+    async def async_hook(*args):
+        await asyncio.sleep(0)
+        return sync_hook(*args)
+
+    with patch(
+        "salt.minion._metaproxy_call", return_value=async_hook if native else sync_hook
+    ):
+        assert (
+            getattr(salt.minion.ProxyMinion, entry)(None, {"id": "proxy"}, {"jid": "1"})
+            is None
+        )
+    assert calls == [(None, {"id": "proxy"}, {"jid": "1"})]
 
 
 @pytest.mark.parametrize("result", [False, 0, {}])

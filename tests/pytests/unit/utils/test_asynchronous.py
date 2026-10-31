@@ -11,6 +11,7 @@ back every master-initiated job) raised
 """
 
 import asyncio
+import contextvars
 import gc
 import warnings
 
@@ -20,6 +21,41 @@ import tornado.ioloop
 
 import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
+
+
+async def test_sync_result_preserves_context_in_async_application():
+    trace_id = contextvars.ContextVar("trace_id", default=None)
+    token = trace_id.set("caller-context")
+    owner_loop = asyncio.get_running_loop()
+
+    async def result():
+        await asyncio.sleep(0)
+        assert asyncio.get_running_loop() is not owner_loop
+        return trace_id.get()
+
+    try:
+        assert asynchronous.resolve_result_sync(result()) == "caller-context"
+        assert asyncio.get_running_loop() is owner_loop
+    finally:
+        trace_id.reset(token)
+
+
+@pytest.mark.parametrize("error", [OSError, asyncio.CancelledError])
+async def test_sync_result_preserves_exception_and_runs_cleanup(error):
+    failure = error("module failed")
+    cleaned = []
+
+    async def result():
+        try:
+            raise failure
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    with pytest.raises(error) as exc:
+        asynchronous.resolve_result_sync(result())
+    assert exc.value is failure
+    assert cleaned == [True]
 
 
 @pytest.mark.parametrize("kind", ["coroutine", "future", "custom"])
