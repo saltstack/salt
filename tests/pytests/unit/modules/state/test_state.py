@@ -1458,3 +1458,32 @@ class TestCheckPriorRunningStates:
         # Only the strictly older queued placeholder should block.
         assert len(result) == 1
         assert result[0]["jid"] == "20260718005609000000"
+
+    def test_check_prior_running_states_waiting_job_blocks_only_older(
+        self, tmp_path
+    ):
+        """
+        A running job with a queue flag file is waiting in the ``queue=<int>``
+        path and must only block younger jobs, otherwise three simultaneous
+        queued runs deadlock waiting on each other.
+        """
+        opts = {"cachedir": str(tmp_path)}
+        queue_dir = salt.utils.state.state_queue_dir(opts)
+        os.makedirs(queue_dir)
+        for jid in ("20260718005610000002", "20260718005610000003"):
+            with open(os.path.join(queue_dir, jid), "w") as fp_:
+                fp_.write("1")
+        active_jobs = [
+            {"jid": "20260718005610000002", "fun": "state.apply", "pid": 222},
+            {"jid": "20260718005610000003", "fun": "state.apply", "pid": 333},
+        ]
+
+        # Oldest waiting job is not blocked by younger waiting jobs
+        assert not salt.utils.state.check_prior_running_states(
+            opts, "20260718005610000001", active_jobs
+        )
+        # Youngest waiting job is blocked only by the older one
+        result = salt.utils.state.check_prior_running_states(
+            opts, "20260718005610000003", active_jobs
+        )
+        assert [r["jid"] for r in result] == ["20260718005610000002"]
