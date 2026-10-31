@@ -37,9 +37,15 @@ log = logging.getLogger(__name__)
 
 
 def _runner(cluster):
-    """Return the loaded ``topology.*`` LazyLoader for *cluster*'s master."""
+    """Return the loaded ``topology.*`` LazyLoader for *cluster*'s master.
+
+    Uses :meth:`TopologyCluster.master_opts` so any :meth:`config_peer`
+    writes to the master config file are picked up (``master.config``
+    is an immutable snapshot taken at startup).
+    """
     master = cluster.masters[0]
     opts = dict(master.config)
+    opts.update(cluster.master_opts())
     loader = salt.loader.runner(opts)
     return loader, opts
 

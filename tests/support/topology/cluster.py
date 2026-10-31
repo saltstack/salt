@@ -574,6 +574,13 @@ def make_single_master(
         },
     }
     base_overrides.update(opts_overrides)
+    # ``cluster_id`` + no ``cluster_peers`` + topology disabled
+    # fails master pre-flight (see :func:`salt.master.Master._pre_flight`).
+    # Callers that explicitly disable topology get the pre-topology
+    # layout: no cluster_id, no topology_peers.
+    if not base_overrides.get("topology_enabled"):
+        base_overrides.pop("cluster_id", None)
+        base_overrides.pop("topology_peers", None)
 
     factory = salt_factories.salt_master_daemon(
         f"topology-{cluster_id}",

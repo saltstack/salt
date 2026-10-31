@@ -381,17 +381,10 @@ def test_link_manager_double_start_is_safe(tmp_path, link_manager_module):
     opts = _opts(
         tmp_path,
         topology_enabled=True,
-        cluster_id="solo-A",
+        cluster_id="solo-a",
         interface="127.0.0.1",
         topology_link_port=0,
     )
-    # Write a minimal topology.conf so load_topology_config() reports enabled.
-    conf_dir = tmp_path / "conf"
-    conf_dir.mkdir()
-    (conf_dir / "topology.conf").write_text(
-        "topology:\n  enabled: true\n  cluster_id: solo-A\n  peers: []\n"
-    )
-    opts["conf_file"] = str(conf_dir / "topology.conf")
     opts["cachedir"] = str(tmp_path / "cache")
     os.makedirs(opts["cachedir"], exist_ok=True)
 
@@ -436,7 +429,7 @@ def test_link_manager_pre_fork_is_idempotent(tmp_path, link_manager_module):
     opts = _opts(
         tmp_path,
         topology_enabled=True,
-        cluster_id="solo-B",
+        cluster_id="solo-b",
         interface="127.0.0.1",
         topology_link_port=port,
     )

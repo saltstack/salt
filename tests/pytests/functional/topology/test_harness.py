@@ -168,10 +168,13 @@ def test_revoke_peer_idempotent(two_cluster_fixture):
 
 
 def test_config_peer_adds_to_topology_peers(two_cluster_fixture):
-    """``config_peer`` appends to this master's ``topology_peers`` opt."""
+    """``config_peer`` appends to this master's ``topology_peers`` opt
+    on disk; ``master.config`` is an immutable snapshot taken at
+    startup, so we read the fresh on-disk state via
+    :meth:`TopologyCluster.master_opts` (which re-reads the file)."""
     east, west = two_cluster_fixture
     east.config_peer(west)
-    peers = list(east.masters[0].config["topology_peers"])
+    peers = list(east.master_opts()["topology_peers"])
     west_port = west.masters[0].config["topology_link_port"]
     assert any(entry["port"] == west_port for entry in peers), peers
 
