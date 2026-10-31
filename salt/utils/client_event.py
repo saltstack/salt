@@ -129,6 +129,17 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         poller = zmq.Poller()
         poller.register(auth_socket, zmq.POLLIN)
 
+        # Short rolling buffer of recent events so a client that calls
+        # ``subscribe_job`` right after dispatching a fast runner / wheel
+        # job can still catch the ``/new`` and ``/ret`` events that fired
+        # in the few hundred ms between dispatch and subscribe.  Keyed on
+        # (timestamp, event).
+        import collections
+        import time
+
+        recent_events = collections.deque()
+        recent_ttl = self.opts.get("client_event_replay_ttl", 5.0)
+
         try:
             while True:
                 # Poll for authentication requests (non-blocking)
@@ -136,11 +147,25 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
 
                 # Handle client authentication
                 if auth_socket in socks:
-                    self._handle_auth_request(auth_socket, key_cache, loadauth, clients)
+                    self._handle_auth_request(
+                        auth_socket,
+                        key_cache,
+                        loadauth,
+                        clients,
+                        pub_socket=pub_socket,
+                        recent_events=recent_events,
+                    )
 
                 # Get events from master event bus
                 event = event_bus.get_event(wait=0.1, full=True)
                 if event:
+                    # Buffer first (so late subscribers can replay), then
+                    # forward to currently-subscribed clients.
+                    now = time.time()
+                    recent_events.append((now, event))
+                    cutoff = now - recent_ttl
+                    while recent_events and recent_events[0][0] < cutoff:
+                        recent_events.popleft()
                     self._publish_filtered_event(pub_socket, event, clients, loadauth)
 
         except (KeyboardInterrupt, SystemExit):
@@ -152,7 +177,15 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
             context.destroy(linger=0)
             event_bus.destroy()
 
-    def _handle_auth_request(self, auth_socket, key_cache, loadauth, clients):
+    def _handle_auth_request(
+        self,
+        auth_socket,
+        key_cache,
+        loadauth,
+        clients,
+        pub_socket=None,
+        recent_events=None,
+    ):
         """
         Handle client authentication request.
 
@@ -232,6 +265,18 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                 if subscriber_id in clients and clients[subscriber_id]["authorized"]:
                     clients[subscriber_id]["jobs"].add(jid)
                     auth_socket.send_pyobj({"subscribed": True})
+                    # Replay recent events for this jid so a late
+                    # subscriber (dispatched a fast job then subscribed)
+                    # doesn't miss ``/new`` or ``/ret``.  Scoped to just
+                    # the subscribing client via a single-entry dict.
+                    if pub_socket is not None and recent_events:
+                        just_this = {subscriber_id: clients[subscriber_id]}
+                        for _ts, buffered in list(recent_events):
+                            btag = buffered.get("tag", "")
+                            if jid and jid in btag:
+                                self._publish_filtered_event(
+                                    pub_socket, buffered, just_this, loadauth
+                                )
                 else:
                     auth_socket.send_pyobj({"subscribed": False})
 
@@ -327,20 +372,45 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                 continue
 
             # Extra auth_list gate for token-auth sessions: the eauth user
-            # must be authorized for the event's function on the event's
-            # target.  Best-effort: fall through to deliver if the event
-            # does not carry enough context for a check (e.g. non-job
-            # /ret events).
+            # must be authorized for the event's function.  Branch on the
+            # event tag -- publish events use the minion matcher
+            # (auth_check), runner/wheel events use the per-form matchers
+            # (runner_check / wheel_check) which don't need tgt/tgt_type.
+            # Fall through to deliver if the event does not carry enough
+            # context for a check (e.g. non-job /ret events).
             if info.get("auth_mode") == "token" and loadauth is not None:
                 auth_list = info.get("auth_list") or []
                 if auth_list and isinstance(data, dict):
                     fun = data.get("fun")
-                    tgt = data.get("tgt", "")
-                    tgt_type = data.get("tgt_type", "glob")
                     if fun:
-                        allowed = loadauth.ckminions.auth_check(
-                            auth_list, fun, data.get("arg") or [], tgt, tgt_type
-                        )
+                        if tag.startswith("salt/run/"):
+                            # Event data decorates the function name with
+                            # the form prefix (``runner.<fun>``), but
+                            # ckminions.runner_check / spec_check expects
+                            # a plain ``mod.func`` -- strip the prefix.
+                            check_fun = (
+                                fun[len("runner.") :]
+                                if fun.startswith("runner.")
+                                else fun
+                            )
+                            allowed = loadauth.ckminions.runner_check(
+                                auth_list, check_fun, data.get("arg") or []
+                            )
+                        elif tag.startswith("salt/wheel/"):
+                            check_fun = (
+                                fun[len("wheel.") :]
+                                if fun.startswith("wheel.")
+                                else fun
+                            )
+                            allowed = loadauth.ckminions.wheel_check(
+                                auth_list, check_fun, data.get("arg") or []
+                            )
+                        else:
+                            tgt = data.get("tgt", "")
+                            tgt_type = data.get("tgt_type", "glob")
+                            allowed = loadauth.ckminions.auth_check(
+                                auth_list, fun, data.get("arg") or [], tgt, tgt_type
+                            )
                         if isinstance(allowed, dict) or not allowed:
                             # Deny this event for this subscriber.
                             continue
@@ -628,34 +698,45 @@ class ClientEventSubscriber:
         if not self.sub_socket:
             return None
 
+        import time
+
+        deadline = None if no_block else time.monotonic() + max(wait, 0)
+
         try:
-            # Set timeout based on wait parameter
-            if no_block:
-                self.sub_socket.setsockopt(zmq.RCVTIMEO, 0)
-            else:
-                self.sub_socket.setsockopt(zmq.RCVTIMEO, int(wait * 1000))
+            # A single job fires multiple event tags (``.../new``,
+            # ``.../ret/<id>``), so when the caller asks for a specific
+            # tag we have to keep reading past non-matching events until
+            # either a match arrives or the overall wait expires.
+            # Dropping on the first mismatch (which the pre-replay code
+            # did) hid a latent bug: the replay buffer now delivers
+            # ``/new`` ahead of ``/ret``, and the old behaviour would
+            # treat ``/new`` as "no match -> timeout".
+            while True:
+                if no_block:
+                    self.sub_socket.setsockopt(zmq.RCVTIMEO, 0)
+                else:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        return None
+                    self.sub_socket.setsockopt(zmq.RCVTIMEO, int(remaining * 1000))
 
-            # Receive event (multipart: [subscriber_id, payload])
-            parts = self.sub_socket.recv_multipart()
+                # Receive event (multipart: [subscriber_id, payload])
+                parts = self.sub_socket.recv_multipart()
 
-            if len(parts) < 2:
-                return None
-
-            event_data = salt.payload.loads(parts[1])
-            # Client-side tag filter: a bus caller that asks for a
-            # specific tag only wants matching events.  The publisher
-            # already filtered by job subscription, but a single job
-            # fires multiple event tags (``.../new``, ``.../ret/<id>``).
-            # Without this filter, callers reading in a tight loop
-            # would see each event they didn't ask for as a bogus
-            # response.
-            if tag:
-                event_tag = event_data.get("tag", "")
-                if not event_tag.startswith(tag):
+                if len(parts) < 2:
                     return None
-            if full:
-                return event_data
-            return event_data.get("data")
+
+                event_data = salt.payload.loads(parts[1])
+                if tag:
+                    event_tag = event_data.get("tag", "")
+                    if not event_tag.startswith(tag):
+                        # Not what the caller asked for -- keep reading.
+                        if no_block:
+                            return None
+                        continue
+                if full:
+                    return event_data
+                return event_data.get("data")
 
         except zmq.Again:
             # Timeout
