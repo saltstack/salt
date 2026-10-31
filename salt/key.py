@@ -177,9 +177,12 @@ class KeyCLI:
         low = {}
         skip_perm_errors = self.opts["eauth"] != ""
 
-        # Skip eauth credential collection for client auth
-        if self.opts.get("client_auth"):
-            # Client auth uses PKI keys, no credentials needed in low dict
+        # client_auth alone (no eauth) uses PKI identity as the sole
+        # authorization source.  When both are configured, we still need
+        # to collect eauth creds so the master's stacked PKI+eauth
+        # check receives them.
+        if self.opts.get("client_auth") and not self.opts.get("eauth"):
+            # Pure PKI identity -- no credentials needed in low dict.
             pass
         elif self.opts["eauth"]:
             if "token" in self.opts:
