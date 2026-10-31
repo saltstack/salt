@@ -2227,6 +2227,30 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             load = payload["load"]
             if key == "clear":
                 ret = await self._handle_clear(load)
+            elif self._is_client_bridge(load):
+                # Bridge: an AES-encrypted payload whose inner ``cmd`` is a
+                # ClearFuncs method AND whose authenticated sender id is a
+                # known client gets routed to ClearFuncs with the decrypted
+                # load intact.  The AES session proves PKI identity (the
+                # client went through the standard sign-in handshake using
+                # its ``client.pem``); routing to ClearFuncs lets eauth
+                # credentials inside the inner load drive publish/runner/
+                # wheel/token authorization the same way the master-local
+                # path does.  Without this bridge, remote clients would
+                # have to send credentials in plaintext over the clear
+                # channel just to reach the publish endpoint.
+                #
+                # ClearFuncs returns ``{"fun": "send_clear"}`` because its
+                # usual caller (salt-api, local salt CLI) talks on the
+                # clear channel.  Here the caller is on the AES channel,
+                # so flip the send mode to ``"send"`` -- the ReqServer
+                # will AES-encrypt the response under the sender's
+                # sign-in session key, preserving confidentiality on the
+                # return trip as well.
+                reply, req_opts = await self._handle_clear(load)
+                req_opts = dict(req_opts)
+                req_opts["fun"] = "send"
+                ret = (reply, req_opts)
             else:
                 ret = await self._handle_aes(load)
             return ret
@@ -2258,6 +2282,46 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             )
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
+
+    def _is_client_bridge(self, load):
+        """
+        Decide whether an AES-wrapped payload should route to ClearFuncs.
+
+        Returns True iff all four conditions hold:
+
+        1. ``load`` is a dict with a ``cmd`` field,
+        2. The ``cmd`` is one of :class:`ClearFuncs`'s exposed methods and
+           *not* one of :class:`AESFuncs`'s (so we don't shadow any
+           AES-native handler),
+        3. The payload carries an ``id`` -- which the ReqChannel-side AES
+           crypticle has already matched against the sender's authenticated
+           PKI identity via the standard sign-in session key, and
+        4. That id is present in the ``client_keys`` cache (the acceptance
+           namespace used by :class:`salt.key.ClientKey` / salt-key's
+           ``--client`` flows); plain minion ids live in ``keys`` and
+           deliberately don't satisfy this check.
+
+        The bridge is strictly additive: it never widens access for
+        minions and never affects clear-channel payloads, which continue
+        to flow through :meth:`_handle_clear` unchanged.
+        """
+        if not isinstance(load, dict):
+            return False
+        cmd = load.get("cmd")
+        if not isinstance(cmd, str):
+            return False
+        if cmd not in self.clear_funcs.expose_methods:
+            return False
+        if cmd in self.aes_funcs.expose_methods:
+            return False
+        sender_id = load.get("id")
+        if not sender_id:
+            return False
+        try:
+            client_record = self.aes_funcs.key_cache.fetch("client_keys", sender_id)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        return bool(client_record)
 
     async def _handle_clear(self, load):
         """

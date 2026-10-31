@@ -303,7 +303,13 @@ class RemoteWheelClient:
 
     def master_call(self, **kwargs):
         """
-        Send a wheel call to the remote master's clear ReqServer port.
+        Send a wheel call to the remote master.
+
+        Uses ``crypt="aes"`` so eauth credentials inside ``kwargs``
+        travel encrypted under the PKI-handshake session key.  See
+        :class:`salt.runner.RemoteRunnerClient.master_call` for the
+        master-side bridge that routes AES-wrapped ``wheel`` cmds to
+        :meth:`salt.daemons.masterapi.LocalFuncs.wheel`.
         """
         load = kwargs
         load["cmd"] = "wheel"
@@ -313,7 +319,7 @@ class RemoteWheelClient:
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
+            self.opts, crypt="aes", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)
         if isinstance(ret, Mapping) and "error" in ret:

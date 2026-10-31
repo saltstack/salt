@@ -743,12 +743,27 @@ class Resolver:
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
+        # Remote clients (``__role=client``) carry username/password to the
+        # master's ``mk_token`` endpoint on this channel.  Use ``crypt="aes"``
+        # so the credentials travel encrypted under the PKI handshake
+        # session key; the master bridges the AES-wrapped ``mk_token`` cmd
+        # to :meth:`ClearFuncs.mk_token` after verifying the sender is a
+        # known client (see :meth:`salt.master.MWorker._handle_payload_inner`).
+        # Master-local callers (salt-api, etc.) stay on ``crypt="clear"``
+        # because that's a trusted loopback IPC path.
+        is_remote_client = self.opts.get("__role") == "client"
+        if is_remote_client:
+            master = self.opts.get("master", "localhost")
+            crypt = "aes"
+        else:
+            master = self.opts["interface"]
+            crypt = "clear"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.network.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(master),
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri
+            self.opts, crypt=crypt, master_uri=master_uri
         ) as channel:
             return channel.send(load)
 

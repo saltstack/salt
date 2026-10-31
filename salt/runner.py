@@ -532,7 +532,14 @@ class RemoteRunnerClient(mixins.SyncClientMixin):
 
     def master_call(self, **kwargs):
         """
-        Send a runner call to the remote master's clear ReqServer port.
+        Send a runner call to the remote master.
+
+        Uses ``crypt="aes"`` so the eauth credentials in ``kwargs``
+        travel encrypted under the PKI-handshake session key.  The
+        master bridges the AES-wrapped ``runner`` cmd through
+        :meth:`salt.master.MWorker._handle_payload_inner` to
+        :meth:`salt.daemons.masterapi.LocalFuncs.runner` on ClearFuncs,
+        which then validates the eauth creds inside the decrypted load.
         """
         load = kwargs
         load["cmd"] = "runner"
@@ -542,7 +549,7 @@ class RemoteRunnerClient(mixins.SyncClientMixin):
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri, usage="master_call"
+            self.opts, crypt="aes", master_uri=master_uri, usage="master_call"
         ) as channel:
             ret = channel.send(load)
         if isinstance(ret, Mapping) and "error" in ret:

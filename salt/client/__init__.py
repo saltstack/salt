@@ -2445,16 +2445,19 @@ class RemoteClient(LocalClient):
         master_uri = "tcp://{}:{}".format(
             salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
         )
-        # The master's ``publish`` method is exposed on ClearFuncs only;
-        # AES-encrypted payloads dispatch to AESFuncs, which doesn't
-        # include ``publish``.  LocalClient uses ``crypt="clear"`` for
-        # the same reason -- mirror that here.  Credentials for the
-        # master's publish-time auth (eauth username/password, token, or
-        # the per-client identity in ``client_id``) travel inside the
-        # clear-channel payload and are evaluated by
-        # :meth:`salt.master.ClearFuncs.publish`.
+        # AES channel: the ReqChannel does the standard PKI handshake
+        # (minion-style sign-in using ``pki_dir/client.pem``, auto-
+        # generated on first use and accepted on the master via the
+        # ``client_keys`` acceptance workflow) and encrypts the entire
+        # payload with the resulting session key.  Eauth credentials
+        # inside the inner load are therefore protected on the wire.
+        # The master's :meth:`salt.master.MWorker._handle_payload_inner`
+        # bridges AES-encrypted ``publish`` (and ``runner``/``wheel``/
+        # ``mk_token``/``get_token``) cmds whose authenticated sender id
+        # is a known client over to :meth:`ClearFuncs.publish`, so eauth
+        # authorization still runs there.
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri
+            self.opts, crypt="aes", master_uri=master_uri
         ) as channel:
             try:
                 # For network events, ensure we're connected.  Prefer

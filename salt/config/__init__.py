@@ -4834,6 +4834,32 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
         # ``client_auth: False`` in their client config.
         if "client_auth" not in opts:
             opts["client_auth"] = True
+        # salt.crypt.Auth's AES-handshake path (``sign_in`` + helpers)
+        # reads a handful of minion-flavoured opts that master_config
+        # does not populate because the master process never signs in.
+        # Remote clients do sign in (that's how we get an authenticated
+        # AES session to carry eauth creds), so fill the missing keys
+        # with sensible minion-side defaults.  Operators can override
+        # any of these in /etc/salt/client.
+        _minion_auth_defaults = {
+            "acceptance_wait_time": 10,
+            "acceptance_wait_time_max": 0,
+            "auth_timeout": 60,
+            "auth_safemode": False,
+            "auth_tries": 7,
+            "auth_events": False,
+            "master_tries": 1,
+            "random_master": False,
+            "master_type": "str",
+            "master_shuffle": False,
+            "verify_master_pubkey_sign": False,
+            "always_verify_signature": False,
+            "master_sign_key_name": "master_sign",
+            "master_pubkey_signature": "master_pubkey_signature",
+            "autosign_grains": [],
+        }
+        for key, value in _minion_auth_defaults.items():
+            opts.setdefault(key, value)
         config_used = client_config_path
     else:
         # Backwards-compatibility fallback: load the master config as a CLI
