@@ -58,6 +58,11 @@ salt/modules/ansiblegate.py:
 salt/platform/win.py:
   - pytests.unit.platform.test_win
 
+salt/crypt.py:
+  - pytests.unit.crypt.test_async_auth
+  - pytests.unit.test_crypt
+  - pytests.functional.test_crypt
+
 salt/modules/cp.py:
   - pytests.functional.modules.file.test_replace
   - pytests.unit.modules.file.test_file_basics
