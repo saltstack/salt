@@ -49,7 +49,7 @@ versions.
   oldest supported branch where the issue occurs.
 
 Incremental Ruff Checks (3008 and Later)
-=======================================
+========================================
 
 Ruff runs alongside pylint in pre-commit and CI. Black remains the formatter.
 The initial rules check unused imports, f-strings without placeholders,

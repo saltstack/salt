@@ -2759,6 +2759,14 @@ repos:
 
   - repo: local
     hooks:
+      - id: contributing-rst
+        name: Check contributor guide RST
+        entry: python -m pytest -c pyproject.toml --noconftest -q tests/pytests/unit/test_contributing.py
+        language: python
+        additional_dependencies: ["docutils==0.22.4", "pytest==8.4.2"]
+        files: ^(CONTRIBUTING\.rst|tests/pytests/unit/test_contributing\.py|pyproject\.toml|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+
       - id: ruff-incremental
         name: Check new Ruff violations
         entry: python tools/precommit/ruff.py
