@@ -13,14 +13,22 @@ Architecture:
       master's standard tokens cache via :class:`salt.auth.LoadAuth`.
 - Filters events based on client identity and job ownership
 - Publishes events only to authorized clients
+- Event payloads are encrypted with a per-session :class:`salt.crypt.Crypticle`
+  key.  For PKI auth, the server mints a random key and wraps it with the
+  client's RSA public key during the auth REP exchange.  For token auth,
+  both sides derive the key from the Salt token via HKDF-SHA256 (so the
+  token itself never travels on the REP channel outside the request).
 """
 
+import base64
 import logging
 import os
 import re
 import secrets
 
 import zmq
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 import salt.auth
 import salt.cache
@@ -34,6 +42,30 @@ import salt.utils.process
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
+
+# HKDF context tag -- bump the version suffix if the key schedule changes
+# incompatibly so an old client doesn't silently misdecode new events.
+_EVENTS_HKDF_INFO = b"salt-client-events-v1"
+# Crypticle default key size: 192-bit AES key + 32-byte HMAC key = 56 bytes.
+_EVENTS_KEY_BYTES = 24 + 32
+
+
+def _derive_events_key(secret):
+    """
+    Derive a :class:`salt.crypt.Crypticle` ``key_string`` from a shared
+    secret via HKDF-SHA256.  Used by the token-auth path where both the
+    publisher and the client already share the Salt token and don't need
+    to transport a separate events key.
+    """
+    if isinstance(secret, str):
+        secret = secret.encode()
+    derived = HKDF(
+        algorithm=hashes.SHA256(),
+        length=_EVENTS_KEY_BYTES,
+        salt=None,
+        info=_EVENTS_HKDF_INFO,
+    ).derive(secret)
+    return base64.b64encode(derived).decode("utf-8")
 
 
 class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
@@ -207,15 +239,29 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                 # PKI client key authentication: subscriber_id == client_id.
                 authorized = self._verify_client(client_id, token, key_cache)
                 if authorized:
+                    # Mint a fresh Crypticle key for this subscriber session
+                    # and wrap it with the client's RSA public key so it
+                    # can be delivered over the auth REP channel in
+                    # confidentiality.  The client unwraps with its
+                    # ``client.pem``.
+                    key_string = salt.crypt.Crypticle.generate_key_string()
+                    crypticle = salt.crypt.Crypticle(self.opts, key_string)
+                    enc_algo = payload.get(
+                        "enc_algo", getattr(salt.crypt, "OAEP_SHA1", "OAEP-SHA1")
+                    )
+                    client_key = key_cache.fetch("client_keys", client_id)
+                    client_pub = salt.crypt.PublicKey.from_str(client_key["pub"])
+                    wrapped = client_pub.encrypt(key_string.encode(), enc_algo)
                     clients[client_id] = {
                         "jobs": set(),
                         "authorized": True,
                         "auth_mode": "pki",
                         "auth_list": None,
                         "expire": None,
+                        "crypticle": crypticle,
                     }
                     log.info("Client %s authenticated for event streaming", client_id)
-                    auth_socket.send_pyobj({"authorized": True})
+                    auth_socket.send_pyobj({"authorized": True, "events_key": wrapped})
                 else:
                     log.warning(
                         "Client %s failed authentication for event streaming",
@@ -241,6 +287,15 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                     return
                 session_id = secrets.token_urlsafe(16)
                 tok_data = loadauth.get_tok(salt_token) or {}
+                # Derive the per-session Crypticle key from the Salt
+                # token.  Both the publisher and the client already share
+                # the token (the client just presented it on this very
+                # request), so HKDF-SHA256 lets us produce an identical
+                # key on both ends without transporting it over the REP
+                # channel.  The ``_EVENTS_HKDF_INFO`` tag binds the key
+                # to this specific protocol version.
+                key_string = _derive_events_key(salt_token)
+                crypticle = salt.crypt.Crypticle(self.opts, key_string)
                 clients[session_id] = {
                     "jobs": set(),
                     "authorized": True,
@@ -248,6 +303,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                     "auth_list": token_check.get("auth_list") or [],
                     "username": token_check.get("username"),
                     "expire": tok_data.get("expire"),
+                    "crypticle": crypticle,
                 }
                 log.info(
                     "Eauth user %s authenticated for event streaming (session %s)",
@@ -416,7 +472,18 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                             continue
 
             try:
-                msg = salt.payload.dumps({"tag": tag, "data": data})
+                # Each subscriber has its own Crypticle (keyed off the
+                # auth exchange), so one event delivered to N subscribers
+                # is N independent AES-CBC+HMAC encryptions.  Clients that
+                # authenticated before this encryption was added would have
+                # no crypticle; fall back to msgpack to keep legacy flows
+                # discoverable rather than silently blackholing their
+                # events.  New auth paths always populate ``crypticle``.
+                crypticle = info.get("crypticle")
+                if crypticle is not None:
+                    msg = crypticle.dumps({"tag": tag, "data": data})
+                else:
+                    msg = salt.payload.dumps({"tag": tag, "data": data})
                 pub_socket.send_multipart([subscriber_id.encode(), msg])
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
@@ -452,6 +519,12 @@ class ClientEventSubscriber:
         # Populated by token-auth path.  When set, the subscriber uses
         # this as its SUB filter prefix (not the opts["id"] client_id).
         self.session_id = None
+        # Per-session :class:`salt.crypt.Crypticle` for decrypting
+        # events on the SUB socket.  Populated during authentication:
+        # the PKI path unwraps a server-minted key from the auth REP
+        # response; the token path derives the same key both sides from
+        # the Salt token.
+        self.crypticle = None
 
     def connect(self, salt_token=None, eauth=None):
         """
@@ -511,13 +584,27 @@ class ClientEventSubscriber:
         token = priv_key.encrypt(b"salt")
 
         # Send authentication request
-        auth_payload = {"id": client_id, "token": token, "action": "auth"}
+        auth_payload = {
+            "id": client_id,
+            "token": token,
+            "action": "auth",
+            "enc_algo": self.opts.get("encryption_algorithm", "OAEP-SHA1"),
+        }
 
         self.auth_socket.send_pyobj(auth_payload)
         response = self.auth_socket.recv_pyobj()
 
         if response.get("authorized"):
             self.authenticated = True
+            # Unwrap the server-minted Crypticle key with our private
+            # key.  The server encrypted it under our RSA public key
+            # (which it has in ``client_keys`` cache from the sign-in
+            # flow), so only we can read it.
+            wrapped = response.get("events_key")
+            if wrapped is not None:
+                key_string_bytes = priv_key.decrypt(wrapped)
+                key_string = key_string_bytes.decode()
+                self.crypticle = salt.crypt.Crypticle(self.opts, key_string)
             log.info("Successfully authenticated with event publisher")
         else:
             raise Exception("Failed to authenticate with event publisher")
@@ -540,6 +627,11 @@ class ClientEventSubscriber:
         if response.get("authorized"):
             self.authenticated = True
             self.session_id = response.get("session_id")
+            # Derive the per-session Crypticle key from the Salt token
+            # the same way the publisher did.  No key transport needed
+            # because both sides already share the token value.
+            key_string = _derive_events_key(salt_token)
+            self.crypticle = salt.crypt.Crypticle(self.opts, key_string)
             log.info("Successfully authenticated with event publisher via token")
         else:
             raise Exception("Failed to authenticate with event publisher via token")
@@ -726,7 +818,14 @@ class ClientEventSubscriber:
                 if len(parts) < 2:
                     return None
 
-                event_data = salt.payload.loads(parts[1])
+                # Decrypt with the per-session Crypticle established at
+                # auth time; fall back to raw msgpack only if the
+                # subscriber connected via a path that didn't negotiate
+                # one.  New paths always set ``self.crypticle``.
+                if self.crypticle is not None:
+                    event_data = self.crypticle.loads(parts[1])
+                else:
+                    event_data = salt.payload.loads(parts[1])
                 if tag:
                     event_tag = event_data.get("tag", "")
                     if not event_tag.startswith(tag):
