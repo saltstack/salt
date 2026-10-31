@@ -2586,6 +2586,7 @@ class Minion(MinionBase):
                     log.warning(
                         "Failed to acquire job_queue lock for jid %s, queuing anyway.",
                         data["jid"],
+                        exc_info=True,
                     )
                     # If we can't get the lock, we assume high contention and queue it to be safe.
                     # Or we could just proceed (unsafe). Queuing is safer for stability.
