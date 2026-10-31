@@ -1066,6 +1066,9 @@ class AsyncAuth:
         """
         cls._register_atfork()
         # do we have any mapping for this io_loop
+        # TODO(#70366): Deprecate Tornado IOLoop inputs with a versioned warning
+        # once #70604's aioloop(warn=True) support is available. Remove this input
+        # compatibility after that deprecation period; keep native asyncio inputs.
         io_loop = (
             asyncio.get_event_loop()
             if io_loop is None
@@ -1179,8 +1182,12 @@ class AsyncAuth:
             if key in AsyncAuth.creds_map:
                 del AsyncAuth.creds_map[key]
 
-    async def authenticate(self, callback=None):
-        """Authenticate once for concurrent callers, on this object's owning loop."""
+    def authenticate(self, callback=None):
+        """Start authentication immediately and return an awaitable for this caller."""
+        return self.io_loop.create_task(self._authenticate_waiter(callback))
+
+    async def _authenticate_waiter(self, callback=None):
+        """Share the sign-in without sharing cancellation between its callers."""
         future = getattr(self, "_authenticate_future", None)
         if future is None or future.done():
             future = self.io_loop.create_task(self._authenticate())
@@ -1334,24 +1341,25 @@ class AsyncAuth:
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-                # Publish credentials before completing authentication so other
-                # processes see key rotation before the next master publish.
-                if self.opts.get("auth_events") is True:
-                    with salt.utils.event.get_event(
-                        self.opts.get("__role"),
-                        opts=self.opts,
-                        listen=False,
-                        io_loop=self.io_loop,
-                    ) as event:
-                        try:
-                            await event.fire_event_async(
-                                {"key": key, "creds": creds},
-                                salt.utils.event.tagify(prefix="auth", suffix="creds"),
-                            )
-                        except Exception as exc:  # pylint: disable=broad-except
-                            log.error("Error firing auth creds event: %s", exc)
+                self._notify_creds_changed(key, creds)
 
         return True
+
+    def _notify_creds_changed(self, key, creds):
+        # Preserve the synchronous IPC publication used for cross-process key
+        # rotation. Migrating this event path requires separate integration tests.
+        if self.opts.get("auth_events") is not True:
+            return
+        with salt.utils.event.get_event(
+            self.opts.get("__role"), opts=self.opts, listen=False
+        ) as event:
+            try:
+                event.fire_event(
+                    {"key": key, "creds": creds},
+                    salt.utils.event.tagify(prefix="auth", suffix="creds"),
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.error("Error firing auth creds event: %s", exc)
 
     async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
@@ -1983,8 +1991,7 @@ class SAuth(AsyncAuth):
             self.authenticate()
         return self._crypticle
 
-    # SAuth serves the remaining synchronous request callers.
-    def authenticate(self, _=None):  # pylint: disable=invalid-overridden-method
+    def authenticate(self, _=None):  # TODO: remove unused var
         """
         Authenticate with the master, this method breaks the functional
         paradigm, it will update the master information from a fresh sign
