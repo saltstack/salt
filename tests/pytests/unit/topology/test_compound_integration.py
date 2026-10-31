@@ -118,7 +118,7 @@ def test_compound_match_source_dispatches_c_to_cluster():
 
 
 # ---------------------------------------------------------------------
-# ``_local_cluster_id`` --- topology-config fallback for C@ matching
+# ``_local_cluster_id`` --- shared opts["cluster_id"] for C@ matching
 # ---------------------------------------------------------------------
 
 
@@ -136,72 +136,33 @@ def test_local_cluster_id_prefers_opts_cluster_id():
 
 def test_local_cluster_id_falls_back_to_master_cluster_id():
     """
-    ``opts["master_cluster_id"]`` is the second-tier source when the
-    3008.x master-cluster primitive is not set.
+    ``opts["master_cluster_id"]`` is the second-tier source when
+    ``opts["cluster_id"]`` is not set (minion-side harness tests).
     """
     ck = _make_ckminions({"master_cluster_id": "east"})
     assert ck._local_cluster_id() == "east"
 
 
-def test_local_cluster_id_reads_topology_conf(tmp_path):
+def test_local_cluster_id_empty_when_unset():
     """
-    On a topology-enabled solo master, ``opts["cluster_id"]`` is
-    FORBIDDEN by the pre-flight check (3008.x ``_pre_flight``
-    requires ``cluster_peers`` whenever ``cluster_id`` is truthy).
-    The topology identity must come from ``topology.conf`` via
-    :func:`salt.config.topology.load_topology_config`.  This test
-    pins that fallback: without ``opts["cluster_id"]``, the
-    ``C@east`` match on a topology-enabled master still resolves
-    to ``east``.
+    No ``cluster_id`` set anywhere -> empty string.  A master that
+    is neither in a 3008.x master cluster nor a topology node has
+    no cluster identity for ``C@`` to match on.
     """
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
-    ck = _make_ckminions(
-        {
-            "topology_enabled": True,
-            "topology_config_file": str(topo_conf),
-        }
-    )
-    assert ck._local_cluster_id() == "east"
+    ck = _make_ckminions({"topology_enabled": False})
+    assert ck._local_cluster_id() == ""
 
 
-def test_local_cluster_id_cached_per_opts(tmp_path):
-    """
-    The topology-config read is cached in
-    ``opts["_topology_cluster_id_cache"]`` so the per-publish C@
-    compound match does not re-parse ``topology.conf`` on every
-    call.
-    """
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
-    opts = {
-        "topology_enabled": True,
-        "topology_config_file": str(topo_conf),
-    }
-    ck = _make_ckminions(opts)
-    first = ck._local_cluster_id()
-    assert first == "east"
-    assert opts["_topology_cluster_id_cache"] == "east"
-    # Delete the config file to prove the second call uses the cache.
-    topo_conf.unlink()
-    assert ck._local_cluster_id() == "east"
-
-
-def test_check_cluster_minions_dispatches_on_topology_cluster_id(tmp_path):
+def test_check_cluster_minions_dispatches_on_cluster_id():
     """
     End-to-end: ``_check_compound_minions`` with target ``"C@east"``
-    on a topology-only master (no ``opts["cluster_id"]``) must
-    recognise east as the local cluster and return the all-minions
-    set.  Pre-fix this returned empty because the C@ matcher only
-    consulted ``opts["cluster_id"]``, which is unset on a
-    topology-enabled solo master.
+    on a master that has ``opts["cluster_id"] = "east"`` recognises
+    east as the local cluster and returns the all-minions set.
     """
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
     ck = _make_ckminions(
         {
+            "cluster_id": "east",
             "topology_enabled": True,
-            "topology_config_file": str(topo_conf),
             "minion_data_cache": False,  # take the simple return path
         }
     )
@@ -209,18 +170,16 @@ def test_check_cluster_minions_dispatches_on_topology_cluster_id(tmp_path):
     assert result["minions"] == ["m1", "m2"]
 
 
-def test_check_cluster_minions_empty_when_not_in_scope(tmp_path):
+def test_check_cluster_minions_empty_when_not_in_scope():
     """
     ``_check_cluster_minions("west", ...)`` on an east master is
     empty.  The forward-only path is the router's responsibility;
     the local match contributes nothing.
     """
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
     ck = _make_ckminions(
         {
+            "cluster_id": "east",
             "topology_enabled": True,
-            "topology_config_file": str(topo_conf),
         }
     )
     result = ck._check_cluster_minions("west", greedy=True, minions=["m1"])

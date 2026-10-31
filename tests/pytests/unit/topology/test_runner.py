@@ -24,19 +24,11 @@ def pki_dir(tmp_path):
 
 
 @pytest.fixture
-def topology_conf(tmp_path):
-    """Write a minimal valid topology.conf and return its path."""
-    conf = tmp_path / "topology.conf"
-    conf.write_text("cluster_id: unit-test\npeers: []\n", encoding="utf-8")
-    return conf
-
-
-@pytest.fixture
-def enabled_opts(pki_dir, topology_conf):
+def enabled_opts(pki_dir):
     return {
         "topology_enabled": True,
         "topology_link_port": 4530,
-        "topology_config_file": str(topology_conf),
+        "topology_peers": [],
         "pki_dir": str(pki_dir),
         "cluster_id": "unit-test",
         "__role": "master",

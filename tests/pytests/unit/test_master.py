@@ -4711,14 +4711,11 @@ async def test_publish_topology_c_scope_forward_only_pass(
     :meth:`MasterPubServerChannel.publish_payload`) can forward it
     to west.
     """
-    # Materialize a minimal topology.conf on-disk so
-    # ``_topology_cluster_id_for_auth`` resolves to ``east`` for
-    # the forward-only check.
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
+    # Set topology opts inline so ``_topology_cluster_id_for_auth``
+    # resolves to ``east`` for the forward-only check.
     publish_clear_funcs.opts["topology_enabled"] = True
-    publish_clear_funcs.opts["topology_config_file"] = str(topo_conf)
-    publish_clear_funcs.opts.pop("_topology_cluster_id_cache", None)
+    publish_clear_funcs.opts["cluster_id"] = "east"
+    publish_clear_funcs.opts["topology_peers"] = []
 
     load = {
         "user": "foo",
@@ -4787,11 +4784,9 @@ async def test_publish_topology_c_scope_matches_local_cluster_normal_path(
     minions must still error out so operators see the real
     "nothing matched" signal.
     """
-    topo_conf = tmp_path / "topology.conf"
-    topo_conf.write_text("cluster_id: east\npeers: []\n")
     publish_clear_funcs.opts["topology_enabled"] = True
-    publish_clear_funcs.opts["topology_config_file"] = str(topo_conf)
-    publish_clear_funcs.opts.pop("_topology_cluster_id_cache", None)
+    publish_clear_funcs.opts["cluster_id"] = "east"
+    publish_clear_funcs.opts["topology_peers"] = []
 
     load = {
         "user": "foo",

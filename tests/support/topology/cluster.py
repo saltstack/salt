@@ -14,9 +14,10 @@ tests reach for: ``accept_peer``, ``revoke_peer``, ``config_peer``,
 
 The wrapper is deliberately thin:
 
-* It writes a per-master ``topology.conf`` at a known path and
-  sets ``topology_enabled`` / ``topology_link_port`` /
-  ``topology_config_file`` in each master's opts.
+* It sets ``topology_enabled`` / ``topology_link_port`` /
+  ``cluster_id`` / ``topology_peers`` directly in each master's
+  opts (topology config lives in the master config, same shape as
+  any other master opt).
 * It generates (and keeps on disk) a per-cluster ``master_identity.pub``
   stand-in so ``accept_peer`` has something to copy.  Per-file
   implementation teams will swap this out for a real
@@ -34,13 +35,10 @@ for the 3008.x master-cluster primitives this harness builds on.
 import logging
 import os
 import pathlib
-import shutil
 import subprocess
 
-import yaml
 from pytestshellutils.utils import ports
 
-import salt.utils.files
 import salt.utils.platform
 
 log = logging.getLogger(__name__)
@@ -157,8 +155,7 @@ class TopologyCluster:
         Stop and restart every underlying salt-master in place.
 
         Tests that mutate on-disk state the master only reads at
-        boot — most notably ``topology.conf`` via :meth:`config_peer`
-        — call this after the mutation so the next boot picks up
+        boot call this after the mutation so the next boot picks up
         the new config.  The fixture's exit-stack still owns the
         final teardown via the original ``factory.started()``
         context (which calls :meth:`terminate` on exit; idempotent
@@ -269,18 +266,19 @@ class TopologyCluster:
             target.unlink()
 
     # ------------------------------------------------------------------
-    # Config-time peering (``topology.peers:`` in topology.conf)
+    # Config-time peering (``topology_peers:`` in master opts)
     # ------------------------------------------------------------------
 
     def config_peer(self, other, host=None, port=None):
         """
-        Add *other* to this cluster's ``topology.peers:`` list in
-        ``topology.conf``.
+        Add *other* to this cluster's ``topology_peers`` entry in
+        every member's on-disk master config file.
 
-        The implementation (not this harness) is responsible for
-        reloading the config.  Behavior tests that need the running
-        master to pick up a new peer will typically restart the
-        master or trigger whatever reload mechanism lands.
+        Tests that need the running master to pick up the new peer
+        follow this call with :meth:`restart`; the factory re-reads
+        the config file on startup.  :meth:`master_opts` also
+        re-reads the file so in-process router/link_manager runs
+        built via that method see the new peer immediately.
 
         :param host: Override the peer host.  Defaults to the peer's
             own ``interface`` opt.
@@ -289,31 +287,23 @@ class TopologyCluster:
         """
         if not isinstance(other, TopologyCluster):
             raise TypeError(f"config_peer expects TopologyCluster, got {type(other)!r}")
-        master = self.masters[0]
-        conf_path = pathlib.Path(master.config["topology_config_file"])
         host = host or other.masters[0].config.get("interface", "127.0.0.1")
         port = port or other.masters[0].config["topology_link_port"]
-
-        if conf_path.exists():
-            with salt.utils.files.fopen(conf_path, encoding="utf-8") as fh:
-                data = yaml.safe_load(fh) or {}
-        else:
-            data = {}
-        data.setdefault("cluster_id", self.cluster_id)
-        peers = list(data.get("peers") or [])
         entry = {"host": host, "port": int(port)}
-        if entry not in peers:
-            peers.append(entry)
-        data["peers"] = peers
-        with salt.utils.files.fopen(conf_path, "w", encoding="utf-8") as fh:
-            yaml.safe_dump(data, fh, default_flow_style=False, sort_keys=False)
 
-        # Mirror on every peer in the 3008.x cluster so they see the
-        # same topology.conf (same semantics as cluster_pki_dir shared
-        # state).
-        for other_master in self.masters[1:]:
-            other_conf = pathlib.Path(other_master.config["topology_config_file"])
-            shutil.copy(str(conf_path), str(other_conf))
+        import yaml  # local import keeps the module header lean
+
+        for master in self.masters:
+            config_file = pathlib.Path(master.config_file)
+            with config_file.open(encoding="utf-8") as fh:
+                data = yaml.safe_load(fh) or {}
+            data.setdefault("cluster_id", self.cluster_id)
+            peers = list(data.get("topology_peers") or [])
+            if entry not in peers:
+                peers.append(entry)
+            data["topology_peers"] = peers
+            with config_file.open("w", encoding="utf-8") as fh:
+                yaml.safe_dump(data, fh, default_flow_style=False, sort_keys=False)
 
     # ------------------------------------------------------------------
     # Inspection (harness-level, swap for real-cache reads later)
@@ -423,7 +413,7 @@ class TopologyCluster:
 
         Pulls values from the running config of the Nth peer so an
         in-process link_manager.start uses the same pki_dir /
-        topology_link_port / topology.conf as the harness-managed
+        topology_link_port / peer list as the harness-managed
         daemon.  Scenario tests that drive topology lifecycle
         in-process (publish daemon restart, startup ordering) use
         this to point module-level writers at the right disk.
@@ -445,13 +435,33 @@ class TopologyCluster:
         # A size mismatch between pre-created files and the writer
         # produces a cache that silently drops writes to the
         # out-of-range slots.
+        # Re-read the on-disk master config for ``topology_peers`` so
+        # any :meth:`config_peer` edits since the master started are
+        # visible to in-process router/link_manager builds driven
+        # from these opts.  salt-factories' ``master.config`` is an
+        # immutable snapshot taken at write-time and does not reflect
+        # subsequent file edits.
+        import yaml  # local import keeps the module header lean
+
+        config_file = pathlib.Path(master.config_file)
+        try:
+            with config_file.open(encoding="utf-8") as fh:
+                _on_disk = yaml.safe_load(fh) or {}
+        except OSError:
+            _on_disk = {}
+        _peers = list(_on_disk.get("topology_peers") or [])
+        _event_subs = _on_disk.get(
+            "topology_event_subscriptions",
+            master.config.get("topology_event_subscriptions"),
+        )
         return {
             "pki_dir": master.config["pki_dir"],
             "cluster_id": self.cluster_id,
             "interface": master.config.get("interface", "127.0.0.1"),
             "topology_enabled": True,
             "topology_link_port": master.config["topology_link_port"],
-            "topology_config_file": master.config["topology_config_file"],
+            "topology_peers": _peers,
+            "topology_event_subscriptions": _event_subs,
             "topology_registry_cache_size": master.config.get(
                 "topology_registry_cache_size", 10_000
             ),
@@ -530,15 +540,6 @@ class TopologyCluster:
             loop.close()
 
 
-def _write_topology_conf(path, cluster_id):
-    """Write a minimal valid topology.conf with just a cluster_id."""
-    path = pathlib.Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with salt.utils.files.fopen(path, "w", encoding="utf-8") as fh:
-        yaml.safe_dump({"cluster_id": cluster_id, "peers": []}, fh, sort_keys=False)
-    return path
-
-
 def make_single_master(
     salt_factories,
     tmp_path,
@@ -547,24 +548,24 @@ def make_single_master(
     transport="zeromq",
 ):
     """
-    Spin up one standalone master configured for topology (opts +
-    topology.conf written; stub code remains inert).
+    Spin up one standalone master configured for topology (opts set
+    inline; stub code remains inert).
 
-    :returns: A started :class:`TopologyCluster` with ``len(masters)==1``.
+    :returns: ``(factory, pki_root, identity_pub)`` --- caller drives
+        ``factory.started()``.
     """
     opts_overrides = dict(opts_overrides or {})
     link_port = ports.get_unused_localhost_port()
     pki_root = pathlib.Path(tmp_path) / f"{cluster_id}-pki"
     pki_root.mkdir(parents=True, exist_ok=True)
-    topology_conf = pathlib.Path(tmp_path) / f"{cluster_id}-topology.conf"
-    _write_topology_conf(topology_conf, cluster_id)
 
     base_overrides = {
         "open_mode": True,
         "pki_dir": str(pki_root),
         "topology_enabled": True,
+        "cluster_id": cluster_id,
+        "topology_peers": [],
         "topology_link_port": link_port,
-        "topology_config_file": str(topology_conf),
         "topology_breadcrumb_grace": 2,
         "topology_breadcrumb_max_age": 60,
         "topology_detach_quiesce": 1,
@@ -582,7 +583,7 @@ def make_single_master(
     )
     identity_pub = _make_harness_identity(cluster_id)
     # The caller is responsible for driving ``factory.started()``.
-    return factory, pki_root, identity_pub, topology_conf
+    return factory, pki_root, identity_pub
 
 
 def make_cluster(
@@ -595,19 +596,21 @@ def make_cluster(
 ):
     """
     Spin up an N-member 3008.x master cluster configured for
-    topology.  Each cluster peer gets the same ``topology.conf`` on
-    disk (writes mirrored by :meth:`TopologyCluster.config_peer`).
+    topology.  Each cluster peer gets ``cluster_id`` and an empty
+    ``topology_peers`` inline in its own master opts; later
+    :meth:`TopologyCluster.config_peer` calls append to each
+    peer's ``topology_peers`` list.
 
-    :returns: ``(factories, pki_root, identity_pub, topology_confs,
-        addrs)`` --- caller drives ``factory.started()`` for each.
+    :returns: ``(factories, pki_root, identity_pub)`` --- caller
+        drives ``factory.started()`` for each.
     """
     if peer_count < 1:
         raise ValueError("peer_count must be >= 1")
     if peer_count == 1:
-        factory, pki_root, identity_pub, topology_conf = make_single_master(
+        factory, pki_root, identity_pub = make_single_master(
             salt_factories, tmp_path, cluster_id, opts_overrides, transport
         )
-        return [factory], pki_root, identity_pub, [topology_conf]
+        return [factory], pki_root, identity_pub
 
     # Multi-peer: use the loopback-alias pattern from the existing
     # cluster conftest.
@@ -633,23 +636,21 @@ def make_cluster(
     addrs = [f"127.0.0.{i + 1}" for i in range(peer_count)]
 
     factories = []
-    topology_confs = []
-    salt_cluster_id = f"master_cluster_{cluster_id}"
     identity_pub = _make_harness_identity(cluster_id)
     for addr in addrs:
         _ensure_lo_alias(addr)
         own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
         own_pki.mkdir(parents=True, exist_ok=True)
-        topology_conf = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-topology.conf"
-        _write_topology_conf(topology_conf, cluster_id)
-        topology_confs.append(topology_conf)
 
         peers = [a for a in addrs if a != addr]
         overrides = {
             "open_mode": True,
             "interface": addr,
             "pki_dir": str(own_pki),
-            "cluster_id": salt_cluster_id,
+            # One ``cluster_id`` serves both features: it names the
+            # Raft master cluster AND identifies this logical node
+            # in the topology graph.
+            "cluster_id": cluster_id,
             "cluster_peers": peers,
             "cluster_pki_dir": str(cluster_pki),
             "cache_dir": str(cluster_cache),
@@ -658,7 +659,7 @@ def make_cluster(
             "cluster_pool_port": cluster_pool_port,
             "topology_enabled": True,
             "topology_link_port": link_port,
-            "topology_config_file": str(topology_conf),
+            "topology_peers": [],
             "topology_breadcrumb_grace": 2,
             "topology_breadcrumb_max_age": 60,
             "topology_detach_quiesce": 1,
@@ -675,4 +676,4 @@ def make_cluster(
         )
         factories.append(factory)
 
-    return factories, cluster_pki, identity_pub, topology_confs
+    return factories, cluster_pki, identity_pub

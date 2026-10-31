@@ -16,9 +16,9 @@ contents of the two dicts; here we exercise end-to-end YAML parsing +
 ``_validate_opts`` on real files on disk.
 
 The complementary module ``test_config.py`` in the same directory
-covers the standalone ``salt.config.topology`` loader (which reads
-``/etc/salt/topology.conf``); this file is about the master-opts
-plumbing only.
+covers the ``salt.config.topology`` loader that assembles a
+:class:`TopologyConfig` from master opts; this file is about the
+master-opts plumbing (schema, defaults, YAML parse).
 """
 
 import logging
@@ -45,7 +45,7 @@ pytestmark = [
 # surfaces as test failures in both.
 EXPECTED_TOPOLOGY_OPTS = {
     "topology_enabled": (bool, False),
-    "topology_config_file": (str, "/etc/salt/topology.conf"),
+    "topology_peers": (list, []),
     "topology_link_port": (int, 4521),
     "topology_summary_interval": (int, 30),
     "topology_breadcrumb_grace": (int, 30),
@@ -124,8 +124,10 @@ def test_explicit_overrides_are_honored(master_conf_path):
     master_conf_path.write_text(
         """\
 topology_enabled: true
-topology_config_file: /etc/salt/custom-topology.conf
 topology_link_port: 4600
+topology_peers:
+  - host: hq.example.com
+    port: 4521
 topology_summary_interval: 15
 topology_breadcrumb_grace: 45
 topology_breadcrumb_max_age: 1200
@@ -145,7 +147,7 @@ topology_summary_grains:
     opts = salt.config.master_config(str(master_conf_path))
 
     assert opts["topology_enabled"] is True
-    assert opts["topology_config_file"] == "/etc/salt/custom-topology.conf"
+    assert opts["topology_peers"] == [{"host": "hq.example.com", "port": 4521}]
     assert opts["topology_link_port"] == 4600
     assert opts["topology_summary_interval"] == 15
     assert opts["topology_breadcrumb_grace"] == 45

@@ -230,6 +230,10 @@ def _opts_from_cluster(cluster):
         "interface": master.config.get("interface", "127.0.0.1"),
         "topology_enabled": True,
         "topology_link_port": master.config["topology_link_port"],
+        "topology_peers": list(master.config.get("topology_peers") or []),
+        "topology_event_subscriptions": master.config.get(
+            "topology_event_subscriptions"
+        ),
         "topology_breadcrumb_grace": master.config.get("topology_breadcrumb_grace", 2),
         "topology_breadcrumb_max_age": master.config.get(
             "topology_breadcrumb_max_age", 60
@@ -707,9 +711,6 @@ def test_scenario_directional_trust_east_accepts_west_not_vice_versa(
     link_manager._reset_module_state()  # noqa: SLF001
     try:
         east_opts_for_lm = _opts_from_cluster(east)
-        east_opts_for_lm["topology_config_file"] = east.masters[0].config[
-            "topology_config_file"
-        ]
         loop = asyncio.new_event_loop()
         try:
             loop.run_until_complete(link_manager.start(east_opts_for_lm, loop))

@@ -607,11 +607,6 @@ def test_startup_registers_callbacks_before_replaying_committed_attaches(
     # Write a minimal topology.conf so link_manager.start's
     # load_topology_config step succeeds.
     import salt.utils.files
-    import salt.utils.yaml
-
-    topology_conf = tmp_path / "topology.conf"
-    with salt.utils.files.fopen(str(topology_conf), "w") as fh:
-        salt.utils.yaml.safe_dump({"cluster_id": "self", "peers": []}, fh)
 
     clustered_opts = {
         "pki_dir": str(pki_dir),
@@ -619,7 +614,7 @@ def test_startup_registers_callbacks_before_replaying_committed_attaches(
         "interface": "127.0.0.1",
         "topology_enabled": True,
         "topology_link_port": _find_free_port(),
-        "topology_config_file": str(topology_conf),
+        "topology_peers": [],
         "topology_registry_cache_size": 512,
         "topology_registry_cache_key_size": 64,
         "topology_breadcrumb_cache_size": 1024,

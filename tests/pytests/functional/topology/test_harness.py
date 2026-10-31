@@ -31,8 +31,6 @@ import socket
 
 import pytest
 
-import salt.utils.files
-
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
@@ -51,17 +49,15 @@ def test_single_master_starts_and_opts_wired(single_master):
     master = cluster.masters[0]
     assert master.config["topology_enabled"] is True
     assert master.config["topology_link_port"] > 0
-    assert master.config["topology_config_file"].endswith("topology.conf")
+    assert master.config["cluster_id"] == cluster.cluster_id
+    assert list(master.config.get("topology_peers") or []) == []
 
 
-def test_single_master_topology_conf_on_disk(single_master):
-    """The harness writes a topology.conf next to the master."""
+def test_single_master_cluster_id_wired(single_master):
+    """``cluster_id`` from the fixture argument makes it into master opts."""
     cluster = single_master(cluster_id="solo")
     master = cluster.masters[0]
-    conf_path = master.config["topology_config_file"]
-    with salt.utils.files.fopen(conf_path, encoding="utf-8") as fh:
-        text = fh.read()
-    assert "cluster_id: solo" in text
+    assert master.config["cluster_id"] == "solo"
 
 
 def test_single_master_distinct_ports(single_master):
@@ -98,12 +94,10 @@ def test_single_cluster_multi_peer(single_cluster):
     """``peer_count=3`` spawns a 3-member 3008.x cluster."""
     cluster = single_cluster("west", peer_count=3)
     assert len(cluster.masters) == 3
-    # All peers share a cluster_id (3008.x cluster_id, not topology cluster_id).
-    salt_cluster_ids = {m.config.get("cluster_id") for m in cluster.masters}
-    assert len(salt_cluster_ids) == 1
-    # Topology cluster_id is uniform across the peers.
-    for master in cluster.masters:
-        assert master.config["cluster_id"] in ("master_cluster_west", "master_cluster")
+    # One ``cluster_id`` serves both features; every peer in the
+    # Raft cluster carries the same topology-graph identity.
+    cluster_ids = {m.config.get("cluster_id") for m in cluster.masters}
+    assert cluster_ids == {"west"}
 
 
 # ---------------------------------------------------------------------------
@@ -173,15 +167,13 @@ def test_revoke_peer_idempotent(two_cluster_fixture):
 # ---------------------------------------------------------------------------
 
 
-def test_config_peer_adds_to_topology_conf(two_cluster_fixture):
-    """``config_peer`` appends an entry to this master's topology.conf."""
+def test_config_peer_adds_to_topology_peers(two_cluster_fixture):
+    """``config_peer`` appends to this master's ``topology_peers`` opt."""
     east, west = two_cluster_fixture
     east.config_peer(west)
-    conf_path = east.masters[0].config["topology_config_file"]
-    with salt.utils.files.fopen(conf_path, encoding="utf-8") as fh:
-        text = fh.read()
+    peers = list(east.masters[0].config["topology_peers"])
     west_port = west.masters[0].config["topology_link_port"]
-    assert str(west_port) in text
+    assert any(entry["port"] == west_port for entry in peers), peers
 
 
 # ---------------------------------------------------------------------------

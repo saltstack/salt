@@ -29,16 +29,18 @@ Design decisions worth calling out
 * The harness does **not** import ``salt.topology`` at any point.
   Stubs are empty; importing them from a master process would be
   the implementation teams' job as they wire ``topology.pre_fork``
-  / ``topology.start``.  Writing ``topology_enabled: True`` + a
-  ``topology.conf`` to disk is sufficient to let the master come
-  up today, and sufficient to let tomorrow's wired implementation
-  behave correctly without touching this harness.
-* The topology ``cluster_id`` lives in ``topology.conf``;
-  salt-factories' master opts also carry a 3008.x ``cluster_id``
-  for the master-cluster primitive.  To avoid collision, the
-  harness uses ``topology-{cluster_id}`` as the master-id and
-  ``master_cluster_{cluster_id}`` as the 3008.x cluster_id for
-  multi-peer clusters.
+  / ``topology.start``.  Setting ``topology_enabled: True`` plus
+  ``cluster_id`` / ``topology_peers`` in the master opts is
+  sufficient to let the master come up today, and sufficient to
+  let tomorrow's wired implementation behave correctly without
+  touching this harness.
+* One ``cluster_id`` serves both features: it is the Raft master
+  cluster identity AND the topology-graph node identity.  For
+  solo masters this is the only identity; for multi-peer clusters
+  the same string names the Raft cluster.  Harness uses
+  ``topology-{cluster_id}`` as the salt-factories master-id for
+  single-master fixtures and the loopback addr as the master-id
+  for cluster peers.
 """
 
 import contextlib
@@ -84,7 +86,7 @@ def single_master(request, salt_factories, topology_tmp_path, _topology_exit_sta
     def _factory(opts_overrides=None, cluster_id=None):
         counter["n"] += 1
         resolved_id = cluster_id or f"solo{counter['n']}"
-        factory, pki_root, identity_pub, _topology_conf = make_single_master(
+        factory, pki_root, identity_pub = make_single_master(
             salt_factories,
             topology_tmp_path,
             resolved_id,
@@ -115,7 +117,7 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
     transport = request.config.getoption("--transport", default="zeromq")
 
     def _factory(cluster_id, peer_count=1, opts_overrides=None):
-        factories, pki_root, identity_pub, _confs = make_cluster(
+        factories, pki_root, identity_pub = make_cluster(
             salt_factories,
             topology_tmp_path,
             cluster_id,

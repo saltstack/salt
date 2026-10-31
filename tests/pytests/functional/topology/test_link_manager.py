@@ -160,12 +160,6 @@ def _reserved_port():
     return port
 
 
-def _write_topology_conf(path, cluster_id, peers=()):
-    data = {"cluster_id": cluster_id, "peers": list(peers)}
-    with salt.utils.files.fopen(str(path), "w") as fh:
-        salt.utils.yaml.safe_dump(data, fh)
-
-
 @pytest.fixture
 def opts(tmp_path):
     """Minimal opts dict with topology enabled."""
@@ -173,14 +167,12 @@ def opts(tmp_path):
     (pki_dir / "master").mkdir(parents=True, exist_ok=True)
     for sub in ("masters", "masters_pre", "masters_rejected", "masters_denied"):
         (pki_dir / sub).mkdir(parents=True, exist_ok=True)
-    conf = tmp_path / "topology.conf"
-    _write_topology_conf(conf, "self")
     return {
         "pki_dir": str(pki_dir),
         "interface": "127.0.0.1",
         "topology_enabled": True,
         "topology_link_port": _reserved_port(),
-        "topology_config_file": str(conf),
+        "topology_peers": [],
         "topology_registry_cache_size": 512,
         "topology_registry_cache_key_size": 64,
         "topology_breadcrumb_cache_size": 1024,

@@ -31,7 +31,7 @@ import salt.config
 
 EXPECTED_TOPOLOGY_OPTS = {
     "topology_enabled": (bool, False),
-    "topology_config_file": (str, "/etc/salt/topology.conf"),
+    "topology_peers": (list, []),
     "topology_link_port": (int, 4521),
     "topology_summary_interval": (int, 30),
     "topology_breadcrumb_grace": (int, 30),
@@ -45,6 +45,11 @@ EXPECTED_TOPOLOGY_OPTS = {
     "topology_detach_quiesce": (int, 60),
     "topology_summary_grains": (list, []),
 }
+
+# ``topology_event_subscriptions`` is declared with
+# ``(type(None), list)`` because the None default means
+# "use DEFAULT_EVENT_SUBSCRIPTIONS from salt.config.topology"
+# rather than an empty subscription set.  Asserted separately.
 
 
 # ---------------------------------------------------------------------------
@@ -190,12 +195,24 @@ def test_breadcrumb_grace_le_max_age():
     assert grace <= max_age
 
 
-def test_topology_config_file_absolute_path():
-    """Default topology config path is absolute (not a relative path)."""
-    import os
+def test_topology_peers_defaults_empty():
+    """
+    ``topology_peers`` defaults to an empty list on an opt-in
+    feature; operators add peer entries only when they switch
+    topology on.
+    """
+    assert list(salt.config.DEFAULT_MASTER_OPTS["topology_peers"]) == []
 
-    path = salt.config.DEFAULT_MASTER_OPTS["topology_config_file"]
-    assert os.path.isabs(path), f"not an absolute path: {path!r}"
+
+def test_topology_event_subscriptions_defaults_none():
+    """
+    ``topology_event_subscriptions`` defaults to ``None`` as a
+    sentinel.  ``load_topology_config`` interprets None as "use
+    :data:`DEFAULT_EVENT_SUBSCRIPTIONS` from salt.config.topology".
+    An empty list would be a different, operator-chosen setting
+    (nothing forwarded).
+    """
+    assert salt.config.DEFAULT_MASTER_OPTS["topology_event_subscriptions"] is None
 
 
 def test_topology_enabled_defaults_off():
