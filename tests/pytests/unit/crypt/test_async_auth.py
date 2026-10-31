@@ -26,9 +26,9 @@ async def test_concurrent_callers_share_authentication(auth):
         return True
 
     auth._authenticate = AsyncMock(side_effect=authenticate)
-    first = asyncio.create_task(auth.authenticate())
+    first = auth.authenticate()
     await started.wait()
-    second = asyncio.create_task(auth.authenticate())
+    second = auth.authenticate()
     await asyncio.sleep(0)
     assert not auth.authenticated
     release.set()
@@ -48,9 +48,9 @@ async def test_cancel_one_waiter_keeps_peer_authentication(auth):
         return True
 
     auth._authenticate = AsyncMock(side_effect=authenticate)
-    first = asyncio.create_task(auth.authenticate())
+    first = auth.authenticate()
     await started.wait()
-    second = asyncio.create_task(auth.authenticate())
+    second = auth.authenticate()
     await asyncio.sleep(0)
     first.cancel()
     with pytest.raises(asyncio.CancelledError):
@@ -75,7 +75,7 @@ async def test_last_cancelled_waiter_drains_authentication(auth):
             cleaned.set()
 
     auth._authenticate = AsyncMock(side_effect=authenticate)
-    waiter = asyncio.create_task(auth.authenticate())
+    waiter = auth.authenticate()
     await started.wait()
     task = auth._authenticate_future
     waiter.cancel()
@@ -99,9 +99,9 @@ async def test_unexpected_authentication_error_reaches_all_waiters(auth):
         raise OSError("connection lost")
 
     auth._authenticate = AsyncMock(side_effect=authenticate)
-    first = asyncio.create_task(auth.authenticate())
+    first = auth.authenticate()
     await started.wait()
-    second = asyncio.create_task(auth.authenticate())
+    second = auth.authenticate()
     await asyncio.sleep(0)
     release.set()
     results = await asyncio.wait_for(
@@ -138,7 +138,10 @@ async def test_singleton_uses_underlying_asyncio_loop(minion_opts, io_loop):
         assert explicit.io_loop is asyncio.get_running_loop()
 
 
-async def test_authentication_waits_for_credential_event(minion_opts):
+@pytest.mark.parametrize("event_failure", [False, True])
+async def test_authentication_preserves_synchronous_credential_event(
+    minion_opts, event_failure
+):
     from tests.support.mock import patch
 
     loop = asyncio.get_running_loop()
@@ -146,32 +149,36 @@ async def test_authentication_waits_for_credential_event(minion_opts):
     minion_opts["acceptance_wait_time"] = 0
     with patch.object(salt.crypt.AsyncAuth, "get_keys"):
         instance = salt.crypt.AsyncAuth(minion_opts, io_loop=loop)
-    instance.sign_in = AsyncMock(
-        return_value={
-            "aes": salt.crypt.Crypticle.generate_key_string(),
-            "session": salt.crypt.Crypticle.generate_key_string(),
-        }
-    )
-    publishing = asyncio.Event()
-    published = asyncio.Event()
-
-    async def fire_event(data, tag):
-        publishing.set()
-        await published.wait()
-
+    creds = {
+        "aes": salt.crypt.Crypticle.generate_key_string(),
+        "session": salt.crypt.Crypticle.generate_key_string(),
+    }
+    instance.sign_in = AsyncMock(return_value=creds)
     with patch("salt.channel.client.AsyncReqChannel.factory") as channel, patch(
         "salt.utils.event.get_event"
-    ) as event:
-        event.return_value.__enter__.return_value.fire_event_async = fire_event
-        waiter = asyncio.create_task(instance.authenticate())
-        await publishing.wait()
-        assert not waiter.done()
-        assert not instance.authenticated
-        assert event.call_args.kwargs["io_loop"] is loop
-        published.set()
-        assert await waiter is True
+    ) as get_event:
+        event = get_event.return_value.__enter__.return_value
+        if event_failure:
+            event.fire_event.side_effect = OSError("event bus unavailable")
+        assert await instance.authenticate() is True
+        assert "io_loop" not in get_event.call_args.kwargs
+        event.fire_event.assert_called_once()
+        assert event.fire_event.call_args.args[0]["creds"] == creds
+        assert event.fire_event.call_args.args[1] == "salt/auth/creds"
+        event.fire_event_async.assert_not_called()
         channel.return_value.__aexit__.assert_awaited_once()
         assert instance.authenticated
+
+
+async def test_callback_only_call_starts_authentication(auth):
+    auth._authenticate = AsyncMock(return_value=True)
+    delivered = asyncio.get_running_loop().create_future()
+    result = auth.authenticate(callback=delivered.set_result)
+    assert isinstance(result, asyncio.Future)
+    assert await asyncio.wait_for(delivered, 1) is True
+    assert result.done()
+    assert result.result() is True
+    auth._authenticate.assert_awaited_once()
 
 
 async def test_cancel_new_attempt_while_old_waiter_is_resuming(auth):
@@ -198,10 +205,10 @@ async def test_cancel_new_attempt_while_old_waiter_is_resuming(auth):
 
     auth._authenticate = AsyncMock(return_value=True)
     with patch("asyncio.shield", hold_completed_attempt):
-        old_waiter = asyncio.create_task(auth.authenticate())
+        old_waiter = auth.authenticate()
         await old_complete.wait()
         auth._authenticate = AsyncMock(side_effect=new_attempt)
-        new_waiter = asyncio.create_task(auth.authenticate())
+        new_waiter = auth.authenticate()
         await new_started.wait()
         new_waiter.cancel()
         with pytest.raises(asyncio.CancelledError):
