@@ -1,10 +1,12 @@
-name: Run Nightly Stress Tests
+name: Dispatch Branch Stress Test
 
 on:
-  workflow_dispatch: {}
-  schedule:
-    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
-    - cron: '0 2 * * *'  # Every day at 2AM
+  workflow_call:
+    inputs:
+      branch:
+        description: Branch whose workflow and source code should run
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -44,7 +46,7 @@ jobs:
           fi
 
   trigger-branch-nightly-stress-builds:
-    name: Trigger Branch Workflows
+    name: Trigger ${{ inputs.branch }} Stress Test
     # Repo-level opt-out, same variable nightly-stress-test.yml's own
     # master-branch run already checks (SKIP_NIGHTLY_STRESS_TEST) -- e.g.
     # saltstack/salt, where the stress test's runner cost belongs on the
@@ -54,15 +56,6 @@ jobs:
     needs:
       - workflow-requirements
     environment: workflow-restart
-    strategy:
-      matrix:
-        # master isn't listed here -- its own nightly-stress-test.yml
-        # already carries a `schedule:` trigger and fires directly (it's
-        # the default branch, so GitHub actually honors that trigger).
-        # This job only needs to reach branches whose `schedule:` is
-        # otherwise inert. 3007.x/3008.x don't have their own
-        # nightly-stress-test.yml yet -- add them here once ported.
-        branch: [3006.x]
     steps:
 
       - name: Generate a token
@@ -72,8 +65,9 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Trigger ${{ matrix.branch }} branch
+      - name: Trigger ${{ inputs.branch }} branch
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          TARGET_BRANCH: ${{ inputs.branch }}
         run: |
-          gh workflow run nightly-stress-test.yml --repo ${{ github.repository }} --ref ${{ matrix.branch }}
+          gh workflow run nightly-stress-test.yml --repo ${{ github.repository }} --ref "$TARGET_BRANCH"

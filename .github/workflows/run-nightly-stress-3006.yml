@@ -1,0 +1,48 @@
+name: Biweekly Stress Test - 3006.x
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # Cron cannot express every other week across month/year boundaries.
+    - cron: '0 2 * * 1'  # Mondays at 02:00 UTC; check the fortnight below
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  check-schedule:
+    name: Check Biweekly Schedule
+    runs-on: ubuntu-24.04
+    outputs:
+      due: ${{ steps.check.outputs.due }}
+    steps:
+      - name: Check Schedule
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          python3 - <<'PY'
+          import os
+          from datetime import date, datetime, timezone
+
+          # Anchor to a fixed Monday so the cadence survives year changes.
+          # Use whole weeks so a delayed Monday run still selects its week.
+          anchor = date(2026, 10, 19)
+          today = datetime.now(timezone.utc).date()
+          weeks = (today - anchor).days // 7
+          due = os.environ["EVENT_NAME"] == "workflow_dispatch" or weeks % 2 == 0
+          value = str(due).lower()
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"due={value}\n")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as summary:
+              summary.write(f"3006.x biweekly stress test due: {value} (UTC date: {today})\n")
+          PY
+
+  dispatch:
+    needs: check-schedule
+    if: needs.check-schedule.outputs.due == 'true'
+    uses: ./.github/workflows/run-nightly-stress.yml
+    with:
+      branch: 3006.x
+    secrets: inherit

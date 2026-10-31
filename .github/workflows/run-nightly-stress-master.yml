@@ -1,0 +1,17 @@
+name: Daily Stress Test - master
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 2 * * *'  # Every day at 02:00 UTC
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    uses: ./.github/workflows/run-nightly-stress.yml
+    with:
+      branch: master
+    secrets: inherit
