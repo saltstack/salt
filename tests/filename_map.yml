@@ -327,6 +327,16 @@ salt/(minion\.py|channel/.+|transport/.+):
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
 
+salt/transport/tcp.py:
+  - pytests.unit.channel.test_server
+  - pytests.unit.test_master_async_optin
+  - pytests.unit.transport.test_tcp
+  - pytests.functional.transport.tcp.test_pub_server
+  - pytests.functional.transport.tcp.test_native_publisher
+
+salt/channel/server.py:
+  - pytests.unit.channel.test_server
+
 tests/support/mock.py:
   - unit.test_mock
 
