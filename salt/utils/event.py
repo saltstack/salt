@@ -767,7 +767,9 @@ class SaltEvent:
                 if self._connect_task is not None:
                     if no_block and not self._connect_task.done():
                         return None
-                    await self._connect_task
+                    # A read's deadline belongs to that read, not the session's
+                    # shared connection. destroy_async() owns its cancellation.
+                    await asyncio.shield(self._connect_task)
                 while True:
                     try:
                         raw = await self.subscriber.recv(

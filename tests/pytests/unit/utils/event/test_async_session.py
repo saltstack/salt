@@ -81,6 +81,47 @@ async def test_read_timeout_releases_reader_and_preserves_session(session):
     assert await event.get_event_async() == {"result": True}
 
 
+@pytest.mark.parametrize("cancel_reader", [False, True])
+async def test_interrupted_read_preserves_initial_connection(session, cancel_reader):
+    event, queue, _ = session
+    started, release = asyncio.Event(), asyncio.Event()
+
+    async def connect():
+        started.set()
+        await release.wait()
+
+    connection = event._connect_task = asyncio.create_task(connect())
+    read = asyncio.create_task(event.get_event_async(wait=0 if cancel_reader else 0.01))
+    try:
+        await started.wait()
+        if cancel_reader:
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            read.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await read
+        else:
+            assert await read is None
+        assert not connection.done()
+        release.set()
+        queue.put_nowait(event.pack("next", {"result": True}))
+        assert await event.get_event_async(wait=1) == {"result": True}
+        assert event._connect_task is connection
+    finally:
+        release.set()
+        await salt.utils.asynchronous.cancel_tasks(read, connection)
+
+
+async def test_destroy_cancels_connection_preserved_after_read_timeout(session):
+    event, _, state = session
+    connection = event._connect_task = asyncio.create_task(asyncio.Event().wait())
+    assert await event.get_event_async(wait=0.01) is None
+    assert not connection.done()
+    await event.destroy_async()
+    assert connection.cancelled()
+    assert state["closed"]
+
+
 async def test_waiting_reader_timeout_does_not_cancel_active_reader(session):
     event, queue, _ = session
     active = asyncio.create_task(event.get_event_async(wait=0, tag="first"))

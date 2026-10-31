@@ -83,6 +83,48 @@ async def test_real_read_timeout_preserves_subscriber(event_broker):
         assert listener.subscriber is subscriber
 
 
+@pytest.mark.parametrize("cancel_reader", [False, True])
+async def test_interrupted_startup_read_can_receive_over_same_real_connection(
+    event_broker, cancel_reader
+):
+    started, release = asyncio.Event(), asyncio.Event()
+    connect = salt.transport.tcp.PublishClient.connect
+
+    async def delayed_connect(client, *args, **kwargs):
+        started.set()
+        await release.wait()
+        return await connect(client, *args, **kwargs)
+
+    with patch.object(salt.transport.tcp.PublishClient, "connect", delayed_connect):
+        listener = native_event(event_broker, True)
+        read = asyncio.create_task(
+            listener.get_event_async(wait=0 if cancel_reader else 0.01)
+        )
+        try:
+            await started.wait()
+            if cancel_reader:
+                await asyncio.sleep(0)
+                await asyncio.sleep(0)
+                read.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await read
+            else:
+                assert await read is None
+            connection = listener._connect_task
+            assert not connection.done()
+            release.set()
+            async with listener, native_event(event_broker, False) as sender:
+                await sender.fire_event_async({"value": False}, "test/startup")
+                assert (await listener.get_event_async(tag="test/startup"))[
+                    "value"
+                ] is False
+                assert listener._connect_task is connection
+        finally:
+            release.set()
+            await salt.utils.asynchronous.cancel_tasks(read)
+            await listener.destroy_async()
+
+
 async def test_destroy_drains_real_infinite_read(event_broker):
     async with native_event(event_broker, True) as listener:
         subscriber = listener.subscriber
