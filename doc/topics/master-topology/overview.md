@@ -56,40 +56,38 @@ return back out the inbound link.
 
 ## Configuration
 
-Topology lives in two files per master: the normal master config, and
-a separate `topology.conf` that names this master and lists its direct
-peers. A working six-cluster example runs under
-`agents/scratch/topology-sandbox/`.
+Topology configuration lives in the regular master config file
+(`/etc/salt/master`) alongside the rest of the master's opts.
+Operators who prefer a separate file can drop the topology keys
+into any file under `/etc/salt/master.d/` -- Salt's existing
+include mechanism handles that case, so topology does not need
+its own loader or a dedicated path opt.
 
-Master config additions on east (`/etc/salt/master`):
+East's `/etc/salt/master`:
 
 ```yaml
 interface: 0.0.0.0
 
 topology_enabled: True
-topology_config_file: /etc/salt/topology.conf
-topology_link_port: 4521
-```
-
-East's `topology.conf`:
-
-```yaml
 cluster_id: east
-peers:
+topology_link_port: 4521
+topology_peers:
   - host: west
     port: 4521
 ```
 
-West is symmetric: `cluster_id: west`, and a `peers:` entry pointing
-at east. Each side also has to accept the other's master-identity
-public key with `salt-key -a <peer> --master` -- the same accept
-workflow Salt already uses for minions, but on a separate key
-directory (`<pki_dir>/masters_pre/`, `<pki_dir>/masters/`).
+West is symmetric: `cluster_id: west`, and a `topology_peers` entry
+pointing at east. Each side also has to accept the other's
+master-identity public key with `salt-key -a <peer> --master` --
+the same accept workflow Salt already uses for minions, but on a
+separate key directory (`<pki_dir>/masters_pre/`,
+`<pki_dir>/masters/`).
 
-The sandbox at `agents/scratch/topology-sandbox/` pre-copies keys
-between containers in `up.sh` so you can skip the manual accept and
-see a working mesh in a few seconds. Don't copy that shortcut into
-production -- the accept step is the trust boundary.
+A working eight-master example runs under
+`agents/scratch/topology-sandbox/`. The sandbox pre-copies keys
+between containers in `up.sh` so you can skip the manual accept
+and see a working mesh in a few seconds. Don't copy that shortcut
+into production -- the accept step is the trust boundary.
 
 ## Relationship to syndic
 

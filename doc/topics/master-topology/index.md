@@ -48,10 +48,10 @@ master-to-master relationship. **Only one of them is implemented
 today.**
 
 **Peer** *(implemented)* — symmetric, bidirectional. Both masters
-list each other in their `topology.conf`. Publishes flow both ways;
-returns flow back along the breadcrumb trail of the originator.
-Every entry in a `peers:` list is a Peer; this is the only link
-type the current code supports.
+list each other in their `topology_peers`. Publishes flow both
+ways; returns flow back along the breadcrumb trail of the
+originator. Every entry in a `topology_peers` list is a Peer;
+this is the only link type the current code supports.
 
 **Controller** *(roadmap)* — a master that can publish *into*
 another master's cluster but will not accept publishes *from* it.
@@ -62,8 +62,9 @@ Accepts publishes, sends returns back, no publish authority upward.
 
 **Today every link is a Peer.** The Controller / Managed split is
 the planned extension for asymmetric trust and will land as a
-per-peer flag in `topology.conf` (something like `role: controller`
-/ `role: managed`). Until then, if you need one-way behavior,
+per-peer flag on each `topology_peers` entry (something like
+`role: controller` / `role: managed`). Until then, if you need
+one-way behavior,
 enforce it with external access control. Do not try to approximate
 it by only listing one side — handshake is mutual and will stay in
 `pending_accept` if either side has not accepted the other's
@@ -71,13 +72,11 @@ identity.
 
 ## Configuration
 
-Topology configuration lives in two places on each master:
-
-1. The master config (`/etc/salt/master`) — a handful of
-   `topology_*` opts that gate the feature and tune its runtime.
-2. A separate topology config file (default
-   `/etc/salt/topology.conf`) — the `cluster_id` and the list of
-   peer seed endpoints.
+Topology configuration lives in `/etc/salt/master` alongside the
+rest of the master's opts. Operators who prefer a separate file
+can drop any of the topology keys into any file under
+`/etc/salt/master.d/` — Salt's existing include mechanism handles
+that case.
 
 ### Master config opts
 
@@ -87,7 +86,9 @@ flip `topology_enabled`.
 | Opt | Default | Meaning |
 | --- | --- | --- |
 | `topology_enabled` | `False` | Master-switch. Nothing in `salt.topology` imports until this is `True`. |
-| `topology_config_file` | `/etc/salt/topology.conf` | Path to the per-master topology config. |
+| `cluster_id` | *(unset)* | This master's identity in the topology graph. Short, lowercase, matches `[a-z0-9][a-z0-9_-]*`. Shared with the 3008.x master cluster feature — a Raft cluster shows up to topology as one node named by this `cluster_id`. Required when `topology_enabled` is `True`. |
+| `topology_peers` | `[]` | List of `{host, port, finger}` mappings naming direct peer masters. See the example below for the entry shape. |
+| `topology_event_subscriptions` | *(unset)* | Glob tag patterns forwarded from this master to each peer. Unset = use the default (`salt/job/*/ret/*` and `salt/job/*/new`). |
 | `topology_link_port` | `4521` | TCP port where this master binds the inbound topology REP socket. |
 | `topology_summary_interval` | `30` | Seconds between `topology/sum` gossip emissions to each peer link. |
 | `topology_breadcrumb_grace` | `30` | Seconds added to a publish's timeout when computing a breadcrumb's `expiry_at`. |
@@ -108,40 +109,33 @@ schema**: `topology_handshake_max_tries` (default `6`) and
 them in `/etc/salt/master` and they will be picked up, but they are
 not in the public opts table. Treat them as internal tunables.
 
-A minimal topology-enabled master config:
+### Example
+
+A minimal topology-enabled master config, equivalent to the
+sandbox's `conf/master-east.conf`:
 
 ```yaml
 # /etc/salt/master
 interface: 0.0.0.0
 
 topology_enabled: True
-topology_config_file: /etc/salt/topology.conf
-topology_link_port: 4521
-```
-
-### `topology.conf`
-
-The per-master topology file is a small YAML mapping. The canonical
-form in the sandbox is `agents/scratch/topology-sandbox/conf/topology-east.conf`:
-
-```yaml
-# This master's identity in the topology graph.  Short, lowercase,
-# unique within the graph.  Must match [a-z0-9][a-z0-9_-]*.
 cluster_id: east
+topology_link_port: 4521
 
 # Seed endpoints for direct peers.  Each master declares only its
 # direct peers; descendants and transit paths are learned via
-# gossip at runtime.
-peers:
+# gossip at runtime.  Short, lowercase cluster_ids must match
+# [a-z0-9][a-z0-9_-]*.
+topology_peers:
   - host: west
-    port: 4515
+    port: 4521
   - host: east-sub
-    port: 4515
+    port: 4521
 
 # Optional: tag-glob subscription list this master wants from each
-# peer.  Default is job events only ("salt/job/*/ret/*" and
+# peer.  Unset = job events only ("salt/job/*/ret/*" and
 # "salt/job/*/new") -- cheapest wire volume, lowest surprise.
-# event_subscriptions:
+# topology_event_subscriptions:
 #   - "salt/job/*/ret/*"
 #   - "salt/job/*/new"
 ```
@@ -371,9 +365,9 @@ minion count, and one row per known peer with state and
 `last_summary_at`.
 
 **`topology.peers`** — every peer in every state across
-`masters/`, `masters_pre/`, `masters_rejected/`, and
-`topology.conf`. States: `configured`, `pending`, `attached`,
-`rejected`.
+`masters/`, `masters_pre/`, `masters_rejected/`, and the
+`topology_peers` list in master opts. States: `configured`,
+`pending`, `attached`, `rejected`.
 
 **`topology.links`** — live link health per peer: `health`
 (`connected`, `connecting`, `degraded`, `disconnected`,
@@ -409,7 +403,8 @@ one or two minions:
                  east-sub-sub   west-sub-sub
 ```
 
-Each master's `topology.conf` lists only its *direct* peers.
+Each master's `topology_peers` list contains only its *direct*
+peers.
 `east-sub` and `west-sub` are not peered with each other, so a
 publish from `west` to `C@east-sub` must transit through `east`.
 The routing table built from gossip picks `east` as the next hop
