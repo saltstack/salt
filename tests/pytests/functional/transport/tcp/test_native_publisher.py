@@ -1,14 +1,17 @@
 """Native IPC publishing preserves framing and the caller's loop."""
 
 import asyncio
+import socket
 import struct
 
 import pytest
 import tornado.iostream
 
+import salt.channel.server
 import salt.transport.tcp
+import salt.utils.event
 import salt.utils.msgpack
-from tests.support.mock import patch
+from tests.support.mock import Mock, patch
 
 
 @pytest.mark.parametrize("async_mworker", [False, True])
@@ -137,3 +140,54 @@ async def test_cancelled_publish_drains_connect():
     finally:
         server.close()
     assert not asyncio.get_running_loop().is_closed()
+
+
+async def test_cluster_key_reannouncement_reconnects_to_recovered_tcp_peer():
+    loop = asyncio.get_running_loop()
+    reservation = socket.socket()
+    reservation.bind(("127.0.0.1", 0))
+    host, port = reservation.getsockname()
+    pusher = salt.transport.tcp.PublishServer({}, pull_host=host, pull_port=port)
+    channel = object.__new__(salt.channel.server.MasterPubServerChannel)
+    channel.opts = {"id": "master"}
+    channel.io_loop = Mock()
+    channel.pushers = [pusher]
+    payload = salt.utils.event.SaltEvent.pack("cluster/peer/master", {"key": "test"})
+    channel.send_aes_key_event = Mock(
+        side_effect=lambda: loop.create_task(channel.publish_payload(payload))
+    )
+    received = loop.create_future()
+    handlers = []
+
+    async def consume(reader, writer):
+        try:
+            size = struct.unpack(">I", await reader.readexactly(4))[0]
+            frame = salt.utils.msgpack.loads(await reader.readexactly(size), raw=False)
+            received.set_result(frame["body"])
+        finally:
+            writer.close()
+            await writer.wait_closed()
+
+    def accept(reader, writer):
+        handlers.append(loop.create_task(consume(reader, writer)))
+
+    try:
+        # A bound socket without listen() refuses connections while reserving
+        # the address for the peer that starts after the failed announcement.
+        await channel.publish_payload(payload)
+        channel.io_loop.call_later.assert_called_once_with(
+            2.0, channel.send_aes_key_event
+        )
+        channel.send_aes_key_event.assert_not_called()
+        reservation.close()
+        async with await asyncio.start_server(accept, host, port):
+            await channel.io_loop.call_later.call_args.args[1]()
+            assert await asyncio.wait_for(received, 2) == payload
+            await asyncio.wait_for(asyncio.gather(*handlers), 2)
+        assert not pusher._closing
+    finally:
+        reservation.close()
+        pusher.close()
+        for task in handlers:
+            task.cancel()
+        await asyncio.gather(*handlers, return_exceptions=True)
