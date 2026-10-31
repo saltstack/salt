@@ -107,7 +107,7 @@ class PublishClient(salt.transport.base.PublishClient):
                         else None
                     )
                     connector = aiohttp.TCPConnector(local_addr=local_addr)
-                    scheme = "https" if self.ssl is not None else "http"
+                    scheme = "https" if self.ssl else "http"
                     url = f"{scheme}://{self.host}:{self.port}/ws"
                 session = aiohttp.ClientSession(connector=connector)
                 remaining = (
@@ -190,13 +190,20 @@ class PublishClient(salt.transport.base.PublishClient):
         return await self._start_io(self._recv_with_timeout(timeout))
 
     async def _recv_with_timeout(self, timeout):
-        async with self._recv_lock:
-            try:
-                return await asyncio.wait_for(
-                    self._recv(), 0.0001 if timeout == 0 else timeout
-                )
-            except asyncio.TimeoutError:
+        if timeout == 0 and self._recv_lock.locked():
+            return None
+        try:
+            return await asyncio.wait_for(
+                self._recv_serialized(), 0.0001 if timeout == 0 else timeout
+            )
+        except asyncio.TimeoutError:
+            if timeout == 0:
                 return None
+            raise
+
+    async def _recv_serialized(self):
+        async with self._recv_lock:
+            return await self._recv()
 
     async def on_recv_handler(self, callback):
         while not self._closing:

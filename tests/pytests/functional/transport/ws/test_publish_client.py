@@ -1,6 +1,7 @@
 """WebSocket subscribers await connection, callbacks and resource cleanup."""
 
 import asyncio
+import tempfile
 
 import aiohttp.web
 import pytest
@@ -13,7 +14,7 @@ from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
-def websocket_publisher(io_loop):
+def websocket_publisher(io_loop, request):
     sockets = asyncio.Queue()
     received = asyncio.Queue()
     active = set()
@@ -34,24 +35,42 @@ def websocket_publisher(io_loop):
     app = aiohttp.web.Application()
     app.router.add_get("/ws", handle)
     runner = aiohttp.web.AppRunner(app)
+    mode = getattr(request, "param", "tcp")
+    client_options = {}
+    ssl_context = None
+    if mode == "tls":
+        ssl_context = salt.transport.base.ssl_context(
+            request.getfixturevalue("ssl_master_config"), server_side=True
+        )
+        client_options["ssl"] = request.getfixturevalue("ssl_minion_config")
+    if mode == "unix":
+        directory = tempfile.TemporaryDirectory(prefix="salt-ws-sub-", dir="/tmp")
+        request.addfinalizer(directory.cleanup)
+        client_options["path"] = f"{directory.name}/pub"
 
     async def start():
         await runner.setup()
-        site = aiohttp.web.TCPSite(runner, "127.0.0.1", 0)
+        if mode == "unix":
+            site = aiohttp.web.UnixSite(runner, client_options["path"])
+        else:
+            site = aiohttp.web.TCPSite(runner, "127.0.0.1", 0, ssl_context=ssl_context)
         await site.start()
+        if mode == "unix":
+            return None, None
         return runner.addresses[0]
 
     loop = salt.utils.asynchronous.aioloop(io_loop)
     host, port = loop.run_until_complete(start())
-    yield host, port, sockets, received
+    if host is not None:
+        client_options.update(host=host, port=port)
+    yield host, port, sockets, received, client_options
     loop.run_until_complete(runner.cleanup())
 
 
 @pytest.fixture
 def client(websocket_publisher, io_loop):
-    host, port, _, _ = websocket_publisher
     instance = salt.transport.ws.PublishClient(
-        {"tcp_reconnect_backoff": 0.01}, io_loop, host=host, port=port
+        {"tcp_reconnect_backoff": 0.01}, io_loop, **websocket_publisher[4]
     )
     yield instance
     salt.utils.asynchronous.aioloop(io_loop).run_until_complete(instance.close_async())
@@ -80,13 +99,64 @@ async def test_sync_connection_callback(client):
     callback.assert_called_once_with(True)
 
 
+async def test_empty_ssl_options_preserve_plaintext_connection(
+    client, websocket_publisher
+):
+    client.ssl = {}
+    await client.connect(timeout=1)
+    ws = await websocket_publisher[2].get()
+    await ws.send_bytes(salt.payload.dumps({b"plaintext": True}))
+    assert await client.recv(timeout=1) == {b"plaintext": True}
+
+
+@pytest.mark.parametrize("websocket_publisher", ["tcp", "tls", "unix"], indirect=True)
 async def test_receive_after_timeout_keeps_connection(client, websocket_publisher):
     await client.connect()
     ws = await websocket_publisher[2].get()
-    assert await client.recv(timeout=0.01) is None
+    with pytest.raises(asyncio.TimeoutError):
+        await client.recv(timeout=0.01)
     await ws.send_bytes(salt.payload.dumps({b"id": b"minion"}))
     assert await client.recv(timeout=1) == {b"id": b"minion"}
     assert websocket_publisher[2].empty()
+
+
+@pytest.mark.parametrize("timeout", [0, 0.01])
+@pytest.mark.parametrize("websocket_publisher", ["tcp", "tls", "unix"], indirect=True)
+async def test_queued_receive_honors_timeout_without_cancelling_reader(
+    client, websocket_publisher, timeout
+):
+    await client.connect()
+    ws = await websocket_publisher[2].get()
+    entered = asyncio.Event()
+    receive = client._recv
+
+    async def reading():
+        entered.set()
+        return await receive()
+
+    with patch.object(client, "_recv", side_effect=reading):
+        active = asyncio.create_task(client.recv())
+        queued = None
+        try:
+            await asyncio.wait_for(entered.wait(), 1)
+            queued = asyncio.create_task(client.recv(timeout=timeout))
+            done, _ = await asyncio.wait([queued], timeout=1)
+            assert queued in done, "receive deadline must include the lock wait"
+            if timeout == 0:
+                assert await queued is None
+            else:
+                with pytest.raises(asyncio.TimeoutError):
+                    await queued
+            assert not active.done()
+            await ws.send_bytes(salt.payload.dumps({b"active": True}))
+            assert await asyncio.wait_for(active, 1) == {b"active": True}
+        finally:
+            await salt.utils.asynchronous.cancel_tasks(active, queued)
+
+
+async def test_nonblocking_receive_without_data_returns_none(client):
+    await client.connect()
+    assert await client.recv(timeout=0) is None
 
 
 async def test_receive_reconnects_after_peer_close(client, websocket_publisher):
@@ -209,15 +279,16 @@ async def test_sync_close_can_be_awaited(client):
     assert session.closed
 
 
+@pytest.mark.parametrize("websocket_publisher", ["tcp", "tls", "unix"], indirect=True)
 async def test_legacy_wrapper_drives_async_subscriber_cleanup(websocket_publisher):
-    host, port, _, received = websocket_publisher
+    _, _, _, received, client_options = websocket_publisher
     frame = salt.transport.frame.frame_msg({"id": "minion"})
 
     def send():
         with salt.utils.asynchronous.SyncWrapper(
             salt.transport.ws.PublishClient,
             args=({},),
-            kwargs={"host": host, "port": port},
+            kwargs=client_options,
             loop_kwarg="io_loop",
         ) as wrapped:
             wrapped.connect()
