@@ -350,7 +350,9 @@ def test_build_envelope_payload_carries_tag_and_origin():
 
 
 def test_module_exports_channel_names():
-    """Functional tests monkeypatch ``link_mod.AsyncReqChannel`` / ``AsyncPubChannel``;
-    make sure those names actually exist on the module."""
+    """Functional tests monkeypatch ``link_mod.AsyncReqChannel``;
+    make sure the name exists on the module.  ``AsyncPubChannel`` was
+    an obsoleted Phase-2 import removed when the pub-channel open path
+    was deleted from :meth:`PeerMasterLink.connect`; functional tests
+    patch it with ``raising=False`` so its absence is tolerated."""
     assert hasattr(link_mod, "AsyncReqChannel")
-    assert hasattr(link_mod, "AsyncPubChannel")

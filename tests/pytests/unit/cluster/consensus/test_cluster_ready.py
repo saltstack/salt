@@ -30,12 +30,24 @@ class TestClusterIsReady:
         assert _cluster_is_ready({"cluster_id": None}) is True
         assert _cluster_is_ready({"cluster_id": ""}) is True
 
+    def test_topology_only_master_is_ready(self):
+        """
+        A topology-only master sets ``cluster_id`` but no
+        ``cluster_peers``.  There is no Raft readiness to wait on,
+        so the gate must pass through.
+        """
+        from salt.channel.server import _cluster_is_ready
+
+        assert _cluster_is_ready({"cluster_id": "east"}) is True
+        assert _cluster_is_ready({"cluster_id": "east", "cluster_peers": []}) is True
+
     def test_cluster_not_ready_when_entry_missing(self):
         from salt.channel.server import _cluster_is_ready
 
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {}
-            assert _cluster_is_ready({"cluster_id": "test"}) is False
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is False
 
     def test_cluster_not_ready_when_event_not_set(self):
         from salt.channel.server import _cluster_is_ready
@@ -43,7 +55,8 @@ class TestClusterIsReady:
         event = multiprocessing.Event()
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {"cluster_ready": {"event": event}}
-            assert _cluster_is_ready({"cluster_id": "test"}) is False
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is False
 
     def test_cluster_ready_when_event_set(self):
         from salt.channel.server import _cluster_is_ready
@@ -52,7 +65,8 @@ class TestClusterIsReady:
         event.set()
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {"cluster_ready": {"event": event}}
-            assert _cluster_is_ready({"cluster_id": "test"}) is True
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is True
 
 
 # ---------------------------------------------------------------------------
