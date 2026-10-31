@@ -53,6 +53,34 @@ class HelperB:
         raise tornado.gen.Return(False)
 
 
+async def test_cancel_tasks_drains_all_owned_cleanup():
+    started = [asyncio.Event(), asyncio.Event()]
+    cleaned = []
+
+    async def operation(index):
+        try:
+            started[index].set()
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(index)
+            if index == 0:
+                raise OSError("cleanup failed")
+
+    tasks = [asyncio.create_task(operation(index)) for index in range(2)]
+    await asyncio.gather(*(event.wait() for event in started))
+    await asynchronous.cancel_tasks(*tasks)
+    assert sorted(cleaned) == [0, 1]
+    assert all(task.done() for task in tasks)
+
+
+async def test_cancel_tasks_accepts_current_missing_and_completed_tasks():
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(OSError("already failed"))
+    await asynchronous.cancel_tasks(None, asyncio.current_task(), future, future)
+    assert not asyncio.current_task().cancelled()
+
+
 class _LoopProbe:
     """
     Minimal async helper whose coroutine calls ``asyncio.get_event_loop``
