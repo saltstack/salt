@@ -673,8 +673,8 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
     async def close_async(self):
         self.close()
-        if self._closed:
-            return
+        # A completed server task may have failed during startup or cleanup.
+        # Resource closure alone does not imply successful completion.
         task = self._server_task
         if task is not None and task is not asyncio.current_task():
             await asyncio.shield(task)

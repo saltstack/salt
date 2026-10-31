@@ -1948,6 +1948,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         super()._handle_signals(signum, sigframe)
 
     async def _close_channels(self):
+        cancelled = None
         for channel in self.req_channels:
             try:
                 close_async = getattr(channel, "close_async", None)
@@ -1955,8 +1956,14 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
                     channel.close()
                 else:
                     await close_async()
+            except asyncio.CancelledError as exc:
+                # The worker closes its loop immediately after this method.
+                # Drain the remaining channels before forwarding cancellation.
+                cancelled = exc
             except Exception:  # pylint: disable=broad-except
                 log.exception("Error closing worker request channel")
+        if cancelled is not None:
+            raise cancelled
 
     def __bind(self):
         """
