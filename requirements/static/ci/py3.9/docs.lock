@@ -241,7 +241,7 @@ opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/base.txt
