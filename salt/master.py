@@ -264,21 +264,22 @@ class SMaster:
     # on Windows since spawning processes on Windows requires pickling.
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
+    #
+    # ``object`` has no ``__setstate__`` method, so the ``super()`` call
+    # pattern used elsewhere in Salt raises
+    # ``AttributeError: 'super' object has no attribute '__setstate__'``
+    # on Python 3.11+ Windows (where ``multiprocessing`` uses ``spawn``
+    # and must pickle/unpickle the master object).  Mirror the pickle
+    # default (``self.__dict__.update(state)``) by hand instead, and
+    # explicitly round-trip the class-level ``secrets`` attribute.
     def __setstate__(self, state):
-        super().__setstate__(state)
-        self.master_key = state["master_key"]
-        self.key = state["key"]
-        SMaster.secrets = state["secrets"]
+        secrets = state.pop("secrets", {})
+        self.__dict__.update(state)
+        SMaster.secrets = secrets
 
     def __getstate__(self):
-        state = super().__getstate__()
-        state.update(
-            {
-                "key": self.key,
-                "master_key": self.master_key,
-                "secrets": SMaster.secrets,
-            }
-        )
+        state = dict(self.__dict__)
+        state["secrets"] = SMaster.secrets
         return state
 
     def __prep_key(self):
