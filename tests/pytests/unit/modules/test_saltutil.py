@@ -550,7 +550,7 @@ def test_master_user_runas_unknown_user_returns_none(monkeypatch):
     name that would later blow up in ``pwd.getpwnam`` inside
     ``_client_cmd_as`` / ``chugid`` (#69600).
 
-    Regression: ``state.orchestrate`` overwrites ``__opts__['user']``
+    Regression: ``state.orchestrate`` used to overwrite ``__opts__['user']``
     with ``__user__`` (the value of ``salt.utils.user.get_specific_user()``),
     which is ``"sudo_<login>"`` whenever ``salt-run`` was launched under
     ``sudo``. That name has no passwd entry, so attempting to drop to it
