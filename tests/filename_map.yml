@@ -120,6 +120,9 @@ salt/cache/*:
 salt/cli/*:
   - integration.shell.test_arguments
 
+salt/transport/(ws|base)\.py:
+  - pytests.functional.transport.ws.test_publish_client
+
 salt/cli/call.py:
   - pytests.integration.cli.test_salt_call
 
