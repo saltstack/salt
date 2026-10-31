@@ -6,12 +6,14 @@ import time
 import uuid
 
 import pytest
+import tornado.iostream
 
 import salt.channel.server as server
 import salt.crypt
 import salt.daemons.masterapi
 import salt.master
 import salt.payload
+import salt.transport.tcp
 import salt.utils.event
 import salt.utils.files
 import salt.utils.stringutils
@@ -912,6 +914,63 @@ async def test_publish_payload_non_cluster_tag_does_not_decode(master_opts):
     channel.transport.publish_payload.assert_awaited_once_with(
         load, raw_payload=b"wire-bytes"
     )
+
+
+@pytest.mark.parametrize("failure_stage", ["connect", "send"])
+async def test_cluster_peer_failure_reannounces_key_and_allows_reconnect(
+    master_opts, failure_stage
+):
+    channel = _pub_channel(master_opts)
+    channel.io_loop = MagicMock()
+    channel.send_aes_key_event = MagicMock()
+    pusher = salt.transport.tcp.PublishServer(
+        master_opts, pull_host="unavailable-peer", pull_port=4510
+    )
+    healthy = MagicMock(pull_host="healthy-peer", pull_port=4510, publish=AsyncMock())
+    channel.pushers = [pusher, healthy]
+    load = salt.utils.event.SaltEvent.pack("cluster/peer/master", {"key": "test"})
+    failures = [
+        tornado.iostream.StreamClosedError(),
+        tornado.iostream.StreamClosedError(),
+        True,
+    ]
+    connect = AsyncMock(side_effect=failures if failure_stage == "connect" else None)
+    send = AsyncMock(side_effect=failures if failure_stage == "send" else None)
+    try:
+        with patch.object(
+            salt.transport.tcp._TCPPubServerPublisher, "connect", connect
+        ), patch.object(salt.transport.tcp._TCPPubServerPublisher, "send", send):
+            # Use the actual native publisher: it deliberately has no pub_sock.
+            await channel.publish_payload(load)
+            channel.io_loop.call_later.assert_called_once_with(
+                2.0, channel.send_aes_key_event
+            )
+            healthy.publish.assert_awaited_once_with(load)
+            channel.transport.publish_payload.assert_not_awaited()
+            channel.send_aes_key_event.assert_not_called()
+            callback = channel.io_loop.call_later.call_args.args[1]
+            callback()
+            channel.send_aes_key_event.assert_called_once_with()
+
+            # Recovery must not close the PublishServer permanently. The next
+            # publication reconnects using its native per-loop publisher.
+            await channel.publish_payload(load)
+            assert connect.await_count == 3
+            assert send.await_count == (1 if failure_stage == "connect" else 3)
+            assert healthy.publish.await_count == 2
+            channel.io_loop.call_later.assert_called_once()
+    finally:
+        pusher.close()
+
+
+async def test_local_publication_failure_does_not_reannounce_peer_key(master_opts):
+    channel = _pub_channel(master_opts)
+    channel.io_loop = MagicMock()
+    channel.send_aes_key_event = MagicMock()
+    channel.transport.publish_payload.side_effect = tornado.iostream.StreamClosedError()
+    load = salt.utils.event.SaltEvent.pack("salt/job/test", {})
+    await channel.publish_payload(load)
+    channel.io_loop.call_later.assert_not_called()
 
 
 async def test_publish_payload_forwards_raw_payload_to_transport(master_opts):
