@@ -31,6 +31,7 @@ import time
 import salt.topology.breadcrumbs as breadcrumbs
 import salt.topology.registry as registry
 import salt.topology.router as router_mod
+import salt.topology.summary as summary_mod
 import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
@@ -71,6 +72,13 @@ _LISTENER = None
 #: Populated by :func:`_start_return_subscriber`; torn down in
 #: :func:`stop`.
 _RETURN_SUBSCRIBER = None
+
+#: Periodic ``topology/sum`` emission task.  Populated by
+#: :func:`start`; cancelled in :func:`stop`.  Builds a fresh
+#: :class:`salt.topology.summary.ClusterSummary` every
+#: ``topology_summary_interval`` seconds and pushes it to every
+#: attached peer link so each peer learns a route to this cluster.
+_SUMMARY_TASK = None
 
 # Pre-fork reserved listening socket (SO_REUSEADDR + FD_CLOEXEC).
 # Populated by :func:`pre_fork`; consumed by :func:`start` when it
@@ -117,7 +125,7 @@ def _reset_module_state():
     """
     global _LINKS, _INBOUND, _LISTENER, _LISTENER_SOCKET, _OWNER_PID
     global _REGISTRY_CACHE, _BREADCRUMB_CACHE, _IO_LOOP, _RAFT_SERVICE
-    global _CONFIG, _OPTS, _RETURN_SUBSCRIBER
+    global _CONFIG, _OPTS, _RETURN_SUBSCRIBER, _SUMMARY_TASK
     for chan in _PUB_CHANNEL_CACHE.values():
         try:
             chan.close()
@@ -129,6 +137,7 @@ def _reset_module_state():
     _LISTENER = None
     _LISTENER_SOCKET = None
     _RETURN_SUBSCRIBER = None
+    _SUMMARY_TASK = None
     _OWNER_PID = None
     _REGISTRY_CACHE = None
     _BREADCRUMB_CACHE = None
@@ -377,6 +386,71 @@ async def start(opts, io_loop, raft_service=None):
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: return-subscriber bootstrap failed")
 
+    # Step 10: periodic ``topology/sum`` emission.  Routes in each
+    # peer's :class:`salt.topology.router.TopologyRouter` are built
+    # from inbound summaries; without a local emission loop the
+    # routing table stays empty and non-adjacent ``C@`` publishes
+    # fall back to ``route_publish flooding --- no known route``.
+    # Peers tolerate send failures (link not yet healthy, transient
+    # transport flap) so the loop keeps going.
+    global _SUMMARY_TASK
+    _SUMMARY_TASK = asyncio.ensure_future(_summary_emit_loop(opts), loop=io_loop)
+
+
+async def _summary_emit_loop(opts):
+    """
+    Build a local :class:`salt.topology.summary.ClusterSummary` on
+    every ``topology_summary_interval`` tick and push it to every
+    attached peer link.
+
+    First iteration runs with a short bootstrap delay so routes
+    populate well before any ``C@<peer>`` publish fires -- without
+    this, the first full interval (30s default) wait would make
+    every topology-forward CLI call see
+    ``route_publish flooding --- no known route`` and fail to
+    route to any transit destination.
+
+    Resilient:
+
+    * Catches exceptions from :func:`summary_mod.collect` so a
+      transient opts/pki hiccup doesn't kill the loop.
+    * Catches per-link send errors so one unhealthy peer doesn't
+      block emission to the others.
+    """
+    interval = float(opts.get("topology_summary_interval", 30) or 30)
+    # Bootstrap delay: short enough that routes populate before the
+    # first forward publish, long enough that outbound links have had
+    # a chance to complete their handshake and transition to
+    # CONNECTED (send_summary on a not-yet-CONNECTED link raises).
+    bootstrap_delay = min(2.0, interval)
+    cluster_id = opts.get("cluster_id") or ""
+    first = True
+    while True:
+        await asyncio.sleep(bootstrap_delay if first else interval)
+        first = False
+        try:
+            summary = summary_mod.collect(opts)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "topology: summary collect failed for cluster_id=%r", cluster_id
+            )
+            continue
+        # Snapshot the link set so a concurrent attach/detach does
+        # not perturb iteration.
+        links = list(_LINKS.items())
+        for peer_id, link in links:
+            try:
+                await asyncio.wait_for(
+                    link.send_summary(summary),
+                    timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: summary emit to peer=%r failed",
+                    peer_id,
+                    exc_info=True,
+                )
+
 
 def _install_sm_callbacks(sm):
     """Wrap the state machine's attach/detach handlers so a commit
@@ -566,8 +640,17 @@ async def _connect_and_register(link):
     """Await ``link.connect()`` then publish the result into
     ``_LINKS`` + ``router._links`` via :func:`_register_connected_link`.
 
-    Split out so :func:`_schedule_connect` keeps its "fire and forget"
-    shape while the post-handshake wiring stays single-sourced.
+    Also pushes an initial ``topology/sum`` to the peer so its
+    routing table learns the way back to this cluster without
+    waiting for the next periodic emission.  Without this immediate
+    push, a ``C@<peer>`` CLI publish that fires within the first
+    ``topology_summary_interval`` after handshake arrives at the
+    other side's router with an empty route table and falls back to
+    ``route_publish flooding --- no known route``.
+
+    Split out so :func:`_schedule_connect` keeps its "fire and
+    forget" shape while the post-handshake wiring stays
+    single-sourced.
     """
     try:
         await link.connect()
@@ -581,6 +664,21 @@ async def _connect_and_register(link):
         _register_connected_link(link)
     except Exception:  # pylint: disable=broad-except
         log.exception("topology: _register_connected_link failed")
+    # First summary push: immediately so routes populate before any
+    # user-driven ``C@<peer>`` publish.  Guard with a short timeout
+    # so a transient slow peer doesn't block the connect task.
+    try:
+        summary = summary_mod.collect(_OPTS or {})
+        await asyncio.wait_for(
+            link.send_summary(summary),
+            timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: initial summary emit to %r failed",
+            getattr(link, "peer_cluster_id", None),
+            exc_info=True,
+        )
 
 
 def _schedule_connect(link):
@@ -757,6 +855,17 @@ async def stop():
     link, and clears all registries.  Idempotent; safe to call
     multiple times.
     """
+    # Cancel the periodic summary emitter before tearing down links
+    # so an in-flight ``send_summary`` doesn't race the disconnect.
+    global _SUMMARY_TASK
+    if _SUMMARY_TASK is not None:
+        _SUMMARY_TASK.cancel()
+        try:
+            await _SUMMARY_TASK
+        except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+            pass
+        _SUMMARY_TASK = None
+
     # Snapshot the current link set so iteration is safe against the
     # concurrent mutation ``disconnect`` may do on failure paths.
     links = list(_LINKS.values()) + list(_INBOUND.values())
