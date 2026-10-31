@@ -144,7 +144,7 @@ opentelemetry-sdk==1.41.1
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.62b1
     # via opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via -r requirements/base.txt
 platformdirs==4.4.0
     # via

@@ -3,7 +3,7 @@
 # If they are freebsd specific, place "; sys_platform == 'freebsd'" in front of the requirement.
 cherrypy>=18.10.0
 cryptography>=46.0.7,<48.0.0; python_version < '3.10'
-cryptography>=48.0.0; python_version >= '3.10'
+cryptography>=50.0.0; python_version >= '3.10'
 pycparser>=2.23; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 pyopenssl>=26.2.0,<26.3.0; python_version < '3.10'

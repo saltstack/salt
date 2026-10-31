@@ -316,7 +316,7 @@ opentelemetry-semantic-conventions==0.62b1
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt

@@ -46,7 +46,7 @@ pywin32==312
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   docker
-requests==2.31.0
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
@@ -63,12 +63,12 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.15.1
     # via pylint
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   astroid
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/windows.lock
     #   -c requirements/static/pkg/py3.10/windows.lock

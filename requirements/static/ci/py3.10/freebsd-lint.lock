@@ -46,12 +46,7 @@ pywin32==312 ; sys_platform == 'win32'
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   docker
-requests==2.31.0 ; python_full_version < '3.11'
-    # via
-    #   -c requirements/static/ci/py3.10/freebsd.lock
-    #   -c requirements/static/pkg/py3.10/freebsd.lock
-    #   docker
-requests==2.34.2 ; python_full_version >= '3.11'
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
@@ -68,12 +63,12 @@ tomli==2.2.1 ; python_full_version < '3.11'
     #   pylint
 tomlkit==0.15.1
     # via pylint
-typing-extensions==4.14.1 ; python_full_version < '3.11'
+typing-extensions==4.16.0 ; python_full_version < '3.11'
     # via
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
     #   astroid
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/freebsd.lock
     #   -c requirements/static/pkg/py3.10/freebsd.lock
