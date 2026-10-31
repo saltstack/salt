@@ -237,24 +237,377 @@ async def test_send_req_async_regression_62453(minion_opts):
                 rtn = await minion._send_req_async(load, timeout)
 
 
-def test_mine_send_tries(minion_opts):
+async def test_mine_send_tries(minion_opts):
     channel_enter = MagicMock()
-    channel_enter.send.side_effect = lambda load, timeout, tries: tries
+    channel_enter.send = AsyncMock(side_effect=lambda load, timeout, tries: tries)
     channel = MagicMock()
-    channel.__enter__.return_value = channel_enter
+    channel.__aenter__.return_value = channel_enter
 
     minion_opts["return_retry_tries"] = 20
-    with patch("salt.channel.client.ReqChannel.factory", return_value=channel), patch(
+    with patch(
+        "salt.channel.client.AsyncReqChannel.factory", return_value=channel
+    ), patch("salt.loader.grains"), patch("salt.engines.start_engines"):
+        minion = salt.minion.Minion(minion_opts)
+        try:
+            minion.tok = "token"
+
+            data = {}
+            tag = "tag"
+
+            rtn = await minion._mine_send(tag, data)
+            assert rtn == 20
+            assert channel_enter.send.call_args.args[0]["tok"] == "token"
+        finally:
+            minion.destroy()
+
+
+async def test_minion_mine_event_does_not_block_io_loop(minion_opts):
+    """
+    While a master is unreachable a mine send can take minutes (timeout *
+    tries).  It must not block the event loop, which the minion shares with
+    every master it is connected to.
+    """
+    send_time = 1
+
+    async def async_send(load, timeout, tries):
+        await asyncio.sleep(send_time)
+
+    def sync_send(load, timeout, tries):
+        time.sleep(send_time)
+
+    async_channel = MagicMock()
+    async_channel.__aenter__.return_value = async_channel
+    async_channel.send = AsyncMock(side_effect=async_send)
+    sync_channel = MagicMock()
+    sync_channel.__enter__.return_value = sync_channel
+    sync_channel.send.side_effect = sync_send
+
+    ticks = 0
+
+    async def heartbeat():
+        nonlocal ticks
+        while True:
+            await asyncio.sleep(0.05)
+            ticks += 1
+
+    with patch(
+        "salt.channel.client.AsyncReqChannel.factory", return_value=async_channel
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", return_value=sync_channel
+    ), patch(
         "salt.loader.grains"
+    ), patch(
+        "salt.engines.start_engines"
     ):
         minion = salt.minion.Minion(minion_opts)
-        minion.tok = "token"
+        try:
+            minion.ready = True
+            minion.tok = "token"
+            package = salt.utils.event.SaltEvent.pack(
+                "_minion_mine", {"cmd": "_mine", "data": {}, "id": minion_opts["id"]}
+            )
+            task = asyncio.create_task(heartbeat())
+            try:
+                await minion.handle_event(package)
+            finally:
+                task.cancel()
+        finally:
+            minion.destroy()
 
-        data = {}
-        tag = "tag"
+    # About 20 ticks fit in the send; none run if the send blocks the loop.
+    assert ticks >= 10
+    async_channel.send.assert_awaited_once()
 
-        rtn = minion._mine_send(tag, data)
-        assert rtn == 20
+
+class _FakeMineChannels:
+    """
+    Stand-in for ``AsyncReqChannel.factory`` in the mine send tests.  Every
+    send is logged as ``("start", load)`` and ``("end", load)``, and the
+    master URI of its channel is added to ``masters`` when it starts.  Sends
+    for a minion ID or master URI passed to ``hold()`` wait until
+    ``release()`` is called for it, and the next send to end raises the
+    first exception in ``errors``.
+    """
+
+    def __init__(self):
+        self.log = []
+        self.masters = []
+        self.errors = []
+        self._held = {}
+
+    def hold(self, minion_id):
+        self._held[minion_id] = asyncio.Event()
+
+    def release(self, minion_id):
+        self._held.pop(minion_id).set()
+
+    def started(self):
+        return [load for what, load in self.log if what == "start"]
+
+    def factory(self, opts, io_loop=None):
+        master = opts["master_uri"]
+
+        async def send(load, timeout, tries):
+            return await self._send(master, load)
+
+        channel = MagicMock()
+        channel.__aenter__.return_value = channel
+        channel.send = AsyncMock(side_effect=send)
+        return channel
+
+    async def _send(self, master, load):
+        self.log.append(("start", load))
+        self.masters.append(master)
+        held = self._held.get(load["id"]) or self._held.get(master)
+        if held is not None:
+            await held.wait()
+        self.log.append(("end", load))
+        if self.errors:
+            raise self.errors.pop(0)
+        return True
+
+
+@contextlib.contextmanager
+def _mine_test_minion(minion_opts, channels):
+    # Starting the engines is not needed here and can take long enough to
+    # trip the slow callback check.
+    with patch(
+        "salt.channel.client.AsyncReqChannel.factory", side_effect=channels.factory
+    ), patch("salt.loader.grains"), patch("salt.engines.start_engines"):
+        minion = salt.minion.Minion(minion_opts)
+        try:
+            minion.ready = True
+            minion.tok = "token"
+            yield minion
+        finally:
+            minion.destroy()
+
+
+def _mine_event(minion_id, cmd="_mine", **load):
+    return salt.utils.event.SaltEvent.pack(
+        "_minion_mine", dict(load, cmd=cmd, id=minion_id)
+    )
+
+
+async def _run_ready_tasks():
+    """
+    Give the tasks a test started the chance to run as far as they can
+    without the test releasing anything.  No time passes.
+    """
+    for _ in range(20):
+        await asyncio.sleep(0)
+
+
+async def test_mine_sends_for_one_minion_id_are_ordered(minion_opts):
+    """
+    A mine send must not start until the earlier one for the same minion ID
+    has finished.  Otherwise a slow update can reach the master after a
+    newer delete and bring the deleted data back.
+    """
+    channels = _FakeMineChannels()
+    minion_id = "minion1"
+    with _mine_test_minion(minion_opts, channels) as minion:
+        channels.hold(minion_id)
+        update = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, "_mine", data={"f": 1}))
+        )
+        await _run_ready_tasks()
+        delete = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, "_mine_delete", fun="f"))
+        )
+        await _run_ready_tasks()
+        assert [load["cmd"] for load in channels.started()] == ["_mine"]
+        channels.release(minion_id)
+        await asyncio.gather(update, delete)
+
+    assert [(what, load["cmd"]) for what, load in channels.log] == [
+        ("start", "_mine"),
+        ("end", "_mine"),
+        ("start", "_mine_delete"),
+        ("end", "_mine_delete"),
+    ]
+
+
+async def test_mine_send_queued_after_earlier_one_finished_keeps_order(minion_opts):
+    """
+    A send that comes in after the first send finished, while a later one is
+    still in flight, has to wait for that later one too.
+    """
+    channels = _FakeMineChannels()
+    minion_id = "minion1"
+    with _mine_test_minion(minion_opts, channels) as minion:
+        channels.hold(minion_id)
+        first = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, data={"n": 0}))
+        )
+        await _run_ready_tasks()
+        second = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, data={"n": 1}))
+        )
+        await _run_ready_tasks()
+        # Let the first one finish but keep the second one in flight.
+        channels.release(minion_id)
+        channels.hold(minion_id)
+        await _run_ready_tasks()
+        assert first.done()
+        assert [load["data"]["n"] for load in channels.started()] == [0, 1]
+        third = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, data={"n": 2}))
+        )
+        await _run_ready_tasks()
+        assert [load["data"]["n"] for load in channels.started()] == [0, 1]
+        channels.release(minion_id)
+        await asyncio.gather(first, second, third)
+
+    assert [(what, load["data"]["n"]) for what, load in channels.log] == [
+        ("start", 0),
+        ("end", 0),
+        ("start", 1),
+        ("end", 1),
+        ("start", 2),
+        ("end", 2),
+    ]
+
+
+async def test_mine_sends_after_failover_do_not_wait_on_old_master(minion_opts):
+    """
+    On failover the minion points its opts at the new master in place.  A
+    send that hangs on the old master (with the TCP transport it can wait
+    until that master is back) must not hold up sends to the new master,
+    and sends still queued for the old master must go there, not to the new
+    master after newer data.
+    """
+    channels = _FakeMineChannels()
+    minion_id = "minion1"
+    with _mine_test_minion(minion_opts, channels) as minion:
+        old_master = minion.opts["master_uri"]
+        new_master = "tcp://127.0.0.2:4506"
+        channels.hold(old_master)
+        queued = []
+        for n in range(2):
+            queued.append(
+                asyncio.create_task(
+                    minion.handle_event(_mine_event(minion_id, data={"n": n}))
+                )
+            )
+            await _run_ready_tasks()
+        # What eval_master does to self.opts on failover.
+        minion.opts["master"] = "127.0.0.2"
+        minion.opts["master_uri"] = new_master
+        after = asyncio.create_task(
+            minion.handle_event(_mine_event(minion_id, data={"n": 2}))
+        )
+        await _run_ready_tasks()
+        assert after.done()
+        channels.release(old_master)
+        await asyncio.gather(*queued, after)
+
+    sent = [load["data"]["n"] for load in channels.started()]
+    assert list(zip(sent, channels.masters)) == [
+        (0, old_master),
+        (2, new_master),
+        (1, old_master),
+    ]
+
+
+async def test_mine_sends_pending_for_one_minion_id_are_capped(minion_opts, caplog):
+    """
+    While the master is unreachable each mine send can take minutes.  Only a
+    few may be pending for one minion ID; newer ones are dropped with a
+    warning rather than queued or sent out of order.
+    """
+    cap = salt.minion._MINE_SEND_MAX_PENDING
+    channels = _FakeMineChannels()
+    minion_id = "minion1"
+    with _mine_test_minion(minion_opts, channels) as minion:
+        channels.hold(minion_id)
+        with caplog.at_level(logging.WARNING):
+            tasks = [
+                asyncio.create_task(
+                    minion.handle_event(_mine_event(minion_id, data={"n": n}))
+                )
+                for n in range(cap + 2)
+            ]
+            await _run_ready_tasks()
+        assert len(channels.started()) == 1
+        dropped = [
+            record.getMessage()
+            for record in caplog.records
+            if record.getMessage().startswith("Not sending mine data")
+        ]
+        assert len(dropped) == 2
+        assert all(minion_id in message for message in dropped)
+        assert all(task.done() for task in tasks[cap:])
+        channels.release(minion_id)
+        await asyncio.gather(*tasks)
+
+    assert [load["data"]["n"] for load in channels.started()] == list(range(cap))
+
+
+async def test_mine_sends_for_different_minion_ids_do_not_wait(minion_opts):
+    """
+    A deltaproxy sends the mine data of each sub-proxy under the sub-proxy's
+    minion ID.  A send held up for one of them must not hold up the others.
+    """
+    channels = _FakeMineChannels()
+    with _mine_test_minion(minion_opts, channels) as minion:
+        channels.hold("sub1")
+        held = asyncio.create_task(minion.handle_event(_mine_event("sub1")))
+        await _run_ready_tasks()
+        other = asyncio.create_task(minion.handle_event(_mine_event("sub2")))
+        await _run_ready_tasks()
+        assert other.done()
+        assert [(what, load["id"]) for what, load in channels.log] == [
+            ("start", "sub1"),
+            ("start", "sub2"),
+            ("end", "sub2"),
+        ]
+        channels.release("sub1")
+        await asyncio.gather(held, other)
+
+    assert channels.log[-1][0] == "end"
+    assert channels.log[-1][1]["id"] == "sub1"
+
+
+async def test_mine_send_state_is_cleared(minion_opts):
+    """
+    The per minion ID lock and count go away once nothing is pending for the
+    minion ID, also after a send raised or a waiting send was cancelled.
+    """
+    channels = _FakeMineChannels()
+    minion_id = "minion1"
+    with _mine_test_minion(minion_opts, channels) as minion:
+        key = (minion.opts["master_uri"], minion_id)
+        channels.errors.append(SaltClientError("master went away"))
+        with pytest.raises(SaltClientError):
+            await minion.handle_event(_mine_event(minion_id))
+        assert minion._mine_send_locks == {}
+        assert minion._mine_send_pending == {}
+
+        channels.hold(minion_id)
+        channels.errors.append(SaltClientError("master went away"))
+        tasks = [
+            asyncio.create_task(minion.handle_event(_mine_event(minion_id, cmd)))
+            for cmd in ("_mine", "_mine_delete", "_mine_flush")
+        ]
+        await _run_ready_tasks()
+        assert minion._mine_send_pending == {key: 3}
+        tasks[1].cancel()
+        await _run_ready_tasks()
+        assert minion._mine_send_pending == {key: 2}
+        channels.release(minion_id)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        assert isinstance(results[0], SaltClientError)
+        assert isinstance(results[1], asyncio.CancelledError)
+        assert results[2] is None
+        assert [load["cmd"] for load in channels.started()] == [
+            "_mine",
+            "_mine",
+            "_mine_flush",
+        ]
+        assert minion._mine_send_locks == {}
+        assert minion._mine_send_pending == {}
 
 
 def test_invalid_master_address(minion_opts):

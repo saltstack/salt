@@ -125,6 +125,10 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# How many mine sends a Minion keeps pending (in flight plus waiting) for
+# one master and minion ID.  See Minion._mine_send.
+_MINE_SEND_MAX_PENDING = 3
+
 
 # Flag so we register the observable gauges exactly once per minion
 # process even though ``tune_in`` may be called from multiple entry
@@ -2171,6 +2175,10 @@ class Minion(MinionBase):
         self.jid_queue = [] if jid_queue is None else jid_queue
         self.periodic_callbacks = {}
         self.req_channel = None
+        # Per master URI and minion ID, the lock that orders mine sends and
+        # the number of sends in flight or waiting for it.  See _mine_send.
+        self._mine_send_locks = {}
+        self._mine_send_pending = {}
         # Track when system resource limits are hit (EMFILE/ENFILE) to apply backpressure
         self._system_resource_limit_hit_timestamp = 0
 
@@ -4928,23 +4936,59 @@ class Minion(MinionBase):
                 exc_info=err,
             )
 
-    def _mine_send(self, tag, data):
+    async def _mine_send(self, tag, data):
         """
         Send mine data to the master
         """
-        # Consider using a long-running req channel to send mine data
-        with salt.channel.client.ReqChannel.factory(self.opts) as channel:
-            data["tok"] = self.tok
-            try:
-                ret = channel.send(
-                    data,
-                    timeout=self._return_retry_timer(),
-                    tries=self.opts["return_retry_tries"],
-                )
-                return ret
-            except SaltReqTimeoutError:
-                log.warning("Unable to send mine data to master.")
-                return None
+        # Sends for one minion ID go to a master one at a time, in the
+        # order the events arrived, so an older update can't land after a
+        # newer update or a delete.  While a master is down each send can
+        # take minutes, or with the TCP transport wait until the master is
+        # back, so once a few are pending new ones are dropped instead of
+        # piling up.
+        #
+        # On failover eval_master points self.opts at the new master in
+        # place.  Each send keeps a copy of the opts it came in with and
+        # queues for that master, so sends still waiting on the old master
+        # don't hold up the new one and don't reach it after newer data.
+        opts = dict(self.opts)
+        minion_id = data.get("id") or opts["id"]
+        key = (opts.get("master_uri"), minion_id)
+        pending = self._mine_send_pending.get(key, 0)
+        if pending >= _MINE_SEND_MAX_PENDING:
+            log.warning(
+                "Not sending mine data for %s to master %s, %d earlier mine "
+                "sends are still pending.",
+                minion_id,
+                opts["master"],
+                pending,
+            )
+            return None
+        if not pending:
+            self._mine_send_locks[key] = asyncio.Lock()
+        self._mine_send_pending[key] = pending + 1
+        try:
+            async with self._mine_send_locks[key]:
+                # Consider using a long-running req channel to send mine data
+                async with salt.channel.client.AsyncReqChannel.factory(
+                    opts, io_loop=self.io_loop
+                ) as channel:
+                    data["tok"] = self.tok
+                    try:
+                        ret = await channel.send(
+                            data,
+                            timeout=self._return_retry_timer(),
+                            tries=self.opts["return_retry_tries"],
+                        )
+                        return ret
+                    except SaltReqTimeoutError:
+                        log.warning("Unable to send mine data to master.")
+                        return None
+        finally:
+            self._mine_send_pending[key] -= 1
+            if not self._mine_send_pending[key]:
+                del self._mine_send_pending[key]
+                del self._mine_send_locks[key]
 
     async def handle_event(self, package):
         """
@@ -5041,7 +5085,7 @@ class Minion(MinionBase):
         elif tag.startswith("environ_setenv"):
             self.environ_setenv(tag, data)
         elif tag.startswith("_minion_mine"):
-            self._mine_send(tag, data)
+            await self._mine_send(tag, data)
         elif tag.startswith("fire_master"):
             if self.connected:
                 log.debug(
