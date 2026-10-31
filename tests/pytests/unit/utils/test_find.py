@@ -4,6 +4,7 @@ Tests for salt.utils.find traversal limits.
 
 import os
 
+import salt.utils.files
 import salt.utils.find
 
 
@@ -13,9 +14,9 @@ def _make_tree(root):
         ("unrelated", "level2", "level3"),
     ):
         os.makedirs(os.path.join(root, *parts))
-    with open(os.path.join(root, "top.txt"), "w", encoding="utf-8"):
+    with salt.utils.files.fopen(os.path.join(root, "top.txt"), "w", encoding="utf-8"):
         pass
-    with open(
+    with salt.utils.files.fopen(
         os.path.join(root, "match", "level2", "level3", "deep.txt"),
         "w",
         encoding="utf-8",
