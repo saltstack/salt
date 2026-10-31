@@ -1,14 +1,16 @@
 import asyncio
 
 import pytest
-import tornado
+from tornado.iostream import StreamClosedError
 
+import salt.cli.batch_async as batch_async
+import salt.utils.asynchronous
 from salt.cli.batch_async import BatchAsync, batch_async_required
-from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, call, patch
 
 
 @pytest.fixture
-def batch(temp_salt_master):
+def batch(temp_salt_master, io_loop):
     opts = {
         "batch": "1",
         "conf_file": {},
@@ -20,22 +22,33 @@ def batch(temp_salt_master):
         "sock_dir": "",
     }
 
-    with patch("salt.client.get_local_client", MagicMock(return_value=MagicMock())):
-        with patch("salt.cli.batch_async.batch_get_opts", MagicMock(return_value=opts)):
-            batch = BatchAsync(
-                opts,
-                MagicMock(side_effect=["1234", "1235"]),
-                {
-                    "tgt": "",
-                    "fun": "",
-                    "kwargs": {
-                        "batch": "",
-                        "batch_presence_ping_timeout": 1,
-                        "metadata": {"mykey": "myvalue"},
-                    },
+    channel = MagicMock()
+    channel.use.return_value = channel
+    channel.subscribe = AsyncMock()
+    channel.master_event.fire_event_async = AsyncMock()
+    channel.local_client.run_job_async = AsyncMock(return_value={"minions": []})
+    with patch(
+        "salt.cli.batch_async._get_shared_events_channel", return_value=channel
+    ), patch("salt.cli.batch_async.batch_get_opts", return_value=opts), patch(
+        "salt.cli.batch_async._destroy_unused_shared_events_channel", AsyncMock()
+    ):
+        instance = BatchAsync(
+            opts,
+            MagicMock(side_effect=["1234", "1235"]),
+            {
+                "tgt": "",
+                "fun": "",
+                "kwargs": {
+                    "batch": "",
+                    "batch_presence_ping_timeout": 1,
+                    "metadata": {"mykey": "myvalue"},
                 },
-            )
-            yield batch
+            },
+        )
+        yield instance
+        salt.utils.asynchronous.aioloop(io_loop).run_until_complete(
+            instance.close_safe()
+        )
 
 
 @pytest.mark.parametrize(
@@ -80,56 +93,96 @@ async def test_batch_size(batch):
     assert batch.batch_size == 2
 
 
-async def test_batch_start_on_batch_presence_ping_timeout(batch):
-    future_ret = tornado.gen.Future()
-    future_ret.set_result({"minions": ["foo", "bar"]})
-    future = tornado.gen.Future()
-    future.set_result({})
-    with patch.object(batch, "events_channel", MagicMock()), patch(
-        "tornado.gen.sleep", return_value=future
-    ), patch.object(batch, "start_batch", return_value=future) as start_batch_mock:
-        batch.events_channel.local_client.run_job_async.return_value = future_ret
-        ret = await batch.start()
-        # assert start_batch is called
-        start_batch_mock.assert_called_once()
-        # assert test.ping called
-        assert batch.events_channel.local_client.run_job_async.call_args[0] == (
-            "*",
-            "test.ping",
-            [],
+@pytest.mark.parametrize("presence_timeout", [0.01, None])
+async def test_batch_starts_after_presence_timeout(batch, presence_timeout):
+    batch.batch_presence_ping_timeout = presence_timeout
+    batch.opts["gather_job_timeout"] = 0.01
+    batch.events_channel.local_client.run_job_async.return_value = {
+        "minions": ["foo", "bar"]
+    }
+    started = []
+
+    async def start_batch():
+        started.append(True)
+
+    batch.start_batch = start_batch
+    await batch.start()
+    assert started == [True]
+    assert batch.targeted_minions == {"foo", "bar"}
+    assert batch.events_channel.local_client.run_job_async.call_args.args[:4] == (
+        "*",
+        "test.ping",
+        [],
+        "glob",
+    )
+
+
+@pytest.mark.parametrize(
+    "target_options,expected_type",
+    [
+        pytest.param({}, "glob", id="default"),
+        pytest.param({"tgt_type": "list"}, "list", id="configured-type"),
+        pytest.param(
+            {"selected_target_option": "list", "tgt_type": "glob"},
+            "list",
+            id="selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": None, "tgt_type": "list"},
+            "list",
+            id="unset-selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": "", "tgt_type": "list"},
+            "list",
+            id="empty-selected-option",
+        ),
+        pytest.param(
+            {"selected_target_option": None, "tgt_type": None},
             "glob",
+            id="unset-types",
+        ),
+        pytest.param({"tgt_type": ""}, "glob", id="empty-type"),
+    ],
+)
+async def test_batch_ping_resolves_target_type(batch, target_options, expected_type):
+    batch.opts.update(target_options)
+    with patch.object(batch, "start_batch", AsyncMock()):
+        await batch.start()
+    assert batch.events_channel.local_client.run_job_async.call_args.args[:4] == (
+        "*",
+        "test.ping",
+        [],
+        expected_type,
+    )
+
+
+async def test_batch_starts_when_ping_reply_precedes_publication_result(batch):
+    batch.batch_presence_ping_timeout = 30
+
+    async def publish(*args, **kwargs):
+        assert batch.events_channel.subscribe.await_count == 2
+        await batch._BatchAsync__event_handler(
+            f"salt/job/{batch.ping_jid}/ret/foo", {"id": "foo"}, "ping_return"
         )
-        # assert targeted_minions == all minions matched by tgt
-        assert batch.targeted_minions == {"foo", "bar"}
+        return {"minions": ["foo"]}
 
-
-async def test_batch_start_on_gather_job_timeout(batch):
-    future = tornado.gen.Future()
-    future.set_result({})
-    future_ret = tornado.gen.Future()
-    future_ret.set_result({"minions": ["foo", "bar"]})
-    batch.batch_presence_ping_timeout = None
-    with patch.object(batch, "events_channel", MagicMock()), patch(
-        "tornado.gen.sleep", return_value=future
-    ), patch.object(
-        batch, "start_batch", return_value=future
-    ) as start_batch_mock, patch.object(
-        batch, "batch_presence_ping_timeout", None
-    ):
-        batch.events_channel.local_client.run_job_async.return_value = future_ret
-        # ret = batch_async.start(batch)
-        ret = await batch.start()
-        # assert start_batch is called
-        start_batch_mock.assert_called_once()
+    batch.events_channel.local_client.run_job_async = AsyncMock(side_effect=publish)
+    with patch.object(batch, "start_batch", AsyncMock()) as start_batch:
+        await asyncio.wait_for(batch.start(), 2)
+    start_batch.assert_awaited_once()
+    assert batch.targeted_minions == batch.minions == {"foo"}
 
 
 async def test_batch_fire_start_event(batch):
     batch.minions = {"foo", "bar"}
     batch.opts = {"batch": "2", "timeout": 5}
-    with patch.object(batch, "events_channel", MagicMock()), patch.object(
+    with patch.object(
+        batch, "events_channel", MagicMock(subscribe=AsyncMock())
+    ), patch.object(
         batch.event,
-        "fire_event",
-        MagicMock(return_value={}),
+        "fire_event_async",
+        AsyncMock(return_value={}),
     ) as fire_event_mock:
         await batch.start_batch()
         assert fire_event_mock.call_args[0] == (
@@ -144,11 +197,15 @@ async def test_batch_fire_start_event(batch):
 
 async def test_start_batch_calls_next(batch):
     batch.initialized = False
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
-    with patch.object(batch, "event", MagicMock()), patch.object(
-        batch, "events_channel", MagicMock()
-    ), patch.object(batch, "run_next", return_value=future) as run_next_mock:
+    with patch.object(
+        batch, "event", MagicMock(fire_event_async=AsyncMock())
+    ), patch.object(
+        batch, "events_channel", MagicMock(subscribe=AsyncMock())
+    ), patch.object(
+        batch, "run_next", return_value=future
+    ) as run_next_mock:
         batch.events_channel.master_event.fire_event_async.return_value = future
         await batch.start_batch()
         assert batch.initialized
@@ -160,10 +217,12 @@ async def test_batch_fire_done_event(batch):
     batch.minions = {"foo", "bar"}
     batch.done_minions = {"foo"}
     batch.timedout_minions = {"bar"}
-    with patch.object(batch, "events_channel", MagicMock()), patch.object(
+    with patch.object(
+        batch, "events_channel", MagicMock(subscribe=AsyncMock())
+    ), patch.object(
         batch.event,
-        "fire_event",
-        MagicMock(return_value={}),
+        "fire_event_async",
+        AsyncMock(return_value={}),
     ) as fire_event_mock:
         await batch.end_batch()
         assert fire_event_mock.call_args[0] == (
@@ -178,12 +237,14 @@ async def test_batch_fire_done_event(batch):
         )
 
 
-def test_batch_close_safe(batch):
+async def test_batch_close_is_idempotent(batch):
     with patch.object(
-        batch, "events_channel", MagicMock()
-    ) as events_channel_mock, patch.object(batch, "event", MagicMock()):
-        batch.close_safe()
-        batch.close_safe()
+        batch, "events_channel", MagicMock(subscribe=AsyncMock())
+    ) as events_channel_mock, patch.object(
+        batch, "event", MagicMock(fire_event_async=AsyncMock())
+    ):
+        await batch.close_safe()
+        await batch.close_safe()
         assert batch.events_channel is None
         assert batch.event is None
         events_channel_mock.unsubscribe.assert_called_once()
@@ -194,10 +255,10 @@ async def test_batch_next(batch):
     batch.opts["fun"] = "my.fun"
     batch.opts["arg"] = []
     batch.batch_size = 2
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
-    with patch("tornado.gen.sleep", return_value=future), patch.object(
-        batch, "events_channel", MagicMock()
+    with patch("asyncio.sleep", return_value=future), patch.object(
+        batch, "events_channel", MagicMock(subscribe=AsyncMock())
     ), patch.object(batch, "_get_next", return_value={"foo", "bar"}), patch.object(
         batch, "find_job", return_value=future
     ) as find_job_mock:
@@ -281,7 +342,7 @@ async def test_batch__event_handler_ping_return(batch):
         "fire_event_async",
         AsyncMock(return_value={}),
     ) as fire_event_async_mock:
-        asyncio.create_task(batch.start())
+        batch._create_task(batch.start())
         assert batch.minions == set()
         await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
@@ -299,7 +360,7 @@ async def test_batch__event_handler_call_start_batch_when_all_pings_return(batch
     ) as local_client_mock, patch.object(
         batch, "start_batch", AsyncMock(return_value=None)
     ) as start_batch_mock:
-        asyncio.create_task(batch.start())
+        batch._create_task(batch.start())
         await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
@@ -318,7 +379,7 @@ async def test_batch__event_handler_not_call_start_batch_when_not_all_pings_retu
     ) as local_client_mock, patch.object(
         batch, "start_batch", AsyncMock(return_value=None)
     ) as start_batch_mock:
-        asyncio.create_task(batch.start())
+        batch._create_task(batch.start())
         await batch._BatchAsync__event_handler(
             "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
         )
@@ -327,16 +388,16 @@ async def test_batch__event_handler_not_call_start_batch_when_not_all_pings_retu
 
 
 async def test_batch__event_handler_batch_run_return(batch):
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     with patch.object(
         batch.events_channel.local_client,
         "run_job_async",
         AsyncMock(return_value={"minions": ["foo", "bar"]}),
     ) as local_client_mock, patch.object(
-        batch, "schedule_next", AsyncMock(return_value=future)
+        batch, "schedule_next", AsyncMock(return_value=None)
     ) as schedule_next_mock:
-        asyncio.create_task(batch.start())
+        batch._create_task(batch.start())
         await asyncio.sleep(1)
         batch.active = {"foo"}
         await batch._BatchAsync__event_handler(
@@ -348,7 +409,7 @@ async def test_batch__event_handler_batch_run_return(batch):
 
 
 async def test_batch__event_handler_find_job_return(batch):
-    asyncio.create_task(batch.start())
+    batch._create_task(batch.start())
     await batch._BatchAsync__event_handler(
         "salt/job/1236/ret/foo", {"id": "foo", "return": "deadbeaf"}, "find_job_return"
     )
@@ -356,7 +417,7 @@ async def test_batch__event_handler_find_job_return(batch):
 
 
 async def test_batch_run_next_end_batch_when_no_next(batch):
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     with patch.object(batch, "_get_next", return_value={}), patch.object(
         batch, "end_batch", return_value=future
@@ -366,10 +427,10 @@ async def test_batch_run_next_end_batch_when_no_next(batch):
 
 
 async def test_batch_find_job(batch):
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     batch.minions = {"foo", "bar"}
-    with patch("tornado.gen.sleep", return_value=future), patch.object(
+    with patch("asyncio.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
     ) as check_find_job_mock, patch.object(batch, "jid_gen", return_value="1236"):
         batch.events_channel.local_client.run_job_async.return_value = future
@@ -382,10 +443,10 @@ async def test_batch_find_job(batch):
 
 async def test_batch_find_job_with_done_minions(batch):
     batch.done_minions = {"bar"}
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     batch.minions = {"foo", "bar"}
-    with patch("tornado.gen.sleep", return_value=future), patch.object(
+    with patch("asyncio.sleep", return_value=future), patch.object(
         batch, "check_find_job", return_value=future
     ) as check_find_job_mock, patch.object(batch, "jid_gen", return_value="1236"):
         batch.events_channel.local_client.run_job_async.return_value = future
@@ -400,7 +461,7 @@ async def test_batch_check_find_job_did_not_return(batch):
     batch.active = {"foo"}
     batch.find_job_returned = set()
     batch.batch_size = 2
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     with patch.object(batch, "find_job", return_value=future) as find_job_mock:
         await batch.check_find_job({"foo"}, jid="1234")
@@ -411,7 +472,7 @@ async def test_batch_check_find_job_did_not_return(batch):
 
 async def test_batch_check_find_job_did_return(batch):
     batch.find_job_returned = {"foo"}
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     with patch.object(batch, "find_job", return_value=future) as find_job_mock:
         await batch.check_find_job({"foo"}, jid="1234")
@@ -434,12 +495,12 @@ async def test_batch_check_find_job_multiple_states(batch):
     # both not yet done but only 'foo' responded to find_job
     not_done = {"foo", "bar"}
 
-    future = tornado.gen.Future()
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
 
-    with patch.object(batch, "schedule_next", return_value=future), patch.object(
-        batch, "find_job", return_value=future
-    ) as find_job_mock:
+    with patch.object(
+        batch, "schedule_next", AsyncMock(return_value=None)
+    ), patch.object(batch, "find_job", return_value=future) as find_job_mock:
         await batch.check_find_job(not_done, jid="1234")
 
         # assert 'bar' removed from active
@@ -452,10 +513,395 @@ async def test_batch_check_find_job_multiple_states(batch):
         find_job_mock.assert_called_once_with({"foo"})
 
 
-def test_only_on_run_next_is_scheduled(batch):
-    future = tornado.gen.Future()
+async def test_only_on_run_next_is_scheduled(batch):
+    future = asyncio.get_event_loop().create_future()
     future.set_result({})
     batch.scheduled = True
     with patch.object(batch, "run_next", return_value=future) as run_next_mock:
-        batch.schedule_next()
+        await batch.schedule_next()
         run_next_mock.assert_not_called()
+
+
+async def test_start_event_completes_before_dispatch(batch):
+    publishing = asyncio.Event()
+    release = asyncio.Event()
+
+    async def fire_event(data, tag):
+        publishing.set()
+        await release.wait()
+
+    batch.event.fire_event_async = fire_event
+    with patch.object(batch, "run_next", AsyncMock()) as run_next:
+        task = batch._create_task(batch.start_batch())
+        await publishing.wait()
+        run_next.assert_not_awaited()
+        release.set()
+        await task
+        run_next.assert_awaited_once()
+
+
+async def test_done_event_completes_before_channel_is_released(batch):
+    publishing = asyncio.Event()
+    release = asyncio.Event()
+    channel = batch.events_channel
+
+    async def fire_event(data, tag):
+        publishing.set()
+        await release.wait()
+
+    batch.event.fire_event_async = fire_event
+    task = batch._create_task(batch.end_batch())
+    await publishing.wait()
+    channel.unuse.assert_not_called()
+    assert batch.event is not None
+    release.set()
+    await task
+    channel.unuse.assert_called_once()
+    assert batch.event is None
+
+
+async def test_close_drains_pending_batch_jobs(batch):
+    started = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def job():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            cleaned.set()
+
+    task = batch._create_task(job())
+    await started.wait()
+    await batch.close_safe()
+    assert cleaned.is_set()
+    assert task.cancelled()
+    assert batch.events_channel is None
+    assert not asyncio.get_running_loop().is_closed()
+
+
+@pytest.mark.parametrize(
+    "target_type,error",
+    [
+        ("list", OSError("publish failed")),
+        ("unknown", ValueError("invalid target type")),
+    ],
+)
+async def test_start_failure_releases_shared_channel(batch, target_type, error):
+    channel = batch.events_channel
+    batch.opts.update(selected_target_option=target_type, tgt_type="glob")
+    channel.local_client.run_job_async = AsyncMock(side_effect=error)
+    with pytest.raises(type(error), match=str(error)) as caught:
+        await batch.start()
+    assert caught.value is error
+    channel.local_client.run_job_async.assert_awaited_once()
+    assert channel.local_client.run_job_async.call_args.args[3] == target_type
+    channel.unuse.assert_called_once()
+    assert batch.event is None
+
+
+async def test_cancelled_start_releases_shared_channel(batch):
+    channel = batch.events_channel
+    started = asyncio.Event()
+
+    async def publish(*args, **kwargs):
+        started.set()
+        await asyncio.Event().wait()
+
+    channel.local_client.run_job_async = publish
+    task = batch._create_task(batch.start())
+    await started.wait()
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    channel.unuse.assert_called_once()
+    assert batch.event is None
+
+
+@pytest.fixture
+def shared_channel(io_loop):
+    from salt.cli.batch_async import SharedEventsChannel
+
+    with patch("salt.client.get_local_client") as local, patch(
+        "salt.utils.event.get_event"
+    ) as event:
+        event.return_value.subscriber._stream = MagicMock()
+        event.return_value.subscriber.connected = False
+        event.return_value._connect_task = None
+        instance = SharedEventsChannel({"conf_file": "master"}, io_loop)
+        yield instance
+        salt.utils.asynchronous.aioloop(io_loop).run_until_complete(
+            instance.destroy_unused()
+        )
+
+
+async def test_subscription_awaits_connection(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def connect():
+        started.set()
+        await release.wait()
+        subscriber.connected = True
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    task = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    await started.wait()
+    assert not task.done()
+    release.set()
+    await task
+    subscriber.connect.assert_awaited_once()
+
+
+async def test_unsubscribe_removes_entire_job_id(shared_channel):
+    shared_channel.master_event.subscriber.connected = True
+    handler = AsyncMock()
+    await shared_channel.subscribe("123", "return", 1, handler)
+    await shared_channel.subscribe("456", "return", 1, handler)
+    shared_channel.unsubscribe("123", "return", 1)
+    assert "123" not in shared_channel._subscriptions
+    assert shared_channel._subscribers[1] == {"456"}
+
+
+async def test_destroy_drains_reconnect(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    started = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def connect():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            cleaned.set()
+
+    subscriber.connect = connect
+    task = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    await started.wait()
+    assert await shared_channel.destroy_unused() is True
+    assert cleaned.is_set()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert shared_channel.master_event is None
+
+
+async def test_new_user_keeps_shared_channel_during_reconnect_cleanup(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def connect():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+
+    subscriber.connect = connect
+    pending = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    await started.wait()
+    closing = asyncio.create_task(shared_channel.destroy_unused())
+    await cleaning.wait()
+    shared_channel.use("new batch")
+    release.set()
+    assert await closing is False
+    assert shared_channel.master_event is not None
+    with pytest.raises(asyncio.CancelledError):
+        await pending
+    shared_channel.unuse("new batch")
+
+
+@pytest.mark.parametrize(
+    "new_user_closes", [False, True], ids=["reuse", "reuse-and-close"]
+)
+async def test_concurrent_shared_channel_cleanup(shared_channel, new_user_closes):
+    subscriber = shared_channel.master_event.subscriber
+    event = shared_channel.master_event
+    local = shared_channel.local_client
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def connect():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+            cleaned.set()
+
+    subscriber.connect = connect
+    pending = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    closing = []
+    try:
+        with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", shared_channel):
+            await started.wait()
+            closing.append(
+                asyncio.create_task(batch_async._destroy_unused_shared_events_channel())
+            )
+            await cleaning.wait()
+            assert batch_async._get_shared_events_channel({}, None) is shared_channel
+            shared_channel.use("new batch")
+            if new_user_closes:
+                shared_channel.unuse("new batch")
+            closing.append(
+                asyncio.create_task(batch_async._destroy_unused_shared_events_channel())
+            )
+            await asyncio.sleep(0)
+            release.set()
+            await asyncio.wait_for(asyncio.gather(*closing), 2)
+
+            assert cleaned.is_set()
+            if new_user_closes:
+                event.destroy.assert_called_once()
+                local.destroy.assert_called_once()
+                assert batch_async.__SHARED_EVENTS_CHANNEL is None
+            else:
+                event.destroy.assert_not_called()
+                local.destroy.assert_not_called()
+                assert batch_async.__SHARED_EVENTS_CHANNEL is shared_channel
+    finally:
+        release.set()
+        shared_channel.unuse("new batch")
+        await salt.utils.asynchronous.cancel_tasks(pending, *closing)
+
+
+async def test_late_cleanup_preserves_replacement_shared_channel():
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def destroy():
+        started.set()
+        await release.wait()
+        return True
+
+    original = MagicMock(destroy_unused=AsyncMock(side_effect=destroy))
+    replacement = MagicMock()
+    closing = None
+    try:
+        with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", original):
+            closing = asyncio.create_task(
+                batch_async._destroy_unused_shared_events_channel()
+            )
+            await started.wait()
+            # Another cleanup has completed and a new batch creates its channel.
+            with patch("salt.cli.batch_async.__SHARED_EVENTS_CHANNEL", None), patch(
+                "salt.cli.batch_async.SharedEventsChannel", return_value=replacement
+            ):
+                assert batch_async._get_shared_events_channel({}, None) is replacement
+                release.set()
+                await closing
+                assert batch_async.__SHARED_EVENTS_CHANNEL is replacement
+    finally:
+        release.set()
+        await salt.utils.asynchronous.cancel_tasks(closing)
+
+
+async def test_subscription_joins_initial_event_connection(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def connect():
+        started.set()
+        await release.wait()
+        subscriber.connected = True
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    initial = asyncio.create_task(subscriber.connect())
+    shared_channel.master_event._connect_task = initial
+    await started.wait()
+    subscription = asyncio.create_task(
+        shared_channel.subscribe("123", "return", 1, AsyncMock())
+    )
+    await asyncio.sleep(0)
+    assert subscriber.connect.await_count == 1
+    release.set()
+    await subscription
+    subscriber.connect.assert_awaited_once()
+    subscriber._stream.set_close_callback.assert_called_once()
+
+
+@pytest.mark.parametrize("cancelled", [False, True], ids=["failed", "cancelled"])
+async def test_subscription_reconnects_after_unsuccessful_initial_connection(
+    shared_channel, cancelled
+):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    initial = asyncio.get_running_loop().create_future()
+    if cancelled:
+        initial.cancel()
+    else:
+        initial.set_exception(StreamClosedError())
+    shared_channel.master_event._connect_task = initial
+
+    async def connect():
+        subscriber.connected = True
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    subscriber.connect.assert_awaited_once()
+    subscriber._stream.set_close_callback.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "reconnect_tries,success_on,expected_calls",
+    [(3, 2, 2), (3, None, 3), (0, None, 1)],
+    ids=["second-attempt-succeeds", "exhausted", "at-least-one-attempt"],
+)
+async def test_subscription_respects_reconnect_policy(
+    shared_channel, reconnect_tries, success_on, expected_calls
+):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    shared_channel._subscriber_reconnect_tries = reconnect_tries
+    shared_channel._subscriber_reconnect_interval = 0.25
+
+    async def connect():
+        if subscriber.connect.await_count == success_on:
+            subscriber.connected = True
+        else:
+            raise StreamClosedError()
+
+    subscriber.connect = AsyncMock(side_effect=connect)
+    with patch("salt.cli.batch_async.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    assert subscriber.connect.await_count == expected_calls
+    assert sleep.await_args_list == [call(0.25)] * (expected_calls - 1)
+    assert subscriber.connected is (success_on is not None)
+    assert subscriber._stream.set_close_callback.call_count == int(
+        success_on is not None
+    )
+
+
+async def test_unexpected_initial_connection_error_propagates(shared_channel):
+    subscriber = shared_channel.master_event.subscriber
+    subscriber._stream.set_close_callback.reset_mock()
+    subscriber.connect = AsyncMock()
+    initial = asyncio.get_running_loop().create_future()
+    initial.set_exception(ValueError("initial connection failed"))
+    shared_channel.master_event._connect_task = initial
+
+    with pytest.raises(ValueError, match="initial connection failed"):
+        await shared_channel.subscribe("123", "return", 1, AsyncMock())
+
+    subscriber.connect.assert_not_awaited()
+    subscriber._stream.set_close_callback.assert_not_called()
+    assert shared_channel._reconnect_task is None
