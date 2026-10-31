@@ -4111,19 +4111,12 @@ class MasterPubServerChannel:
                     peer = task.get_name()
                     log.warning(
                         "Unable to forward event to cluster peer %s; "
-                        "resetting pusher for reconnect",
+                        "will reconnect on the next publish",
                         peer,
                     )
-                    # Reset the broken pub_sock so the next publish attempt
-                    # triggers a fresh TCP connection rather than reusing a
-                    # dead stream.
-                    for pusher in self.pushers:
-                        if pusher.pull_host == peer and pusher.pub_sock is not None:
-                            try:
-                                pusher.pub_sock.close()
-                            except Exception:  # pylint: disable=broad-except
-                                pass
-                            pusher.pub_sock = None
+                    # The native publisher reconnects closed streams on the
+                    # next publish. Keep it open so the scheduled key event
+                    # can use the same publisher after the peer recovers.
                     # Schedule an AES-key re-announcement so the peer
                     # learns our key after it reconnects.
                     self.io_loop.call_later(2.0, self.send_aes_key_event)
