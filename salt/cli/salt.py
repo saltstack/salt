@@ -247,6 +247,15 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             SaltClientError,
         ) as exc:
             self._output_ret(str(exc), "", retcode=1)
+            # Non-zero exit matches the batch-mode auth-failure path
+            # (``_run_batch`` -> ``sys.exit(2)`` after ``resolver.cli``
+            # returns False) and the behavior documented at
+            # ``doc/topics/return_codes/index.rst``.  Before this call,
+            # ``_output_ret`` printed the error text, but then the
+            # function would fall through to the ``finally`` block and
+            # return normally, giving the shell rc=0 for an obvious
+            # auth / authz failure.
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
         finally:
             self.local_client.destroy()
 
