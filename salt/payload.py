@@ -169,7 +169,7 @@ def dumps(msg, use_bin_type=False):
             objid = id(obj)
             # This instance list needs to correspond to the types recursed
             # in the below if/elif chain. Also update
-            # tests/unit/test_payload.py
+            # tests/pytests/unit/test_payload.py
             if objid in context and isinstance(obj, (dict, list, tuple)):
                 return "<Recursion on {} with id={}>".format(
                     type(obj).__name__, id(obj)
