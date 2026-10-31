@@ -1453,25 +1453,22 @@ class LocalClient:
 
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
             #
-            # Topology forwarding (:mod:`salt.topology`) can add minions
-            # to the job's ``.minions.p`` file *after* publish time, as
-            # peer-cluster returns stream in via
-            # :func:`salt.topology.link_manager._store_forwarded_return`
-            # calling ``save_minions``.  Those appended minions grow
-            # both the expected ``minions`` set (via the shared
-            # ``.minions.p`` -> ``get_minions`` read-back path) and the
-            # ``found`` set.  As long as this loop re-reads
-            # ``.minions.p`` and keeps ``minions`` current, the ordinary
-            # ``found >= minions`` check behaves correctly: it only
-            # fires once BOTH the expected set has been fully populated
-            # AND every expected minion has returned.  Nothing special
-            # is required beyond that -- the earlier override that
-            # suppressed this short-circuit on every topology-enabled
-            # publish is removed because it forced the CLI to wait the
-            # full ``--timeout`` even on 1-minion local-only publishes.
+            # Topology forwarding (:mod:`salt.topology`) carries publishes
+            # to peer-cluster minions whose ids this master cannot
+            # pre-enumerate at pub time -- a ``C@west`` publish from east
+            # arrives here with ``minions=set()``.  Peer-cluster returns
+            # stream in later as ``salt/job/<jid>/ret/<id>`` events, and
+            # the row-handling loop above adds each id to ``found``.
+            # Without the ``len(minions) > 0`` guard below, ``found >=
+            # minions`` is a trivial ``0 >= 0`` on the first iteration
+            # and the loop exits before any peer-cluster return has had
+            # time to arrive.  Local topology publishes (non-empty
+            # ``minions`` populated from a glob match) still short-circuit
+            # as usual once every expected minion has returned.
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
+                and not (self.opts.get("topology_enabled") and len(minions) == 0)
             ):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)
