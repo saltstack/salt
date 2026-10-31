@@ -2049,65 +2049,32 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self.close()
 
 
-def _term_zmq_context(context):
-    try:
-        context.term()
-    except zmq.ZMQError as exc:
-        log.debug("Error terminating zmq context: %s", exc)
-
-
 def _finalize_zmq_context(context):
-    """Non-blocking zmq.Context teardown for ``weakref.finalize``.
+    """Bounded, wedge-safe zmq.Context teardown for ``weakref.finalize``.
 
     Runs when a ``RequestClient`` (or similar owner) is garbage-collected
     without an explicit ``close()`` having been called on it.  Explicitly
-    tears down the ``zmq.asyncio.Context`` so pyzmq's own
-    ``Context.__del__`` -- which would otherwise walk the context's
-    sockets and call libzmq's ``zmq_ctx_term()`` under each socket's
-    native LINGER setting -- has nothing left to do.  That matters
-    because pyzmq's ``__del__`` runs synchronously on whatever thread the
-    last reference is dropped from, and when that thread is an asyncio
-    ioloop callback ``zmq_ctx_term()`` can block the whole loop
-    indefinitely.
-
-    ``Context.destroy()`` is not safe here either.  It only closes the
-    sockets still tracked in ``Context._sockets`` (a ``WeakSet``) before
-    calling the blocking ``term()``.  When this callback fires from a
-    cyclic GC run, a socket that is part of the same unreachable garbage
-    has already been dropped from that set (the GC clears weakrefs before
-    it runs finalizers) but is not closed yet (``Socket.__del__`` only
-    runs later in the same GC pass).  ``term()`` then waits for that
-    socket forever and deadlocks the thread running the GC, typically the
-    minion's ioloop (#70353).
-
-    So close the tracked sockets here with a bounded linger, and run the
-    blocking ``term()`` on a daemon thread, where it returns once any
-    remaining sockets are closed by their own finalizers.  The thread
-    holds a strong reference to ``context``, so pyzmq's
-    ``Context.__del__`` cannot start a second, blocking teardown on this
-    thread in the meantime.
+    destroys the ``zmq.asyncio.Context`` with a bounded linger so
+    pyzmq's own ``Context.__del__`` -- which would otherwise walk the
+    context's sockets and call libzmq's ``zmq_ctx_term()`` under each
+    socket's native LINGER setting -- has nothing left to do.  That
+    matters because pyzmq's ``__del__`` runs synchronously on whatever
+    thread the last reference is dropped from, and when that thread is
+    an asyncio ioloop callback ``zmq_ctx_term()`` can block the whole
+    loop indefinitely.
 
     Register from a ``RequestClient``-alike via::
 
         weakref.finalize(self, _finalize_zmq_context, self.context)
 
-    ``weakref.finalize`` captures its own strong reference to
-    ``context``, so this callback is guaranteed to execute exactly once
-    and to see a live Context.
+    ``weakref.finalize`` fires before the type slot ``__del__`` on the
+    referent runs and captures its own strong reference to ``context``,
+    so this callback is guaranteed to execute exactly once and to see a
+    live Context.
     """
     try:
-        if context is None or context.closed:
-            return
-        for sock in list(getattr(context, "_sockets", None) or ()):
-            if not sock.closed:
-                sock.setsockopt(zmq.LINGER, 1000)
-                sock.close()
-        threading.Thread(
-            target=_term_zmq_context,
-            args=(context,),
-            name="salt-zmq-context-term",
-            daemon=True,
-        ).start()
+        if context is not None and not context.closed:
+            context.destroy(linger=1000)
     except Exception:  # pylint: disable=broad-except
         pass
 
@@ -2206,9 +2173,9 @@ class RequestClient(salt.transport.base.RequestClient):
             # callback via _fire_master_main -> _send_req_async_main
             # -> req_channel.send -> transport.send -> connect() ->
             # _init_socket, all on the ioloop), the loop freezes.
-            # ``weakref.finalize`` closes the sockets and hands
-            # ``term()`` to a helper thread first, so pyzmq's
-            # ``__del__`` has nothing left to tear down on the ioloop.
+            # ``weakref.finalize`` runs a bounded ``destroy(linger=N)``
+            # first, so pyzmq's ``__del__`` sees ``closed=True`` and
+            # skips the wedge-prone destroy path.
             weakref.finalize(self, _finalize_zmq_context, self.context)
 
         self.socket = self.context.socket(zmq.REQ)
