@@ -77,7 +77,7 @@ cryptography==50.0.1
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.0
+distlib==0.4.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   virtualenv
@@ -247,15 +247,15 @@ opentelemetry-semantic-conventions==0.66b2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   sphinx
+    #   virtualenv
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -313,7 +313,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-discovery==1.4.0
+python-discovery==1.9.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   virtualenv
@@ -412,7 +412,7 @@ typer-slim==0.24.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   jaraco-text
-typing-extensions==4.14.1
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   aiohttp
@@ -434,7 +434,7 @@ urllib3==2.8.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.15.2
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt

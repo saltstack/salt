@@ -69,7 +69,7 @@ cryptography==50.0.1
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.0
+distlib==0.4.4
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   virtualenv
@@ -81,7 +81,7 @@ docutils==0.22.4
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==3.29.1
+filelock==4.2.5
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
@@ -238,15 +238,15 @@ opentelemetry-semantic-conventions==0.66b2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   opentelemetry-sdk
-packaging==24.0
+packaging==26.3
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   sphinx
+    #   virtualenv
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
-    #   python-discovery
     #   virtualenv
 portend==3.2.1
     # via
@@ -305,7 +305,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   croniter
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.9.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   virtualenv
@@ -419,7 +419,7 @@ urllib3==2.8.0
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.15.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt

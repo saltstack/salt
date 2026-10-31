@@ -45,11 +45,11 @@ cryptography==50.0.1
     # via
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.0
+distlib==0.4.4
     # via virtualenv
 distro==1.9.0
     # via -r requirements/base.txt
-filelock==3.29.1
+filelock==4.2.5
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -148,12 +148,12 @@ opentelemetry-sdk==1.45.2
     #   opentelemetry-exporter-prometheus
 opentelemetry-semantic-conventions==0.66b2
     # via opentelemetry-sdk
-packaging==24.0
-    # via -r requirements/base.txt
-platformdirs==4.9.2
+packaging==26.3
     # via
-    #   python-discovery
+    #   -r requirements/base.txt
     #   virtualenv
+platformdirs==4.9.2
+    # via virtualenv
 portend==3.2.1
     # via cherrypy
 prometheus-client==0.25.0
@@ -188,7 +188,7 @@ python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.txt
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.9.0
     # via virtualenv
 python-gnupg==0.5.6
     # via -r requirements/base.txt
@@ -249,7 +249,7 @@ urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.4.2
+virtualenv==21.15.2
     # via -r requirements/base.txt
 wmi==1.5.1
     # via -r requirements/base.txt

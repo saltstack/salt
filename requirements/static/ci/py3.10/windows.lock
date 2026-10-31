@@ -114,7 +114,7 @@ cryptography==50.0.1
     #   pyspnego
     #   requests-ntlm
     #   trustme
-distlib==0.4.0
+distlib==0.4.4
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   virtualenv
@@ -324,11 +324,12 @@ opentelemetry-semantic-conventions==0.66b2
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   opentelemetry-sdk
-packaging==26.2
+packaging==26.3
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 passlib==1.7.4
     # via -r requirements/static/ci/common.txt
 patch==1.16
@@ -338,7 +339,6 @@ pathspec==1.0.3
 platformdirs==4.9.2
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.5.0
     # via pytest
@@ -456,7 +456,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.9.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   virtualenv
@@ -593,7 +593,7 @@ typer-slim==0.24.0
     #   jaraco-text
 types-pyyaml==6.0.1
     # via responses
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   aiohttp
@@ -616,7 +616,7 @@ urllib3==2.8.0
     #   kubernetes
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.15.2
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.txt
