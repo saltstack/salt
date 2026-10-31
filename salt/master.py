@@ -1107,24 +1107,33 @@ class Master(SMaster):
                 finally:
                     del new_opts
 
-        if self.opts.get("cluster_id") and not self.opts.get("cluster_peers"):
+        if (
+            self.opts.get("cluster_id")
+            and not self.opts.get("cluster_peers")
+            and not self.opts.get("topology_enabled")
+        ):
             critical_errors.append(
-                "cluster_id is set but cluster_peers is empty. "
-                "Every cluster member must have at least one peer configured. "
-                "Dynamic peer discovery is not supported."
+                "cluster_id is set but cluster_peers is empty and "
+                "topology_enabled is False.  cluster_id identifies this "
+                "master either as a 3008.x master-cluster peer (requires "
+                "cluster_peers) or as a topology-graph node (requires "
+                "topology_enabled)."
             )
 
         # Topology + syndic coexistence note (RFC "Syndic deprecation plan"):
         # running both on the same master is permitted during the deprecation
-        # window but discouraged.  Surface an INFO-level breadcrumb so
-        # operators auditing their config see the dual-mode state in logs.
-        if self.opts.get("topology_enabled") and self.opts.get("syndic_master"):
+        # window but discouraged.  ``syndic_master`` has a sentinel default
+        # of ``"masterofmasters"`` meaning "unconfigured", so only log when
+        # the operator has set it to something else.
+        syndic_master = self.opts.get("syndic_master")
+        syndic_configured = syndic_master and syndic_master != "masterofmasters"
+        if self.opts.get("topology_enabled") and syndic_configured:
             log.info(
                 "Master is configured with BOTH topology_enabled=True and "
                 "syndic_master=%r. This coexistence is permitted during the "
                 "syndic deprecation window; topology is the recommended "
                 "replacement. See the master-topology RFC.",
-                self.opts.get("syndic_master"),
+                syndic_master,
             )
 
         if errors or critical_errors:

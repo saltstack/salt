@@ -81,12 +81,19 @@ def _cluster_is_ready(opts):
     """
     Return ``True`` if this master may serve minion/CLI requests.
 
-    For non-cluster masters this is always ``True``.  For cluster members it
-    returns ``True`` only after the Raft ``MembershipStateMachine`` has
-    committed a CONFIG entry listing this node as a voter and
+    For non-cluster masters this is always ``True``.  For 3008.x
+    master-cluster members it returns ``True`` only after the Raft
+    ``MembershipStateMachine`` has committed a CONFIG entry listing
+    this node as a voter and
     ``SMaster.secrets["cluster_ready"]["event"]`` has been set.
+
+    A topology-only master sets ``cluster_id`` but no
+    ``cluster_peers``; it is not in a Raft cluster and the readiness
+    check should pass through.
     """
     if not opts.get("cluster_id"):
+        return True
+    if not opts.get("cluster_peers"):
         return True
     import salt.master  # pylint: disable=import-outside-toplevel
 
@@ -3260,8 +3267,11 @@ class MasterPubServerChannel:
         # iterates ``self.pushers`` on every event.
         self.pushers = []
 
-        # Cluster-specific peer communication (separate from local IPC)
-        if self.opts.get("cluster_id"):
+        # Cluster-specific peer communication (separate from local IPC).
+        # Only used by 3008.x master-cluster peers; a topology-only master
+        # sets ``cluster_id`` without ``cluster_peers`` and does not need
+        # (and must not bind) the pool_puller port.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
             self.tcp_master_pool_port = self.opts["cluster_pool_port"]
             self.auth_errors = collections.defaultdict(collections.deque)
             self.peer_map = {}
