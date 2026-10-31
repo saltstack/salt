@@ -1,3 +1,4 @@
+import codecs
 import os
 
 import pytest
@@ -573,3 +574,96 @@ def test_replace_utf16_execution_module(modules, tmp_path):
 
     raw = name.read_bytes()
     assert raw[:2] in (b"\xff\xfe", b"\xfe\xff"), "BOM missing after replace"
+
+
+def test_replace_append_if_not_found_converges_after_one_run_crlf(file, tmp_path):
+    """
+    Two ``file.replace`` states appending to the same CRLF file must not
+    keep rewriting it on later runs (#52457).
+    """
+    name = tmp_path / "pg_hba.conf"
+    name.write_bytes(b"# managed by salt\r\n")
+    states = [
+        (r"^host\s+all\s+all\s+0\.0\.0\.0/0\s+md5.*", "host all all 0.0.0.0/0 md5"),
+        (r"^host\s+all\s+all\s+::/0\s+md5.*", "host all all ::/0 md5"),
+    ]
+
+    def run():
+        return [
+            file.replace(
+                name=str(name),
+                pattern=pattern,
+                repl=repl,
+                append_if_not_found=True,
+                backup=False,
+            )
+            for pattern, repl in states
+        ]
+
+    first = run()
+    assert all(ret.result is True for ret in first)
+    assert all(ret.changes for ret in first)
+    expected = (
+        b"# managed by salt\r\n"
+        b"host all all 0.0.0.0/0 md5\r\n"
+        b"host all all ::/0 md5\r\n"
+    )
+    assert name.read_bytes() == expected
+
+    for _ in range(2):
+        for ret in run():
+            assert ret.result is True
+            assert not ret.changes
+        assert name.read_bytes() == expected
+
+
+def test_replace_utf16_bom_crlf_without_encoding(file, tmp_path):
+    """
+    A UTF-16 file with a BOM and CRLF line endings is detected without
+    ``encoding``. The state converges in one run and the BOM and line endings
+    are preserved (#65906).
+    """
+    name = tmp_path / "abc.txt"
+    lines = ["one two", "three", "four", "      something=111111", "ten", "nine"]
+    text = "".join(f"{line}\r\n" for line in lines)
+    original = codecs.BOM_UTF16_LE + text.encode("utf-16-le")
+    name.write_bytes(original)
+    kwargs = {
+        "name": str(name),
+        "pattern": r"^(.*)something=\d+$",
+        "repl": r"\1something=123",
+        "flags": ["IGNORECASE", "MULTILINE"],
+        "backup": False,
+    }
+
+    ret = file.replace(test=True, **kwargs)
+    assert ret.result is None
+    assert ret.changes
+    assert name.read_bytes() == original
+
+    ret = file.replace(**kwargs)
+    assert ret.result is True
+    assert ret.changes
+    text = text.replace("something=111111", "something=123")
+    expected = codecs.BOM_UTF16_LE + text.encode("utf-16-le")
+    assert name.read_bytes() == expected
+
+    ret = file.replace(**kwargs)
+    assert ret.result is True
+    assert not ret.changes
+    assert name.read_bytes() == expected
+
+
+def test_replace_utf16_without_bom_fails(file, tmp_path):
+    """
+    A UTF-16 file without a BOM still requires ``encoding``.
+    """
+    name = tmp_path / "nobom.txt"
+    original = "key = old\r\n".encode("utf-16-le")
+    name.write_bytes(original)
+
+    ret = file.replace(name=str(name), pattern="old", repl="new", backup=False)
+
+    assert ret.result is False
+    assert "binary file" in ret.comment
+    assert name.read_bytes() == original
