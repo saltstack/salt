@@ -61,6 +61,24 @@ known_third_party = [
   "pytest"
 ]
 
+[tool.ruff]
+# Match the minimum Python version declared by this project.
+target-version = "py38"
+line-length = 88
+extend-exclude = ["salt/ext", "templates"]
+
+[tool.ruff.lint]
+# Start with a small set of correctness checks, alongside Salt's pylint plugins.
+# Black remains the formatter. Type checking is a separate rollout.
+select = [
+    "F401",  # unused imports
+    "F541",  # f-strings without placeholders
+    "F631",  # assertions with a non-empty tuple (always true)
+    "F634",  # conditions with a non-empty tuple (always true)
+    "B006",  # mutable argument defaults
+    "B023",  # loop variables captured without binding
+]
+
 [tool.towncrier]
     package = "salt"
     filename = "CHANGELOG.md"

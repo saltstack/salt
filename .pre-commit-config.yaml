@@ -2759,6 +2759,23 @@ repos:
 
   - repo: local
     hooks:
+      - id: ruff-incremental
+        name: Check new Ruff violations
+        entry: python tools/precommit/ruff.py
+        language: python
+        additional_dependencies: ["ruff==0.16.2"]
+        types_or: [python, pyi]
+        exclude: ^(salt/ext/|templates/)
+        require_serial: true
+
+      - id: ruff-incremental-tests
+        name: Test incremental Ruff checks
+        entry: python -m pytest -c pyproject.toml --noconftest -q tests/pytests/unit/test_ruff.py
+        language: python
+        additional_dependencies: ["ruff==0.16.2", "pytest==8.4.2"]
+        files: ^(tools/precommit/ruff\.py|tests/pytests/unit/test_ruff\.py|pyproject\.toml|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+
       - id: lint-salt
         name: Lint Salt
         entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --
