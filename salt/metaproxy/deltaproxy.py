@@ -3,7 +3,6 @@
 #
 
 import asyncio
-import concurrent.futures
 import copy
 import functools
 import logging
@@ -54,6 +53,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.minion import ProxyMinion
+from salt.utils.asynchronous import resolve_result
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
@@ -633,7 +633,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
         ProxyMinion._thread_return(minion_instance, opts, data)
 
 
-def thread_return(cls, minion_instance, opts, data):
+async def thread_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -718,26 +718,12 @@ def thread_return(cls, minion_instance, opts, data):
                 args, kwargs = data["arg"], data
             functions.pack["__context__"]["retcode"] = 0
             functions.pack["__opts__"] = opts
-            if isinstance(executors, str):
-                executors = [executors]
-            elif not isinstance(executors, list) or not executors:
-                raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list expected".format(
-                        executors
-                    )
-                )
-            if opts.get("sudo_user", "") and executors[-1] != "sudo":
-                executors[-1] = "sudo"  # replace the last one with sudo
+            executors = salt.utils.minion.prepare_executors(executors, opts)
             log.debug("Executors list %s", executors)
 
-            for name in executors:
-                fname = f"{name}.execute"
-                if fname not in executor_loader:
-                    raise SaltInvocationError(f"Executor '{name}' is not available")
-
-                return_data = executor_loader[fname](opts, data, func, args, kwargs)
-                if return_data is not None:
-                    break
+            return_data = await salt.utils.minion.run_executors(
+                executor_loader, executors, opts, data, func, args, kwargs
+            )
 
             if isinstance(return_data, types.GeneratorType):
                 ind = 0
@@ -889,7 +875,7 @@ def thread_return(cls, minion_instance, opts, data):
                 log.exception("The return failed for job %s: %s", data["jid"], exc)
 
 
-def thread_multi_return(cls, minion_instance, opts, data):
+async def thread_multi_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -968,7 +954,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
             )
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
-            ret["return"][key] = func(*args, **kwargs)
+            ret["return"][key] = await resolve_result(func(*args, **kwargs))
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return
@@ -1163,46 +1149,22 @@ def target_load(self, load):
 
 
 # Main Minion Tune In
-def tune_in(self, start=True):
-    """
-    Lock onto the publisher. This is the main event loop for the minion
-    :rtype : None
-    """
+async def tune_in(self):
+    """Initialize subproxy callbacks on the manager's running loop."""
+    proxies = list(self.deltaproxy_objs.values())
     if self.opts["proxy"].get("parallel_startup"):
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            futures = [
-                executor.submit(
-                    threaded_subproxy_tune_in, self.deltaproxy_objs[proxy_minion]
-                )
-                for proxy_minion in self.deltaproxy_objs
-            ]
-
-        for f in concurrent.futures.as_completed(futures):
-            _proxy_minion = f.result()
-            log.debug("Tune in for sub proxy %r finished", _proxy_minion.opts.get("id"))
+        await asyncio.gather(*(subproxy_tune_in(proxy) for proxy in proxies))
     else:
-        for proxy_minion in self.deltaproxy_objs:
-            _proxy_minion = subproxy_tune_in(self.deltaproxy_objs[proxy_minion])
-            log.debug("Tune in for sub proxy %r finished", _proxy_minion.opts.get("id"))
-    super(ProxyMinion, self).tune_in(start=start)
+        for proxy in proxies:
+            await subproxy_tune_in(proxy)
+    await super(ProxyMinion, self).tune_in()
 
 
-def threaded_subproxy_tune_in(proxy_minion):
-    """
-    Run subproxy tune in with it's own event lopp.
-
-    This method needs to be the target of a thread.
-    """
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    return subproxy_tune_in(proxy_minion)
-
-
-def subproxy_tune_in(proxy_minion, start=True):
+async def subproxy_tune_in(proxy_minion):
     """
     Tunein sub proxy minions
     """
-    proxy_minion.setup_scheduler()
+    await proxy_minion.setup_scheduler()
     proxy_minion.setup_beacons()
     proxy_minion.add_periodic_callback("cleanup", proxy_minion.cleanup_subprocesses)
     proxy_minion._state_run()

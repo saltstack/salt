@@ -11,6 +11,7 @@ back every master-initiated job) raised
 """
 
 import asyncio
+import contextvars
 import gc
 import warnings
 
@@ -20,6 +21,83 @@ import tornado.ioloop
 
 import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
+
+
+async def test_sync_result_preserves_context_in_async_application():
+    trace_id = contextvars.ContextVar("trace_id", default=None)
+    token = trace_id.set("caller-context")
+    owner_loop = asyncio.get_running_loop()
+
+    async def result():
+        await asyncio.sleep(0)
+        assert asyncio.get_running_loop() is not owner_loop
+        return trace_id.get()
+
+    try:
+        assert asynchronous.resolve_result_sync(result()) == "caller-context"
+        assert asyncio.get_running_loop() is owner_loop
+    finally:
+        trace_id.reset(token)
+
+
+@pytest.mark.parametrize("error", [OSError, asyncio.CancelledError])
+async def test_sync_result_preserves_exception_and_runs_cleanup(error):
+    failure = error("module failed")
+    cleaned = []
+
+    async def result():
+        try:
+            raise failure
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    with pytest.raises(error) as exc:
+        asynchronous.resolve_result_sync(result())
+    assert exc.value is failure
+    assert cleaned == [True]
+
+
+@pytest.mark.parametrize("kind", ["coroutine", "future", "custom"])
+async def test_resolve_result_accepts_pending_awaitables_on_the_callers_task(kind):
+    loop = asyncio.get_running_loop()
+    owner = asyncio.current_task()
+    future = loop.create_future()
+
+    async def operation():
+        assert asyncio.current_task() is owner
+        return await future
+
+    class Awaitable:
+        def __await__(self):
+            return future.__await__()
+
+    result = (
+        operation()
+        if kind == "coroutine"
+        else future if kind == "future" else Awaitable()
+    )
+    loop.call_soon(future.set_result, False)
+    assert await asynchronous.resolve_result(result) is False
+
+
+async def test_resolve_result_propagates_cancellation_to_the_awaited_future():
+    future = asyncio.get_running_loop().create_future()
+    task = asyncio.create_task(asynchronous.resolve_result(future))
+    await asyncio.sleep(0)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert future.cancelled()
+
+
+async def test_resolve_result_preserves_the_original_exception():
+    error = OSError("request failed")
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(error)
+    with pytest.raises(OSError) as caught:
+        await asynchronous.resolve_result(future)
+    assert caught.value is error
 
 
 class HelperA:

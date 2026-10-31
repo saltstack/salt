@@ -29,7 +29,7 @@ pytestmark = [
 
 
 @pytest.mark.skipif(not HAS_CRONITER, reason="Cannot find croniter python module")
-def test_eval_cron_invalid(schedule):
+async def test_eval_cron_invalid(schedule):
     """
     verify that scheduled job runs
     """
@@ -40,13 +40,13 @@ def test_eval_cron_invalid(schedule):
 
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
     with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
-        schedule.eval(now=run_time)
+        await schedule.eval(now=run_time)
 
     ret = schedule.job_status("job1")
     assert ret["_error"] == "Invalid cron string. Ignoring job job1."
 
 
-def test_eval_when_invalid_date(schedule):
+async def test_eval_when_invalid_date(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -59,12 +59,12 @@ def test_eval_when_invalid_date(schedule):
     schedule.opts.update(job)
 
     # Evaluate 1 second before the run time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     assert ret["_error"] == "Invalid date string 13/29/2017 1:00pm. Ignoring job job1."
 
 
-def test_eval_whens_grain_not_dict(schedule):
+async def test_eval_whens_grain_not_dict(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -81,12 +81,12 @@ def test_eval_whens_grain_not_dict(schedule):
     schedule.opts.update(job)
 
     # Evaluate 1 second before the run time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     assert ret["_error"] == 'Grain "whens" must be a dict. Ignoring job job1.'
 
 
-def test_eval_once_invalid_datestring(schedule):
+async def test_eval_once_invalid_datestring(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -100,7 +100,7 @@ def test_eval_once_invalid_datestring(schedule):
     schedule.opts.update(job)
 
     # Evaluate 1 second at the run time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     _expected = (
         "Date string could not be parsed: "
@@ -110,7 +110,7 @@ def test_eval_once_invalid_datestring(schedule):
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_invalid_date(schedule):
+async def test_eval_skip_during_range_invalid_date(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -131,18 +131,18 @@ def test_eval_skip_during_range_invalid_date(schedule):
 
     # eval at 3:00pm to prime, simulate minion start up.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
 
     # eval at 4:00pm to prime
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     _expected = "Invalid date string for end in skip_during_range. Ignoring job job1."
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_end_before_start(schedule):
+async def test_eval_skip_during_range_end_before_start(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -163,12 +163,12 @@ def test_eval_skip_during_range_end_before_start(schedule):
 
     # eval at 3:00pm to prime, simulate minion start up.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
 
     # eval at 4:00pm to prime
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     _expected = (
         "schedule.handle_func: Invalid "
@@ -178,7 +178,7 @@ def test_eval_skip_during_range_end_before_start(schedule):
     assert ret["_error"] == _expected
 
 
-def test_eval_skip_during_range_not_dict(schedule):
+async def test_eval_skip_during_range_not_dict(schedule):
     """
     verify that scheduled job does not run
     and returns the right error
@@ -199,12 +199,12 @@ def test_eval_skip_during_range_not_dict(schedule):
 
     # eval at 3:00pm to prime, simulate minion start up.
     run_time = dateutil.parser.parse("11/29/2017 3:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
 
     # eval at 4:00pm to prime
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status("job1")
     _expected = (
         "schedule.handle_func: Invalid, "

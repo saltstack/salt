@@ -3,6 +3,7 @@ The caller module is used as a front-end to manage direct calls to the salt
 minion modules.
 """
 
+import asyncio
 import logging
 import os
 import sys
@@ -28,6 +29,7 @@ from salt.exceptions import (
     SaltClientError,
     SaltInvocationError,
 )
+from salt.utils.asynchronous import resolve_result
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +94,7 @@ class BaseCaller:
         try:
             pr = salt.utils.profile.activate_profile(profiling_enabled)
             try:
-                ret = self.call()
+                ret = asyncio.run(self.call())
             finally:
                 salt.utils.profile.output_profile(
                     pr,
@@ -119,12 +121,12 @@ class BaseCaller:
         except SaltInvocationError as err:
             raise SystemExit(err)
 
-    def call(self):
+    async def call(self):
         """
         Call the module
         """
         if self.opts.get("resources_dispatch"):
-            return self._call_with_resources()
+            return await self._call_with_resources()
         ret = {}
         fun = self.opts["fun"]
         ret["jid"] = salt.utils.jid.gen_jid(self.opts)
@@ -203,15 +205,15 @@ class BaseCaller:
             if isinstance(executors, str):
                 executors = [executors]
             try:
-                for name in executors:
-                    fname = f"{name}.execute"
-                    if fname not in self.minion.executors:
-                        raise SaltInvocationError(f"Executor '{name}' is not available")
-                    ret["return"] = self.minion.executors[fname](
-                        self.opts, data, func, args, kwargs
-                    )
-                    if ret["return"] is not None:
-                        break
+                ret["return"] = await salt.utils.minion.run_executors(
+                    self.minion.executors,
+                    executors,
+                    self.opts,
+                    data,
+                    func,
+                    args,
+                    kwargs,
+                )
             except TypeError as exc:
                 sys.stderr.write(f"\nPassed invalid arguments: {exc}.\n\nUsage:\n")
                 salt.utils.stringutils.print_cli(func.__doc__)
@@ -296,7 +298,7 @@ class BaseCaller:
 
         return ret
 
-    def _call_with_resources(self):
+    async def _call_with_resources(self):
         """
         Dispatch a salt-call invocation to the managing minion and/or its
         managed resources.
@@ -371,7 +373,9 @@ class BaseCaller:
         # 1. Run the function on the managing minion if it matches the target.
         if minion_matches:
             try:
-                minion_ret = self.minion.functions[fun](*args, **kwargs)
+                minion_ret = await resolve_result(
+                    self.minion.functions[fun](*args, **kwargs)
+                )
             except KeyError:
                 minion_ret = f"Function '{fun}' is not available on the managing minion"
             except Exception as exc:  # pylint: disable=broad-except
@@ -419,7 +423,8 @@ class BaseCaller:
                         exc,
                     )
             try:
-                results[rid] = loader[fun](*args, **kwargs)
+                result = await resolve_result(loader[fun](*args, **kwargs))
+                results[rid] = result
             except Exception as exc:  # pylint: disable=broad-except
                 log.exception("Resource %s raised running %s", rid, fun)
                 results[rid] = f"ERROR running {fun} for '{rid}': {exc}"

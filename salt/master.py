@@ -450,6 +450,10 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 self.presence_events = True
 
     def run(self):
+        """Start the maintenance process and own its asyncio loop."""
+        return asyncio.run(self.run_async())
+
+    async def run_async(self):
         """
         This is the general passive maintenance process controller for the Salt
         master.
@@ -500,7 +504,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             if not last or (now - last_git_pillar_update) >= git_pillar_update_interval:
                 last_git_pillar_update = now
                 self.handle_git_pillar()
-            self.handle_schedule()
+            await self.handle_schedule()
             self.handle_key_cache()
             self.handle_presence(old_present)
             self.handle_key_rotate(now)
@@ -511,7 +515,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
             salt.utils.verify.check_max_open_files(self.opts)
             last = now
             now = int(time.time())
-            time.sleep(self.loop_interval)
+            await asyncio.sleep(self.loop_interval)
 
     def destroy(self):
         """
@@ -629,12 +633,12 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Exception caught while updating git_pillar", exc_info=True)
 
-    def handle_schedule(self):
+    async def handle_schedule(self):
         """
         Evaluate the scheduler
         """
         try:
-            self.schedule.eval()
+            await self.schedule.eval()
             # Check if scheduler requires lower loop interval than
             # the loop_interval setting
             if self.schedule.loop_interval < self.loop_interval:

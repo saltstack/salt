@@ -105,11 +105,11 @@ def test_r_off_uses_legacy_call_path(call_opts, monkeypatch):
     assert caller.opts.get("resources_dispatch") is False
 
 
-def test_r_default_star_includes_minion_and_all_resources(call_opts):
+async def test_r_default_star_includes_minion_and_all_resources(call_opts):
     """salt-call -r test.ping → {minion: True, dummy-01: True, ...}."""
     call_opts["resources_dispatch"] = True
     caller = _build_caller(call_opts)
-    ret = caller._call_with_resources()
+    ret = await caller._call_with_resources()
     payload = ret["return"]
     assert isinstance(payload, dict), payload
     assert payload[call_opts["id"]] is True
@@ -118,40 +118,40 @@ def test_r_default_star_includes_minion_and_all_resources(call_opts):
     assert ret["retcode"] == salt.defaults.exitcodes.EX_OK
 
 
-def test_r_bare_id_glob_returns_single_value(call_opts):
+async def test_r_bare_id_glob_returns_single_value(call_opts):
     """salt-call -r --tgt dummy-02 test.ping → True (single, unwrapped)."""
     call_opts["resources_dispatch"] = True
     call_opts["resources_tgt"] = "dummy-02"
     caller = _build_caller(call_opts)
-    ret = caller._call_with_resources()
+    ret = await caller._call_with_resources()
     assert ret["return"] is True
 
 
-def test_r_list_targets_returns_dict_of_those_only(call_opts):
+async def test_r_list_targets_returns_dict_of_those_only(call_opts):
     """-r --tgt 'dummy-01,dummy-03' --tgt-type list → only those resources."""
     call_opts["resources_dispatch"] = True
     call_opts["resources_tgt"] = "dummy-01,dummy-03"
     call_opts["resources_tgt_type"] = "list"
     caller = _build_caller(call_opts)
-    payload = caller._call_with_resources()["return"]
+    payload = (await caller._call_with_resources())["return"]
     assert isinstance(payload, dict)
     assert set(payload.keys()) == {"dummy-01", "dummy-03"}
     assert all(v is True for v in payload.values())
 
 
-def test_r_pure_compound_excludes_managing_minion(call_opts):
+async def test_r_pure_compound_excludes_managing_minion(call_opts):
     """T@ compound is a pure resource target — minion must be excluded."""
     call_opts["resources_dispatch"] = True
     call_opts["resources_tgt"] = "T@dummy"
     call_opts["resources_tgt_type"] = "compound"
     caller = _build_caller(call_opts)
-    payload = caller._call_with_resources()["return"]
+    payload = (await caller._call_with_resources())["return"]
     assert isinstance(payload, dict)
     assert call_opts["id"] not in payload
     assert set(payload.keys()) == {"dummy-01", "dummy-02", "dummy-03"}
 
 
-def test_r_grains_items_not_supported_without_override(call_opts):
+async def test_r_grains_items_not_supported_without_override(call_opts):
     """
     ``salt-call -r --tgt dummy-01 grains.items`` — the ``dummy`` resource
     type ships no ``grains.py`` override, so ``grains.items`` is not
@@ -168,12 +168,12 @@ def test_r_grains_items_not_supported_without_override(call_opts):
     call_opts["resources_tgt"] = "dummy-01"
     call_opts["fun"] = "grains.items"
     caller = _build_caller(call_opts)
-    payload = caller._call_with_resources()["return"]
+    payload = (await caller._call_with_resources())["return"]
     assert isinstance(payload, str), payload
     assert "not supported for resource type 'dummy'" in payload, payload
 
 
-def test_r_grains_items_not_supported_per_target(call_opts):
+async def test_r_grains_items_not_supported_per_target(call_opts):
     """
     With multiple resource targets and no per-type ``grains`` override,
     each entry in the response dict carries the "not supported for
@@ -185,7 +185,7 @@ def test_r_grains_items_not_supported_per_target(call_opts):
     call_opts["resources_tgt_type"] = "compound"
     call_opts["fun"] = "grains.items"
     caller = _build_caller(call_opts)
-    payload = caller._call_with_resources()["return"]
+    payload = (await caller._call_with_resources())["return"]
     assert isinstance(payload, dict), payload
     for rid in ("dummy-01", "dummy-02", "dummy-03"):
         assert rid in payload, payload
@@ -196,7 +196,7 @@ def test_r_grains_items_not_supported_per_target(call_opts):
         )
 
 
-def test_r_state_apply_not_supported_without_override(call_opts):
+async def test_r_state_apply_not_supported_without_override(call_opts):
     """
     ``salt-call -r state.apply`` against a logical resource type with no
     per-resource ``state.py`` override — after #69881 the resource
@@ -218,7 +218,7 @@ def test_r_state_apply_not_supported_without_override(call_opts):
     call_opts["fun"] = "state.apply"
     call_opts["arg"] = ["dummy_state"]
     caller = _build_caller(call_opts)
-    payload = caller._call_with_resources()["return"]
+    payload = (await caller._call_with_resources())["return"]
     assert isinstance(payload, dict), payload
     for rid in ("dummy-01", "dummy-02", "dummy-03"):
         key = f"no_|-{rid}_|-{rid}_|-None"

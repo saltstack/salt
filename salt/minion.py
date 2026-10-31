@@ -76,7 +76,6 @@ from salt.exceptions import (
     CommandExecutionError,
     CommandNotFoundError,
     SaltClientError,
-    SaltDaemonNotRunning,
     SaltException,
     SaltInvocationError,
     SaltMasterUnresolvableError,
@@ -84,6 +83,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.template import SLS_ENCODING
+from salt.utils.asynchronous import resolve_result, resolve_result_sync
 from salt.utils.debug import enable_sigusr1_handler
 from salt.utils.event import tagify
 from salt.utils.network import parse_host_port
@@ -844,10 +844,10 @@ class MinionBase:
         return discovered
 
     @staticmethod
-    def process_schedule(minion, loop_interval):
+    async def process_schedule(minion, loop_interval):
         try:
             if hasattr(minion, "schedule"):
-                minion.schedule.eval()
+                await minion.schedule.eval()
             else:
                 log.error(
                     "Minion scheduler not initialized. Scheduled jobs will not be run."
@@ -1693,13 +1693,13 @@ class MinionManager(MinionBase):
                 if minion.opts.get("beacons_before_connect", False):
                     minion.setup_beacons(before_connect=True)
                 if minion.opts.get("scheduler_before_connect", False):
-                    minion.setup_scheduler(before_connect=True)
+                    await minion.setup_scheduler(before_connect=True)
                 if minion.opts.get("master_type", "str") != "disable":
                     if minion.opts.get(
                         "file_client", "remote"
                     ) == "remote" or minion.opts.get("use_master_when_local", False):
                         await minion.connect_master(failed=failed)
-                minion.tune_in(start=False)
+                await minion.tune_in()
                 self.minions.append(minion)
                 break
             except SaltClientError as exc:
@@ -2008,38 +2008,6 @@ class Minion(MinionBase):
                         )
             except OSError as exc:
                 log.debug("Could not list queue directory %s: %s", queue_dir, exc)
-
-    def sync_connect_master(self, timeout=None, failed=False):
-        """
-        Block until we are connected to a master
-        """
-        self._sync_connect_master_success = False
-        log.debug("sync_connect_master")
-
-        def on_connect_master_future_done(future):
-            self._sync_connect_master_success = True
-            self.io_loop.stop()
-
-        self._connect_master_future = self.connect_master(failed=failed)
-        # finish connecting to master
-        self._connect_master_future.add_done_callback(on_connect_master_future_done)
-        if timeout:
-            self.io_loop.call_later(timeout, self.io_loop.stop)
-        try:
-            self.io_loop.run_forever()
-        except KeyboardInterrupt:
-            self.destroy()
-        # I made the following 3 line oddity to preserve traceback.
-        # Please read PR #23978 before changing, hopefully avoiding regressions.
-        # Good luck, we're all counting on you.  Thanks.
-        if self._connect_master_future.done():
-            future_exception = self._connect_master_future.exception()
-            if future_exception:
-                exc_info = self._connect_master_future.exc_info()
-                # This needs to be re-raised to preserve restart_on_error behavior.
-                raise exc_info[0].with_traceback(exc_info[1], exc_info[2])
-        if timeout and self._sync_connect_master_success is False:
-            raise SaltDaemonNotRunning("Failed to connect to the salt-master")
 
     async def connect_master(self, failed=False):
         """
@@ -3043,7 +3011,7 @@ class Minion(MinionBase):
             else:
                 return Minion._thread_return(minion_instance, opts, data)
 
-    def _execute_job_function(
+    async def _execute_job_function(
         self,
         function_name,
         function_args,
@@ -3105,27 +3073,12 @@ class Minion(MinionBase):
             args, kwargs = function_args, data
         functions.pack["__context__"]["retcode"] = 0
 
-        if isinstance(executors, str):
-            executors = [executors]
-        elif not isinstance(executors, list) or not executors:
-            raise SaltInvocationError(
-                "Wrong executors specification: {}. String or non-empty list expected".format(
-                    executors
-                )
-            )
-        if opts.get("sudo_user", "") and executors[-1] != "sudo":
-            executors[-1] = "sudo"  # replace the last one with sudo
+        executors = salt.utils.minion.prepare_executors(executors, opts)
         log.trace("Executors list %s", executors)  # pylint: disable=no-member
 
-        for name in executors:
-            fname = f"{name}.execute"
-            if fname not in executor_loader:
-                raise SaltInvocationError(f"Executor '{name}' is not available")
-            return_data = executor_loader[fname](opts, data, func, args, kwargs)
-            if return_data is not None:
-                return return_data
-
-        return None
+        return await salt.utils.minion.run_executors(
+            executor_loader, executors, opts, data, func, args, kwargs
+        )
 
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
@@ -3247,14 +3200,16 @@ class Minion(MinionBase):
                 and (function_name in functions_to_use or allow_missing_funcs is True)
             ):
                 try:
-                    return_data = minion_instance._execute_job_function(
-                        function_name,
-                        function_args,
-                        executors,
-                        opts,
-                        data,
-                        functions=functions_to_use,
-                        executor_loader=generation.executors,
+                    return_data = loop.run_until_complete(
+                        minion_instance._execute_job_function(
+                            function_name,
+                            function_args,
+                            executors,
+                            opts,
+                            data,
+                            functions=functions_to_use,
+                            executor_loader=generation.executors,
+                        )
                     )
                     log.info(
                         "Job %s execution finished, return_data: %s",
@@ -3456,14 +3411,16 @@ class Minion(MinionBase):
                     else:
                         token = _loader_ctx.resource_ctxvar.set(resource)
                         try:
-                            resource_return = minion_instance._execute_job_function(
-                                function_name,
-                                function_args,
-                                executors,
-                                opts,
-                                data,
-                                functions=resource_loader,
-                                executor_loader=generation.executors,
+                            resource_return = loop.run_until_complete(
+                                minion_instance._execute_job_function(
+                                    function_name,
+                                    function_args,
+                                    executors,
+                                    opts,
+                                    data,
+                                    functions=resource_loader,
+                                    executor_loader=generation.executors,
+                                )
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.error(
@@ -3732,14 +3689,16 @@ class Minion(MinionBase):
                 if not multifunc_ordered:
                     ret["success"][function_name] = False
                 try:
-                    return_data = minion_instance._execute_job_function(
-                        function_name,
-                        function_args,
-                        executors,
-                        opts,
-                        data,
-                        functions=generation.functions,
-                        executor_loader=generation.executors,
+                    return_data = loop.run_until_complete(
+                        minion_instance._execute_job_function(
+                            function_name,
+                            function_args,
+                            executors,
+                            opts,
+                            data,
+                            functions=generation.functions,
+                            executor_loader=generation.executors,
+                        )
                     )
 
                     key = ind if multifunc_ordered else data["fun"][ind]
@@ -4425,7 +4384,7 @@ class Minion(MinionBase):
             except Exception as exc:  # pylint: disable=broad-except
                 log.error("Error firing pillar refresh complete event: %s", exc)
 
-    def manage_schedule(self, tag, data):
+    async def manage_schedule(self, tag, data):
         """
         Refresh the functions and returners.
         """
@@ -4457,7 +4416,7 @@ class Minion(MinionBase):
         # Call the appropriate schedule function
         try:
             alias, params = funcs.get(func)
-            getattr(self.schedule, alias)(*params)
+            await resolve_result(getattr(self.schedule, alias)(*params))
         except TypeError:
             log.error('Function "%s" is unavailable in salt.utils.scheduler', func)
 
@@ -4653,7 +4612,7 @@ class Minion(MinionBase):
             _minion.opts["resources"] = _minion._discover_resources()
             _minion._spawn_background(_minion._register_resources_with_master())
         elif tag.startswith("manage_schedule"):
-            _minion.manage_schedule(tag, data)
+            await _minion.manage_schedule(tag, data)
         elif tag.startswith("manage_beacons"):
             _minion.manage_beacons(tag, data)
         elif tag.startswith("grains_refresh"):
@@ -4950,7 +4909,7 @@ class Minion(MinionBase):
 
             self.add_periodic_callback("beacons", handle_beacons)
 
-    def setup_scheduler(self, before_connect=False):
+    async def setup_scheduler(self, before_connect=False):
         """
         Set up the scheduler.
         This is safe to call multiple times.
@@ -4986,12 +4945,12 @@ class Minion(MinionBase):
                 )
 
             # TODO: actually listen to the return and change period
-            def handle_schedule():
-                self.process_schedule(self, loop_interval)
+            async def handle_schedule():
+                await self.process_schedule(self, loop_interval)
 
             if before_connect:
-                # Make sure there is a chance for one iteration to occur before connect
-                handle_schedule()
+                # Finish the first scheduler iteration before connecting.
+                await handle_schedule()
 
             self.add_periodic_callback("schedule", handle_schedule)
 
@@ -5221,10 +5180,9 @@ class Minion(MinionBase):
         return True
 
     # Main Minion Tune In
-    def tune_in(self, start=True):
+    async def tune_in(self):
         """
-        Lock onto the publisher. This is the main event loop for the minion
-        :rtype : None
+        Initialize callbacks on the event loop owned by the minion manager.
         """
         self._pre_tune()
 
@@ -5233,12 +5191,6 @@ class Minion(MinionBase):
         _register_minion_observables()
         log.debug("Minion '%s' trying to tune in", self.opts["id"])
 
-        if start:
-            if self.opts.get("beacons_before_connect", False):
-                self.setup_beacons(before_connect=True)
-            if self.opts.get("scheduler_before_connect", False):
-                self.setup_scheduler(before_connect=True)
-            self.sync_connect_master()
         if self.connected:
             self._spawn_background(self._fire_master_minion_start())
             self._spawn_background(self._register_resources_with_master())
@@ -5255,7 +5207,7 @@ class Minion(MinionBase):
         self._state_run()
 
         self.setup_beacons()
-        self.setup_scheduler()
+        await self.setup_scheduler()
         self.setup_state_queue_processing()
         self.setup_process_queue_processing()
         self.add_periodic_callback("cleanup", self.cleanup_subprocesses, interval=0.2)
@@ -5315,20 +5267,6 @@ class Minion(MinionBase):
         # of cyclic garbage measured under stress).  Reaping every 60 s
         # keeps the working set steady.
         self.add_periodic_callback("gc_collect", gc.collect, interval=60)
-
-        if start:
-            try:
-                self.io_loop.run_forever()
-                if self.restart:
-                    self.destroy()
-            except (
-                KeyboardInterrupt,
-                RuntimeError,
-            ):  # A RuntimeError can be re-raised during shutdown
-                self.destroy()
-            finally:
-                if not self.io_loop.is_closed():
-                    self.io_loop.close()
 
     async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
@@ -6475,13 +6413,10 @@ class ProxyMinion(Minion):
         mp_call = _metaproxy_call(self.opts, "subproxy_post_master_init")
         await mp_call(self, minion_id, uid)
 
-    def tune_in(self, start=True):
-        """
-        Lock onto the publisher. This is the main event loop for the minion
-        :rtype : None
-        """
+    async def tune_in(self):
+        """Initialize proxy callbacks on the manager's running loop."""
         mp_call = _metaproxy_call(self.opts, "tune_in")
-        return mp_call(self, start)
+        return await mp_call(self)
 
     def _target_load(self, load):
         """
@@ -6507,12 +6442,12 @@ class ProxyMinion(Minion):
     @classmethod
     def _thread_return(cls, minion_instance, opts, data):
         mp_call = _metaproxy_call(opts, "thread_return")
-        return mp_call(cls, minion_instance, opts, data)
+        return resolve_result_sync(mp_call(cls, minion_instance, opts, data))
 
     @classmethod
     def _thread_multi_return(cls, minion_instance, opts, data):
         mp_call = _metaproxy_call(opts, "thread_multi_return")
-        return mp_call(cls, minion_instance, opts, data)
+        return resolve_result_sync(mp_call(cls, minion_instance, opts, data))
 
 
 class SProxyMinion(SMinion):

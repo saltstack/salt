@@ -50,6 +50,7 @@ from salt.exceptions import (
     SaltSystemExit,
 )
 from salt.minion import ProxyMinion
+from salt.utils.asynchronous import resolve_result
 from salt.utils.event import tagify
 from salt.utils.process import SignalHandlingProcess, default_signals
 
@@ -396,7 +397,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
         ProxyMinion._thread_return(minion_instance, opts, data)
 
 
-def thread_return(cls, minion_instance, opts, data):
+async def thread_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -472,24 +473,12 @@ def thread_return(cls, minion_instance, opts, data):
                 func = function_name
                 args, kwargs = data["arg"], data
             functions.pack["__context__"]["retcode"] = 0
-            if isinstance(executors, str):
-                executors = [executors]
-            elif not isinstance(executors, list) or not executors:
-                raise SaltInvocationError(
-                    "Wrong executors specification: {}. String or non-empty list"
-                    " expected".format(executors)
-                )
-            if opts.get("sudo_user", "") and executors[-1] != "sudo":
-                executors[-1] = "sudo"  # replace the last one with sudo
+            executors = salt.utils.minion.prepare_executors(executors, opts)
             log.trace("Executors list %s", executors)  # pylint: disable=no-member
 
-            for name in executors:
-                fname = f"{name}.execute"
-                if fname not in executor_loader:
-                    raise SaltInvocationError(f"Executor '{name}' is not available")
-                return_data = executor_loader[fname](opts, data, func, args, kwargs)
-                if return_data is not None:
-                    break
+            return_data = await salt.utils.minion.run_executors(
+                executor_loader, executors, opts, data, func, args, kwargs
+            )
 
             if isinstance(return_data, types.GeneratorType):
                 ind = 0
@@ -642,7 +631,7 @@ def thread_return(cls, minion_instance, opts, data):
                 log.exception("The return failed for job %s: %s", data["jid"], exc)
 
 
-def thread_multi_return(cls, minion_instance, opts, data):
+async def thread_multi_return(cls, minion_instance, opts, data):
     """
     This method should be used as a threading target, start the actual
     minion side execution.
@@ -714,7 +703,7 @@ def thread_multi_return(cls, minion_instance, opts, data):
             )
             functions.pack["__context__"]["retcode"] = 0
             key = ind if multifunc_ordered else data["fun"][ind]
-            ret["return"][key] = func(*args, **kwargs)
+            ret["return"][key] = await resolve_result(func(*args, **kwargs))
             retcode = functions.pack["__context__"].get("retcode", 0)
             if retcode == 0:
                 # No nonzero retcode in __context__ dunder. Check if return
@@ -895,9 +884,9 @@ def target_load(self, load):
 
 
 # Main Minion Tune In
-def tune_in(self, start=True):
+async def tune_in(self):
     """
     Lock onto the publisher. This is the main event loop for the minion
     :rtype : None
     """
-    super(ProxyMinion, self).tune_in(start=start)
+    await super(ProxyMinion, self).tune_in()
