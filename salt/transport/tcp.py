@@ -3005,6 +3005,8 @@ class RequestClient(salt.transport.base.RequestClient):
         self._stream_return_running = False
         self._stream = None
         self.task = None
+        # The connect attempt in flight, shared by every caller of connect().
+        self._connect_task = None
         self.disconnect_callback = _null_callback
         self.connect_callback = _null_callback
         self.backoff = opts.get("tcp_reconnect_backoff", 1)
@@ -3048,14 +3050,31 @@ class RequestClient(salt.transport.base.RequestClient):
         return stream
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
-        if self._stream is None:
-            self._connect_called = True
-            self._stream = await self.getstream()
-            if self._stream:
-                if not self._stream_return_running:
-                    self.task = asyncio.create_task(self._stream_return())
-                if self.connect_callback is not None:
-                    await self.connect_callback()
+        if self._stream is not None or self._closing:
+            return
+        self._connect_called = True
+        if self._connect_task is None or self._connect_task.done():
+            self._connect_task = asyncio.create_task(self._connect())
+        # Concurrent callers wait on the same attempt instead of each opening
+        # a connection. The shield keeps a caller that is cancelled (its
+        # request timed out) from cancelling the attempt for the others.
+        await asyncio.shield(self._connect_task)
+
+    async def _connect(self):
+        try:
+            stream = await self.getstream()
+        except asyncio.CancelledError:
+            if not self._closing:
+                raise
+            # close() cancelled the attempt.
+            return
+        if stream is None:
+            return
+        self._stream = stream
+        if not self._stream_return_running:
+            self.task = asyncio.create_task(self._stream_return())
+        if self.connect_callback is not None:
+            await self.connect_callback()
 
     async def _stream_return(self):
         self._stream_return_running = True
@@ -3135,15 +3154,12 @@ class RequestClient(salt.transport.base.RequestClient):
         if message_id not in self.send_future_map:
             return
         future = self.send_future_map.pop(message_id)
-        if future is not None:
+        if future is not None and not future.done():
             future.set_exception(SaltReqTimeoutError("Message timed out"))
 
     async def send(self, load, timeout=60):
-        await self.connect()
         if self._closing:
             raise ClosingError()
-        while not self._stream:
-            await asyncio.sleep(0.03)
         message_id = self._message_id()
         header = {"mid": message_id}
         future = tornado.concurrent.Future()
@@ -3154,27 +3170,70 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
+        # Armed before connecting, so the timeout covers the connect too.
+        send_timeout = None
         if timeout is not None:
-            self.io_loop.call_later(timeout, self.timeout_message, message_id, load)
+            send_timeout = self.io_loop.call_later(
+                timeout, self.timeout_message, message_id, load
+            )
 
         item = salt.transport.frame.frame_msg(load, header=header)
 
         async def _do_send():
-            await self.connect()
-            # If the _stream is None, we failed to connect.
-            if self._stream:
-                await self._stream.write(item)
+            try:
+                while self._stream is None and not (self._closing or self._closed):
+                    await self.connect()
+                if future.done():
+                    # Timed out while connecting. Don't send a request the
+                    # caller has already given up on.
+                    return
+                if self._stream is None:
+                    raise ClosingError()
+                # Don't wait for the flush: send() may cancel this task, and
+                # cancelling a pending tornado write future logs an error.
+                self._stream.write(item)
+            except asyncio.CancelledError:
+                # send() cancels this only once the future is done. Otherwise
+                # the connect attempt was cancelled, e.g. by close() before
+                # it started.
+                self.send_future_map.pop(message_id, None)
+                if not future.done():
+                    future.set_exception(ClosingError())
+                raise
+            except Exception as exc:  # pylint: disable=broad-except
+                self.send_future_map.pop(message_id, None)
+                if not future.done():
+                    future.set_exception(exc)
 
         # Run send in a callback so we can wait on the future, in case we time
         # out before we are able to connect.
-        self.io_loop.create_task(_do_send())
-        recv = await future
-        return recv
+        send_task = self.io_loop.create_task(_do_send())
+        try:
+            return await future
+        finally:
+            if send_timeout is not None:
+                send_timeout.cancel()
+            self.send_future_map.pop(message_id, None)
+            if not send_task.done():
+                send_task.cancel()
+                await asyncio.gather(send_task, return_exceptions=True)
 
     def close(self):
         if self._closing:
             return
         self._closing = True
+        if self._connect_task is not None and not self._connect_task.done():
+            # Don't leave getstream() retrying, or waiting on a master that
+            # never answers, after close.
+            try:
+                self._connect_task.cancel()
+                group = asyncio.gather(self._connect_task, return_exceptions=True)
+                self._connect_task.get_loop().run_until_complete(group)
+            except (RuntimeError, ValueError):
+                # The loop is running (the task ends on its own) or closed, or
+                # this thread runs another loop (ValueError on Python 3.14).
+                # See #70178.
+                pass
         if self._stream is not None:
             self._stream.close()
             self._stream = None
