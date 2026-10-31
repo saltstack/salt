@@ -37,7 +37,7 @@ def _run(coro):
 
 def _make_opts(node_id, peers, cachedir):
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cluster_id": "ready-test-cluster",
         "cluster_peers": peers,

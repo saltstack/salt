@@ -241,6 +241,7 @@ class TestOperatorOverride:
 
         tmpdir = tempfile.mkdtemp()
         opts = salt.config.master_config("/dev/null")
+        opts["id"] = "127.0.0.1_master"
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2", "127.0.0.3"]
         opts["cluster_pool_port"] = 55596
