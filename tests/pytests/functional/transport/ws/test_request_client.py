@@ -134,6 +134,7 @@ async def test_connect_reuses_healthy_connection_during_active_request(
         assert await active == "wait"
 
 
+@pytest.mark.parametrize("websocket_server", ["tcp", "tls", "unix"], indirect=True)
 async def test_timeout_discards_connection_and_allows_retry(client, websocket_server):
     with pytest.raises(SaltReqTimeoutError):
         await client.send("wait", timeout=0.02)
@@ -143,6 +144,7 @@ async def test_timeout_discards_connection_and_allows_retry(client, websocket_se
     assert websocket_server["connections"] == 2
 
 
+@pytest.mark.parametrize("websocket_server", ["tcp", "tls", "unix"], indirect=True)
 async def test_queued_timeout_does_not_close_active_request(client, websocket_server):
     active = asyncio.create_task(client.send("wait"))
     await websocket_server["waiting"].wait()
@@ -155,6 +157,7 @@ async def test_queued_timeout_does_not_close_active_request(client, websocket_se
     assert websocket_server["connections"] == 1
 
 
+@pytest.mark.parametrize("websocket_server", ["tcp", "tls", "unix"], indirect=True)
 async def test_cancelled_request_cannot_leave_a_reply_for_next_request(
     client, websocket_server
 ):

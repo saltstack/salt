@@ -8,6 +8,7 @@ import pytest
 import salt.channel.client
 import salt.transport.ws
 import salt.utils.asynchronous
+from salt.exceptions import SaltReqTimeoutError
 
 pytestmark = [pytest.mark.core_test]
 
@@ -84,6 +85,21 @@ async def test_blocked_client_does_not_block_another_client(request_server):
             request_server["release"].set()
             result = await asyncio.wait_for(active, 2)
         assert result == {"request": 1, "result": None}
+
+
+async def test_timeout_discards_late_reply_from_production_server(request_server):
+    async with salt.channel.client.AsyncReqChannel.factory(
+        request_server["opts"], crypt="clear"
+    ) as channel:
+        with pytest.raises(SaltReqTimeoutError):
+            await channel.send({"id": 1, "block": True}, tries=1, timeout=0.05)
+        assert request_server["started"].is_set()
+        request_server["release"].set()
+        for index, value in enumerate([None, False, 0, [], {}], start=2):
+            assert await channel.send({"id": index, "value": value}) == {
+                "request": index,
+                "result": value,
+            }
 
 
 @pytest.mark.parametrize("context_manager", [False, True])
