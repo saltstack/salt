@@ -7,9 +7,9 @@ Salt's existing channel primitives directly:
 * Opens one :class:`salt.channel.client.AsyncReqChannel` per
   active endpoint for ``_master_auth`` and outbound topology
   RPCs (``topology/pub``, ``topology/ret``, ``topology/sum``).
-* Opens one :class:`salt.channel.client.AsyncPubChannel` per
-  active endpoint for the inbound pub stream (events, returns,
-  summaries from the peer).
+  Inbound traffic is handled on the peer by the Phase 3
+  :class:`ReqServerChannel` bound in
+  :func:`salt.topology.link_manager._open_inbound_listener`.
 * Adds health state (:class:`LinkHealth`), endpoint
   multiplexing, and the quiesce / detach lifecycle.
 * Dispatches inbound messages to
@@ -40,7 +40,7 @@ import asyncio
 import logging
 import os
 
-from salt.channel.client import AsyncPubChannel, AsyncReqChannel
+from salt.channel.client import AsyncReqChannel
 from salt.config.topology import PeerRef
 from salt.topology.summary import ClusterSummary
 from salt.topology.summary import serialize as serialize_summary
@@ -478,21 +478,18 @@ class PeerMasterLink:
                                 finger=ep.get("finger"),
                             )
                         )
-                # Open the pub channel; failures are logged but do
-                # not block CONNECTED --- Phase 3 brings up the real
-                # inbound listener, Phase 2 can live without pub.
-                try:
-                    if self._pub_channel is None:
-                        self._pub_channel = AsyncPubChannel.factory(
-                            channel_opts, io_loop=self.io_loop
-                        )
-                    await self._pub_channel.connect()
-                except Exception as exc:  # pylint: disable=broad-except
-                    log.debug(
-                        "topology link to %s: pub channel connect skipped: %s",
-                        endpoint.host,
-                        exc,
-                    )
+                # Phase 2's ``AsyncPubChannel.factory`` + connect was
+                # a one-way breadcrumb channel that Phase 3 obsoleted
+                # when the inbound ``ReqServerChannel`` landed.  None
+                # of ``send_publish`` / ``send_return`` / ``send_summary``
+                # / ``send_event`` consult ``self._pub_channel``, so
+                # keeping that connect wedged every master-to-master
+                # handshake forever: ``AsyncAuth._authenticate`` raises
+                # ``KeyError('acceptance_wait_time')`` on the master
+                # opts dict (that key is a minion-only default) BEFORE
+                # the authenticate-future is set, so the await never
+                # resolves and the link never transitions to
+                # CONNECTED.  Drop the pub-channel open path entirely.
                 self._health = LinkHealth.CONNECTED
                 return
             if status == "rejected":
