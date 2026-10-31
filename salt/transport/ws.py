@@ -314,14 +314,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self._connect_lock = asyncio.Lock()
         self._publish_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
-        self._connect_tasks = set()
-        self._publish_tasks = set()
+        self._io_tasks = set()
         self._ipc_connections = {}
         self._publisher_task = None
         self._publisher_done = asyncio.Event()
         self._monitor_task = None
         self._loop = None
         self._closing = self._closed = False
+        self._close_error = None
         self.close_task = None
         self.runner = None
         self.site = None
@@ -542,39 +542,42 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 pass
 
     async def connect(self, timeout=None):  # pylint: disable=invalid-overridden-method
-        task = asyncio.current_task()
-        self._connect_tasks.add(task)
+        return await self._start_io(self._connect(timeout))
+
+    def _start_io(self, coroutine):
+        """Own the operation, leaving the caller free to finish its context exit."""
         self._loop = asyncio.get_running_loop()
-        try:
-            async with self._connect_lock:
-                if self._closing:
-                    raise salt.exceptions.SaltClientError("Publish server is closed")
-                if self.pub_writer is not None and not self.pub_writer.is_closing():
-                    return
-                await self._disconnect_pusher()
-                connection = (
-                    asyncio.open_unix_connection(self.pull_path)
-                    if self.pull_path
-                    else asyncio.open_connection(self.pull_host, self.pull_port)
-                )
-                self.pub_reader, self.pub_writer = await asyncio.wait_for(
-                    connection, timeout
-                )
-        finally:
-            self._connect_tasks.discard(task)
+        task = self._loop.create_task(coroutine)
+        self._io_tasks.add(task)
+        task.add_done_callback(self._io_tasks.discard)
+        return task
+
+    async def _connect(self, timeout=None):
+        async with self._connect_lock:
+            if self._closing:
+                raise salt.exceptions.SaltClientError("Publish server is closed")
+            if self.pub_writer is not None and not self.pub_writer.is_closing():
+                return
+            await self._disconnect_pusher()
+            connection = (
+                asyncio.open_unix_connection(self.pull_path)
+                if self.pull_path
+                else asyncio.open_connection(self.pull_host, self.pull_port)
+            )
+            self.pub_reader, self.pub_writer = await asyncio.wait_for(
+                connection, timeout
+            )
 
     async def publish(
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
-        task = asyncio.current_task()
-        self._publish_tasks.add(task)
-        try:
-            async with self._publish_lock:
-                await self.connect()
-                self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
-                await self.pub_writer.drain()
-        finally:
-            self._publish_tasks.discard(task)
+        return await self._start_io(self._publish(payload))
+
+    async def _publish(self, payload):
+        async with self._publish_lock:
+            await self._connect()
+            self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
+            await self.pub_writer.drain()
 
     async def publish_payload(self, payload, topic_list=None, raw_payload=None):
         # ``raw_payload`` is accepted for interface parity with the
@@ -592,26 +595,48 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     async def _close_resources(self):
         async with self._close_lock:
             if self._closed:
+                if self._close_error is not None:
+                    raise self._close_error
                 return
-            if self.puller is not None:
+
+            async def cleanup(operation, *args):
+                try:
+                    await operation(*args)
+                # pylint: disable-next=broad-exception-caught
+                except (Exception, asyncio.CancelledError) as exc:
+                    # Finish releasing the other resources before reporting
+                    # failure, including cancellation during stream closure.
+                    if self._close_error is None:
+                        self._close_error = exc
+
+            async def stop_accepting():
                 self.puller.close()
-                await self.puller.wait_closed()
-                self.puller = None
+
+            if self.puller is not None:
+                await cleanup(stop_accepting)
             connections = tuple(self._ipc_connections.items())
-            await cancel_tasks(
+
+            await cleanup(
+                cancel_tasks,
                 self._monitor_task,
-                *self._connect_tasks,
-                *self._publish_tasks,
+                *self._io_tasks,
                 *(task for task, _ in connections),
             )
             for _, writer in connections:
-                await close_stream_writer(writer)
-            await self._disconnect_pusher()
+                await cleanup(close_stream_writer, writer)
+            # Server.wait_closed() also waits for accepted connections on newer
+            # Python versions. Release those connections before joining it.
+            if self.puller is not None:
+                await cleanup(self.puller.wait_closed)
+                self.puller = None
+            await cleanup(self._disconnect_pusher)
             if self.runner is not None:
-                await self.runner.cleanup()
+                await cleanup(self.runner.cleanup)
                 self.runner = self.site = None
             self.clients.clear()
             self._closed = True
+            if self._close_error is not None:
+                raise self._close_error
 
     async def close_async(self):
         self.close()
@@ -625,6 +650,8 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             and self._publisher_task is not asyncio.current_task()
         ):
             await self._publisher_done.wait()
+            if self._close_error is not None:
+                raise self._close_error
         else:
             await self._close_resources()
 
