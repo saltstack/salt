@@ -2158,7 +2158,6 @@ class _TCPPubServerPublisher:
     async_methods = [
         "send",
         "connect",
-        "_connect",
     ]
     close_methods = [
         "close",
