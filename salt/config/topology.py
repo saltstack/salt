@@ -1,5 +1,5 @@
 """
-Load and validate the per-master ``topology.conf``.
+Load and validate the per-master topology configuration.
 
 Master topology connects multiple 3008.x master clusters into a
 loop-detected peer graph.  The per-master config is minimal: each
@@ -7,36 +7,34 @@ master declares only its own ``cluster_id`` and the seed addresses
 of its direct peers.  The full peer graph emerges from each
 master's local view --- no master declares descendants.
 
-This module contains four things:
+Topology config lives in the master's regular config file (or any
+file in ``/etc/salt/master.d/`` -- Salt's existing include mechanism
+handles the "I want it in a separate file" case for free).  The
+relevant master opts are:
 
-* :data:`DEFAULT_EVENT_SUBSCRIPTIONS`, the default set of event tag
-  patterns forwarded across a peer link when the operator does not
-  override.
-* :class:`PeerRef`, a NamedTuple describing one seed entry from
-  ``topology.conf``.
-* :class:`TopologyConfig`, the parsed-and-validated config object
-  consumed by :mod:`salt.topology` runtime machinery.
-* :func:`validate_topology_config` and :func:`load_topology_config`,
-  the public entry points called from master configuration
-  processing.  See :mod:`salt.config.worker_pools` for the sibling
-  pattern.
+* ``topology_enabled`` -- master toggle.  When False (the default)
+  :func:`load_topology_config` returns a disabled
+  :class:`TopologyConfig` without touching any other opt.
+* ``cluster_id`` -- this master's identity in the graph.  Shared
+  with the 3008.x master cluster feature; a Raft cluster shows up
+  to topology as one node named by its ``cluster_id``.
+* ``topology_link_port`` -- TCP port the peer link listens on
+  (default 4521).
+* ``topology_peers`` -- list of ``{host, port, finger}`` mappings
+  naming direct peers.
+* ``topology_event_subscriptions`` -- glob tag patterns forwarded
+  from this master to each peer.  Defaults to
+  :data:`DEFAULT_EVENT_SUBSCRIPTIONS` (job events only) when unset.
 
-The topology config file lives at ``opts["topology_config_file"]``
-(default ``/etc/salt/topology.conf``) and is read only when
-``opts["topology_enabled"]`` is True.  On a disabled or missing-file
-master, :func:`load_topology_config` returns a disabled
-:class:`TopologyConfig` with empty peers so callers can rely on the
-``enabled`` attribute without a None-check.
+:func:`load_topology_config` always returns a :class:`TopologyConfig`
+(never ``None``) so callers can rely on the ``enabled`` attribute
+without a None-check.
 """
 
 import fnmatch
 import logging
-import os
 import re
 from typing import NamedTuple
-
-import salt.utils.files
-import salt.utils.yaml
 
 log = logging.getLogger(__name__)
 
@@ -81,7 +79,7 @@ _RESERVED_CLUSTER_IDS = frozenset(
 
 class PeerRef(NamedTuple):
     """
-    A single peer entry from ``topology.conf``.
+    A single peer entry from ``opts["topology_peers"]``.
 
     :param host: Seed hostname or IP.  The full peer list for the
         peer's cluster is learned from Raft state during handshake;
@@ -104,7 +102,7 @@ class PeerRef(NamedTuple):
 
 class TopologyConfig(NamedTuple):
     """
-    Parsed and validated contents of ``topology.conf``.
+    Parsed and validated topology view of a master's opts.
 
     :param cluster_id: This logical master's identity in the graph.
         Short, unique within the graph.  Required when ``enabled``
@@ -117,9 +115,9 @@ class TopologyConfig(NamedTuple):
         this master to each peer.  Defaults to
         :data:`DEFAULT_EVENT_SUBSCRIPTIONS` (job events only).
     :param enabled: True when ``opts["topology_enabled"]`` is True
-        AND the config file loaded and validated successfully.
-        False means :mod:`salt.topology` should remain inert in
-        this process.
+        AND the opts loaded and validated successfully.  False
+        means :mod:`salt.topology` should remain inert in this
+        process.
     """
 
     cluster_id: str
@@ -131,10 +129,9 @@ class TopologyConfig(NamedTuple):
 def _disabled_config():
     """Return the canonical disabled :class:`TopologyConfig`.
 
-    Centralized so the ``disabled`` short-circuit and the
-    missing-file short-circuit return byte-identical shapes; callers
-    that duck-type over ``enabled`` + ``peers`` get the same
-    guarantees from both paths.
+    Centralized so the ``disabled`` short-circuit returns a known
+    shape; callers that duck-type over ``enabled`` + ``peers`` get
+    the same guarantees regardless of why topology ended up inert.
     """
     return TopologyConfig(
         cluster_id="",
@@ -174,7 +171,8 @@ def validate_topology_config(cfg):
       patterns via :func:`fnmatch.translate`.
 
     :raises ValueError: On any invariant violation.  The message
-        names the specific field at fault.
+        names the specific field at fault (``topology_peers[N]...``
+        for peer entries so operators can grep the master config).
     """
     if not isinstance(cfg, TopologyConfig):
         raise ValueError(
@@ -269,12 +267,12 @@ def validate_topology_config(cfg):
 
     if errors:
         raise ValueError(
-            "topology.conf validation failed:\n  - " + "\n  - ".join(errors)
+            "topology config validation failed:\n  - " + "\n  - ".join(errors)
         )
 
 
 def _coerce_peer(raw, idx):
-    """Build a :class:`PeerRef` from a raw YAML dict entry.
+    """Build a :class:`PeerRef` from a raw master-opts entry.
 
     Validation of the resulting PeerRef happens in
     :func:`validate_topology_config`; this helper is just structural
@@ -282,11 +280,11 @@ def _coerce_peer(raw, idx):
     """
     if not isinstance(raw, dict):
         raise ValueError(
-            f"peers[{idx}] must be a mapping (host/port/finger), got "
+            f"topology_peers[{idx}] must be a mapping (host/port/finger), got "
             f"{type(raw).__name__}"
         )
     if "host" not in raw:
-        raise ValueError(f"peers[{idx}] missing required 'host' key")
+        raise ValueError(f"topology_peers[{idx}] missing required 'host' key")
 
     host = raw.get("host")
     port = raw.get("port")
@@ -294,11 +292,12 @@ def _coerce_peer(raw, idx):
 
     if host is not None and not isinstance(host, str):
         raise ValueError(
-            f"peers[{idx}].host must be a string, got {type(host).__name__}"
+            f"topology_peers[{idx}].host must be a string, got {type(host).__name__}"
         )
     if finger is not None and not isinstance(finger, str):
         raise ValueError(
-            f"peers[{idx}].finger must be a string, got " f"{type(finger).__name__}"
+            f"topology_peers[{idx}].finger must be a string, got "
+            f"{type(finger).__name__}"
         )
     # Allow None port (falls back to this master's topology_link_port).
     # Any non-None non-int port is caught by the validator below with a
@@ -344,80 +343,42 @@ def _dedupe_peers(peers):
 
 def load_topology_config(opts):
     """
-    Load and validate the topology config file for this master.
+    Build and validate a :class:`TopologyConfig` from master opts.
 
-    Behavior matches the sibling
-    :func:`salt.config.worker_pools.get_worker_pools_config`:
+    Behavior:
 
     * ``opts["topology_enabled"]`` False -> returns a disabled
-      :class:`TopologyConfig` with empty peers.  The file is not
-      opened.
-    * File absent at ``opts["topology_config_file"]`` -> returns a
-      disabled :class:`TopologyConfig` with an INFO log line.
-    * File present and valid -> returns an enabled
-      :class:`TopologyConfig` after passing
-      :func:`validate_topology_config`.
+      :class:`TopologyConfig` with empty peers.  No other opt is
+      consulted.
+    * ``opts["topology_enabled"]`` True -> reads ``cluster_id``,
+      ``topology_peers``, and ``topology_event_subscriptions`` from
+      ``opts`` and returns an enabled :class:`TopologyConfig` after
+      passing :func:`validate_topology_config`.
 
-    :raises ValueError: If topology is enabled and the config file
-        is malformed, missing ``cluster_id``, or fails validation.
+    :raises ValueError: If topology is enabled and the opts are
+        malformed, missing ``cluster_id``, or fail validation.
         Callers in the master startup path treat this as fatal.
-    :raises OSError: If the config file is present but unreadable
-        (permissions, I/O error).  Fatal at daemon start.
     """
     if not opts.get("topology_enabled"):
         return _disabled_config()
 
-    path = opts.get("topology_config_file")
-    if not path:
-        # Enabled but no path at all --- treat as missing-file.  Rare
-        # (the master opts default to /etc/salt/topology.conf) but
-        # we don't want to blow up with a non-informative TypeError.
-        log.info("topology enabled but no topology_config_file set; topology inert")
-        return _disabled_config()
+    cluster_id = opts.get("cluster_id") or ""
 
-    if not os.path.exists(path):
-        log.info(
-            "topology config file %s does not exist; topology inert",
-            path,
-        )
-        return _disabled_config()
-
-    # Open explicitly so a permission failure surfaces as OSError,
-    # per the public contract.  salt.utils.yaml.safe_load accepts a
-    # file-like object.
-    with salt.utils.files.fopen(path, encoding="utf-8") as fh:
-        try:
-            raw = salt.utils.yaml.safe_load(fh) or {}
-        except salt.utils.yaml.YAMLError as exc:
-            raise ValueError(
-                f"topology.conf at {path} is not valid YAML: {exc}"
-            ) from exc
-
-    if not isinstance(raw, dict):
-        raise ValueError(
-            f"topology.conf at {path} must be a YAML mapping, got "
-            f"{type(raw).__name__}"
-        )
-
-    cluster_id = raw.get("cluster_id")
-    if cluster_id is None:
-        cluster_id = ""
-
-    raw_peers = raw.get("peers") or []
+    raw_peers = opts.get("topology_peers") or []
     if not isinstance(raw_peers, list):
         raise ValueError(
-            f"topology.conf peers must be a list, got " f"{type(raw_peers).__name__}"
+            f"topology_peers must be a list, got {type(raw_peers).__name__}"
         )
     peers_in = tuple(_coerce_peer(entry, idx) for idx, entry in enumerate(raw_peers))
     peers = _dedupe_peers(peers_in)
 
-    raw_subs = raw.get("event_subscriptions")
+    raw_subs = opts.get("topology_event_subscriptions")
     if raw_subs is None:
         event_subscriptions = DEFAULT_EVENT_SUBSCRIPTIONS
     else:
         if not isinstance(raw_subs, list):
             raise ValueError(
-                f"topology.conf event_subscriptions must be a list, got "
+                f"topology_event_subscriptions must be a list, got "
                 f"{type(raw_subs).__name__}"
             )
         event_subscriptions = tuple(raw_subs)

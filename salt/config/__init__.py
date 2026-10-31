@@ -265,7 +265,8 @@ VALID_OPTS = immutabletypes.freeze(
         # ``salt/topology/`` and ``salt/config/topology.py`` for how
         # the other opts are consumed.
         "topology_enabled": bool,
-        "topology_config_file": str,
+        "topology_peers": list,
+        "topology_event_subscriptions": (type(None), list),
         "topology_link_port": int,
         "topology_summary_interval": int,
         "topology_breadcrumb_grace": int,
@@ -2049,7 +2050,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_auto_replace_voters": False,
         # Master-topology defaults (see VALID_OPTS block for docs).
         "topology_enabled": False,
-        "topology_config_file": "/etc/salt/topology.conf",
+        "topology_peers": [],
+        "topology_event_subscriptions": None,
         "topology_link_port": 4521,
         "topology_summary_interval": 30,
         "topology_breadcrumb_grace": 30,

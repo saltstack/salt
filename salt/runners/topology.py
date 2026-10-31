@@ -19,7 +19,7 @@ The resting state consulted here is:
 * ``<pki_dir>/masters_rejected/`` --- rejected peers
 * ``<pki_dir>/master/topology_registry.mmap*`` --- registry cache
 * ``<pki_dir>/master/topology_breadcrumbs.mmap*`` --- breadcrumbs cache
-* ``opts["topology_config_file"]`` --- configured seed peers
+* ``opts["topology_peers"]`` --- configured seed peers
 
 Any of these may be absent on a fresh master; absence is treated
 as empty rather than as an error.
