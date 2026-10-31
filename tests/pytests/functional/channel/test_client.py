@@ -13,7 +13,10 @@ async def test_async_pub_channel_connect_cb(minion_opts):
     """
     minion_opts["master_uri"] = "tcp://127.0.0.1:4506"
     minion_opts["master_ip"] = "127.0.0.1"
-    with salt.channel.client.AsyncPubChannel.factory(minion_opts) as channel:
+    with patch("salt.utils.event.get_event") as event_factory:
+        event_factory.return_value.fire_event_async = AsyncMock()
+        channel = salt.channel.client.AsyncPubChannel.factory(minion_opts)
+    async with channel:
 
         async def send_id(*args):
             return
@@ -27,5 +30,9 @@ async def test_async_pub_channel_connect_cb(minion_opts):
 
         with patch("salt.channel.client.AsyncReqChannel.factory", return_value=mock):
             await channel.connect_callback(None)
+            event_factory.return_value.fire_event.assert_called_once_with(
+                {"master": minion_opts["master"]}, "__master_connected"
+            )
+            event_factory.return_value.fire_event_async.assert_not_awaited()
             mock.send.assert_called_once()
             mock.__aexit__.assert_called_once()

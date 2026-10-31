@@ -1,6 +1,9 @@
+import asyncio
 import copy
 
 import salt.master
+import salt.transport
+from salt.utils.asynchronous import aioloop
 
 
 def iter_transport_opts(opts):
@@ -32,75 +35,39 @@ def iter_transport_opts(opts):
         yield transport, t_opts
 
 
+def _pool_transport_opts(opts):
+    """Preserve pool selection without mutating options or copying shared secrets."""
+    ttype = opts.get("transport", "zeromq")
+    if ttype not in salt.transport.TRANSPORTS:
+        raise ValueError(f"Unsupported transport type: {ttype}")
+    if "transport" not in opts:
+        # Common factories also consult pillar; pool routing historically did not.
+        return dict(opts, transport=ttype)
+    return opts
+
+
 def create_server_transport(opts):
-    """
-    Create a server transport based on opts
-    """
-    ttype = opts.get("transport", "zeromq")
-    if ttype == "zeromq":
-        import salt.transport.zeromq
-
-        return salt.transport.zeromq.RequestServer(opts)
-    if ttype == "tcp":
-        import salt.transport.tcp
-
-        return salt.transport.tcp.RequestServer(opts)
-    if ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.RequestServer(opts)
-    raise ValueError(f"Unsupported transport type: {ttype}")
+    """Create a request server for pool routing."""
+    opts = _pool_transport_opts(opts)
+    return salt.transport.request_server(opts)
 
 
-def create_client_transport(opts, io_loop):
-    """
-    Create a client transport based on opts.
-    For request routing, this should return a RequestClient, not PublishClient.
-    """
-    ttype = opts.get("transport", "zeromq")
-    if ttype == "zeromq":
-        import salt.transport.zeromq
-
-        # For worker pool routing we need RequestClient, not PublishClient
-        if opts.get("workers_ipc_name") or opts.get("pool_name"):
-            return salt.transport.zeromq.RequestClient(opts, io_loop=io_loop)
-        return salt.transport.zeromq.PublishClient(opts, io_loop)
-    if ttype == "tcp":
-        import salt.transport.tcp
-
-        if opts.get("workers_ipc_name") or opts.get("pool_name"):
-            return salt.transport.tcp.RequestClient(opts, io_loop=io_loop)
-        return salt.transport.tcp.PublishClient(opts, io_loop)
-    if ttype == "ws":
-        import salt.transport.ws
-
-        if opts.get("workers_ipc_name") or opts.get("pool_name"):
-            return salt.transport.ws.RequestClient(opts, io_loop=io_loop)
-        return salt.transport.ws.PublishClient(opts, io_loop)
-    raise ValueError(f"Unsupported transport type: {ttype}")
+def create_client_transport(opts, io_loop=None):
+    """Create a request client for pool routing, otherwise a publish client."""
+    opts = _pool_transport_opts(opts)
+    io_loop = (
+        asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+    )
+    if opts.get("workers_ipc_name") or opts.get("pool_name"):
+        return salt.transport.request_client(opts, io_loop=io_loop)
+    # The former direct constructors did not enable TLS from opts here.
+    return salt.transport.publish_client(opts, io_loop, ssl=None)
 
 
 def create_request_client(opts, io_loop=None):
-    """
-    Create a RequestClient for pool routing.
-    This ensures we always get a RequestClient regardless of transport.
-    """
-    ttype = opts.get("transport", "zeromq")
-    if io_loop is None:
-        import tornado.ioloop
-
-        io_loop = tornado.ioloop.IOLoop.current()
-
-    if ttype == "zeromq":
-        import salt.transport.zeromq
-
-        return salt.transport.zeromq.RequestClient(opts, io_loop=io_loop)
-    if ttype == "tcp":
-        import salt.transport.tcp
-
-        return salt.transport.tcp.RequestClient(opts, io_loop=io_loop)
-    if ttype == "ws":
-        import salt.transport.ws
-
-        return salt.transport.ws.RequestClient(opts, io_loop=io_loop)
-    raise ValueError(f"Unsupported transport type: {ttype}")
+    """Create a request client on the caller's event loop for pool routing."""
+    opts = _pool_transport_opts(opts)
+    io_loop = (
+        asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+    )
+    return salt.transport.request_client(opts, io_loop=io_loop)

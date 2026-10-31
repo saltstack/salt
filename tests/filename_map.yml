@@ -180,6 +180,10 @@ salt/utils/metrics.py:
   - pytests.functional.utils.test_metrics_otlp_instances
   - pytests.unit.utils.test_metrics
 
+salt/utils/channel.py:
+  - pytests.unit.utils.test_channel
+  - pytests.unit.channel.test_server
+
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 
@@ -319,6 +323,10 @@ salt/utils/vt.py:
 
 salt/wheel/*:
   - pytests.integration.wheel.test_client
+
+salt/channel/client.py:
+  - pytests.unit.channel.test_client
+  - pytests.functional.channel.test_client
 
 salt/(minion\.py|channel/.+|transport/.+):
   - pytests.scenarios.multimaster.test_multimaster

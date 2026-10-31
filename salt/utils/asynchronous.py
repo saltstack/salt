@@ -15,6 +15,7 @@ import tornado.concurrent
 import tornado.ioloop
 
 import salt.utils.resource_warnings
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -22,14 +23,22 @@ log = logging.getLogger(__name__)
 def aioloop(io_loop, warn=False):
     """
     Ensure the ioloop is an asyncio loop not a tornado ioloop.
+
+    With ``warn=True``, deprecate Tornado loop arguments at an API boundary.
+    Native asyncio loop arguments remain supported without a warning.
     """
     if isinstance(io_loop, asyncio.AbstractEventLoop):
         return io_loop
     elif isinstance(io_loop, tornado.ioloop.IOLoop):
         if warn:
-            import traceback
-
-            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+            salt.utils.versions.warn_until(
+                (3009, 2),
+                "Passing a Tornado IOLoop as io_loop is deprecated and will "
+                "be removed in Salt {version}. Omit io_loop to use the current "
+                "asyncio event loop, or pass the Tornado loop's asyncio_loop "
+                "attribute to keep using that loop.",
+                stacklevel=4,
+            )
         return io_loop.asyncio_loop
     else:
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
@@ -107,7 +116,7 @@ class SyncWrapper:
         # as the transport classes in ``salt/transport/tcp.py``.
         self._creator_pid = os.getpid()
         if loop_kwarg:
-            kwargs[self.loop_kwarg] = self.io_loop
+            kwargs[self.loop_kwarg] = self.asyncio_loop
         with current_ioloop(self.io_loop):
             self.obj = cls(*args, **kwargs)
         self._async_methods = list(
