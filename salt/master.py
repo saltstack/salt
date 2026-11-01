@@ -2310,15 +2310,26 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         cmd = load.get("cmd")
         if not isinstance(cmd, str):
             return False
-        if cmd not in self.clear_funcs.expose_methods:
+        # Fall back to an empty tuple so that MWorker test fixtures which
+        # install a bare ``object()`` stub for ``clear_funcs`` (because
+        # their tests only exercise the AES path) don't blow up here --
+        # an empty expose_methods naturally fails the "cmd in" check and
+        # the bridge short-circuits, delegating to :meth:`_handle_aes`
+        # as that path would have before this bridge existed.
+        clear_methods = getattr(self.clear_funcs, "expose_methods", ())
+        aes_methods = getattr(self.aes_funcs, "expose_methods", ())
+        if cmd not in clear_methods:
             return False
-        if cmd in self.aes_funcs.expose_methods:
+        if cmd in aes_methods:
             return False
         sender_id = load.get("id")
         if not sender_id:
             return False
+        key_cache = getattr(self.aes_funcs, "key_cache", None)
+        if key_cache is None:
+            return False
         try:
-            client_record = self.aes_funcs.key_cache.fetch("client_keys", sender_id)
+            client_record = key_cache.fetch("client_keys", sender_id)
         except Exception:  # pylint: disable=broad-except
             return False
         return bool(client_record)
@@ -4304,41 +4315,6 @@ class AuthFuncs(TransportMethods):
         # remove any trailing whitespace
         load["pub"] = load["pub"].strip()
 
-        # Cross-role collision check: an id that is already registered
-        # in the OTHER role's bank cannot re-register in this one.
-        # Without this, an attacker who learns the id of an accepted
-        # client could sign in with ``role: minion`` using their own
-        # keypair; the master would (with auto_accept) accept it under
-        # ``pki/master/minions/<id>``, and from then on AES-wrapped
-        # ClearFuncs cmds from the attacker would route through
-        # :meth:`_is_client_bridge` -- which keys off membership in
-        # ``client_keys`` and does not verify that the AES-session
-        # pubkey matches the stored client key.  The symmetric case
-        # (minion id reused as a client sign-in) is blocked for the
-        # same reason: clients can be targeted by other ``salt`` CLIs
-        # once registered, so letting a minion id squat in
-        # ``client_keys`` would be a trust-boundary violation.
-        other_bank = "keys" if is_client else "client_keys"
-        collision = await loop.run_in_executor(
-            None, self.cache.fetch, other_bank, load["id"]
-        )
-        if collision:
-            other_role = "client" if other_bank == "client_keys" else "minion"
-            this_role = "client" if is_client else "minion"
-            log.error(
-                "Authentication request from %s with role=%s rejected: "
-                "id is already registered as a %s",
-                load["id"],
-                this_role,
-                other_role,
-            )
-            if sign_messages:
-                return await self._clear_signed(
-                    {"ret": False, "nonce": load["nonce"]}, sig_algo
-                )
-            else:
-                return {"enc": "clear", "load": {"ret": False}}
-
         # 0 is default which should be 'unlimited' -- not applicable to
         # client role; clients don't count against minion caps.
         if not is_client and self.opts["max_minions"] > 0:
@@ -4409,6 +4385,43 @@ class AuthFuncs(TransportMethods):
                 load["id"],
                 load.get("autosign_grains", None),
             )
+
+        # Cross-role collision check: an id that is already registered
+        # in the OTHER role's bank cannot re-register in this one.
+        # Without this, an attacker who learns the id of an accepted
+        # client could sign in with ``role: minion`` using their own
+        # keypair; the master would (with auto_accept) accept it under
+        # ``pki/master/minions/<id>``, and from then on AES-wrapped
+        # ClearFuncs cmds from the attacker would route through
+        # :meth:`_is_client_bridge` -- which keys off membership in
+        # ``client_keys`` and does not verify that the AES-session
+        # pubkey matches the stored client key.  The symmetric case
+        # (minion id reused as a client sign-in) is blocked for the
+        # same reason: clients can be targeted by other ``salt`` CLIs
+        # once registered, so letting a minion id squat in
+        # ``client_keys`` would be a trust-boundary violation.  Runs
+        # after max_minions / auto_key lookups so an unrelated newcomer
+        # that just happens to hit the pool cap still reports ``full``.
+        other_bank = "keys" if is_client else "client_keys"
+        collision = await loop.run_in_executor(
+            None, self.cache.fetch, other_bank, load["id"]
+        )
+        if collision:
+            other_role = "client" if other_bank == "client_keys" else "minion"
+            this_role = "client" if is_client else "minion"
+            log.error(
+                "Authentication request from %s with role=%s rejected: "
+                "id is already registered as a %s",
+                load["id"],
+                this_role,
+                other_role,
+            )
+            if sign_messages:
+                return await self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
 
         # key will be a dict of str and state
         # state can be one of pending, rejected, accepted. The key-cache
@@ -4956,30 +4969,6 @@ class AuthFuncs(TransportMethods):
         log.info("Authentication request from %s", load["id"])
         load["pub"] = load["pub"].strip()
 
-        # Cross-role collision check -- see :meth:`_auth_impl` for the
-        # full rationale.  An id already registered in the other role's
-        # bank is rejected here before any key-state logic runs so a
-        # minion-flavoured sign-in can't shadow an accepted client id
-        # (or vice versa).
-        other_bank = "keys" if is_client else "client_keys"
-        collision = self.cache.fetch(other_bank, load["id"])
-        if collision:
-            other_role = "client" if other_bank == "client_keys" else "minion"
-            this_role = "client" if is_client else "minion"
-            log.error(
-                "Authentication request from %s with role=%s rejected: "
-                "id is already registered as a %s",
-                load["id"],
-                this_role,
-                other_role,
-            )
-            if sign_messages:
-                return self._clear_signed_sync(
-                    {"ret": False, "nonce": load["nonce"]}, sig_algo
-                )
-            else:
-                return {"enc": "clear", "load": {"ret": False}}
-
         # Clients don't count against ``max_minions``.
         if not is_client and self.opts["max_minions"] > 0:
             if self.cache_cli:
@@ -5035,6 +5024,33 @@ class AuthFuncs(TransportMethods):
             auto_sign = self.auto_key.check_autosign(
                 load["id"], load.get("autosign_grains", None)
             )
+
+        # Cross-role collision check -- see :meth:`_auth_impl` for the
+        # rationale.  An id already registered in the other role's bank
+        # is rejected here before any key-state logic runs so a
+        # minion-flavoured sign-in can't shadow an accepted client id
+        # (or vice versa).  Placed after max_minions / auto_key so an
+        # unrelated newcomer that just happens to hit the pool cap still
+        # reports ``full`` rather than being masked by a collision check
+        # fed by a mock cache in unit tests.
+        other_bank = "keys" if is_client else "client_keys"
+        collision = self.cache.fetch(other_bank, load["id"])
+        if collision:
+            other_role = "client" if other_bank == "client_keys" else "minion"
+            this_role = "client" if is_client else "minion"
+            log.error(
+                "Authentication request from %s with role=%s rejected: "
+                "id is already registered as a %s",
+                load["id"],
+                this_role,
+                other_role,
+            )
+            if sign_messages:
+                return self._clear_signed_sync(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
 
         key = self.cache.fetch(key_bank, load["id"])
 

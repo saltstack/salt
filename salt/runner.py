@@ -278,9 +278,23 @@ class Runner(RunnerClient):
     """
 
     def __init__(self, opts, context=None):
+        # In-process callers that construct ``Runner`` with
+        # ``client_auth=True`` expect the opts to look like they came
+        # out of :func:`salt.config.client_config` -- notably with
+        # ``__role=client`` so downstream code (``RemoteRunner`` dispatch,
+        # ``_send_token_request``) can tell this is a workstation client
+        # and not the master-local path.  CLI invocations get this via
+        # ``client_config``; in-process callers (and the tests covering
+        # remote-CLI parity) get it here.  Mirrors the same shim in
+        # :class:`salt.key.KeyCLI` so the two classes stay symmetric.
+        if opts.get("client_auth") and opts.get("__role") != "client":
+            opts = dict(opts)
+            opts["__role"] = "client"
         super().__init__(opts, context=context)
-        self.returners = salt.loader.returners(opts, self.functions, context=context)
-        self.outputters = salt.loader.outputters(opts)
+        self.returners = salt.loader.returners(
+            self.opts, self.functions, context=context
+        )
+        self.outputters = salt.loader.outputters(self.opts)
 
     def destroy(self):
         if hasattr(self, "returners") and self.returners is not None:

@@ -204,16 +204,24 @@ class KeyCLI:
 
                 resolver = _auth.Resolver(self.opts)
                 res = resolver.cli(self.opts["eauth"])
-                # Mint a token so the WheelClient event path (if used)
-                # can authenticate without a client PKI key.
-                tok = None
-                if res:
-                    tok = resolver.token_cli(self.opts["eauth"], res)
-                    if tok and tok.get("token"):
-                        low["token"] = tok["token"]
                 if not res:
                     log.error("Authentication failed")
                     return {}
+                # Mint a token when the operator asked for one
+                # (``--mktoken``) or when this is a remote CLI client
+                # whose event-subscriber path needs it.  For plain
+                # master-local salt-key, do not pre-mint: the historical
+                # bad-eauth-creds behavior expects ``check_authentication``
+                # on the wheel endpoint to see ``auth_type="eauth"`` and
+                # reject bad PAM passwords through the eauth driver
+                # rather than through a successful ``mk_token`` round-trip.
+                want_token = (
+                    self.opts.get("mktoken") or self.opts.get("__role") == "client"
+                )
+                if want_token:
+                    tok = resolver.token_cli(self.opts["eauth"], res)
+                    if tok and tok.get("token"):
+                        low["token"] = tok["token"]
                 low.update(res)
                 low["eauth"] = self.opts["eauth"]
         else:
