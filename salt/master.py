@@ -5468,6 +5468,7 @@ class ClearFuncs(TransportMethods):
         "mk_token",
         "wheel",
         "runner",
+        "batch_adopt",
     )
     async_methods = (
         "publish",
@@ -5756,6 +5757,86 @@ class ClearFuncs(TransportMethods):
             "enc": "clear",
             "load": {"jid": batch.batch_jid, "minions": minions, "missing": missing},
         }
+
+    def batch_adopt(self, clear_load):
+        """
+        Hand off an async-batch state blob built by a remote client.
+
+        Called by :class:`salt.client.RemoteClient.batch_adopt` after the
+        workstation has published the first sub-batch and composed a
+        BatchState dict.  Writes the state to the master's cachedir and
+        fires ``salt/batch/<jid>/new`` so :class:`BatchManager` adopts
+        the JID and takes over driving subsequent sub-batches.
+
+        Remote workstations cannot write to the master's ``cachedir``
+        or push on the master's IPC event bus directly, so this
+        endpoint is the narrow surface that bridges those two
+        master-local operations under eauth authorization.  Unlike a
+        general-purpose ``fire_event`` RPC, ``batch_adopt`` only ever
+        emits ``salt/batch/<jid>/new`` and only ever writes
+        ``.batch.p`` / ``batch_active.p`` -- the blast radius is a
+        single JID per call.
+
+        :param dict clear_load:
+            Must carry ``batch_jid`` (str) and ``state`` (dict), plus
+            standard eauth fields (``eauth``/``username``/``password``,
+            or ``token``).  ``state`` is a BatchState dict as returned
+            by :func:`salt.utils.batch_state.create_batch_state` with
+            ``driver="master"`` already set.
+        """
+        import salt.utils.batch_output
+        import salt.utils.batch_state
+
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(clear_load)
+        auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
+        error = auth_check.get("error")
+        if error:
+            return {"error": error}
+
+        # Authorize: adopting a batch is a wheel-ish master-side admin
+        # action; require ``@wheel`` on the eauth user's auth_list.
+        if auth_type != "user":
+            if not self.ckminions.wheel_check(
+                auth_check.get("auth_list", []),
+                "batch.adopt",
+                clear_load.get("kwarg", {}),
+            ):
+                return {
+                    "error": {
+                        "name": err_name,
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, auth_check.get("username"))
+                        ),
+                    }
+                }
+
+        batch_jid = clear_load.get("batch_jid")
+        state = clear_load.get("state")
+        if not batch_jid or not isinstance(state, dict):
+            return {
+                "error": {
+                    "name": "SaltInvocationError",
+                    "message": "batch_adopt requires 'batch_jid' and 'state'",
+                }
+            }
+
+        try:
+            salt.utils.batch_state.write_batch_state(batch_jid, state, self.opts)
+            salt.utils.batch_state.add_to_active_index(batch_jid, self.opts)
+            self.event.fire_event(
+                salt.utils.batch_output.new_payload(state),
+                salt.utils.batch_output.tag_new(batch_jid),
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            log.exception("batch_adopt failed for jid=%s", batch_jid)
+            return {
+                "error": {
+                    "name": exc.__class__.__name__,
+                    "message": str(exc),
+                }
+            }
+        return {"jid": batch_jid, "adopted": True}
 
     async def publish(self, clear_load):
         """

@@ -443,28 +443,49 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             state["active"][m] = now
         state["last_progress"] = now
 
-        salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
-        salt.utils.batch_state.add_to_active_index(batch_jid, self.config)
+        # Remote CLI (``__role=client``) cannot write to the master's
+        # ``cachedir`` or push on its IPC event bus; hand the state
+        # blob to :meth:`salt.master.ClearFuncs.batch_adopt` instead,
+        # which performs both operations server-side under eauth
+        # authorization.  See the matching ``RemoteClient.batch_adopt``
+        # client-side wrapper -- it routes via the standard AES bridge.
+        if self.config.get("__role") == "client":
+            try:
+                self.client.batch_adopt(batch_jid, state, **(eauth or {}))
+            except (
+                AuthenticationError,
+                AuthorizationError,
+                EauthAuthenticationError,
+                SaltClientError,
+                SaltInvocationError,
+            ) as exc:
+                sys.stderr.write(f"ERROR: {exc}\n")
+                sys.exit(2)
+        else:
+            salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
+            salt.utils.batch_state.add_to_active_index(batch_jid, self.config)
 
-        try:
-            with salt.utils.event.get_master_event(
-                self.config, self.config["sock_dir"], listen=False
-            ) as event:
-                event.fire_event(
-                    salt.utils.batch_output.new_payload(state),
-                    salt.utils.batch_output.tag_new(batch_jid),
+            try:
+                with salt.utils.event.get_master_event(
+                    self.config, self.config["sock_dir"], listen=False
+                ) as event:
+                    event.fire_event(
+                        salt.utils.batch_output.new_payload(state),
+                        salt.utils.batch_output.tag_new(batch_jid),
+                    )
+            except Exception:  # pylint: disable=broad-except
+                # Non-fatal — BatchManager's _tick() reconciliation
+                # will pick this batch up from the active index
+                # within one loop interval.  Log the failure so
+                # operators see it.
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Failed to fire salt/batch/%s/new; BatchManager "
+                    "will adopt via active-index reconciliation on "
+                    "its next tick",
+                    batch_jid,
                 )
-        except Exception:  # pylint: disable=broad-except
-            # Non-fatal — BatchManager's _tick() reconciliation will
-            # pick this batch up from the active index within one
-            # loop interval.  Log the failure so operators see it.
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "Failed to fire salt/batch/%s/new; BatchManager will adopt "
-                "via active-index reconciliation on its next tick",
-                batch_jid,
-            )
 
         salt.utils.stringutils.print_cli(
             f"Executed batch command with job ID: {batch_jid}"

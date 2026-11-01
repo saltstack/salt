@@ -32,6 +32,7 @@ import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
 import salt.utils.args
+import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
@@ -2539,6 +2540,52 @@ class RemoteClient(LocalClient):
         raise RuntimeError(
             "Unexpected method call: RemoteClient should not read master key"
         )
+
+    def batch_adopt(self, batch_jid, state, **auth_kwargs):
+        """
+        Ask the master to adopt a batch state blob built on this client.
+
+        Routes to :meth:`salt.master.ClearFuncs.batch_adopt` via the
+        standard AES bridge used by publish/runner/wheel.  Enables
+        ``salt --batch --async`` from a workstation: the client runs
+        ``gather_minions`` and publishes the first sub-batch locally,
+        then hands the composed BatchState dict (with
+        ``driver="master"``) to the master so :class:`BatchManager`
+        can own cachedir writes and drive subsequent sub-batches.
+
+        :param str batch_jid:
+            The JID assigned to the batch run.
+
+        :param dict state:
+            A BatchState dict as returned by
+            :func:`salt.utils.batch_state.create_batch_state` with
+            ``driver="master"`` set.
+
+        :param auth_kwargs:
+            Eauth fields (``eauth``/``username``/``password`` or
+            ``token``) consumed by ``ClearFuncs._prep_auth_info`` on
+            the master.
+
+        :raises SaltClientError: if the master rejects the request.
+        """
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
+        )
+        load = {
+            "cmd": "batch_adopt",
+            "id": self.opts["id"],
+            "batch_jid": batch_jid,
+            "state": state,
+        }
+        load.update(auth_kwargs)
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri
+        ) as channel:
+            ret = channel.send(load)
+        if isinstance(ret, dict) and "error" in ret:
+            salt.utils.error.raise_error(**ret["error"])
+        return ret
 
 
 class FunctionWrapper(dict):
