@@ -1458,7 +1458,25 @@ class AsyncAuth:
                     error = SaltClientError(
                         "Attempt to authenticate with the salt master failed"
                     )
-                self._authenticate_future.set_exception(error)
+                # Guard against a double-set on ``_authenticate_future``.
+                # A stale coroutine (e.g. one racing against a sibling
+                # ``authenticate()`` call that replaced the future, or one
+                # finishing after ``invalidate()`` dropped the attribute and
+                # a new task was scheduled) would otherwise raise
+                # ``asyncio.exceptions.InvalidStateError`` here, propagate
+                # out of this task as an unhandled coroutine exception, and
+                # leave the minion wedged in an un-authenticated state until
+                # the process is restarted.
+                if not self._authenticate_future.done():
+                    self._authenticate_future.set_exception(error)
+                else:
+                    log.debug(
+                        "%s _authenticate_future already resolved; "
+                        "dropping redundant set_exception(%r). A sibling "
+                        "authenticate() call will schedule the next retry.",
+                        self,
+                        error,
+                    )
             else:
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
@@ -1481,9 +1499,21 @@ class AsyncAuth:
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-                self._authenticate_future.set_result(
-                    True
-                )  # mark the sign-in as complete
+                # Guard against a double-set for the same reasons documented
+                # on the exception branch above.  A stale winner finishing
+                # against an already-resolved future would otherwise raise
+                # ``InvalidStateError`` and bubble out as an unhandled
+                # coroutine exception.
+                if not self._authenticate_future.done():
+                    self._authenticate_future.set_result(
+                        True
+                    )  # mark the sign-in as complete
+                else:
+                    log.debug(
+                        "%s _authenticate_future already resolved before "
+                        "set_result; a sibling authenticate() won the race.",
+                        self,
+                    )
                 # Notify the bus about creds change.
                 # Fire synchronously on the role's event bus (no io_loop) so the
                 # IPC publish completes before the `with` block tears the event
