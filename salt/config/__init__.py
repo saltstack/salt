@@ -606,6 +606,15 @@ VALID_OPTS = immutabletypes.freeze(
         # The port for the master to listen to returns on. The minion needs to connect to this port
         # to send returns.
         "ret_port": int,
+        # The port the master's ClientEventPublisher binds for authenticated
+        # event streaming to remote clients. The auth channel uses
+        # ``client_event_port + 1``.
+        "client_event_port": int,
+        # Set by ``client_config()`` to signal the CLI dispatch layer which
+        # client implementation to use.  True when ``/etc/salt/client`` is
+        # loaded (RemoteClient path, PKI client identity); False when the
+        # legacy master-config fallback is used (LocalClient path).
+        "client_auth": bool,
         # The number of seconds to keep jobs around in the job cache on the master
         "keep_jobs_seconds": int,
         # If the returner supports `clean_old_jobs`, then at cleanup time,
@@ -1603,6 +1612,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "master"),
         "sock_pool_size": 1,
         "ret_port": 4506,
+        "client_event_port": 4507,
+        "client_auth": False,
         "timeout": 5,
         "publish_timeout": 30,
         "keep_jobs": 24,
