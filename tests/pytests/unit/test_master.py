@@ -618,6 +618,116 @@ def test_prep_pub_start_event_value_is_normalized_to_true(clear_funcs):
         )
 
 
+# ---------------------------------------------------------------------------
+# _topology_forward_only_target
+# ---------------------------------------------------------------------------
+
+
+def _topology_opts(master_opts, cluster_id="east"):
+    """
+    Return a copy of master_opts with topology-enabled fields set so the
+    forward-only widening path is in effect.  The helper intentionally
+    does NOT touch the pki / cache paths because the method under test
+    only reads opts["topology_enabled"] + the identity-level cluster_id.
+    """
+    opts = master_opts.copy()
+    opts["topology_enabled"] = True
+    opts["cluster_id"] = cluster_id
+    return opts
+
+
+def test_topology_forward_only_target_disabled_returns_false(master_opts):
+    """
+    When topology is not enabled, every call is a no-op: the legacy
+    "no minions matched" error path must still fire for every
+    tgt_type.
+    """
+    opts = master_opts.copy()
+    opts["topology_enabled"] = False
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        for tgt_type in ("glob", "list", "pcre", "compound"):
+            assert clear_funcs._topology_forward_only_target("foo", tgt_type) is False
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_bare_minion_glob_widens(master_opts):
+    """
+    BUG-003: a bare minion-id glob (``east-sub-minion-1``) that
+    resolves to zero local minions must widen on a topology-enabled
+    master so :func:`salt.topology.router.on_publish` can flood-forward
+    the publish to peer clusters.
+    """
+    opts = _topology_opts(master_opts)
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        assert (
+            clear_funcs._topology_forward_only_target("east-sub-minion-1", "glob")
+            is True
+        )
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_bare_targets_all_types_widen(master_opts):
+    """
+    Bare targets of every non-compound tgt_type widen under topology:
+    ``glob`` (``salt east-sub-minion-1 ...``), ``list``
+    (``salt -L east-sub-minion-1,west-sub-minion-1 ...``), and
+    ``pcre`` (``salt -E 'east-.*' ...``) all need to reach peer
+    clusters whose minion-id manifest the origin cannot pre-enumerate.
+    """
+    opts = _topology_opts(master_opts)
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        for tgt_type in ("glob", "list", "pcre"):
+            assert (
+                clear_funcs._topology_forward_only_target("east-sub-minion-1", tgt_type)
+                is True
+            ), tgt_type
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_compound_c_at_peer_widens(master_opts):
+    """
+    Compound ``C@<peer>`` target widens for a peer cluster (case 1 of
+    the docstring).  This was the original pre-fix behaviour and must
+    continue to work.
+    """
+    opts = _topology_opts(master_opts, cluster_id="east")
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        with patch("salt.master._topology_cluster_id_for_auth", return_value="east"):
+            assert (
+                clear_funcs._topology_forward_only_target("C@east-sub", "compound")
+                is True
+            )
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_compound_c_at_local_only_does_not_widen(
+    master_opts,
+):
+    """
+    Compound ``C@<local>`` target with no peer scope must NOT widen:
+    the only destination is the local cluster, where the match
+    genuinely failed, so the legacy "could not resolve minions" error
+    is the correct response.
+    """
+    opts = _topology_opts(master_opts, cluster_id="east")
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        with patch("salt.master._topology_cluster_id_for_auth", return_value="east"):
+            assert (
+                clear_funcs._topology_forward_only_target("C@east", "compound") is False
+            )
+    finally:
+        clear_funcs.destroy()
+
+
 @pytest.mark.slow_test
 def test_runner_token_not_authenticated(clear_funcs):
     """
@@ -4817,16 +4927,16 @@ async def test_publish_topology_c_scope_matches_local_cluster_normal_path(
     ), f"local-only C@east with empty minions should still error: {result!r}"
 
 
-async def test_publish_glob_empty_minions_still_errors(publish_clear_funcs):
+async def test_publish_glob_empty_minions_errors_without_topology(
+    publish_clear_funcs,
+):
     """
-    A non-topology target (plain glob) with no matches must still
-    short-circuit with "Master could not resolve minions for
-    target", regardless of ``topology_enabled``.  The forward-only
-    pass is gated on a ``C@`` scope naming a peer cluster, not on
-    the empty-match condition alone.
+    On a NON-topology master, a plain glob with no local matches must
+    short-circuit with "Master could not resolve minions for target"
+    --- the forward-only widening is gated on ``topology_enabled`` and
+    must not fire when the master is a solo publish daemon.
     """
-    publish_clear_funcs.opts["topology_enabled"] = True
-    publish_clear_funcs.opts["_topology_cluster_id_cache"] = "east"
+    publish_clear_funcs.opts["topology_enabled"] = False
 
     load = {
         "user": "foo",
@@ -4852,3 +4962,58 @@ async def test_publish_glob_empty_minions_still_errors(publish_clear_funcs):
         result = await publish_clear_funcs.publish(load)
 
     assert "Master could not resolve minions for target" in result["load"]["error"]
+
+
+async def test_publish_glob_empty_minions_forwards_under_topology(
+    publish_clear_funcs,
+):
+    """
+    BUG-003: on a topology-enabled master, a bare glob target that
+    resolves to zero local minions must NOT short-circuit --- the
+    publish is widened so :func:`salt.topology.router.on_publish` can
+    forward it to peer clusters whose minion-id manifest the origin
+    cannot pre-enumerate.  ``east-sub-minion-1`` from topo-east is
+    the canonical repro of this bug.
+    """
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["_topology_cluster_id_cache"] = "east"
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "east-sub-minion-1",
+        "tgt_type": "glob",
+        "arg": [],
+        "ret": "",
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs, "_prep_jid", MagicMock(return_value="20260101000000000001")
+    ), patch.object(
+        publish_clear_funcs, "_send_pub", AsyncMock(return_value=None)
+    ), patch.object(
+        publish_clear_funcs, "_send_ssh_pub", MagicMock(return_value=None)
+    ), patch.object(
+        publish_clear_funcs, "_fire_event_on_running_loop", MagicMock(return_value=None)
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    # The publish must reach _prep_pub / _send_pub.  The successful-publish
+    # shape has {"enc": "clear", "load": {"jid": ..., "minions": [], "missing": []}}.
+    assert "error" not in result.get("load", {}), (
+        f"topology bare-target publish should widen past the no-minions "
+        f"guard: {result!r}"
+    )
+    assert result["load"]["jid"] == "20260101000000000001"

@@ -6468,45 +6468,87 @@ class ClearFuncs(TransportMethods):
         should still be allowed through for topology-level
         forwarding to one or more peer clusters.
 
-        Semantics: the target carries at least one ``C@`` cluster
-        scope naming a cluster OTHER than this master's own
-        topology ``cluster_id``.  ``tgt_type`` must be a compound
-        target --- globs / lists / pcre never carry ``C@`` scopes.
+        Two widening cases, both gated on ``topology_enabled``:
 
-        A pure-local-miss (e.g. ``nonexistent-minion`` glob, or
-        ``C@east`` on east with no accepted minions) continues to
-        error out the normal way; this gate only widens the pass
-        for the single case of "the C@scope is for someone else."
+        1. **Compound ``C@`` scope to peer cluster(s)**: the target
+           carries at least one ``C@`` scope naming a cluster
+           OTHER than this master's own topology ``cluster_id``.
+           :func:`salt.topology.router.on_publish` fans the publish
+           to the named peers; the origin's empty local-match is
+           expected.
+
+        2. **Bare target on topology-enabled master**: a glob /
+           list / pcre target that resolved to zero local minions
+           at this master.  The target may name a minion that
+           lives on an adjacent peer cluster whose minion ids
+           this master has no way to pre-enumerate (the summary
+           gossip carries aggregate counts + histograms, not the
+           minion-id manifest; see
+           :class:`salt.topology.summary.ClusterSummary`).  The
+           publish is widened to flood-forward so the peer
+           cluster(s) whose local matcher resolves the target can
+           publish and return.  Per-publish amplification is
+           bounded by:
+
+           * jid-keyed breadcrumb + path authentication in
+             :meth:`TopologyRouter.forward_publish` --- each hop
+             forwards a given jid exactly once.
+           * mesh dedup via the authenticated path --- no cycle
+             re-propagates.
+           * every peer's local matcher independently decides
+             whether to publish; genuinely-nonexistent target
+             ids simply match nothing everywhere and the client
+             reports timeout, not a lingering flood.
+
+           Trade-off: a mistyped glob (``salt east-sub-minionx
+           test.ping``) now cross-cluster-floods instead of
+           returning "could not resolve minions."  The
+           alternative (summary-driven minion-id resolution)
+           would require wire-level changes to
+           :class:`ClusterSummary` that break its size-bounding
+           invariant; see follow-up ``bug-003`` in the agents
+           report.
+
+        For non-topology masters this always returns ``False``;
+        the legacy "no minions matched" error fires as before.
         """
         if not self.opts.get("topology_enabled"):
-            return False
-        if tgt_type not in ("compound", "compound_pillar_exact", "nodegroup"):
             return False
         try:
             # Local import keeps non-topology masters out of this path.
             import salt.topology.router as topology_router
         except ImportError:
             return False
-        try:
-            destinations = topology_router.extract_cluster_scope(tgt)
-        except Exception:  # pylint: disable=broad-except
-            return False
-        if destinations is None:
-            # Flood (either no C@ at all, or a ``not`` makes extraction
-            # conservative-flood).  "no C@ at all" is a plain target
-            # miss --- the existing error should still fire.  Flood-via-
-            # ``not`` is treated the same here: on an empty local
-            # match there is nothing to forward with correct semantics
-            # anyway.  No forward-only pass.
-            return False
-        local_cluster_id = _topology_cluster_id_for_auth(self.opts)
-        # Any destination not equal to our local cluster_id implies a
-        # peer-cluster forward opportunity.  ``local_cluster_id`` may
-        # be ``""`` on a master whose topology config has no
-        # ``cluster_id`` --- in that case every named destination is
-        # "someone else" and the forward is still worth attempting.
-        remote = {c for c in destinations if c and c != local_cluster_id}
-        return bool(remote)
+
+        if tgt_type in ("compound", "compound_pillar_exact", "nodegroup"):
+            # Case 1: compound target with ``C@`` scoping.
+            try:
+                destinations = topology_router.extract_cluster_scope(tgt)
+            except Exception:  # pylint: disable=broad-except
+                return False
+            if destinations is None:
+                # Flood (either no C@ at all, or a ``not`` makes extraction
+                # conservative-flood).  Fall through to the bare-target
+                # case below so the publish still forwards --- a compound
+                # target like ``not C@east and web-*`` from topo-east
+                # might legitimately resolve on a peer cluster.
+                pass
+            else:
+                local_cluster_id = _topology_cluster_id_for_auth(self.opts)
+                # Any destination not equal to our local cluster_id
+                # implies a peer-cluster forward opportunity.
+                # ``local_cluster_id`` may be ``""`` on a master whose
+                # topology config has no ``cluster_id`` --- in that case
+                # every named destination is "someone else" and the
+                # forward is still worth attempting.
+                remote = {c for c in destinations if c and c != local_cluster_id}
+                return bool(remote)
+
+        # Case 2: bare target (glob / list / pcre) under topology.
+        # No cluster scope to inspect --- let the publish forward and
+        # rely on peer-cluster local matchers to resolve.  See the
+        # docstring above for the bound-and-trade-off discussion.
+        return True
 
     def _prep_auth_info(self, clear_load, want_stacked=False):
         """
