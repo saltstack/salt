@@ -13,6 +13,43 @@ If your master is being upgraded from 3006.x/3007.x, see the
 about the minion data cache reorganization — run
 ``salt '*' saltutil.refresh_grains`` on minions after the upgrade.
 
+## Master Cluster: Node Identity Changed — Migration Required
+> :warning: **Upgrade Notice (clustered masters only)**: <br>
+[#70568](https://github.com/saltstack/salt/pull/70568) fixes
+[#70567](https://github.com/saltstack/salt/issues/70567) by changing the
+cluster-wide node identity from ``opts["interface"]`` to ``opts["id"]``
+(with the ``_master`` suffix stripped). This is required so founding-voter
+election and peer handshakes work when masters bind to ``0.0.0.0`` / ``::``
+or when ``cluster_peers`` is specified by hostname rather than by IP.
+>
+> **Who is affected**: existing 3008.0–3008.2 clustered masters whose
+> ``opts["interface"]`` differs from their ``opts["id"]`` (the common
+> case — ``interface`` is typically an IP, ``id`` typically a hostname).
+> Standalone (non-clustered) masters are not affected.
+>
+> **What changes on-disk**:
+> - Raft storage path moves from
+>   ``<cachedir>/cluster/consensus/<interface>/log`` to
+>   ``<cachedir>/cluster/consensus/<node_id>/log``.
+> - The cluster-join sentinel moves from
+>   ``<cachedir>/.cluster_joined.<interface>`` to
+>   ``<cachedir>/.cluster_joined.<node_id>``.
+> - Peer pubkey files under ``<cluster_pki_dir>/peers/`` are now looked up
+>   by ``<node_id>.pub`` instead of ``<interface>.pub``.
+>
+> **Before upgrading**:
+> 1. On every master in the cluster, set :conf_master:`id` explicitly and
+>    make sure each master's ``id`` matches the name its siblings list in
+>    their ``cluster_peers``. See the updated
+>    [master cluster tutorial](../tutorials/master-cluster) for details.
+> 2. Rename each master's ``<cluster_pki_dir>/peers/<old-interface>.pub``
+>    to ``<cluster_pki_dir>/peers/<new-node-id>.pub`` on every master.
+>
+> **On upgrade**: the Raft log at the old path is not read; the cluster
+> will re-bootstrap under the new identity (lowest ``node_id`` founds,
+> others join as learners). Expect a short window during which the cluster
+> re-forms before resuming normal operation.
+
 <!--
 Do not edit the changelog below.
 This is auto generated.
