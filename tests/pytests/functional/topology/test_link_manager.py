@@ -517,11 +517,25 @@ def test_handle_inbound_dispatches_ret_evt_sum(opts, clean_state, monkeypatch):
         # calls ``route_return(item)`` for each item with a ``jid`` (items
         # without a jid are dropped before the router sees them).  Craft
         # a minimal valid batch so the dispatch exercises ``route_return``.
-        # ``_dispatch_evt`` / ``_dispatch_sum`` still take an opaque load.
+        # ``_dispatch_sum`` now reconstitutes the wire summary via
+        # :func:`summary_mod.deserialize` before scheduling
+        # ``ingest_summary`` (commit ``94c4c6e15c3``), so pass a proper
+        # ``{"summary": <wire-dict>}`` body here.  ``_dispatch_evt``
+        # still takes an opaque load.
         payloads = {
             "topology/ret": {"batch": [{"jid": "20260101000000000001", "id": "m"}]},
             "topology/evt": {"blob": "topology/evt"},
-            "topology/sum": {"blob": "topology/sum"},
+            "topology/sum": {
+                "summary": {
+                    "cluster_id": "east",
+                    "path": ["east"],
+                    "minion_count": 0,
+                    "up_count": 0,
+                    "grain_histograms": {},
+                    "origin_seq": 1,
+                    "origin_at": 0.0,
+                },
+            },
         }
         for tag, bucket in (
             ("topology/ret", fake.route_return_calls),

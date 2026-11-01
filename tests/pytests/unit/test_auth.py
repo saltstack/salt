@@ -124,6 +124,19 @@ def master_acl_clear_funcs(master_acl_master_opts):
         pass
 
     clear._send_pub = _send_pub
+
+    # ClearFuncs now routes event fires through ``_fire_event_on_running_loop``
+    # which prefers ``fire_event_async`` under a running loop (commit
+    # ``0be0b4c1355`` -- fixes the event-bus subscriber lag on hub
+    # masters).  These tests mock the sync ``fire_event`` and assert on
+    # its ``call_args``; route the helper to sync so assertions keep
+    # inspecting a single mock regardless of the running-loop
+    # heuristic.
+    def _sync_fire(data, tag):
+        clear.event.fire_event(data, tag)
+
+    clear._fire_event_on_running_loop = _sync_fire
+
     try:
         yield clear
     finally:
