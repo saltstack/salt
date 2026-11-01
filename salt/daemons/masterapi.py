@@ -730,10 +730,14 @@ class RemoteFuncs:
             ckey = load["id"]
             cbank = "mine"
             new_data = load["data"]
-            if not load.get("clear", False):
+            if load.get("clear", False):
+                data = new_data
+            else:
                 data = self.cache.fetch(cbank, ckey)
                 if isinstance(data, dict):
                     data.update(new_data)
+                else:
+                    data = new_data
             self.cache.store(cbank, ckey, data)
         return True
 
