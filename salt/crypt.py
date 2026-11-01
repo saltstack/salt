@@ -835,7 +835,13 @@ class MasterKeys(dict):
             path = f"{self.opts['keys.cache_driver']}:master_keys/{self.master_id}.pub"
 
         if force or not cache.contains("master_keys", f"{name}.pem"):
-            log.info("Generating key-pair for %s", path)
+            log.warning(
+                "Generating new master key-pair for %s. Any minion that "
+                "previously cached this master's public key will reject "
+                "the new key as a MITM attempt until its "
+                "minion_master.pub is deleted and the minion restarts.",
+                path,
+            )
             (priv, pub) = gen_keys(
                 keysize or self.opts["keysize"],
                 passphrase,
