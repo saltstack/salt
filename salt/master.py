@@ -5684,6 +5684,34 @@ class ClearFuncs(TransportMethods):
             self.get_token = self._sync_get_token
             self.ping = self._sync_ping
 
+    def _fire_event_on_running_loop(self, data, tag):
+        """
+        Fire an event without blocking the current ``asyncio`` loop.
+
+        ``SaltEvent.fire_event`` is synchronous and its underlying
+        ``self.pusher.publish`` goes through
+        :class:`salt.utils.asynchronous.SyncWrapper._wrap`.  When
+        ``_wrap`` detects a running loop in the caller, it spawns an
+        OS thread and ``thread.join()`` s --- blocking this coroutine
+        for the duration of the IPC write to
+        ``master_event_pull.ipc``.  On a hub master (e.g. the sandbox
+        ``topo-east`` where two peers connect inbound) the per-event
+        write latency amplifies the join overhead and
+        ``salt/job/<jid>/new`` arrival drifts behind
+        ``salt/job/<jid>/ret/*`` by multiple seconds.
+
+        Prefer :func:`asyncio.get_running_loop().create_task` with
+        :meth:`SaltEvent.fire_event_async` so the fire runs on the
+        caller's own loop with no thread spawn; fall back to the
+        synchronous path when no loop is running.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.event.fire_event(data, tag)
+            return
+        loop.create_task(self.event.fire_event_async(data, tag))
+
     async def runner(self, clear_load):
         """
         Send a master control function back to the runner system
@@ -6131,7 +6159,7 @@ class ClearFuncs(TransportMethods):
                 }
             }
             if "jid" in clear_load:
-                self.event.fire_event(
+                self._fire_event_on_running_loop(
                     {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
                 )
             return err
@@ -6331,7 +6359,7 @@ class ClearFuncs(TransportMethods):
                     }
                 }
                 if "jid" in clear_load:
-                    self.event.fire_event(
+                    self._fire_event_on_running_loop(
                         {**clear_load, **err},
                         tagify([clear_load["jid"], "error"], "job"),
                     )
@@ -6400,7 +6428,9 @@ class ClearFuncs(TransportMethods):
         # Send it!
         # Copy the payload when firing event for now since it's adding a
         # __pub_stamp field.
-        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        self._fire_event_on_running_loop(
+            payload.copy(), tagify([jid, "publish"], "job")
+        )
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
@@ -6639,7 +6669,9 @@ class ClearFuncs(TransportMethods):
         }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, tagify([clear_load["jid"], "new"], "job"))
+        self._fire_event_on_running_loop(
+            new_job_load, tagify([clear_load["jid"], "new"], "job")
+        )
 
         if self.opts["ext_job_cache"]:
             fstr = "{}.save_load".format(self.opts["ext_job_cache"])

@@ -455,6 +455,7 @@ def test_clear_funcs_black(master_opts):
         "__sizeof__",
         "__str__",
         "__subclasshook__",
+        "_fire_event_on_running_loop",
         "_is_known_client",
         "_prep_auth_info",
         "_prep_jid",
