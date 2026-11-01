@@ -542,15 +542,44 @@ class ReqServerChannel:
             )
             cmd = load.get("cmd") if isinstance(load, dict) else None
             span_name = f"salt.req.recv.{cmd}" if cmd else "salt.req.recv"
+            span_attrs = {
+                "salt.req.cmd": cmd or "",
+                "salt.req.minion_id": (
+                    payload.get("id", "") if isinstance(payload, dict) else ""
+                ),
+            }
+            if isinstance(load, dict):
+                # Return-leg correlation: a ``_return`` carries the
+                # originating ``jid`` and the function name, but no
+                # ``id`` on the outer envelope -- surface both as
+                # span attributes so a return span is joinable to
+                # the originating publish without a trace walk.
+                if cmd == "_return":
+                    jid = load.get("jid")
+                    if jid is not None:
+                        span_attrs["salt.jid"] = str(jid)
+                    fun = load.get("fun")
+                    if fun is not None:
+                        span_attrs["salt.fun"] = fun
+                # Publish-leg correlation: ``publish`` is directed at
+                # the master, not a specific minion, so
+                # ``salt.req.minion_id`` is always empty.  Fill in the
+                # jid + target expression so the span is joinable to
+                # the originating publish via ``salt.jid`` or
+                # ``salt.pub.tgt``.
+                elif cmd == "publish":
+                    jid = load.get("jid")
+                    if jid is not None:
+                        span_attrs["salt.jid"] = str(jid)
+                    tgt = load.get("tgt")
+                    if tgt is not None:
+                        span_attrs["salt.pub.tgt"] = (
+                            str(tgt) if not isinstance(tgt, str) else tgt
+                        )
             with salt.utils.tracing.start_span(
                 span_name,
                 kind=salt.utils.tracing.SpanKind.SERVER,
-                attributes={
-                    "salt.req.cmd": cmd or "",
-                    "salt.req.minion_id": (
-                        payload.get("id", "") if isinstance(payload, dict) else ""
-                    ),
-                },
+                attributes=span_attrs,
                 context=trace_ctx,
             ):
                 ret, req_opts = await self.payload_handler(payload)
@@ -1641,6 +1670,13 @@ class PubServerChannel:
     def _publish_daemon(self, **kwargs):
         import salt.master
 
+        # Initialise OpenTelemetry under this daemon's own pid.  Spans +
+        # inject/extract helpers invoked from ``publish_payload`` and the
+        # topology forward path (``send_publish`` -> ``inject(body)``)
+        # short-circuit silently when ``is_enabled()`` is False, so without
+        # this call cross-process trace context propagation is a no-op in
+        # the forked daemon.
+        salt.utils.tracing.configure(self.opts)
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.debug(
                 "setting Publish daemon niceness to %i",
@@ -3250,6 +3286,13 @@ class MasterPubServerChannel:
             setproctitle.setproctitle("EventPublisher")
         import salt.master  # pylint: disable=import-outside-toplevel
 
+        # Initialise OpenTelemetry under this daemon's own pid.  This is
+        # the process that runs ``publish_payload`` -> ``topology_router.
+        # on_publish`` -> ``PeerMasterLink.send_publish``; the inject()
+        # call that threads traceparent across peer-cluster forwards
+        # short-circuits silently when ``is_enabled()`` is False, so
+        # cross-cluster trace propagation breaks without this call.
+        salt.utils.tracing.configure(self.opts)
         if (
             self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()

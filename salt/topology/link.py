@@ -40,6 +40,7 @@ import asyncio
 import logging
 import os
 
+import salt.utils.tracing
 from salt.channel.client import AsyncReqChannel
 from salt.config.topology import PeerRef
 from salt.topology.summary import ClusterSummary
@@ -687,6 +688,10 @@ class PeerMasterLink:
         # Caller-owned ``load`` must not be mutated.
         body = dict(load) if isinstance(load, dict) else {"inner": load}
         body["topology"] = envelope
+        # Carry trace context across the peer link so the receiving
+        # master's ``salt.req.recv.topology/pub`` span is a child of
+        # the originating publish's trace instead of orphaned.
+        salt.utils.tracing.inject(body)
         payload = self._build_envelope_payload(body, "topology/pub")
         return await self._req_channel.send(payload, tries=1)
 

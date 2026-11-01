@@ -1220,6 +1220,70 @@ def test_publish_daemon_sets_eventpublisher_process_title():
     fake_setproctitle.setproctitle.assert_called_once_with("EventPublisher")
 
 
+def test_master_pub_server_channel_publish_daemon_configures_tracing():
+    """
+    Regression: ``MasterPubServerChannel._publish_daemon`` must call
+    ``salt.utils.tracing.configure(self.opts)`` on entry so the daemon
+    process initialises OpenTelemetry under its own pid.
+
+    Without this call, every ``salt.utils.tracing.inject`` /
+    ``start_span`` invocation in the publish daemon (including the
+    cross-cluster traceparent injection in ``PeerMasterLink.send_publish``
+    and the local ``salt.pub.send`` span) short-circuits silently because
+    ``tracing.is_enabled()`` returns False in a process that never ran
+    ``configure``.  Peer-cluster masters then produce orphaned spans with
+    no linkage back to the originating publish trace.
+    """
+    import salt.utils.tracing
+    from tests.support.mock import MagicMock, patch
+
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = {"event_publisher_niceness": 0}
+    channel.transport = MagicMock()
+
+    # Short-circuit the daemon body after ``configure`` by making the next
+    # line (``IOLoop.current``) raise.
+    with patch.object(
+        salt.utils.tracing, "configure", MagicMock()
+    ) as fake_configure, patch(
+        "tornado.ioloop.IOLoop.current", side_effect=StopIteration
+    ):
+        with pytest.raises(StopIteration):
+            channel._publish_daemon()
+
+    fake_configure.assert_called_once_with(channel.opts)
+
+
+def test_pub_server_channel_publish_daemon_configures_tracing():
+    """
+    Companion to
+    :func:`test_master_pub_server_channel_publish_daemon_configures_tracing`:
+    ``PubServerChannel._publish_daemon`` (the base pub daemon used by
+    non-cluster masters) must also call
+    ``salt.utils.tracing.configure(self.opts)`` so the ``salt.pub.send``
+    span and any future daemon-side tracing produce real spans.
+    """
+    import salt.utils.tracing
+    from tests.support.mock import MagicMock, patch
+
+    channel = server.PubServerChannel.__new__(server.PubServerChannel)
+    # ``pub_server_niceness`` gates an ``os.nice`` call; keep it falsy.
+    channel.opts = {"pub_server_niceness": 0}
+    channel.transport = MagicMock()
+    # ``publish_daemon`` is called at the end; make it raise so the test
+    # observes the configure() call before any transport setup.
+    channel.transport.publish_daemon.side_effect = StopIteration
+    channel.master_key = None
+
+    with patch.object(
+        salt.utils.tracing, "configure", MagicMock()
+    ) as fake_configure, patch("salt.crypt.MasterKeys", MagicMock(return_value=None)):
+        with pytest.raises(StopIteration):
+            channel._publish_daemon()
+
+    fake_configure.assert_called_once_with(channel.opts)
+
+
 def test_pool_routing_channel_caches_auto_key_on_init(tmp_path):
     """
     ``PoolRoutingChannel.__init__`` must eagerly construct and cache an

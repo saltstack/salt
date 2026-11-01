@@ -344,6 +344,85 @@ def test_build_envelope_payload_carries_tag_and_origin():
 
 
 # ---------------------------------------------------------------------------
+# send_publish --- trace context propagation across peer links
+# ---------------------------------------------------------------------------
+
+
+def test_send_publish_injects_traceparent_into_body(monkeypatch):
+    """Cross-cluster forwards must carry the active trace context so the
+    receiving peer master can parent its spans to the originating trace
+    instead of generating orphans."""
+    import salt.utils.tracing as tracing
+
+    tracing.shutdown()
+    monkeypatch.setattr(tracing, "_cached_opts", None)
+    tracing.configure(
+        {
+            "tracing": {
+                "enabled": True,
+                "exporter": "console",
+                "sampler": "always_on",
+            }
+        }
+    )
+    try:
+        link = _make_link()
+        link._rotate_session(b"\x00" * 32)
+        captured = {}
+
+        class _StubReqChannel:
+            async def send(self, payload, tries=1):
+                captured["payload"] = payload
+                return None
+
+        link._req_channel = _StubReqChannel()
+        link._health = LinkHealth.CONNECTED
+
+        load = {"jid": "20261101000000000001", "fun": "test.ping", "tgt": "*"}
+
+        async def _call():
+            with tracing.start_span("origin.pub"):
+                await link.send_publish(load, ["west"])
+
+        asyncio.run(_call())
+
+        body = captured["payload"]["load"]
+        assert "traceparent" in body
+        assert "traceparent" not in load
+    finally:
+        tracing.shutdown()
+
+
+def test_send_publish_no_traceparent_when_disabled(monkeypatch):
+    """With tracing disabled, no traceparent key should be injected
+    (avoid on-the-wire bloat)."""
+    import salt.utils.tracing as tracing
+
+    tracing.shutdown()
+    monkeypatch.setattr(tracing, "_cached_opts", None)
+
+    link = _make_link()
+    link._rotate_session(b"\x00" * 32)
+    captured = {}
+
+    class _StubReqChannel:
+        async def send(self, payload, tries=1):
+            captured["payload"] = payload
+            return None
+
+    link._req_channel = _StubReqChannel()
+    link._health = LinkHealth.CONNECTED
+    load = {"jid": "20261101000000000002", "fun": "test.ping", "tgt": "*"}
+
+    async def _call():
+        await link.send_publish(load, ["west"])
+
+    asyncio.run(_call())
+    body = captured["payload"]["load"]
+    assert "traceparent" not in body
+
+
+# ---------------------------------------------------------------------------
 # Module shape --- make sure the fakes used by the functional tests still
 # have the attributes they monkeypatch.
 # ---------------------------------------------------------------------------
