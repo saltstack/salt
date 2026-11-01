@@ -178,10 +178,12 @@ def _drain_cancelled_tasks(loop, tasks):
         running = asyncio.get_running_loop()
     except RuntimeError:
         running = None
-    if running is loop or loop.is_running() or loop.is_closed():
-        # Can't synchronously drive the loop from here. Mark the tasks so
-        # asyncio's Task.__del__ doesn't log when they're GC'd; the running
-        # loop will deliver the cancellation on its next iteration.
+    if running is not None or loop.is_running() or loop.is_closed():
+        # Can't synchronously drive the loop from here: it is running or
+        # closed, or this thread runs another loop (run_until_complete()
+        # refuses, and on Python 3.14 gather() raises ValueError). Mark the
+        # tasks so asyncio's Task.__del__ doesn't log when they're GC'd; a
+        # running loop will deliver the cancellation on its next iteration.
         for task in tasks:
             task._log_destroy_pending = False
         return
@@ -193,6 +195,20 @@ def _drain_cancelled_tasks(loop, tasks):
         for task in tasks:
             if not task.done():
                 task._log_destroy_pending = False
+
+
+def _cancel_and_drain(task):
+    """
+    Cancel ``task`` and let it finish with ``_drain_cancelled_tasks()``.
+    """
+    if task is None or task.done():
+        return
+    try:
+        task.cancel()
+    except RuntimeError:
+        # The task's loop is already closed. See #70178.
+        pass
+    _drain_cancelled_tasks(task.get_loop(), [task])
 
 
 class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
@@ -3038,6 +3054,9 @@ class RequestClient(salt.transport.base.RequestClient):
                     )
                     _cap_stream_write_buffer(stream, self.opts)
             except Exception as exc:  # pylint: disable=broad-except
+                # An ipc stream exists before it connects. Retry instead of
+                # returning it closed.
+                stream = None
                 log.warning(
                     "TCP Message Client encountered an exception while connecting to"
                     " %s:%s: %r, will reconnect in %d seconds",
@@ -3078,6 +3097,13 @@ class RequestClient(salt.transport.base.RequestClient):
 
     async def _stream_return(self):
         self._stream_return_running = True
+        try:
+            await self._read_replies()
+        finally:
+            # However the reader exits, let the next connect start a new one.
+            self._stream_return_running = False
+
+    async def _read_replies(self):
         unpacker = salt.utils.msgpack.Unpacker()
         while not self._closing:
             try:
@@ -3090,7 +3116,10 @@ class RequestClient(salt.transport.base.RequestClient):
                     message_id = header.get("mid")
 
                     if message_id in self.send_future_map:
-                        self.send_future_map.pop(message_id).set_result(body)
+                        future = self.send_future_map.pop(message_id)
+                        # send() may have been cancelled as the reply came in.
+                        if not future.done():
+                            future.set_result(body)
                     else:
                         if self._on_recv is not None:
                             self.io_loop.call_soon(self._on_recv, header, body)
@@ -3107,7 +3136,8 @@ class RequestClient(salt.transport.base.RequestClient):
                     self.port,
                 )
                 for future in self.send_future_map.values():
-                    future.set_exception(e)
+                    if not future.done():
+                        future.set_exception(e)
                 self.send_future_map = {}
                 if self._closing or self._closed:
                     return
@@ -3131,7 +3161,8 @@ class RequestClient(salt.transport.base.RequestClient):
             except Exception as e:  # pylint: disable=broad-except
                 log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
-                    future.set_exception(e)
+                    if not future.done():
+                        future.set_exception(e)
                 self.send_future_map = {}
                 if self._closing or self._closed:
                     return
@@ -3145,7 +3176,6 @@ class RequestClient(salt.transport.base.RequestClient):
                 await self.connect()
             except asyncio.CancelledError:
                 log.debug("Stream return cancelled")
-        self._stream_return_running = False
 
     def _message_id(self):
         return str(uuid.uuid4())
@@ -3214,7 +3244,9 @@ class RequestClient(salt.transport.base.RequestClient):
             if send_timeout is not None:
                 send_timeout.cancel()
             self.send_future_map.pop(message_id, None)
-            if not send_task.done():
+            # A closed loop means this coroutine is being garbage collected:
+            # cancel() would raise and there is nothing left to wait for.
+            if not send_task.done() and not send_task.get_loop().is_closed():
                 send_task.cancel()
                 await asyncio.gather(send_task, return_exceptions=True)
 
@@ -3222,32 +3254,19 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._closing:
             return
         self._closing = True
-        if self._connect_task is not None and not self._connect_task.done():
-            # Don't leave getstream() retrying, or waiting on a master that
-            # never answers, after close.
-            try:
-                self._connect_task.cancel()
-                group = asyncio.gather(self._connect_task, return_exceptions=True)
-                self._connect_task.get_loop().run_until_complete(group)
-            except (RuntimeError, ValueError):
-                # The loop is running (the task ends on its own) or closed, or
-                # this thread runs another loop (ValueError on Python 3.14).
-                # See #70178.
-                pass
+        # Don't leave getstream() retrying, or waiting on a master that never
+        # answers, after close.
+        _cancel_and_drain(self._connect_task)
         if self._stream is not None:
-            self._stream.close()
-            self._stream = None
-        if self.task is not None:
             try:
-                self.task.cancel()
-                # Wait for the task to finish via asyncio
-                group = asyncio.gather(self.task)
-                self.task.get_loop().run_until_complete(group)
+                self._stream.close()
             except RuntimeError:
-                # Ignore event loop was already running/closed message.
-                # See #70178.
+                # IOStream.close() fails the pending read through the loop,
+                # which raises if the loop is closed. See #70178.
                 pass
-            self.task = None
+            self._stream = None
+        _cancel_and_drain(self.task)
+        self.task = None
 
     def __enter__(self):
         return self
