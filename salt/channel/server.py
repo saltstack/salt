@@ -1888,9 +1888,20 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        if opts.get("cluster_id"):
-            # Cluster mode: Use TCP-based transport for peer communication while
-            # preserving normal local IPC behavior for internal processes.
+        if opts.get("cluster_id") and opts.get("cluster_peers"):
+            # 3008.x master cluster: Use TCP-based transport for peer
+            # communication while preserving normal local IPC behavior for
+            # internal processes.  A topology-only solo master sets
+            # ``cluster_id`` without ``cluster_peers`` and must fall into
+            # the ``else`` branch below -- otherwise on Windows the TCP
+            # ``pub_sock.bind(publish_port)`` collides with the IPC
+            # publisher's prior tornado bind on the same port (see
+            # ``channel/server.py:1796-1798`` for the Windows path
+            # fallback that pins both to ``publish_port``) and the main
+            # pub-daemon's ``started`` event never fires, causing
+            # ``master.py:1199`` to raise
+            # ``SaltMasterError: Publish server did not start``.
+            # Mirrors the same gate at ``_publish_daemon`` (line 3165).
             port = opts["cluster_pool_port"]
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
