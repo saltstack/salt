@@ -242,9 +242,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         except (
             AuthenticationError,
             AuthorizationError,
-            SaltInvocationError,
             EauthAuthenticationError,
-            SaltClientError,
         ) as exc:
             self._output_ret(str(exc), "", retcode=1)
             # Non-zero exit matches the batch-mode auth-failure path
@@ -255,7 +253,15 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # function would fall through to the ``finally`` block and
             # return normally, giving the shell rc=0 for an obvious
             # auth / authz failure.
+            #
+            # Scoped to auth / authz exceptions only.  ``SaltInvocationError``
+            # (e.g. unknown nodegroup, bad target syntax) and
+            # ``SaltClientError`` (transport / timeout) kept their
+            # historical rc=0 so this PR doesn't accidentally re-flag
+            # callers that already handle those as soft failures.
             sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        except (SaltInvocationError, SaltClientError) as exc:
+            self._output_ret(str(exc), "", retcode=1)
         finally:
             self.local_client.destroy()
 
