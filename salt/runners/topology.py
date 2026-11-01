@@ -335,10 +335,21 @@ def links():
     Live-link health is taken from the in-process
     :mod:`salt.topology.link_manager` when it is active in the
     current process; when the runner runs in a RunnerClient
-    subprocess (the usual case), health falls back to
-    ``"attached"`` for peers present in the registry, and
-    ``"disconnected"`` for peers whose key is on disk but not in
-    the registry.
+    subprocess (the usual case), health is derived from on-disk
+    state:
+
+    * ``"connected"`` — peer has a registry entry (summary gossip
+      received at least once); this is the strongest confirmation
+      the runner can make without an IPC query.
+    * ``"attached"`` — peer's identity key is accepted in
+      ``masters/`` but no summary has been ingested yet.  Matches
+      the ``peers()`` label for the same state.
+    * absent — peer key is in ``masters_pre/`` or
+      ``masters_rejected/`` only.
+
+    Note: ``"disconnected"`` is reserved for future use when a
+    persisted :class:`~salt.topology.link.LinkHealth` sentinel
+    tracks genuine transport-level failure (a known follow-up).
     """
     opts = _opts()
     out = []
@@ -359,7 +370,10 @@ def links():
                     else state.get("attached_at")
                 )
             else:
-                health = "attached"
+                # Summary gossip has populated the registry: strongest
+                # from-disk confirmation we have that the link is
+                # carrying traffic.
+                health = "connected"
                 last_summary_at = state.get("attached_at")
             out.append(
                 {
@@ -372,8 +386,10 @@ def links():
             )
 
         # Peers whose key sits in masters/ but have never completed
-        # a handshake (no registry entry): surface as DISCONNECTED
-        # so operators see them with an explanation.
+        # a handshake (no registry entry): the handshake has
+        # succeeded (the key wouldn't be in masters/ otherwise), so
+        # label matches ``peers()`` --- ``attached``.  See the
+        # docstring for the full three-state ladder.
         registry_set = set(_registry_peer_ids(reader))
         for accepted in _accepted_peers(opts):
             if accepted in registry_set:
@@ -381,7 +397,7 @@ def links():
             out.append(
                 {
                     "peer_cluster_id": accepted,
-                    "health": "disconnected",
+                    "health": "attached",
                     "endpoints": [],
                     "last_summary_at": None,
                     "breadcrumbs_active": active,

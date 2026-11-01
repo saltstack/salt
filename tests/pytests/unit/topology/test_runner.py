@@ -191,3 +191,93 @@ def test_peers_empty_without_pki(enabled_opts, monkeypatch, tmp_path):
     monkeypatch.setattr(topology_runner, "__opts__", opts, raising=False)
     out = topology_runner.peers()
     assert out == []
+
+
+# ---------------------------------------------------------------------------
+# links() health labelling
+# ---------------------------------------------------------------------------
+
+
+def _write_accepted(pki_dir, cluster_id, pubkey=b"-----BEGIN FAKE-----\n"):
+    """Drop a .pub into ``pki/masters/`` to simulate acceptance.
+
+    Matches ``_masters_dir(opts, 'masters') = pki_dir / 'masters'``
+    in :mod:`salt.runners.topology`.
+    """
+    import pathlib
+
+    masters = pathlib.Path(pki_dir) / "masters"
+    masters.mkdir(parents=True, exist_ok=True)
+    (masters / f"{cluster_id}.pub").write_bytes(pubkey)
+
+
+def test_links_accepted_without_registry_reports_attached(
+    enabled_opts, pki_dir, monkeypatch
+):
+    """Peer with key in masters/ but no registry entry → ``attached``.
+
+    Matches the ``peers()`` label and mirrors the "handshake
+    accepted, no summary gossip yet" state.
+    """
+    _write_accepted(pki_dir, "east-sub")
+    _write_accepted(pki_dir, "west")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+    # Stub registry/breadcrumbs readers to simulate an empty mmap.
+    monkeypatch.setattr(topology_runner, "_open_registry_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_open_breadcrumbs_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_registry_peer_ids", lambda reader: [])
+    monkeypatch.setattr(topology_runner, "_breadcrumbs_count", lambda bread: 0)
+    monkeypatch.setattr(topology_runner, "_live_link_by_cluster", lambda cid: None)
+
+    out = topology_runner.links()
+
+    by_id = {entry["peer_cluster_id"]: entry for entry in out}
+    assert set(by_id) == {"east-sub", "west"}
+    for entry in by_id.values():
+        assert entry["health"] == "attached"
+
+
+def test_links_registry_entry_reports_connected(enabled_opts, pki_dir, monkeypatch):
+    """Peer present in the registry (summary gossip received) → ``connected``.
+
+    Strongest from-disk confirmation the subprocess runner can
+    make; last_summary_at reflects the gossip timestamp.
+    """
+    _write_accepted(pki_dir, "east")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+    monkeypatch.setattr(topology_runner, "_open_registry_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_open_breadcrumbs_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_registry_peer_ids", lambda reader: ["east"])
+    monkeypatch.setattr(
+        topology_runner,
+        "_registry_peer_state",
+        lambda reader, cid: {"attached_at": 123.0, "endpoints": []},
+    )
+    monkeypatch.setattr(topology_runner, "_breadcrumbs_count", lambda bread: 0)
+    monkeypatch.setattr(topology_runner, "_live_link_by_cluster", lambda cid: None)
+
+    out = topology_runner.links()
+
+    assert len(out) == 1
+    assert out[0]["peer_cluster_id"] == "east"
+    assert out[0]["health"] == "connected"
+    assert out[0]["last_summary_at"] == 123.0
+
+
+def test_links_rejected_key_absent(enabled_opts, pki_dir, monkeypatch):
+    """A key only in masters_rejected/ must not surface in links()."""
+    import pathlib
+
+    rejected = pathlib.Path(pki_dir) / "masters_rejected"
+    rejected.mkdir(parents=True, exist_ok=True)
+    (rejected / "bad-peer.pub").write_bytes(b"-----BEGIN FAKE-----\n")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+    monkeypatch.setattr(topology_runner, "_open_registry_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_open_breadcrumbs_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_registry_peer_ids", lambda reader: [])
+    monkeypatch.setattr(topology_runner, "_breadcrumbs_count", lambda bread: 0)
+    monkeypatch.setattr(topology_runner, "_live_link_by_cluster", lambda cid: None)
+
+    out = topology_runner.links()
+
+    assert out == []
