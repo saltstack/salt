@@ -229,7 +229,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         """
         try:
             # Receive authentication payload
-            payload = auth_socket.recv_pyobj()
+            payload = salt.payload.loads(auth_socket.recv())
 
             action = payload.get("action")
 
@@ -261,13 +261,15 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                         "crypticle": crypticle,
                     }
                     log.info("Client %s authenticated for event streaming", client_id)
-                    auth_socket.send_pyobj({"authorized": True, "events_key": wrapped})
+                    auth_socket.send(
+                        salt.payload.dumps({"authorized": True, "events_key": wrapped})
+                    )
                 else:
                     log.warning(
                         "Client %s failed authentication for event streaming",
                         client_id,
                     )
-                    auth_socket.send_pyobj({"authorized": False})
+                    auth_socket.send(salt.payload.dumps({"authorized": False}))
 
             elif action == "auth_token":
                 # Eauth token authentication.  Validate via LoadAuth
@@ -283,7 +285,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                         "Event-stream token auth failed: %s",
                         token_check["error"].get("message", "unknown"),
                     )
-                    auth_socket.send_pyobj({"authorized": False})
+                    auth_socket.send(salt.payload.dumps({"authorized": False}))
                     return
                 session_id = secrets.token_urlsafe(16)
                 tok_data = loadauth.get_tok(salt_token) or {}
@@ -310,7 +312,9 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                     token_check.get("username"),
                     session_id,
                 )
-                auth_socket.send_pyobj({"authorized": True, "session_id": session_id})
+                auth_socket.send(
+                    salt.payload.dumps({"authorized": True, "session_id": session_id})
+                )
 
             elif action == "subscribe_job":
                 # Client wants to subscribe to events for a specific job.
@@ -320,7 +324,7 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                 jid = payload.get("jid")
                 if subscriber_id in clients and clients[subscriber_id]["authorized"]:
                     clients[subscriber_id]["jobs"].add(jid)
-                    auth_socket.send_pyobj({"subscribed": True})
+                    auth_socket.send(salt.payload.dumps({"subscribed": True}))
                     # Replay recent events for this jid so a late
                     # subscriber (dispatched a fast job then subscribed)
                     # doesn't miss ``/new`` or ``/ret``.  Scoped to just
@@ -334,21 +338,21 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                                     pub_socket, buffered, just_this, loadauth
                                 )
                 else:
-                    auth_socket.send_pyobj({"subscribed": False})
+                    auth_socket.send(salt.payload.dumps({"subscribed": False}))
 
             elif action == "unsubscribe_job":
                 subscriber_id = payload.get("id")
                 jid = payload.get("jid")
                 if subscriber_id in clients:
                     clients[subscriber_id]["jobs"].discard(jid)
-                    auth_socket.send_pyobj({"unsubscribed": True})
+                    auth_socket.send(salt.payload.dumps({"unsubscribed": True}))
                 else:
-                    auth_socket.send_pyobj({"unsubscribed": False})
+                    auth_socket.send(salt.payload.dumps({"unsubscribed": False}))
 
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error handling auth request: %s", exc)
             try:
-                auth_socket.send_pyobj({"error": str(exc)})
+                auth_socket.send(salt.payload.dumps({"error": str(exc)}))
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -591,8 +595,8 @@ class ClientEventSubscriber:
             "enc_algo": self.opts.get("encryption_algorithm", "OAEP-SHA1"),
         }
 
-        self.auth_socket.send_pyobj(auth_payload)
-        response = self.auth_socket.recv_pyobj()
+        self.auth_socket.send(salt.payload.dumps(auth_payload))
+        response = salt.payload.loads(self.auth_socket.recv())
 
         if response.get("authorized"):
             self.authenticated = True
@@ -621,8 +625,8 @@ class ClientEventSubscriber:
         if eauth:
             auth_payload["eauth"] = eauth
 
-        self.auth_socket.send_pyobj(auth_payload)
-        response = self.auth_socket.recv_pyobj()
+        self.auth_socket.send(salt.payload.dumps(auth_payload))
+        response = salt.payload.loads(self.auth_socket.recv())
 
         if response.get("authorized"):
             self.authenticated = True
@@ -727,8 +731,8 @@ class ClientEventSubscriber:
             "jid": jid,
         }
 
-        self.auth_socket.send_pyobj(subscribe_payload)
-        response = self.auth_socket.recv_pyobj()
+        self.auth_socket.send(salt.payload.dumps(subscribe_payload))
+        response = salt.payload.loads(self.auth_socket.recv())
 
         if response.get("subscribed"):
             self.subscribed_jobs.add(jid)
@@ -750,8 +754,8 @@ class ClientEventSubscriber:
                 "jid": jid,
             }
 
-            self.auth_socket.send_pyobj(unsubscribe_payload)
-            self.auth_socket.recv_pyobj()
+            self.auth_socket.send(salt.payload.dumps(unsubscribe_payload))
+            salt.payload.loads(self.auth_socket.recv())
             self.subscribed_jobs.discard(jid)
 
     def get_event(
