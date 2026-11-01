@@ -5,6 +5,9 @@ Tests the ClientEventPublisher's ability to filter and deliver events
 for different event types: job, run, and wheel.
 """
 
+import base64
+
+import salt.crypt
 import salt.utils.client_event
 
 
@@ -308,3 +311,55 @@ class TestClientEventFiltering:
         assert (
             len(sent_events) == 0
         ), "Malformed events should not result in any deliveries"
+
+
+class TestDeriveEventsKey:
+    """Covers :func:`salt.utils.client_event._derive_events_key`.
+
+    The token-auth path for the remote event stream derives a per-session
+    Crypticle key from the Salt token via HKDF-SHA256 so the token itself
+    never travels on the REP channel outside the request.  Both ends of
+    the stream MUST agree bit-for-bit on the output, so the function is
+    deterministic, accepts the token in either str or bytes form, and
+    produces a well-formed Crypticle ``key_string``.
+    """
+
+    def test_deterministic_for_same_input(self):
+        """Same secret in -> same key out (bit-for-bit)."""
+        a = salt.utils.client_event._derive_events_key("shared-secret")
+        b = salt.utils.client_event._derive_events_key("shared-secret")
+        assert a == b
+
+    def test_accepts_str_and_bytes_equivalently(self):
+        """``str`` and ``bytes`` forms of the same secret derive the same key."""
+        s = "shared-secret"
+        a = salt.utils.client_event._derive_events_key(s)
+        b = salt.utils.client_event._derive_events_key(s.encode())
+        assert a == b
+
+    def test_different_secrets_produce_different_keys(self):
+        """Distinct secrets must not collide."""
+        a = salt.utils.client_event._derive_events_key("alpha")
+        b = salt.utils.client_event._derive_events_key("beta")
+        assert a != b
+
+    def test_output_decodes_to_crypticle_key_length(self):
+        """
+        The derived key_string is base64 and decodes to exactly 56 bytes
+        -- the Crypticle layout of 24 AES bytes + 32 HMAC bytes.
+        """
+        key_string = salt.utils.client_event._derive_events_key("secret")
+        raw = base64.b64decode(key_string)
+        assert len(raw) == 24 + 32  # key_size=192//8 + SHA-256 digest size
+
+    def test_output_is_valid_crypticle_key_string(self):
+        """
+        Feed the derived key into :class:`salt.crypt.Crypticle` and
+        make sure a round-trip encrypt/decrypt comes back with the same
+        payload.  Also sanity-checks that ``extract_keys`` accepts the
+        encoding without hitting its ``invalid key`` assertion.
+        """
+        key_string = salt.utils.client_event._derive_events_key("secret")
+        crypt = salt.crypt.Crypticle({}, key_string)
+        token = crypt.dumps({"hello": "world"})
+        assert crypt.loads(token) == {"hello": "world"}
