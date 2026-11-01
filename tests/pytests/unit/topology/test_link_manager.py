@@ -440,3 +440,126 @@ def test_maybe_lazy_register_inbound_holds_lock_on_inbound_write(
         f"_maybe_lazy_register_inbound wrote _INBOUND without _LOCK held "
         f"({inbound_lock_witness.unlocked_writes} unlocked writes)"
     )
+
+
+# ---------------------------------------------------------------------------
+# _dispatch_sum --- summary ingest wire-form reconstitution + offload
+# ---------------------------------------------------------------------------
+
+
+def test_dispatch_sum_deserializes_summary_before_ingest(monkeypatch):
+    """BUG-001/002/006 regression: ``_dispatch_sum`` must reconstitute
+    the wire-form summary via :func:`summary_mod.deserialize` before
+    passing to :meth:`TopologyRouter.ingest_summary`.  Prior to the
+    fix, the raw dict was handed in and ``ingest_summary`` tripped
+    ``AttributeError: 'dict' object has no attribute 'path'`` on
+    every inbound ``topology/sum`` -- flooding stayed the fallback and
+    ``topology.links()`` reported every peer as ``disconnected``."""
+    import salt.topology.link_manager as lm
+    import salt.topology.summary as summary_mod
+
+    sentinel_summary = object()
+    captured = {}
+
+    def _fake_deserialize(wire):
+        captured["wire"] = wire
+        return sentinel_summary
+
+    class _FakeRouter:
+        async def ingest_summary(self, summary, inbound_link):
+            captured["summary"] = summary
+            captured["inbound_link"] = inbound_link
+
+    class _FakeLoop:
+        def __init__(self):
+            self.scheduled = []
+
+        def is_running(self):
+            return True
+
+    fake_loop = _FakeLoop()
+
+    scheduled = []
+
+    def _fake_ensure_future(coro):
+        scheduled.append(coro)
+        # Drain so the coroutine actually runs and `captured` populates.
+        asyncio.new_event_loop().run_until_complete(coro)
+        return None
+
+    monkeypatch.setattr(summary_mod, "deserialize", _fake_deserialize)
+    monkeypatch.setattr(lm.router_mod, "get_router", _FakeRouter)
+    monkeypatch.setattr(lm.asyncio, "ensure_future", _fake_ensure_future)
+
+    wire_dict = {"cluster_id": "west", "path": ["west"]}
+    payload = {
+        "load": {"summary": wire_dict},
+        "origin_cluster_id": "west",
+    }
+
+    lm._dispatch_sum(payload)  # pylint: disable=protected-access
+
+    assert captured["wire"] is wire_dict, "deserialize not called with wire body"
+    assert (
+        captured["summary"] is sentinel_summary
+    ), "ingest_summary did not receive the deserialized summary"
+    assert scheduled, "ingest_summary was not scheduled via asyncio.ensure_future"
+
+
+def test_dispatch_sum_drops_missing_summary_body(monkeypatch, caplog):
+    """A ``topology/sum`` payload without a ``summary`` key must be
+    dropped (debug-logged) without raising and without scheduling
+    anything on the loop."""
+    import logging
+
+    import salt.topology.link_manager as lm
+
+    class _FakeRouter:
+        async def ingest_summary(self, summary, inbound_link):  # pragma: no cover
+            raise AssertionError("ingest_summary must not be called")
+
+    scheduled = []
+    monkeypatch.setattr(lm.router_mod, "get_router", _FakeRouter)
+    monkeypatch.setattr(lm.asyncio, "ensure_future", scheduled.append)
+
+    with caplog.at_level(logging.DEBUG, logger="salt.topology.link_manager"):
+        lm._dispatch_sum(  # pylint: disable=protected-access
+            {"load": {}, "origin_cluster_id": "west"}
+        )
+
+    assert scheduled == []
+    assert any(
+        "dropping topology/sum with no summary body" in rec.getMessage()
+        for rec in caplog.records
+    )
+
+
+def test_dispatch_sum_swallows_deserialize_errors(monkeypatch, caplog):
+    """A ``summary_mod.deserialize`` exception must be logged and
+    swallowed; the dispatcher returns ``None`` and schedules nothing."""
+    import logging
+
+    import salt.topology.link_manager as lm
+    import salt.topology.summary as summary_mod
+
+    def _boom(_):
+        raise ValueError("corrupt wire")
+
+    class _FakeRouter:
+        async def ingest_summary(self, summary, inbound_link):  # pragma: no cover
+            raise AssertionError("ingest_summary must not be called")
+
+    scheduled = []
+    monkeypatch.setattr(summary_mod, "deserialize", _boom)
+    monkeypatch.setattr(lm.router_mod, "get_router", _FakeRouter)
+    monkeypatch.setattr(lm.asyncio, "ensure_future", scheduled.append)
+
+    with caplog.at_level(logging.ERROR, logger="salt.topology.link_manager"):
+        lm._dispatch_sum(  # pylint: disable=protected-access
+            {"load": {"summary": {"anything": "goes"}}, "origin_cluster_id": "west"}
+        )
+
+    assert scheduled == []
+    assert any(
+        "topology/sum deserialize failed" in rec.getMessage() for rec in caplog.records
+    )

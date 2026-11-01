@@ -4443,6 +4443,50 @@ async def test_clearfuncs_wheel_exception_fires_event_via_fire_event_async():
 
 
 # ---------------------------------------------------------------------------
+# _fire_event_on_running_loop --- BUG-007 regression
+# ---------------------------------------------------------------------------
+
+
+async def test_fire_event_on_running_loop_uses_async_path_with_running_loop():
+    """BUG-007 regression: when invoked from a coroutine with a running
+    event loop, ``_fire_event_on_running_loop`` must schedule
+    ``fire_event_async`` via ``loop.create_task`` -- NEVER the sync
+    ``fire_event`` which goes through ``SyncWrapper._wrap`` and
+    spawns-and-joins a thread (blocks the running loop for the IPC
+    write; the symptom was ``salt/job/<jid>/new`` lagging
+    ``salt/job/<jid>/ret/*`` by multiple seconds on a hub master)."""
+    cf = _make_bare_clear_funcs()
+
+    async def _fake_fire_async(data, tag):
+        return None
+
+    cf.event.fire_event_async = MagicMock(side_effect=_fake_fire_async)
+    cf.event.fire_event = MagicMock()
+
+    cf._fire_event_on_running_loop({"payload": 1}, "salt/job/0/new")
+
+    cf.event.fire_event.assert_not_called()
+    cf.event.fire_event_async.assert_called_once_with({"payload": 1}, "salt/job/0/new")
+    # Drain any pending task so pytest-asyncio doesn't warn.
+    await asyncio.sleep(0)
+
+
+def test_fire_event_on_running_loop_falls_back_sync_without_loop():
+    """When no running loop exists (synchronous caller), the helper
+    must fall back to the sync ``fire_event``.  Without the fallback
+    the method would raise ``RuntimeError: no running event loop``
+    and the caller would lose the event entirely."""
+    cf = _make_bare_clear_funcs()
+    cf.event.fire_event = MagicMock()
+    cf.event.fire_event_async = MagicMock()
+
+    cf._fire_event_on_running_loop({"payload": 2}, "salt/job/0/new")
+
+    cf.event.fire_event.assert_called_once_with({"payload": 2}, "salt/job/0/new")
+    cf.event.fire_event_async.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # AuthFuncs async dispatch: minion authentication (``_auth`` / ``_auth_impl``).
 #
 # The auth state machine now runs on the MWorker event loop as ``async def``.

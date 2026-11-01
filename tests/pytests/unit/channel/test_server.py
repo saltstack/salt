@@ -1625,3 +1625,100 @@ def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_b
         channel._publish_daemon()
 
     assert fake_puller.call_args.kwargs["host"] == expected_bind
+
+
+# ---------------------------------------------------------------------------
+# MasterPubServerChannel.factory --- cluster_peers gate (BUG regression)
+#
+# A topology-only solo master sets ``cluster_id`` but leaves
+# ``cluster_peers`` empty.  Before commit ``b7c0cdf5a4d`` the factory
+# gated the 3008.x TCP-based cluster branch on ``cluster_id`` alone,
+# so those masters took the TCP path -- and on Windows the TCP
+# ``pub_sock.bind(publish_port)`` collided with the already-bound
+# tornado publisher on the same port.  The gate must require BOTH
+# ``cluster_id`` and a non-empty ``cluster_peers`` list.
+# ---------------------------------------------------------------------------
+
+
+def _factory_test_opts(tmp_path, **extra):
+    """Minimal opts dict that lets ``MasterPubServerChannel.factory``
+    reach the gate branch without hitting other attribute lookups.
+    ``__init__`` reads ``opts["cluster_peers"]`` unconditionally so the
+    base opts default it to ``[]`` -- tests exercising the empty-peers
+    gate leave it alone; tests exercising the TCP branch override."""
+    sock = tmp_path / "sock"
+    sock.mkdir(exist_ok=True)
+    opts = {
+        "id": "salt-master-1_master",
+        "sock_dir": str(sock),
+        "interface": "127.0.0.1",
+        "publish_port": 4505,
+        "cluster_pool_port": 4511,
+        "tcp_master_pub_port": 4512,
+        "tcp_master_pull_port": 4513,
+        "cluster_peers": [],
+    }
+    opts.update(extra)
+    return opts
+
+
+def test_master_pub_server_channel_factory_takes_tcp_branch_with_peers(tmp_path):
+    """``cluster_id`` + non-empty ``cluster_peers`` → the 3008.x
+    master-cluster TCP branch (``salt.transport.tcp.PublishServer``)."""
+    opts = _factory_test_opts(tmp_path, cluster_id="prod", cluster_peers=["127.0.0.2"])
+    tcp_mock = MagicMock(name="tcp.PublishServer")
+    ipc_mock = MagicMock(name="ipc_publish_server")
+
+    with patch("salt.transport.tcp.PublishServer", tcp_mock), patch(
+        "salt.transport.ipc_publish_server", ipc_mock
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        server.MasterPubServerChannel.factory(opts)
+
+    assert tcp_mock.called, "TCP branch not taken for a true 3008.x cluster peer"
+    assert (
+        not ipc_mock.called
+    ), "ipc_publish_server must NOT be used when cluster_peers is populated"
+
+
+def test_master_pub_server_channel_factory_takes_ipc_branch_without_peers(tmp_path):
+    """``cluster_id`` set but ``cluster_peers`` empty (topology-only
+    solo master) → the ``ipc_publish_server`` branch.  The TCP branch
+    would collide with the IPC publisher on Windows (both bind
+    ``publish_port``) and cause ``SaltMasterError: Publish server did
+    not start``."""
+    opts = _factory_test_opts(tmp_path, cluster_id="prod", cluster_peers=[])
+    tcp_mock = MagicMock(name="tcp.PublishServer")
+    ipc_mock = MagicMock(name="ipc_publish_server")
+
+    with patch("salt.transport.tcp.PublishServer", tcp_mock), patch(
+        "salt.transport.ipc_publish_server", ipc_mock
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        server.MasterPubServerChannel.factory(opts)
+
+    assert (
+        ipc_mock.called
+    ), "ipc_publish_server branch not taken for topology-only solo master"
+    assert not tcp_mock.called, (
+        "TCP branch must NOT be taken when cluster_peers is empty -- "
+        "regression for the Windows publish-port collision"
+    )
+
+
+def test_master_pub_server_channel_factory_takes_ipc_branch_without_cluster_id(
+    tmp_path,
+):
+    """Plain (non-cluster, non-topology) master takes the ``ipc_publish_server``
+    branch.  Verifies the gate still excludes masters that set neither
+    cluster_id nor cluster_peers."""
+    opts = _factory_test_opts(tmp_path)
+    opts.pop("cluster_id", None)
+    tcp_mock = MagicMock(name="tcp.PublishServer")
+    ipc_mock = MagicMock(name="ipc_publish_server")
+
+    with patch("salt.transport.tcp.PublishServer", tcp_mock), patch(
+        "salt.transport.ipc_publish_server", ipc_mock
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        server.MasterPubServerChannel.factory(opts)
+
+    assert ipc_mock.called
+    assert not tcp_mock.called
