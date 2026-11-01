@@ -4834,6 +4834,25 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
         # ``client_auth: False`` in their client config.
         if "client_auth" not in opts:
             opts["client_auth"] = True
+        # ``master_port`` is the minion-side spelling for "the port to
+        # reach the master on"; ``ret_port`` is the master-side spelling
+        # for "the port we listen on".  Clients talk TO a master, so
+        # operators configuring ``/etc/salt/client`` naturally reach for
+        # ``master_port`` (same muscle memory as ``/etc/salt/minion``).
+        # When the operator sets only ``master_port`` in the client
+        # config file (not ``ret_port``), honour it -- otherwise the
+        # sign-in handshake would silently fall back to the ``ret_port``
+        # master-side default and time out on the wrong port.  Re-parse
+        # the raw file keys instead of comparing loaded values because
+        # both options have the same ``4506`` default and would be
+        # indistinguishable post-merge.
+        try:
+            with salt.utils.files.fopen(client_config_path) as _fp:
+                _raw = salt.utils.yaml.safe_load(_fp) or {}
+        except Exception:  # pylint: disable=broad-except
+            _raw = {}
+        if isinstance(_raw, dict) and "master_port" in _raw and "ret_port" not in _raw:
+            opts["ret_port"] = int(_raw["master_port"])
         # salt.crypt.Auth's AES-handshake path (``sign_in`` + helpers)
         # reads a handful of minion-flavoured opts that master_config
         # does not populate because the master process never signs in.
