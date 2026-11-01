@@ -1638,11 +1638,37 @@ def _dispatch_sum(payload):
         payload.get("origin_cluster_id") if isinstance(payload, dict) else None
     )
     inbound_link = _INBOUND.get(inbound_cluster) if inbound_cluster else None
-    try:
-        return router.ingest_summary(load, inbound_link)
-    except Exception:  # pylint: disable=broad-except
-        log.exception("topology: ingest_summary raised")
+    # Reconstitute the ClusterSummary from its wire form before handing to
+    # :meth:`TopologyRouter.ingest_summary`, which reads attributes like
+    # ``summary.path`` / ``summary.cluster_id`` and raises AttributeError
+    # on a bare dict.  Without this, every inbound ``topology/sum`` fails
+    # the ``'dict' has no attribute 'path'`` assertion and the registry
+    # never acquires peer-cluster membership -- flooding stays as the
+    # fallback and ``topology.links()`` reports every peer as
+    # ``disconnected``.
+    wire_summary = load.get("summary") if isinstance(load, dict) else None
+    if wire_summary is None:
+        log.debug("topology: dropping topology/sum with no summary body")
         return None
+    try:
+        summary = summary_mod.deserialize(wire_summary)
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: topology/sum deserialize failed")
+        return None
+    # Schedule the ingest + fan-out via ``ensure_future`` so the inbound
+    # REP handler is NOT blocked for the duration of the recursive summary
+    # re-emit.  :meth:`TopologyRouter.ingest_summary` awaits
+    # ``send_summary`` on every forward peer; running that inline inside
+    # ``_handle_inbound_channel`` holds the REP socket for up to
+    # ``_TOPOLOGY_AWAIT_TIMEOUT`` per hop, which cascades into pairwise
+    # summary-emit deadlocks when both peers emit simultaneously (the
+    # publish-shaped transit forwards at line ~1260 use the same
+    # fire-and-forget pattern).
+    try:
+        asyncio.ensure_future(router.ingest_summary(summary, inbound_link))
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: ingest_summary scheduling raised")
+    return None
 
 
 #: Map inbound tag -> dispatcher callable.  Kept module-level and
