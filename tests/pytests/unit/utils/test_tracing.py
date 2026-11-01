@@ -471,3 +471,68 @@ def test_configure_idempotent(in_memory_exporter):
     )
     # Configure does not rebuild when PID + opts are still valid.
     assert tracing._provider is first
+
+
+def test_root_span_survives_shutdown_after_with_block(in_memory_exporter):
+    """
+    Regression: a root span created inside ``with start_span(...)`` must
+    be exported when ``shutdown()`` is called immediately after the
+    block exits.  Previously ``shutdown()`` fired from a ``finally:``
+    inside the ``with``, so ``provider.shutdown()`` ran before
+    ``span.end()`` and the root span was silently dropped
+    ("Shutdown called, ignoring Span.").
+    """
+    tracing.configure(
+        {"tracing": {"enabled": True, "exporter": "console", "sampler": "always_on"}}
+    )
+    with tracing.start_span("salt.cli.test.ping") as span:
+        assert span is not tracing._NOOP_SPAN
+    tracing.shutdown()
+    spans = in_memory_exporter.get_finished_spans()
+    assert [s.name for s in spans] == ["salt.cli.test.ping"]
+
+
+def test_shutdown_force_flushes_before_provider_shutdown(monkeypatch):
+    """
+    ``shutdown()`` must call ``provider.force_flush()`` before
+    ``provider.shutdown()`` so queued batch spans are drained even if a
+    caller ordered things wrong.
+    """
+    tracing.configure(
+        {"tracing": {"enabled": True, "exporter": "console", "sampler": "always_on"}}
+    )
+    calls = []
+
+    def _flush(*args, **kwargs):
+        calls.append("flush")
+
+    def _down():
+        calls.append("shutdown")
+
+    monkeypatch.setattr(tracing._provider, "force_flush", _flush)
+    monkeypatch.setattr(tracing._provider, "shutdown", _down)
+    tracing.shutdown()
+    assert calls == ["flush", "shutdown"]
+
+
+def test_shutdown_tolerates_force_flush_exception(monkeypatch, caplog):
+    """A broken force_flush must not prevent provider.shutdown()."""
+    import logging
+
+    tracing.configure(
+        {"tracing": {"enabled": True, "exporter": "console", "sampler": "always_on"}}
+    )
+    calls = []
+
+    def _flush(*args, **kwargs):
+        calls.append("flush")
+        raise RuntimeError("boom")
+
+    def _down():
+        calls.append("shutdown")
+
+    monkeypatch.setattr(tracing._provider, "force_flush", _flush)
+    monkeypatch.setattr(tracing._provider, "shutdown", _down)
+    with caplog.at_level(logging.DEBUG, logger="salt.utils.tracing"):
+        tracing.shutdown()
+    assert calls == ["flush", "shutdown"]

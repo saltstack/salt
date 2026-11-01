@@ -39,17 +39,19 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             if self.config.get("fun")
             else "salt.cli"
         )
-        with salt.utils.tracing.start_span(
-            span_name,
-            attributes={
-                "salt.cli.tgt": str(self.config.get("tgt", "")),
-                "salt.cli.fun": self.config.get("fun", ""),
-            },
-        ):
-            try:
+        # shutdown() must run *after* the span's __exit__ so span.end()
+        # happens before provider.shutdown() tears down BatchSpanProcessor.
+        try:
+            with salt.utils.tracing.start_span(
+                span_name,
+                attributes={
+                    "salt.cli.tgt": str(self.config.get("tgt", "")),
+                    "salt.cli.fun": self.config.get("fun", ""),
+                },
+            ):
                 self._run()
-            finally:
-                salt.utils.tracing.shutdown()
+        finally:
+            salt.utils.tracing.shutdown()
 
     def _run(self):
         import salt.client
