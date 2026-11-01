@@ -39,13 +39,17 @@ log = logging.getLogger(__name__)
 def _runner(cluster):
     """Return the loaded ``topology.*`` LazyLoader for *cluster*'s master.
 
-    Uses :meth:`TopologyCluster.master_opts` so any :meth:`config_peer`
-    writes to the master config file are picked up (``master.config``
-    is an immutable snapshot taken at startup).
+    ``master.config`` is an immutable snapshot taken at startup, so
+    any :meth:`config_peer` writes to the master config file aren't
+    reflected there.  Re-read ``topology_peers`` from disk (via
+    :meth:`cluster.master_opts`) and overlay just that field; leave
+    everything else (notably ``topology_enabled``, which the test
+    may have disabled on purpose) untouched.
     """
     master = cluster.masters[0]
     opts = dict(master.config)
-    opts.update(cluster.master_opts())
+    fresh = cluster.master_opts()
+    opts["topology_peers"] = fresh.get("topology_peers", [])
     loader = salt.loader.runner(opts)
     return loader, opts
 
