@@ -83,26 +83,25 @@ def test__decrypt_ciphertext():
             assert "decrypt error" in multidecrypt_error.value.args[0]
 
 
-def test__decrypt_ciphertext_default_silent_on_3006_41846():
+def test__decrypt_ciphertext_default_fail_loud_41846():
     """
-    Regression test for #41846 (3006.x behavior).
+    Regression test for #41846 (3008.x+ behavior).
 
-    On 3006.x the default value of ``gpg_decrypt_must_succeed`` is
-    ``False`` (kept for LTS backwards compatibility). A gpg decrypt
-    failure therefore returns the ciphertext unchanged and does NOT
-    raise. Users who want the fail-loud behavior must explicitly opt in
-    by setting ``gpg_decrypt_must_succeed: True`` in their minion or
-    master config; the ``test__decrypt_ciphertext`` fixture at the top of
-    this module already covers that path.
+    The default value of ``gpg_decrypt_must_succeed`` was flipped to
+    ``True`` here, so a gpg decrypt failure under default config now
+    raises ``SaltRenderError`` instead of silently returning the raw
+    ciphertext. This test pins the fail-loud default contract so an
+    inadvertent revert is caught.
 
-    This test pins the silent-default contract on 3006.x so an
-    inadvertent flip is caught. The default is expected to flip to
-    ``True`` in a future 3006.x release.
+    The complementary silent-default test lives on 3006.x where LTS
+    backwards compatibility keeps the pre-flip default; see the
+    ``test__decrypt_ciphertext_default_silent_on_3006_41846`` test on
+    that branch.
     """
     import salt.config
 
     opts = salt.config.DEFAULT_MINION_OPTS.copy()
-    assert opts["gpg_decrypt_must_succeed"] is False
+    assert opts["gpg_decrypt_must_succeed"] is True
 
     key_dir = "/etc/salt/gpgkeys"
     crypted = "-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----"
@@ -116,11 +115,11 @@ def test__decrypt_ciphertext_default_silent_on_3006_41846():
     ), patch("salt.utils.path.which", MagicMock()), patch(
         "salt.renderers.gpg.Popen", MagicMock(return_value=GPGNotDecrypt())
     ):
-        # Must not raise; must return the original ciphertext bytes.
-        result = gpg._decrypt_ciphertexts(crypted)
-        if isinstance(result, bytes):
-            result = result.decode()
-        assert crypted in result
+        with pytest.raises(SaltRenderError) as decrypt_error:
+            gpg._decrypt_ciphertexts(crypted)
+        assert decrypt_error.value.args[0].startswith("Could not decrypt cipher ")
+        assert crypted in decrypt_error.value.args[0]
+        assert "decrypt error" in decrypt_error.value.args[0]
 
 
 def test__decrypt_ciphertext_opt_in_raises_41846(minion_opts):
