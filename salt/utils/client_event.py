@@ -477,17 +477,13 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
 
             try:
                 # Each subscriber has its own Crypticle (keyed off the
-                # auth exchange), so one event delivered to N subscribers
-                # is N independent AES-CBC+HMAC encryptions.  Clients that
-                # authenticated before this encryption was added would have
-                # no crypticle; fall back to msgpack to keep legacy flows
-                # discoverable rather than silently blackholing their
-                # events.  New auth paths always populate ``crypticle``.
-                crypticle = info.get("crypticle")
-                if crypticle is not None:
-                    msg = crypticle.dumps({"tag": tag, "data": data})
-                else:
-                    msg = salt.payload.dumps({"tag": tag, "data": data})
+                # auth exchange), so one event delivered to N
+                # subscribers is N independent AES-CBC+HMAC encryptions.
+                # Both auth paths populate ``crypticle``; a missing one
+                # here means a bug in auth setup, not a legacy client.
+                # Fail loud rather than falling back to cleartext.
+                crypticle = info["crypticle"]
+                msg = crypticle.dumps({"tag": tag, "data": data})
                 pub_socket.send_multipart([subscriber_id.encode(), msg])
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
@@ -822,14 +818,17 @@ class ClientEventSubscriber:
                 if len(parts) < 2:
                     return None
 
-                # Decrypt with the per-session Crypticle established at
-                # auth time; fall back to raw msgpack only if the
-                # subscriber connected via a path that didn't negotiate
-                # one.  New paths always set ``self.crypticle``.
-                if self.crypticle is not None:
-                    event_data = self.crypticle.loads(parts[1])
-                else:
-                    event_data = salt.payload.loads(parts[1])
+                # Decrypt with the per-session Crypticle established
+                # at auth time.  Both ``_authenticate`` and
+                # ``_authenticate_token`` populate ``self.crypticle``
+                # on success; a missing one here means we received an
+                # event before auth completed, which is a bug.
+                if self.crypticle is None:
+                    raise salt.exceptions.AuthenticationError(
+                        "Received event before Crypticle session was "
+                        "negotiated with the publisher"
+                    )
+                event_data = self.crypticle.loads(parts[1])
                 if tag:
                     event_tag = event_data.get("tag", "")
                     if not event_tag.startswith(tag):

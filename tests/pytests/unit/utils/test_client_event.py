@@ -11,6 +11,10 @@ import salt.crypt
 import salt.utils.client_event
 
 
+def _test_crypticle(opts=None):
+    return salt.crypt.Crypticle(opts or {}, salt.crypt.Crypticle.generate_key_string())
+
+
 class TestClientEventFiltering:
     """Test event filtering logic in ClientEventPublisher."""
 
@@ -29,6 +33,7 @@ class TestClientEventFiltering:
             "test-client": {
                 "authorized": True,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -63,6 +68,7 @@ class TestClientEventFiltering:
             "test-runner-client": {
                 "authorized": True,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -99,6 +105,7 @@ class TestClientEventFiltering:
             "test-wheel-client": {
                 "authorized": True,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -135,6 +142,7 @@ class TestClientEventFiltering:
             "test-client": {
                 "authorized": True,
                 "jobs": {"different-job-id"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -170,6 +178,7 @@ class TestClientEventFiltering:
             "test-client": {
                 "authorized": False,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -205,14 +214,17 @@ class TestClientEventFiltering:
             "client1": {
                 "authorized": True,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             },
             "client2": {
                 "authorized": True,
                 "jobs": {"20231027123456789012"},
+                "crypticle": _test_crypticle(),
             },
             "client3": {
                 "authorized": True,
                 "jobs": {"different-job"},
+                "crypticle": _test_crypticle(),
             },
         }
 
@@ -242,6 +254,7 @@ class TestClientEventFiltering:
             "test-client": {
                 "authorized": True,
                 "jobs": {"job-id-1", "run-id-1", "wheel-id-1"},
+                "crypticle": _test_crypticle(),
             }
         }
 
@@ -283,6 +296,7 @@ class TestClientEventFiltering:
             "test-client": {
                 "authorized": True,
                 "jobs": {"some-job-id"},
+                "crypticle": _test_crypticle(),
             }
         }
 
