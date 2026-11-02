@@ -1071,7 +1071,7 @@ class AsyncAuth:
         # once #70604's aioloop(warn=True) support is available. Remove this input
         # compatibility after that deprecation period; keep native asyncio inputs.
         io_loop = (
-            asyncio.get_event_loop()
+            asyncio.get_running_loop()
             if io_loop is None
             else salt.utils.asynchronous.aioloop(io_loop)
         )
@@ -1219,6 +1219,10 @@ class AsyncAuth:
                         await future
                     except asyncio.CancelledError:
                         pass
+                    except Exception:  # pylint: disable=broad-except
+                        # Keep this caller's cancellation; do not replace it
+                        # with an error from the abandoned sign-in's cleanup.
+                        log.exception("Error cleaning up abandoned authentication")
 
     async def _authenticate(self):
         """

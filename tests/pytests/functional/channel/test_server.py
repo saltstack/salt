@@ -107,7 +107,7 @@ def minion_config(minion_opts, master_config, channel_minion_id):
         signing_algorithm="PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
     )
     os.makedirs(minion_opts["pki_dir"], exist_ok=True)
-    salt.crypt.AsyncAuth(minion_opts).get_keys()  # generate minion.pem/pub
+    salt.crypt.SAuth(minion_opts).get_keys()  # generate minion.pem/pub
     minion_pub = os.path.join(minion_opts["pki_dir"], "minion.pub")
     pub_on_master = os.path.join(master_config["pki_dir"], "minions", channel_minion_id)
     shutil.copyfile(minion_pub, pub_on_master)
