@@ -1600,6 +1600,14 @@ def sls(
             return ["Pillar failed to render with the following messages:"] + errors
 
         orchestration_jid = kwargs.get("orchestration_jid")
+        orchestration_user = kwargs.get("orchestration_user")
+        if orchestration_user is not None and __opts__.get("__role") == "master":
+            # Set by state.orchestrate so that salt.runner states attribute the
+            # jobs they start to the user that started the orchestration
+            # (#63148). Injected as __user__ rather than written to
+            # opts["user"], which is the user the master runs as (#70251).
+            # Only honoured master-side, so a minion's publisher cannot set it.
+            st_.state.inject_globals["__user__"] = orchestration_user
         with salt.utils.files.set_umask(0o077):
             if kwargs.get("cache"):
                 if os.path.isfile(cfn):
