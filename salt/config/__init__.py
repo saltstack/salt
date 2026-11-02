@@ -4892,6 +4892,7 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
             "always_verify_signature": False,
             "master_sign_key_name": "master_sign",
             "master_pubkey_signature": "master_pubkey_signature",
+            "master_finger": "",
             "autosign_grains": [],
         }
         for key, value in _minion_auth_defaults.items():
