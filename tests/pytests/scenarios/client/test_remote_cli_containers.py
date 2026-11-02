@@ -24,12 +24,23 @@ import salt.utils.files
 @pytest.fixture
 def master_container(salt_factories):
     """Create a Salt master container."""
+    from pytestshellutils.utils import ports
+
+    # ``client_event_port`` must be unique per master so parallel
+    # (or reruns-in-the-same-session) tests don't race to bind the
+    # same port.  The default 4507 is fine in production where only
+    # one master runs per host; it falls over here because another
+    # scenario test's master may still own that port.  Allocate a
+    # free port instead -- the client config written by
+    # :func:`remote_client_setup` picks the same value out of
+    # ``master_container.config``.
+    client_event_port = ports.get_unused_localhost_port()
     config_overrides = {
         "open_mode": False,
         "auto_accept": False,
         "client_acl": {},
         "publisher_acl": {},
-        "client_event_port": 4507,  # Enable network event publishing for tests
+        "client_event_port": client_event_port,
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -134,6 +145,9 @@ def remote_client_setup(master_container, client_config_dir):
         id: {client_id}
         master: {master_config['interface']}
         master_port: {master_config['ret_port']}
+        # Pick up the dynamically-allocated event port from the master
+        # fixture so a parallel test's master doesn't shadow ours.
+        client_event_port: {master_config['client_event_port']}
 
         # Client-specific settings
         pki_dir: {pki_dir}

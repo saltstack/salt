@@ -33,6 +33,8 @@ def master_cluster(salt_factories):
     This simulates a high-availability production environment with
     multiple masters for redundancy and load balancing.
     """
+    from pytestshellutils.utils import ports
+
     masters = []
 
     # Create three masters with coordinated configuration
@@ -44,6 +46,9 @@ def master_cluster(salt_factories):
             "auto_accept": False,
             "order_masters": True,  # Enable master ordering for cluster
             "cluster_mode": True,  # Enable cluster mode
+            # Each master needs its own ``client_event_port``;
+            # the default 4507 would collide across all three.
+            "client_event_port": ports.get_unused_localhost_port(),
         }
 
         factory = salt_factories.salt_master_daemon(
@@ -100,6 +105,7 @@ def remote_admin_workstation(tmp_path, master_cluster):
             id: {admin_id}
             master: {master.config['interface']}
             master_port: {master.config['ret_port']}
+            client_event_port: {master.config['client_event_port']}
 
             pki_dir: {pki_dir}
             transport: {master.config.get('transport', 'zeromq')}
