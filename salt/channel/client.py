@@ -4,14 +4,11 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
 import uuid
-
-import tornado.gen
-import tornado.ioloop
-import tornado.locks
 
 import salt.crypt
 import salt.exceptions
@@ -51,6 +48,10 @@ class AsyncReqChannel:
     """
     Factory class to create a asynchronous communication channels to the
     master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
+
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -79,7 +80,9 @@ class AsyncReqChannel:
             opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop, warn=True)
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -122,7 +125,7 @@ class AsyncReqChannel:
         # cache.  Holding this lock across the send + decrypt window makes
         # the request/reply pair atomic w.r.t. any other coroutine on the
         # same io_loop.  See issue #69753.
-        self._req_lock = tornado.locks.Lock()
+        self._req_lock = asyncio.Lock()
 
     @property
     def crypt(self):
@@ -465,6 +468,10 @@ class AsyncReqChannel:
 class AsyncPubChannel:
     """
     Factory class to create subscription channels to the master's Publisher
+
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -496,17 +503,28 @@ class AsyncPubChannel:
 
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop, warn=True)
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
         host = opts.get("master_ip", "127.0.0.1")
         port = int(opts.get("publish_port", 4506))
         transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
-        return cls(opts, transport, auth, io_loop)
+        try:
+            return cls(opts, transport, auth, io_loop)
+        except BaseException:
+            try:
+                transport.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                log.exception("Failed to close transport after channel initialization")
+            raise
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = aioloop(io_loop)
+        self.io_loop = (
+            asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+        )
         self.auth = auth
         try:
             # This loads or generates the minion's public key.
@@ -559,6 +577,7 @@ class AsyncPubChannel:
         """
         Close the channel
         """
+        self._closing = True
         self.transport.close()
         if self.event is not None:
             self.event.destroy()
@@ -732,4 +751,4 @@ class AsyncPubChannel:
         return self
 
     async def __aexit__(self, *_):
-        await self.close()
+        self.close()
