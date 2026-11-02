@@ -78,7 +78,7 @@ def parse():
         dest="minions",
         default=5,
         type="int",
-        help="The number of minions to make (default = 5)",
+        help="The number of minions to make (default = %default)",
     )
     parser.add_option(
         "-M",
@@ -91,7 +91,7 @@ def parse():
         "--master",
         dest="master",
         default="localhost",
-        help="The location of the salt master that this swarm will serve. (default = localhost) "
+        help="The location of the salt master that this swarm will serve. (default = %default) "
         "The standard port used by daemon masters is 4506. Masters can be specified using "
         "<IP address>:<port>. For example, 192.168.1.2:4506",
     )
@@ -102,7 +102,7 @@ def parse():
         default="minion",
         help="Give the minions an alternative id prefix, this is used "
         "when minions from many systems are being aggregated onto "
-        "a single master. (default = minion)",
+        "a single master. (default = %default)",
     )
     parser.add_option(
         "--rand-os",
@@ -137,7 +137,7 @@ def parse():
         "--keep-modules",
         dest="keep",
         default="",
-        help="A comma delimited list of modules to enable. (default = None)",
+        help="A comma delimited list of modules to enable. (default = %default)",
     )
     parser.add_option(
         "-f",
@@ -151,7 +151,7 @@ def parse():
         "--temp-dir",
         dest="temp_dir",
         default="/tmp/sroot",
-        help="Place temporary files/directories here, (default = /tmp/sroot)",
+        help="Place temporary files/directories here, (default = %default)",
     )
     parser.add_option(
         "--no-clean",
@@ -167,13 +167,13 @@ def parse():
         "--root-dir",
         dest="root_dir",
         default=None,
-        help="Override the minion root_dir config. (default = None)",
+        help="Override the minion root_dir config. (default = %default)",
     )
     parser.add_option(
         "--transport",
         dest="transport",
         default="zeromq",
-        help="Declare which transport to use, (default = zeromq). Currently, "
+        help="Declare which transport to use, (default = %default). Currently, "
         "tcp/TLS and ws/TLS are not supported, since they require the "
         "establishment of a certificate infrastructure and use of PKI "
         "keys managed by that infrastructure.",
