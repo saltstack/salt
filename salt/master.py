@@ -1832,7 +1832,7 @@ class RequestRouter:
                             import salt.crypt
 
                             crypticle = salt.crypt.Crypticle(self.opts, key)
-                            load = crypticle.decrypt(load)
+                            load = crypticle.loads(load)
                     elif enc == "pub":
                         # RSA encryption
                         import salt.crypt
