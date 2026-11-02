@@ -1722,3 +1722,66 @@ def test_master_pub_server_channel_factory_takes_ipc_branch_without_cluster_id(
 
     assert ipc_mock.called
     assert not tcp_mock.called
+
+
+# ---------------------------------------------------------------------------
+# PubServerChannel pickle round-trip (Windows spawn regression)
+#
+# Windows ``multiprocessing`` uses ``spawn`` and pickles the channel
+# across the parent -> child boundary.  ``__setstate__`` must restore
+# the same attribute names that ``__getstate__`` reads.  A long-standing
+# typo (commit ``3e8f10b5b34``, 2022) wrote
+# ``self.state = state["presence_events"]`` instead of
+# ``self.presence_events = state["presence_events"]``, so a child that
+# itself spawned another subprocess would AttributeError in
+# ``__getstate__`` with
+# ``'PubServerChannel' object has no attribute 'presence_events'``.
+# Reproduced on Windows CI run 41358216263 / scenarios-zeromq.
+# ---------------------------------------------------------------------------
+
+
+def test_pub_server_channel_setstate_restores_presence_events_attr():
+    """``__setstate__`` must write the ``presence_events`` ATTRIBUTE
+    (not ``self.state``) so a subsequent ``__getstate__`` round-trip
+    doesn't AttributeError on Windows multiprocessing re-pickle."""
+    bare = server.PubServerChannel.__new__(server.PubServerChannel)
+    state = {
+        "opts": {"id": "test-master", "pki_dir": "/tmp/does-not-matter"},
+        "transport": MagicMock(),
+        "presence_events": True,
+    }
+
+    with patch("salt.utils.event.get_event", MagicMock()), patch(
+        "salt.utils.minions.CkMinions", MagicMock()
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        bare.__setstate__(state)
+
+    assert hasattr(bare, "presence_events"), (
+        "__setstate__ must restore ``presence_events`` as a named "
+        "attribute, not ``self.state`` -- otherwise a Windows re-pickle "
+        "fails in ``__getstate__``"
+    )
+    assert bare.presence_events is True
+
+
+def test_pub_server_channel_round_trip_pickle_preserves_getstate():
+    """End-to-end: unpickled instance must survive a second
+    ``__getstate__`` without AttributeError.  Mirrors the Windows
+    cascade where a parent spawns a child that itself spawns a
+    grandchild."""
+    bare = server.PubServerChannel.__new__(server.PubServerChannel)
+    state = {
+        "opts": {"id": "test-master", "pki_dir": "/tmp/does-not-matter"},
+        "transport": MagicMock(),
+        "presence_events": False,
+    }
+
+    with patch("salt.utils.event.get_event", MagicMock()), patch(
+        "salt.utils.minions.CkMinions", MagicMock()
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        bare.__setstate__(state)
+        round_trip = bare.__getstate__()
+
+    assert round_trip["presence_events"] is False
+    assert "opts" in round_trip
+    assert "transport" in round_trip
