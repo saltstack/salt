@@ -131,7 +131,8 @@ def test_masked_pillar_dumps_as_plain_data():
         salt.utils.yamldumper.OrderedDumper,
         salt.utils.yamldumper.SafeOrderedDumper,
         salt.utils.yamldumper.IndentedSafeOrderedDumper,
-        salt.utils.yamldumper.yaml.Dumper,
+        # yamlloader_old can rebind yaml.Dumper to CDumper during other tests.
+        salt.utils.yamldumper.yaml.dumper.Dumper,
         salt.utils.yamldumper.yaml.SafeDumper,
     )
     wrapped = salt.utils.secret.hide(data)
