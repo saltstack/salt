@@ -224,7 +224,18 @@ def _fulfills_version_spec(versions, oper, desired_version, ignore_epoch=None):
     if salt.utils.platform.is_freebsd():
         if isinstance(versions, dict) and "version" in versions:
             versions = versions["version"]
+
+    # If desired version is missing a release, but not the installed
+    # The versions would be equal, ignore the release.
+    # This can happen on checking if a package version 3.2 is satisfied by
+    # 3.2-1.0 or 3.2-2.1
+    ignore_release = "-" not in desired_version
+
     for ver in versions:
+        if ignore_release and "-" in ver:
+            # Strip release part from the installed package version
+            # if release was not specified as desired
+            ver = ver[: ver.find("-")]
         if (
             oper == "==" and fnmatch.fnmatch(ver, desired_version)
         ) or salt.utils.versions.compare(
