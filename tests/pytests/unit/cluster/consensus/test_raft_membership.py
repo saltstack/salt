@@ -15,6 +15,7 @@ import tempfile
 
 import pytest
 
+import salt.cluster
 import salt.config
 from salt.cluster.consensus.raft import (
     ManualPeer,
@@ -356,6 +357,7 @@ class TestMaxVotersCap:
 
         tmpdir = tempfile.mkdtemp()
         opts = salt.config.master_config("/dev/null")
+        opts["id"] = "127.0.0.1_master"
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
         opts["cluster_pool_port"] = 55597
@@ -418,6 +420,7 @@ class TestMaxVotersCap:
 
         tmpdir = tempfile.mkdtemp()
         opts = salt.config.master_config("/dev/null")
+        opts["id"] = f"{my_addr}_master"
         opts["interface"] = my_addr
         opts["cluster_peers"] = list(peer_addrs)
         opts["cluster_pool_port"] = 55596
@@ -552,6 +555,7 @@ class TestNotifyPeerJoined:
 
         tmpdir = tempfile.mkdtemp()
         opts = salt.config.master_config("/dev/null")
+        opts["id"] = "127.0.0.1_master"
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
         opts["cluster_pool_port"] = 55596
@@ -580,7 +584,7 @@ class TestNotifyPeerJoined:
         initial_count = len(svc.node.peers)
 
         # "Joining" with own address must be a no-op.
-        svc.notify_peer_joined(opts["interface"])
+        svc.notify_peer_joined(salt.cluster.node_id(opts))
 
         assert len(svc.node.peers) == initial_count
 
@@ -729,3 +733,59 @@ class TestNotifyPeerJoined:
             "no new CONFIG entry should be written for an already-known "
             f"learner; got {len(config_entries)}"
         )
+
+
+class TestPeerFactoryIdentity:
+    """
+    Regression tests for issue #70567.
+
+    ``RaftService._make_peer`` must stamp the cluster identity.
+    """
+
+    @staticmethod
+    def _make_service_with_distinct_interface():
+        import asyncio
+
+        from salt.cluster.consensus.service import RaftService
+
+        tmpdir = tempfile.mkdtemp()
+        opts = salt.config.master_config("/dev/null")
+        opts["id"] = "salt-master-1_master"
+        # Deliberately not the identity, and a wildcard bind at that.
+        opts["interface"] = "0.0.0.0"
+        opts["cluster_peers"] = ["salt-master-2"]
+        opts["cluster_pool_port"] = 55598
+        opts["cachedir"] = tmpdir
+
+        loop = asyncio.new_event_loop()
+        try:
+            return RaftService(opts, loop, {"salt-master-2": MagicMock()}), opts
+        finally:
+            loop.close()
+
+    def test_local_node_id_comes_from_opts_id(self):
+        svc, opts = self._make_service_with_distinct_interface()
+        assert svc.node.node_id == salt.cluster.node_id(opts) == "salt-master-1"
+
+    def test_make_peer_local_id_matches_local_node(self):
+        svc, _ = self._make_service_with_distinct_interface()
+        peer = svc._make_peer("salt-master-3")
+        assert peer.node_id == "salt-master-3"
+        assert peer._local_id == svc.node.node_id, (
+            "the peer factory must stamp the same identity the local Node "
+            "runs under, or outbound RPCs advertise a node-id no peer knows"
+        )
+        assert peer._local_id == "salt-master-1"
+
+    def test_statically_configured_peers_agree_with_the_factory(self):
+        """
+        The two construction paths must not disagree.
+
+        Peers built in ``__init__`` and peers built later by the factory have
+        to carry the same ``local_id``; a cluster that was fine until a
+        learner was promoted is the hardest version of this bug to find.
+        """
+        svc, _ = self._make_service_with_distinct_interface()
+        static = [p for p in svc.node.peers if p.node_id == "salt-master-2"]
+        assert static, "the statically configured peer should be registered"
+        assert static[0]._local_id == svc._make_peer("salt-master-3")._local_id

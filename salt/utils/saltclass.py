@@ -134,7 +134,16 @@ def dict_merge(a, b, path=None):
             else:
                 a[key] = b[key]
         else:
-            a[key] = b[key]
+            # Key is absent from a. Descend into dicts so nested override
+            # markers are still processed, and honour a leading '^' marker on
+            # a list even when there is no existing list to override.
+            if isinstance(b[key], list) and b[key] and b[key][0] == "^":
+                a[key] = b[key][1:]
+            elif isinstance(b[key], dict):
+                a[key] = {}
+                dict_merge(a[key], b[key], path + [str(key)])
+            else:
+                a[key] = b[key]
     return a
 
 

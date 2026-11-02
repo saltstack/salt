@@ -165,7 +165,7 @@ jobs:
           cwd: pkgs/checkout/
 
       - name: Setup GnuPG
-        if: ${{ inputs.sign-deb-packages }}
+        if: ${{ inputs.sign-deb-packages && (github.repository == 'saltstack/salt' || github.repository == 'saltstack/salt-priv' || github.repository == 'saltstack/salt-nightlies') }}
         env:
           # NIGHTLY_SIGNING_GPG_KEY is only populated in the nightly environment;
           # staging / release environments carry SIGNING_GPG_KEY instead.
@@ -300,7 +300,7 @@ jobs:
           salt-version: "${{ inputs.salt-version }}"
 
       - name: Setup GnuPG
-        if: ${{ inputs.sign-rpm-packages }}
+        if: ${{ inputs.sign-rpm-packages && (github.repository == 'saltstack/salt' || github.repository == 'saltstack/salt-priv' || github.repository == 'saltstack/salt-nightlies') }}
         env:
           # NIGHTLY_SIGNING_GPG_KEY is only populated in the nightly environment;
           # staging / release environments carry SIGNING_GPG_KEY instead.
