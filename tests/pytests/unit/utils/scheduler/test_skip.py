@@ -19,7 +19,7 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.mark.slow_test
-def test_skip(schedule):
+async def test_skip(schedule):
     """
     verify that scheduled job is skipped at the specified time
     """
@@ -46,7 +46,7 @@ def test_skip(schedule):
     )
 
     # Run 11/29/2017 at 4pm
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert "_last_run" not in ret
     assert ret["_skip_reason"] == "skip_explicit"
@@ -54,13 +54,13 @@ def test_skip(schedule):
 
     # Run 11/29/2017 at 5pm
     run_time = dateutil.parser.parse("11/29/2017 5:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time
 
 
 @pytest.mark.slow_test
-def test_skip_during_range(schedule):
+async def test_skip_during_range(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
@@ -84,12 +84,12 @@ def test_skip_during_range(schedule):
     # eval at 1:30pm to prime; will run.
     run_time = dateutil.parser.parse("11/29/2017 1:30pm")
     init_run_time = run_time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
     # eval at 2:30pm, will not run during range.
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == init_run_time
     assert ret["_skip_reason"] == "in_skip_range"
@@ -97,12 +97,12 @@ def test_skip_during_range(schedule):
 
     # eval at 3:30pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time
 
 
-def test_skip_during_range_invalid_datestring(schedule):
+async def test_skip_during_range_invalid_datestring(schedule):
     """
     verify that scheduled job is not run and returns the right error string
     """
@@ -138,7 +138,7 @@ def test_skip_during_range_invalid_datestring(schedule):
     schedule.opts.update(job1)
 
     # Eval
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
 
     # Check the first job
     ret = schedule.job_status(job_name1)
@@ -154,7 +154,7 @@ def test_skip_during_range_invalid_datestring(schedule):
     schedule.opts.update(job2)
 
     # Eval
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
 
     # Check the second job
     ret = schedule.job_status(job_name2)
@@ -165,7 +165,7 @@ def test_skip_during_range_invalid_datestring(schedule):
 
 
 @pytest.mark.slow_test
-def test_skip_during_range_global(schedule):
+async def test_skip_during_range_global(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
@@ -186,12 +186,12 @@ def test_skip_during_range_global(schedule):
     # eval at 1:30pm to prime; will run.
     run_time = dateutil.parser.parse("11/29/2017 1:30pm")
     init_run_time = run_time
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
     # eval at 2:30pm, will not run during range.
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == init_run_time
     assert ret["_skip_reason"] == "in_skip_range"
@@ -199,13 +199,13 @@ def test_skip_during_range_global(schedule):
 
     # eval at 3:30pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time
 
 
 @pytest.mark.slow_test
-def test_run_after_skip_range(schedule):
+async def test_run_after_skip_range(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
@@ -229,7 +229,7 @@ def test_run_after_skip_range(schedule):
 
     # eval at 2:30pm, will not run during range.
     run_time = dateutil.parser.parse("11/29/2017 2:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert "_last_run" not in ret
     assert ret["_skip_reason"] == "in_skip_range"
@@ -237,13 +237,13 @@ def test_run_after_skip_range(schedule):
 
     # eval at 3:00:01pm, will run.
     run_time = dateutil.parser.parse("11/29/2017 3:00:01pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert ret["_last_run"] == run_time
 
 
 @pytest.mark.slow_test
-def test_run_seconds_skip(schedule):
+async def test_run_seconds_skip(schedule):
     """
     verify that scheduled job is skipped during the specified range
     """
@@ -255,12 +255,12 @@ def test_run_seconds_skip(schedule):
 
     # eval at 2:00pm, to prime the scheduler
     run_time = dateutil.parser.parse("11/29/2017 2:00pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
     # eval at 2:00:10pm
     run_time = dateutil.parser.parse("11/29/2017 2:00:10pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
 
     # Skip at 2:00:20pm
@@ -272,7 +272,7 @@ def test_run_seconds_skip(schedule):
             "time_fmt": "%Y-%m-%dT%H:%M:%S",
         },
     )
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert "_next_fire_time" in ret
     assert ret["_skip_reason"] == "skip_explicit"
@@ -280,6 +280,6 @@ def test_run_seconds_skip(schedule):
 
     # Run at 2:00:30pm
     run_time = dateutil.parser.parse("11/29/2017 2:00:30pm")
-    schedule.eval(now=run_time)
+    await schedule.eval(now=run_time)
     ret = schedule.job_status(job_name)
     assert "_last_run" in ret

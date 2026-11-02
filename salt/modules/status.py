@@ -3,6 +3,7 @@ Module for returning various status data about a minion.
 These data can be useful for compiling into stats later.
 """
 
+import asyncio
 import collections
 import copy
 import datetime
@@ -14,6 +15,7 @@ import re
 import time
 
 import salt.channel
+import salt.channel.client
 import salt.config
 import salt.minion
 import salt.utils.event
@@ -1733,7 +1735,7 @@ def master(master=None, connected=True):
     return master_connection_status
 
 
-def ping_master(master):
+async def ping_master(master):
     """
     .. versionadded:: 2016.3.0
 
@@ -1760,25 +1762,25 @@ def ping_master(master):
         return False
 
     timeout = opts.get("auth_timeout", 60)
-    load = {"cmd": "ping"}
+    if timeout is None:
+        timeout = opts.get("request_channel_timeout", 60)
+    try:
+        async with salt.channel.client.AsyncReqChannel.factory(
+            opts, crypt="clear"
+        ) as channel:
+            await asyncio.wait_for(
+                channel.send({"cmd": "ping"}, tries=0, timeout=timeout), timeout=timeout
+            )
+    except Exception:  # pylint: disable=broad-except
+        return False
 
-    result = False
-    with salt.channel.client.ReqChannel.factory(opts, crypt="clear") as channel:
-        try:
-            payload = channel.send(load, tries=0, timeout=timeout)
-            result = True
-        except Exception as e:  # pylint: disable=broad-except
-            pass
-
-        if result:
-            with salt.utils.event.get_event(
-                "minion", opts=__opts__, listen=False
-            ) as event:
-                event.fire_event(
-                    {"master": master}, salt.minion.master_event(type="failback")
-                )
-
-        return result
+    with salt.utils.event.get_event(
+        "minion", opts=__opts__, listen=False, io_loop=asyncio.get_running_loop()
+    ) as event:
+        await event.fire_event_async(
+            {"master": master}, salt.minion.master_event(type="failback")
+        )
+    return True
 
 
 def proxy_reconnect(proxy_name, opts=None):

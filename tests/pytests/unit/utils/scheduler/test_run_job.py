@@ -3,7 +3,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def test_run_job(schedule):
+async def test_run_job(schedule):
     """
     verify that scheduled job runs
     """
@@ -13,7 +13,7 @@ def test_run_job(schedule):
     schedule.opts.update(job)
 
     # Run job
-    schedule.run_job(job_name)
+    await schedule.run_job(job_name)
     ret = schedule.job_status(job_name)
     expected = {"function": "test.ping", "run": True, "name": "test_run_job"}
     assert ret == expected

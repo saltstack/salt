@@ -2,6 +2,7 @@
 Tests for salt.loader.lazy
 """
 
+import asyncio
 import sys
 import textwrap
 
@@ -37,6 +38,12 @@ def loader_dir(tmp_path):
 
     async def get_opts_async(key):
         return __opts__.get(key, None)
+
+    async def context_after_await():
+        import asyncio
+        await asyncio.sleep(0)
+        __context__["completed"] = True
+        return __context__["owner"]
     """
     with pytest.helpers.temp_file(
         "mod_a.py", directory=tmp_path, contents=mod_contents
@@ -158,6 +165,25 @@ async def test_loader_async(loader_dir):
     myasync = loader["mod_a.myasync"]
     ret = await myasync("foo")
     assert ret == "foo"
+
+
+async def test_loaded_coroutines_keep_their_loader_context_across_await(loader_dir):
+    first = salt.loader.lazy.LazyLoader(
+        [loader_dir], {}, pack={"__context__": {"owner": "first"}}
+    )
+    second = salt.loader.lazy.LazyLoader(
+        [loader_dir], {}, pack={"__context__": {"owner": "second"}}
+    )
+
+    result = await asyncio.gather(
+        first["mod_a.context_after_await"](),
+        second["mod_a.context_after_await"](),
+    )
+
+    assert result == ["first", "second"]
+    assert first.pack["__context__"] == {"owner": "first", "completed": True}
+    assert second.pack["__context__"] == {"owner": "second", "completed": True}
+    assert salt.loader.context.loader_ctxvar.get(None) is None
 
 
 @pytest.mark.parametrize(

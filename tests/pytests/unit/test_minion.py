@@ -8,6 +8,7 @@ import pathlib
 import signal
 import threading
 import time
+import types
 import uuid
 
 import pytest
@@ -39,7 +40,7 @@ from salt.exceptions import (
     SaltReqTimeoutError,
     SaltSystemExit,
 )
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -684,9 +685,6 @@ async def test_beacons_before_connect(minion_opts):
     Tests that the 'beacons_before_connect' option causes the beacons to be initialized before connect.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.minion.Minion.sync_connect_master",
-        MagicMock(side_effect=RuntimeError("stop execution")),
-    ), patch(
         "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
@@ -698,10 +696,11 @@ async def test_beacons_before_connect(minion_opts):
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
 
-            try:
-                await minion.tune_in(start=True)
-            except RuntimeError:
-                pass
+            minion.connect_master = AsyncMock()
+            minion.tune_in = AsyncMock()
+            manager = types.SimpleNamespace(minions=[])
+            await salt.minion.MinionManager._connect_minion(manager, minion)
+            minion.tune_in.assert_awaited_once_with()
 
             # Make sure beacons are initialized but the sheduler is not
             assert "beacons" in minion.periodic_callbacks
@@ -716,9 +715,6 @@ async def test_scheduler_before_connect(minion_opts):
     Tests that the 'scheduler_before_connect' option causes the scheduler to be initialized before connect.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.minion.Minion.sync_connect_master",
-        MagicMock(side_effect=RuntimeError("stop execution")),
-    ), patch(
         "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
@@ -729,10 +725,11 @@ async def test_scheduler_before_connect(minion_opts):
         io_loop = tornado.ioloop.IOLoop()
         minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
         try:
-            try:
-                await minion.tune_in(start=True)
-            except RuntimeError:
-                pass
+            minion.connect_master = AsyncMock()
+            minion.tune_in = AsyncMock()
+            manager = types.SimpleNamespace(minions=[])
+            await salt.minion.MinionManager._connect_minion(manager, minion)
+            minion.tune_in.assert_awaited_once_with()
 
             # Make sure the scheduler is initialized but the beacons are not
             assert "schedule" in minion.periodic_callbacks
@@ -889,9 +886,6 @@ async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodi
     minion_opts,
 ):
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.minion.Minion.sync_connect_master",
-        MagicMock(side_effect=RuntimeError("stop execution")),
-    ), patch(
         "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
@@ -911,7 +905,7 @@ async def test_when_ping_interval_is_set_the_callback_should_be_added_to_periodi
                     pass
 
                 minion._fire_master_minion_start = async_mock
-                minion.tune_in(start=False)
+                await minion.tune_in()
             except RuntimeError:
                 pass
 
@@ -1167,7 +1161,7 @@ def _make_thread_return_minion_mock(tmp_path, opts):
     minion_instance.functions = MagicMock()
     minion_instance.functions.__contains__.return_value = True
     minion_instance.functions.pack = {"__context__": {"retcode": 0}}
-    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._execute_job_function = AsyncMock(return_value="ok")
     minion_instance._return_pub = MagicMock()
     minion_instance._fire_master = MagicMock()
     minion_instance._fire_start_event = MagicMock()
@@ -1264,7 +1258,7 @@ def _make_thread_multi_return_minion_mock(tmp_path, opts):
     minion_instance.functions = MagicMock()
     minion_instance.functions.__contains__.return_value = True
     minion_instance.functions.pack = {"__context__": {"retcode": 0}}
-    minion_instance._execute_job_function = MagicMock(return_value="ok")
+    minion_instance._execute_job_function = AsyncMock(return_value="ok")
     minion_instance._return_pub_multi = MagicMock()
     minion_instance._fire_master = MagicMock()
     minion_instance._fire_start_event = MagicMock()
@@ -1590,7 +1584,7 @@ def _assert_distinct_generations_61830(state):
     )
 
 
-def _sibling_job_61830(minion, functions, code, fun="test.retcode", exec_fn=None):
+async def _sibling_job_61830(minion, functions, code, fun="test.retcode", exec_fn=None):
     """
     A sibling job's real _execute_job_function on ``functions``: the
     start-of-job retcode reset, then ``fun`` writes ``code`` into that
@@ -1598,7 +1592,7 @@ def _sibling_job_61830(minion, functions, code, fun="test.retcode", exec_fn=None
     """
     if exec_fn is None:
         exec_fn = salt.minion.Minion._execute_job_function
-    exec_fn(
+    await exec_fn(
         minion,
         fun,
         [code],
@@ -1771,8 +1765,10 @@ def test_thread_return_retcode_owns_captured_loader_61830(minion_opts):
             # window, on the loader its own gen_modules() built.
             if "execution finished" in str(msg) and not state.get("sibling_ran"):
                 state["sibling_ran"] = True
-                _sibling_job_61830(
-                    minion, state["sibling_functions"], state["sibling_code"]
+                asyncio.get_event_loop().run_until_complete(
+                    _sibling_job_61830(
+                        minion, state["sibling_functions"], state["sibling_code"]
+                    )
                 )
             return original_info(msg, *args, **kwargs)
 
@@ -1997,11 +1993,13 @@ def test_thread_return_resource_job_owns_job_generation_61830(
             # this job's write->read window.
             if "execution finished" in str(msg) and not state.get("sibling_ran"):
                 state["sibling_ran"] = True
-                _sibling_job_61830(
-                    minion,
-                    minion.resource_loaders["dummy"],
-                    sibling_code,
-                    fun="rctest.retcode",
+                asyncio.get_event_loop().run_until_complete(
+                    _sibling_job_61830(
+                        minion,
+                        minion.resource_loaders["dummy"],
+                        sibling_code,
+                        fun="rctest.retcode",
+                    )
                 )
             return original_info(msg, *args, **kwargs)
 
@@ -2148,14 +2146,14 @@ def test_thread_return_merge_resource_job_owns_job_generation_61830(
     with _threaded_minion_61830(minion_opts, pillar=pillar) as (minion, delivered):
         real_exec = salt.minion.Minion._execute_job_function
 
-        def racing_exec(self, *args, **kwargs):
+        async def racing_exec(self, *args, **kwargs):
             # This run's function returns and the executor records its
             # retcode; then a sibling resource job runs on the shared per-type
             # loader before the merge block reads the retcode back.
-            result = real_exec(self, *args, **kwargs)
+            result = await real_exec(self, *args, **kwargs)
             if not state.get("sibling_ran"):
                 state["sibling_ran"] = True
-                _sibling_job_61830(
+                await _sibling_job_61830(
                     minion,
                     minion.resource_loaders["dummy"],
                     sibling_code,
@@ -2318,14 +2316,14 @@ def test_thread_multi_return_retcode_owns_captured_loader_61830(minion_opts):
         real_exec = salt.minion.Minion._execute_job_function
         state = {}
 
-        def racing_exec(self, *args, **kwargs):
+        async def racing_exec(self, *args, **kwargs):
             # The job's function writes its retcode; then the sibling job runs
             # on the sibling's loader before _thread_multi_return reads the
             # retcode back.
-            result = real_exec(self, *args, **kwargs)
+            result = await real_exec(self, *args, **kwargs)
             if not state.get("sibling_ran"):
                 state["sibling_ran"] = True
-                _sibling_job_61830(
+                await _sibling_job_61830(
                     minion,
                     state["sibling_functions"],
                     state["sibling_code"],
@@ -2378,15 +2376,12 @@ def test_thread_multi_return_retcode_owns_captured_loader_61830(minion_opts):
         assert ret["success"]["test.retcode"] is True
 
 
-def test_minion_manage_schedule(minion_opts):
+async def test_minion_manage_schedule(minion_opts):
     """
     Tests that the manage_schedule will call the add function, adding
     schedule data into opts.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.minion.Minion.sync_connect_master",
-        MagicMock(side_effect=RuntimeError("stop execution")),
-    ), patch(
         "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(
@@ -2426,7 +2421,7 @@ def test_minion_manage_schedule(minion_opts):
                 }
                 tag = "manage_schedule"
 
-                minion.manage_schedule(tag, data)
+                await minion.manage_schedule(tag, data)
                 assert "test_job" in minion.opts["schedule"]
             finally:
                 del minion.schedule
@@ -2440,9 +2435,6 @@ def test_minion_manage_beacons(minion_opts):
     beacon data into opts.
     """
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
-        "salt.minion.Minion.sync_connect_master",
-        MagicMock(side_effect=RuntimeError("stop execution")),
-    ), patch(
         "salt.utils.process.SignalHandlingProcess.start",
         MagicMock(return_value=True),
     ), patch(

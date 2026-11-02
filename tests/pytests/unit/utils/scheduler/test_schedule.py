@@ -300,23 +300,25 @@ def test_reload_schedule_in_saved_but_not_opts(schedule):
 
 
 # eval tests
-def test_eval_schedule_is_not_dict(schedule):
+async def test_eval_schedule_is_not_dict(schedule):
     """
     Tests eval if the schedule is not a dictionary
     """
     schedule.opts.update({"schedule": "", "pillar": {"schedule": {}}})
-    pytest.raises(ValueError, Schedule.eval, schedule)
+    with pytest.raises(ValueError):
+        await schedule.eval()
 
 
-def test_eval_schedule_is_not_dict_in_pillar(schedule):
+async def test_eval_schedule_is_not_dict_in_pillar(schedule):
     """
     Tests eval if the schedule from pillar is not a dictionary
     """
     schedule.opts.update({"schedule": {}, "pillar": {"schedule": ""}})
-    pytest.raises(ValueError, Schedule.eval, schedule)
+    with pytest.raises(ValueError):
+        await schedule.eval()
 
 
-def test_eval_schedule_time(schedule):
+async def test_eval_schedule_time(schedule):
     """
     Tests eval if the schedule setting time is in the future
     """
@@ -325,11 +327,11 @@ def test_eval_schedule_time(schedule):
         {"schedule": {"testjob": {"function": "test.true", "seconds": 60}}}
     )
     now = datetime.datetime.now()
-    schedule.eval()
+    await schedule.eval()
     assert schedule.opts["schedule"]["testjob"]["_next_fire_time"] > now
 
 
-def test_eval_schedule_time_eval(schedule):
+async def test_eval_schedule_time_eval(schedule):
     """
     Tests eval if the schedule setting time is in the future plus splay
     """
@@ -347,14 +349,14 @@ def test_eval_schedule_time_eval(schedule):
         }
     )
     now = datetime.datetime.now()
-    schedule.eval()
+    await schedule.eval()
     assert schedule.opts["schedule"]["testjob"]["_splay"] - now > datetime.timedelta(
         seconds=60
     )
 
 
 @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
-def test_eval_schedule_cron(schedule):
+async def test_eval_schedule_cron(schedule):
     """
     Tests eval if the schedule is defined with cron expression
     """
@@ -363,12 +365,12 @@ def test_eval_schedule_cron(schedule):
         {"schedule": {"testjob": {"function": "test.true", "cron": "* * * * *"}}}
     )
     now = datetime.datetime.now()
-    schedule.eval()
+    await schedule.eval()
     assert schedule.opts["schedule"]["testjob"]["_next_fire_time"] > now
 
 
 @pytest.mark.skipif(not _CRON_SUPPORTED, reason="croniter module not installed")
-def test_eval_schedule_cron_splay(schedule):
+async def test_eval_schedule_cron_splay(schedule):
     """
     Tests eval if the schedule is defined with cron expression plus splay
     """
@@ -380,7 +382,7 @@ def test_eval_schedule_cron_splay(schedule):
             }
         }
     )
-    schedule.eval()
+    await schedule.eval()
     assert (
         schedule.opts["schedule"]["testjob"]["_splay"]
         > schedule.opts["schedule"]["testjob"]["_next_fire_time"]
@@ -388,7 +390,7 @@ def test_eval_schedule_cron_splay(schedule):
 
 
 @pytest.mark.slow_test
-def test_handle_func_schedule_minion_blackout(schedule):
+async def test_handle_func_schedule_minion_blackout(schedule):
     """
     Tests eval if the schedule from pillar is not a dictionary
     """
@@ -412,11 +414,11 @@ def test_handle_func_schedule_minion_blackout(schedule):
 
     with patch.object(salt.utils.schedule, "log") as log_mock:
         with patch("salt.utils.process.daemonize"), patch("sys.platform", "linux2"):
-            schedule.handle_func(False, "test.ping", data)
+            await schedule.handle_func(False, "test.ping", data)
             assert log_mock.exception.called
 
 
-def test_handle_func_check_data(schedule):
+async def test_handle_func_check_data(schedule):
     """
     Tests handle_func to ensure that __pub_fun_args is not
     being duplicated in the value of kwargs in data.
@@ -439,17 +441,17 @@ def test_handle_func_check_data(schedule):
     with patch("salt.utils.process.daemonize"), patch("sys.platform", "linux2"):
         with patch.object(schedule, "standalone", return_value=True):
             # run handle_func once
-            schedule.handle_func(False, "test.arg", data)
+            await schedule.handle_func(False, "test.arg", data)
 
             # run handle_func and ensure __pub_fun_args
             # is not in kwargs
-            schedule.handle_func(False, "test.arg", data)
+            await schedule.handle_func(False, "test.arg", data)
 
             assert "kwargs" in data
             assert "__pub_fun_args" not in data["kwargs"]
 
 
-def test_handle_func_check_dicts(schedule):
+async def test_handle_func_check_dicts(schedule):
     """
     Tests that utils, functions, and returners dicts are not
     empty after handle_func has run on Windows.
@@ -475,7 +477,7 @@ def test_handle_func_check_dicts(schedule):
             schedule.functions = {}
             schedule.returners = {}
             schedule.utils = {}
-            schedule.handle_func(False, "test.arg", data)
+            await schedule.handle_func(False, "test.arg", data)
 
             assert schedule.functions != {}
             assert schedule.returners != {}

@@ -32,6 +32,7 @@ import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
 import salt.utils.args
+import salt.utils.asynchronous
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
@@ -2400,7 +2401,9 @@ class Caller:
             caller.cmd('event.send', 'myco/myevent/something',
                 data={'foo': 'Foo'}, with_env=['GIT_COMMIT'], with_grains=True)
         """
-        return self.sminion.functions[fun](*args, **kwargs)
+        return salt.utils.asynchronous.resolve_result_sync(
+            self.sminion.functions[fun](*args, **kwargs)
+        )
 
     def function(self, fun, *args, **kwargs):
         """
@@ -2410,7 +2413,7 @@ class Caller:
         args, kwargs = salt.minion.load_args_and_kwargs(
             func, salt.utils.args.parse_input(args), kwargs
         )
-        return func(*args, **kwargs)
+        return salt.utils.asynchronous.resolve_result_sync(func(*args, **kwargs))
 
 
 class ProxyCaller:
@@ -2482,8 +2485,8 @@ class ProxyCaller:
             fname = f"{name}.execute"
             if fname not in self.sminion.executors:
                 raise SaltInvocationError(f"Executor '{name}' is not available")
-            return_data = self.sminion.executors[fname](
-                self.opts, data, func, args, kwargs
+            return_data = salt.utils.asynchronous.resolve_result_sync(
+                self.sminion.executors[fname](self.opts, data, func, args, kwargs)
             )
             if return_data is not None:
                 break

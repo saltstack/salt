@@ -3,8 +3,11 @@ Helpers/utils for working with tornado asynchronous stuff
 """
 
 import asyncio
+import concurrent.futures
 import contextlib
+import contextvars
 import gc
+import inspect
 import logging
 import os
 import sys
@@ -17,6 +20,31 @@ import tornado.ioloop
 import salt.utils.resource_warnings
 
 log = logging.getLogger(__name__)
+
+
+async def resolve_result(result):
+    """Await an awaitable result, or return a synchronous value unchanged."""
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
+def resolve_result_sync(result):
+    """Resolve a result at a synchronous API or worker entry point."""
+    if not inspect.isawaitable(result):
+        return result
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(resolve_result(result))
+    # A synchronous client may itself be called from an async application.
+    # Keep its blocking API without nesting event loops in the caller's thread,
+    # and retain loader/context variables in the temporary worker.
+    context = contextvars.copy_context()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        return executor.submit(
+            context.run, asyncio.run, resolve_result(result)
+        ).result()
 
 
 def aioloop(io_loop, warn=False):

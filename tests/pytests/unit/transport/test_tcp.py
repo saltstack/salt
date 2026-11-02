@@ -681,6 +681,68 @@ async def test_tcp_request_client_close_cancels_stream_return_task(
     assert tcp_request_client.task is None
 
 
+async def test_tcp_request_client_close_async_waits_for_reader_cleanup(
+    tcp_request_client,
+):
+    cleaned = asyncio.Event()
+    started = asyncio.Event()
+
+    async def read():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            cleaned.set()
+
+    stream = MagicMock()
+    tcp_request_client._stream = stream
+    tcp_request_client.task = asyncio.create_task(read())
+    await started.wait()
+    pending = asyncio.get_running_loop().create_future()
+    tcp_request_client.send_future_map["pending"] = pending
+
+    await tcp_request_client.close_async()
+    await tcp_request_client.close_async()
+
+    assert cleaned.is_set()
+    assert pending.cancelled()
+    assert tcp_request_client.task is None
+    assert tcp_request_client.send_future_map == {}
+    stream.close.assert_called_once_with()
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_tcp_request_client_send_releases_timeout_and_writer(
+    tcp_request_client, cancel
+):
+    entered = asyncio.Event()
+    timer = MagicMock()
+
+    async def write(_):
+        entered.set()
+        if cancel:
+            await asyncio.Event().wait()
+        else:
+            next(iter(tcp_request_client.send_future_map.values())).set_result(True)
+
+    tcp_request_client._stream = MagicMock()
+    tcp_request_client._stream.write = write
+    tcp_request_client.connect = AsyncMock()
+    with patch.object(tcp_request_client.io_loop, "call_later", return_value=timer):
+        task = asyncio.create_task(tcp_request_client.send({"cmd": "ping"}))
+        await entered.wait()
+        if cancel:
+            task.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await task
+        else:
+            assert await task is True
+    timer.cancel.assert_called_once_with()
+    assert tcp_request_client.send_future_map == {}
+    await tcp_request_client.close_async()
+
+
 async def test_tcp_request_client_send_after_close_raises_closing_error(
     tcp_request_client,
 ):
@@ -708,6 +770,68 @@ async def test_tcp_request_client_timeout_message_fails_the_future(
 
     assert "abc" not in tcp_request_client.send_future_map
     assert isinstance(future.exception(), salt.exceptions.SaltReqTimeoutError)
+
+
+async def test_tcp_request_client_timeout_message_ignores_cancelled_future(
+    tcp_request_client,
+):
+    future = asyncio.get_running_loop().create_future()
+    future.cancel()
+    tcp_request_client.send_future_map["cancelled"] = future
+    tcp_request_client.timeout_message("cancelled", {"cmd": "ping"})
+    assert tcp_request_client.send_future_map == {}
+
+
+async def test_tcp_request_client_reader_ignores_cancelled_reply(tcp_request_client):
+    cancelled = asyncio.get_running_loop().create_future()
+    cancelled.cancel()
+    wanted = asyncio.get_running_loop().create_future()
+    tcp_request_client.send_future_map.update(cancelled=cancelled, wanted=wanted)
+    frames = salt.transport.frame.frame_msg(True, header={"mid": "cancelled"})
+    frames += salt.transport.frame.frame_msg("pong", header={"mid": "wanted"})
+
+    async def read_bytes(*args, **kwargs):
+        if tcp_request_client._closing:
+            raise tornado.iostream.StreamClosedError()
+        tcp_request_client._closing = True
+        return frames
+
+    tcp_request_client._stream = MagicMock()
+    tcp_request_client._stream.read_bytes = read_bytes
+    await tcp_request_client._stream_return()
+    assert wanted.result() == "pong"
+    assert cancelled.cancelled()
+    assert tcp_request_client.send_future_map == {}
+
+
+@pytest.mark.parametrize(
+    "error", [tornado.iostream.StreamClosedError(), ValueError("invalid frame")]
+)
+async def test_request_client_read_error_fails_only_pending_requests(
+    tcp_request_client, error
+):
+    loop = asyncio.get_running_loop()
+    pending, cancelled, completed = (loop.create_future() for _ in range(3))
+    cancelled.cancel()
+    completed.set_result(False)
+    tcp_request_client.send_future_map.update(
+        pending=pending, cancelled=cancelled, completed=completed
+    )
+
+    async def read_bytes(*args, **kwargs):
+        tcp_request_client._closed = True
+        raise error
+
+    tcp_request_client._stream = MagicMock()
+    tcp_request_client._stream.read_bytes = read_bytes
+    await tcp_request_client._stream_return()
+
+    with pytest.raises(type(error)) as caught:
+        await pending
+    assert caught.value is error
+    assert cancelled.cancelled()
+    assert await completed is False
+    assert not tcp_request_client.send_future_map
 
 
 async def test_tcp_request_client_stream_return_resolves_future_by_message_id(

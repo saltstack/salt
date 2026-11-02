@@ -33,12 +33,14 @@ executor-ownership test rebinds both attributes to a new generation after the
 job has started but before its executor lookup.
 """
 
+import asyncio
 import functools
 import types
 
 import pytest
 
 import salt.defaults.exitcodes
+import salt.executors.direct_call
 import salt.loader
 import salt.metaproxy.deltaproxy
 import salt.metaproxy.proxy
@@ -184,8 +186,49 @@ def _assert_distinct_loaders(job_loader, state):
 
 
 @METAPROXIES
+@pytest.mark.parametrize("multi", [False, True])
+def test_proxy_job_awaits_native_coroutine_result(
+    metaproxy, proxy_opts, proc_dir, multi
+):
+    proxy_opts["metaproxy"] = metaproxy.__name__.rsplit(".", 1)[-1]
+    functions = salt.loader.minion_mods(proxy_opts)
+
+    async def native_result():
+        await asyncio.sleep(0)
+        functions.pack["__context__"]["retcode"] = 7
+        return False
+
+    functions["test.native_result"] = native_result
+    delivered = []
+    minion = _minion_instance(
+        proxy_opts,
+        proc_dir,
+        functions,
+        {"direct_call.execute": salt.executors.direct_call.execute},
+        delivered,
+    )
+    data = {
+        "jid": "20261028000000000001",
+        "ret": "",
+        "fun": ["test.native_result"] if multi else "test.native_result",
+        "arg": [[]] if multi else [],
+    }
+    runner = (
+        salt.minion.ProxyMinion._thread_multi_return
+        if multi
+        else salt.minion.ProxyMinion._thread_return
+    )
+    runner(minion, proxy_opts, data)
+
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert (ret["return"]["test.native_result"] if multi else ret["return"]) is False
+    assert (ret["retcode"]["test.native_result"] if multi else ret["retcode"]) == 7
+
+
+@METAPROXIES
 @RETCODE_CASES
-def test_metaproxy_thread_return_retcode_owns_captured_loader_61830(
+async def test_metaproxy_thread_return_retcode_owns_captured_loader_61830(
     metaproxy, proxy_opts, proc_dir, code, sibling_code, expected
 ):
     """
@@ -220,7 +263,9 @@ def test_metaproxy_thread_return_retcode_owns_captured_loader_61830(
         "ret": "",
     }
 
-    metaproxy.thread_return(salt.minion.ProxyMinion, minion_instance, proxy_opts, data)
+    await metaproxy.thread_return(
+        salt.minion.ProxyMinion, minion_instance, proxy_opts, data
+    )
 
     _assert_distinct_loaders(job_loader, state)
     # The job's function wrote its retcode into the loader it ran under.
@@ -233,7 +278,7 @@ def test_metaproxy_thread_return_retcode_owns_captured_loader_61830(
 
 @METAPROXIES
 @RETCODE_CASES
-def test_metaproxy_thread_multi_return_retcode_owns_captured_loader_61830(
+async def test_metaproxy_thread_multi_return_retcode_owns_captured_loader_61830(
     metaproxy, proxy_opts, proc_dir, code, sibling_code, expected
 ):
     """
@@ -266,7 +311,7 @@ def test_metaproxy_thread_multi_return_retcode_owns_captured_loader_61830(
         "ret": "",
     }
 
-    metaproxy.thread_multi_return(
+    await metaproxy.thread_multi_return(
         salt.minion.ProxyMinion, minion_instance, proxy_opts, data
     )
 
@@ -300,7 +345,7 @@ def _sudo_generation(opts, cmd_ret, calls):
 
 @METAPROXIES
 @SUDO_CASES
-def test_metaproxy_thread_return_executor_owns_captured_generation_61830(
+async def test_metaproxy_thread_return_executor_owns_captured_generation_61830(
     metaproxy, proxy_opts, proc_dir, code, cmd_ret, expected_retcode, expected_return
 ):
     """
@@ -368,7 +413,7 @@ def test_metaproxy_thread_return_executor_owns_captured_generation_61830(
     ), patch(
         "salt.utils.path.which", which
     ):
-        metaproxy.thread_return(
+        await metaproxy.thread_return(
             salt.minion.ProxyMinion, minion_instance, proxy_opts, data
         )
 

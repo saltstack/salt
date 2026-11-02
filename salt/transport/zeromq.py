@@ -1186,12 +1186,12 @@ class ZeroMQSocketMonitor:
             return
         try:
             self._socket.disable_monitor()
-        except zmq.Error:
+        except zmq.error.ZMQError:
             pass
         if self._monitor_socket is not None:
             try:
                 self._monitor_socket.close(0)
-            except zmq.Error:
+            except zmq.error.ZMQError:
                 pass
         self._socket = None
         self._running.clear()
@@ -1872,12 +1872,17 @@ class RequestClient(salt.transport.base.RequestClient):
         if self.opts.get("detect_mode") is True:
             timeout = 1
 
+        send_timeout = None
         if timeout is not None:
             send_timeout = self.io_loop.call_later(
                 timeout, self._timeout_message, future
             )
 
-        return await future
+        try:
+            return await future
+        finally:
+            if send_timeout is not None:
+                send_timeout.cancel()
 
     def _timeout_message(self, future):
         if not future.done():

@@ -35,6 +35,21 @@ pytestmark = [
 ]
 
 
+def test_socket_monitor_stop_tolerates_closed_sockets():
+    socket = MagicMock()
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(socket)
+    monitor._running.set()
+    socket.disable_monitor.side_effect = zmq.error.ZMQError(zmq.ENOTSOCK)
+    monitor_socket = socket.get_monitor_socket.return_value
+    monitor_socket.close.side_effect = [zmq.error.ZMQError(zmq.ENOTSOCK), None]
+
+    monitor.stop()
+
+    assert monitor._socket is None
+    assert monitor._monitor_socket is None
+    assert not monitor._running.is_set()
+
+
 MASTER_PRIV_KEY = """
 -----BEGIN RSA PRIVATE KEY-----
 MIIEogIBAAKCAQEAoAsMPt+4kuIG6vKyw9r3+OuZrVBee/2vDdVetW+Js5dTlgrJ
@@ -1853,6 +1868,27 @@ async def test_client_timeout_msg(minion_opts, io_loop):
             await client.send({"meh": "bah"}, 1)
     finally:
         client.close()
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+async def test_request_client_send_releases_timeout(minion_opts, io_loop, cancel):
+    client = salt.transport.zeromq.RequestClient(minion_opts, io_loop)
+    client.socket = MagicMock()
+    timer = MagicMock()
+    try:
+        with patch.object(client.io_loop, "call_later", return_value=timer):
+            task = asyncio.create_task(client.send({"cmd": "ping"}))
+            future, _ = await client._queue.get()
+            if cancel:
+                task.cancel()
+                with pytest.raises(asyncio.CancelledError):
+                    await task
+            else:
+                future.set_result(True)
+                assert await task is True
+        timer.cancel.assert_called_once_with()
+    finally:
+        await client.close_async()
 
 
 async def test_client_send_recv_on_cancelled_error(minion_opts, io_loop):
