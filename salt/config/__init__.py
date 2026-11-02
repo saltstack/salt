@@ -4897,6 +4897,18 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=Non
         }
         for key, value in _minion_auth_defaults.items():
             opts.setdefault(key, value)
+        # ``master_config`` sets ``syndic_master`` to the string
+        # ``'masterofmasters'`` by default (truthy).  Without an
+        # explicit override :func:`salt.crypt.AsyncAuth.\
+        # handle_signin_response` would route the master-finger check
+        # through its ``syndic_finger`` branch; it falls back to
+        # ``master_finger`` so behavior is equivalent, but an operator
+        # who later sets ``syndic_finger`` in ``/etc/salt/client``
+        # would silently override ``master_finger``.  Pin the role so
+        # the finger check consistently takes the ``master_finger``
+        # path.  Not using ``setdefault`` because the master-config
+        # pass we just inherited already populated the key.
+        opts["syndic_master"] = False
         config_used = client_config_path
     else:
         # Backwards-compatibility fallback: load the master config as a CLI

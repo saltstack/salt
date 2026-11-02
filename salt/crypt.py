@@ -1926,18 +1926,58 @@ class AsyncAuth:
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
-        log.critical(
-            "The specified fingerprint in the master configuration "
-            "file:\n%s\nDoes not match the authenticating master's "
-            "key:\n%s\nVerify that the configured fingerprint "
-            "matches the fingerprint of the correct master and that "
-            "this minion is not subject to a man-in-the-middle attack.",
-            finger,
-            salt.utils.crypt.pem_finger(
-                path=master_key, sum_type=self.opts["hash_type"]
-            ),
+        actual = salt.utils.crypt.pem_finger(
+            master_key, sum_type=self.opts["hash_type"]
         )
-        sys.exit(42)
+        role = self.opts.get("__role", "minion")
+        # Point the operator at the right file.  ``conf_file`` is the
+        # per-role conf path (``/etc/salt/minion`` or
+        # ``/etc/salt/client``); fall back to the role default if the
+        # opt isn't populated.
+        default_conf = "/etc/salt/client" if role == "client" else "/etc/salt/minion"
+        conf_file = self.opts.get("conf_file") or default_conf
+        # The opt name differs when the sign-in is going through the
+        # syndic branch (see :meth:`handle_signin_response`); report
+        # whichever opt the operator actually set.
+        opt_key = "syndic_finger" if self.opts.get("syndic_master") else "master_finger"
+        # A length mismatch on the two fingerprint strings almost
+        # always means the configured value was produced with a
+        # different hash algorithm than the local ``hash_type`` opt.
+        # Call that out explicitly -- otherwise the error looks
+        # identical to a real MITM and the operator panics.
+        hash_type = self.opts.get("hash_type", "sha256")
+        hash_hint = ""
+        if len(finger.replace(":", "")) != len(actual.replace(":", "")):
+            hash_hint = (
+                "\nFingerprint lengths differ, which usually indicates a hash "
+                "algorithm mismatch.  This %s is using hash_type=%r; "
+                "regenerate the fingerprint with the same algorithm "
+                "(e.g. ``salt-key -F master`` on a master with "
+                "matching hash_type)." % (role, hash_type)
+            )
+        log.critical(
+            "The fingerprint configured as '%s' in %s:\n%s\n"
+            "does not match the authenticating master's key:\n%s\n"
+            "Verify that the configured fingerprint matches the correct "
+            "master's pubkey and that this %s is not subject to a "
+            "man-in-the-middle attack.%s",
+            opt_key,
+            conf_file,
+            finger,
+            actual,
+            role,
+            hash_hint,
+        )
+        # Raise rather than ``sys.exit`` so the error propagates
+        # cleanly through the AsyncAuth retry loop (caught as
+        # ``SaltClientError`` by ``_authenticate``) instead of
+        # terminating the process from inside an asyncio Task --
+        # which triggers a "Task exception was never retrieved"
+        # traceback that drowns out the critical diagnostic above.
+        raise SaltClientError(
+            "master fingerprint mismatch: configured {}={} does not match "
+            "the master's pubkey fingerprint {}".format(opt_key, finger, actual)
+        )
 
 
 # TODO: remove, we should just return a sync wrapper of AsyncAuth
