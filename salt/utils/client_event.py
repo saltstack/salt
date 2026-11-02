@@ -425,22 +425,79 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         Returns:
             bool: True if client is authenticated
         """
+        if not client_id:
+            log.warning("Event-stream PKI auth: missing client_id in payload")
+            return False
+        if not token:
+            log.warning(
+                "Event-stream PKI auth for %s: missing token in payload",
+                client_id,
+            )
+            return False
         try:
             # Get client public key from cache
             client_key = key_cache.fetch("client_keys", client_id)
-            if not client_key:
-                log.debug("No key found for client %s", client_id)
-                return False
-
-            # Verify token signature
-            pub = salt.crypt.PublicKey.from_str(client_key["pub"])
-            if pub.decrypt(token) == b"salt":
-                return True
-
         except Exception as exc:  # pylint: disable=broad-except
-            log.error("Error verifying client %s: %s", client_id, exc)
-
-        return False
+            log.error(
+                "Event-stream PKI auth for %s: client_keys cache lookup "
+                "raised %s: %s (expected pubkey in pki_dir/clients/)",
+                client_id,
+                type(exc).__name__,
+                exc,
+            )
+            return False
+        if not client_key:
+            log.warning(
+                "Event-stream PKI auth for %s: no entry in client_keys "
+                "cache (expected a 'state: accepted' record stored via "
+                "salt.key.ClientKey.cache.store).",
+                client_id,
+            )
+            return False
+        if client_key.get("state") != "accepted":
+            log.warning(
+                "Event-stream PKI auth for %s: client_keys entry is in "
+                "state %r, not 'accepted'; master operator must accept "
+                "the key first.",
+                client_id,
+                client_key.get("state"),
+            )
+            return False
+        try:
+            pub = salt.crypt.PublicKey.from_str(client_key["pub"])
+        except Exception as exc:  # pylint: disable=broad-except
+            log.error(
+                "Event-stream PKI auth for %s: could not load stored "
+                "pubkey as RSA PEM: %s: %s",
+                client_id,
+                type(exc).__name__,
+                exc,
+            )
+            return False
+        try:
+            decrypted = pub.decrypt(token)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "Event-stream PKI auth for %s: X9.31 signature verify "
+                "failed (%s: %s).  Common causes: client sent a token "
+                "signed with a different private key than the one "
+                "accepted on the master; token bytes corrupted on the "
+                "wire.",
+                client_id,
+                type(exc).__name__,
+                exc,
+            )
+            return False
+        if decrypted != b"salt":
+            log.warning(
+                "Event-stream PKI auth for %s: signature verified but "
+                "payload was %r, expected b'salt' -- the client sent a "
+                "signature of the wrong challenge string.",
+                client_id,
+                decrypted[:32],
+            )
+            return False
+        return True
 
     def _publish_filtered_event(self, pub_socket, event, clients, loadauth=None):
         """
