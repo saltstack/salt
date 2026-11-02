@@ -676,6 +676,19 @@ class ReqServerChannel:
 
     def close(self):
         self.transport.close()
+        self._close_resources()
+
+    async def close_async(self):
+        try:
+            close_async = getattr(self.transport, "close_async", None)
+            if close_async is not None:
+                await close_async()
+            else:
+                self.transport.close()
+        finally:
+            self._close_resources()
+
+    def _close_resources(self):
         if self.event is not None:
             self.event.destroy()
         if hasattr(self, "ckminions") and self.ckminions is not None:
@@ -1001,10 +1014,9 @@ class PoolRoutingChannel:
             pass
         finally:
             try:
-                io_loop.stop()
-            except Exception:  # pylint: disable=broad-except
-                pass
-            io_loop.close()
+                io_loop.run_until_complete(self.close_async())
+            finally:
+                io_loop.close()
 
     def post_fork(self, payload_handler, io_loop, **kwargs):
         """
@@ -1388,6 +1400,17 @@ class PoolRoutingChannel:
         """
         log.info("Closing PoolRoutingChannel")
 
+        # A synchronous signal callback may request shutdown before the worker
+        # drives async cleanup. Keep the transports until that cleanup is awaited.
+        closing = getattr(self, "_closing_transports", {})
+        for clients in self.pool_clients.values():
+            for client in clients if isinstance(clients, list) else [clients]:
+                closing[id(client)] = client
+        for server in self.pool_servers.values():
+            closing[id(server)] = server
+        closing[id(self.transport)] = self.transport
+        self._closing_transports = closing
+
         # Close all pool clients (RequestClients to pool RequestServers)
         # PATCH: iterate the per-pool list rather than treating each
         # entry as a single client.
@@ -1429,6 +1452,26 @@ class PoolRoutingChannel:
                 log.error("Error closing external transport: %s", exc)
 
         log.info("PoolRoutingChannel closed")
+
+    async def close_async(self):
+        self.close()
+        cancelled = None
+        for transport in tuple(self._closing_transports.values()):
+            try:
+                close_async = getattr(transport, "close_async", None)
+                if close_async is not None:
+                    await close_async()
+                else:
+                    close_task = getattr(transport, "close_task", None)
+                    if close_task is not None:
+                        await close_task
+            except asyncio.CancelledError as exc:
+                cancelled = exc
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Error awaiting pool transport cleanup")
+        self._closing_transports.clear()
+        if cancelled is not None:
+            raise cancelled
 
 
 class PubServerChannel:

@@ -5,6 +5,7 @@ Helpers/utils for working with tornado asynchronous stuff
 import asyncio
 import contextlib
 import gc
+import inspect
 import logging
 import os
 import sys
@@ -17,6 +18,13 @@ import tornado.ioloop
 import salt.utils.resource_warnings
 
 log = logging.getLogger(__name__)
+
+
+async def resolve_result(result):
+    """Await an awaitable result, or return a synchronous value unchanged."""
+    if inspect.isawaitable(result):
+        return await result
+    return result
 
 
 def aioloop(io_loop, warn=False):
@@ -56,6 +64,17 @@ def current_ioloop(io_loop):
             asyncio.set_event_loop(aioloop(orig_loop))
         else:
             asyncio.set_event_loop(None)
+
+
+async def cancel_tasks(*tasks):
+    """Cancel and drain owned tasks, excluding the task performing cleanup."""
+    current = asyncio.current_task()
+    tasks = {task for task in tasks if task is not None and task is not current}
+    for task in tasks:
+        if not task.done():
+            task.cancel()
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class SyncWrapper:
