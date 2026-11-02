@@ -4118,6 +4118,16 @@ class MasterPubServerChannel:
                     # The native publisher reconnects closed streams on the
                     # next publish. Keep it open so the scheduled key event
                     # can use the same publisher after the peer recovers.
+                    # REMOVE-WITH-FLAG(master_async_mworker): with the flag off
+                    # the legacy pub_sock is reset so the next publish opens a
+                    # fresh connection.
+                    for pusher in self.pushers:
+                        if pusher.pull_host == peer and pusher.pub_sock is not None:
+                            try:
+                                pusher.pub_sock.close()
+                            except Exception:  # pylint: disable=broad-except
+                                pass
+                            pusher.pub_sock = None
                     # Schedule an AES-key re-announcement so the peer
                     # learns our key after it reconnects.
                     self.io_loop.call_later(2.0, self.send_aes_key_event)

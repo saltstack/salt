@@ -1817,8 +1817,9 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
+    # ``connect`` is only awaited on the native path; ``__init__`` adds it
+    # when ``master_async_mworker`` is on.
     async_methods = [
-        "connect",
         "publish",
     ]
     close_methods = [
@@ -1840,6 +1841,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         ssl=None,
     ):
         self.opts = opts
+        # REMOVE-WITH-FLAG(master_async_mworker): pub_sock is only used when the
+        # flag is off. It is a SyncWrapper nested inside the outer wrapper.
+        self.pub_sock = None
+        if self._native_ipc():
+            self.async_methods = ["connect", "publish"]
         self._async_pub_by_loop = weakref.WeakKeyDictionary()
         self.pub_host = pub_host
         self.pub_port = pub_port
@@ -2005,6 +2011,13 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             payload, topic_list, raw_payload=raw_payload
         )
 
+    def _native_ipc(self):
+        """
+        Publish natively on the caller's loop when ``master_async_mworker`` is
+        on. With the flag off the original ``pub_sock`` path is kept.
+        """
+        return bool((getattr(self, "opts", None) or {}).get("master_async_mworker"))
+
     def _new_publisher(self, loop):
         return _TCPPubServerPublisher(
             self.pull_host,
@@ -2018,6 +2031,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if self._closing:
             raise ClosingError("Publish server is closed")
         loop = asyncio.get_running_loop()
+        # A cached publisher holds its loop, so the weak key alone never lets
+        # go of it. Drop publishers whose loop has been closed.
+        for old_loop, (old_publisher, _) in list(self._async_pub_by_loop.items()):
+            if old_loop.is_closed():
+                del self._async_pub_by_loop[old_loop]
+                try:
+                    old_publisher.close()
+                except Exception:  # pylint: disable=broad-except
+                    pass
         entry = self._async_pub_by_loop.get(loop)
         if entry is None:
             # Legacy event callers can still share a server across loops.
@@ -2026,7 +2048,14 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             self._async_pub_by_loop[loop] = entry
         return loop, entry
 
-    async def connect(self, timeout=None):  # pylint: disable=invalid-overridden-method
+    def connect(self, timeout=None):
+        # Flag on: returns a coroutine (``connect`` is in ``async_methods``).
+        # Flag off: connects synchronously, as before.
+        if self._native_ipc():
+            return self._connect_native(timeout)
+        return self._connect_legacy(timeout)
+
+    async def _connect_native(self, timeout=None):
         loop, (_, lock) = self._publisher_for_loop()
         async with lock:
             if self._closing:
@@ -2034,10 +2063,36 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             publisher, _ = self._async_pub_by_loop[loop]
             await publisher.connect(timeout=timeout)
 
+    # REMOVE-WITH-FLAG(master_async_mworker)
+    def _connect_legacy(self, timeout=None):
+        # ``ipc_write_buffer`` caps the publisher-side (MWorker fire_event
+        # -> EP pull) tornado write buffer.  Without a cap the buffer is
+        # unbounded and a wedged EP io_loop lets MWorkers grow RSS
+        # without exception until the process is OOM-killed.  Opt-in
+        # (falsy preserves prior behavior) mirrors the accept-side caps.
+        max_write_buffer_size = self.opts.get("ipc_write_buffer") or None
+        self.pub_sock = salt.utils.asynchronous.SyncWrapper(
+            _TCPPubServerPublisher,
+            (
+                self.pull_host,
+                self.pull_port,
+                self.pull_path,
+            ),
+            kwargs={"max_write_buffer_size": max_write_buffer_size},
+            loop_kwarg="io_loop",
+        )
+        self.pub_sock.connect(timeout=timeout)
+
     async def publish(
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """Await IPC delivery, serializing frames and reconnecting once on failure."""
+        if not self._native_ipc():
+            # REMOVE-WITH-FLAG(master_async_mworker): original path, unchanged.
+            if not self.pub_sock:
+                self.connect()
+            self.pub_sock.send(payload)
+            return
         loop, (_, lock) = self._publisher_for_loop()
         async with lock:
             if self._closing:
@@ -2048,6 +2103,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 await publisher.connect()
                 await publisher.send(payload)
             except tornado.iostream.StreamClosedError:
+                log.debug(
+                    "Publisher stream to %s closed; reconnecting and sending again",
+                    self.pull_path or f"{self.pull_host}:{self.pull_port}",
+                )
                 publisher.close()
                 if self._closing:
                     raise ClosingError("Publish server is closed") from None
@@ -2058,6 +2117,19 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
 
     def close(self):
         self._closing = True
+        # REMOVE-WITH-FLAG(master_async_mworker): close the legacy pub_sock.
+        if self.pub_sock:
+            # pub_sock is a SyncWrapper - need to call close() on the wrapper itself.
+            # Guarded because ``__del__`` may drive this during GC when the
+            # SyncWrapper's io_loop / asyncio_loop is in a torn-down state.
+            try:
+                if isinstance(self.pub_sock, salt.utils.asynchronous.SyncWrapper):
+                    salt.utils.asynchronous.SyncWrapper.close(self.pub_sock)
+                else:
+                    self.pub_sock.close()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self.pub_sock = None
         per_loop = getattr(self, "_async_pub_by_loop", None)
         if per_loop is not None:
             for pub, _lock in list(per_loop.values()):
@@ -2175,7 +2247,7 @@ class _TCPPubServerPublisher:
         the historical unbounded behavior.
         """
         self.io_loop = (
-            asyncio.get_event_loop()
+            asyncio.get_running_loop()
             if io_loop is None
             else salt.utils.asynchronous.aioloop(io_loop)
         )

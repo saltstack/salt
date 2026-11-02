@@ -1,5 +1,6 @@
 import asyncio
 import gc
+import logging
 import os
 import socket
 import warnings
@@ -838,7 +839,7 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     assert server.clients == set()
 
 
-async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
+async def test_publish_closes_stale_publisher_on_stream_closed(master_opts, caplog):
     """
     When ``PublishServer.publish`` is invoked from an async context (the
     ``master_async_mworker=True`` bypass path) and the cached
@@ -893,10 +894,13 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
     server._async_pub_by_loop[loop] = (stale_pub, lock)
 
     try:
-        with patch(
+        with caplog.at_level(logging.DEBUG, logger="salt.transport.tcp"), patch(
             "salt.transport.tcp._TCPPubServerPublisher", side_effect=_new_publisher
         ):
             await server.publish(b"payload")
+
+        # The reconnect is logged so a dropped connection is visible.
+        assert "closed; reconnecting and sending again" in caplog.text
 
         # The stale publisher must have had ``close()`` called on it
         # before being replaced.
@@ -910,6 +914,31 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
         cached_pub, _cached_lock = server._async_pub_by_loop[loop]
         assert cached_pub is new_pub_instances[0]
         assert cached_pub is not stale_pub
+    finally:
+        server.close()
+
+
+async def test_publisher_cache_drops_closed_loops(master_opts):
+    """
+    A cached publisher keeps a reference to its loop, so the weak key never
+    frees it. ``_publisher_for_loop`` must drop publishers of closed loops.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    stale = MagicMock()
+    other = asyncio.new_event_loop()
+    server._async_pub_by_loop[other] = (stale, asyncio.Lock())
+    other.close()
+    try:
+        server._publisher_for_loop()
+        assert other not in server._async_pub_by_loop
+        stale.close.assert_called_once_with()
+        assert asyncio.get_running_loop() in server._async_pub_by_loop
     finally:
         server.close()
 
@@ -1946,6 +1975,7 @@ async def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
     master_opts,
 ):
     master_opts["ipc_write_buffer"] = 4321
+    master_opts["master_async_mworker"] = True
     server = salt.transport.tcp.PublishServer(
         master_opts,
         pub_host="127.0.0.1",
@@ -1967,6 +1997,45 @@ async def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
             publisher.return_value.connect.assert_awaited_once_with(timeout=3)
     finally:
         server.close()
+
+
+def test_publish_server_connect_wires_ipc_write_buffer_into_legacy_publisher(
+    master_opts,
+):
+    """
+    With ``master_async_mworker`` off, ``PublishServer.connect`` forwards
+    ``ipc_write_buffer`` into the ``_TCPPubServerPublisher`` it spins up via
+    ``SyncWrapper``.
+
+    REMOVE-WITH-FLAG(master_async_mworker)
+    """
+    master_opts["ipc_write_buffer"] = 4321
+    master_opts["master_async_mworker"] = False
+
+    captured = {}
+
+    class _FakeSyncWrapper:
+        def __init__(self, cls, args=None, kwargs=None, **_kw):
+            captured["cls"] = cls
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+
+        def connect(self, timeout=None):
+            captured["connect_called"] = True
+
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    with patch("salt.utils.asynchronous.SyncWrapper", _FakeSyncWrapper):
+        server.connect(timeout=None)
+
+    assert captured["cls"] is salt.transport.tcp._TCPPubServerPublisher
+    assert captured["kwargs"] == {"max_write_buffer_size": 4321}
+    assert captured.get("connect_called") is True
 
 
 def test_publish_server_del_safety_net_calls_close_70175(master_opts):

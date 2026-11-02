@@ -14,8 +14,7 @@ import salt.utils.msgpack
 from tests.support.mock import Mock, patch
 
 
-@pytest.mark.parametrize("async_mworker", [False, True])
-async def test_concurrent_native_publishes_preserve_large_frames(async_mworker):
+async def test_concurrent_native_publishes_preserve_large_frames():
     received = []
     readers = []
     complete = asyncio.Event()
@@ -43,7 +42,7 @@ async def test_concurrent_native_publishes_preserve_large_frames(async_mworker):
     async with await asyncio.start_server(accept, "127.0.0.1", 0) as listener:
         host, port = listener.sockets[0].getsockname()
         server = salt.transport.tcp.PublishServer(
-            {"master_async_mworker": async_mworker, "ipc_write_buffer": 262144},
+            {"master_async_mworker": True, "ipc_write_buffer": 262144},
             pull_host=host,
             pull_port=port,
         )
@@ -62,8 +61,13 @@ async def test_concurrent_native_publishes_preserve_large_frames(async_mworker):
     assert not asyncio.get_running_loop().is_closed()
 
 
-async def test_legacy_outer_wrapper_uses_native_ipc_connection():
-    """Unmigrated sync events need only their existing outer wrapper."""
+@pytest.mark.parametrize("async_mworker", [False, True])
+async def test_legacy_outer_wrapper_uses_native_ipc_connection(async_mworker):
+    """
+    Unmigrated sync events need only their existing outer wrapper.
+
+    With ``master_async_mworker`` off this is the original ``pub_sock`` path.
+    """
     received = asyncio.get_running_loop().create_future()
     handlers = []
 
@@ -86,7 +90,7 @@ async def test_legacy_outer_wrapper_uses_native_ipc_connection():
         def publish():
             with salt.utils.asynchronous.SyncWrapper(
                 salt.transport.tcp.PublishServer,
-                args=({},),
+                args=({"master_async_mworker": async_mworker},),
                 kwargs={"pull_host": host, "pull_port": port},
             ) as server:
                 server.connect()
@@ -126,7 +130,9 @@ async def test_cancelled_publish_drains_connect():
         finally:
             stopped.set()
 
-    server = salt.transport.tcp.PublishServer({}, pull_host="127.0.0.1", pull_port=1)
+    server = salt.transport.tcp.PublishServer(
+        {"master_async_mworker": True}, pull_host="127.0.0.1", pull_port=1
+    )
     try:
         with patch.object(tornado.iostream.IOStream, "connect", connect):
             task = asyncio.create_task(server.publish(b"event"))
@@ -142,12 +148,17 @@ async def test_cancelled_publish_drains_connect():
     assert not asyncio.get_running_loop().is_closed()
 
 
-async def test_cluster_key_reannouncement_reconnects_to_recovered_tcp_peer():
+@pytest.mark.parametrize("async_mworker", [False, True])
+async def test_cluster_key_reannouncement_reconnects_to_recovered_tcp_peer(
+    async_mworker,
+):
     loop = asyncio.get_running_loop()
     reservation = socket.socket()
     reservation.bind(("127.0.0.1", 0))
     host, port = reservation.getsockname()
-    pusher = salt.transport.tcp.PublishServer({}, pull_host=host, pull_port=port)
+    pusher = salt.transport.tcp.PublishServer(
+        {"master_async_mworker": async_mworker}, pull_host=host, pull_port=port
+    )
     channel = object.__new__(salt.channel.server.MasterPubServerChannel)
     channel.opts = {"id": "master"}
     channel.io_loop = Mock()
