@@ -3,7 +3,8 @@ Regression tests for the ``master_async_mworker`` dispatch flag.
 
 With the flag disabled, AESFuncs, ClearFuncs and AuthFuncs retain their
 synchronous worker handlers. Enabling the flag selects their asynchronous
-dispatch. TCP IPC publishing awaits delivery with either flag value.
+dispatch. TCP IPC publishing keeps its original ``pub_sock`` path with the
+flag disabled and awaits delivery on the caller's loop with it enabled.
 """
 
 import inspect
@@ -256,14 +257,11 @@ def test_pool_routing_sync_mode_avoids_pool_worker_count_option(sync_master_opts
     assert "pool_worker_count" not in sync_master_opts
 
 
-@pytest.mark.parametrize("async_mworker", [False, True])
-async def test_publishserver_awaits_native_ipc_in_both_worker_modes(
-    master_opts, async_mworker
-):
-    """Both worker modes await IPC delivery without creating an inner wrapper."""
+async def test_publishserver_awaits_native_ipc_when_flag_on(master_opts):
+    """With the flag on, IPC delivery is awaited without an inner wrapper."""
     import salt.transport.tcp
 
-    opts = dict(master_opts, master_async_mworker=async_mworker)
+    opts = dict(master_opts, master_async_mworker=True)
     server = salt.transport.tcp.PublishServer(
         opts,
         pub_host="127.0.0.1",
@@ -282,3 +280,30 @@ async def test_publishserver_awaits_native_ipc_in_both_worker_modes(
         finally:
             server.close()
         publisher.return_value.close.assert_called_once()
+
+
+async def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
+    """
+    With the flag off, ``PublishServer.publish`` keeps the original
+    ``pub_sock`` path and does not use the per-loop publishers.
+
+    REMOVE-WITH-FLAG(master_async_mworker)
+    """
+    import salt.transport.tcp
+
+    server = salt.transport.tcp.PublishServer(
+        sync_master_opts,
+        pub_host="127.0.0.1",
+        pub_port=0,
+        pull_host="127.0.0.1",
+        pull_port=0,
+    )
+    assert server.pub_sock is None
+    assert "connect" not in server.async_methods
+    with patch("salt.utils.asynchronous.SyncWrapper") as wrapper:
+        await server.publish(b"event")
+        wrapper.return_value.connect.assert_called_once_with(timeout=None)
+        wrapper.return_value.send.assert_called_once_with(b"event")
+        assert len(server._async_pub_by_loop) == 0
+        server.close()
+    assert server.pub_sock is None
