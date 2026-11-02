@@ -581,6 +581,95 @@ async def test_close_drains_pending_batch_jobs(batch):
     assert not asyncio.get_running_loop().is_closed()
 
 
+async def test_check_find_job_unsubscribes_find_job_id(batch):
+    channel = batch.events_channel
+    await batch.check_find_job(set(), jid="4321")
+    channel.unsubscribe.assert_called_once_with("4321", "find_job_return", id(batch))
+
+
+async def test_presence_complete_only_after_all_targets_reply(batch):
+    batch.targeted_minions = {"foo", "bar"}
+    await batch._BatchAsync__event_handler(
+        "salt/job/1234/ret/foo", {"id": "foo"}, "ping_return"
+    )
+    assert not batch._presence_complete.is_set()
+    await batch._BatchAsync__event_handler(
+        "salt/job/1234/ret/bar", {"id": "bar"}, "ping_return"
+    )
+    assert batch._presence_complete.is_set()
+
+
+async def test_failed_batch_task_closes_batch(batch):
+    channel = batch.events_channel
+
+    async def fail():
+        raise RuntimeError("boom")
+
+    batch._create_task(fail())
+    await asyncio.wait_for(batch._closed.wait(), 1)
+    channel.unuse.assert_called_once_with(id(batch))
+    assert batch.event is None
+
+
+async def test_cancelled_batch_task_does_not_close_batch(batch):
+    channel = batch.events_channel
+    task = batch._create_task(asyncio.Event().wait())
+    await asyncio.sleep(0)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+    await asyncio.sleep(0)
+    channel.unuse.assert_not_called()
+    assert not batch._closing
+
+
+async def test_task_failure_during_close_does_not_schedule_another_close(batch):
+    channel = batch.events_channel
+    batch._closing = True
+
+    async def fail():
+        raise RuntimeError("boom")
+
+    task = batch._create_task(fail())
+    await asyncio.gather(task, return_exceptions=True)
+    await asyncio.sleep(0)
+    channel.unuse.assert_not_called()
+    assert batch._tasks == set()
+    batch._closing = False
+
+
+async def test_close_from_batch_task_does_not_wait_for_itself(batch):
+    channel = batch.events_channel
+    task = batch._create_task(batch.close_safe())
+    await asyncio.wait_for(task, 1)
+    channel.unuse.assert_called_once_with(id(batch))
+    assert batch._closed.is_set()
+
+
+async def test_concurrent_close_waits_for_cleanup(batch):
+    channel = batch.events_channel
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+
+    async def job():
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+
+    batch._create_task(job())
+    await asyncio.sleep(0)
+    first = asyncio.create_task(batch.close_safe())
+    await cleaning.wait()
+    second = asyncio.create_task(batch.close_safe())
+    await asyncio.sleep(0.01)
+    assert not second.done()
+    channel.unuse.assert_not_called()
+    release.set()
+    await asyncio.gather(first, second)
+    channel.unuse.assert_called_once_with(id(batch))
+
+
 @pytest.mark.parametrize(
     "target_type,error",
     [
@@ -665,6 +754,33 @@ async def test_unsubscribe_removes_entire_job_id(shared_channel):
     shared_channel.unsubscribe("123", "return", 1)
     assert "123" not in shared_channel._subscriptions
     assert shared_channel._subscribers[1] == {"456"}
+
+
+async def test_unsubscribe_is_scoped_to_op_and_subscriber(shared_channel):
+    shared_channel.master_event.subscriber.connected = True
+    handler = AsyncMock()
+    await shared_channel.subscribe("123", "return", 1, handler)
+    await shared_channel.subscribe("123", "other", 1, handler)
+    await shared_channel.subscribe("123", "return", 2, handler)
+    shared_channel.unsubscribe("123", "return", 1)
+    assert shared_channel._subscriptions["123"] == [
+        ("other", 1, handler),
+        ("return", 2, handler),
+    ]
+    assert shared_channel._subscribers[2] == {"123"}
+
+
+async def test_unsubscribe_all_leaves_other_subscribers(shared_channel):
+    shared_channel.master_event.subscriber.connected = True
+    handler = AsyncMock()
+    await shared_channel.subscribe("123", "return", 1, handler)
+    await shared_channel.subscribe("456", "return", 1, handler)
+    await shared_channel.subscribe("456", "return", 2, handler)
+    shared_channel.unsubscribe(None, None, 1)
+    assert shared_channel._subscriptions == {"456": [("return", 2, handler)]}
+    assert 1 not in shared_channel._subscribers
+    shared_channel.unsubscribe(None, None, 99)
+    assert shared_channel._subscribers == {2: {"456"}}
 
 
 async def test_destroy_drains_reconnect(shared_channel):
