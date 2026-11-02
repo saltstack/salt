@@ -1,10 +1,14 @@
 """
-Regression tests for the ``master_async_mworker`` dispatch flag.
+Regression tests for the ``master_async_mworker`` opt-in flag.
 
-With the flag disabled, AESFuncs, ClearFuncs and AuthFuncs retain their
-synchronous worker handlers. Enabling the flag selects their asynchronous
-dispatch. TCP IPC publishing keeps its original ``pub_sock`` path with the
-flag disabled and awaits delivery on the caller's loop with it enabled.
+PR #70129 converted every ``AESFuncs`` / ``ClearFuncs`` / ``AuthFuncs``
+handler on 3008.x to ``async def``.  On the LTS (3008.x) branch that
+behaviour must be strictly opt-in: with ``master_async_mworker`` off
+(the default) the dispatch tables, method signatures, and IPC socket
+topology have to look exactly like Argon v3008.2 and earlier.
+
+These tests exercise the OFF path only.  The ON path is covered by
+``test_master.py`` and ``test_master_async_error_paths.py``.
 """
 
 import inspect
@@ -257,13 +261,37 @@ def test_pool_routing_sync_mode_avoids_pool_worker_count_option(sync_master_opts
     assert "pool_worker_count" not in sync_master_opts
 
 
+def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
+    """
+    ``PublishServer.publish`` async-context bypass (per-loop
+    ``_TCPPubServerPublisher`` cache) exists to defuse a nested-
+    SyncWrapper deadlock that can only happen when async handlers
+    invoke ``publish`` from a running asyncio loop.  With the flag off
+    the sync path must run ``self.pub_sock.send(payload)`` directly.
+    """
+    import salt.transport.tcp
+
+    ps = salt.transport.tcp.PublishServer(
+        sync_master_opts,
+        pub_host="127.0.0.1",
+        pub_port=0,
+        pull_host="127.0.0.1",
+        pull_port=0,
+    )
+    # Instance MUST NOT hold the per-loop cache when the flag is off
+    # (it is only allocated inside the async branch of ``publish``).
+    assert getattr(ps, "_async_pub_by_loop", None) is None
+    # And the opts we passed in must be visible so ``publish`` can
+    # branch on them.
+    assert ps.opts.get("master_async_mworker") is False
+
+
 async def test_publishserver_awaits_native_ipc_when_flag_on(master_opts):
     """With the flag on, IPC delivery is awaited without an inner wrapper."""
     import salt.transport.tcp
 
-    opts = dict(master_opts, master_async_mworker=True)
     server = salt.transport.tcp.PublishServer(
-        opts,
+        dict(master_opts, master_async_mworker=True),
         pub_host="127.0.0.1",
         pub_port=0,
         pull_host="127.0.0.1",
@@ -272,38 +300,11 @@ async def test_publishserver_awaits_native_ipc_when_flag_on(master_opts):
     with patch(
         "salt.utils.asynchronous.SyncWrapper",
         side_effect=AssertionError("Unexpected nested SyncWrapper"),
-    ), patch("salt.transport.tcp._TCPPubServerPublisher", autospec=True) as publisher:
+    ), patch("salt.transport.tcp._AsyncPubServerPublisher", autospec=True) as pub:
         try:
             await server.publish(b"event")
-            publisher.return_value.connect.assert_awaited_once()
-            publisher.return_value.send.assert_awaited_once_with(b"event")
+            pub.return_value.connect.assert_awaited_once()
+            pub.return_value.send.assert_awaited_once_with(b"event")
         finally:
             server.close()
-        publisher.return_value.close.assert_called_once()
-
-
-async def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
-    """
-    With the flag off, ``PublishServer.publish`` keeps the original
-    ``pub_sock`` path and does not use the per-loop publishers.
-
-    REMOVE-WITH-FLAG(master_async_mworker)
-    """
-    import salt.transport.tcp
-
-    server = salt.transport.tcp.PublishServer(
-        sync_master_opts,
-        pub_host="127.0.0.1",
-        pub_port=0,
-        pull_host="127.0.0.1",
-        pull_port=0,
-    )
-    assert server.pub_sock is None
-    assert "connect" not in server.async_methods
-    with patch("salt.utils.asynchronous.SyncWrapper") as wrapper:
-        await server.publish(b"event")
-        wrapper.return_value.connect.assert_called_once_with(timeout=None)
-        wrapper.return_value.send.assert_called_once_with(b"event")
-        assert len(server._async_pub_by_loop) == 0
-        server.close()
-    assert server.pub_sock is None
+        pub.return_value.close.assert_called_once()

@@ -410,9 +410,6 @@ salt/transport/tcp.py:
   - pytests.functional.transport.tcp.test_pub_server
   - pytests.functional.transport.tcp.test_native_publisher
 
-salt/channel/server.py:
-  - pytests.unit.channel.test_server
-
 salt/crypt.py:
   - pytests.functional.utils.test_asynchronous
 
