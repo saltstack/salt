@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 import salt.crypt
-from tests.support.mock import AsyncMock, MagicMock
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.fixture
@@ -89,6 +89,26 @@ async def test_last_cancelled_waiter_drains_authentication(auth):
     assert await auth.authenticate() is True
 
 
+async def test_cleanup_error_does_not_replace_cancellation(auth):
+    started = asyncio.Event()
+
+    async def authenticate():
+        try:
+            started.set()
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            raise OSError("cleanup failed")
+
+    auth._authenticate = AsyncMock(side_effect=authenticate)
+    waiter = auth.authenticate()
+    await started.wait()
+    waiter.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await waiter
+    assert waiter.cancelled()
+
+
 async def test_unexpected_authentication_error_reaches_all_waiters(auth):
     started = asyncio.Event()
     release = asyncio.Event()
@@ -129,8 +149,6 @@ async def test_cancelled_authentication_is_not_authenticated(auth):
 
 
 async def test_singleton_uses_underlying_asyncio_loop(minion_opts, io_loop):
-    from tests.support.mock import patch
-
     with patch.object(salt.crypt.AsyncAuth, "get_keys"):
         explicit = salt.crypt.AsyncAuth(minion_opts, io_loop=io_loop)
         implicit = salt.crypt.AsyncAuth(minion_opts)
@@ -142,8 +160,6 @@ async def test_singleton_uses_underlying_asyncio_loop(minion_opts, io_loop):
 async def test_authentication_preserves_synchronous_credential_event(
     minion_opts, event_failure
 ):
-    from tests.support.mock import patch
-
     loop = asyncio.get_running_loop()
     minion_opts["auth_events"] = True
     minion_opts["acceptance_wait_time"] = 0
@@ -182,8 +198,6 @@ async def test_callback_only_call_starts_authentication(auth):
 
 
 async def test_cancel_new_attempt_while_old_waiter_is_resuming(auth):
-    from tests.support.mock import patch
-
     old_complete = asyncio.Event()
     release_old = asyncio.Event()
     new_started = asyncio.Event()
