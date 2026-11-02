@@ -108,7 +108,7 @@ async def test_connection_timeout_closes_stream():
         started.set()
         await asyncio.Event().wait()
 
-    publisher = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 1, None)
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 1, None)
     try:
         with patch.object(tornado.iostream.IOStream, "connect", connect):
             with pytest.raises(asyncio.TimeoutError):

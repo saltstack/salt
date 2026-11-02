@@ -90,10 +90,15 @@ def client_socket():
 
 
 def test_get_socket():
-    with salt.transport.tcp._get_socket({"ipv6": True}) as sock:
-        assert sock.family == socket.AF_INET6
-    with salt.transport.tcp._get_socket({"ipv6": False}) as sock:
-        assert sock.family == socket.AF_INET
+    socket = salt.transport.tcp._get_socket({"ipv6": True})
+
+    if salt.utils.platform.is_windows():
+        assert int(socket.family) == 23
+    else:
+        assert int(socket.family) == 10
+
+    socket = salt.transport.tcp._get_socket({"ipv6": False})
+    assert int(socket.family) == 2
 
 
 def test_get_bind_addr():
@@ -140,11 +145,271 @@ def test_tcppuller_start_ipv6():
     assert created_sockets[0].family == socket.AF_INET6
 
 
+def test_tcppubserverpublisher_connect_ipv4():
+    """_TCPPubServerPublisher uses AF_INET when connecting to an IPv4 address."""
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    captured_family = []
+
+    def fake_socket(family, *args, **kwargs):
+        captured_family.append(family)
+        raise OSError("test abort")
+
+    publisher._connecting_future = tornado.concurrent.Future()
+
+    with patch("salt.transport.tcp.socket.socket", fake_socket):
+        try:
+            io_loop.run_sync(publisher._connect, timeout=3)
+        except OSError:
+            pass
+
+    io_loop.close()
+    assert captured_family == [socket.AF_INET]
+
+
+def test_tcppubserverpublisher_connect_ipv6():
+    """_TCPPubServerPublisher uses AF_INET6 when connecting to an IPv6 address."""
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="::1", port=4511, path=None, io_loop=io_loop
+    )
+    captured_family = []
+
+    def fake_socket(family, *args, **kwargs):
+        captured_family.append(family)
+        raise OSError("test abort")
+
+    publisher._connecting_future = tornado.concurrent.Future()
+
+    with patch("salt.transport.tcp.socket.socket", fake_socket):
+        try:
+            io_loop.run_sync(publisher._connect, timeout=3)
+        except OSError:
+            pass
+
+    io_loop.close()
+    assert captured_family == [socket.AF_INET6]
+
+
+async def test_tcppubserverpublisher_close_during_connect_no_attribute_error_69187(
+    io_loop,
+):
+    """
+    Regression test for #69187.
+
+    ``_TCPPubServerPublisher.close()`` nulls ``self._connecting_future`` while
+    a concurrent ``_connect()`` coroutine is awaiting ``stream.connect()``.
+    When the await resumes (succeeds or raises), ``_connect()`` calls
+    ``self._connecting_future.set_result(True)`` or
+    ``self._connecting_future.set_exception(e)`` on ``None`` and crashes with
+    ``AttributeError: 'NoneType' object has no attribute 'set_result'`` (or
+    ``set_exception``). The original future is then orphaned and tornado
+    logs the misleading ``Future <...> exception was never retrieved``
+    message described in the issue.
+
+    This test drives the close-during-connect race both ways:
+
+    1. ``stream.connect()`` raises (the path that originally caused
+       ``set_exception`` to be called on ``None``).
+    2. ``stream.connect()`` succeeds (the ``set_result`` path).
+    """
+
+    # ----- 1. close-during-failed-connect (set_exception path) -----
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher._connecting_future = tornado.concurrent.Future()
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            raise tornado.iostream.StreamClosedError("Stream is closed")
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            # timeout=None means the retry-loop's "should I keep retrying?"
+            # check (``timeout is None or time.monotonic() > timeout_at``)
+            # always selects the "give up, set_exception" branch — which is
+            # the exact branch that crashes in the issue's stack trace
+            # (legacy ipc.py line 343).
+            connect_task = asyncio.ensure_future(publisher._connect(timeout=None))
+            try:
+                await connect_started.wait()
+                # close() nulls _connecting_future while _connect is awaiting
+                publisher.close()
+                # Now release the awaited stream.connect() so _connect resumes
+                # and walks into the buggy ``set_exception`` line.
+                let_connect_finish.set()
+                # If the bug is present, the connect_task fails with
+                # AttributeError ("'NoneType' object has no attribute
+                # 'set_exception'"). If the bug is fixed, the task completes
+                # cleanly.
+                await asyncio.wait_for(connect_task, timeout=5)
+            finally:
+                if not connect_task.done():
+                    connect_task.cancel()
+                    try:
+                        await connect_task
+                    except asyncio.CancelledError:
+                        pass
+
+    # ----- 2. close-during-successful-connect (set_result path) -----
+    publisher2 = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    publisher2._connecting_future = tornado.concurrent.Future()
+    connect_started2 = asyncio.Event()
+    let_connect_finish2 = asyncio.Event()
+
+    class _FakeStreamOk:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started2.set()
+            await let_connect_finish2.wait()
+            # successful connect — _connect will fall through to set_result
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStreamOk):
+            connect_task2 = asyncio.ensure_future(publisher2._connect(timeout=5))
+            try:
+                await connect_started2.wait()
+                publisher2.close()
+                let_connect_finish2.set()
+                await asyncio.wait_for(connect_task2, timeout=5)
+            finally:
+                if not connect_task2.done():
+                    connect_task2.cancel()
+                    try:
+                        await connect_task2
+                    except asyncio.CancelledError:
+                        pass
+
+
+async def test_tcppubserverpublisher_close_resolves_connecting_future_69187(io_loop):
+    """
+    Regression test for #69187 (orphan-future follow-up).
+
+    Before the fix, ``_TCPPubServerPublisher.close()`` nulled
+    ``self._connecting_future`` **without** ever calling
+    ``.set_result()`` or ``.set_exception()`` on it.  As a result, any
+    caller that did::
+
+        future = publisher.connect()
+        await future    # no wait_for -- production callers do this
+
+    would hang forever, because ``_connect()`` sees ``_closing`` at the
+    top of its next loop iteration and breaks silently, leaving the
+    original future unresolved.
+
+    ``close()`` must resolve the future with a
+    ``salt.transport.tcp.ClosingError`` before nulling it, so awaiters
+    get a definitive answer.
+    """
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    connect_started = asyncio.Event()
+    let_connect_finish = asyncio.Event()
+
+    class _FakeStream:
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, addr):
+            connect_started.set()
+            await let_connect_finish.wait()
+            return None
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+
+    with patch("salt.transport.tcp.socket.socket", lambda *a, **kw: MagicMock()):
+        with patch("salt.transport.tcp.tornado.iostream.IOStream", _FakeStream):
+            future = publisher.connect(timeout=5)
+            try:
+                await connect_started.wait()
+                publisher.close()
+                # Awaiting the original future MUST NOT hang -- it should
+                # resolve with ClosingError.  A short wait_for is only a
+                # safety net so a regression manifests as an assertion
+                # rather than a test timeout.
+                try:
+                    await asyncio.wait_for(future, timeout=2)
+                except salt.transport.tcp.ClosingError:
+                    pass
+                except asyncio.TimeoutError:
+                    raise AssertionError(
+                        "connecting future was orphaned by close() "
+                        "-- caller would hang in production"
+                    )
+                else:
+                    raise AssertionError(
+                        "connecting future should have resolved with "
+                        "ClosingError but returned normally"
+                    )
+            finally:
+                # Unpark _connect() so the create_task-backed coroutine
+                # completes and isn't reported as a warning.  It sees
+                # ``_closing=True`` at the top of its next loop iteration
+                # and breaks cleanly.
+                let_connect_finish.set()
+                # Give the io_loop a chance to drain the _connect task.
+                await asyncio.sleep(0.05)
+
+
+def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+    """
+    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
+    disables the cap (preserves the prior unbounded default).
+    """
+    pub = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=99999
+    )
+    assert pub.max_write_buffer_size == 99999
+
+    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null"
+    )
+    assert pub_none.max_write_buffer_size is None
+
+    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=0
+    )
+    assert pub_zero.max_write_buffer_size is None
+
+
 @pytest.mark.parametrize(
     "host,family", [("127.0.0.1", socket.AF_INET), ("::1", socket.AF_INET6)]
 )
 async def test_publisher_connect_address_family(host, family):
-    publisher = salt.transport.tcp._TCPPubServerPublisher(host, 4511, None)
+    publisher = salt.transport.tcp._AsyncPubServerPublisher(host, 4511, None)
     try:
         with patch(
             "salt.transport.tcp.socket.socket", side_effect=OSError("test abort")
@@ -181,7 +446,7 @@ async def test_publisher_close_during_connect(failed):
             self._closed = True
             release.set()
 
-    publisher = salt.transport.tcp._TCPPubServerPublisher("127.0.0.1", 4511, None)
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 4511, None)
     with patch("salt.transport.tcp.socket.socket", return_value=MagicMock()), patch(
         "salt.transport.tcp.tornado.iostream.IOStream", Stream
     ):
@@ -895,7 +1160,7 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts, capl
 
     try:
         with caplog.at_level(logging.DEBUG, logger="salt.transport.tcp"), patch(
-            "salt.transport.tcp._TCPPubServerPublisher", side_effect=_new_publisher
+            "salt.transport.tcp._AsyncPubServerPublisher", side_effect=_new_publisher
         ):
             await server.publish(b"payload")
 
@@ -1812,23 +2077,23 @@ def test_cap_stream_write_buffer_helper_noop_when_zero_or_missing():
     assert fs.max_write_buffer_size == "sentinel"
 
 
-async def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+async def test_async_pub_server_publisher_accepts_max_write_buffer_size():
     """
-    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_AsyncPubServerPublisher`` records the passed cap on the instance so
     ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
     disables the cap (preserves the prior unbounded default).
     """
-    pub = salt.transport.tcp._TCPPubServerPublisher(
+    pub = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null", max_write_buffer_size=99999
     )
     assert pub.max_write_buffer_size == 99999
 
-    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+    pub_none = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null"
     )
     assert pub_none.max_write_buffer_size is None
 
-    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+    pub_zero = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null", max_write_buffer_size=0
     )
     assert pub_zero.max_write_buffer_size is None
@@ -1984,7 +2249,7 @@ async def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
         pull_port=2,
     )
     try:
-        with patch("salt.transport.tcp._TCPPubServerPublisher") as publisher:
+        with patch("salt.transport.tcp._AsyncPubServerPublisher") as publisher:
             publisher.return_value.connect = AsyncMock()
             await server.connect(timeout=3)
             publisher.assert_called_once_with(
@@ -2064,11 +2329,13 @@ def test_publish_server_del_safety_net_calls_close_70175(master_opts):
 
     # Wire fake sub-resources so we can observe that close() actually
     # traversed them. Each mock records whether ``close()`` was called.
+    saved_pub_sock = MagicMock()
     saved_pub_server = MagicMock()
     saved_pull_sock = MagicMock()
     saved_io_loop = MagicMock()
     stale_pub = MagicMock()
     stale_pub.close = MagicMock()
+    server.pub_sock = saved_pub_sock
     server.pub_server = saved_pub_server
     server.pull_sock = saved_pull_sock
     server.io_loop = saved_io_loop
@@ -2089,11 +2356,12 @@ def test_publish_server_del_safety_net_calls_close_70175(master_opts):
 
     # 2. Safety-net close() ran -- observed via the sub-resource mocks
     #    (each ``.close()`` was invoked exactly once by ``PublishServer.close``).
+    saved_pub_sock.close.assert_called_once()
     saved_pub_server.close.assert_called_once()
     saved_pull_sock.close.assert_called_once()
-    # The entry point owns the event loop, even during finalizer cleanup.
-    saved_io_loop.stop.assert_not_called()
-    saved_io_loop.close.assert_not_called()
+    # 3. io_loop had stop() + close() driven.
+    saved_io_loop.stop.assert_called_once()
+    saved_io_loop.close.assert_called_once_with(all_fds=True)
     # 4. Per-loop cached publisher was drained.
     stale_pub.close.assert_called_once()
 
@@ -2171,9 +2439,11 @@ def test_publish_server_del_forked_child_does_not_close_parent_fds_70175(
     assert creator_pid > 0
     assert server._closing is False
 
+    saved_pub_sock = MagicMock()
     saved_pub_server = MagicMock()
     saved_pull_sock = MagicMock()
     saved_io_loop = MagicMock()
+    server.pub_sock = saved_pub_sock
     server.pub_server = saved_pub_server
     server.pull_sock = saved_pull_sock
     server.io_loop = saved_io_loop
@@ -2201,6 +2471,7 @@ def test_publish_server_del_forked_child_does_not_close_parent_fds_70175(
     #    sub-resources are untouched.  Without the guard, close() would
     #    have called close() on each of them, tearing down FDs the
     #    parent still owns.
+    saved_pub_sock.close.assert_not_called()
     saved_pub_server.close.assert_not_called()
     saved_pull_sock.close.assert_not_called()
     saved_io_loop.stop.assert_not_called()

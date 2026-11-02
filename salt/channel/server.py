@@ -4112,15 +4112,12 @@ class MasterPubServerChannel:
                     peer = task.get_name()
                     log.warning(
                         "Unable to forward event to cluster peer %s; "
-                        "will reconnect on the next publish",
+                        "resetting pusher for reconnect",
                         peer,
                     )
-                    # The native publisher reconnects closed streams on the
-                    # next publish. Keep it open so the scheduled key event
-                    # can use the same publisher after the peer recovers.
-                    # REMOVE-WITH-FLAG(master_async_mworker): with the flag off
-                    # the legacy pub_sock is reset so the next publish opens a
-                    # fresh connection.
+                    # Reset the broken pub_sock so the next publish attempt
+                    # triggers a fresh TCP connection rather than reusing a
+                    # dead stream.
                     for pusher in self.pushers:
                         if pusher.pull_host == peer and pusher.pub_sock is not None:
                             try:

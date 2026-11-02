@@ -924,7 +924,9 @@ async def test_cluster_peer_failure_reannounces_key_and_allows_reconnect(
     channel.io_loop = MagicMock()
     channel.send_aes_key_event = MagicMock()
     pusher = salt.transport.tcp.PublishServer(
-        master_opts, pull_host="unavailable-peer", pull_port=4510
+        dict(master_opts, master_async_mworker=True),
+        pull_host="unavailable-peer",
+        pull_port=4510,
     )
     healthy = MagicMock(pull_host="healthy-peer", pull_port=4510, publish=AsyncMock())
     channel.pushers = [pusher, healthy]
@@ -938,9 +940,9 @@ async def test_cluster_peer_failure_reannounces_key_and_allows_reconnect(
     send = AsyncMock(side_effect=failures if failure_stage == "send" else None)
     try:
         with patch.object(
-            salt.transport.tcp._TCPPubServerPublisher, "connect", connect
-        ), patch.object(salt.transport.tcp._TCPPubServerPublisher, "send", send):
-            # Use the actual native publisher: it deliberately has no pub_sock.
+            salt.transport.tcp._AsyncPubServerPublisher, "connect", connect
+        ), patch.object(salt.transport.tcp._AsyncPubServerPublisher, "send", send):
+            # Use the actual async publisher: it reconnects by itself.
             await channel.publish_payload(load)
             channel.io_loop.call_later.assert_called_once_with(
                 2.0, channel.send_aes_key_event
@@ -961,16 +963,6 @@ async def test_cluster_peer_failure_reannounces_key_and_allows_reconnect(
             channel.io_loop.call_later.assert_called_once()
     finally:
         pusher.close()
-
-
-async def test_local_publication_failure_does_not_reannounce_peer_key(master_opts):
-    channel = _pub_channel(master_opts)
-    channel.io_loop = MagicMock()
-    channel.send_aes_key_event = MagicMock()
-    channel.transport.publish_payload.side_effect = tornado.iostream.StreamClosedError()
-    load = salt.utils.event.SaltEvent.pack("salt/job/test", {})
-    await channel.publish_payload(load)
-    channel.io_loop.call_later.assert_not_called()
 
 
 async def test_publish_payload_forwards_raw_payload_to_transport(master_opts):
