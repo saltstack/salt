@@ -123,6 +123,24 @@ _CONFIG = None
 # opts into every dispatch.
 _OPTS = None
 
+#: Process-wide hook that fires an event on the local master event bus
+#: without blocking the publish daemon's io_loop.  Set by
+#: :func:`_wire_router_fire_event` once at :func:`start` time; also used
+#: by :func:`_publish_to_local_minions` to announce forwarded publishes
+#: via ``salt/job/<jid>/new`` and ``salt/job/<jid>/publish``.  Signature:
+#: ``_FIRE_EVENT(tag, data)``.
+_FIRE_EVENT = None
+
+#: Cached :class:`salt.utils.event.MasterEvent` client used by
+#: :func:`_publish_to_local_minions` to fire the forwarded-publish
+#: new-job + publish-job events sequentially via
+#: :meth:`fire_event_async`.  Set alongside :data:`_FIRE_EVENT` by
+#: :func:`_wire_router_fire_event`.  Sharing a single client across
+#: fires preserves the single-pusher-socket connection so paired
+#: ``/new`` + ``/publish`` writes land in order on
+#: ``master_event_pull.ipc``.
+_EVENT_BUS = None
+
 _LOCK = threading.RLock()
 
 
@@ -135,12 +153,15 @@ def _reset_module_state():
     global _LINKS, _INBOUND, _LISTENER, _LISTENER_SOCKET, _OWNER_PID
     global _REGISTRY_CACHE, _BREADCRUMB_CACHE, _IO_LOOP, _RAFT_SERVICE
     global _CONFIG, _OPTS, _RETURN_SUBSCRIBER, _SUMMARY_TASK, _RECONNECT_TASK
+    global _FIRE_EVENT, _EVENT_BUS
     for chan in _PUB_CHANNEL_CACHE.values():
         try:
             chan.close()
         except Exception:  # pylint: disable=broad-except
             log.debug("topology: cached PubServerChannel close failed", exc_info=True)
     _PUB_CHANNEL_CACHE.clear()
+    _FIRE_EVENT = None
+    _EVENT_BUS = None
     _LINKS = {}
     _INBOUND = {}
     _LISTENER = None
@@ -222,10 +243,16 @@ def pre_fork(opts, process_manager):
 def _wire_router_fire_event(router, opts, io_loop):
     """Install a real-bus ``_fire_event`` hook on *router*.
 
+    Also publishes the hook as module-level :data:`_FIRE_EVENT` so
+    other link_manager helpers (e.g. :func:`_publish_to_local_minions`
+    which fires ``salt/job/<jid>/new`` and ``salt/job/<jid>/publish``
+    for forwarded publishes) share the single cached event-bus client.
+
     Returns silently if the required pieces (sock_dir / running loop)
     aren't available; the router's default WARNING-log fallback then
     remains in effect, matching pre-fix behavior for test harnesses.
     """
+    global _FIRE_EVENT, _EVENT_BUS
     sock_dir = opts.get("sock_dir")
     if not sock_dir:
         return
@@ -255,6 +282,8 @@ def _wire_router_fire_event(router, opts, io_loop):
             log.debug("topology: _fire_event failed for %s", tag, exc_info=True)
 
     router._fire_event = _fire  # pylint: disable=protected-access
+    _FIRE_EVENT = _fire
+    _EVENT_BUS = event
 
 
 async def start(opts, io_loop, raft_service=None):
@@ -1566,13 +1595,69 @@ async def _publish_to_local_minions(load):
     # the PKI directory and ``save_load`` does fsync + atomic rename;
     # both are synchronous disk I/O that blocks the publish daemon's
     # io_loop and starves the IPC pull-socket reader under load.
+    matched = None
     try:
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
+        matched = await loop.run_in_executor(
             None, _seed_local_cache_for_forwarded_publish, stripped
         )
     except Exception:  # pylint: disable=broad-except
         log.debug("topology: seed_local_cache offload failed", exc_info=True)
+    # Announce the forwarded publish on the LOCAL master event bus so
+    # reactors, returners, and metrics exporters that key off new-job
+    # or publish-job events see it on THIS receiving master too.
+    # ``_prep_pub`` fires ``salt/job/<jid>/new`` and ``ClearFuncs.publish``
+    # fires ``salt/job/<jid>/publish`` on the origin master; the forward
+    # path otherwise bypasses both (``chan.publish`` is a raw IPC write).
+    # Mirror origin ordering: ``new`` first, then ``publish``, both
+    # before the wire write.  Fire unconditionally (even on empty
+    # ``matched``) to match ``_prep_pub``'s behavior.
+    #
+    # NOTE: ``ext_job_cache.save_load`` is also invoked on the origin
+    # path (``salt/master.py:5987-6022``) but is NOT yet mirrored here;
+    # tracked as a follow-up (returner-loader + argspec probe).
+    jid = stripped.get("jid")
+    if jid:
+        new_job_load = {
+            "jid": jid,
+            "tgt": stripped.get("tgt"),
+            "tgt_type": stripped.get("tgt_type"),
+            "fun": stripped.get("fun"),
+            "arg": stripped.get("arg"),
+            "user": stripped.get("user", "topology-forward"),
+            "minions": matched if isinstance(matched, list) else [],
+            "missing": [],
+        }
+        new_tag = salt.utils.event.tagify([jid, "new"], "job")
+        pub_tag = salt.utils.event.tagify([jid, "publish"], "job")
+        # Prefer awaiting ``fire_event_async`` sequentially on the cached
+        # bus: two independent ``create_task`` calls on the same pusher
+        # race on ``connect_pull`` and can silently drop one of the
+        # writes on ``master_event_pull.ipc``.  Sequential await also
+        # guarantees that any subscriber ordering ``new`` -> ``publish``
+        # matches the origin master.  Fall back to the sync
+        # ``_FIRE_EVENT`` hook when the cached bus isn't wired (test
+        # harness without a ``sock_dir``).
+        if _EVENT_BUS is not None:
+            try:
+                await _EVENT_BUS.fire_event_async(new_job_load, new_tag)
+                await _EVENT_BUS.fire_event_async(new_job_load, pub_tag)
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: fire salt/job/<jid>/{new,publish} async for "
+                    "forwarded publish failed",
+                    exc_info=True,
+                )
+        elif _FIRE_EVENT is not None:
+            try:
+                _FIRE_EVENT(new_tag, new_job_load)
+                _FIRE_EVENT(pub_tag, new_job_load)
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: fire salt/job/<jid>/{new,publish} for forwarded "
+                    "publish failed",
+                    exc_info=True,
+                )
     # Reuse a cached per-transport :class:`PubServerChannel` -- do NOT
     # construct a fresh one per publish.  The transport's PUSH socket
     # that writes to ``publish_pull.ipc`` sets ``zmq.LINGER=1`` (one
@@ -1622,6 +1707,11 @@ def _get_cached_pub_channel(transport, opts):
 def _seed_local_cache_for_forwarded_publish(load):
     """Write ``.load.p`` + ``.minions.p`` for a forwarded publish jid.
 
+    Returns the resolved local matched-minion list (possibly empty) so
+    the caller can fire ``salt/job/<jid>/new`` with the same set of
+    minions that was persisted to ``.minions.p``.  Returns ``None`` if
+    the seed was skipped (no ``_OPTS``, no jid, bad shape).
+
     See the extended comment in :func:`_publish_to_local_minions` for
     the exact race this closes.  Writes the local-cache artifacts the
     same way :func:`salt.returners.local_cache.save_load` would, so
@@ -1631,10 +1721,10 @@ def _seed_local_cache_for_forwarded_publish(load):
     """
     global _MMINION_CACHE
     if _OPTS is None or not isinstance(load, dict):
-        return
+        return None
     jid = load.get("jid")
     if not jid:
-        return
+        return None
     try:
         if _MMINION_CACHE is None:
             import salt.minion  # pylint: disable=import-outside-toplevel
@@ -1643,7 +1733,7 @@ def _seed_local_cache_for_forwarded_publish(load):
         job_cache = _OPTS.get("master_job_cache", "local_cache")
         save_load_fn = _MMINION_CACHE.returners.get(f"{job_cache}.save_load")
         if save_load_fn is None:
-            return
+            return None
         import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
         # Resolve the local matched minions for this master so the
@@ -1660,12 +1750,14 @@ def _seed_local_cache_for_forwarded_publish(load):
             save_load_fn(jid, load, minions=matched)
         except TypeError:
             save_load_fn(jid, load)
+        return matched if isinstance(matched, list) else []
     except Exception:  # pylint: disable=broad-except
         log.debug(
             "topology: seed_local_cache_for_forwarded_publish failed for jid=%r",
             jid,
             exc_info=True,
         )
+        return None
 
 
 async def _dispatch_ret(payload):

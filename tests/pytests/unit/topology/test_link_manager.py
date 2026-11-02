@@ -659,3 +659,249 @@ def test_reconnect_loop_schedules_degraded_links(clean_state, monkeypatch):
     # degraded/disconnected link.  (The healthy / pending stayed off.)
     assert healthy.connects == 0
     assert pending.connects == 0
+
+
+# ---------------------------------------------------------------------------
+# BUG-019: forwarded publish must fire ``salt/job/<jid>/new``
+# ---------------------------------------------------------------------------
+
+
+class _FakePubChan:
+    """Minimal :class:`PubServerChannel` stub used by the forward path."""
+
+    def __init__(self):
+        self.published = []
+
+    async def publish(self, load):
+        self.published.append(dict(load))
+
+
+class _ForwardWitness:
+    """Record every ``_FIRE_EVENT`` and ``chan.publish`` call in order.
+
+    The forward path must fire ``salt/job/<jid>/new`` then
+    ``salt/job/<jid>/publish`` BEFORE handing the load to the pub
+    channel's IPC write; recording a single ordered list lets a test
+    assert that interleaving exactly.
+    """
+
+    def __init__(self):
+        self.events = []  # list of (kind, tag_or_load_dict)
+
+    def fire(self, tag, data):
+        self.events.append(("fire", tag, dict(data)))
+
+    def pub_chan(self):
+        witness = self
+
+        class _Chan:
+            async def publish(self, load):
+                witness.events.append(("publish", dict(load)))
+
+        return _Chan()
+
+
+def _install_forwarded_publish_fakes(monkeypatch, *, seed_result, mode="async"):
+    """Wire the module globals + helpers used by
+    :func:`_publish_to_local_minions` to a recording witness.
+
+    ``mode="async"`` installs a fake :data:`_EVENT_BUS` whose
+    ``fire_event_async`` records tag + payload (production path).
+    ``mode="sync"`` installs only the sync :data:`_FIRE_EVENT` fallback
+    (``_EVENT_BUS=None``).  ``mode="unwired"`` leaves both None.
+    """
+    import salt.topology.link_manager as lm
+
+    witness = _ForwardWitness()
+    fake_chan = witness.pub_chan()
+
+    class _FakeEventBus:
+        async def fire_event_async(self, data, tag, timeout=1000):
+            witness.fire(tag, data)
+
+    monkeypatch.setattr(lm, "_OPTS", {"id": "forward-receiver", "transport": "zeromq"})
+    if mode == "async":
+        monkeypatch.setattr(lm, "_EVENT_BUS", _FakeEventBus())
+        monkeypatch.setattr(lm, "_FIRE_EVENT", None)
+    elif mode == "sync":
+        monkeypatch.setattr(lm, "_EVENT_BUS", None)
+        monkeypatch.setattr(lm, "_FIRE_EVENT", witness.fire)
+    else:  # mode == "unwired"
+        monkeypatch.setattr(lm, "_EVENT_BUS", None)
+        monkeypatch.setattr(lm, "_FIRE_EVENT", None)
+    monkeypatch.setattr(lm, "_get_cached_pub_channel", lambda _t, _o: fake_chan)
+    monkeypatch.setattr(
+        lm,
+        "_seed_local_cache_for_forwarded_publish",
+        lambda _load: seed_result,
+    )
+    # ``iter_transport_opts`` normally reads opts; stub it to a single
+    # transport pair so the publish loop runs once.  ``link_manager``
+    # does a function-local ``import salt.utils.channel`` so patch the
+    # module object in ``sys.modules`` directly.
+    import salt.utils.channel as _channel_mod
+
+    monkeypatch.setattr(
+        _channel_mod,
+        "iter_transport_opts",
+        lambda _opts: [("zeromq", _opts)],
+    )
+    # ``strip_cluster_scope`` passthrough so the test target survives.
+    monkeypatch.setattr(
+        lm.router_mod, "strip_cluster_scope", lambda tgt: tgt, raising=False
+    )
+    return witness
+
+
+def _expected_new_job_payload(load, matched):
+    return {
+        "jid": load["jid"],
+        "tgt": load["tgt"],
+        "tgt_type": load["tgt_type"],
+        "fun": load["fun"],
+        "arg": load["arg"],
+        "user": load["user"],
+        "minions": matched,
+        "missing": [],
+    }
+
+
+def test_publish_to_local_minions_fires_new_and_publish_events(monkeypatch):
+    """BUG-019 regression: forwarded publish must fire both
+    ``salt/job/<jid>/new`` and ``salt/job/<jid>/publish`` on the local
+    master event bus, in that order, BEFORE handing the load to
+    ``chan.publish``.  Payload shape matches ``_prep_pub``'s
+    ``new_job_load`` dict.
+    """
+    import salt.topology.link_manager as lm
+
+    matched = ["m1", "m2"]
+    witness = _install_forwarded_publish_fakes(monkeypatch, seed_result=matched)
+
+    load = {
+        "jid": "20261102000000000001",
+        "tgt": "*",
+        "tgt_type": "glob",
+        "fun": "test.ping",
+        "arg": [],
+        "user": "root",
+    }
+
+    asyncio.new_event_loop().run_until_complete(
+        lm._publish_to_local_minions(load)  # pylint: disable=protected-access
+    )
+
+    kinds = [e[0] for e in witness.events]
+    assert kinds == [
+        "fire",
+        "fire",
+        "publish",
+    ], f"expected fire,fire,publish; got {kinds} ({witness.events})"
+
+    new_tag, new_payload = witness.events[0][1], witness.events[0][2]
+    pub_tag, pub_payload = witness.events[1][1], witness.events[1][2]
+    assert new_tag == "salt/job/20261102000000000001/new"
+    assert pub_tag == "salt/job/20261102000000000001/publish"
+
+    expected = _expected_new_job_payload(load, matched)
+    assert new_payload == expected
+    assert pub_payload == expected
+
+
+def test_publish_to_local_minions_fires_events_on_empty_match(monkeypatch):
+    """BUG-019 edge case: ``_prep_pub`` fires ``salt/job/<jid>/new``
+    unconditionally on the origin master (even for publishes with no
+    local matches).  The forward path must match that behavior so
+    reactors see consistent event flow on every receiving master.
+    Minions list in the payload is empty.
+    """
+    import salt.topology.link_manager as lm
+
+    witness = _install_forwarded_publish_fakes(monkeypatch, seed_result=[])
+
+    load = {
+        "jid": "20261102000000000002",
+        "tgt": "C@no-such-cluster",
+        "tgt_type": "compound",
+        "fun": "test.ping",
+        "arg": [],
+        "user": "root",
+    }
+
+    asyncio.new_event_loop().run_until_complete(
+        lm._publish_to_local_minions(load)  # pylint: disable=protected-access
+    )
+
+    fires = [(e[1], e[2]) for e in witness.events if e[0] == "fire"]
+    tags = [t for t, _ in fires]
+    assert tags == [
+        "salt/job/20261102000000000002/new",
+        "salt/job/20261102000000000002/publish",
+    ]
+    for _, payload in fires:
+        assert payload["minions"] == []
+        assert payload["missing"] == []
+
+
+def test_publish_to_local_minions_no_fire_without_wired_hook(monkeypatch):
+    """Belt + braces: when neither :data:`_EVENT_BUS` nor
+    :data:`_FIRE_EVENT` has been wired (e.g. ``_wire_router_fire_event``
+    short-circuited on a test harness with no ``sock_dir``), the forward
+    path must silently skip the event-bus fire -- not raise, not try to
+    construct a fresh event bus per publish.
+    """
+    import salt.topology.link_manager as lm  # noqa: F401
+
+    witness = _install_forwarded_publish_fakes(
+        monkeypatch, seed_result=["m1"], mode="unwired"
+    )
+
+    load = {
+        "jid": "20261102000000000003",
+        "tgt": "*",
+        "tgt_type": "glob",
+        "fun": "test.ping",
+        "arg": [],
+        "user": "root",
+    }
+
+    asyncio.new_event_loop().run_until_complete(
+        lm._publish_to_local_minions(load)  # pylint: disable=protected-access
+    )
+
+    kinds = [e[0] for e in witness.events]
+    assert kinds == [
+        "publish"
+    ], f"forward path must publish without fires when hook unwired; got {kinds}"
+
+
+def test_publish_to_local_minions_sync_fire_fallback(monkeypatch):
+    """When ``_EVENT_BUS`` is unavailable but the sync ``_FIRE_EVENT``
+    hook is wired, the forward path falls back to the sync fire for
+    both ``/new`` and ``/publish``.  Guards against regressions that
+    tie the forward-fire path exclusively to the async bus.
+    """
+    import salt.topology.link_manager as lm  # noqa: F401
+
+    matched = ["m1"]
+    witness = _install_forwarded_publish_fakes(
+        monkeypatch, seed_result=matched, mode="sync"
+    )
+
+    load = {
+        "jid": "20261102000000000004",
+        "tgt": "*",
+        "tgt_type": "glob",
+        "fun": "test.ping",
+        "arg": [],
+        "user": "root",
+    }
+
+    asyncio.new_event_loop().run_until_complete(
+        lm._publish_to_local_minions(load)  # pylint: disable=protected-access
+    )
+
+    kinds = [e[0] for e in witness.events]
+    assert kinds == ["fire", "fire", "publish"]
+    assert witness.events[0][1] == "salt/job/20261102000000000004/new"
+    assert witness.events[1][1] == "salt/job/20261102000000000004/publish"
