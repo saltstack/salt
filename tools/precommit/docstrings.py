@@ -140,7 +140,6 @@ MISSING_DOCSTRINGS = {
     "salt/pillar/extra_minion_data_in_pillar.py": ["ext_pillar"],
     "salt/pillar/gpg.py": ["ext_pillar"],
     "salt/pillar/makostack.py": ["ext_pillar"],
-    "salt/pillar/nacl.py": ["ext_pillar"],
     "salt/proxy/cisconso.py": ["init"],
     "salt/proxy/esxi.py": ["is_connected_via_vcenter"],
     "salt/proxy/fx2.py": ["host"],
