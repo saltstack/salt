@@ -37,16 +37,27 @@ the session AES is pinned to the identity, not the endpoint.
 """
 
 import asyncio
+import json
 import logging
 import os
+import time
 
+import salt.utils.files
 import salt.utils.tracing
 from salt.channel.client import AsyncReqChannel
 from salt.config.topology import PeerRef
+from salt.exceptions import SaltReqTimeoutError
 from salt.topology.summary import ClusterSummary
 from salt.topology.summary import serialize as serialize_summary
 
 log = logging.getLogger(__name__)
+
+#: Subdirectory of ``pki_dir`` where each outbound link publishes a
+#: short JSON snapshot of its runtime health.  Read by
+#: :func:`salt.runners.topology.peers` so operators see "attached but
+#: faulting" without having to grep the master log.  Written only
+#: by the publish daemon that owns the :class:`PeerMasterLink`.
+_HEALTH_SNAPSHOT_DIRNAME = "topology_link_health"
 
 
 #: Default retry backoff while waiting for the peer to accept us.
@@ -171,6 +182,22 @@ class PeerMasterLink:
         #: counter to reach zero before transitioning to DISCONNECTED when
         #: the drain timer fires.
         self._inflight_returns = 0
+        #: Monotonically increasing count of outbound send faults
+        #: (``SaltReqTimeoutError`` or other transport errors).  Surfaces
+        #: for ops observability so ``topology.peers`` can report
+        #: "attached but faulting" instead of silently masking a wedged
+        #: REQ channel behind an on-disk key check.
+        self._send_fault_count = 0
+        #: Wallclock timestamp of the most recent send fault.  ``None``
+        #: when no fault has occurred since the link's most recent
+        #: successful handshake (``_rotate_session`` clears it).
+        self._last_send_fault_at = None
+        #: Wallclock timestamp of the most recent successful send.
+        self._last_send_success_at = None
+        #: Rate-limit tag for the sidecar health snapshot writer so
+        #: hot publish paths don't thrash the pki disk.  Guarded by
+        #: :meth:`_send_with_fault_handling`; faults always write.
+        self._last_health_snapshot_at = 0.0
 
     # ------------------------------------------------------------------
     # Equality / hashing --- used by link_manager's registry dict
@@ -249,6 +276,29 @@ class PeerMasterLink:
         """Generation counter --- increments on each session rotation."""
         return self._session_generation
 
+    @property
+    def send_fault_count(self):
+        """Monotonic count of outbound send failures on this link.
+
+        Surfaced to ops via :mod:`salt.runners.topology` so a wedged
+        REQ channel is visible without grepping the master log.
+        """
+        return self._send_fault_count
+
+    @property
+    def last_send_fault_at(self):
+        """Wallclock time of the most recent send fault, or ``None``.
+
+        Cleared by :meth:`_rotate_session` so a successful re-handshake
+        resets the signal.
+        """
+        return self._last_send_fault_at
+
+    @property
+    def last_send_success_at(self):
+        """Wallclock time of the most recent successful send, or ``None``."""
+        return self._last_send_success_at
+
     # ------------------------------------------------------------------
     # Endpoint management
     # ------------------------------------------------------------------
@@ -274,9 +324,156 @@ class PeerMasterLink:
     # ------------------------------------------------------------------
 
     def _rotate_session(self, aes):
-        """Install a fresh session AES and bump the generation counter."""
+        """Install a fresh session AES and bump the generation counter.
+
+        A fresh handshake clears the send-fault bookkeeping: the prior
+        wedged REQ channel has been torn down and the new session starts
+        from a clean slate.
+        """
         self._session_aes = aes
         self._session_generation += 1
+        self._last_send_fault_at = None
+        self._write_health_snapshot()
+
+    def _health_snapshot_path(self):
+        """Return the pathlib-less sidecar file path for this link.
+
+        ``None`` when the link has no ``peer_cluster_id`` yet (pre-
+        handshake) or no ``pki_dir`` is configured --- the snapshot
+        is operator observability, not a correctness primitive, so
+        either absence is a non-fatal "skip write".
+        """
+        pki_dir = self.opts.get("pki_dir") if isinstance(self.opts, dict) else None
+        if not pki_dir or not self._peer_cluster_id:
+            return None
+        return os.path.join(
+            pki_dir, _HEALTH_SNAPSHOT_DIRNAME, f"{self._peer_cluster_id}.json"
+        )
+
+    def _write_health_snapshot(self):
+        """Dump the current link health to the sidecar JSON file.
+
+        Fire-and-forget: a disk error here must not take the publish
+        daemon down.  Writes atomically via ``.tmp``+rename so a
+        concurrent reader in the runner process never sees a partial
+        file.
+        """
+        path = self._health_snapshot_path()
+        if path is None:
+            return
+        payload = {
+            "peer_cluster_id": self._peer_cluster_id,
+            "health": self._health,
+            "session_generation": self._session_generation,
+            "send_fault_count": self._send_fault_count,
+            "last_send_fault_at": self._last_send_fault_at,
+            "last_send_success_at": self._last_send_success_at,
+            "updated_at": time.time(),
+        }
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            tmp = f"{path}.tmp"
+            with salt.utils.files.fopen(tmp, "w") as fh:
+                json.dump(payload, fh)
+            os.replace(tmp, path)
+        except OSError:
+            log.debug(
+                "topology link to %r: health snapshot write failed",
+                self._peer_cluster_id,
+                exc_info=True,
+            )
+
+    def _handle_send_fault(self, tag, exc):
+        """Tear down a wedged outbound REQ channel after a send failure.
+
+        A REQ-shaped socket "goes into a bad state after a failed send
+        (expecting the matching recv) and the next send on the same
+        socket deadlocks" (see the same note at the top of
+        :meth:`connect`'s retry loop).  The handshake path already
+        rebuilds the channel between attempts; this is the symmetric
+        teardown for post-handshake sends.
+
+        Transitions the link to :data:`LinkHealth.DEGRADED` so
+        :meth:`_assert_sendable` rejects follow-on sends (which would
+        otherwise all time out at the full REQ timeout against the
+        wedged socket) until the periodic reconnector in
+        :mod:`salt.topology.link_manager` drives a fresh handshake.
+
+        Keeps the link identity (``peer_cluster_id``, cached endpoints)
+        intact so breadcrumbs and ``topology.peers`` state remain
+        resolvable; only the transient channel resource is dropped.
+        """
+        self._send_fault_count += 1
+        self._last_send_fault_at = time.time()
+        # Only tear down transport state when the link was actively
+        # connected -- a QUIESCING or DISCONNECTED link's channel teardown
+        # is already in flight on another coroutine; stepping on it would
+        # race the drain path.
+        if self._health == LinkHealth.CONNECTED:
+            self._health = LinkHealth.DEGRADED
+        if self._req_channel is not None:
+            try:
+                close = getattr(self._req_channel, "close", None)
+                if close is not None:
+                    close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology link to %r: req channel close failed after "
+                    "%s send fault",
+                    self._peer_cluster_id,
+                    tag,
+                    exc_info=True,
+                )
+            self._req_channel = None
+        log.warning(
+            "topology link to %r: %s send failed (%s: %s); link marked "
+            "DEGRADED, awaiting re-handshake",
+            self._peer_cluster_id,
+            tag,
+            type(exc).__name__,
+            exc,
+        )
+        self._write_health_snapshot()
+
+    async def _send_with_fault_handling(self, payload, tag):
+        """Shared post-handshake send path.
+
+        Wraps the single ``self._req_channel.send(payload, tries=1)``
+        shape used by :meth:`send_publish` / :meth:`send_return` /
+        :meth:`send_summary` / :meth:`send_event` / :meth:`subscribe`.
+
+        On ``SaltReqTimeoutError`` or any transport-level exception,
+        tears the channel down (:meth:`_handle_send_fault`) and
+        re-raises.  Callers (e.g. ``link_manager._summary_emit_loop``,
+        ``router._transit_send``) already catch and log at their
+        bounded-timeout boundaries, so re-raising preserves their
+        error path.
+
+        On success, records ``_last_send_success_at`` for ops
+        visibility.
+        """
+        if self._req_channel is None:
+            raise LinkUnavailable(
+                f"link to {self._peer_cluster_id!r} has no open channel"
+            )
+        try:
+            result = await self._req_channel.send(payload, tries=1)
+        except SaltReqTimeoutError as exc:
+            self._handle_send_fault(tag, exc)
+            raise
+        except Exception as exc:  # pylint: disable=broad-except
+            self._handle_send_fault(tag, exc)
+            raise
+        self._last_send_success_at = time.time()
+        # Snapshot each success is a lot of disk churn; the summary
+        # emit loop fires every ``topology_summary_interval`` and
+        # ``send_publish`` fires per-``C@``-publish, so rate-limit
+        # snapshot writes to roughly one per interval window.
+        last = getattr(self, "_last_health_snapshot_at", 0.0)
+        if self._last_send_success_at - last >= 1.0:
+            self._last_health_snapshot_at = self._last_send_success_at
+            self._write_health_snapshot()
+        return result
 
     def _build_channel_opts(self, endpoint):
         """
@@ -678,6 +875,13 @@ class PeerMasterLink:
             session yet.
         """
         self._assert_sendable("topology/pub")
+        jid = load.get("jid") if isinstance(load, dict) else None
+        log.debug(
+            "topology: send_publish entry peer=%s jid=%s path=%s",
+            self._peer_cluster_id,
+            jid,
+            path,
+        )
         topology = (load.get("topology") if isinstance(load, dict) else None) or {}
         envelope = _build_envelope(
             origin=topology.get("origin", self.opts.get("cluster_id")),
@@ -693,7 +897,11 @@ class PeerMasterLink:
         # the originating publish's trace instead of orphaned.
         salt.utils.tracing.inject(body)
         payload = self._build_envelope_payload(body, "topology/pub")
-        return await self._req_channel.send(payload, tries=1)
+        result = await self._send_with_fault_handling(payload, "topology/pub")
+        log.debug(
+            "topology: send_publish exit peer=%s jid=%s", self._peer_cluster_id, jid
+        )
+        return result
 
     async def send_return(self, ret_batch, path):
         """
@@ -731,7 +939,7 @@ class PeerMasterLink:
         # fires mid-send.
         self._inflight_returns += 1
         try:
-            return await self._req_channel.send(payload, tries=1)
+            return await self._send_with_fault_handling(payload, "topology/ret")
         finally:
             self._inflight_returns -= 1
 
@@ -753,7 +961,7 @@ class PeerMasterLink:
             },
         }
         payload = self._build_envelope_payload(body, "topology/evt")
-        return await self._req_channel.send(payload, tries=1)
+        return await self._send_with_fault_handling(payload, "topology/evt")
 
     async def send_summary(self, summary):
         """
@@ -772,7 +980,7 @@ class PeerMasterLink:
             )
         body = {"summary": serialize_summary(summary)}
         payload = self._build_envelope_payload(body, "topology/sum")
-        return await self._req_channel.send(payload, tries=1)
+        return await self._send_with_fault_handling(payload, "topology/sum")
 
     async def subscribe(self, tag_patterns):
         """
@@ -788,4 +996,4 @@ class PeerMasterLink:
         patterns = list(tag_patterns)
         body = {"subscribe": patterns}
         payload = self._build_envelope_payload(body, "topology/sub")
-        return await self._req_channel.send(payload, tries=1)
+        return await self._send_with_fault_handling(payload, "topology/sub")

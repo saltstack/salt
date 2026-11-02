@@ -281,3 +281,134 @@ def test_links_rejected_key_absent(enabled_opts, pki_dir, monkeypatch):
     out = topology_runner.links()
 
     assert out == []
+
+
+# ---------------------------------------------------------------------------
+# peers() surfaces health snapshot --- BUG-016 regression
+# ---------------------------------------------------------------------------
+
+
+def _write_health_snapshot(pki_dir, cluster_id, payload):
+    """Persist a sidecar health snapshot the way the publish daemon does.
+
+    Mirrors the writer in
+    :meth:`salt.topology.link.PeerMasterLink._write_health_snapshot`.
+    """
+    import json
+    import pathlib
+
+    directory = pathlib.Path(pki_dir) / "topology_link_health"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{cluster_id}.json").write_text(json.dumps(payload))
+
+
+def test_peers_surfaces_degraded_health_from_snapshot(
+    enabled_opts, pki_dir, monkeypatch
+):
+    """BUG-016: ``peers()`` MUST merge the publish daemon's sidecar
+    health snapshot so operators see ``attached-degraded`` rather than
+    the on-disk-key ``attached`` label when the outbound REQ channel
+    has been torn down.
+
+    This is the "topology.peers is a liar" fix referenced in the bug
+    report: previously the runner returned ``attached`` for any peer
+    whose key was on disk, regardless of whether the sender was still
+    able to forward frames to that peer.
+    """
+    _write_accepted(pki_dir, "west-sub-sub-1")
+    _write_health_snapshot(
+        pki_dir,
+        "west-sub-sub-1",
+        {
+            "peer_cluster_id": "west-sub-sub-1",
+            "health": "degraded",
+            "session_generation": 2,
+            "send_fault_count": 7,
+            "last_send_fault_at": 1000.0,
+            "last_send_success_at": 900.0,
+            "updated_at": 1000.5,
+        },
+    )
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+
+    out = topology_runner.peers()
+    by_id = {entry["cluster_id"]: entry for entry in out}
+    entry = by_id["west-sub-sub-1"]
+    assert entry["state"] == "attached-degraded"
+    assert entry["send_fault_count"] == 7
+    assert entry["session_generation"] == 2
+    assert entry["last_send_fault_at"] == 1000.0
+    assert entry["last_send_success_at"] == 900.0
+
+
+def test_peers_surfaces_wedged_when_fault_newer_than_success(
+    enabled_opts, pki_dir, monkeypatch
+):
+    """When the snapshot says the link is CONNECTED but the most recent
+    fault wallclock is newer than the most recent success, the composite
+    state is ``attached-wedged``: the sender's view of the link is
+    healthy but it hasn't delivered a frame since the last fault.
+
+    This is the asymmetry operators care about -- key material and
+    REQ-health both look fine but forwards are still failing.
+    """
+    _write_accepted(pki_dir, "east")
+    _write_health_snapshot(
+        pki_dir,
+        "east",
+        {
+            "peer_cluster_id": "east",
+            "health": "connected",
+            "session_generation": 3,
+            "send_fault_count": 2,
+            "last_send_fault_at": 2000.0,
+            "last_send_success_at": 1000.0,
+        },
+    )
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+
+    out = topology_runner.peers()
+    entry = next(e for e in out if e["cluster_id"] == "east")
+    assert entry["state"] == "attached-wedged"
+    assert entry["send_fault_count"] == 2
+
+
+def test_peers_without_snapshot_falls_back_to_plain_attached(
+    enabled_opts, pki_dir, monkeypatch
+):
+    """A peer accepted on disk but with no sidecar snapshot (publish
+    daemon has never written one -- e.g. link never faulted or runner
+    on a freshly started master) MUST return the plain ``attached``
+    label without fault fields.
+    """
+    _write_accepted(pki_dir, "south")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+
+    out = topology_runner.peers()
+    entry = next(e for e in out if e["cluster_id"] == "south")
+    assert entry["state"] == "attached"
+    for field in (
+        "session_generation",
+        "send_fault_count",
+        "last_send_fault_at",
+        "last_send_success_at",
+    ):
+        assert field not in entry
+
+
+def test_peers_tolerates_malformed_snapshot(enabled_opts, pki_dir, monkeypatch):
+    """A corrupt sidecar JSON must not raise -- fall back to plain
+    ``attached``.  The snapshot is observability, not a correctness
+    primitive; a disk hiccup must not break the runner.
+    """
+    import pathlib
+
+    _write_accepted(pki_dir, "north")
+    directory = pathlib.Path(pki_dir) / "topology_link_health"
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "north.json").write_text("not json {{{")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+
+    out = topology_runner.peers()
+    entry = next(e for e in out if e["cluster_id"] == "north")
+    assert entry["state"] == "attached"

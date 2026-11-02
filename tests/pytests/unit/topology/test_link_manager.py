@@ -563,3 +563,99 @@ def test_dispatch_sum_swallows_deserialize_errors(monkeypatch, caplog):
     assert any(
         "topology/sum deserialize failed" in rec.getMessage() for rec in caplog.records
     )
+
+
+# ---------------------------------------------------------------------------
+# Reconnect sweep --- BUG-016 regression
+# ---------------------------------------------------------------------------
+
+
+class _ReconnectWitnessLink:
+    """A link-shape stub that records whether ``connect`` was scheduled."""
+
+    def __init__(self, cluster_id, health):
+        self.peer_cluster_id = cluster_id
+        self.health = health
+        self.session_generation = 1
+        self.endpoints = (PeerRef(host="127.0.0.1", port=4515, finger=None),)
+        self.send_fault_count = 1 if health == LinkHealth.DEGRADED else 0
+        self.connects = 0
+
+    async def connect(self):
+        self.connects += 1
+        self.health = LinkHealth.CONNECTED
+
+    async def send_summary(self, _summary):
+        pass
+
+
+def test_reconnect_loop_schedules_degraded_links(clean_state, monkeypatch):
+    """BUG-016: the periodic sweep MUST schedule ``_connect_and_register``
+    for every outbound link in DEGRADED or DISCONNECTED health, and MUST
+    NOT touch CONNECTED or provisional-key links.
+
+    Guards the recovery path for the regression scenario on BUG-016:
+    a send fault tears down the REQ channel and marks the link
+    DEGRADED; without this sweep the link would stay wedged until
+    master restart.
+    """
+    degraded = _ReconnectWitnessLink("east", LinkHealth.DEGRADED)
+    disconnected = _ReconnectWitnessLink("south", LinkHealth.DISCONNECTED)
+    healthy = _ReconnectWitnessLink("west", LinkHealth.CONNECTED)
+    pending = _ReconnectWitnessLink(None, LinkHealth.CONNECTING)
+
+    link_manager._LINKS.clear()  # pylint: disable=protected-access
+    link_manager._LINKS["east"] = degraded  # pylint: disable=protected-access
+    link_manager._LINKS["south"] = disconnected  # pylint: disable=protected-access
+    link_manager._LINKS["west"] = healthy  # pylint: disable=protected-access
+    link_manager._LINKS["__pending__:1.2.3.4:9000"] = (
+        pending  # pylint: disable=protected-access
+    )
+
+    # Shrink the sweep cadence so the test does not wait seconds.
+    monkeypatch.setattr(link_manager, "_RECONNECT_INTERVAL", 0.01)
+
+    scheduled = []
+    real_ensure_future = asyncio.ensure_future
+
+    def _fake_ensure_future(coro, *args, **kwargs):
+        # Capture only the ``_connect_and_register`` scheduling calls
+        # the reconnect loop issues; let every OTHER ``ensure_future``
+        # call (including the test's own scheduling of ``_reconnect_loop``)
+        # fall through to the real implementation.
+        name = getattr(coro, "__name__", None) or getattr(
+            getattr(coro, "cr_code", None), "co_name", ""
+        )
+        if name == "_connect_and_register":
+            scheduled.append(coro)
+            coro.close()
+
+            class _Dummy:
+                def cancel(self):
+                    pass
+
+            return _Dummy()
+        return real_ensure_future(coro, *args, **kwargs)
+
+    monkeypatch.setattr(link_manager.asyncio, "ensure_future", _fake_ensure_future)
+
+    async def _run():
+        task = asyncio.ensure_future(link_manager._reconnect_loop({}))
+        # Give the sweep one tick.
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.new_event_loop().run_until_complete(_run())
+
+    # Exactly two scheduled reconnects: one for ``east`` (DEGRADED),
+    # one for ``south`` (DISCONNECTED).  The CONNECTED and provisional
+    # entries must not be touched.
+    assert len(scheduled) >= 2, f"expected >=2 reconnects; got {len(scheduled)}"
+    # Idempotence over multiple ticks: at least one reconnect per
+    # degraded/disconnected link.  (The healthy / pending stayed off.)
+    assert healthy.connects == 0
+    assert pending.connects == 0

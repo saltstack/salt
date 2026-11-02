@@ -435,3 +435,188 @@ def test_module_exports_channel_names():
     was deleted from :meth:`PeerMasterLink.connect`; functional tests
     patch it with ``raising=False`` so its absence is tolerated."""
     assert hasattr(link_mod, "AsyncReqChannel")
+
+
+# ---------------------------------------------------------------------------
+# Send-fault teardown --- BUG-016 regression
+# ---------------------------------------------------------------------------
+
+
+from salt.exceptions import SaltReqTimeoutError as _SaltReqTimeoutError  # noqa: E402
+
+
+class _WedgingReqChannel:
+    """A stub req channel whose first N sends raise and the rest succeed.
+
+    Mirrors the real transport behaviour where a ``SaltReqTimeoutError``
+    leaves the REQ socket in RECV state and the next send on the same
+    socket would deadlock -- but here the test owns the socket's
+    identity so we can observe teardown instead of hanging.
+    """
+
+    def __init__(self, raises=1, exc=None):
+        self.sends = 0
+        self.closes = 0
+        self._raises = raises
+        self._exc = exc or _SaltReqTimeoutError("wedged")
+
+    async def send(self, payload, tries=1):
+        self.sends += 1
+        if self.sends <= self._raises:
+            raise self._exc
+        return {"ok": True}
+
+    def close(self):
+        self.closes += 1
+
+
+def test_send_publish_timeout_tears_down_channel_and_marks_degraded():
+    """BUG-016: a ``SaltReqTimeoutError`` on an outbound publish MUST
+
+    * close + null the ``_req_channel`` reference,
+    * transition the link off CONNECTED (to DEGRADED), and
+    * bump ``send_fault_count`` + stamp ``last_send_fault_at``.
+
+    Before the fix, the wedged REQ channel stayed installed and every
+    subsequent send on the same link also timed out at the full REQ
+    timeout; ``topology.peers`` still reported ``attached`` so operators
+    saw no asymmetry.
+    """
+    link = _make_link()
+    link._peer_cluster_id = "east"
+    link._rotate_session(b"\x00" * 32)
+    link._health = LinkHealth.CONNECTED
+    chan = _WedgingReqChannel(raises=1)
+    link._req_channel = chan
+
+    async def _call():
+        with pytest.raises(_SaltReqTimeoutError):
+            await link.send_publish({"jid": "j1"}, ["west"])
+
+    asyncio.run(_call())
+
+    assert chan.closes == 1
+    assert link._req_channel is None
+    assert link.health == LinkHealth.DEGRADED
+    assert link.send_fault_count == 1
+    assert link.last_send_fault_at is not None
+
+
+def test_degraded_link_rejects_follow_on_sends_without_timeout():
+    """After a send fault, the next send MUST raise ``LinkUnavailable``
+    immediately -- not time out again against the wedged socket.
+
+    This is the "fail loud, don't silent-timeout" half of the BUG-016
+    acceptance: callers (``_summary_emit_loop``, ``_transit_send``)
+    get a prompt error back and the link is excluded from fan-out
+    until the reconnector drives a fresh handshake.
+    """
+    link = _make_link()
+    link._peer_cluster_id = "east"
+    link._rotate_session(b"\x00" * 32)
+    link._health = LinkHealth.CONNECTED
+    link._req_channel = _WedgingReqChannel(raises=1)
+
+    async def _first():
+        with pytest.raises(_SaltReqTimeoutError):
+            await link.send_publish({"jid": "j1"}, ["west"])
+
+    asyncio.run(_first())
+
+    # Second send: no stub channel attached (teardown nulled it).  The
+    # pre-send gate must raise LinkUnavailable, not re-enter the
+    # transport.
+    async def _second():
+        with pytest.raises(LinkUnavailable):
+            await link.send_publish({"jid": "j2"}, ["west"])
+
+    asyncio.run(_second())
+
+
+def test_rotate_session_clears_fault_timestamp_after_reconnect():
+    """A successful re-handshake (which calls ``_rotate_session``) MUST
+    clear ``last_send_fault_at`` and bump ``session_generation``.
+
+    This is the sender's half of the invariant the receiver verifies in
+    :func:`salt.topology.link_manager._verify_session`: both ends must
+    converge on the same ``session_generation`` after rotation.  Without
+    the clear-on-rotate semantic, ``topology.peers`` could report a
+    stale fault timestamp indefinitely after recovery.
+    """
+    link = _make_link()
+    link._peer_cluster_id = "east"
+    link._rotate_session(b"\x00" * 32)
+    link._health = LinkHealth.CONNECTED
+    link._req_channel = _WedgingReqChannel(raises=1)
+
+    async def _first():
+        with pytest.raises(_SaltReqTimeoutError):
+            await link.send_publish({"jid": "j1"}, ["west"])
+
+    asyncio.run(_first())
+    assert link.last_send_fault_at is not None
+    gen_before = link.session_generation
+
+    # Simulate a successful re-handshake: a fresh session AES.
+    link._rotate_session(b"\xff" * 32)
+    assert link.session_generation == gen_before + 1
+    assert link.last_send_fault_at is None
+    # The fault count is cumulative across sessions -- it is the ops
+    # signal that a link has flapped historically, not whether it is
+    # currently faulting.  ``last_send_fault_at is None`` is the "is
+    # it faulting now" signal.
+    assert link.send_fault_count == 1
+
+
+def test_send_summary_timeout_also_tears_down_channel():
+    """BUG-016 regression for the summary emit path.  ``send_summary``
+    runs on a background loop (``_summary_emit_loop``); a wedge there
+    is the first symptom operators see in the master log because the
+    summary cadence is tighter than the ``C@`` publish cadence."""
+    from salt.topology.summary import ClusterSummary
+
+    link = _make_link()
+    link._peer_cluster_id = "east"
+    link._rotate_session(b"\x00" * 32)
+    link._health = LinkHealth.CONNECTED
+    chan = _WedgingReqChannel(raises=1)
+    link._req_channel = chan
+    summary = ClusterSummary(
+        cluster_id="west",
+        path=("west",),
+        minion_count=0,
+        up_count=0,
+        grain_histograms={},
+        origin_seq=1,
+        origin_at=1.0,
+    )
+
+    async def _call():
+        with pytest.raises(_SaltReqTimeoutError):
+            await link.send_summary(summary)
+
+    asyncio.run(_call())
+    assert chan.closes == 1
+    assert link._req_channel is None
+    assert link.health == LinkHealth.DEGRADED
+
+
+def test_successful_send_records_last_send_success_at():
+    """On the happy path, a successful send stamps
+    ``last_send_success_at`` so ``topology.peers`` can surface the
+    "last confirmed delivery" timestamp alongside the fault counters.
+    """
+    link = _make_link()
+    link._peer_cluster_id = "east"
+    link._rotate_session(b"\x00" * 32)
+    link._health = LinkHealth.CONNECTED
+    link._req_channel = _WedgingReqChannel(raises=0)  # never raises
+
+    async def _call():
+        await link.send_publish({"jid": "j1"}, ["west"])
+
+    assert link.last_send_success_at is None
+    asyncio.run(_call())
+    assert link.last_send_success_at is not None
+    assert link.send_fault_count == 0
+    assert link.last_send_fault_at is None

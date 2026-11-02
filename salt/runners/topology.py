@@ -414,6 +414,49 @@ def links():
     return out
 
 
+def _read_link_health(opts, cluster_id):
+    """Return the publish daemon's sidecar health snapshot for *cluster_id*.
+
+    ``None`` when the snapshot file is absent (link never built, or
+    pre-snapshot build) or malformed (treated as missing so the
+    runner can still return an "attached" row).  See the writer in
+    :meth:`salt.topology.link.PeerMasterLink._write_health_snapshot`.
+    """
+    pki_dir = opts.get("pki_dir")
+    if not pki_dir:
+        return None
+    path = pathlib.Path(pki_dir) / "topology_link_health" / f"{cluster_id}.json"
+    try:
+        with salt.utils.files.fopen(str(path), "r") as fh:
+            return salt.utils.json.load(fh)
+    except (OSError, ValueError):
+        return None
+
+
+def _link_state_from_health(snapshot):
+    """Compose a composite ``state`` string from a health snapshot.
+
+    * ``attached``          --- CONNECTED and no recent fault.
+    * ``attached-degraded`` --- link went DEGRADED but has not yet
+      been re-handshaked by the sweeper.
+    * ``attached-wedged``   --- link reports CONNECTED but has had
+      a fault more recently than its last success (ops signal
+      operators care about: the receiver may be alive but the
+      sender's REQ channel is still catching up).
+    * ``attached``          --- fallback for any other health shape.
+    """
+    health = snapshot.get("health")
+    last_fault = snapshot.get("last_send_fault_at")
+    last_ok = snapshot.get("last_send_success_at")
+    if health == "degraded":
+        return "attached-degraded"
+    if health == "disconnected":
+        return "attached-disconnected"
+    if last_fault is not None and (last_ok is None or last_fault > last_ok):
+        return "attached-wedged"
+    return "attached"
+
+
 def peers():
     """
     Return the list of peer references, each with its current
@@ -422,12 +465,28 @@ def peers():
     * ``configured`` --- in ``topology.conf`` but not yet seen on
       any key path.
     * ``pending``    --- key is in ``masters_pre/``.
-    * ``attached``   --- key is in ``masters/``.
+    * ``attached``   --- key is in ``masters/`` and the publish
+      daemon's outbound link is CONNECTED with no recent fault.
+    * ``attached-degraded`` --- key accepted, but the outbound
+      link's REQ channel was torn down after a send fault and is
+      awaiting re-handshake by the periodic sweeper.
+    * ``attached-wedged``   --- key accepted, link reports
+      CONNECTED, but the most recent send failed more recently
+      than the most recent success.  Operator should expect
+      ``send_publish ok peer=...`` to recover shortly; if not,
+      investigate the receiver.
+    * ``attached-disconnected`` --- key accepted but outbound link
+      has not been reconnected since startup.
     * ``rejected``   --- key is in ``masters_rejected/``.
 
     Each entry has ``{"cluster_id": ..., "state": ...}`` and, for
     configured-only entries, ``{"host": ..., "port": ...}`` fields
-    identifying the seed endpoint.
+    identifying the seed endpoint.  When a health snapshot is
+    available (publish daemon has written one for this peer), the
+    entry also carries ``session_generation``, ``send_fault_count``,
+    ``last_send_fault_at``, and ``last_send_success_at`` so operators
+    see the "attached-per-runner but dead-per-forwards" asymmetry
+    without having to grep the master log.
     """
     opts = _opts()
     cfg = _topology_config(opts)
@@ -442,7 +501,19 @@ def peers():
         out.append({"cluster_id": cluster_id, "state": "rejected"})
         seen.add(cluster_id)
     for cluster_id in sorted(accepted - rejected):
-        out.append({"cluster_id": cluster_id, "state": "attached"})
+        entry = {"cluster_id": cluster_id, "state": "attached"}
+        snapshot = _read_link_health(opts, cluster_id)
+        if snapshot is not None:
+            entry["state"] = _link_state_from_health(snapshot)
+            for field in (
+                "session_generation",
+                "send_fault_count",
+                "last_send_fault_at",
+                "last_send_success_at",
+            ):
+                if field in snapshot:
+                    entry[field] = snapshot[field]
+        out.append(entry)
         seen.add(cluster_id)
     for cluster_id in sorted(pending - accepted - rejected):
         out.append({"cluster_id": cluster_id, "state": "pending"})

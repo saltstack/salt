@@ -375,3 +375,175 @@ class TestGetRouterUnit:
     def test_default_none(self, monkeypatch):
         monkeypatch.setattr(router, "_router", None, raising=False)
         assert router.get_router() is None
+
+
+# ===========================================================================
+# on_publish success/failure path (regression for BUG-018)
+#
+# BUG-018 was filed on the premise that east was not forwarding at all,
+# because the forward-success path emitted no visible log entries.  The
+# diagnosis was wrong (routing worked), but the observability gap was
+# real.  These tests pin:
+#
+# * on_publish for a bare-glob publish calls ``send_publish`` exactly
+#   once per peer link AND emits a DEBUG line carrying the jid, so
+#   future "did it forward?" questions have a greppable answer.
+# * On a per-link ``send_publish`` failure, ``_fire_event`` fires
+#   ``salt/topology/pub/failed/<peer>`` --- the viz backend subscribes
+#   to this tag, and silent dropping was the mis-shape that led
+#   operators to misdiagnose BUG-018 to begin with.
+# ===========================================================================
+
+
+class _CountingLink:
+    """A ``PeerMasterLink`` double that records every ``send_publish``."""
+
+    def __init__(self, peer_cluster_id, raise_exc=None):
+        self.peer_cluster_id = peer_cluster_id
+        self.calls = []
+        self._raise = raise_exc
+
+    async def send_publish(self, load, path):
+        self.calls.append((load, list(path)))
+        if self._raise is not None:
+            raise self._raise
+
+
+class TestOnPublishForwardsBareGlob:
+    """Regression for BUG-018 (misdiagnosis) + observability pin."""
+
+    async def test_bare_glob_calls_send_publish_per_peer_with_debug_log(
+        self, tmp_path, caplog, monkeypatch
+    ):
+        import logging
+
+        r, _opts_, _reg, _br = _router(tmp_path, cluster_id="origin")
+        link_a = _CountingLink("peer-a")
+        link_b = _CountingLink("peer-b")
+        r._links = {"peer-a": link_a, "peer-b": link_b}
+        monkeypatch.setattr(router, "_ROUTER", r)
+
+        load = {
+            "jid": "20261102000000000001",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "fun": "test.ping",
+            "arg": [],
+        }
+
+        with caplog.at_level(logging.DEBUG, logger="salt.topology.router"):
+            await router.on_publish(load, io_loop=None)
+
+        assert len(link_a.calls) == 1, "peer-a.send_publish must be called once"
+        assert len(link_b.calls) == 1, "peer-b.send_publish must be called once"
+        # Path is the origin cluster_id (receiver appends its own on recv).
+        assert link_a.calls[0][1] == ["origin"]
+        assert link_b.calls[0][1] == ["origin"]
+
+        jid = load["jid"]
+        route_msgs = [rec for rec in caplog.records if "route_publish" in rec.message]
+        assert route_msgs, "route_publish DEBUG line missing"
+        assert any(jid in rec.getMessage() for rec in route_msgs)
+
+        ok_msgs = [rec for rec in caplog.records if "send_publish ok" in rec.message]
+        assert len(ok_msgs) == 2, "expected one DEBUG line per successful send"
+        peers = sorted(m.getMessage() for m in ok_msgs)
+        assert any("peer-a" in m for m in peers)
+        assert any("peer-b" in m for m in peers)
+
+    async def test_bare_glob_filtered_meta_notification_is_no_op(
+        self, tmp_path, monkeypatch
+    ):
+        """``salt/job/<jid>/new`` carries ``minions`` + ``missing`` without ``ret``.
+        That's a meta-notification, NOT a publish load; it must be skipped so
+        downstream minions don't receive a ``ret``-less load.
+        """
+        r, _opts_, _reg, _br = _router(tmp_path, cluster_id="origin")
+        link_a = _CountingLink("peer-a")
+        r._links = {"peer-a": link_a}
+        monkeypatch.setattr(router, "_ROUTER", r)
+
+        meta = {
+            "jid": "20261102000000000002",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "fun": "test.ping",
+            "arg": [],
+            "minions": ["m1"],
+            "missing": [],
+        }
+        await router.on_publish(meta, io_loop=None)
+        assert link_a.calls == [], "meta-notification must not reach send_publish"
+
+
+class TestOnPublishFireEventOnLinkFailure:
+    """A link that raises during send_publish MUST emit
+    ``salt/topology/pub/failed/<peer>`` so operators see per-cluster
+    failures instead of a silent drop."""
+
+    async def test_single_link_failure_fires_pub_failed(self, tmp_path, monkeypatch):
+        r, _opts_, _reg, _br = _router(tmp_path, cluster_id="origin")
+        boom = RuntimeError("peer link wedged")
+        link_dead = _CountingLink("peer-dead", raise_exc=boom)
+        link_live = _CountingLink("peer-live")
+        r._links = {"peer-dead": link_dead, "peer-live": link_live}
+        monkeypatch.setattr(router, "_ROUTER", r)
+
+        fired = []
+        r._fire_event = lambda tag, data: fired.append((tag, data))
+
+        load = {
+            "jid": "20261102000000000003",
+            "tgt": "*",
+            "tgt_type": "glob",
+            "fun": "test.ping",
+            "arg": [],
+        }
+        await router.on_publish(load, io_loop=None)
+
+        assert len(link_dead.calls) == 1
+        assert len(link_live.calls) == 1
+        failed_tags = [tag for tag, _d in fired]
+        assert "salt/topology/pub/failed/peer-dead" in failed_tags
+        assert "salt/topology/pub/failed/peer-live" not in failed_tags
+        data = dict(fired)["salt/topology/pub/failed/peer-dead"]
+        assert data["cluster_id"] == "peer-dead"
+        assert data["jid"] == "20261102000000000003"
+        assert "RuntimeError" in data["error"]
+
+
+class TestLinkManagerWiresFireEvent:
+    """BUG-018 observability sibling: a running ``link_manager.start``
+    MUST replace ``TopologyRouter._fire_event`` so pub-failed events
+    reach the real event bus (viz backend subscribes).  Pre-fix, the
+    comment at ``router.py:_fire_event`` claimed the hook was installed
+    by link_manager but no code did it; the default WARNING-log
+    fallback stayed in place and events were lost."""
+
+    def test_wire_router_fire_event_overrides_default(self, tmp_path, monkeypatch):
+        from salt.topology import link_manager
+
+        r, opts, _reg, _br = _router(tmp_path, cluster_id="origin")
+        default_fire = r._fire_event
+        opts["sock_dir"] = str(tmp_path / "sock")
+
+        class _StubEvent:
+            def __init__(self):
+                self.fired = []
+
+            def fire_event(self, data, tag):
+                self.fired.append((tag, data))
+
+        stub = _StubEvent()
+        monkeypatch.setattr(
+            "salt.utils.event.get_master_event",
+            lambda *a, **kw: stub,
+        )
+        link_manager._wire_router_fire_event(r, opts, io_loop=None)
+        assert r._fire_event is not default_fire
+
+        r._fire_event("salt/topology/pub/failed/peer-x", {"cluster_id": "peer-x"})
+        assert (
+            "salt/topology/pub/failed/peer-x",
+            {"cluster_id": "peer-x"},
+        ) in stub.fired

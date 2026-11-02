@@ -80,6 +80,15 @@ _RETURN_SUBSCRIBER = None
 #: attached peer link so each peer learns a route to this cluster.
 _SUMMARY_TASK = None
 
+#: Periodic re-handshake task for outbound links whose channels have
+#: been torn down after a send fault
+#: (:meth:`salt.topology.link.PeerMasterLink._handle_send_fault`).
+#: Without this, a wedged REQ channel stays wedged until the master
+#: restarts: ``topology.peers`` still shows ``attached`` but every
+#: outbound forward times out silently.  Populated by :func:`start`;
+#: cancelled in :func:`stop`.
+_RECONNECT_TASK = None
+
 # Pre-fork reserved listening socket (SO_REUSEADDR + FD_CLOEXEC).
 # Populated by :func:`pre_fork`; consumed by :func:`start` when it
 # constructs the ReqServerChannel.  Kept distinct from ``_LISTENER``
@@ -125,7 +134,7 @@ def _reset_module_state():
     """
     global _LINKS, _INBOUND, _LISTENER, _LISTENER_SOCKET, _OWNER_PID
     global _REGISTRY_CACHE, _BREADCRUMB_CACHE, _IO_LOOP, _RAFT_SERVICE
-    global _CONFIG, _OPTS, _RETURN_SUBSCRIBER, _SUMMARY_TASK
+    global _CONFIG, _OPTS, _RETURN_SUBSCRIBER, _SUMMARY_TASK, _RECONNECT_TASK
     for chan in _PUB_CHANNEL_CACHE.values():
         try:
             chan.close()
@@ -138,6 +147,7 @@ def _reset_module_state():
     _LISTENER_SOCKET = None
     _RETURN_SUBSCRIBER = None
     _SUMMARY_TASK = None
+    _RECONNECT_TASK = None
     _OWNER_PID = None
     _REGISTRY_CACHE = None
     _BREADCRUMB_CACHE = None
@@ -207,6 +217,44 @@ def pre_fork(opts, process_manager):
         return
     registry.pre_create(opts)
     breadcrumbs.pre_create(opts)
+
+
+def _wire_router_fire_event(router, opts, io_loop):
+    """Install a real-bus ``_fire_event`` hook on *router*.
+
+    Returns silently if the required pieces (sock_dir / running loop)
+    aren't available; the router's default WARNING-log fallback then
+    remains in effect, matching pre-fix behavior for test harnesses.
+    """
+    sock_dir = opts.get("sock_dir")
+    if not sock_dir:
+        return
+    try:
+        event = salt.utils.event.get_master_event(
+            opts, sock_dir, listen=False, io_loop=io_loop
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: get_master_event failed; _fire_event not wired", exc_info=True
+        )
+        return
+
+    def _fire(tag, data):
+        try:
+            fire_async = getattr(event, "fire_event_async", None)
+            if fire_async is not None:
+                try:
+                    loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    loop = None
+                if loop is not None:
+                    loop.create_task(fire_async(data, tag))
+                    return
+            event.fire_event(data, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("topology: _fire_event failed for %s", tag, exc_info=True)
+
+    router._fire_event = _fire  # pylint: disable=protected-access
 
 
 async def start(opts, io_loop, raft_service=None):
@@ -324,6 +372,19 @@ async def start(opts, io_loop, raft_service=None):
         _topology_router.registry_cache = _REGISTRY_CACHE
     if not hasattr(_topology_router, "breadcrumbs_cache"):
         _topology_router.breadcrumbs_cache = _BREADCRUMB_CACHE
+    # Wire the router's ``_fire_event`` hook onto the publish daemon's
+    # master event bus.  The default implementation in
+    # :meth:`TopologyRouter._fire_event` logs a WARNING ("no event bus
+    # wired") because the router module is import-safe for test
+    # harnesses that run without a loop.  Here in the real daemon we
+    # DO have a loop and a ``master_event_pull.ipc`` reachable, so
+    # install a fire function that pushes ``salt/topology/pub/failed/*``
+    # (and future router-side events) onto the real bus where the viz
+    # backend and :mod:`salt.engines.topology_events` subscribers can
+    # consume them.  Falls back to the sync fire path when no running
+    # loop is detected, mirroring ``_fire_event_on_running_loop`` in
+    # :class:`salt.master.ClearFuncs`.
+    _wire_router_fire_event(_topology_router, opts, io_loop)
     router_mod._ROUTER = _topology_router  # pylint: disable=protected-access
 
     # Step 5: install state-machine callbacks before replaying.
@@ -393,8 +454,16 @@ async def start(opts, io_loop, raft_service=None):
     # fall back to ``route_publish flooding --- no known route``.
     # Peers tolerate send failures (link not yet healthy, transient
     # transport flap) so the loop keeps going.
-    global _SUMMARY_TASK
+    global _SUMMARY_TASK, _RECONNECT_TASK
     _SUMMARY_TASK = asyncio.ensure_future(_summary_emit_loop(opts), loop=io_loop)
+
+    # Step 11: periodic reconnect sweep.  Walks ``_LINKS`` on a short
+    # cadence and re-handshakes any outbound link that
+    # :meth:`PeerMasterLink._handle_send_fault` has transitioned to
+    # DEGRADED (or any that remained DISCONNECTED after a bounded
+    # connect retry).  Without this, a REQ-channel wedge after one
+    # send timeout pins the link until the master restarts.
+    _RECONNECT_TASK = asyncio.ensure_future(_reconnect_loop(opts), loop=io_loop)
 
 
 async def _summary_emit_loop(opts):
@@ -450,6 +519,69 @@ async def _summary_emit_loop(opts):
                     peer_id,
                     exc_info=True,
                 )
+
+
+#: Interval between reconnect sweeps.  Short enough that a wedged
+#: link recovers inside the operator-visible lifecycle of a single
+#: ``salt`` CLI publish (default 60s overall master publish timeout),
+#: long enough that the sweeper is cheap when every link is healthy.
+_RECONNECT_INTERVAL = 5.0
+
+
+async def _reconnect_loop(opts):
+    """Re-handshake outbound links whose channels have been torn down.
+
+    A :meth:`salt.topology.link.PeerMasterLink._handle_send_fault`
+    transitions the link to :data:`LinkHealth.DEGRADED` and nulls the
+    REQ channel after a send failure.  Without this loop, the link
+    stays DEGRADED until the master restarts: no code path drives
+    ``link.connect()`` after startup except ``add_link`` (fires on
+    attach, not on fault) and the handshake retry inside
+    :meth:`connect` itself.
+
+    Walks ``_LINKS`` every :data:`_RECONNECT_INTERVAL` seconds; for
+    any link whose health is DEGRADED or DISCONNECTED (and which is
+    not currently in CONNECTING), schedules a fresh
+    ``_connect_and_register`` task.  The connect task is fire-and-
+    forget: a wedged peer will still time out, but on its own
+    coroutine so it does not stall the sweeper.
+    """
+    while True:
+        await asyncio.sleep(_RECONNECT_INTERVAL)
+        try:
+            from salt.topology.link import (
+                LinkHealth,  # pylint: disable=import-outside-toplevel
+            )
+
+            # Snapshot before iteration so a concurrent attach/detach
+            # does not perturb the walk.
+            with _LOCK:
+                snapshot = list(_LINKS.items())
+            for key, link in snapshot:
+                if isinstance(key, str) and key.startswith("__pending__:"):
+                    # Provisional key -- a connect task is already
+                    # in flight for this link; don't double up.
+                    continue
+                health = getattr(link, "health", None)
+                if health in (LinkHealth.DEGRADED, LinkHealth.DISCONNECTED):
+                    log.info(
+                        "topology: scheduling re-handshake for peer=%r "
+                        "(health=%r, send_fault_count=%d)",
+                        getattr(link, "peer_cluster_id", None),
+                        health,
+                        getattr(link, "send_fault_count", 0),
+                    )
+                    try:
+                        asyncio.ensure_future(_connect_and_register(link))
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "topology: scheduling reconnect for peer=%r failed",
+                            getattr(link, "peer_cluster_id", None),
+                        )
+        except Exception:  # pylint: disable=broad-except
+            # Never let the sweeper die; a single bad link should not
+            # take out recovery for every other peer.
+            log.exception("topology: reconnect sweep raised; continuing")
 
 
 def _install_sm_callbacks(sm):
@@ -857,7 +989,7 @@ async def stop():
     """
     # Cancel the periodic summary emitter before tearing down links
     # so an in-flight ``send_summary`` doesn't race the disconnect.
-    global _SUMMARY_TASK
+    global _SUMMARY_TASK, _RECONNECT_TASK
     if _SUMMARY_TASK is not None:
         _SUMMARY_TASK.cancel()
         try:
@@ -865,6 +997,13 @@ async def stop():
         except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
             pass
         _SUMMARY_TASK = None
+    if _RECONNECT_TASK is not None:
+        _RECONNECT_TASK.cancel()
+        try:
+            await _RECONNECT_TASK
+        except (asyncio.CancelledError, Exception):  # pylint: disable=broad-except
+            pass
+        _RECONNECT_TASK = None
 
     # Snapshot the current link set so iteration is safe against the
     # concurrent mutation ``disconnect`` may do on failure paths.

@@ -537,7 +537,22 @@ async def on_publish(load, io_loop):
         if "missing" in load and "minions" in load and "ret" not in load:
             return
 
+    jid = load.get("jid") if isinstance(load, dict) else None
     links, _local_match = r.route_publish(load)
+    # Success-path breadcrumb: a bare glob/pcre target with
+    # ``topology_enabled=True`` and configured peers resolves to
+    # ``flood_outbound`` in :meth:`TopologyRouter.route_publish`, so
+    # the empty-links shape is a legitimate "no peers wired" signal
+    # worth seeing at DEBUG when triaging why a publish didn't cross
+    # clusters.  Avoids locking a brittle INFO/WARNING in the hot
+    # path (BUG-018 misdiagnosis was driven by zero visible success
+    # logs; this is the surgical fix).
+    log.debug(
+        "topology: on_publish jid=%s route_publish -> %d link(s) local_match=%s",
+        jid,
+        len(links),
+        _local_match,
+    )
     if not links:
         return
 
@@ -557,6 +572,11 @@ async def on_publish(load, io_loop):
     )
     for link, exc in results:
         if exc is None:
+            log.debug(
+                "topology: send_publish ok jid=%s peer=%s",
+                jid,
+                getattr(link, "peer_cluster_id", None),
+            )
             continue
         peer = getattr(link, "peer_cluster_id", None) or "unknown"
         tag = f"salt/topology/pub/failed/{peer}"
