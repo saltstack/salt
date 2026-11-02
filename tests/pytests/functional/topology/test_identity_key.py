@@ -194,7 +194,16 @@ def test_exists_false_when_only_pub_present(identity_key, pki_dir):
     """
     pub, priv = identity_key.generate()
     identity_key.write(pub, priv)
-    (pki_dir / "master" / "master_identity.pem").unlink()
+    # ``MasterIdentityKey.write`` persists the private key with mode
+    # ``0400``.  On Windows NTFS, a read-only file cannot be
+    # ``os.unlink``'d without first clearing the read-only attribute
+    # (``PermissionError: [WinError 5] Access is denied``).  Mirror
+    # the production ``_write_if_changed`` pre-unlink pattern so this
+    # test exercises the "operator deleted the private key" scenario
+    # on both platforms.
+    priv_path = pki_dir / "master" / "master_identity.pem"
+    os.chmod(priv_path, 0o600)
+    priv_path.unlink()
     assert identity_key.exists() is False
 
 
