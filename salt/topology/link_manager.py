@@ -1969,9 +1969,32 @@ def _verify_session(payload):
 
     An ``_master_auth`` tag is permitted without a session (it is
     the handshake itself).  Every other tag must carry an
-    ``origin_cluster_id`` for which we have a link whose
-    ``session_generation`` matches the payload's
-    ``session_generation``.
+    ``origin_cluster_id`` whose server-side inbound record's
+    ``session_generation`` matches the payload's.
+
+    Match against :data:`_INBOUND[origin]` (the server-side record
+    established at ``_master_auth`` handshake time and kept current
+    by :func:`_maybe_lazy_register_inbound`), NEVER
+    :data:`_LINKS[origin]`.  The two counters are independent:
+
+    * ``_INBOUND[origin].session_generation`` -- *origin's* own
+      session gen, received in origin's handshake load.  This is
+      the correct counter to compare against the payload's
+      self-reported gen because the payload also comes from origin.
+    * ``_LINKS[origin].session_generation`` -- *self's* outbound
+      session gen for the link where self initiated the handshake
+      with origin.  Unrelated to anything origin sends us.
+
+    :func:`get_link` was consulted here historically; it prefers
+    the outbound ``_LINKS[origin]`` entry when both exist, which
+    silently rejected every frame from an authenticated peer whose
+    server-side gen differed from self's outbound-side gen.  In the
+    8-master topology sandbox this surfaced as 21k+ ``bad/missing
+    session`` drops per master over a 12-hour window, with the
+    user-visible symptom being forwarded ``state.apply`` returning
+    ``{"failed": True}`` for every minion more than one hop out --
+    LocalClient's "no return within timeout" marker, because the
+    transit's forwarded publishes never ran.
     """
     if not isinstance(payload, dict):
         return False
@@ -1982,13 +2005,17 @@ def _verify_session(payload):
     gen = payload.get("session_generation")
     if origin is None or gen is None:
         return False
-    link = get_link(origin)
-    if link is None:
+    try:
+        gen_i = int(gen)
+    except (TypeError, ValueError):
         return False
-    expected = getattr(link, "session_generation", None)
+    inbound = _INBOUND.get(origin)
+    if inbound is None:
+        return False
+    expected = getattr(inbound, "session_generation", None)
     if expected is None:
         return False
-    return int(expected) == int(gen)
+    return int(expected) == gen_i
 
 
 def _unwrap_inbound_envelope(payload):

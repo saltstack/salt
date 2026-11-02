@@ -905,3 +905,106 @@ def test_publish_to_local_minions_sync_fire_fallback(monkeypatch):
     assert kinds == ["fire", "fire", "publish"]
     assert witness.events[0][1] == "salt/job/20261102000000000004/new"
     assert witness.events[1][1] == "salt/job/20261102000000000004/publish"
+
+
+# ---------------------------------------------------------------------------
+# BUG-020: ``_verify_session`` must compare against the inbound record
+# ---------------------------------------------------------------------------
+
+
+def test_verify_session_prefers_inbound_record_over_outbound(clean_state):
+    """BUG-020 regression: ``_verify_session`` must compare the
+    payload's ``session_generation`` against the server-side
+    ``_INBOUND[origin]`` record, not the ``_LINKS[origin]`` outbound
+    record.  The two counters are independent -- the inbound record
+    tracks the peer's own session gen (received at handshake), the
+    outbound tracks this master's session gen for the link where
+    *we* initiated the handshake.  Comparing payload gen against
+    the outbound side silently rejects every follow-on frame
+    whenever the counters have drifted (which they do the moment
+    either side bumps generation).  Pre-fix: this frame is dropped
+    as "bad/missing session".  Post-fix: accepted.
+    """
+    # Server-side inbound record for the peer: gen that we received
+    # at the peer's handshake.  This is the authoritative counter
+    # against which the peer's follow-on frames must be verified.
+    inbound_stub = _StubLink("east")
+    inbound_stub.session_generation = 3
+    link_manager._INBOUND["east"] = inbound_stub  # pylint: disable=protected-access
+    # Outbound link we initiated to the same peer, with a different
+    # (unrelated) session gen -- our own counter for our own REQ
+    # handshake.  Must not interfere with inbound verification.
+    outbound_stub = _StubLink("east")
+    outbound_stub.session_generation = 1
+    link_manager._LINKS["east"] = outbound_stub  # pylint: disable=protected-access
+
+    payload = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 3,  # matches inbound record, NOT outbound
+    }
+    assert link_manager._verify_session(
+        payload
+    ), (  # pylint: disable=protected-access
+        "frame whose gen matches _INBOUND[origin] must verify"
+    )
+
+
+def test_verify_session_rejects_without_inbound_record(clean_state):
+    """BUG-020 negative case: when there is no ``_INBOUND[origin]``
+    record (sender's key is not accepted and lazy-register bailed),
+    the frame must be rejected -- even when an outbound record
+    happens to exist.  The outbound record alone is NOT proof the
+    peer is authenticated on the inbound side.
+    """
+    # Outbound-only: self initiated a connection to east, but east
+    # never completed a handshake to self so there is no inbound
+    # record.  Verification must fail.
+    outbound_stub = _StubLink("east")
+    outbound_stub.session_generation = 1
+    link_manager._LINKS["east"] = outbound_stub  # pylint: disable=protected-access
+
+    payload = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 1,
+    }
+    assert not link_manager._verify_session(  # pylint: disable=protected-access
+        payload
+    ), (
+        "frame with no _INBOUND[origin] record must be rejected regardless of "
+        "any outbound record"
+    )
+
+
+def test_verify_session_rejects_stale_inbound_gen(clean_state):
+    """BUG-020 regression: strict equality against the inbound
+    record is preserved.  A replayed frame with an older gen than
+    the inbound-cached gen (which :func:`_maybe_lazy_register_inbound`
+    only ever bumps forward) must still be rejected.
+    """
+    inbound_stub = _StubLink("east")
+    inbound_stub.session_generation = 5
+    link_manager._INBOUND["east"] = inbound_stub  # pylint: disable=protected-access
+
+    payload = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 1,  # replay / stale
+    }
+    assert not link_manager._verify_session(  # pylint: disable=protected-access
+        payload
+    ), "stale-gen replay against bumped _INBOUND must still be rejected"
+
+
+def test_verify_session_master_auth_bypass_preserved(clean_state):
+    """``_master_auth`` frames carry no session yet -- they ARE the
+    handshake.  The receiver must always pass them through to
+    :func:`_handle_master_auth` for key acceptance, regardless of
+    the inbound record state.
+    """
+    for tag in ("_master_auth", "topology/_master_auth"):
+        payload = {"tag": tag, "origin_cluster_id": "east"}
+        assert link_manager._verify_session(  # pylint: disable=protected-access
+            payload
+        ), f"{tag} must bypass session check"
