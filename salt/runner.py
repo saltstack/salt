@@ -557,6 +557,12 @@ class RemoteRunnerClient(mixins.SyncClientMixin):
         """
         load = kwargs
         load["cmd"] = "runner"
+        # Pure-PKI remote clients (no eauth / token in kwargs) still
+        # need to prove identity to ``ClearFuncs.runner``; set
+        # ``client_id`` so the master's ``_prep_auth_info`` can route
+        # them through ``auth_type="client"``.  Stacked PKI+eauth
+        # flows set both; the master prefers eauth/token when present.
+        load.setdefault("client_id", self.opts["id"])
         master = self.opts.get("master", "localhost")
         master_uri = "tcp://{}:{}".format(
             salt.utils.network.ip_bracket(master),

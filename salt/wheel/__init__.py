@@ -313,6 +313,11 @@ class RemoteWheelClient:
         """
         load = kwargs
         load["cmd"] = "wheel"
+        # Pure-PKI remote clients (no eauth / token in kwargs) still
+        # need to prove identity to ``ClearFuncs.wheel``; set
+        # ``client_id`` so the master's ``_prep_auth_info`` can route
+        # them through ``auth_type="client"``.
+        load.setdefault("client_id", self.opts["id"])
         master = self.opts.get("master", "localhost")
         master_uri = "tcp://{}:{}".format(
             salt.utils.network.ip_bracket(master),

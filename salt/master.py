@@ -5549,7 +5549,22 @@ class ClearFuncs(TransportMethods):
 
         # Authorize
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # Pure-PKI remote client: fall through to the per-client ACL
+            # instead of the eauth ``auth_list`` matcher.  ``username``
+            # is the client_id (set in
+            # :meth:`salt.auth.LoadAuth.check_authentication`).
+            if not self.client_acl.client_can_run_runner(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'runner function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             runner_check = self.ckminions.runner_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5625,7 +5640,21 @@ class ClearFuncs(TransportMethods):
 
         # Authorize
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # Pure-PKI remote client: authorize via ``client_acl``'s
+            # dedicated wheel matcher.  See the matching note in
+            # :meth:`runner` for the broader rationale.
+            if not self.client_acl.client_can_run_wheel(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'wheel function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             wheel_check = self.ckminions.wheel_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5970,6 +5999,13 @@ class ClearFuncs(TransportMethods):
             except Exception:  # pylint: disable=broad-except
                 # If we can't check, assume not a client
                 pass
+        elif auth_type == "client" and auth_identity:
+            # Pure-PKI remote client: ``auth_type == "client"`` already
+            # proved the client_keys membership during
+            # :meth:`check_authentication`, so we take the ACL branch
+            # unconditionally.
+            is_client = True
+            client_identity = auth_identity
 
         # If this is a client, check client ACL for minion targeting and module execution
         if is_client:
@@ -6189,6 +6225,27 @@ class ClearFuncs(TransportMethods):
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},
         }
 
+    def _is_known_client(self, client_id):
+        """
+        Return True if ``client_id`` has an accepted entry in the
+        master's ``client_keys`` cache.
+
+        Used by :meth:`_prep_auth_info` to recognise pure-PKI remote
+        clients as a first-class auth axis.  Mirrors the acceptance
+        check that :meth:`_is_client_bridge` runs before the payload
+        is routed to ClearFuncs; the two have to agree or the bridge
+        would route a request we'd then reject.
+        """
+        if not client_id:
+            return False
+        try:
+            record = self.key_cache.fetch("client_keys", client_id)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        if not record:
+            return False
+        return record.get("state") == "accepted"
+
     def _prep_auth_info(self, clear_load, want_stacked=False):
         """
         Pick the primary auth_type for ``clear_load``.
@@ -6210,9 +6267,24 @@ class ClearFuncs(TransportMethods):
         """
         sensitive_load_keys = []
         key = None
-        has_user = "key" in clear_load
+        # ``LocalClient._prep_pub`` always injects ``key=self.key``, so
+        # ``"key" in clear_load`` is True even for a remote workstation
+        # that has no real master key (``self.key == ""``).  Only count
+        # the user axis as present when the field carries a non-empty
+        # value, otherwise a pure-PKI remote client is misclassified
+        # as a failed master-user login.
+        raw_user_key = clear_load.get("key")
+        has_user = bool(raw_user_key)
         has_token = "token" in clear_load
         has_eauth = "eauth" in clear_load
+        # Pure-PKI remote clients send ``client_id`` (set by
+        # :meth:`salt.client.RemoteClient.pub`) and rely on the sender
+        # already being proven by the AES-handshake PKI session (gated
+        # by :meth:`_is_client_bridge` before this path is reached).
+        # Treat them as a first-class auth axis so publish/runner/wheel
+        # don't fall back to ``user`` and reject the empty master key.
+        client_id = clear_load.get("client_id")
+        has_client = bool(client_id) and self._is_known_client(client_id)
         if has_token:
             auth_type = "token"
             err_name = "TokenAuthenticationError"
@@ -6221,7 +6293,17 @@ class ClearFuncs(TransportMethods):
             auth_type = "eauth"
             err_name = "EauthAuthenticationError"
             sensitive_load_keys = ["username", "password"]
+        elif has_user:
+            auth_type = "user"
+            err_name = "UserAuthenticationError"
+            key = self.key
+        elif has_client:
+            auth_type = "client"
+            err_name = "ClientAuthenticationError"
         else:
+            # Keep the historical "user" fallback for callers that pass
+            # no credentials at all; ``authenticate_key`` will produce
+            # the standard failure message.
             auth_type = "user"
             err_name = "UserAuthenticationError"
             key = self.key
@@ -6485,7 +6567,20 @@ class ClearFuncs(TransportMethods):
             return {"error": error}
 
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # See the matching comment in :meth:`runner` async: pure-PKI
+            # client authorizes through ``client_acl``, not ``auth_list``.
+            if not self.client_acl.client_can_run_runner(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'runner function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             runner_check = self.ckminions.runner_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -6540,7 +6635,19 @@ class ClearFuncs(TransportMethods):
             return {"error": error}
 
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # See the matching comment in :meth:`wheel` async.
+            if not self.client_acl.client_can_run_wheel(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'wheel function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             wheel_check = self.ckminions.wheel_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],

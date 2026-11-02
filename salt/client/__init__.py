@@ -2439,7 +2439,26 @@ class RemoteClient(LocalClient):
             tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
         )
 
+        # Advertise the client identity in two places because
+        # ``ClearFuncs.publish`` reads auth/eauth material out of
+        # ``clear_load["kwargs"]`` (the nested dict) when calling
+        # :meth:`MWorker._prep_auth_info`, while runner/wheel/batch
+        # endpoints read it off the top of ``clear_load``.  Setting
+        # both lets a single ``_prep_auth_info`` implementation find
+        # ``client_id`` regardless of which dispatcher is live.
         payload_kwargs["client_id"] = self.opts["id"]
+        payload_kwargs.setdefault("kwargs", {})
+        if isinstance(payload_kwargs["kwargs"], dict):
+            payload_kwargs["kwargs"]["client_id"] = self.opts["id"]
+        # ``LocalClient._prep_pub`` always injects ``key=self.key``.
+        # On a remote workstation ``self.key`` is ``""`` (the master's
+        # ``.root_key`` file isn't readable), and leaving that empty
+        # string in the payload makes :meth:`MWorker._prep_auth_info`
+        # treat it as a failed user-auth attempt instead of recognising
+        # the client's PKI identity.  Drop the empty value here so the
+        # master falls into the ``auth_type == "client"`` path.
+        if not payload_kwargs.get("key"):
+            payload_kwargs.pop("key", None)
 
         # Use master address from config, not interface (for remote clients)
         master = self.opts.get("master", "localhost")

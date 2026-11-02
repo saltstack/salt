@@ -720,6 +720,34 @@ class LoadAuth:
                 if not auth_list:
                     ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                     return ret
+        elif auth_type == "client":
+            # Pure-PKI remote client.  The sender's identity was proven
+            # at the AES-handshake layer (sign-in rotated an AES session
+            # key using the stored ``client_keys/<client_id>`` pubkey),
+            # and :meth:`salt.master.MWorker._is_client_bridge` gated
+            # routing on membership in that same cache.  By the time
+            # this branch runs, the client is authenticated; the only
+            # remaining question is authorization, which is handled by
+            # the ``client_acl`` matching that publish/runner/wheel
+            # perform downstream when they see ``auth_type == "client"``.
+            client_id = load.get("client_id")
+            if not client_id:
+                ret["error"] = {
+                    "name": "ClientAuthenticationError",
+                    "message": (
+                        'Authentication failure of type "client" occurred: '
+                        "payload missing client_id"
+                    ),
+                }
+                return ret
+            # Expose the client id to callers using the standard
+            # ``username`` key so is_client / client_acl gating paths
+            # that already consume ``auth_check["username"]`` work
+            # without further branching.
+            ret["username"] = client_id
+            # ``auth_list`` stays empty here; the dispatcher's is_client
+            # branch loads the client-specific ACL out of ``client_acl``
+            # on master opts.
         else:
             ret["error"] = {
                 "name": "SaltInvocationError",
