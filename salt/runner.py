@@ -579,6 +579,36 @@ class RemoteRunner(RemoteRunnerClient):
     everything flows through :meth:`RemoteRunnerClient.cmd_sync`.
     """
 
+    def print_docs(self):
+        """
+        Print runner docstrings.
+
+        Reads from the locally-loaded runner modules (``self.functions``
+        populated by ``RemoteRunnerClient.__init__`` for argspec and doc
+        introspection), *not* from the master.  This is a deliberate
+        design choice: doc output is query-only metadata and treating it
+        like ``git`` / ``kubectl`` / ``aws`` ``--help`` -- served from
+        the client binary -- avoids a server round-trip for every
+        introspection call.
+
+        Caveats operators should be aware of:
+          * runners whose dependencies aren't installed on the client
+            workstation won't appear in ``--doc`` output even if the
+            master has them (``salt.loader.runner`` silently skips
+            modules that fail to import)
+          * if client and master run different Salt versions, the
+            printed docstrings may drift from what the server actually
+            implements
+
+        Every other remote-CLI operation (publish / runner execution /
+        wheel / mk_token / batch adopt) routes through the master.
+        """
+        arg = self.opts.get("fun", None)
+        docs = self.get_docs(arg)
+        for fun in sorted(docs):
+            display_output(f"{fun}:", "text", self.opts)
+            print(docs[fun])
+
     def run(self, full_return=False):
         """
         Execute the runner sequence against a remote master.
