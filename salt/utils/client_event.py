@@ -165,12 +165,19 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
         # ``subscribe_job`` right after dispatching a fast runner / wheel
         # job can still catch the ``/new`` and ``/ret`` events that fired
         # in the few hundred ms between dispatch and subscribe.  Keyed on
-        # (timestamp, event).
+        # (timestamp, event).  Hard-capped so a burst of events on the
+        # master's bus can't balloon memory even if the TTL loop lags.
         import collections
         import time
 
-        recent_events = collections.deque()
+        recent_maxlen = int(self.opts.get("client_event_replay_maxlen", 1024))
+        recent_events = collections.deque(maxlen=recent_maxlen)
         recent_ttl = self.opts.get("client_event_replay_ttl", 5.0)
+        # Cadence (seconds) for sweeping expired token-auth sessions
+        # from ``clients`` so the sweep still runs on an idle master
+        # instead of only when a new event triggers the publish path.
+        session_sweep_interval = 1.0
+        last_session_sweep = time.time()
 
         try:
             while True:
@@ -187,6 +194,15 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                         pub_socket=pub_socket,
                         recent_events=recent_events,
                     )
+
+                # Periodic eviction of expired token sessions.  Running
+                # here (rather than only inside ``_publish_filtered_event``)
+                # means a quiet master still reclaims memory for sessions
+                # whose Salt tokens have expired.
+                now_wall = time.time()
+                if now_wall - last_session_sweep >= session_sweep_interval:
+                    self._evict_expired_sessions(clients, now_wall)
+                    last_session_sweep = now_wall
 
                 # Get events from master event bus
                 event = event_bus.get_event(wait=0.1, full=True)
@@ -232,6 +248,29 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
             payload = salt.payload.loads(auth_socket.recv())
 
             action = payload.get("action")
+
+            # Server-side cap on concurrent subscriber sessions.  Only
+            # applies to new ``auth`` / ``auth_token`` requests; existing
+            # subscribe/unsubscribe actions on already-authenticated
+            # entries don't grow the dict.  Rejecting here prevents a
+            # token-auth attacker (who can mint fresh ``session_id``s per
+            # connection) from exhausting server memory.
+            max_sessions = int(self.opts.get("client_event_max_sessions", 1024))
+            if action in ("auth", "auth_token") and len(clients) >= max_sessions:
+                log.warning(
+                    "Rejecting %s auth: event-stream session cap (%s) reached",
+                    action,
+                    max_sessions,
+                )
+                auth_socket.send(
+                    salt.payload.dumps(
+                        {
+                            "authorized": False,
+                            "reason": "server session cap reached",
+                        }
+                    )
+                )
+                return
 
             if action == "auth":
                 client_id = payload.get("id")
@@ -355,6 +394,24 @@ class ClientEventPublisher(salt.utils.process.SignalHandlingProcess):
                 auth_socket.send(salt.payload.dumps({"error": str(exc)}))
             except Exception:  # pylint: disable=broad-except
                 pass
+
+    def _evict_expired_sessions(self, clients, now):
+        """
+        Drop token-auth sessions whose ``expire`` timestamp has passed.
+
+        Called periodically from the publisher main loop so that an idle
+        master still reclaims memory held by stale sessions, rather than
+        waiting for the next event to drive eviction in
+        ``_publish_filtered_event``.
+        """
+        expired = [
+            sid
+            for sid, info in clients.items()
+            if info.get("expire") is not None and info["expire"] < now
+        ]
+        for sid in expired:
+            clients.pop(sid, None)
+            log.info("Evicted expired token session %s", sid)
 
     def _verify_client(self, client_id, token, key_cache):
         """

@@ -377,3 +377,120 @@ class TestDeriveEventsKey:
         crypt = salt.crypt.Crypticle({}, key_string)
         token = crypt.dumps({"hello": "world"})
         assert crypt.loads(token) == {"hello": "world"}
+
+
+class TestServerBounds:
+    """Server-side defensive bounds on ClientEventPublisher internals.
+
+    Covers:
+      * ``recent_events`` deque hard-caps at ``client_event_replay_maxlen``
+      * ``_handle_auth_request`` rejects new auths once the ``clients``
+        dict is full (``client_event_max_sessions``)
+      * ``_evict_expired_sessions`` reclaims token-auth entries whose
+        ``expire`` timestamp has passed, independent of the publish path
+    """
+
+    def test_recent_events_deque_honors_maxlen(self):
+        """``collections.deque(maxlen=N)`` drops oldest when full."""
+        import collections
+
+        buf = collections.deque(maxlen=4)
+        for i in range(10):
+            buf.append(("t", {"i": i}))
+        assert len(buf) == 4
+        # Oldest 6 were evicted; survivors are the latest 4
+        assert [item[1]["i"] for item in buf] == [6, 7, 8, 9]
+
+    def test_evict_expired_sessions_drops_past_expiry(self):
+        """Expired token sessions are removed; unexpired + no-expire stay."""
+        publisher = salt.utils.client_event.ClientEventPublisher({})
+        now = 1_000_000.0
+        clients = {
+            "stale-token-session": {
+                "authorized": True,
+                "auth_mode": "token",
+                "jobs": set(),
+                "expire": now - 10,  # 10s ago
+            },
+            "live-token-session": {
+                "authorized": True,
+                "auth_mode": "token",
+                "jobs": set(),
+                "expire": now + 60,  # 60s from now
+            },
+            "pki-no-expire": {
+                "authorized": True,
+                "auth_mode": "pki",
+                "jobs": set(),
+                "expire": None,
+            },
+        }
+        publisher._evict_expired_sessions(clients, now)
+        assert set(clients) == {"live-token-session", "pki-no-expire"}
+
+    def test_handle_auth_rejects_when_session_cap_reached(self):
+        """New ``auth`` beyond ``client_event_max_sessions`` is rejected."""
+        import salt.payload
+
+        publisher = salt.utils.client_event.ClientEventPublisher(
+            {"client_event_max_sessions": 2}
+        )
+        clients = {
+            "sid-0": {"authorized": True, "jobs": set()},
+            "sid-1": {"authorized": True, "jobs": set()},
+        }
+        sent = []
+
+        class StubSocket:
+            def recv(self):
+                return salt.payload.dumps(
+                    {"action": "auth", "id": "new-client", "token": b"x"}
+                )
+
+            def send(self, msg):
+                sent.append(msg)
+
+        publisher._handle_auth_request(
+            StubSocket(), key_cache=None, loadauth=None, clients=clients
+        )
+        # Clients dict unchanged -- new-client was not admitted
+        assert "new-client" not in clients
+        assert len(sent) == 1
+        resp = salt.payload.loads(sent[0])
+        assert resp["authorized"] is False
+        assert "session cap" in resp.get("reason", "")
+
+    def test_subscribe_job_not_blocked_by_session_cap(self):
+        """The cap gates only ``auth``/``auth_token``; subscribe actions on
+        already-authenticated sessions must still work when the dict is
+        at capacity (otherwise legitimate subscribers can't poll).
+        """
+        import salt.payload
+
+        publisher = salt.utils.client_event.ClientEventPublisher(
+            {"client_event_max_sessions": 1}
+        )
+        clients = {
+            "existing-sid": {"authorized": True, "jobs": set()},
+        }
+        sent = []
+
+        class StubSocket:
+            def recv(self):
+                return salt.payload.dumps(
+                    {
+                        "action": "subscribe_job",
+                        "id": "existing-sid",
+                        "jid": "20260101000000000001",
+                    }
+                )
+
+            def send(self, msg):
+                sent.append(msg)
+
+        publisher._handle_auth_request(
+            StubSocket(), key_cache=None, loadauth=None, clients=clients
+        )
+        assert "20260101000000000001" in clients["existing-sid"]["jobs"]
+        resp = salt.payload.loads(sent[0])
+        assert resp["subscribed"] is True

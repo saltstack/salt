@@ -610,6 +610,11 @@ VALID_OPTS = immutabletypes.freeze(
         # event streaming to remote clients. The auth channel uses
         # ``client_event_port + 1``.
         "client_event_port": int,
+        # Hard cap on concurrent authenticated subscriber sessions tracked
+        # by :class:`ClientEventPublisher`.  Prevents an attacker holding
+        # a valid Salt token from exhausting server memory by opening
+        # unbounded sessions.
+        "client_event_max_sessions": int,
         # Set by ``client_config()`` to signal the CLI dispatch layer which
         # client implementation to use.  True when ``/etc/salt/client`` is
         # loaded (RemoteClient path, PKI client identity); False when the
@@ -1613,6 +1618,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_pool_size": 1,
         "ret_port": 4506,
         "client_event_port": 4507,
+        "client_event_max_sessions": 1024,
         "client_auth": False,
         "timeout": 5,
         "publish_timeout": 30,
