@@ -1490,14 +1490,17 @@ class TestRemoteCommandExecution:
                 client.event, client_event.ClientEventSubscriber
             ), "Remote client must use ClientEventSubscriber for network events"
 
-            # Execute async command to get JID
-            pub_data = client.cmd_async(
+            # Execute async command to get JID.  ``LocalClient.cmd_async``
+            # (and therefore ``RemoteClient.cmd_async``) documents the
+            # return as a bare JID string, or ``0`` on failure.
+            jid = client.cmd_async(
                 minion_container.id,
                 "test.ping",
             )
 
-            assert "jid" in pub_data, "Should receive JID from async command"
-            jid = pub_data["jid"]
+            assert (
+                jid and jid != 0
+            ), f"Should receive JID from async command, got {jid!r}"
 
             # Subscribe to job events
             client.event.subscribe_job(jid)
