@@ -4,7 +4,6 @@ belongs.
 """
 
 import ctypes
-import getpass
 import logging
 import os
 import sys
@@ -240,8 +239,9 @@ def chugid_and_umask(runas, umask, group=None):
     set_runas = False
     set_grp = False
 
-    current_user = getpass.getuser()
-    current_grp = grp.getgrgid(pwd.getpwnam(getpass.getuser()).pw_gid).gr_name
+    current_user_info = pwd.getpwuid(os.getuid())
+    current_user = current_user_info.pw_name
+    current_grp = grp.getgrgid(current_user_info.pw_gid).gr_name
 
     if runas and runas != current_user:
         set_runas = True
