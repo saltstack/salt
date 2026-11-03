@@ -1056,9 +1056,7 @@ def ipset_present(name, ipset_type, family=None, options=None, entries=None):
     if name not in __salt__["firewalld.get_ipsets"](permanent=True):
         if not __opts__["test"]:
             try:
-                __salt__["firewalld.new_ipset"](
-                    name, ipset_type, family, options, True
-                )
+                __salt__["firewalld.new_ipset"](name, ipset_type, family, options, True)
             except CommandExecutionError as err:
                 ret["comment"] = f"Error: {err}"
                 return ret
