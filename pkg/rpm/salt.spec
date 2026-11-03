@@ -28,6 +28,14 @@
 %global _MN_CUR_USER %{_SALT_USER}
 %global _MN_CUR_GROUP %{_SALT_GROUP}
 
+# RPM continues running scriptlets after a failure. Do not let a later
+# daemon scriptlet start the updated runtime if local requirements failed.
+%define salt_check_local_requirements() \
+if [ -f /var/lib/rpm-state/salt/local-requirements.failed ]; then \
+    echo "Salt local requirements installation failed; service startup is blocked. Correct the requirements or package source and reinstall the salt package." >&2 \
+    exit 1 \
+fi
+
 # Disable debugsource template
 %define _debugsource_template %{nil}
 
@@ -707,6 +715,26 @@ fi
 ln -s -f /opt/saltstack/salt/spm %{_bindir}/spm
 ln -s -f /opt/saltstack/salt/salt-pip %{_bindir}/salt-pip
 
+# Install once in the base package, before dependent daemon scriptlets.
+# Leave a failure marker even if pip is interrupted; RPM does not roll back
+# scriptlet failures or prevent subsequent service scriptlets from running.
+if [ -f /etc/salt/local-requirements.txt ]; then
+    mkdir -p /var/lib/rpm-state/salt || exit 1
+    touch /var/lib/rpm-state/salt/local-requirements.failed || exit 1
+    (
+        if [ -f /etc/sysconfig/salt-minion-setup ]; then
+            . /etc/sysconfig/salt-minion-setup
+        fi
+        if [ -n "$SALT_EXTRAS_DIR" ]; then
+            export SALT_EXTRAS_DIR
+        fi
+        echo "Installing Salt local requirements before service startup"
+        SALT_CONFIG_DIR=/etc/salt /opt/saltstack/salt/salt-pip install \
+            --requirement /etc/salt/local-requirements.txt
+    ) || exit 1
+fi
+rm -f /var/lib/rpm-state/salt/local-requirements.failed || exit 1
+
 
 %post cloud
 ln -s -f /opt/saltstack/salt/salt-cloud %{_bindir}/salt-cloud
@@ -734,6 +762,7 @@ fi
 # %%systemd_post salt-master.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 else
   # Initial installation
@@ -745,6 +774,7 @@ ln -s -f /opt/saltstack/salt/salt-syndic %{_bindir}/salt-syndic
 # %%systemd_post salt-syndic.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 else
   # Initial installation
@@ -844,6 +874,7 @@ if [ $1 -gt 1 ] ; then
   # (and the FAQ ``cmd.run bg: True`` pattern) restart the service
   # after the transaction completes. See issue #69656.
   if [ ! -f /tmp/.salt-minion-self-upgrade ]; then
+%{salt_check_local_requirements}
     /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
   fi
 else
@@ -859,6 +890,7 @@ ln -s -f /opt/saltstack/salt/salt-api %{_bindir}/salt-api
 # %%systemd_post salt-api.service
 if [ $1 -gt 1 ] ; then
   # Upgrade
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 else
   # Initial installation
@@ -1281,9 +1313,11 @@ fi
 # is a no-op. The FAQ ``cmd.run bg: True`` pattern in the state that
 # drove this transaction restarts the minion once the state returns.
 if [ -f /tmp/.salt-minion-upgrade-was-active ]; then
+%{salt_check_local_requirements}
     /bin/systemctl start salt-minion.service >/dev/null 2>&1 || :
     rm -f /tmp/.salt-minion-upgrade-was-active
 else
+%{salt_check_local_requirements}
     /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 fi
 rm -f /tmp/.salt-minion-self-upgrade
@@ -1301,6 +1335,7 @@ fi
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-master.service >/dev/null 2>&1 || :
 fi
 if [ $1 -eq 0 ]; then
@@ -1322,6 +1357,7 @@ fi
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-syndic.service >/dev/null 2>&1 || :
 fi
 
@@ -1330,6 +1366,7 @@ fi
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-minion.service >/dev/null 2>&1 || :
 fi
 if [ $1 -eq 0 ]; then
@@ -1351,6 +1388,7 @@ fi
 /bin/systemctl daemon-reload >/dev/null 2>&1 || :
 if [ $1 -ge 1 ] ; then
   # Package upgrade, not uninstall
+%{salt_check_local_requirements}
   /bin/systemctl try-restart salt-api.service >/dev/null 2>&1 || :
 fi
 
