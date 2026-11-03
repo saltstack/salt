@@ -343,3 +343,19 @@ def test_directory_test_mode_user_group_not_present():
         assert filestate.directory(name, user=user, group=group) == ret
         assert filestate.directory(name, user=user, group=group) == ret
         assert filestate.directory(name, user=user, group=group) == ret
+
+
+def test_directory_docstring_clean_typo():
+    """
+    Regression test for issue #68316.
+
+    Ensures that the ``clean`` option example in the
+    :func:`file.directory <salt.states.file.directory>` docstring reads
+    "will create the file" instead of the previous typo "will crete the file".
+    The docstring is the authoritative source for the generated
+    ``salt.states.file`` autodoc page.
+    """
+    docstring = filestate.directory.__doc__
+    assert docstring is not None
+    assert "will create the file" in docstring
+    assert "will crete the file" not in docstring
