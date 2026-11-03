@@ -96,6 +96,8 @@ def test_prepend():
                 ret.update({"name": name})
                 with patch.object(
                     salt.utils.files, "fopen", MagicMock(mock_open(read_data=""))
+                ), patch.object(
+                    salt.utils.files, "get_bom_encoding", MagicMock(return_value=None)
                 ):
                     with patch.dict(filestate.__utils__, {"files.is_text": mock_f}):
                         with patch.dict(filestate.__opts__, {"test": True}):
