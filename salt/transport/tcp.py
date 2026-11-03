@@ -197,20 +197,6 @@ def _drain_cancelled_tasks(loop, tasks):
                 task._log_destroy_pending = False
 
 
-def _cancel_and_drain(task):
-    """
-    Cancel ``task`` and let it finish with ``_drain_cancelled_tasks()``.
-    """
-    if task is None or task.done():
-        return
-    try:
-        task.cancel()
-    except RuntimeError:
-        # The task's loop is already closed. See #70178.
-        pass
-    _drain_cancelled_tasks(task.get_loop(), [task])
-
-
 class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
     """
     Raw TCP server which runs in its own process and will listen
@@ -3250,13 +3236,27 @@ class RequestClient(salt.transport.base.RequestClient):
                 send_task.cancel()
                 await asyncio.gather(send_task, return_exceptions=True)
 
+    @staticmethod
+    def _cancel_and_drain(task):
+        """
+        Cancel ``task`` and let it finish with ``_drain_cancelled_tasks()``.
+        """
+        if task is None or task.done():
+            return
+        try:
+            task.cancel()
+        except RuntimeError:
+            # The task's loop is already closed. See #70178.
+            pass
+        _drain_cancelled_tasks(task.get_loop(), [task])
+
     def close(self):
         if self._closing:
             return
         self._closing = True
         # Don't leave getstream() retrying, or waiting on a master that never
         # answers, after close.
-        _cancel_and_drain(self._connect_task)
+        self._cancel_and_drain(self._connect_task)
         if self._stream is not None:
             try:
                 self._stream.close()
@@ -3265,7 +3265,7 @@ class RequestClient(salt.transport.base.RequestClient):
                 # which raises if the loop is closed. See #70178.
                 pass
             self._stream = None
-        _cancel_and_drain(self.task)
+        self._cancel_and_drain(self.task)
         self.task = None
 
     def __enter__(self):
