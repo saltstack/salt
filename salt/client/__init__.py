@@ -2155,6 +2155,19 @@ class LocalClient:
             if not payload:
                 return payload
 
+        # Clustered masters defer every publish with a ``cluster_retry``
+        # sentinel while Raft is still forming / not a committed voter.
+        # The load shape is ``{"ret": False, "cluster_retry": True}``
+        # with no ``jid`` key -- without this guard we would ``KeyError:
+        # 'jid'`` on the return below and cmd_async would wrap it as
+        # ``SaltClientError: 'jid'``, which is useless to operators.
+        load_dict = payload.get("load") if isinstance(payload, dict) else None
+        if isinstance(load_dict, dict) and load_dict.get("cluster_retry"):
+            raise SaltClientError(
+                "Master is not ready; cluster consensus still forming. "
+                "Retry the command once the cluster is ready."
+            )
+
         return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
     async def pub_async(
@@ -2259,6 +2272,19 @@ class LocalClient:
 
             if not payload:
                 return payload
+
+        # Clustered masters defer every publish with a ``cluster_retry``
+        # sentinel while Raft is still forming / not a committed voter.
+        # The load shape is ``{"ret": False, "cluster_retry": True}``
+        # with no ``jid`` key -- without this guard we would ``KeyError:
+        # 'jid'`` on the return below and cmd_async would wrap it as
+        # ``SaltClientError: 'jid'``, which is useless to operators.
+        load_dict = payload.get("load") if isinstance(payload, dict) else None
+        if isinstance(load_dict, dict) and load_dict.get("cluster_retry"):
+            raise SaltClientError(
+                "Master is not ready; cluster consensus still forming. "
+                "Retry the command once the cluster is ready."
+            )
 
         return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
