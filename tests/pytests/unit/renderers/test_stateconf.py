@@ -24,7 +24,7 @@ class Renderer:
         cache_dir = self.tmp_path / "cachedir"
         state_tree_dir.mkdir()
         cache_dir.mkdir()
-        config = salt.config.minion_config(None)
+        config = salt.config.minion_config(None, minion_id="match")
         config["root_dir"] = str(root_dir)
         config["state_events"] = False
         config["id"] = "match"
