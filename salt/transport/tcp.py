@@ -2804,6 +2804,13 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._closing:
             return
         self._closing = True
+        # Cancelling the reader can prevent it from propagating StreamClosedError
+        # to Salt's reply futures. Resolve them here so requests cannot hang.
+        pending = list(self.send_future_map.values())
+        self.send_future_map.clear()
+        for future in pending:
+            if not future.done():
+                future.set_exception(tornado.iostream.StreamClosedError())
         if self._stream is not None:
             self._stream.close()
             self._stream = None
