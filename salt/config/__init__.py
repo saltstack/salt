@@ -4363,7 +4363,12 @@ def _update_disabled_grains(opts):
     This function provides backwards compatibility for grain-specific options
     such as ``enable_fqdns_grains: False``
     """
-    grain_specific_option = re.compile(r"(?:enable_)?(?P<grain>[\w_]+)grains$")
+    # Only ``enable_<grain>_grains`` toggles are deprecated. The optional
+    # ``enable_`` in the previous regex incorrectly matched any option whose
+    # name happens to end in ``_grains`` (e.g. ``auth_events_pend_autosign_grains``,
+    # whose master-side default of ``False`` would then fire the warning on
+    # every config load and break tests that assert ``not ret.stderr``).
+    grain_specific_option = re.compile(r"^enable_(?P<grain>\w+)_grains$")
     if "disabled_grains" not in opts:
         opts["disabled_grains"] = []
 
