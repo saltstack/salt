@@ -3,7 +3,7 @@ from tests.support.mock import MagicMock, patch
 
 
 def test___cli_path_is_expanded():
-    defaults = salt.config.DEFAULT_MINION_OPTS.copy()
+    defaults = salt.config.DEFAULT_MINION_OPTS.copy() | {"id": "config-test-minion"}
     overrides = {}
     with patch(
         "salt.utils.path.expand", MagicMock(return_value="/path/to/testcli")

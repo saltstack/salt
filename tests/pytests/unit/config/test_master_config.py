@@ -5,7 +5,7 @@ from tests.support.mock import MagicMock, patch
 
 
 def test_apply_no_cluster_id():
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     assert defaults["cluster_id"] is None
 
     overrides = {}
@@ -20,7 +20,7 @@ def test_apply_no_cluster_id():
 
 
 def test_apply_default_for_cluster():
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     assert defaults["cluster_id"] is None
 
     overrides = {"cluster_id": "test-cluster"}
@@ -43,7 +43,7 @@ def test_apply_default_for_cluster():
 
 
 def test_apply_for_cluster():
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     assert defaults["cluster_id"] is None
 
     cluster_dir = "/tmp/cluster"
@@ -87,7 +87,7 @@ def test_cluster_port_alias_warns_and_aliases_cluster_pool_port(caplog):
     ``cluster_pool_port`` (if the caller did not set that explicitly) and
     emits a deprecation warning.
     """
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     overrides = {"cluster_port": 6520}
 
     with caplog.at_level(logging.WARNING, logger="salt.config"):
@@ -107,7 +107,7 @@ def test_cluster_pool_port_wins_over_cluster_port_alias():
     for operators who happened to pick up the buggy name, not a co-equal
     setting.
     """
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     overrides = {"cluster_port": 55596, "cluster_pool_port": 6520}
 
     opts = salt.config.apply_master_config(overrides, defaults)
@@ -115,7 +115,7 @@ def test_cluster_pool_port_wins_over_cluster_port_alias():
 
 
 def test___cli_path_is_expanded():
-    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"}
     overrides = {}
     with patch(
         "salt.utils.path.expand", MagicMock(return_value="/path/to/testcli")
