@@ -3,7 +3,7 @@ Utilities for working with etcd
 
 .. versionadded:: 2014.7.0
 
-:depends:  - etcd3-py
+:depends:  - etcd3gw
 
 This library sets up a client object for etcd, using the configuration passed
 into the get_conn() function. Normally, this is __opts__. Optionally, a profile
@@ -71,16 +71,28 @@ always use a named configuration profile, as shown above.
 
     The etcd v2 API client (``EtcdClient``) and the ``etcd.require_v2`` option
     were removed. ``get_conn`` now always returns an :class:`EtcdClientV3`.
+
+.. versionchanged:: 3009.0
+
+    The client library changed from ``etcd3-py`` to ``etcd3gw``. Install
+    ``etcd3gw`` (``salt-pip install etcd3gw`` on onedir installs) in place of
+    ``etcd3-py``. ``etcd.username``/``etcd.password``, ``etcd.ca`` and the
+    client certificate options work as before.
 """
 
+import inspect
 import logging
+import threading
+
+import requests
 
 import salt.exceptions
 import salt.utils.msgpack
 from salt.exceptions import SaltException
 
 try:
-    import etcd3
+    import etcd3gw.exceptions
+    from etcd3gw.client import Etcd3Client
 
     HAS_ETCD_V3 = True
 except ImportError:
@@ -112,6 +124,150 @@ class EtcdUtilWatchTimeout(Exception):
     """
     A watch timed out without returning a result
     """
+
+
+class _KeyValue:
+    """
+    An etcd key-value pair, with the attribute names that callers of
+    :meth:`EtcdClientV3.read` have used since 3005.
+    """
+
+    __slots__ = ("key", "value", "create_revision", "mod_revision", "version", "lease")
+
+    def __init__(
+        self, key, value=None, create_revision=0, mod_revision=0, version=0, lease=0
+    ):
+        self.key = key
+        self.value = value
+        self.create_revision = create_revision
+        self.mod_revision = mod_revision
+        self.version = version
+        self.lease = lease
+
+    @classmethod
+    def from_etcd(cls, kv, value=None):
+        """
+        Build from an etcd ``KeyValue`` dict as returned by etcd3gw, whose
+        integer fields arrive as strings.
+        """
+        return cls(
+            kv.get("key"),
+            value if value is not None else kv.get("value"),
+            int(kv.get("create_revision", 0)),
+            int(kv.get("mod_revision", 0)),
+            int(kv.get("version", 0)),
+            int(kv.get("lease", 0)),
+        )
+
+
+def prefix_range_end(prefix):
+    """
+    Return the etcd ``range_end`` that selects every key starting with
+    ``prefix``.
+    """
+    if isinstance(prefix, str):
+        prefix = prefix.encode("utf-8")
+    end = bytearray(prefix)
+    while end:
+        if end[-1] < 0xFF:
+            end[-1] += 1
+            return bytes(end)
+        end.pop()
+    # An empty prefix, or one made only of 0xff bytes: run to the end of the
+    # keyspace.
+    return b"\0"
+
+
+def _token_rejected(exc):
+    """
+    Whether etcd rejected the request's auth token as invalid or expired
+    (HTTP 401, gRPC Unauthenticated).
+    """
+    return exc.args[:1] == ("Unauthorized",) or "invalid auth token" in (
+        getattr(exc, "detail_text", None) or ""
+    )
+
+
+def _client_class():
+    """
+    Return the etcd3gw client class to use.
+
+    etcd3gw releases without the ``username`` and ``password`` client
+    arguments cannot authenticate, so :class:`_AuthEtcd3Client` adds that.
+    Once Salt requires an etcd3gw release that has them, remove
+    ``_AuthEtcd3Client`` and use ``Etcd3Client`` directly.
+    """
+    if "username" in inspect.signature(Etcd3Client.__init__).parameters:
+        return Etcd3Client
+    return _AuthEtcd3Client
+
+
+if HAS_ETCD_V3:
+
+    class _AuthEtcd3Client(Etcd3Client):
+        """
+        etcd3gw client with user name and password authentication.
+
+        The token is set on the client's session, so it is also sent with
+        watch requests, which do not go through ``post``. A token etcd
+        rejects is replaced and the request sent once more.
+        """
+
+        def __init__(self, *args, username=None, password=None, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._salt_username = username
+            self._salt_password = password
+            self._salt_token = None
+            self._salt_auth_lock = threading.Lock()
+
+        def _salt_authenticate(self, rejected_token=None):
+            with self._salt_auth_lock:
+                if self._salt_token is not None and self._salt_token != rejected_token:
+                    # Another thread has already replaced the rejected token.
+                    return
+                # Send no token with the request: older etcd releases refuse
+                # to authenticate a request that carries an invalid one.
+                try:
+                    resp = self.session.post(
+                        self.get_url("/auth/authenticate"),
+                        json={
+                            "name": self._salt_username,
+                            "password": self._salt_password,
+                        },
+                        headers={"Authorization": None},
+                        timeout=self.timeout,
+                    )
+                except requests.exceptions.Timeout as exc:
+                    raise etcd3gw.exceptions.ConnectionTimeoutError(str(exc))
+                except requests.exceptions.ConnectionError as exc:
+                    raise etcd3gw.exceptions.ConnectionFailedError(str(exc))
+                if resp.status_code != requests.codes["ok"]:
+                    raise etcd3gw.exceptions.Etcd3Exception(resp.text, resp.reason)
+                self._salt_token = resp.json()["token"]
+                self.session.headers["Authorization"] = self._salt_token
+
+        def post(self, url, *args, **kwargs):
+            if self._salt_username is None:
+                return super().post(url, *args, **kwargs)
+            if self._salt_token is None:
+                self._salt_authenticate()
+            token = self._salt_token
+            try:
+                return super().post(url, *args, **kwargs)
+            except etcd3gw.exceptions.Etcd3Exception as exc:
+                if not _token_rejected(exc):
+                    raise
+                self._salt_authenticate(rejected_token=token)
+                return super().post(url, *args, **kwargs)
+
+        def watch_once(self, key, *args, **kwargs):
+            if self._salt_username is not None:
+                # etcd cancels a watch created with an expired token instead
+                # of returning an error, so it would never see an event. A
+                # read of the watched key first replaces an expired token; it
+                # needs only the permission the watch itself needs.
+                self.get(key, count_only=True)
+            return super().watch_once(key, *args, **kwargs)
 
 
 class EtcdBase:
@@ -347,7 +503,7 @@ class EtcdClientV3(EtcdBase):
         **kwargs,
     ):
         if not HAS_ETCD_V3:
-            raise EtcdLibraryNotInstalled("Don't have etcd3-py, need to install it.")
+            raise EtcdLibraryNotInstalled("Don't have etcd3gw, need to install it.")
         log.debug("etcd_util has the libraries needed for etcd v3")
 
         super().__init__(opts, **kwargs)
@@ -360,11 +516,17 @@ class EtcdClientV3(EtcdBase):
             "etcd.unicode_errors", "surrogateescape"
         )
 
-        # etcd3-py uses verify instead of ca_cert
-        self.xargs["verify"] = self.xargs.pop("ca_cert", None)
-        self.client = etcd3.Client(host=self.host, port=self.port, **self.xargs)
+        client_kwargs = {"host": self.host, "port": int(self.port)}
+        if "protocol" in self.xargs:
+            client_kwargs["protocol"] = self.xargs["protocol"]
+        if "ca_cert" in self.xargs:
+            client_kwargs["ca_cert"] = self.xargs["ca_cert"]
+        if "cert" in self.xargs:
+            client_kwargs["cert_cert"], client_kwargs["cert_key"] = self.xargs["cert"]
         if self.xargs.get("username") and self.xargs.get("password"):
-            self.client.auth()
+            client_kwargs["username"] = self.xargs["username"]
+            client_kwargs["password"] = self.xargs["password"]
+        self.client = _client_class()(**client_kwargs)
 
     def _maybe_decode_key(self, key, **extra_kwargs):
         extra_kwargs.setdefault("unicode_errors", self.unicode_errors)
@@ -397,10 +559,23 @@ class EtcdClientV3(EtcdBase):
     def _decode_kv(self, kv):
         try:
             kv.key = self._maybe_decode_key(kv.key)
-            kv.value = self._maybe_decode_value(kv.value)
+            # A delete event carries no value.
+            if kv.value is not None:
+                kv.value = self._maybe_decode_value(kv.value)
         except AttributeError as err:
             log.error("etcd3 decoding error: %s", err)
         return kv
+
+    def _range(self, key, recurse=False):
+        """
+        Return the key-value pairs at ``key``, or under it if ``recurse``.
+        """
+        key = self._maybe_encode_key(key)
+        kwargs = {"metadata": True}
+        if recurse:
+            kwargs["range_end"] = prefix_range_end(key)
+        items = list(self.client.get(key, **kwargs))
+        return [_KeyValue.from_etcd(kv, value) for value, kv in items]
 
     def watch(self, key, recurse=False, timeout=0, start_revision=None, **kwargs):
         if "index" in kwargs:
@@ -457,26 +632,26 @@ class EtcdClientV3(EtcdBase):
 
         if not wait:
             try:
-                result = self.client.range(self._maybe_encode_key(key), prefix=recurse)
-                kvs = getattr(result, "kvs", None)
-                if kvs is None:
+                kvs = self._range(key, recurse=recurse)
+                if not kvs:
                     log.error("etcd3 read: No values found for key %s", key)
-                else:
-                    for kv in kvs:
-                        kv = self._decode_kv(kv)
-                return kvs
+                    return None
+                return [self._decode_kv(kv) for kv in kvs]
             except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 read: %s", err)
                 return None
         else:
             try:
-                watcher = self.client.Watcher(
-                    key=self._maybe_encode_key(key),
-                    prefix=recurse,
-                    start_revision=start_revision,
+                encoded_key = self._maybe_encode_key(key)
+                watch_kwargs = {}
+                if recurse:
+                    watch_kwargs["range_end"] = prefix_range_end(encoded_key)
+                if start_revision is not None:
+                    watch_kwargs["start_revision"] = start_revision
+                event = self.client.watch_once(
+                    encoded_key, timeout=timeout, **watch_kwargs
                 )
-                watch_event = watcher.watch_once(timeout=timeout)
-                return self._decode_kv(watch_event)
+                return self._decode_kv(_KeyValue.from_etcd(event["kv"]))
             except Exception as err:  # pylint: disable=W0703
                 log.error("etcd3 watch: %s", err)
                 return None
@@ -497,12 +672,10 @@ class EtcdClientV3(EtcdBase):
 
     def write_file(self, key, value, ttl=None):
         if ttl:
-            lease = self.client.Lease(ttl=ttl)
-            lease.grant()  # We need to explicitly grant the lease
             self.client.put(
                 self._maybe_encode_key(key),
                 self._maybe_encode_value(value),
-                lease=lease.ID,
+                lease=self.client.lease(ttl=ttl),
             )
         else:
             self.client.put(
@@ -548,10 +721,11 @@ class EtcdClientV3(EtcdBase):
 
         if kwargs:
             log.warning("Invalid kwargs passed in will not be used: %s", kwargs)
-        result = self.client.delete_range(self._maybe_encode_key(key), prefix=recurse)
-        if hasattr(result, "deleted"):
-            return True if result.deleted else None
-        return False
+        key = self._maybe_encode_key(key)
+        kwargs = {}
+        if recurse:
+            kwargs["range_end"] = prefix_range_end(key)
+        return True if self.client.delete(key, **kwargs) else None
 
     def _expand_recurse(self, key, value, dest):
         """

@@ -2,7 +2,6 @@
 # We can also exclude platforms from the requirements using markers, but if a requirement only applies
 # to a particular platform, please add it to the corresponding `<platform>.txt` file in this directory.
 
-# aiohttp is a dependency of etcd3-py
 aiohttp>=3.13.5,<3.14.0; python_version < '3.10'
 aiohttp>=3.14.4; python_version >= '3.10'
 apache-libcloud>=3.8.0,<3.9.1; sys_platform != 'win32' and python_version < '3.10'
@@ -26,7 +25,7 @@ cffi>=2.0.0
 cherrypy>=18.10.0
 clustershell
 dnspython
-etcd3-py==0.1.6
+etcd3gw>=2.7.0; python_version >= '3.10'
 filelock>=3.19.1 ; python_version < '3.10'
 filelock>=3.29.1,<4.0.0 ; python_version == '3.10'
 filelock>=4.2.1 ; python_version >= '3.11'

@@ -10,7 +10,6 @@ aiohttp==3.13.5
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   aiohttp-retry
-    #   etcd3-py
     #   twilio
 aiohttp-retry==2.8.3
     # via twilio
@@ -117,7 +116,6 @@ cryptography==46.0.7
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
@@ -139,8 +137,6 @@ docker==7.1.0
     # via -r requirements/pytest.txt
 durationpy==0.10
     # via kubernetes
-etcd3-py==0.1.6
-    # via -r requirements/static/ci/common.txt
 exceptiongroup==1.1.1
     # via
     #   anyio
@@ -189,7 +185,6 @@ idna==3.18
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
     #   anyio
-    #   etcd3-py
     #   httpx
     #   requests
     #   trustme
@@ -478,7 +473,6 @@ pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   etcd3-py
 pyparsing==3.3.2
     # via junos-eznc
 pyserial==3.5
@@ -583,7 +577,6 @@ requests==2.32.5
     #   -r requirements/base.txt
     #   apache-libcloud
     #   docker
-    #   etcd3-py
     #   kubernetes
     #   moto
     #   napalm
@@ -623,8 +616,6 @@ scp==0.15.0
     #   netmiko
 secretstorage==3.3.3
     # via keyring
-semantic-version==2.10.0
-    # via etcd3-py
 setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -636,7 +627,6 @@ shellingham==1.5.4
 six==1.16.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
-    #   etcd3-py
     #   junit-xml
     #   junos-eznc
     #   kubernetes

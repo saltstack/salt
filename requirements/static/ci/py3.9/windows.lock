@@ -9,7 +9,6 @@ aiohttp==3.13.5
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   etcd3-py
 aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -105,7 +104,6 @@ cryptography==46.0.7
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   etcd3-py
     #   moto
     #   pyopenssl
     #   pyspnego
@@ -128,8 +126,6 @@ docker==7.1.0
     # via -r requirements/pytest.txt
 durationpy==0.10
     # via kubernetes
-etcd3-py==0.1.6
-    # via -r requirements/static/ci/common.txt
 exceptiongroup==1.1.1
     # via pytest
 filelock==3.19.1
@@ -167,7 +163,6 @@ idna==3.18
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
-    #   etcd3-py
     #   requests
     #   trustme
     #   yarl
@@ -400,7 +395,6 @@ pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   -r requirements/base.txt
-    #   etcd3-py
 pyspnego==0.12.0
     # via requests-ntlm
 pytest==8.4.2
@@ -502,7 +496,6 @@ requests==2.32.5
     #   -r requirements/base.txt
     #   apache-libcloud
     #   docker
-    #   etcd3-py
     #   kubernetes
     #   moto
     #   opentelemetry-exporter-otlp-proto-http
@@ -534,8 +527,6 @@ s3transfer==0.16.0
     # via boto3
 sed==0.3.1
     # via -r requirements/static/ci/windows.txt
-semantic-version==2.10.0
-    # via etcd3-py
 setproctitle==1.3.7
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
@@ -547,7 +538,6 @@ shellingham==1.5.4
 six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
-    #   etcd3-py
     #   junit-xml
     #   kubernetes
     #   python-dateutil

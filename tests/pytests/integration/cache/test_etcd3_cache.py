@@ -17,7 +17,10 @@ import pytest
 
 import salt.cache.etcd3_cache as etcd3_cache
 import salt.payload
+import salt.utils.etcd_util
+from salt.utils.etcd_util import HAS_ETCD_V3
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
+from tests.support.pytest.etcd import EtcdVersion, etcd_version_ids
 
 docker = pytest.importorskip("docker")
 
@@ -26,7 +29,7 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
     pytest.mark.skipif(
         not etcd3_cache.HAS_ETCD,
-        reason="etcd3-py is not installed",
+        reason="etcd3gw is not installed",
     ),
 ]
 
@@ -62,9 +65,28 @@ def cache(opts, monkeypatch):
     # Best-effort cleanup of this test's prefix.
     try:
         if etcd3_cache.client is not None and etcd3_cache.path_prefix:
-            etcd3_cache.client.delete_range(etcd3_cache.path_prefix + "/", prefix=True)
+            _raw_delete_prefix(etcd3_cache.path_prefix + "/")
     except Exception:  # pylint: disable=broad-except
         pass
+
+
+def _raw_get(key, prefix=False):
+    """
+    Read ``key`` (or every key under it) straight from etcd and return the
+    etcd ``KeyValue`` dicts, with the value under ``"value"`` as bytes.
+    """
+    kwargs = {"metadata": True}
+    if prefix:
+        kwargs["range_end"] = salt.utils.etcd_util.prefix_range_end(key)
+    return [
+        dict(kv, value=value) for value, kv in etcd3_cache.client.get(key, **kwargs)
+    ]
+
+
+def _raw_delete_prefix(prefix):
+    etcd3_cache.client.delete(
+        prefix, range_end=salt.utils.etcd_util.prefix_range_end(prefix)
+    )
 
 
 # --- core round-trip ---------------------------------------------------------
@@ -126,11 +148,10 @@ def test_store_writes_exactly_one_etcd_key_per_entry(cache):
     """
     cache.store("b", "k", {"v": 1})
 
-    raw = etcd3_cache.client
     # Prefix-scan the bank; only the single value key should exist.
-    bank_resp = raw.range(f"{etcd3_cache.path_prefix}/b/", prefix=True)
-    assert bank_resp.kvs and len(bank_resp.kvs) == 1
-    assert bank_resp.kvs[0].key.decode() == f"{etcd3_cache.path_prefix}/b/k"
+    kvs = _raw_get(f"{etcd3_cache.path_prefix}/b/", prefix=True)
+    assert len(kvs) == 1
+    assert kvs[0]["key"].decode() == f"{etcd3_cache.path_prefix}/b/k"
 
 
 def test_stored_value_is_msgpack_wrapped_not_base64(cache):
@@ -140,9 +161,8 @@ def test_stored_value_is_msgpack_wrapped_not_base64(cache):
     """
     cache.store("b", "k", {"v": 1})
 
-    raw = etcd3_cache.client
-    kv = raw.range(f"{etcd3_cache.path_prefix}/b/k").kvs[0]
-    payload = salt.payload.loads(kv.value)
+    kv = _raw_get(f"{etcd3_cache.path_prefix}/b/k")[0]
+    payload = salt.payload.loads(kv["value"])
     assert payload["d"] == {"v": 1}
     assert isinstance(payload["t"], int)
 
@@ -155,9 +175,8 @@ def test_updated_matches_stored_timestamp(cache):
     cache.store("b", "k", {"v": 1})
     via_updated = cache.updated("b", "k")
 
-    raw = etcd3_cache.client
-    kv = raw.range(f"{etcd3_cache.path_prefix}/b/k").kvs[0]
-    via_payload = salt.payload.loads(kv.value)["t"]
+    kv = _raw_get(f"{etcd3_cache.path_prefix}/b/k")[0]
+    via_payload = salt.payload.loads(kv["value"])["t"]
     assert via_updated == via_payload
 
 
@@ -171,16 +190,14 @@ def test_store_with_expires_attaches_lease(cache):
     """
     cache.store("tokens", "tok1", {"u": "alice"}, expires=3600)
 
-    raw = etcd3_cache.client
-    kv = raw.range(f"{etcd3_cache.path_prefix}/tokens/tok1").kvs[0]
-    assert kv.lease != 0, "lease should be attached when expires> 0"
+    kv = _raw_get(f"{etcd3_cache.path_prefix}/tokens/tok1")[0]
+    assert int(kv.get("lease", 0)) != 0, "lease should be attached when expires> 0"
 
 
 def test_store_without_expires_has_no_lease(cache):
     cache.store("bank", "k", "v")
-    raw = etcd3_cache.client
-    kv = raw.range(f"{etcd3_cache.path_prefix}/bank/k").kvs[0]
-    assert kv.lease == 0, "no lease should be attached without expires="
+    kv = _raw_get(f"{etcd3_cache.path_prefix}/bank/k")[0]
+    assert int(kv.get("lease", 0)) == 0, "no lease should be attached without expires="
 
 
 def test_store_with_expires_actually_expires_the_key(cache):
@@ -436,7 +453,7 @@ def test_flush_does_not_touch_keys_outside_path_prefix(cache):
 
         # Sanity: foreign keys are there.
         for k in foreign_keys:
-            assert raw.range(k).kvs, f"foreign key {k} did not land"
+            assert _raw_get(k), f"foreign key {k} did not land"
 
         # Store something in our cache and then flush aggressively.
         cache.store("bank1", "k1", "v1")
@@ -451,13 +468,13 @@ def test_flush_does_not_touch_keys_outside_path_prefix(cache):
 
         # Foreign keys must still be intact.
         for k in foreign_keys:
-            resp = raw.range(k)
-            assert resp.kvs, f"flush() reached foreign key {k}"
-            assert resp.kvs[0].value == b"foreign-data"
+            kvs = _raw_get(k)
+            assert kvs, f"flush() reached foreign key {k}"
+            assert kvs[0]["value"] == b"foreign-data"
     finally:
         # Clean up the foreign keys regardless of test outcome.
         try:
-            raw.delete_range(foreign_prefix + "/", prefix=True)
+            _raw_delete_prefix(foreign_prefix + "/")
         except Exception:  # pylint: disable=broad-except
             pass
 

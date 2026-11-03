@@ -4,7 +4,7 @@ Manage etcd Keys
 
 .. versionadded:: 2015.8.0
 
-:depends:  - etcd3-py
+:depends:  - etcd3gw
 
 This state module supports setting and removing keys from etcd.
 
@@ -172,7 +172,7 @@ NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
 
 def __virtual__():
     """
-    Only return if etcd3-py is installed
+    Only return if etcd3gw is installed
     """
     if HAS_LIBS:
         return __virtualname__
