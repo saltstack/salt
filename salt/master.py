@@ -3123,9 +3123,10 @@ class AESFuncs(TransportMethods):
                 load["id"],
                 load["grains"],
             )
-            await loop.run_in_executor(
-                None, self.masterapi.cache.store, "pillar", load["id"], data
-            )
+            if salt.pillar.update_minion_snapshot(load):
+                await loop.run_in_executor(
+                    None, self.masterapi.cache.store, "pillar", load["id"], data
+                )
 
             if self.opts.get("minion_data_cache_events") is True:
                 await self.event.fire_event_async(
@@ -3801,7 +3802,8 @@ class AESFuncs(TransportMethods):
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
             self.masterapi.cache.store("grains", load["id"], load["grains"])
-            self.masterapi.cache.store("pillar", load["id"], data)
+            if salt.pillar.update_minion_snapshot(load):
+                self.masterapi.cache.store("pillar", load["id"], data)
 
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(

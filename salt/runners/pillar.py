@@ -101,9 +101,12 @@ def show_pillar(minion="*", **kwargs):
 
 def clear_pillar_cache(minion="*", **kwargs):
     """
-    Clears the cached values when using pillar_cache.
+    Clears the compiled pillar cache used by ``pillar_cache``.
     Returns True on success.
-    Returns False if pillar_cache or minion_data_cache are not enabled.
+    Returns False if ``pillar_cache`` is not enabled.
+
+    This does not touch the pillar data that minion targeting reads from the
+    minion data cache; use ``cache.clear_pillar`` for that.
 
     .. versionadded:: 3003
 
@@ -117,7 +120,7 @@ def clear_pillar_cache(minion="*", **kwargs):
 
     """
 
-    if not (__opts__.get("pillar_cache") or __opts__.get("minion_data_cache")):
+    if not __opts__.get("pillar_cache"):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 
@@ -146,7 +149,10 @@ def clear_pillar_cache(minion="*", **kwargs):
 
 def show_pillar_cache(minion="*", **kwargs):
     """
-    Shows the cached values in pillar_cache
+    Shows the compiled pillars cached by ``pillar_cache``.
+
+    This is not the pillar data that minion targeting reads from the minion
+    data cache.
 
     .. versionadded:: 3003
 
@@ -160,7 +166,7 @@ def show_pillar_cache(minion="*", **kwargs):
 
     """
 
-    if not (__opts__.get("pillar_cache") or __opts__.get("minion_data_cache")):
+    if not __opts__.get("pillar_cache"):
         log.info("The pillar_cache is set to False or not enabled.")
         return False
 

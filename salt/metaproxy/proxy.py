@@ -75,6 +75,7 @@ async def post_master_init(self, master):
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=True,
         ).compile_pillar()
 
     if "proxy" not in self.opts["pillar"] and "proxy" not in self.opts:

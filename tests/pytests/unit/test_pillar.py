@@ -19,7 +19,7 @@ import salt.exceptions
 import salt.fileclient
 import salt.utils.stringutils
 from salt.utils.files import fopen
-from tests.support.mock import ANY, MagicMock, call, patch
+from tests.support.mock import ANY, AsyncMock, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -1266,6 +1266,7 @@ def test_pillar_send_extra_minion_data_from_config(tmp_pki, grains):
             "saltenv": "fake_env",
             "pillarenv": "fake_pillar_env",
             "pillar_override": {},
+            "snapshot": False,
             "extra_minion_data": {"path_to_add": "fake_data"},
         },
         dictkey="pillar",
@@ -1512,3 +1513,32 @@ def test_pillar_functions_masterless_id_unchanged():
         opts = _min_pillar_opts(id="myminion")
         pillar = salt.pillar.Pillar(opts, {"os": "Ubuntu"}, "myminion", "base")
         assert pillar.functions.opts["id"] == "myminion"
+
+
+@pytest.mark.parametrize("snapshot", [False, True])
+def test_remote_pillar_sends_snapshot_flag(minion_opts, snapshot):
+    minion_opts["file_client"] = "remote"
+    channel = MagicMock(crypted_transfer_decode_dictentry=MagicMock(return_value={}))
+    with patch("salt.channel.client.ReqChannel.factory", return_value=channel):
+        pillar = salt.pillar.get_pillar(
+            minion_opts, {}, "minion", "base", snapshot=snapshot
+        )
+        pillar.compile_pillar()
+    load = channel.crypted_transfer_decode_dictentry.call_args.args[0]
+    assert load["snapshot"] is snapshot
+
+
+async def test_async_remote_pillar_sends_snapshot_flag(minion_opts):
+    minion_opts["file_client"] = "remote"
+    channel = MagicMock(
+        crypted_transfer_decode_dictentry=AsyncMock(return_value={}),
+        close_async=AsyncMock(),
+    )
+    with patch("salt.channel.client.AsyncReqChannel.factory", return_value=channel):
+        pillar = salt.pillar.get_async_pillar(
+            minion_opts, {}, "minion", "base", snapshot=True
+        )
+        await pillar.compile_pillar()
+        await pillar.aclose()
+    load = channel.crypted_transfer_decode_dictentry.call_args.args[0]
+    assert load["snapshot"] is True

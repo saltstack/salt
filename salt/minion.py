@@ -901,6 +901,7 @@ class MinionBase:
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             try:
                 self.opts["pillar"] = pillar.compile_pillar()
@@ -2396,6 +2397,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
             # Async aclose awaits the transport's send/recv exit
@@ -4702,6 +4704,7 @@ class Minion(MinionBase):
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
                 clean_cache=clean_cache,
+                snapshot=True,
             )
             try:
                 new_pillar = await async_pillar.compile_pillar()
@@ -6938,6 +6941,7 @@ class SProxyMinion(SMinion):
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=True,
         )
         try:
             new_pillar = pillar.compile_pillar()

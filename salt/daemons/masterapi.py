@@ -844,7 +844,8 @@ class RemoteFuncs:
         data = pillar.compile_pillar()
         if self.opts.get("minion_data_cache", False):
             self.cache.store("grains", load["id"], load["grains"])
-            self.cache.store("pillar", load["id"], data)
+            if salt.pillar.update_minion_snapshot(load):
+                self.cache.store("pillar", load["id"], data)
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"comment": "Minion data cache refresh"},
