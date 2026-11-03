@@ -1759,7 +1759,11 @@ async def test_req_server_garbage_request(io_loop):
     Validate invalid msgpack messages will not raise exceptions in the
     RequestServers's message handler.
     """
-    opts = salt.config.master_config("")
+    opts = salt.config.master_config(
+        "",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+        | {"id": "transport-test-master"},
+    )
     request_server = salt.transport.zeromq.RequestServer(opts)
 
     def message_handler(payload):
