@@ -1165,7 +1165,8 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts, capl
             await server.publish(b"payload")
 
         # The reconnect is logged so a dropped connection is visible.
-        assert "closed; reconnecting and sending again" in caplog.text
+        assert "reconnecting and sending again" in caplog.text
+        assert "StreamClosedError" in caplog.text
 
         # The stale publisher must have had ``close()`` called on it
         # before being replaced.
