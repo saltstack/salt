@@ -71,7 +71,7 @@ class LazyLoaderTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -152,7 +152,7 @@ class LazyLoaderUtilsTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -226,7 +226,7 @@ class LazyLoaderVirtualEnabledTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["disable_modules"] = ["pillar"]
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
@@ -368,7 +368,7 @@ class LazyLoaderVirtualDisabledTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
         cls.proxy = salt.loader.proxy(cls.opts)
@@ -411,7 +411,7 @@ class LazyLoaderWhitelistTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
         cls.proxy = salt.loader.proxy(cls.opts)
@@ -454,7 +454,7 @@ class LazyLoaderGrainsBlacklistTest(TestCase):
     """
 
     def setUp(self):
-        self.opts = salt.config.minion_config(None)
+        self.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
 
     def tearDown(self):
         del self.opts
@@ -478,7 +478,7 @@ class LazyLoaderSingleItem(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
         cls.proxy = salt.loader.proxy(cls.opts)
@@ -553,7 +553,7 @@ class LazyLoaderReloadingTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -750,7 +750,7 @@ class LazyLoaderVirtualAliasTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -842,7 +842,7 @@ class LazyLoaderSubmodReloadingTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -1028,7 +1028,7 @@ class LazyLoaderModulePackageTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -1148,7 +1148,7 @@ class LazyLoaderDeepSubmodReloadingTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
@@ -1270,7 +1270,7 @@ class LoaderMultipleGlobalTest(ModuleCase):
     """
 
     def setUp(self):
-        opts = salt.config.minion_config(None)
+        opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         self.loader1 = salt.loader.LazyLoader(
             salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
             copy.deepcopy(opts),
@@ -1318,7 +1318,7 @@ class LoaderCleanupTest(ModuleCase):
     """
 
     def setUp(self):
-        opts = salt.config.minion_config(None)
+        opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         self.loader1 = salt.loader.LazyLoader(
             salt.loader._module_dirs(copy.deepcopy(opts), "modules", "module"),
             copy.deepcopy(opts),
@@ -1477,7 +1477,7 @@ class LoaderGlobalsTest(ModuleCase):
             - __grains__
             - __context__
         """
-        opts = salt.config.minion_config(None)
+        opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         opts["grains"] = salt.loader.grains(opts)
         utils = salt.loader.utils(opts)
         proxy = salt.loader.proxy(opts)
@@ -1502,7 +1502,7 @@ class RawModTest(TestCase):
     """
 
     def setUp(self):
-        self.opts = salt.config.minion_config(None)
+        self.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
 
     def tearDown(self):
         del self.opts
@@ -1546,7 +1546,7 @@ class LazyLoaderOptimizationOrderTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
         cls.proxy = salt.loader.proxy(cls.opts)
@@ -1673,7 +1673,7 @@ class LoaderLoadCachedGrainsTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         if not os.path.isdir(RUNTIME_VARS.TMP):
             os.makedirs(RUNTIME_VARS.TMP)
 
@@ -1726,7 +1726,7 @@ class LazyLoaderRefreshFileMappingTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.opts = salt.config.minion_config(None)
+        cls.opts = salt.config.minion_config(None, minion_id="loader-test-minion")
         cls.opts["grains"] = salt.loader.grains(cls.opts)
         cls.utils = salt.loader.utils(copy.deepcopy(cls.opts))
         cls.proxy = salt.loader.proxy(cls.opts)
