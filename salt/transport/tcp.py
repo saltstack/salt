@@ -2013,6 +2013,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             payload, topic_list, raw_payload=raw_payload
         )
 
+    def _pull_target(self):
+        """Where this server's events are published, for messages."""
+        return self.pull_path or f"{self.pull_host}:{self.pull_port}"
+
+    def _closed_error(self, doing="being used"):
+        # close() was called on this server; something still tries to use it.
+        return ClosingError(
+            f"Publish server for {self._pull_target()} was already closed by"
+            f" close() and is still {doing}"
+        )
+
     def _new_publisher(self, loop):
         return _AsyncPubServerPublisher(
             self.pull_host,
@@ -2023,8 +2034,20 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         )
 
     def _publisher_for_loop(self):
+        # Four cases, and what each one does:
+        #
+        # - First use: nothing is connected yet. Connect on demand, in
+        #   connect() and publish().
+        # - We closed it: close() was called on this server, so _closing is set.
+        #   It stays closed. Raise ClosingError. Reconnecting would open a
+        #   connection that nobody closes.
+        # - The other side closed it (for example the event publisher restarted):
+        #   the stream is closed but this server is not. Reconnect, and after a
+        #   failed send reconnect and send once more (see publish()).
+        # - Any other failure (refused, timeout): raise it to the caller, which
+        #   decides whether to retry or to drop the event.
         if self._closing:
-            raise ClosingError("Publish server is closed")
+            raise self._closed_error()
         loop = asyncio.get_running_loop()
         # A cached publisher holds its loop, so the weak key alone never lets
         # go of it. Drop publishers whose loop has been closed.
@@ -2034,7 +2057,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 try:
                     old_publisher.close()
                 except Exception:  # pylint: disable=broad-except
-                    pass
+                    log.debug(
+                        "Error closing the publisher for %s of a closed loop",
+                        self._pull_target(),
+                        exc_info=True,
+                    )
         entry = self._async_pub_by_loop.get(loop)
         if entry is None:
             # One server can still be used from several loops.
@@ -2054,7 +2081,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         loop, (_, lock) = self._publisher_for_loop()
         async with lock:
             if self._closing:
-                raise ClosingError("Publish server is closed")
+                raise self._closed_error()
             publisher, _ = self._async_pub_by_loop[loop]
             await publisher.connect(timeout=timeout)
 
@@ -2092,21 +2119,25 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             return
         loop, (_, lock) = self._publisher_for_loop()
         async with lock:
+            # close() may have run while we waited for the lock (see
+            # _publisher_for_loop for the cases).
             if self._closing:
-                raise ClosingError("Publish server is closed")
+                raise self._closed_error()
             # A preceding sender may have replaced the connection while we waited.
             publisher, _ = self._async_pub_by_loop[loop]
             try:
                 await publisher.connect()
                 await publisher.send(payload)
-            except tornado.iostream.StreamClosedError:
+            except tornado.iostream.StreamClosedError as exc:
                 log.debug(
-                    "Publisher stream to %s closed; reconnecting and sending again",
-                    self.pull_path or f"{self.pull_host}:{self.pull_port}",
+                    "Publisher stream to %s closed (%r); reconnecting and sending"
+                    " again",
+                    self._pull_target(),
+                    exc,
                 )
                 publisher.close()
                 if self._closing:
-                    raise ClosingError("Publish server is closed") from None
+                    raise self._closed_error("publishing") from None
                 publisher = self._new_publisher(loop)
                 self._async_pub_by_loop[loop] = (publisher, lock)
                 await publisher.connect()
@@ -2567,6 +2598,17 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
     # event bus wait that long too.
     _connect_retry_delay = 0.1
 
+    def _target(self):
+        """The address this publisher connects to, for messages."""
+        return self.path or f"{self.host}:{self.port}"
+
+    def _closed_error(self, doing="connecting"):
+        # close() was called on this publisher; something still tries to use it.
+        return ClosingError(
+            f"Publisher for {self._target()} was already closed by close() and"
+            f" is still {doing}"
+        )
+
     def __init__(self, host, port, path, io_loop=None, max_write_buffer_size=None):
         if io_loop is None:
             io_loop = asyncio.get_running_loop()
@@ -2588,7 +2630,7 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
         deadline = None if timeout is None else self.io_loop.time() + timeout
         async with self._connect_lock:
             if self._closing:
-                raise ClosingError("Publisher is closed")
+                raise self._closed_error()
             if self.connected():
                 return True
             if self.path:
@@ -2600,7 +2642,7 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
                 sock_addr = (self.host, self.port)
             while True:
                 if self._closing:
-                    raise ClosingError("Publisher is closed")
+                    raise self._closed_error()
                 sock = socket.socket(sock_type, socket.SOCK_STREAM)
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.stream = tornado.iostream.IOStream(sock)
@@ -2614,7 +2656,10 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
                     )
                     await asyncio.wait_for(self.stream.connect(sock_addr), remaining)
                     if self._closing:
-                        raise ClosingError("Publisher closed before connect completed")
+                        raise ClosingError(
+                            f"Publisher for {self._target()} was closed by close()"
+                            " while it was connecting"
+                        )
                     return True
                 except asyncio.CancelledError:
                     self.stream.close()
@@ -2625,13 +2670,19 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
                     self.stream = None
                     if self._closing:
                         raise ClosingError(
-                            "Publisher closed before connect completed"
+                            f"Publisher for {self._target()} was closed by close()"
+                            " while it was connecting"
                         ) from None
+                    if isinstance(exc, asyncio.TimeoutError):
+                        # wait_for raises a bare TimeoutError; say what timed out.
+                        exc = asyncio.TimeoutError(
+                            f"Timed out connecting to {self._target()}"
+                        )
                     remaining = (
                         None if deadline is None else deadline - self.io_loop.time()
                     )
                     if remaining is None or remaining <= 0:
-                        raise
+                        raise exc
                     await asyncio.sleep(min(self._connect_retry_delay, remaining))
                     if remaining <= self._connect_retry_delay:
                         # That wait used up the time: report the real error.

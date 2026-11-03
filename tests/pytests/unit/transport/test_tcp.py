@@ -2660,3 +2660,24 @@ def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
     )
     # And the stream itself must be closed.
     fake_stream.close.assert_called()
+
+
+async def test_closing_error_names_the_target(master_opts):
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts, master_async_mworker=True),
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    server.close()
+    with pytest.raises(
+        salt.transport.tcp.ClosingError,
+        match="127.0.0.1:5152 was already closed by close",
+    ):
+        await server.publish(b"event")
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 5152, None)
+    publisher.close()
+    with pytest.raises(
+        salt.transport.tcp.ClosingError,
+        match="127.0.0.1:5152 was already closed by close",
+    ):
+        await publisher.connect()
