@@ -81,6 +81,26 @@ def test_chugid(account_1):
         assert testfile_stat.st_gid == account_1.info.gid
 
 
+def test_chugid_ignores_inherited_login_name(account_1, monkeypatch):
+    monkeypatch.setenv("LOGNAME", account_1.username)
+
+    ret = subprocess.run(
+        ["id", "-u"],
+        preexec_fn=functools.partial(
+            salt.utils.user.chugid_and_umask,
+            runas=account_1.username,
+            umask=None,
+            group=None,
+        ),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert ret.returncode == 0
+    assert int(ret.stdout.strip()) == account_1.info.uid
+
+
 def test_chugid_and_group(account_1, account_2, tmp_path):
 
     # Since we're changing accounts to touch the file, the parent directory must be world-writable

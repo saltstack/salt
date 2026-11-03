@@ -1,7 +1,11 @@
+import contextlib
+import json
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
+from collections.abc import Iterator
 
 import pytest
 from saltfactories.utils import random_string
@@ -123,3 +127,53 @@ def test_salt_call_preserves_ownership(non_root_minion, salt_call_wrapper):
     # Ensure we actually checked some files (cache shouldn't be empty after running a command)
     # salt-call usually populates grains/minion_id/etc in cache
     assert files_checked > 0, "No files found in cache directory to check"
+
+
+@pytest.mark.destructive_test
+@pytest.mark.skip_if_not_root
+@pytest.mark.skip_on_windows
+@pytest.mark.skipif(shutil.which("sudo") is None, reason="sudo is not available")
+def test_salt_call_runas_ignores_inherited_login_name(salt_minion, salt_call_wrapper):
+    """Ensure sudo salt-call switches UIDs when the runas user matches the user invoking sudo
+    """
+    with pytest.helpers.create_account() as account:
+        salt_call_args = [
+            "--local",
+            "--out=json",
+            "-c",
+            str(salt_minion.config_dir),
+            "cmd.run",
+            "id",
+            f"runas={account.username}",
+        ]
+        allowed_command = [salt_call_wrapper, *salt_call_args]
+        with temporary_sudoers_rule(account.username, allowed_command):
+            command = [
+                "sudo",
+                "-n",
+                "-u",
+                account.username,
+                "sudo",
+                "-n",
+                *allowed_command,
+            ]
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+
+        actual_uid = json.loads(result.stdout)["local"]
+        assert actual_uid.startswith(f"uid={account.info.uid}(")
+
+
+@contextlib.contextmanager
+def temporary_sudoers_rule(username: str, command: list[str]) -> Iterator[None]:
+    """Allow one user to run a specific command as root during a test.
+    """
+    sudoers_rule = f"{username} ALL=(root) NOPASSWD: {' '.join(command)}\n"
+    sudoers_path = pathlib.Path("/etc/sudoers.d") / f"salt-runas-{username}"
+    fd = os.open(sudoers_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o400)
+    try:
+        with os.fdopen(fd, "w") as policy_file:
+            policy_file.write(sudoers_rule)
+        sudoers_path.chmod(0o440)
+        yield
+    finally:
+        sudoers_path.unlink()

@@ -45,3 +45,19 @@ def test_get_group_list():
         group_list = salt.utils.user.get_group_list("salt")
         assert group_list == ["games", "remote", "salt"]
         getgrgid.assert_called_once()
+
+
+def test_chugid_and_umask_ignores_inherited_login_name(monkeypatch):
+    monkeypatch.setenv("LOGNAME", "non-root")
+    current_user = SimpleNamespace(pw_name="root", pw_gid=0)
+    current_group = SimpleNamespace(gr_name="root")
+    chugid = MagicMock()
+
+    with patch("salt.utils.user.os.getuid", return_value=0), \
+      patch("salt.utils.user.pwd.getpwuid", return_value=current_user), \
+      patch("salt.utils.user.pwd.getpwnam", return_value=current_user), \
+      patch("salt.utils.user.grp.getgrgid", return_value=current_group), \
+      patch("salt.utils.user.chugid", chugid):
+        salt.utils.user.chugid_and_umask("non-root", None)
+
+    chugid.assert_called_once_with("non-root", "root")
