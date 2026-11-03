@@ -109,11 +109,10 @@ class SaltPeer(Peer):
     """
     A ``Peer`` that sends Raft RPCs over the cluster pool channel.
 
-    :param node_id:       The remote master's node-id — its
-                          ``opts["interface"]`` address (matches the
-                          entries in ``opts["cluster_peers"]`` and the
-                          ``peer_pushers`` keys used everywhere else
-                          in the cluster code).
+    :param node_id:       The remote master's node-id — the identity it
+                          publishes as ``peer_id`` (matches the entries in
+                          ``opts["cluster_peers"]`` and the ``peer_pushers``
+                          keys used everywhere else in the cluster code).
     :param pusher:        The ``PublishServer`` instance already
                           connected to that master's
                           ``cluster_pool_port``.
@@ -272,10 +271,9 @@ class RaftDispatcher:
                       mapping group-id to its local ``Node``.  Passing
                       a single Node preserves the pre-multi-ring
                       constructor signature.
-    :param local_id:  This master's node-id (``opts["interface"]``) — used as
-                      ``src`` in outbound RPC envelopes.
-    :param pushers:   Dict mapping peer node-id (interface address) ->
-                      ``PublishServer`` pusher.
+    :param local_id:  This master's node-id (:func:`salt.cluster.node_id`) —
+                      used as ``src`` in outbound RPC envelopes.
+    :param pushers:   Dict mapping peer node-id -> ``PublishServer`` pusher.
     """
 
     def __init__(self, node, local_id, pushers):

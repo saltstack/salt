@@ -206,6 +206,7 @@ def test_pip_args_installing_with_target():
 
 
 @pytest.mark.skip_on_windows(reason="Linux-only multiprocessing default change")
+@pytest.mark.skip_on_darwin(reason="salt.scripts does not pin fork on macOS")
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="Pre-3.14 already defaulted to fork on Linux",
@@ -221,6 +222,7 @@ def test_salt_scripts_pins_fork_start_method():
 
 
 @pytest.mark.skip_on_windows(reason="Linux-only multiprocessing default change")
+@pytest.mark.skip_on_darwin(reason="salt.scripts does not pin fork on macOS")
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="Pre-3.14 already defaulted to fork on Linux",
