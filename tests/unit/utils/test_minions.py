@@ -71,7 +71,11 @@ class CkMinionsTestCase(TestCase):
     """
 
     def setUp(self):
-        opts = salt.config.master_config(None)
+        opts = salt.config.master_config(
+            None,
+            defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+            | {"id": "minions-test-master"},
+        )
         opts["minion_data_cache"] = True
         self.ckminions = salt.utils.minions.CkMinions(opts)
 
