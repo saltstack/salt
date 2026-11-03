@@ -106,9 +106,8 @@ class OutputReturnTest(ShellCase):
         """
         Tests outputter reliability with utf8
         """
-        opts = salt.config.minion_config(
-            os.path.join(RUNTIME_VARS.TMP_CONF_DIR, "minion")
-        )
+        # The master's config directory need not contain the minion's config.
+        opts = salt.config.minion_config(self.get_config_file_path("minion"))
         opts["output_file"] = os.path.join(RUNTIME_VARS.TMP, "outputtest")
         data = {"foo": {"result": False, "aaa": "azerzaeréééé", "comment": "ééééàààà"}}
         try:
