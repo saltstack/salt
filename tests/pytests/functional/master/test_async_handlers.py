@@ -72,7 +72,7 @@ def _make_worker(aes_funcs):
 def _base_opts(tmp_path):
     """Full ``AESFuncs`` opts backed by ``tmp_path``.
 
-    Uses ``salt.config.master_config(None)`` so every default (of which
+    Uses a master configuration file with an explicit ID so every default (of which
     the fileserver/pillar backends read many) is populated; only the
     per-test paths and a few knobs are overridden.
     """
@@ -84,12 +84,14 @@ def _base_opts(tmp_path):
     (pki_dir / "minions_denied").mkdir()
     (tmp_path / "cache").mkdir()
     (tmp_path / "sock_drawer").mkdir()
-    opts = salt.config.master_config(None)
+    config_file = tmp_path / "config.conf"
+    config_file.write_text("id: master\n", encoding="utf-8")
+    opts = salt.config.master_config(str(config_file))
     opts["__role"] = "master"
     opts["pki_dir"] = str(pki_dir)
     opts["cachedir"] = str(tmp_path / "cache")
     opts["sock_dir"] = str(tmp_path / "sock_drawer")
-    opts["conf_file"] = str(tmp_path / "config.conf")
+    opts["conf_file"] = str(config_file)
     opts["fileserver_backend"] = ["roots"]
     opts["master_job_cache"] = "local_cache"
     opts["job_cache"] = True
@@ -97,7 +99,6 @@ def _base_opts(tmp_path):
     opts["keys.cache_driver"] = "localfs_key"
     opts["optimization_order"] = [0, 1, 2]
     opts["master_sign_key_name"] = "master_sign"
-    opts["id"] = "master"
     opts["pillar_version"] = 2
     opts["minion_data_cache"] = False
     opts["minion_data_cache_events"] = False
