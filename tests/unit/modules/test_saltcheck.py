@@ -25,7 +25,7 @@ class SaltcheckTestCase(TestCase, LoaderModuleMockMixin):
         tmp_root = tempfile.mkdtemp(prefix="saltcheck-test-")
         self.addCleanup(lambda: shutil.rmtree(tmp_root, ignore_errors=True))
         local_opts = salt.config.minion_config(
-            os.path.join(syspaths.CONFIG_DIR, "minion")
+            os.path.join(syspaths.CONFIG_DIR, "minion"), minion_id="client-test-minion"
         )
         local_opts["file_client"] = "local"
         local_opts["conf_file"] = "/etc/salt/minion"
