@@ -95,13 +95,20 @@ def mworker_opts(tmp_path):
     plain non-pooled ReqServerChannel.
     """
     root = tmp_path / "master"
-    opts = salt.config.master_config(None)
+    opts = salt.config.master_config(
+        None,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "master-test-master"},
+    )
     opts["__role"] = "master"
     opts["root_dir"] = str(root)
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
         d = root / name
         d.mkdir(parents=True, exist_ok=True)
         opts[name] = str(d)
+    # Clients created by the worker reload this file before applying overrides.
+    config_file = root / "conf_dir" / "master"
+    config_file.write_text("id: master-test-master\n", encoding="utf-8")
+    opts["conf_file"] = str(config_file)
     opts["log_file"] = str(root / "master.log")
     # Non-pooled path — MWorker + a plain ReqServerChannel over zmq TCP.
     opts["worker_pools_enabled"] = False
