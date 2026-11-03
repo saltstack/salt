@@ -171,15 +171,38 @@ def test_no_snapshot_without_minion_data_cache(opts):
     assert handler.masterapi.cache.fetch("pillar", MINION_ID) == {}
 
 
-def test_request_overrides_do_not_enter_compilation_cache(opts):
+def test_request_overrides_do_not_enter_caches(opts):
     handler = _handler(opts)
     override = {"temporary": "request-only"}
     with patch("salt.pillar.Pillar.compile_pillar", return_value=PILLARS["base"]):
+        _request(handler, "base")
         result = _request(handler, "base", pillar_override=override)
         assert result == {**PILLARS["base"], **override}
-        assert handler.masterapi.cache.fetch("pillar", MINION_ID) == result
+        assert handler.masterapi.cache.fetch("pillar", MINION_ID) == PILLARS["base"]
         assert _compiler(opts, "base").cached_pillar() == PILLARS["base"]
         assert _request(handler, "base") == PILLARS["base"]
+
+
+@pytest.mark.parametrize(
+    "extra, updates",
+    [
+        ({}, True),  # minions that predate the snapshot field
+        ({"snapshot": True}, True),
+        ({"snapshot": False}, False),
+        ({"snapshot": True, "pillar_override": {"x": 1}}, False),
+    ],
+)
+def test_only_regular_requests_update_snapshot(opts, extra, updates):
+    handler = _handler(opts)
+    with patch(
+        "salt.pillar.Pillar.compile_pillar",
+        autospec=True,
+        side_effect=lambda pillar: PILLARS[pillar.opts["pillarenv"]],
+    ):
+        _request(handler, None, snapshot=True)
+        _request(handler, "dev", **extra)
+    expected = PILLARS["dev"] if updates else PILLARS[None]
+    assert handler.masterapi.cache.fetch("pillar", MINION_ID) == expected
 
 
 def test_compilation_ttl_does_not_expire_snapshot(opts):

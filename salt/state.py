@@ -1057,6 +1057,7 @@ class State:
             self.opts["saltenv"],
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=not self._pillar_override,
         )
         try:
             return pillar.compile_pillar()

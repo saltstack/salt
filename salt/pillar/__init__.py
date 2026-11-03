@@ -30,6 +30,19 @@ from salt.version import __version__
 log = logging.getLogger(__name__)
 
 
+def update_minion_snapshot(load):
+    """
+    Whether a master-side ``_pillar`` request should refresh the pillar
+    snapshot in the minion data cache that pillar targeting reads.
+
+    Only a minion's regular pillar fetch qualifies. One-off queries
+    (``pillar.items pillarenv=...``) and requests with ``pillar_override`` do
+    not describe the pillar the minion actually holds. Minions that predate the
+    ``snapshot`` field do not send it, so it defaults to True for them.
+    """
+    return bool(load.get("snapshot", True)) and not load.get("pillar_override")
+
+
 def get_pillar(
     opts,
     grains,
@@ -41,9 +54,14 @@ def get_pillar(
     pillarenv=None,
     extra_minion_data=None,
     clean_cache=False,
+    snapshot=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
+
+    ``snapshot`` marks the request as the minion fetching its own regular
+    pillar (startup, refresh, highstate). Only such requests update the
+    master's minion data cache used for pillar targeting.
     """
     # When file_client is 'local' this makes the minion masterless
     # but sometimes we want the minion to read its files from the local
@@ -87,6 +105,7 @@ def get_pillar(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
         extra_minion_data=extra_minion_data,
+        **({"snapshot": snapshot} if file_client == "remote" else {}),
     )
 
 
@@ -102,9 +121,14 @@ def get_async_pillar(
     pillarenv=None,
     extra_minion_data=None,
     clean_cache=False,
+    snapshot=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
+
+    ``snapshot`` marks the request as the minion fetching its own regular
+    pillar (startup, refresh, highstate). Only such requests update the
+    master's minion data cache used for pillar targeting.
     """
     file_client = opts["file_client"]
     if opts.get("master_type") == "disable" and file_client == "remote":
@@ -128,6 +152,7 @@ def get_async_pillar(
             pillarenv=pillarenv,
             extra_minion_data=extra_minion_data,
             clean_cache=clean_cache,
+            snapshot=snapshot,
         )
     return ptype(
         opts,
@@ -217,6 +242,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         pillarenv=None,
         extra_minion_data=None,
         clean_cache=False,
+        snapshot=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
@@ -242,6 +268,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         )
         self._closing = False
         self.clean_cache = clean_cache
+        self.snapshot = snapshot
 
     async def compile_pillar(self):
         """
@@ -254,6 +281,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             "pillarenv": self.opts["pillarenv"],
             "pillar_override": self.pillar_override,
             "extra_minion_data": self.extra_minion_data,
+            "snapshot": self.snapshot,
             "ver": "2",
             "cmd": "_pillar",
         }
@@ -369,6 +397,7 @@ class RemotePillar(RemotePillarMixin):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        snapshot=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
@@ -393,6 +422,7 @@ class RemotePillar(RemotePillarMixin):
             merge_lists=True,
         )
         self._closing = False
+        self.snapshot = snapshot
 
     def compile_pillar(self):
         """
@@ -405,6 +435,7 @@ class RemotePillar(RemotePillarMixin):
             "pillarenv": self.opts["pillarenv"],
             "pillar_override": self.pillar_override,
             "extra_minion_data": self.extra_minion_data,
+            "snapshot": self.snapshot,
             "ver": "2",
             "cmd": "_pillar",
         }
