@@ -5278,21 +5278,24 @@ configuration options to fully understand the tunable parameters and their impli
     :ref:`targeting minions with pillar <targeting-pillar>`.
 
 Compiled pillars are stored in the ``pillar_compile`` cache bank, using
-``pillar.cache_driver`` when configured. The separate ``pillar`` bank contains
-minion snapshots in the default cache backend. With ``minion_data_cache``
-enabled, a successful minion pillar request updates its snapshot, including
-when the compiled pillar was already cached. Targeting reads this snapshot
-under the plain minion id; it reflects the most recent pillar request for that
-minion. Compiling a pillar directly, such as with ``pillar.show_pillar``, does
-not replace that snapshot.
+``pillar.cache_driver`` when configured. The separate ``pillar`` bank holds the
+pillar snapshot that :ref:`pillar targeting <targeting-pillar>` reads, stored
+under the plain minion id in the default cache backend.
+
+With ``minion_data_cache`` enabled, the snapshot is refreshed when a minion
+fetches its own regular pillar: on startup, on ``saltutil.refresh_pillar`` and
+during a highstate. This also happens when the compiled pillar was already
+cached. One-off queries such as ``pillar.items pillarenv=dev``, requests with a
+``pillar`` override, and direct compilation such as ``pillar.show_pillar`` do
+not change the snapshot. Minions older than this change always refresh it.
 
 After upgrading, old compilation entries in the ``pillar`` bank are not reused;
 each requested minion/environment combination is compiled again on first use.
-Use ``pillar.clear_pillar_cache`` to clear compilation results, and
-``cache.clear_pillar`` to clear minion snapshots. The next minion pillar request
-repopulates its snapshot even on a compilation cache hit. The asynchronous
-master request path also writes snapshots; its compilation caching support is
-unchanged.
+``pillar.clear_pillar_cache`` and ``pillar.show_pillar_cache`` work on the
+compilation cache and need ``pillar_cache`` enabled. Use ``cache.clear_pillar``
+to clear the targeting snapshots; the next regular pillar fetch of a minion
+restores its snapshot. The asynchronous master request path also writes
+snapshots; its compilation caching support is unchanged.
 
 .. conf_master:: pillar_cache_ttl
 
