@@ -294,3 +294,18 @@ def test_symlink_lexists_called_follow_symlinks_false():
         filemod.symlink(tfile, a_link, follow_symlinks=False)
         lexists.assert_called()
         exists.assert_not_called()
+
+
+def test_symlink_lexists_called_follow_symlinks_true():
+    tfile = "/tmp/file-basics-test-file"
+    a_link = "/tmp/a_link"
+
+    exists = MagicMock(return_value=False)
+    lexists = MagicMock(return_value=False)
+
+    with patch("os.path.exists", exists), patch("os.path.lexists", lexists), patch(
+        "os.symlink", MagicMock(return_value=True)
+    ):
+        filemod.symlink(tfile, a_link, follow_symlinks=True)
+        lexists.assert_not_called()
+        exists.assert_called()

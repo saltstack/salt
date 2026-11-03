@@ -8,6 +8,7 @@ import salt.config
 import salt.loader
 import salt.modules.cmdmod as cmdmod
 import salt.modules.file as filemod
+import salt.modules.selinux
 import salt.utils.data
 import salt.utils.files
 import salt.utils.platform

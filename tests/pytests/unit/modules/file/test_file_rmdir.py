@@ -37,6 +37,54 @@ def test_file_rmdir_not_found_exception():
         filemod.rmdir("/tmp/not_there")
 
 
+def test_file_rmdir_not_found_exception_includes_path():
+    with pytest.raises(SaltInvocationError, match="/tmp/not_there"):
+        filemod.rmdir("/tmp/not_there")
+
+
+def test_file_readdir_not_found_exception_includes_path():
+    with pytest.raises(SaltInvocationError, match="/tmp/not_there"):
+        filemod.readdir("/tmp/not_there")
+
+
+def test_file_rmdir_not_found_includes_path_with_state_args_47707():
+    # The file.rmdir state (salt/states/file.py) calls this as
+    # rmdir(name, recurse=recurse, verbose=True, older_than=older_than).
+    # verbose=True is the decisive flag: with it, removal failures are
+    # normally collected into the returned dict's "errors" list instead of
+    # raised, but an invalid directory must still raise, and the message
+    # must include the offending path.
+    with pytest.raises(SaltInvocationError, match="/tmp/not_there"):
+        filemod.rmdir("/tmp/not_there", recurse=True, verbose=True, older_than=None)
+
+
+def test_file_rmdir_relative_path_error_unchanged_47707():
+    """
+    Guard against overcorrection: a relative path must still fail the
+    absolute-path check, not the valid-directory check changed for #47707.
+    """
+    with pytest.raises(SaltInvocationError, match="must be absolute"):
+        filemod.rmdir("not_absolute")
+
+
+def test_file_readdir_relative_path_error_unchanged_47707():
+    """
+    Guard against overcorrection: a relative path must still fail readdir's
+    absolute-path check, not the valid-directory check changed for #47707.
+    """
+    with pytest.raises(SaltInvocationError, match="must be absolute"):
+        filemod.readdir("not_absolute")
+
+
+def test_file_readdir_valid_directory_47707(tmp_path):
+    """
+    Guard against overcorrection: readdir on an existing directory must
+    still return the directory listing without raising.
+    """
+    (tmp_path / "afile").write_text("data")
+    assert filemod.readdir(str(tmp_path)) == [".", "..", "afile"]
+
+
 def test_file_rmdir_success_return():
     with patch("os.rmdir", MagicMock(return_value=True)), patch(
         "os.path.isdir", MagicMock(return_value=True)
