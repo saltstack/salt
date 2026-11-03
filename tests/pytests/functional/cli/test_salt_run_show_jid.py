@@ -36,7 +36,8 @@ def salt_run_cli(salt_master):
 
 def test_salt_run_show_jid(salt_run_cli):
     """
-    Test that jid is output
+    Test that jid is printed to stderr (not stdout) so --out=json stdout remains valid JSON.
     """
     ret = salt_run_cli.run("test.stdout_print")
-    assert re.match(r"jid: \d+", ret.stdout)
+    assert re.match(r"jid: \d+", ret.stderr)
+    assert not re.match(r"jid: \d+", ret.stdout)

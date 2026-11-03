@@ -2,6 +2,7 @@ import pytest
 
 import salt.client
 from salt.exceptions import SaltInvocationError
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -335,3 +336,47 @@ def test_prep_pub_ext_job_cache_existing(master_opts):
         "user": local_client.salt_user,
     }
     assert result == expected
+
+
+@pytest.mark.parametrize(
+    "method,extra_kwargs",
+    [
+        ("get_cli_returns", {}),
+        ("get_cli_static_event_returns", {}),
+        ("get_cli_event_returns", {}),
+    ],
+)
+def test_show_jid_goes_to_stderr(local_client, capsys, method, extra_kwargs):
+    """
+    When show_jid=True, the jid line must be printed to stderr, not stdout,
+    so that --out=json output on stdout remains valid JSON.
+    """
+    jid = "20250101000000000001"
+
+    with patch.object(local_client, "get_cache_returns", return_value={}), patch.object(
+        local_client,
+        "get_event_iter_returns",
+        return_value=iter([]),
+    ), patch.object(
+        local_client,
+        "get_iter_returns",
+        return_value=iter([]),
+    ), patch.dict(
+        local_client.opts,
+        {"timeout": 1, "gather_job_timeout": 1, "master_job_cache": "local_cache"},
+    ), patch.object(
+        local_client,
+        "returners",
+        {
+            "local_cache.get_load": MagicMock(return_value={"tgt": "*"}),
+        },
+    ):
+        func = getattr(local_client, method)
+        result = func(jid, minions=[], show_jid=True, **extra_kwargs)
+        # exhaust generator if needed
+        if hasattr(result, "__iter__") and not isinstance(result, dict):
+            list(result)
+
+    captured = capsys.readouterr()
+    assert f"jid: {jid}" in captured.err
+    assert f"jid: {jid}" not in captured.out
