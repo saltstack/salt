@@ -28,7 +28,7 @@ import salt.utils.itertools
 import salt.utils.path
 import salt.utils.stringutils
 import salt.utils.systemd
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, ServiceNotFoundError
 
 log = logging.getLogger(__name__)
 
@@ -127,7 +127,11 @@ def _check_available(name):
             ret = match.group(1) != "not-found"
             break
     else:
-        raise CommandExecutionError("Failed to get information on unit '%s'" % name)
+        if _status["retcode"] == 4:
+            # Exit status 4 means "no such unit"; the output may be localized
+            # so it cannot be matched against the text above.
+            return False
+        raise ServiceNotFoundError("Failed to get information on unit '%s'" % name)
     return ret
 
 
