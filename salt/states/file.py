@@ -6883,12 +6883,16 @@ def comment(
         ret["result"] = None
         return ret
 
-    slines = _read_file_text(name, encoding=encoding, encoding_errors=encoding_errors).splitlines(True)
+    slines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, True, backup)
 
-    nlines = _read_file_text(name, encoding=encoding, encoding_errors=encoding_errors).splitlines(True)
+    nlines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
@@ -7584,7 +7588,9 @@ def prepend(
 
     text = _validate_str_list(text)
 
-    slines = _read_file_text(name, encoding=encoding, encoding_errors=encoding_errors).splitlines(True)
+    slines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     count = 0
     test_lines = []
