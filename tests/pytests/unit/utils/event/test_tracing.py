@@ -40,7 +40,7 @@ def _make_event_stub():
 
     class _FakePusher:
         @staticmethod
-        def publish(msg):
+        def publish(msg, timeout=None):
             sent.append(msg)
 
     event.pusher = _FakePusher

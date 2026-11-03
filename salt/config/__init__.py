@@ -559,6 +559,7 @@ VALID_OPTS = immutabletypes.freeze(
         "event_return_blacklist": list,
         # default match type for filtering events tags: startswith, endswith, find, regex, fnmatch
         "event_match_type": str,
+        "event_publish_timeout": (int, float),
         # This pidfile to write out to when a daemon starts
         "pidfile": str,
         # Used with the SECO range master tops system
@@ -1834,6 +1835,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "event_return_whitelist": [],
         "event_return_blacklist": [],
         "event_match_type": "startswith",
+        "event_publish_timeout": 60,
         "runner_returns": True,
         "serial": "msgpack",
         "test": False,
