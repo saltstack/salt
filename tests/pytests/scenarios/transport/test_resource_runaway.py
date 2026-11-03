@@ -38,7 +38,7 @@ async def test_publish_tasks_accumulate_under_slow_pusher():
     event.cpush = True
     event._run_io_loop_sync = False
 
-    async def _publish(_msg):
+    async def _publish(_msg, **_kwargs):
         await asyncio.sleep(0)
 
     event.pusher = MagicMock()
