@@ -103,7 +103,8 @@ def get_(key, recurse=False, profile=None, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    Get a value from etcd, by direct path.  Returns None on failure.
+    Get a value from etcd, by direct path.  Returns None if the key does not
+    exist, and raises an error if etcd cannot be reached or refuses the request.
 
     CLI Examples:
 
@@ -123,7 +124,8 @@ def set_(key, value, profile=None, ttl=None, directory=False, **kwargs):
     .. versionadded:: 2014.7.0
 
     Set a key in etcd by direct path. Optionally, create a directory
-    or set a TTL on the key.  Returns None on failure.
+    or set a TTL on the key.  Returns the value written, and raises an error if
+    etcd cannot be reached or refuses the request.
 
     CLI Example:
 
@@ -202,7 +204,12 @@ def watch(key, recurse=False, profile=None, timeout=0, **kwargs):
     deleted ), the modifiedIndex of the key, whether the key changed or
     not, the path to the key that changed and whether it is a directory or not.
 
-    If something catastrophic happens, returns {}
+    Returns None if ``timeout`` seconds pass without a change. A ``timeout`` of
+    0, the default, waits until there is a change.
+
+    .. versionchanged:: 3009.0
+
+        A ``timeout`` of 0 waits for a change. It used to return None at once.
 
     CLI Example:
 
@@ -224,8 +231,8 @@ def ls_(path="/", profile=None, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    Return all keys and dirs inside a specific path. Returns an empty dict on
-    failure.
+    Return all keys and dirs inside a specific path. Returns an empty dict if
+    nothing exists under the path.
 
     CLI Example:
 
@@ -243,8 +250,8 @@ def rm_(key, recurse=False, profile=None, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    Delete a key from etcd.  Returns True if the key was deleted, False if it was
-    not and None if there was a failure.
+    Delete a key from etcd.  Returns True if the key was deleted and None if it
+    did not exist.
 
     CLI Example:
 
@@ -263,7 +270,8 @@ def tree(path="/", profile=None, **kwargs):
     """
     .. versionadded:: 2014.7.0
 
-    Recurse through etcd and return all values.  Returns None on failure.
+    Recurse through etcd and return all values.  Returns None if nothing exists
+    under the path.
 
     CLI Example:
 

@@ -152,6 +152,9 @@ Available Functions
             - file: /some/file.txt
 """
 
+import salt.utils.args
+from salt.exceptions import CommandExecutionError
+
 # Define the module's virtual name
 __virtualname__ = "etcd"
 
@@ -167,8 +170,6 @@ try:
 except ImportError:
     HAS_LIBS = False
 
-NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
-
 
 def __virtual__():
     """
@@ -177,16 +178,6 @@ def __virtual__():
     if HAS_LIBS:
         return __virtualname__
     return (False, "Unable to import etcd_util")
-
-
-def _etcd_action(*, action, key, profile, value=None, **kwargs):
-    try:
-        ret = __salt__[f"etcd.{action}"](
-            key=key, profile=profile, value=value, **kwargs
-        )
-    except Exception:  # pylint: disable=broad-except
-        ret = None
-    return ret
 
 
 def set_(name, value, profile=None, **kwargs):
@@ -209,37 +200,30 @@ def set_(name, value, profile=None, **kwargs):
               etcd.port: 4001
 
     """
-
-    created = False
-
     rtn = {
         "name": name,
         "comment": "Key contains correct value",
         "result": True,
         "changes": {},
     }
-
-    current = _etcd_action(action="get", key=name, profile=profile, **kwargs)
-
-    if current is None and profile is None:
-        rtn["comment"] = NO_PROFILE_MSG
+    try:
+        current = __salt__["etcd.get"](name, profile=profile, **kwargs)
+        if current == value:
+            return rtn
+        if __opts__.get("test"):
+            rtn["result"] = None
+            rtn["comment"] = (
+                "Key would be created" if current is None else "Key would be updated"
+            )
+            rtn["changes"] = {name: value}
+            return rtn
+        __salt__["etcd.set"](name, value, profile=profile, **kwargs)
+    except CommandExecutionError as exc:
         rtn["result"] = False
+        rtn["comment"] = str(exc)
         return rtn
-
-    if not current:
-        created = True
-
-    result = _etcd_action(
-        action="set", key=name, value=value, profile=profile, **kwargs
-    )
-
-    if result and result != current:
-        if created:
-            rtn["comment"] = "New key created"
-        else:
-            rtn["comment"] = "Key value updated"
-        rtn["changes"] = {name: value}
-
+    rtn["comment"] = "New key created" if current is None else "Key value updated"
+    rtn["changes"] = {name: value}
     return rtn
 
 
@@ -271,6 +255,11 @@ def directory(name, profile=None, **kwargs):
     """
     Create a directory in etcd.
 
+    .. versionchanged:: 3009.0
+
+        etcd v3 has no directories, so this state always fails. Set the keys
+        under the prefix with ``etcd.set`` instead.
+
     name
         The etcd directory name, for example: ``/foo/bar/baz``.
     profile
@@ -283,31 +272,15 @@ def directory(name, profile=None, **kwargs):
               etcd.host: 127.0.0.1
               etcd.port: 4001
     """
-
-    created = False
-
-    rtn = {"name": name, "comment": "Directory exists", "result": True, "changes": {}}
-
-    current = _etcd_action(
-        action="get", key=name, profile=profile, recurse=True, **kwargs
-    )
-
-    if current is None and profile is None:
-        rtn["comment"] = NO_PROFILE_MSG
-        rtn["result"] = False
-        return rtn
-
-    if not current:
-        created = True
-
-    result = __salt__["etcd.set"](name, None, directory=True, profile=profile, **kwargs)
-
-    if result and result != current:
-        if created:
-            rtn["comment"] = "New directory created"
-            rtn["changes"] = {name: "Created"}
-
-    return rtn
+    return {
+        "name": name,
+        "changes": {},
+        "result": False,
+        "comment": (
+            "etcd v3 has no directories. Set the keys under the prefix with "
+            "etcd.set instead."
+        ),
+    }
 
 
 def rm(name, recurse=False, profile=None, **kwargs):
@@ -330,28 +303,27 @@ def rm(name, recurse=False, profile=None, **kwargs):
               etcd.host: 127.0.0.1
               etcd.port: 4001
     """
-
     rtn = {"name": name, "result": True, "changes": {}}
-
-    current = _etcd_action(
-        action="get", key=name, profile=profile, recurse=True, **kwargs
-    )
-
-    if current is None and profile is None:
-        rtn["comment"] = NO_PROFILE_MSG
+    try:
+        current = __salt__["etcd.get"](name, recurse=recurse, profile=profile, **kwargs)
+        if not current:
+            rtn["comment"] = "Key does not exist"
+            return rtn
+        if __opts__.get("test"):
+            rtn["result"] = None
+            rtn["comment"] = "Key would be removed"
+            rtn["changes"] = {name: "Deleted"}
+            return rtn
+        removed = __salt__["etcd.rm"](name, recurse=recurse, profile=profile, **kwargs)
+    except CommandExecutionError as exc:
         rtn["result"] = False
+        rtn["comment"] = str(exc)
         return rtn
-
-    if not current:
-        rtn["comment"] = "Key does not exist"
-        return rtn
-
-    if __salt__["etcd.rm"](name, recurse=recurse, profile=profile, **kwargs):
+    if removed:
         rtn["comment"] = "Key removed"
         rtn["changes"] = {name: "Deleted"}
     else:
-        rtn["comment"] = "Unable to remove key"
-
+        rtn["comment"] = "Key does not exist"
     return rtn
 
 
@@ -391,13 +363,28 @@ def mod_watch(name, **kwargs):
         Parameters for this function should be set by the state being triggered.
     """
 
+    sfun = kwargs.get("sfun")
+    # Keep the connection overrides (host, port, ...) given to the wait state.
+    conn_kwargs = {
+        k: v
+        for k, v in salt.utils.args.clean_kwargs(**kwargs).items()
+        if k not in ("sfun", "value", "recurse", "profile")
+    }
+
     # Watch to set etcd key
-    if kwargs.get("sfun") in ["wait_set_key", "wait_set"]:
-        return set_(name, kwargs.get("value"), profile=kwargs.get("profile"))
+    if sfun in ["wait_set_key", "wait_set"]:
+        return set_(
+            name, kwargs.get("value"), profile=kwargs.get("profile"), **conn_kwargs
+        )
 
     # Watch to rm etcd key
-    if kwargs.get("sfun") in ["wait_rm_key", "wait_rm"]:
-        return rm(name, profile=kwargs.get("profile"))
+    if sfun in ["wait_rm_key", "wait_rm"]:
+        return rm(
+            name,
+            recurse=kwargs.get("recurse", False),
+            profile=kwargs.get("profile"),
+            **conn_kwargs,
+        )
 
     return {
         "name": name,

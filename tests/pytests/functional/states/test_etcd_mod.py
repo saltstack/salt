@@ -5,6 +5,7 @@ import pytest
 import salt.modules.etcd_mod as etcd_mod
 import salt.states.etcd_mod as etcd_state
 from salt.utils.etcd_util import get_conn
+from tests.support.mock import patch
 from tests.support.pytest.etcd import *  # pylint: disable=wildcard-import,unused-wildcard-import
 
 docker = pytest.importorskip("docker")
@@ -63,7 +64,7 @@ def cleanup_prefixed_entries(etcd_client, prefix):
         etcd_client.delete(prefix, recurse=True)
 
 
-def test_basic_operations(subtests, profile_name, prefix, etcd_version):
+def test_basic_operations(subtests, profile_name, prefix, etcd_version, etcd_client):
     """
     Test basic CRUD operations
     """
@@ -83,6 +84,24 @@ def test_basic_operations(subtests, profile_name, prefix, etcd_version):
             "changes": {f"{prefix}/1": "one"},
         }
         assert etcd_state.set_(f"{prefix}/1", "one", profile=profile_name) == expected
+    with subtests.test("Setting the same value again should not change anything"):
+        before = etcd_client.read(f"{prefix}/1")[0].mod_revision
+        expected = {
+            "name": f"{prefix}/1",
+            "comment": "Key contains correct value",
+            "result": True,
+            "changes": {},
+        }
+        assert etcd_state.set_(f"{prefix}/1", "one", profile=profile_name) == expected
+        assert etcd_client.read(f"{prefix}/1")[0].mod_revision == before
+    with subtests.test("Test mode should not write"):
+        with patch.dict(etcd_state.__opts__, {"test": True}):
+            ret = etcd_state.set_(f"{prefix}/1", "uno", profile=profile_name)
+            assert ret["result"] is None
+            assert ret["changes"] == {f"{prefix}/1": "uno"}
+            ret = etcd_state.rm(f"{prefix}/1", profile=profile_name)
+            assert ret["result"] is None
+        assert etcd_client.get(f"{prefix}/1") == "one"
     with subtests.test(
         "We should be able to create an empty directory and set values in it"
     ):
@@ -114,14 +133,14 @@ def test_with_missing_profile(subtests, prefix, etcd_version, etcd_port):
         with subtests.test("Test no profile and bad connection in set_"):
             ret = etcd_state.set_(f"{prefix}/1", "one")
             assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+            assert ret["comment"].startswith(f"etcd3: cannot read {prefix}/1:")
 
-        with subtests.test("Test no profile and bad connection in directory"):
+        with subtests.test("Test no profile in directory"):
             ret = etcd_state.directory(f"{prefix}/2")
             assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+            assert "no directories" in ret["comment"]
 
         with subtests.test("Test no profile and bad connection in rm"):
             ret = etcd_state.rm(f"{prefix}/2/3")
             assert not ret["result"]
-            assert ret["comment"] == etcd_state.NO_PROFILE_MSG
+            assert ret["comment"].startswith(f"etcd3: cannot read {prefix}/2/3:")

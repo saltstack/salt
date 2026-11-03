@@ -11,7 +11,7 @@ import requests.exceptions
 
 import salt.exceptions
 import salt.utils.etcd_util as etcd_util
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 try:
     import etcd3gw.exceptions
@@ -58,14 +58,26 @@ def test_read(etcd_client):
     ]
     etcd_client.get.assert_called_with("/salt", metadata=True)
 
+    # recurse reads the key itself and the keys under "/salt/", but not
+    # siblings such as "/saltstack".
+    etcd_client.get.reset_mock()
     client.read("/salt", recurse=True)
-    etcd_client.get.assert_called_with("/salt", metadata=True, range_end=b"/salu")
+    assert etcd_client.get.call_args_list == [
+        call("/salt", metadata=True),
+        call("/salt/", metadata=True, range_end=b"/salt0"),
+    ]
 
     etcd_client.get.return_value = []
     assert client.read("/salt") is None
 
-    etcd_client.get.side_effect = Exception
-    assert client.read("/salt") is None
+    # etcd errors are not mistaken for a missing key
+    etcd_client.get.side_effect = etcd3gw.exceptions.Etcd3Exception(
+        '{"code": 7, "message": "etcdserver: permission denied"}', "Forbidden"
+    )
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError, match="permission denied"
+    ):
+        client.read("/salt")
 
 
 def test_read_wait(etcd_client):
@@ -76,20 +88,40 @@ def test_read_wait(etcd_client):
     }
     result = client.read("salt", True, True, 10, 5)
     assert (result.key, result.value, result.mod_revision) == ("salt", "stack", 7)
-    etcd_client.watch_once.assert_called_with(
-        "salt", timeout=10, range_end=b"salu", start_revision=5
-    )
+    args, kwargs = etcd_client.watch_once.call_args
+    assert args == ("salt",)
+    assert kwargs["range_end"] == b"salt0"
+    assert kwargs["start_revision"] == 5
+    assert 0 < kwargs["timeout"] <= 10
 
-    client.read("salt", wait=True, timeout=10)
-    etcd_client.watch_once.assert_called_with("salt", timeout=10)
+    # A timeout of 0 waits until there is a change.
+    client.read("salt", wait=True, timeout=0)
+    etcd_client.watch_once.assert_called_with("salt", timeout=None)
 
     # A delete event carries no value.
     etcd_client.watch_once.return_value = {"kv": {"key": b"salt", "mod_revision": "8"}}
     result = client.read("salt", wait=True, timeout=10)
     assert (result.key, result.value) == ("salt", None)
 
-    etcd_client.watch_once.side_effect = Exception
+    etcd_client.watch_once.side_effect = etcd3gw.exceptions.WatchTimedOut()
     assert client.read("salt", True, True, 10, 5) is None
+
+    etcd_client.watch_once.side_effect = etcd3gw.exceptions.ConnectionFailedError(
+        "refused"
+    )
+    with pytest.raises(salt.exceptions.CommandExecutionError, match="refused"):
+        client.read("salt", wait=True, timeout=10)
+
+
+def test_read_wait_recurse_skips_siblings(etcd_client):
+    client = etcd_util.get_conn({"etcd.encode_values": False})
+    etcd_client.watch_once.side_effect = [
+        {"kv": {"key": b"/app-old", "value": b"x", "mod_revision": "4"}},
+        {"kv": {"key": b"/app/child", "value": b"y", "mod_revision": "5"}},
+    ]
+    result = client.read("/app", recurse=True, wait=True, timeout=10)
+    assert (result.key, result.value) == ("/app/child", "y")
+    assert etcd_client.watch_once.call_args.kwargs["start_revision"] == 5
 
 
 def test_read_rejects_recursive_kwarg(etcd_client):
@@ -279,8 +311,83 @@ def test_rm(etcd_client):
     etcd_client.delete.assert_called_with("/some-key")
 
     etcd_client.delete.return_value = False
+    assert client.rm("/some-key") is None
+
+    # recurse deletes the key and its subtree, not siblings, in one
+    # transaction
+    etcd_client.transaction.return_value = {
+        "responses": [
+            {"response_delete_range": {}},
+            {"response_delete_range": {"deleted": "2"}},
+        ]
+    }
+    assert client.rm("/some-key", recurse=True) is True
+    txn = etcd_client.transaction.call_args.args[0]
+    assert txn["success"] == [
+        {"request_delete_range": {"key": "L3NvbWUta2V5"}},
+        {
+            "request_delete_range": {
+                "key": "L3NvbWUta2V5Lw==",
+                "range_end": "L3NvbWUta2V5MA==",
+            }
+        },
+    ]
+
+    etcd_client.transaction.return_value = {"responses": [{}, {}]}
     assert client.rm("/some-key", recurse=True) is None
-    etcd_client.delete.assert_called_with("/some-key", range_end=b"/some-kez")
+
+    etcd_client.delete.side_effect = etcd3gw.exceptions.Etcd3Exception(
+        '{"code": 7, "message": "etcdserver: permission denied"}', "Forbidden"
+    )
+    with pytest.raises(
+        salt.exceptions.CommandExecutionError, match="permission denied"
+    ):
+        client.rm("/some-key")
+
+
+@pytest.mark.parametrize(
+    "opts,match",
+    [
+        ({"etcd.username": "alice"}, "username and etcd.password"),
+        ({"etcd.password": "secret"}, "username and etcd.password"),
+        ({"etcd.client_cert": "/c.pem"}, "client_cert and etcd.client_key"),
+        ({"etcd.client_key": "/k.pem"}, "client_cert and etcd.client_key"),
+    ],
+)
+def test_partial_settings_are_rejected(opts, match):
+    with patch.object(etcd_util, "_client_class"):
+        with pytest.raises(salt.exceptions.SaltInvocationError, match=match):
+            etcd_util.EtcdClientV3(opts)
+
+
+def test_client_cert_without_ca_uses_https():
+    opts = {"etcd.client_cert": "/client.pem", "etcd.client_key": "/client-key.pem"}
+    with patch.object(etcd_util, "_client_class") as client_class:
+        etcd_util.EtcdClientV3(opts)
+        client_class.return_value.assert_called_once_with(
+            host="127.0.0.1",
+            port=2379,
+            protocol="https",
+            cert_cert="/client.pem",
+            cert_key="/client-key.pem",
+        )
+
+
+def test_explicit_false_options_win_over_config(etcd_client):
+    client = etcd_util.EtcdClientV3(
+        {"etcd.encode_values": True, "etcd.raw_keys": True},
+        encode_values=False,
+        raw_keys=False,
+    )
+    assert client.encode_values is False
+    assert client.raw_keys is False
+
+
+def test_undecodable_value_raises(etcd_client):
+    client = etcd_util.get_conn({})
+    etcd_client.get.return_value = [(b"plain text", {"key": b"/salt"})]
+    with pytest.raises(salt.exceptions.CommandExecutionError, match="encode_values"):
+        client.get("/salt")
 
 
 def test_watch(etcd_client):
