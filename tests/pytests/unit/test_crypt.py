@@ -652,6 +652,404 @@ async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, 
     assert auth._creds["session"] == session
 
 
+async def test_authenticate_returns_distinct_futures_per_caller_70642(
+    minion_root, io_loop
+):
+    """
+    Regression test for the ``InvalidStateError`` wedge (issue #70642).
+
+    In the pre-refactor design every caller of ``AsyncAuth.authenticate()``
+    received the same ``self._authenticate_future`` object; the two tails
+    of ``_authenticate`` wrote to that shared future via ``self`` at the
+    moment of the call, so if the attribute was replaced between a task's
+    spawn and its tail, two tasks could both reach
+    ``self._authenticate_future.set_result(True)`` against the same future
+    object, raising ``asyncio.exceptions.InvalidStateError`` out of the
+    second task and permanently wedging the minion in a non-authenticated
+    state (observed as a 15+ hour silent outage after a master upgrade).
+
+    Under the per-caller design the shared mutable future is gone: each
+    call to ``authenticate()`` returns a fresh ``Future`` from
+    ``_waiters``, a single ``_sign_in_task`` fans its result out to every
+    waiter via ``_on_sign_in_done``, and the double-set race is
+    structurally impossible because no two writers ever share a future.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    # Gate ``sign_in`` on a release event so both callers are parked
+    # inside the same ``_authenticate`` coroutine when their futures are
+    # allocated; the pre-refactor code would otherwise dedup them onto a
+    # single future and the "distinct-futures" assertion would be
+    # vacuously true.
+    sign_in_entered = _asyncio.Event()
+    release = _asyncio.Event()
+    sign_in_calls = 0
+
+    async def mock_sign_in(*args, **kwargs):
+        nonlocal sign_in_calls
+        sign_in_calls += 1
+        sign_in_entered.set()
+        await release.wait()
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        future_a = auth.authenticate()
+        future_b = auth.authenticate()
+
+        # Per-caller: the two callers must not share a future, otherwise
+        # the ``InvalidStateError`` race can recur.
+        assert future_a is not future_b
+
+        # Dedup: a single sign-in task services both waiters (only one
+        # ``_authenticate`` coroutine, only one ``sign_in`` entry, so no
+        # thundering-herd regression against the master on recovery).
+        await sign_in_entered.wait()
+        assert sign_in_calls == 1
+        assert auth._sign_in_task is not None
+        assert not auth._sign_in_task.done()
+        assert len(auth._waiters) == 2
+
+        release.set()
+        results = await _asyncio.gather(future_a, future_b)
+
+        assert results == [True, True]
+        assert future_a.done() and future_b.done()
+        assert future_a.exception() is None and future_b.exception() is None
+        assert auth._sign_in_task is None
+        assert auth._waiters == set()
+        assert auth.authenticated
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_propagates_unexpected_exception_to_all_waiters_70642(
+    minion_root, io_loop
+):
+    """
+    Regression test for the ``OSError``-hang symptom described in
+    https://github.com/saltstack/salt/issues/70642.
+
+    In the pre-refactor design, ``_authenticate`` only explicitly set the
+    shared future via its two handled tails -- any *unexpected* exception
+    (``OSError`` from ``sign_in``'s socket layer, a programming bug, etc.)
+    escaped the task as an unhandled coroutine exception and the shared
+    future was never resolved, so every caller awaiting it hung forever.
+
+    The per-caller design wires the sign-in task's termination through
+    ``_on_sign_in_done``, which inspects ``task.exception()`` and fans
+    *any* non-cancellation exception out to every registered waiter.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    boom = OSError("simulated socket layer failure")
+
+    async def mock_sign_in(*args, **kwargs):
+        raise boom
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        futures = [auth.authenticate() for _ in range(5)]
+        # All five waiters are registered synchronously inside
+        # ``authenticate()`` before the ``_authenticate`` task even runs,
+        # so we can assert on the waiter count without any ``await``.
+        assert len(auth._waiters) == 5
+
+        # Every waiter resolves with the unexpected exception.  Before the
+        # refactor, ``_authenticate`` would propagate the ``OSError`` out of
+        # the coroutine unseen by any caller and the ``await`` here would
+        # block indefinitely.
+        results = await _asyncio.gather(*futures, return_exceptions=True)
+
+        assert len(results) == 5
+        for res in results:
+            assert isinstance(res, OSError)
+            assert res is boom
+
+        # Failure is not cached -- a subsequent ``authenticate()`` can
+        # retry.
+        assert not auth.authenticated
+        assert auth._last_result is None
+        assert auth._sign_in_task is None
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_caller_cancellation_does_not_affect_siblings(
+    minion_root, io_loop
+):
+    """
+    A caller cancelling its own ``authenticate()`` future must only
+    remove itself from the waiter set -- the shared sign-in task and
+    every other waiter must continue normally.  This is one of the three
+    bullets from https://github.com/saltstack/salt/issues/70642.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    sign_in_entered = _asyncio.Event()
+    release = _asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        sign_in_entered.set()
+        await release.wait()
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        future_a = auth.authenticate()
+        future_b = auth.authenticate()
+        future_c = auth.authenticate()
+
+        await sign_in_entered.wait()
+        assert len(auth._waiters) == 3
+        sign_in_task = auth._sign_in_task
+        assert sign_in_task is not None and not sign_in_task.done()
+
+        # Cancel the middle caller before sign_in completes.
+        future_b.cancel()
+        await _asyncio.sleep(0)
+
+        # The cancelled future is gone from the waiter set; the sign-in
+        # task is still in flight because there are two live waiters.
+        assert len(auth._waiters) == 2
+        assert sign_in_task is auth._sign_in_task
+        assert not sign_in_task.done()
+
+        # Release the sign-in and verify the live callers complete
+        # normally.
+        release.set()
+        result_a = await future_a
+        result_c = await future_c
+
+        assert result_a is True
+        assert result_c is True
+        assert future_b.cancelled()
+        assert auth.authenticated
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_last_waiter_cancel_cancels_sign_in_task(
+    minion_root, io_loop
+):
+    """
+    When the waiter set drains to empty while a sign-in is still in
+    flight, the sign-in task must be cancelled so it does not keep its
+    ``AsyncReqChannel`` open with no caller waiting for the result.
+
+    This is the "nobody cancels the task" bullet from
+    https://github.com/saltstack/salt/issues/70642.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    sign_in_started = _asyncio.Event()
+    release = _asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        sign_in_started.set()
+        await release.wait()
+        return {"enc": "pub", "aes": "x", "session": "y"}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        future = auth.authenticate()
+        await sign_in_started.wait()
+
+        sign_in_task = auth._sign_in_task
+        assert sign_in_task is not None
+        assert not sign_in_task.done()
+        assert len(auth._waiters) == 1
+
+        # Cancel the only waiter.  ``_on_waiter_done`` must detect the
+        # empty waiter set and cancel the shared sign-in task so it
+        # does not continue to hold the ``AsyncReqChannel`` open.
+        future.cancel()
+
+        # Drive the loop until the task finishes and its
+        # ``_on_sign_in_done`` callback (which clears ``_sign_in_task``)
+        # has had a chance to run.
+        for _ in range(20):
+            await _asyncio.sleep(0)
+            if auth._sign_in_task is None:
+                break
+
+        assert sign_in_task.done()
+        assert sign_in_task.cancelled()
+        assert future.cancelled()
+        assert auth._sign_in_task is None
+        assert auth._waiters == set()
+        assert not auth.authenticated
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_cached_creds_fast_path_via_authenticated_property(
+    minion_root, io_loop
+):
+    """
+    ``AsyncAuth.__singleton_init__`` pre-populates ``_last_result`` to
+    ``(True,)`` when ``creds_map`` already holds an entry for this key,
+    so the ``authenticated`` property is True on a freshly-constructed
+    instance.  Production callers (see ``salt/channel/client.py``) gate
+    on ``self.auth.authenticated`` before calling ``authenticate()``, so
+    this path short-circuits the sign-in roundtrip entirely on reuse.
+
+    This test pins the contract between ``creds_map`` pre-population and
+    ``authenticated`` so a future refactor cannot regress it; a hot
+    reconnect flow depends on it (otherwise every channel reconstruction
+    after ``invalidate()``-less reuse would re-auth against the master).
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+    crypt.AsyncAuth.creds_map[credskey] = {"aes": aes, "session": session}
+    try:
+        auth = crypt.AsyncAuth(opts, io_loop)
+
+        assert auth.authenticated
+        assert auth._last_result == (True,)
+        assert auth._sign_in_task is None
+        assert auth._waiters == set()
+
+        auth.invalidate()
+        assert not auth.authenticated
+        assert auth._last_result is None
+        assert credskey not in crypt.AsyncAuth.creds_map
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
 # --- PublicKey / PrivateKey caching regression tests --------------------------
 
 
