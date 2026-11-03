@@ -35,6 +35,11 @@ or clusters are available.
     ``etcd.require_v2`` option is no longer accepted and setting it to
     ``True`` raises a ``CommandExecutionError``.
 
+    The client library changed from ``etcd3-py`` to ``etcd3gw``; install it
+    with ``salt-pip install etcd3gw``. ``set``, ``rm`` and ``directory`` honor
+    ``test=True``, ``set`` no longer rewrites a key that already has the
+    right value, and errors talking to etcd fail the state.
+
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
 
@@ -177,7 +182,7 @@ def __virtual__():
     """
     if HAS_LIBS:
         return __virtualname__
-    return (False, "Unable to import etcd_util")
+    return (False, "The etcd3gw library is not installed")
 
 
 def set_(name, value, profile=None, **kwargs):

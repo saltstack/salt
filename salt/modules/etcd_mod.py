@@ -30,6 +30,11 @@ or clusters are available.
     ``etcd.require_v2`` option is no longer accepted and setting it to
     ``True`` raises a ``CommandExecutionError``.
 
+    The client library changed from ``etcd3-py`` to ``etcd3gw``; install it
+    with ``salt-pip install etcd3gw``. Errors talking to etcd now raise
+    instead of returning ``None``, and ``recurse`` only covers the key and the
+    keys under ``<key>/``, not other keys that share its prefix.
+
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
 
@@ -95,7 +100,7 @@ def __virtual__():
     return (
         False,
         "The etcd_mod execution module cannot be loaded: "
-        "python etcd library not available.",
+        "the etcd3gw library is not installed.",
     )
 
 
