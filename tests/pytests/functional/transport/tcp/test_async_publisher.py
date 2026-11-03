@@ -260,6 +260,21 @@ async def test_publish_reconnects_once_after_the_peer_drops_the_connection():
                 writer.close()
 
 
+async def test_connect_timeout_says_what_timed_out():
+    async def hang(stream, address):
+        await asyncio.Event().wait()
+
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 4511, None)
+    try:
+        with patch.object(tornado.iostream.IOStream, "connect", hang):
+            with pytest.raises(
+                asyncio.TimeoutError, match="Timed out connecting to 127.0.0.1:4511"
+            ):
+                await publisher.connect(timeout=0.2)
+    finally:
+        publisher.close()
+
+
 async def test_cancelled_publish_drains_connect():
     started = asyncio.Event()
     stopped = asyncio.Event()
