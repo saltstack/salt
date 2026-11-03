@@ -21,7 +21,7 @@ def test_minion_config_type_check(caplog):
     try:
         with os.fdopen(fd, "w") as tmp:
             tmp.write("ipc_write_buffer: 'dynamic'\n")
-        salt.config.minion_config(path)
+        salt.config.minion_config(path, minion_id="config-test-minion")
 
         assert msg not in caplog.text
     finally:
@@ -35,7 +35,7 @@ def test_cloud_config_relative_to_root_dir(tmp_path):
     cloud_config = config_path / "cloud"
     cloud_config.write_text("")
     master_config = config_path / "master"
-    master_config.write_text(f"root_dir: {root_path}")
+    master_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
     opts = salt.config.cloud_config(cloud_config)
     assert opts["log_file"] == str(root_path / "var" / "log" / "salt" / "cloud")
     assert opts["cachedir"] == str(root_path / "var" / "cache" / "salt" / "cloud")
@@ -46,8 +46,11 @@ def test_master_config_relative_to_root_dir(tmp_path):
     config_path = tmp_path / "conf"
     config_path.mkdir()
     master_config = config_path / "master"
-    master_config.write_text(f"root_dir: {root_path}")
-    opts = salt.config.master_config(master_config)
+    master_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
+    opts = salt.config.master_config(
+        master_config,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "config-test-master"},
+    )
     if salt.utils.platform.is_windows():
         assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "master")
     else:
@@ -82,8 +85,8 @@ def test_minion_config_relative_to_root_dir(tmp_path):
     config_path = tmp_path / "conf"
     config_path.mkdir()
     minion_config = config_path / "minion"
-    minion_config.write_text(f"root_dir: {root_path}")
-    opts = salt.config.minion_config(minion_config)
+    minion_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
+    opts = salt.config.minion_config(minion_config, minion_id="config-test-minion")
     if salt.utils.platform.is_windows():
         assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "minion")
     else:
@@ -102,7 +105,7 @@ def test_api_config_relative_to_root_dir(tmp_path):
     config_path = tmp_path / "conf"
     config_path.mkdir()
     master_config = config_path / "master"
-    master_config.write_text(f"root_dir: {root_path}")
+    master_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
     opts = salt.config.api_config(master_config)
     assert opts["pidfile"] == str(root_path / "var" / "run" / "salt-api.pid")
     assert opts["log_file"] == str(root_path / "var" / "log" / "salt" / "api")
@@ -115,7 +118,7 @@ def test_spm_config_relative_to_root_dir(tmp_path):
     config_path = tmp_path / "conf"
     config_path.mkdir()
     spm_config = config_path / "spm"
-    spm_config.write_text(f"root_dir: {root_path}")
+    spm_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
     opts = salt.config.spm_config(spm_config)
 
     assert opts["formula_path"] == str(root_path / "srv" / "spm" / "salt")
@@ -131,9 +134,9 @@ def test_syndic_config_relative_to_root_dir(tmp_path):
     config_path = tmp_path / "conf"
     config_path.mkdir()
     master_config = config_path / "master"
-    master_config.write_text(f"root_dir: {root_path}")
+    master_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
     minion_config = config_path / "master"
-    minion_config.write_text(f"root_dir: {root_path}")
+    minion_config.write_text(f"id: config-test-node\nroot_dir: {root_path}")
     opts = salt.config.syndic_config(master_config, minion_config)
     if salt.utils.platform.is_windows():
         assert opts["pki_dir"] == str(root_path / "conf" / "pki" / "minion")
