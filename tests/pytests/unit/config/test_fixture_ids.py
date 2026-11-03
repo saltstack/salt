@@ -1,5 +1,6 @@
 """Configuration fixtures must not depend on discovering the host identity."""
 
+import salt.config
 from tests.pytests.functional.loader import test_loaded_base_name as loader_tests
 from tests.support.mock import patch
 
@@ -10,6 +11,12 @@ def test_master_opts_does_not_discover_host_id(request):
         side_effect=AssertionError("Unexpected host ID discovery"),
     ):
         opts = request.getfixturevalue("master_opts")
+        # These are the reload paths used by nested clients and MasterMinion.
+        assert salt.config.client_config(opts["conf_file"])["id"] == opts["id"]
+        assert (
+            salt.config.minion_config(opts["conf_file"], role="master")["id"]
+            == opts["id"]
+        )
     assert opts["id"]
 
 
