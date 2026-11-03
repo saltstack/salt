@@ -44,7 +44,7 @@ def loader_opts(tmp_path):
     """A minimal opts dict pointing at tmp_path for ``extension_modules``."""
     extmods = tmp_path / "extmods"
     extmods.mkdir()
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="resource-test-minion")
     opts["root_dir"] = str(tmp_path)
     opts["cachedir"] = str(tmp_path / "cache")
     opts["pki_dir"] = str(tmp_path / "pki")
