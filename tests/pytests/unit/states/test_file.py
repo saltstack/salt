@@ -72,6 +72,103 @@ def test_file_copy_should_use_provided_force_mode_for_file_remove(fake_remove):
     fake_remove.assert_called_with("/tmp/foo", force=True)
 
 
+class TestGetHttpParamsFromSource:
+    """Unit tests for salt.states.file._get_http_params_from_source (PR #67153)."""
+
+    def test_none_source_returns_none_and_empty_params(self):
+        url, http_params = file._get_http_params_from_source(None)
+        assert url is None
+        assert http_params == {}
+
+    def test_string_source_passes_through_unchanged(self):
+        src = "https://example.com/file.tar.gz"
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == src
+        assert http_params == {}
+
+    def test_list_source_passes_through_unchanged(self):
+        src = [
+            "https://example.com/file.tar.gz",
+            "https://mirror.example.com/file.tar.gz",
+        ]
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == src
+        assert http_params == {}
+
+    def test_dict_source_extracts_url_and_headers(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "headers": {"Authorization": "Bearer token"},
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert http_params == {"headers": {"Authorization": "Bearer token"}}
+
+    def test_dict_source_extracts_url_and_all_valid_params(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "headers": {"X-Custom": "value"},
+            "params": {"key": "val"},
+            "username": "user",
+            "password": "pass",
+            "auth": ("user", "pass"),
+            "backend": "requests",
+            "port": 8443,
+            "agent": "curl",
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert http_params["headers"] == {"X-Custom": "value"}
+        assert http_params["params"] == {"key": "val"}
+        assert http_params["username"] == "user"
+        assert http_params["password"] == "pass"
+        assert http_params["auth"] == ("user", "pass")
+        assert http_params["backend"] == "requests"
+        assert http_params["port"] == 8443
+        assert http_params["agent"] == "curl"
+
+    def test_dict_source_ignores_unknown_keys(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "unknown_key": "should_be_ignored",
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert "unknown_key" not in http_params
+
+    def test_dict_source_cert_as_string(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "cert": "/path/to/cert.pem",
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert http_params["cert"] == "/path/to/cert.pem"
+
+    def test_dict_source_cert_as_dict_with_key(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "cert": {"cert": "/path/to/cert.pem", "key": "/path/to/key.pem"},
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert http_params["cert"] == ["/path/to/cert.pem", "/path/to/key.pem"]
+
+    def test_dict_source_cert_as_dict_without_key(self):
+        src = {
+            "url": "https://example.com/file.tar.gz",
+            "cert": {"cert": "/path/to/cert.pem"},
+        }
+        url, http_params = file._get_http_params_from_source(src)
+        assert url == "https://example.com/file.tar.gz"
+        assert http_params["cert"] == "/path/to/cert.pem"
+
+    def test_dict_source_without_url_raises(self):
+        src = {"headers": {"X-Custom": "value"}}
+        with pytest.raises(KeyError):
+            file._get_http_params_from_source(src)
+
+
 def test_file_recurse_directory_test():
     salt_dunder = {
         "cp.list_master_dirs": MagicMock(return_value=[]),
