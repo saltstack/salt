@@ -5,6 +5,7 @@
 import pytest
 
 import salt.modules.firewalld as firewalld
+from salt.exceptions import CommandExecutionError
 from tests.support.helpers import dedent
 from tests.support.mock import MagicMock, patch
 
@@ -532,3 +533,35 @@ def test_info_ipset():
     }
     with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
         assert firewalld.info_ipset("myipset") == expected
+
+
+def test_info_ipset_ignores_indented_key_lines_and_flag_options():
+    """
+    Indented ``type:``/``options:`` lines must not be treated as ipset names
+    and options without ``=`` must not raise.
+    """
+    firewall_cmd_ret = dedent(
+        """\
+        myipset
+          type: hash:net
+          options: family=inet timeout
+          entries:
+        """
+    )
+    expected = {
+        "myipset": {
+            "type": ["hash:net"],
+            "options": {"family": "inet", "timeout": ""},
+            "entries": [],
+        }
+    }
+    with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
+        assert firewalld.info_ipset("myipset") == expected
+
+
+def test_new_ipset_invalid_family():
+    """
+    Test that an invalid family raises a CommandExecutionError
+    """
+    with pytest.raises(CommandExecutionError):
+        firewalld.new_ipset("myipset", "hash:net", family="ipv4")

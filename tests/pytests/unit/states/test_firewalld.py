@@ -272,6 +272,67 @@ def test_ipset_present_idempotent():
         }
 
 
+def test_ipset_present_creates_empty_ipset():
+    """
+    ipset_present creates an empty ipset when entries is not given and
+    reports the creation as a change.
+    """
+    firewalld_new_ipset = MagicMock(return_value="success")
+    firewalld_info_ipset = MagicMock()
+    firewalld_reload_rules = MagicMock(return_value="success")
+
+    __salt__ = {
+        "firewalld.get_ipsets": MagicMock(return_value=[]),
+        "firewalld.new_ipset": firewalld_new_ipset,
+        "firewalld.info_ipset": firewalld_info_ipset,
+        "firewalld.reload_rules": firewalld_reload_rules,
+    }
+    with patch.dict(firewalld.__dict__, {"__salt__": __salt__}):
+        ret = firewalld.ipset_present("myipset", "hash:net")
+        assert ret["result"] is True
+        assert ret["changes"] == {"ipset": {"old": None, "new": "myipset"}}
+        assert ret["comment"] == "'myipset' was configured."
+        firewalld_new_ipset.assert_called_once()
+        firewalld_info_ipset.assert_not_called()
+        firewalld_reload_rules.assert_called_once()
+
+
+def test_ipset_present_none_entries_leaves_entries_alone():
+    """
+    ipset_present does not touch existing entries when entries is None.
+    """
+    firewalld_info_ipset = MagicMock()
+    __salt__ = {
+        "firewalld.get_ipsets": MagicMock(return_value=["myipset"]),
+        "firewalld.info_ipset": firewalld_info_ipset,
+    }
+    with patch.dict(firewalld.__dict__, {"__salt__": __salt__}):
+        ret = firewalld.ipset_present("myipset", "hash:net")
+        assert ret["result"] is True
+        assert ret["changes"] == {}
+        firewalld_info_ipset.assert_not_called()
+
+
+def test_ipset_present_empty_entries_removes_all():
+    """
+    ipset_present with entries=[] removes every existing entry.
+    """
+    firewalld_remove_ipset_entry = MagicMock(return_value="success")
+    __salt__ = {
+        "firewalld.get_ipsets": MagicMock(return_value=["myipset"]),
+        "firewalld.info_ipset": MagicMock(
+            return_value={"myipset": {"type": ["hash:net"], "entries": ["1.1.1.1/32"]}}
+        ),
+        "firewalld.remove_ipset_entry": firewalld_remove_ipset_entry,
+        "firewalld.reload_rules": MagicMock(return_value="success"),
+    }
+    with patch.dict(firewalld.__dict__, {"__salt__": __salt__}):
+        ret = firewalld.ipset_present("myipset", "hash:net", entries=[])
+        assert ret["result"] is True
+        assert ret["changes"] == {"entries": {"old": ["1.1.1.1/32"], "new": []}}
+        firewalld_remove_ipset_entry.assert_called_once_with("myipset", "1.1.1.1/32")
+
+
 def test_zone_present_with_target():
     """
     zone_present sets zone target when it differs from current value.

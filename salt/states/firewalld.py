@@ -1047,22 +1047,30 @@ def ipset_present(name, ipset_type, family=None, options=None, entries=None):
         List of options to add to the ipset, can be timeout, maxelen or hashsize.
 
     entries: None
-        List of entry to add to the ipset.
+        Entries the ipset must contain; others are removed. If omitted,
+        entries are not managed. Use ``[]`` for an empty ipset.
     """
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
     if name not in __salt__["firewalld.get_ipsets"](permanent=True):
         if not __opts__["test"]:
-            __salt__["firewalld.new_ipset"](name, ipset_type, family, options, True)
+            try:
+                __salt__["firewalld.new_ipset"](
+                    name, ipset_type, family, options, True
+                )
+            except CommandExecutionError as err:
+                ret["comment"] = f"Error: {err}"
+                return ret
+            ret["changes"]["ipset"] = {"old": None, "new": name}
         else:
             ret["result"] = None
             ret["comment"] = f"'{name}' will be created."
             return ret
 
-    if entries:
-        entries = entries or []
-
+    # ``entries=None`` leaves the entries unmanaged; an empty list makes the
+    # ipset empty.
+    if entries is not None:
         try:
             info_ipset = __salt__["firewalld.info_ipset"](name)[name]
         except CommandExecutionError as err:

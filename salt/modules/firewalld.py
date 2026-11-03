@@ -1047,6 +1047,9 @@ def get_target(zone):
     """
     Get zone's target
 
+    zone
+        The zone to query.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1061,6 +1064,15 @@ def get_target(zone):
 def set_target(zone, target, permanent=True):
     """
     Set zone's target
+
+    zone
+        The zone to modify.
+
+    target
+        ``default``, ``ACCEPT``, ``DROP`` or ``REJECT``.
+
+    permanent
+        Make the change permanent. Default ``True``.
 
     CLI Example:
 
@@ -1085,7 +1097,8 @@ def __parse_ipset(cmd):
 
     for i in __firewall_cmd(cmd).splitlines():
         if i.strip():
-            if re.match("^[a-z0-9]", i, re.I):
+            if not i[0].isspace():
+                # Header line: the ipset name, not indented and without a colon
                 ipset_name = i.rstrip()
             else:
                 if i.startswith("\t"):
@@ -1103,7 +1116,15 @@ def __parse_ipset(cmd):
                             _ipset[ipset_name].update({id_: val.strip().split(" ")})
                     elif id_ == "options":
                         _ipset[ipset_name].update(
-                            {id_: dict(item.split("=") for item in val.split())}
+                            {
+                                # options without "=" get an empty value
+                                id_: {
+                                    k: v
+                                    for k, _, v in (
+                                        item.partition("=") for item in val.split()
+                                    )
+                                }
+                            }
                         )
                     else:
                         _ipset[ipset_name].update({id_: [val.strip()]})
@@ -1115,6 +1136,9 @@ def __parse_ipset(cmd):
 def get_ipsets(permanent=True):
     """
     Print predefined ipsets
+
+    permanent
+        List permanent ipsets. Default ``True``.
 
     CLI Example:
 
@@ -1134,11 +1158,14 @@ def info_ipset(ipset):
     """
     Print ipset info
 
+    ipset
+        The name of the ipset to query.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' firewalld.get_ipsets
+        salt '*' firewalld.info_ipset my_ipset
     """
     cmd = f"--info-ipset={ipset} --permanent"
 
@@ -1149,19 +1176,38 @@ def new_ipset(ipset, ipset_type, family=None, options=None, restart=False):
     """
     Add a new ipset
 
+    ipset
+        The name of the ipset to create.
+
+    ipset_type
+        Ipset type, e.g. ``hash:net``. See ``firewall-cmd --get-ipset-types``.
+
+    family
+        ``inet`` or ``inet6``. Default is firewalld's default (``inet``).
+
+    options
+        Dict of options: ``timeout``, ``maxelem`` or ``hashsize``.
+
+    restart
+        Reload firewalld afterwards. Default ``False``.
+
     CLI Example:
 
     .. code-block:: bash
 
-        salt '*' firewalld.new_ipset my_ipset
+        salt '*' firewalld.new_ipset my_ipset hash:net family=inet
 
-    By default firewalld will be reloaded. However, to avoid reloading
-    you need to specify the restart as False
+    To reload firewalld afterwards:
 
     .. code-block:: bash
 
-        salt '*' firewalld.new_ipset my_ipset False
+        salt '*' firewalld.new_ipset my_ipset hash:net restart=True
     """
+    if family and family not in ("inet", "inet6"):
+        raise CommandExecutionError(
+            f"Invalid family '{family}', must be 'inet' or 'inet6'"
+        )
+
     cmd = f"--permanent --new-ipset={ipset} --type={ipset_type}"
 
     if family:
@@ -1184,6 +1230,15 @@ def delete_ipset(ipset, permanent=True, restart=True):
     """
     Delete an existing ipset
 
+    ipset
+        The name of the ipset to delete.
+
+    permanent
+        Unused; ipsets are always deleted permanently. Default ``True``.
+
+    restart
+        Reload firewalld afterwards. Default ``True``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1195,7 +1250,7 @@ def delete_ipset(ipset, permanent=True, restart=True):
 
     .. code-block:: bash
 
-        salt '*' firewalld.delete_ipset my_ipset False
+        salt '*' firewalld.delete_ipset my_ipset restart=False
     """
     out = __mgmt(ipset, "ipset", "delete")
 
@@ -1210,6 +1265,12 @@ def add_ipset_entry(ipset, entry):
     """
     Add an new entry to the specified ipset.
 
+    ipset
+        The name of the ipset.
+
+    entry
+        The entry to add.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1223,6 +1284,12 @@ def add_ipset_entry(ipset, entry):
 def remove_ipset_entry(ipset, entry):
     """
     Remove an entry from the specified ipset.
+
+    ipset
+        The name of the ipset.
+
+    entry
+        The entry to remove.
 
     CLI Example:
 
