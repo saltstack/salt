@@ -1151,13 +1151,15 @@ is set to ``tcp`` by default on Windows.
 ``ipc_write_buffer``
 -----------------------
 
-Default: ``0``
+Default: ``dynamic``
 
-The maximum size of a message sent via the IPC transport module can be limited
-dynamically or by sharing an integer value lower than the total memory size. When
-the value ``dynamic`` is set, salt will use 2.5% of the total memory as
-``ipc_write_buffer`` value (rounded to an integer). A value of ``0`` disables
-this option.
+The maximum number of bytes that a connection of the IPC transport module may
+queue for writing. Without a limit, a reader that stops reading makes the queue
+grow until the process runs out of memory.
+
+The default is 2.5% of the total memory, but at least 5 MiB. Set an integer to use
+a fixed number of bytes, or ``dynamic`` to get the default explicitly. A value of
+``0`` removes the limit and is not recommended.
 
 .. code-block:: yaml
 

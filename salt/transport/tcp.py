@@ -150,7 +150,8 @@ def _cap_stream_write_buffer(stream, opts):
     ``StreamBufferFullError`` at the ceiling so the caller can drop the
     peer / apply backpressure instead of silently ballooning.
 
-    ``0`` / unset preserves the historical unbounded behavior (opt-in).
+    The cap is on by default (``ipc_write_buffer`` defaults to 2.5% of the
+    total memory, at least 5 MiB). ``0`` / unset removes the limit.
     Existing sites that apply the same cap on the server-side accepted
     streams (see ``PubServer._apply_write_buffer_cap`` and the
     ``SaltMessageServer`` kwarg) already use this opt; this helper is
