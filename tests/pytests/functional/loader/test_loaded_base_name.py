@@ -15,7 +15,8 @@ def loaded_base_name():
 
 @pytest.fixture(scope="module")
 def opts(loaded_base_name):
-    return salt.config.minion_config(None)
+    # Loader namespace isolation does not depend on the host identity.
+    return salt.config.minion_config(None, minion_id="loader-test-minion")
 
 
 def _loader_id(value):

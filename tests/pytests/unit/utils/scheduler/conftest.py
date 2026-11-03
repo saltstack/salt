@@ -28,7 +28,9 @@ def schedule(tmp_path):
         root_dir = tmp_path / "schedule-unit-tests"
         sock_dir = str(root_dir / "test-socks")
 
-        default_config = salt.config.minion_config(None)
+        default_config = salt.config.minion_config(
+            None, minion_id="scheduler-test-minion"
+        )
         default_config["conf_dir"] = str(root_dir)
         default_config["root_dir"] = str(root_dir)
         default_config["sock_dir"] = sock_dir

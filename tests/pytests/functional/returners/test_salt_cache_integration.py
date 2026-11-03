@@ -39,7 +39,9 @@ def master_opts(tmp_path):
     """
     import salt.config
 
-    opts = salt.config.master_config("/dev/null")
+    config_file = tmp_path / "master"
+    config_file.write_text("id: returner-test-master\n", encoding="utf-8")
+    opts = salt.config.master_config(str(config_file))
     opts["cachedir"] = str(tmp_path)
     opts["extension_modules"] = str(tmp_path / "extmods")
     opts["master_job_cache"] = "salt_cache"

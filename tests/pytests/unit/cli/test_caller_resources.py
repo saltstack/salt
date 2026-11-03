@@ -50,7 +50,7 @@ def call_opts(tmp_path):
         )
     )
 
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="rcaller-minion")
     opts["id"] = "rcaller-minion"
     opts["root_dir"] = str(tmp_path)
     opts["cachedir"] = str(cachedir)

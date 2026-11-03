@@ -13,7 +13,7 @@ from salt.template import compile_template_str
 def render(template, opts=None):
     tmp = tempfile.mkdtemp(prefix="yamlex-test-")
     try:
-        _config = minion_config(None)
+        _config = minion_config(None, minion_id="renderer-test-minion")
         _config["file_client"] = "local"
         _config["root_dir"] = tmp
         _config["cachedir"] = os.path.join(tmp, "cache", "minion")

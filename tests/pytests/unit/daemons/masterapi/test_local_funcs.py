@@ -1,8 +1,6 @@
 import pytest
 
-import salt.config
 import salt.daemons.masterapi as masterapi
-import salt.utils.platform
 from tests.support.mock import MagicMock, patch
 
 pytestmark = [
@@ -20,8 +18,7 @@ def check_keys():
 
 @pytest.fixture
 def local_funcs(master_opts):
-    opts = salt.config.master_config(None)
-    return masterapi.LocalFuncs(opts, "test-key")
+    return masterapi.LocalFuncs(master_opts, "test-key")
 
 
 @pytest.fixture

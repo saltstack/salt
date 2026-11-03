@@ -28,7 +28,10 @@ from tests.support.mock import MagicMock
 
 
 def _storage(path):
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "cluster-test-master"},
+    )
     opts["cachedir"] = path
     return SaltStorage("test-node", opts)
 
@@ -355,7 +358,11 @@ class TestMaxVotersCap:
         from salt.cluster.consensus.service import RaftService
 
         tmpdir = tempfile.mkdtemp()
-        opts = salt.config.master_config("/dev/null")
+        opts = salt.config.master_config(
+            "/dev/null",
+            defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+            | {"id": "cluster-test-master"},
+        )
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
         opts["cluster_pool_port"] = 55597
@@ -417,7 +424,11 @@ class TestMaxVotersCap:
         from salt.cluster.consensus.service import RaftService
 
         tmpdir = tempfile.mkdtemp()
-        opts = salt.config.master_config("/dev/null")
+        opts = salt.config.master_config(
+            "/dev/null",
+            defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+            | {"id": "cluster-test-master"},
+        )
         opts["interface"] = my_addr
         opts["cluster_peers"] = list(peer_addrs)
         opts["cluster_pool_port"] = 55596
@@ -551,7 +562,11 @@ class TestNotifyPeerJoined:
         from salt.cluster.consensus.service import RaftService
 
         tmpdir = tempfile.mkdtemp()
-        opts = salt.config.master_config("/dev/null")
+        opts = salt.config.master_config(
+            "/dev/null",
+            defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+            | {"id": "cluster-test-master"},
+        )
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2"]
         opts["cluster_pool_port"] = 55596
