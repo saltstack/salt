@@ -5061,3 +5061,72 @@ async def test_publish_glob_empty_minions_forwards_under_topology(
         f"guard: {result!r}"
     )
     assert result["load"]["jid"] == "20260101000000000001"
+
+
+# ---------------------------------------------------------------------------
+# populate_secrets: topology-only master skips the Raft-readiness Event
+#
+# ``salt/channel/server.py:should_serve_requests`` short-circuits True
+# for a topology-only master (``cluster_id`` set, no ``cluster_peers``)
+# WITHOUT consulting the Event -- so allocating the Event is dead code
+# there.  Worse, keeping it in ``SMaster.secrets`` makes it
+# un-pickleable through ``MWorker.__getstate__`` on Windows
+# ``multiprocessing.spawn``: SemLock handles only duplicate via
+# ``Process(args=...)``, not plain pickle.  Crashes every spawned
+# MWorker with exit 1 before logging is initialised and makes minion
+# authentication time out forever (nightly 41510296234 / Windows
+# functional 4).
+# ---------------------------------------------------------------------------
+
+
+def _bare_smaster(opts):
+    """Build an ``SMaster`` shell without running ``__init__`` -- enough to
+    exercise ``populate_secrets`` without the real master bring-up."""
+    master = salt.master.Master.__new__(salt.master.Master)
+    master.opts = opts
+    master.secrets = {}
+    return master
+
+
+def test_populate_secrets_topology_only_skips_cluster_ready_event():
+    """Topology-only master (``cluster_id`` set, no ``cluster_peers``) must
+    NOT allocate the ``cluster_ready`` entry -- an unused
+    ``multiprocessing.Event`` in ``SMaster.secrets`` crashes every
+    MWorker on Windows ``spawn``.
+    """
+    salt.master.SMaster.secrets = {}
+    opts = {
+        "cluster_id": "solo",
+        "cluster_peers": [],
+    }
+    master = _bare_smaster(opts)
+
+    with patch.object(
+        salt.master.Master, "read_or_generate_key", return_value="x" * 32
+    ):
+        master.populate_secrets()
+
+    assert (
+        "cluster_ready" not in salt.master.SMaster.secrets
+    ), "topology-only masters should not allocate cluster_ready Event"
+
+
+def test_populate_secrets_real_cluster_allocates_cluster_ready_event():
+    """A real cluster master (``cluster_id`` set, ``cluster_peers``
+    populated) still gets the Event -- Raft readiness gating depends
+    on it.
+    """
+    salt.master.SMaster.secrets = {}
+    opts = {
+        "cluster_id": "prod",
+        "cluster_peers": ["127.0.0.2", "127.0.0.3"],
+    }
+    master = _bare_smaster(opts)
+
+    with patch.object(
+        salt.master.Master, "read_or_generate_key", return_value="x" * 32
+    ):
+        master.populate_secrets()
+
+    assert "cluster_ready" in salt.master.SMaster.secrets
+    assert "event" in salt.master.SMaster.secrets["cluster_ready"]

@@ -416,10 +416,22 @@ class SMaster:
     def populate_secrets(self):
         if self.opts["cluster_id"]:
             # Gate that request workers check before serving minion/CLI traffic.
-            # Cleared on start; set by RaftService once this node is a committed voter.
-            SMaster.secrets["cluster_ready"] = {
-                "event": multiprocessing.Event(),
-            }
+            # Cleared on start; set by RaftService once this node is a committed
+            # voter.  Only allocated when the master is actually in a Raft
+            # cluster: a topology-only master (``cluster_id`` set,
+            # ``cluster_peers`` empty) short-circuits
+            # ``should_serve_requests`` to True without consulting the Event
+            # (see ``salt/channel/server.py:85-98``), so the Event is dead
+            # code there -- and worse, embedding a ``multiprocessing.Event``
+            # in ``SMaster.secrets`` makes it unpickleable through
+            # ``MWorker.__getstate__`` on Windows ``multiprocessing.spawn``
+            # (SemLock handle isn't duplicated via plain pickle, only via
+            # ``Process(args=...)``), which crashes every spawned MWorker
+            # with exit 1 before logging is initialised.
+            if self.opts.get("cluster_peers"):
+                SMaster.secrets["cluster_ready"] = {
+                    "event": multiprocessing.Event(),
+                }
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["cluster_aes"] = {
