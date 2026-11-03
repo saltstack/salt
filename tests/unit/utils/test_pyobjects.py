@@ -239,7 +239,7 @@ class RendererMixin:
 
         if not os.path.isdir(self.cache_dir):
             os.makedirs(self.cache_dir)
-        self.config = salt.config.minion_config(None)
+        self.config = salt.config.minion_config(None, minion_id="match")
         self.config["root_dir"] = self.root_dir
         self.config["state_events"] = False
         self.config["id"] = "match"
