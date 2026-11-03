@@ -21,6 +21,18 @@ etcd. Salt no longer uses `etcd3-py`, so it can be removed.
 salt-pip install etcd3gw
 ```
 
+The etcd sdb module (`driver: etcd`), the `etcd` ext_pillar and the `etcd`
+returner, removed in 3008.0, are back for the etcd v3 API. Their 3007
+configuration works unchanged, apart from `etcd.require_v2`, which is no
+longer accepted. Values are msgpack-encoded unless the profile sets
+`etcd.encode_values: False`, which is needed to read values written by other
+tools such as `etcdctl`.
+
+The returner can now also be the master job cache (`master_job_cache: etcd`).
+It stores each minion return as one key, so the layout under
+`etcd.returner_root` differs from 3007, handles binary return data, and
+removes jobs older than `keep_jobs_seconds` when `etcd.ttl` is not set.
+
 This release also changes some etcd behavior:
 
 - Recursive operations (`etcd.rm ... recurse=True`, `etcd.tree`, `etcd.ls`,

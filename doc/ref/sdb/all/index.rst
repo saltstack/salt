@@ -11,4 +11,5 @@ sdb modules
     :template: autosummary.rst.tmpl
 
     env
+    etcd_db
     yaml
