@@ -54,15 +54,18 @@ def patch_check_permissions(
 
 @pytest.fixture
 def auto_key():
-    opts = salt.config.master_config(None)
+    opts = salt.config.master_config(
+        None,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+        | {"id": "masterapi-test-master"},
+    )
     opts["user"] = "test_user"
     return masterapi.AutoKey(opts)
 
 
 @pytest.fixture
-def local_funcs():
-    opts = salt.config.master_config(None)
-    return masterapi.LocalFuncs(opts, "test-key")
+def local_funcs(master_opts):
+    return masterapi.LocalFuncs(master_opts, "test-key")
 
 
 def test_check_permissions_windows(auto_key):
