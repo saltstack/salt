@@ -365,6 +365,21 @@ class Minion(
                     self.minion.destroy()
                 # Restart for multi_master failover when daemonized
                 if self.options.daemon:
+                    # self.minion's io_loop was already closed by
+                    # tune_in()'s own finally clause -- re-entering
+                    # tune_in() on this same, now-stale MinionManager
+                    # would immediately raise "RuntimeError: Event loop
+                    # is closed". Build a fresh MinionManager instead
+                    # (mirroring the narrow construction step from
+                    # prepare(), NOT self.prepare() itself, which would
+                    # re-daemonize/re-fork the already-running process).
+                    # Reassign self.minion as the very next statement
+                    # after destroy(), with nothing interposed, to keep
+                    # the SIGTERM race window (see MinionManager.stop())
+                    # as tight as possible. See #70178.
+                    import salt.minion
+
+                    self.minion = salt.minion.MinionManager(self.config)
                     continue
             break
 

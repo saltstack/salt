@@ -230,8 +230,11 @@ def set_peers(*peers, **options):
     commit = options.pop("commit", True)
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "set_ntp_peers")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available("set_ntp_peers", napalm_device)
     return __salt__["net.load_template"](
-        "set_ntp_peers",
+        resolved,
         peers=peers,
         test=test,
         commit=commit,
@@ -268,8 +271,13 @@ def set_servers(*servers, **options):
     commit = options.pop("commit", True)
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "set_ntp_servers")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "set_ntp_servers", napalm_device
+        )
     return __salt__["net.load_template"](
-        "set_ntp_servers",
+        resolved,
         servers=servers,
         test=test,
         commit=commit,
@@ -307,8 +315,13 @@ def delete_peers(*peers, **options):
     commit = options.pop("commit", True)
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "delete_ntp_peers")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "delete_ntp_peers", napalm_device
+        )
     return __salt__["net.load_template"](
-        "delete_ntp_peers",
+        resolved,
         peers=peers,
         test=test,
         commit=commit,
@@ -347,8 +360,13 @@ def delete_servers(*servers, **options):
     commit = options.pop("commit", True)
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "delete_ntp_servers")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "delete_ntp_servers", napalm_device
+        )
     return __salt__["net.load_template"](
-        "delete_ntp_servers",
+        resolved,
         servers=servers,
         test=test,
         commit=commit,

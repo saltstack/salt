@@ -113,6 +113,9 @@ class _StubAuth:
     def gen_token(self, clear_tok):  # pragma: no cover - unused
         return b""
 
+    def get_keys(self):  # pragma: no cover - the pillar path asks for these
+        return None
+
     @tornado.gen.coroutine
     def authenticate(self):  # pragma: no cover - unused
         raise tornado.gen.Return(None)
@@ -282,3 +285,148 @@ def test_do_transfer_serialized_by_lock(minion_opts, tmp_path):
     ], events
     assert r1 == {"n": 1}
     assert r2 == {"n": 2}
+
+
+@pytest.mark.parametrize(
+    "payload,expected",
+    [
+        ({"enc": "clear", "load": {"ret": False, "cluster_retry": True}}, True),
+        ({"enc": "clear", "load": {"ret": False}}, False),
+        ({"enc": "aes", "load": {"cluster_retry": True}}, False),
+        ({"enc": "clear", "load": "not-a-dict"}, False),
+        ({}, False),
+        (b"\x81\xa3enc", False),
+        (None, False),
+    ],
+)
+def test_cluster_retry_predicate(payload, expected):
+    """
+    Regression test for issue #70563.
+
+    ``_cluster_retry`` must recognise the deferral and nothing else.
+    """
+    assert bool(salt.channel.client._cluster_retry(payload)) is expected
+
+
+def test_crypted_transfer_waits_out_cluster_retry(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    A ``cluster_retry`` deferral must be retried, not decrypted.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    master = salt.crypt.Crypticle(minion_opts, key)
+    minion = salt.crypt.Crypticle(minion_opts, key)
+
+    # Retry immediately so the test does not sit on the real 10s default.
+    minion_opts["acceptance_wait_time"] = 0
+
+    class _DeferringTransport(_StubTransport):
+        def __init__(self):
+            super().__init__([])
+            self.call = 0
+
+        @tornado.gen.coroutine
+        def send(self, payload, timeout=None):
+            self.call += 1
+            if self.call == 1:
+                raise tornado.gen.Return(
+                    {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+                )
+            outer = (
+                salt.payload.loads(payload) if isinstance(payload, bytes) else payload
+            )
+            decrypted = master.loads(outer["load"])
+            raise tornado.gen.Return(
+                master.dumps({"ret": "real-reply"}, nonce=decrypted["nonce"])
+            )
+
+    transport = _DeferringTransport()
+    channel = _make_channel(
+        minion_opts, tmp_path, transport, _StubAuth(minion_opts, minion)
+    )
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        result = io_loop.run_sync(
+            lambda: channel._crypted_transfer({"cmd": "test"}, timeout=30)
+        )
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert result == {"ret": "real-reply"}
+    assert transport.call == 2, "the deferral must cost one extra round trip"
+
+
+def test_crypted_transfer_cluster_retry_is_bounded(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    The wait is bounded by the timeout the caller already accepted. If a master
+    never becomes ready, the minion must raise an ``AuthenticationError``.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    minion = salt.crypt.Crypticle(minion_opts, key)
+    minion_opts["acceptance_wait_time"] = 0
+
+    class _AlwaysDeferringTransport(_StubTransport):
+        @tornado.gen.coroutine
+        def send(self, payload, timeout=None):
+            self.sent.append(payload)
+            raise tornado.gen.Return(
+                {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+            )
+
+    transport = _AlwaysDeferringTransport([])
+    channel = _make_channel(
+        minion_opts, tmp_path, transport, _StubAuth(minion_opts, minion)
+    )
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        with pytest.raises(
+            salt.crypt.AuthenticationError, match="cluster is not ready"
+        ):
+            io_loop.run_sync(
+                lambda: channel._crypted_transfer({"cmd": "test"}, timeout=0)
+            )
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert transport.sent, "the request must be attempted at least once"
+
+
+def test_pillar_path_says_why_the_cluster_deferred(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    ``crypted_transfer_decode_dictentry`` must also raise an ``AuthenticationError``
+    when the master defers a pillar fetch with an informative message.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    minion = salt.crypt.Crypticle(minion_opts, key)
+
+    class _DeferringTransport(_StubTransport):
+        @tornado.gen.coroutine
+        def send(self, payload, timeout=None):
+            self.sent.append(payload)
+            raise tornado.gen.Return(
+                {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+            )
+
+    channel = _make_channel(
+        minion_opts, tmp_path, _DeferringTransport([]), _StubAuth(minion_opts, minion)
+    )
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        with pytest.raises(
+            salt.crypt.AuthenticationError, match=r"\(cluster not ready\)"
+        ):
+            io_loop.run_sync(
+                lambda: channel.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
+                    {"cmd": "_pillar"}, dictkey="pillar", timeout=4, tries=1
+                )
+            )
+    finally:
+        io_loop.close(all_fds=True)

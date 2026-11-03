@@ -56,6 +56,7 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:
@@ -1520,7 +1521,7 @@ class AsyncAuth:
             if syndic_finger:
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != syndic_finger
                 ):
@@ -1529,7 +1530,7 @@ class AsyncAuth:
             if self.opts.get("master_finger", False):
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != self.opts["master_finger"]
                 ):
@@ -1902,7 +1903,9 @@ class AsyncAuth:
             "matches the fingerprint of the correct master and that "
             "this minion is not subject to a man-in-the-middle attack.",
             finger,
-            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts["hash_type"]),
+            salt.utils.crypt.pem_finger(
+                path=master_key, sum_type=self.opts["hash_type"]
+            ),
         )
         sys.exit(42)
 
@@ -2133,6 +2136,47 @@ class Crypticle:
         b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
+
+    @classmethod
+    def derive_session_key(
+        cls, cluster_pem_bytes, cluster_aes, minion_id, key_size=192
+    ):
+        """
+        Derive a per-minion session key from the cluster RSA private key
+        (``cluster.pem``) via HKDF-SHA256, with ``cluster_aes`` used as the
+        HKDF salt so a cluster-wide aes rotation rotates every derived
+        session key.
+
+        ``cluster.pem`` is distributed master-to-master via
+        ``cluster/peer/join-reply`` and never appears in a minion auth
+        reply, so minions cannot derive each other's session keys even
+        though they all share ``cluster_aes`` (which they receive in
+        order to decrypt publish-channel broadcasts).  Every peer master
+        has ``cluster.pem`` plus the current ``cluster_aes``, so each one
+        derives an identical session key for the same minion without any
+        replication of the per-minion ``sessions/<minion>`` file.
+
+        Returns the same base64-encoded shape as
+        :meth:`generate_key_string` so callers can feed it to
+        ``Crypticle(opts, key_string)`` unchanged.
+        """
+        if not isinstance(cluster_aes, bytes):
+            cluster_aes = salt.utils.stringutils.to_bytes(cluster_aes)
+        if not isinstance(cluster_pem_bytes, bytes):
+            cluster_pem_bytes = salt.utils.stringutils.to_bytes(cluster_pem_bytes)
+        # SHA-256 of cluster.pem compacts the IKM to 32 bytes with no
+        # security loss and avoids feeding a multi-kilobyte PEM into
+        # HKDF-Extract on every cache miss.
+        ikm = hashlib.sha256(cluster_pem_bytes).digest()
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=key_size // 8 + cls.SIG_SIZE,
+            salt=cluster_aes,
+            info=b"salt-cluster-session-key/"
+            + salt.utils.stringutils.to_bytes(minion_id),
+        )
+        key = hkdf.derive(ikm)
+        return base64.b64encode(key).decode("utf-8").replace("\n", "")
 
     @classmethod
     def write_key(cls, path, key_size=192):

@@ -28,6 +28,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 import salt.cache
+import salt.cluster
 import salt.cluster.consensus.rpc
 import salt.crypt
 import salt.daemons.masterapi
@@ -45,6 +46,7 @@ import salt.utils.stringutils
 import salt.utils.tracing
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
+from salt.utils.network import ip_bracket
 
 log = logging.getLogger(__name__)
 
@@ -272,6 +274,30 @@ class ReqServerChannel:
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file, so the random-file path would hand
+        # each peer a different session key and an L4-balanced minion
+        # would fail "bad load" on its first non-auth request routed to
+        # a peer.  Derive from ``cluster.pem`` instead -- it is
+        # distributed master-to-master in join-reply and never leaves
+        # the cluster, so no minion can derive another minion's session
+        # key.  ``cluster_aes`` is used as the HKDF salt so a
+        # cluster-wide aes rotation rotates every derived session key
+        # in lockstep.  See ``Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -892,6 +918,24 @@ class PoolRoutingChannel:
         """
         Returns a session key for the given minion id.
         """
+        # See ``ReqServerChannel.session_key`` -- derive from
+        # ``cluster.pem`` (master-only) salted by ``cluster_aes`` so
+        # isolated-FS peers agree without replicating the sessions
+        # directory and no minion can derive a peer minion's key.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -2198,7 +2242,7 @@ class MasterPubServerChannel:
         Wire shape:
 
         1. For each peer, emit a ``cluster/peer/collect-request``
-           event tagged with this master's interface as the
+           event tagged with this master's node-id as the
            ``requester`` and the channel list.
         2. The peer's ``publish_payload`` sees the event, opens an
            outbound state-sync session pointed back at the
@@ -2221,11 +2265,9 @@ class MasterPubServerChannel:
             self.opts,
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
-        requester = self.opts.get("interface")
+        requester = salt.cluster.node_id(self.opts)
         if requester is None:
-            log.warning(
-                "cluster.collect_from_peers: opts['interface'] not set; aborting"
-            )
+            log.warning("cluster.collect_from_peers: opts['id'] not set; aborting")
             return
         valid_channels = [
             ch
@@ -2605,11 +2647,11 @@ class MasterPubServerChannel:
             iter_root_chunks,
         )
 
-        pusher = self.pusher(peer_id)
         crypticle = salt.crypt.Crypticle(
             self.opts,
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
+        pusher = self.pusher(peer_id)
 
         async def send_channel(channel, chunk_iter):
             chunks = list(chunk_iter)
@@ -2671,6 +2713,8 @@ class MasterPubServerChannel:
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("state-sync session %s aborted unexpectedly", session_id)
+        finally:
+            pusher.close()
 
     def _apply_state_sync_chunk(self, chunk):
         """
@@ -2911,7 +2955,7 @@ class MasterPubServerChannel:
         """
         Return the path to the per-master join sentinel file.
 
-        The filename is namespaced by the master's interface address so that
+        The filename is namespaced by the master's node-id so that
         deployments which share ``cachedir`` between cluster members (and the
         cluster integration tests, which point every master at the same
         ``cluster_cache_path``) keep distinct sentinels — without that, the
@@ -2919,8 +2963,8 @@ class MasterPubServerChannel:
         master sees it on startup, takes the "rejoining" path, and skips
         the deterministic founding-voter election.
         """
-        interface = self.opts.get("interface") or "unknown"
-        return pathlib.Path(self.opts["cachedir"]) / f".cluster_joined.{interface}"
+        node_id = salt.cluster.node_id(self.opts) or "unknown"
+        return pathlib.Path(self.opts["cachedir"]) / f".cluster_joined.{node_id}"
 
     def _has_joined_cluster(self):
         """
@@ -3110,7 +3154,7 @@ class MasterPubServerChannel:
 
             # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts.get("interface", "127.0.0.1"),
+                host=ip_bracket(self.opts.get("interface", "127.0.0.1"), strip=True),
                 port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
@@ -3149,7 +3193,7 @@ class MasterPubServerChannel:
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to start Raft consensus service")
             else:
-                # Deterministic bootstrap: only the lowest interface address
+                # Deterministic bootstrap: only the master with lowest id
                 # in the configured cluster bootstraps as the founding
                 # voter.  Every other master comes up as a learner via the
                 # join-reply path.  This eliminates the race where several
@@ -3157,16 +3201,15 @@ class MasterPubServerChannel:
                 # join-replies and each one bootstraps its own single-member
                 # cluster, leaving the cluster with multiple disjoint
                 # leaders or — when join-replies land first — zero voters.
-                bootstrap_pool = sorted(
-                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
-                )
+                node_id = salt.cluster.node_id(self.opts)
+                bootstrap_pool = sorted({node_id, *self.opts.get("cluster_peers", [])})
                 aio_loop_deferred = salt.utils.asynchronous.aioloop(self.io_loop)
-                if bootstrap_pool and bootstrap_pool[0] == self.opts["interface"]:
+                if bootstrap_pool and bootstrap_pool[0] == node_id:
                     log.info(
                         "New node bootstrapping cluster %r as designated founder",
                         self.opts["cluster_id"],
                     )
-                    # The founder is the lowest-IP master and never runs
+                    # The founder is the lowest-id master and never runs
                     # discover (see ``salt.master.Master.start``), so no
                     # inbound join-reply can race this start-up.  Still
                     # delay by ``cluster_join_timeout`` before starting
@@ -3841,7 +3884,11 @@ class MasterPubServerChannel:
                         "payload": tosign,
                     },
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
                 if state_sync_session_id is not None:
                     asyncio.get_event_loop().create_task(
                         self._send_state_sync_chunks(
@@ -3973,7 +4020,11 @@ class MasterPubServerChannel:
                     salt.utils.event.tagify("discover-reply", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
             elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
                 # Sibling masters key ``data["peers"]`` by the bare names
@@ -3985,8 +4036,17 @@ class MasterPubServerChannel:
                 if peer == master_id:
                     log.debug("Skip our own cluster peer event %s", tag)
                     return
-                aes = data["peers"][master_id]["aes"]
-                sig = data["peers"][master_id]["sig"]
+                entry = data["peers"].get(master_id) or {}
+                if "aes" not in entry:
+                    # The sender records an empty entry for a peer whose public
+                    # key it does not hold yet. It re-announces once the key
+                    # arrives, so skip this round.
+                    log.info(
+                        "Peer %s has no AES key for us yet, awaiting re-announce", peer
+                    )
+                    return
+                aes = entry["aes"]
+                sig = entry["sig"]
                 key_str = self.master_key.master_key.decrypt(
                     aes, algorithm=self.opts["cluster_encryption_algorithm"]
                 )

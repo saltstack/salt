@@ -9,6 +9,7 @@ import salt.modules.yumpkg
 import salt.utils.files
 import salt.utils.pkg.rpm
 from salt.exceptions import SaltInvocationError
+from tests.support.mock import MagicMock, patch
 
 pytestmark = [
     pytest.mark.skip_if_binaries_missing("rpm", "yum"),
@@ -64,6 +65,27 @@ def repo_basedir(tmp_path):
         yield basedir
     finally:
         shutil.rmtree(str(basedir))
+
+
+def test_list_upgrades_forwards_extra_options(grains):
+    """
+    Regression for #70235 on a real yum/dnf system: ``pkg.list_upgrades``
+    must forward extra kwargs (e.g. ``exclude='kernel*'`` or
+    ``security=True``) to the yum/dnf command so ``state.test=True``
+    previews of ``pkg.uptodate`` match the real apply.  Spies on
+    ``cmd.run_all`` so the assertion runs on any yum-equipped host
+    without needing an actual upgradable package.
+    """
+    spy = MagicMock(return_value={"retcode": 0, "stdout": ""})
+    original_salt = dict(salt.modules.yumpkg.__salt__)
+    original_salt["cmd.run_all"] = spy
+    with patch.dict(salt.modules.yumpkg.__salt__, original_salt):
+        salt.modules.yumpkg.list_upgrades(refresh=False, exclude="kernel*")
+    assert spy.called, "list_upgrades never invoked the yum/dnf command"
+    cmd_args = spy.call_args.args[0]
+    assert any(
+        arg == "--exclude=kernel*" for arg in cmd_args
+    ), f"list_upgrades dropped --exclude=kernel*; command was: {cmd_args}"
 
 
 @pytest.mark.slow_test

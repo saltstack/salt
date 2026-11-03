@@ -1970,14 +1970,13 @@ def _master_user_runas(opts):
     would otherwise touch master-owned resources (the git_pillar/gitfs cache,
     the pki tree, ...) as the wrong user. See #67716.
 
-    The ``user`` value in ``opts`` is not always the master's configured
-    daemon user: ``state.orchestrate`` overwrites ``__opts__['user']`` with
-    the publishing user (``salt.utils.user.get_specific_user()``), which
-    returns ``"sudo_<login>"`` when the call was made under ``sudo``. That
-    is not a real account, so attempting to drop to it would later raise
-    ``KeyError`` from ``pwd.getpwnam`` inside ``chugid``. Validate the
-    candidate against the passwd database and skip the privilege drop when
-    it does not resolve to a real user. See #69600.
+    ``opts`` is the master's configuration: ``__opts__`` when called
+    master-side, otherwise the master config read from disk. Its ``user`` is
+    the master's configured user, never the user that published the job, so
+    master-side this is a no-op in the master daemons and CLIs (they already
+    run as that user) and drops a root process that embeds the Python API to
+    it. A configured user that has no passwd entry skips the drop instead of
+    raising ``KeyError`` inside ``chugid`` (#69600).
     """
     runas = opts.get("user")
     if not runas or runas == salt.utils.user.get_user():
@@ -1990,9 +1989,7 @@ def _master_user_runas(opts):
             pwd.getpwnam(runas)
         except KeyError:
             log.debug(
-                "Not dropping privileges: '%s' is not a real user on this "
-                "system (likely the publishing user copied into opts by "
-                "state.orchestrate, e.g. 'sudo_<login>').",
+                "Not dropping privileges: '%s' is not a real user on this system.",
                 runas,
             )
             return None
@@ -2187,7 +2184,7 @@ def runner(
 
     if name in rclient.functions:
         aspec = salt.utils.args.get_function_argspec(rclient.functions[name])
-        if "saltenv" in aspec.args:
+        if "saltenv" in aspec.namedargs:
             kwarg["saltenv"] = saltenv
 
     if name in ["state.orchestrate", "state.orch", "state.sls"]:
@@ -2273,7 +2270,7 @@ def wheel(name, *args, **kwargs):
     try:
         if name in wheel_client.functions:
             aspec = salt.utils.args.get_function_argspec(wheel_client.functions[name])
-            if "saltenv" in aspec.args:
+            if "saltenv" in aspec.namedargs:
                 valid_kwargs["saltenv"] = saltenv
 
         if jid:

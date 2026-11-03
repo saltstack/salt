@@ -214,11 +214,12 @@ def progress_batch(state, new_returns=None, *, now=None, timed_out=None):
        each minion from ``active`` to ``failed`` with reason
        ``"timeout"``.  The sync driver uses this to surface timeouts
        detected externally by ``cmd_iter_no_block``'s own clock.
-    4. Internal timeout sweep — move minions whose ``active`` dispatch
-       time exceeds ``now - (timeout + gather_job_timeout)`` to
-       ``failed`` with reason ``"timeout"``.  The async driver relies
-       on this; the sync driver reports the same minions externally,
-       so this is idempotent in practice.
+    4. For master-driven async batches, perform an internal timeout sweep:
+       move minions whose ``active`` dispatch time exceeds
+       ``now - (timeout + gather_job_timeout)`` to ``failed`` with reason
+       ``"timeout"``.  Sync CLI batches rely on their LocalClient iterator,
+       which probes ``saltutil.find_job`` and reports completed timeouts via
+       the ``timed_out`` argument above.
     5. Prune expired entries from ``state["wait"]`` (entries with
        timestamp ``<= now``).
     6. If not halted, pop from ``pending`` up to
@@ -295,16 +296,23 @@ def progress_batch(state, new_returns=None, *, now=None, timed_out=None):
                 state["wait"].append(now + bwait)
 
     # ---- 4. Internal timeout sweep -------------------------------------
-    _t = state.get("timeout")
-    _g = state.get("gather_job_timeout")
-    timeout_window = (60 if _t is None else _t) + (10 if _g is None else _g)
-    for minion_id, dispatch_ts in list(state["active"].items()):
-        if now - dispatch_ts >= timeout_window:
-            del state["active"][minion_id]
-            state["failed"][minion_id] = "timeout"
-            timed_out_minions.append(minion_id)
-            if bwait:
-                state["wait"].append(now + bwait)
+    # Master-driven async batches do not have a LocalClient iterator to
+    # determine whether a minion's job is still running, so they need a
+    # wall-clock safety timeout.  Sync CLI batches do have that iterator;
+    # it probes saltutil.find_job and reports a timeout through ``timed_out``
+    # only after the job is no longer running.  Applying this sweep to the
+    # sync driver releases its batch slot while the job is still active.
+    if state.get("driver") == "master":
+        _t = state.get("timeout")
+        _g = state.get("gather_job_timeout")
+        timeout_window = (60 if _t is None else _t) + (10 if _g is None else _g)
+        for minion_id, dispatch_ts in list(state["active"].items()):
+            if now - dispatch_ts >= timeout_window:
+                del state["active"][minion_id]
+                state["failed"][minion_id] = "timeout"
+                timed_out_minions.append(minion_id)
+                if bwait:
+                    state["wait"].append(now + bwait)
 
     # ---- 4. Prune expired wait stamps ----------------------------------
     if state["wait"]:

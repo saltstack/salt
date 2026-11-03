@@ -106,16 +106,14 @@ def test_salt_pip_network_lockdown_opts_flow_to_subprocess_env():
 
 def test_salt_pip_network_lockdown_opts_default_off():
     """
-    Without any saltpip_* options set, the PIP_* lockdown env vars are not
-    injected at all -- current behavior is unchanged.
+    Without any saltpip_* options set, the ``PIP_NO_DEPS``/``PIP_NO_INDEX``
+    network-lockdown env vars are not injected. ``PIP_DISABLE_PIP_VERSION_CHECK``
+    is always set to ``"1"`` by salt-pip (#70025) to silence pip's periodic
+    version check; it is independent of the saltpip_* opts.
 
     Uses a controlled, empty base environment (rather than the real
     ambient one) since CI runners commonly set vars like
-    PIP_DISABLE_PIP_VERSION_CHECK themselves for unrelated reasons, which
-    would otherwise leak through and make this assertion flaky/host
-    dependent -- salt-pip correctly leaves pre-existing env vars alone
-    when the corresponding option is off, it's the test's job to control
-    what's "pre-existing" here.
+    ``PIP_DISABLE_PIP_VERSION_CHECK`` themselves for unrelated reasons.
     """
     mock_minion_config = MagicMock(return_value={"user": "root"})
     mock_get_user = MagicMock(return_value="root")
@@ -141,4 +139,4 @@ def test_salt_pip_network_lockdown_opts_default_off():
         assert called_env["PYTHONPATH"] == "extras"
         assert "PIP_NO_DEPS" not in called_env
         assert "PIP_NO_INDEX" not in called_env
-        assert "PIP_DISABLE_PIP_VERSION_CHECK" not in called_env
+        assert called_env["PIP_DISABLE_PIP_VERSION_CHECK"] == "1"

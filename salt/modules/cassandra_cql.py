@@ -444,8 +444,6 @@ def cql_query(
     :type  cql_pass:       str
     :param port:           The Cassandra cluster port, defaults to None.
     :type  port:           int
-    :param params:         The parameters for the query, optional.
-    :type  params:         str
     :param protocol_version: Cassandra protocol version to use.
     :type  protocol_version: int
     :param load_balancing_policy: cassandra.policy class name to use

@@ -54,6 +54,7 @@ def test_remove_key(salt_master, salt_key_cli):
         # Remove Key
         ret = salt_key_cli.run("-d", min_name, "-y")
         assert ret.returncode == 0
+        assert "Exception ignored in" not in ret.stderr
         # We can't load JSON because we print to stdout!
         # >>>>> STDOUT >>>>>
         # The following keys are going to be deleted:
