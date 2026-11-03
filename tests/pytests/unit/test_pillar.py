@@ -1154,7 +1154,7 @@ def test_get_opts_in_pillar_override_call(minion_opts, grains):
 
 
 def test_multiple_keys_in_opts_added_to_pillar(grains, tmp_pki):
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="minion")
     opts.update(
         {
             "pki_dir": tmp_pki,
@@ -1213,7 +1213,7 @@ def test_pillar_file_client_master_remote(tmp_pki, grains):
     returns a remote file client.
     """
     mocked_minion = MagicMock()
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="minion")
     opts.update(
         {
             "pki_dir": tmp_pki,
@@ -1421,7 +1421,7 @@ def test_compile_pillar_disk_cache(master_opts, grains):
 
 
 def test_remote_pillar_bad_return(grains, tmp_pki):
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="minion")
     opts.update(
         {
             "pki_dir": tmp_pki,
@@ -1444,7 +1444,7 @@ def test_remote_pillar_bad_return(grains, tmp_pki):
 
 
 async def test_async_remote_pillar_bad_return(grains, tmp_pki):
-    opts = salt.config.minion_config(None)
+    opts = salt.config.minion_config(None, minion_id="minion")
     opts.update(
         {
             "pki_dir": tmp_pki,
