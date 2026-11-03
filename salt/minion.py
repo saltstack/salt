@@ -654,6 +654,7 @@ class MinionBase:
             opts = OptsDict.from_dict(opts, name="minionbase_opts")
         self.opts = opts
         self.beacons_leader = opts.get("beacons_leader", True)
+        self.schedule_leader = opts.get("schedule_leader", True)
 
     def gen_modules(self, initial_load=False, context=None):
         """
@@ -1659,10 +1660,12 @@ class MinionManager(MinionBase):
             masters = [masters]
 
         beacons_leader = True
+        schedule_leader = True
         for master in masters:
             # Use OptsDict copy-on-write instead of deepcopy
-            # Only master, multimaster, and beacons_leader are mutated
-            # Grains, pillar, and other large dicts are shared via copy-on-write
+            # Only master, multimaster, beacons_leader, and schedule_leader are
+            # mutated. Grains, pillar, and other large dicts are shared via
+            # copy-on-write
             # self.opts is guaranteed to be OptsDict (set by MinionBase.__init__)
             from salt.utils.optsdict import OptsDict
 
@@ -1672,6 +1675,9 @@ class MinionManager(MinionBase):
             s_opts["beacons_leader"] = beacons_leader
             if beacons_leader:
                 beacons_leader = False
+            s_opts["schedule_leader"] = schedule_leader
+            if schedule_leader:
+                schedule_leader = False
             minion = self._create_minion_object(
                 s_opts,
                 s_opts["auth_timeout"],
@@ -4955,6 +4961,10 @@ class Minion(MinionBase):
         Set up the scheduler.
         This is safe to call multiple times.
         """
+        # In multimaster configuration only one minion shall execute schedule jobs
+        if not self.schedule_leader:
+            return
+
         self._setup_core()
 
         loop_interval = self.opts["loop_interval"]
