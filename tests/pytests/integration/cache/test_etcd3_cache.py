@@ -78,9 +78,8 @@ def _raw_get(key, prefix=False):
     kwargs = {"metadata": True}
     if prefix:
         kwargs["range_end"] = salt.utils.etcd_util.prefix_range_end(key)
-    return [
-        dict(kv, value=value) for value, kv in etcd3_cache.client.get(key, **kwargs)
-    ]
+    items = list(etcd3_cache.client.get(key, **kwargs))
+    return [dict(kv, value=value) for value, kv in items]
 
 
 def _raw_delete_prefix(prefix):
