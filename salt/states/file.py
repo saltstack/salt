@@ -892,19 +892,23 @@ def _check_file(name):
 def _read_file_text(name, encoding=None, encoding_errors="strict"):
     """
     Return the contents of ``name`` as text, for building diffs. An explicit
-    ``encoding`` (with optional ``encoding_errors``) takes precedence. Otherwise
-    files that start with a UTF-8, UTF-16 or UTF-32 byte order mark are decoded
-    in that encoding with the byte order mark removed.
+    ``encoding`` takes precedence. Otherwise, files that start with a UTF-8,
+    UTF-16 or UTF-32 byte order mark are decoded in that encoding with the
+    byte order mark removed. Falls back to ``__salt_system_encoding__``.
+
+    ``encoding_errors`` (default ``"strict"``) is applied on every decode
+    path so #50903's ``errors="replace"`` escape hatch works even when the
+    file has no BOM and no explicit ``encoding`` was supplied.
     """
     with salt.utils.files.fopen(name, "rb") as fp_:
         data = fp_.read()
     if encoding:
         return data.decode(encoding, errors=encoding_errors)
-    encoding = salt.utils.files.get_bom_encoding(name)
-    if encoding:
-        text = data.decode(encoding)
+    bom_encoding = salt.utils.files.get_bom_encoding(name)
+    if bom_encoding:
+        text = data.decode(bom_encoding, errors=encoding_errors)
         return text[1:] if text.startswith("\ufeff") else text
-    return data.decode(__salt_system_encoding__)
+    return data.decode(__salt_system_encoding__, errors=encoding_errors)
 
 
 def _is_text_file(name):
