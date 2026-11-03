@@ -240,7 +240,11 @@ class TestOperatorOverride:
         from salt.cluster.consensus.service import RaftService
 
         tmpdir = tempfile.mkdtemp()
-        opts = salt.config.master_config("/dev/null")
+        opts = salt.config.master_config(
+            "/dev/null",
+            defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+            | {"id": "cluster-test-master"},
+        )
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2", "127.0.0.3"]
         opts["cluster_pool_port"] = 55596

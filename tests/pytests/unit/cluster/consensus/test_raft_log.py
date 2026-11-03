@@ -26,7 +26,10 @@ def status():
 @pytest.fixture
 def storage(tmp_path):
     """SaltStorage backed by a temporary localfs cache directory."""
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "cluster-test-master"},
+    )
     opts["cachedir"] = str(tmp_path)
     return SaltStorage("test-node", opts)
 
@@ -2202,7 +2205,10 @@ def test_fsync_skipped_for_non_localfs_driver(tmp_path):
     """Non-localfs drivers fall through silently — durability is their concern."""
     from tests.support.mock import MagicMock
 
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "cluster-test-master"},
+    )
     opts["cachedir"] = str(tmp_path)
     storage = SaltStorage("test-node", opts)
     # Replace the cache with a stub so the unknown driver name never
