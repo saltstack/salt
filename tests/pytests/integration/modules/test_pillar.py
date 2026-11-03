@@ -295,7 +295,7 @@ def test_pillar_refresh_pillar_get(salt_cli, salt_minion, key_pillar):
         key_pillar_instance.refresh_pillar()
 
         # The pillar can now be read from in-memory pillars
-        ret = salt_cli.run("pillar.get", key, minion_tgt=salt_minion.id)
+        ret = salt_cli.run("pillar.get", key, minion_tgt=salt_minion.id, unmask=True)
         assert ret.returncode == 0
         val = ret.data
         assert val is True, repr(val)
@@ -328,7 +328,7 @@ def test_pillar_refresh_pillar_item(salt_cli, salt_minion, key_pillar):
         key_pillar_instance.refresh_pillar()
 
         # The pillar can now be read from in-memory pillars
-        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id, unmask=True)
         assert ret.returncode == 0
         val = ret.data
         assert key in val
@@ -353,7 +353,7 @@ def test_pillar_refresh_pillar_items(salt_cli, salt_minion, key_pillar):
         # refresh_pillar event is fired.
         # Calling refresh_pillar to update in-memory pillars
         key_pillar_instance.refresh_pillar()
-        ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id)
+        ret = salt_cli.run("pillar.items", minion_tgt=salt_minion.id, unmask=True)
         assert ret.returncode == 0
         val = ret.data
         assert key in val
@@ -394,7 +394,7 @@ def test_pillar_refresh_pillar_ping(salt_cli, salt_minion, key_pillar):
         key_pillar_instance.refresh_pillar()
 
         # The pillar can now be read from in-memory pillars
-        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id)
+        ret = salt_cli.run("pillar.item", key, minion_tgt=salt_minion.id, unmask=True)
         assert ret.returncode == 0
         val = ret.data
         assert key in val

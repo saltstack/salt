@@ -1,5 +1,6 @@
 import copy
 import logging
+import re
 
 import pytest
 
@@ -917,3 +918,271 @@ def test_nested_output():
     assert "              Succeeded: 2 (changed=1)" in ret
     assert "              Failed:    0" in ret
     assert "              Total states run:     2" in ret
+
+
+# ---------------------------------------------------------------------------
+# Tests for diff colorization
+# ---------------------------------------------------------------------------
+
+# ANSI color codes used by salt.utils.color when color=True
+_GREEN = "\x1b[0;32m"
+_RED = "\x1b[0;31m"
+_CYAN = "\x1b[0;36m"
+_WHITE = "\x1b[0;37m"
+_LIGHT_RED = "\x1b[0;1;31m"
+_LIGHT_GREEN = "\x1b[0;1;32m"
+_ENDC = "\x1b[0;0m"
+
+
+def _strip_ansi(text):
+    """Remove all ANSI escape sequences from *text*."""
+    return re.sub(r"\x1b\[[0-9;]+m", "", text)
+
+
+_MOTD_STATE = {
+    "minion": {
+        "file_|-/etc/motd_|-/etc/motd_|-managed": {
+            "__id__": "/etc/motd",
+            "__run_num__": 0,
+            "__sls__": "motd",
+            "changes": {
+                "diff": (
+                    "--- /etc/motd\n"
+                    "+++ /etc/motd\n"
+                    "@@ -1,2 +1,2 @@\n"
+                    " unchanged\n"
+                    "-old line\n"
+                    "+new line\n"
+                )
+            },
+            "comment": "File /etc/motd updated",
+            "duration": 10.0,
+            "name": "/etc/motd",
+            "result": True,
+            "start_time": "10:00:00.000000",
+        },
+    }
+}
+
+
+def _assert_diff_colorized(rendered):
+    assert _RED in rendered
+    assert _GREEN in rendered
+    assert "-old line" in _strip_ansi(rendered)
+    assert "+new line" in _strip_ansi(rendered)
+    for line in rendered.splitlines():
+        plain = _strip_ansi(line)
+        if "-old line" in plain or "+new line" in plain:
+            assert plain.startswith(
+                " " * 18
+            ), f"Expected 18-space indent: {repr(plain)}"
+        # Diff file headers use the bold variants: --- (from) red, +++ (to)
+        # green.  A real header is the marker followed by a space + path
+        # ("--- /path"), which distinguishes it from the outputter's own
+        # "----------" separator lines.
+        if plain.lstrip().startswith("--- "):
+            assert _LIGHT_RED in line
+        if plain.lstrip().startswith("+++ "):
+            assert _LIGHT_GREEN in line
+
+
+def test_diff_in_full_color_output(minion_opts):
+    """file.managed diff has red removed and green added lines with full_color mode."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
+
+
+def test_diff_in_full_color_output_color_default(minion_opts):
+    """With color=None (default), full_color mode still colorizes diff lines."""
+    minion_opts.update(
+        {
+            "color": None,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
+
+
+def test_diff_not_colorized_in_plain_full_output(minion_opts):
+    """With state_output=full (no _color), diff is not colorized."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(_MOTD_STATE)
+    assert _RED not in rendered
+
+
+@pytest.mark.parametrize("state_output", ["changes_color", "filter_color"])
+def test_diff_colorized_for_all_color_variants(minion_opts, state_output):
+    """Any XXX_color state_output variant colorizes the diff block."""
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": state_output,
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        _assert_diff_colorized(highstate.output(_MOTD_STATE))
+
+
+def test_diff_colorized_in_mixed_color_on_failure(minion_opts):
+    """mixed_color only shows full output for failures; a failed state's diff is colorized."""
+    state_data = {
+        "minion": {
+            "file_|-/etc/motd_|-/etc/motd_|-managed": {
+                "__id__": "/etc/motd",
+                "__run_num__": 0,
+                "__sls__": "motd",
+                "changes": {
+                    "diff": (
+                        "--- /etc/motd\n"
+                        "+++ /etc/motd\n"
+                        "@@ -1,2 +1,2 @@\n"
+                        " unchanged\n"
+                        "-old line\n"
+                        "+new line\n"
+                    )
+                },
+                "comment": "File /etc/motd failed to update",
+                "duration": 10.0,
+                "name": "/etc/motd",
+                "result": False,
+                "start_time": "10:00:00.000000",
+            },
+        }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "mixed_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    assert _RED in rendered
+    assert "-old line" in _strip_ansi(rendered)
+
+
+def test_nested_diff_colorized_in_file_recurse(minion_opts):
+    """file.recurse changes nest diff under a file-path key; diff must still be colorized."""
+    state_data = {
+        "minion": {
+            "file_|-/etc/test_|-/etc/test_|-recurse": {
+                "__id__": "recurse_test",
+                "__run_num__": 0,
+                "__sls__": "test",
+                "changes": {
+                    "/etc/test/file.txt": {
+                        "diff": (
+                            "--- /etc/test/file.txt\n"
+                            "+++ /etc/test/file.txt\n"
+                            "@@ -1,2 +1,2 @@\n"
+                            " unchanged\n"
+                            "-old line\n"
+                            "+new line\n"
+                        )
+                    },
+                },
+                "comment": "changes incoming",
+                "duration": 10.0,
+                "name": "/etc/test",
+                "result": None,
+                "start_time": "10:00:00.000000",
+            },
+        }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    assert _RED in rendered
+    assert _GREEN in rendered
+    assert "-old line" in _strip_ansi(rendered)
+    assert "+new line" in _strip_ansi(rendered)
+
+
+def test_diff_not_colorized_without_color_modifier(minion_opts):
+    """Default state_output=full produces no diff colorization."""
+    minion_opts.update({"color": True, "color_theme": None, "state_verbose": True})
+    minion_opts.pop("state_output", None)
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(_MOTD_STATE)
+    assert _RED not in rendered
+
+
+def test_colorized_diff_strips_embedded_escape_sequences(minion_opts):
+    """
+    Diff content is untrusted; embedded terminal escape sequences must be
+    neutralized in the colorized path just as the nested outputter does for
+    the plain path (strip_colors defaults to True).
+    """
+    # ESC ]0;injected_title BEL is an OSC that would set the terminal title if
+    # printed.
+    injected = "\x1b]0;injected_title\x07"
+    state_data = {
+        "minion": {
+            "file_|-/etc/motd_|-/etc/motd_|-managed": {
+                "__id__": "/etc/motd",
+                "__run_num__": 0,
+                "__sls__": "motd",
+                "changes": {
+                    "diff": (
+                        "--- /etc/motd\n"
+                        "+++ /etc/motd\n"
+                        "@@ -1,2 +1,2 @@\n"
+                        " unchanged\n"
+                        "-old line\n"
+                        f"+new line{injected}\n"
+                    )
+                },
+                "comment": "File /etc/motd updated",
+                "duration": 10.0,
+                "name": "/etc/motd",
+                "result": True,
+                "start_time": "10:00:00.000000",
+            },
+        }
+    }
+    minion_opts.update(
+        {
+            "color": True,
+            "color_theme": None,
+            "state_verbose": True,
+            "strip_colors": True,
+            "state_output": "full_color",
+        }
+    )
+    with patch.dict(highstate.__opts__, minion_opts):
+        rendered = highstate.output(state_data)
+    # The raw OSC injection must not survive into the output...
+    assert injected not in rendered
+    # ...but the visible text and colorization are preserved.
+    assert _GREEN in rendered
+    assert "+new line" in _strip_ansi(rendered)

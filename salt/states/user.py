@@ -348,18 +348,33 @@ def present(
         The user id to assign. If not specified, and the user does not exist,
         then the next available uid will be assigned.
 
+        .. note::
+            Not supported on Windows. On Windows the account SID is fixed by
+            the operating system at user creation time and cannot be chosen
+            or changed; ``uid`` and ``allow_uid_change`` have no effect there
+            and will surface as a permissions error if used.
+
     gid
         The id of the default group to assign to the user. Either a group name
         or gid can be used. If not specified, and the user does not exist, then
         the next available gid will be assigned.
 
+        .. note::
+            Not supported on Windows.
+
     allow_uid_change : False
         Set to ``True`` to allow the state to update the uid.
+
+        .. note::
+            Not supported on Windows -- see ``uid``.
 
         .. versionadded:: 2018.3.1
 
     allow_gid_change : False
         Set to ``True`` to allow the state to update the gid.
+
+        .. note::
+            Not supported on Windows.
 
         .. versionadded:: 2018.3.1
 
@@ -613,14 +628,25 @@ def present(
             ret["result"] = False
             return ret
 
+    missing_groups = []
     if groups:
         missing_groups = [x for x in groups if not __salt__["group.info"](x)]
         if missing_groups:
-            ret["comment"] = "The following group(s) are not present: {}".format(
-                ",".join(missing_groups)
-            )
-            ret["result"] = False
-            return ret
+            if __opts__.get("test"):
+                # In test mode, a missing group is not necessarily an error:
+                # a `group.present` requisite may create it during the real
+                # run. Note the missing groups in the result, drop them from
+                # the membership check below (they cannot be diffed against
+                # the user's current groups since they do not yet exist),
+                # and let the rest of the function report whatever else
+                # would change. Issue #68110.
+                groups = [x for x in groups if x not in missing_groups]
+            else:
+                ret["comment"] = "The following group(s) are not present: {}".format(
+                    ",".join(missing_groups)
+                )
+                ret["result"] = False
+                return ret
 
     if optional_groups:
         present_optgroups = [x for x in optional_groups if __salt__["group.info"](x)]
@@ -703,6 +729,10 @@ def present(
                 elif key == "group" and not remove_groups:
                     key = "ensure groups"
                 ret["comment"] += f"{key}: {val}\n"
+            if missing_groups:
+                ret["comment"] += "groups (pending creation): {}\n".format(
+                    ",".join(missing_groups)
+                )
             return ret
         # The user is present
         if "shadow.info" in __salt__:
@@ -888,6 +918,10 @@ def present(
         if __opts__["test"]:
             ret["result"] = None
             ret["comment"] = f"User {name} set to be added"
+            if missing_groups:
+                ret["comment"] += " (pending groups: {})".format(
+                    ",".join(missing_groups)
+                )
             return ret
         if groups and present_optgroups:
             groups.extend(present_optgroups)

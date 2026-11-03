@@ -362,3 +362,48 @@ class SystemdTestCase(TestCase):
         dbus_mock.GetUnitByPID = Mock(site_effect=dbus_mock.DBusException)
         with patch("salt.utils.systemd.dbus", dbus_mock):
             assert _systemd.pid_to_service(99999) is None
+
+    def test_status_does_not_use_capture_output_kwarg(self):
+        """
+        Regression test for #68778.
+
+        salt-ssh's thin advertises Python 3.0+ as a supported target
+        interpreter (see ``salt/utils/thin.py`` ``py3:3:0``), which means
+        ``salt.utils.systemd`` must import and run on Python 3.6 targets
+        (e.g. stock RHEL 8 system Python). ``subprocess.run``'s
+        ``capture_output`` keyword was added in Python 3.7, so any call
+        site that passes it raises ``TypeError`` on 3.6.  Assert that
+        ``status()`` uses the equivalent ``stdout=PIPE, stderr=PIPE``
+        form instead of ``capture_output=True``.
+        """
+        run_mock = Mock(return_value=Mock(stderr=b""))
+        with patch("salt.utils.systemd.subprocess.run", run_mock):
+            _systemd.status({})
+        run_mock.assert_called_once()
+        _, kwargs = run_mock.call_args
+        assert "capture_output" not in kwargs, (
+            "salt.utils.systemd.status() must not use capture_output=; "
+            "it is Python 3.7+ only and salt-ssh targets can run 3.6."
+        )
+        assert kwargs.get("stdout") is subprocess.PIPE
+        assert kwargs.get("stderr") is subprocess.PIPE
+
+    @patch("salt.utils.systemd.dbus", False)
+    def test_pid_to_service_systemctl_does_not_use_capture_output_kwarg(self):
+        """
+        Regression test for #68778. See ``test_status_does_not_use_capture_output_kwarg``
+        for background — the same constraint applies to
+        ``_pid_to_service_systemctl``.
+        """
+        run_mock = Mock(return_value=Mock(stdout='{"_SYSTEMD_UNIT":"foo.service"}'))
+        with patch("salt.utils.systemd.subprocess.run", run_mock):
+            _systemd.pid_to_service(1234)
+        run_mock.assert_called_once()
+        _, kwargs = run_mock.call_args
+        assert "capture_output" not in kwargs, (
+            "salt.utils.systemd._pid_to_service_systemctl() must not use "
+            "capture_output=; it is Python 3.7+ only and salt-ssh targets "
+            "can run 3.6."
+        )
+        assert kwargs.get("stdout") is subprocess.PIPE
+        assert kwargs.get("stderr") is subprocess.PIPE

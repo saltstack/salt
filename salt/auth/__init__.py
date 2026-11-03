@@ -47,6 +47,8 @@ AUTH_INTERNAL_KEYWORDS = frozenset(
         "print_event",
         "raw",
         "yield_pub_data",
+        "batch",
+        "batch_delay",
     ]
 )
 
@@ -70,6 +72,31 @@ class LoadAuth:
     @cached_property
     def ckminions(self):
         return self._ckminions or salt.utils.minions.CkMinions(self.opts)
+
+    def destroy(self):
+        """
+        Clean up resources
+        """
+        if hasattr(self, "auth") and self.auth is not None:
+            if hasattr(self.auth, "destroy"):
+                self.auth.destroy()
+            self.auth = {}
+        if hasattr(self, "tokens") and self.tokens is not None:
+            if hasattr(self.tokens, "destroy"):
+                self.tokens.destroy()
+            self.tokens = {}
+        if hasattr(self, "ckminions") and self.ckminions is not None:
+            if hasattr(self.ckminions, "cache") and self.ckminions.cache is not None:
+                if hasattr(self.ckminions.cache, "destroy"):
+                    self.ckminions.cache.destroy()
+                self.ckminions.cache = None
+            self.ckminions = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
 
     def load_name(self, load):
         """
@@ -104,9 +131,18 @@ class LoadAuth:
         _valid = ["username", "password", "eauth", "token"]
         _load = {key: value for (key, value) in load.items() if key in _valid}
 
-        fcall = salt.utils.args.format_call(
-            self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
-        )
+        try:
+            fcall = salt.utils.args.format_call(
+                self.auth[fstr], _load, expected_extra_kws=AUTH_INTERNAL_KEYWORDS
+            )
+        except salt.exceptions.SaltInvocationError as e:
+            log.debug(
+                "Authentication request for eauth '%s' is missing required "
+                "arguments: %s",
+                load.get("eauth"),
+                e,
+            )
+            return False
         try:
             if "kwargs" in fcall:
                 return self.auth[fstr](*fcall["args"], **fcall["kwargs"])

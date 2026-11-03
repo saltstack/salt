@@ -243,7 +243,7 @@ class TestOperatorOverride:
         opts = salt.config.master_config("/dev/null")
         opts["interface"] = "127.0.0.1"
         opts["cluster_peers"] = ["127.0.0.2", "127.0.0.3"]
-        opts["cluster_port"] = 55596
+        opts["cluster_pool_port"] = 55596
         opts["cachedir"] = tmpdir
         opts["cluster_min_voters"] = 2
 

@@ -520,3 +520,85 @@ def test_unicode_remove_section(encoding, linesep, ini_file, unicode_content):
     }
     assert ini.remove_section(str(ini_file), "Юникод", encoding=encoding) == expected
     assert ini.get_section(str(ini_file), "Юникод", encoding=encoding) == {}
+
+
+def test_set_option_preserves_indented_options(ini_file):
+    """
+    Test that setting an option does not delete indented options in other
+    sections (e.g. a git-style config where options are indented).
+
+    Regression test for #36354.
+    """
+    ini_content = os.linesep.join(
+        [
+            "[core]",
+            "",
+            '[remote "origin"]',
+            "        url = git@version-control:test.git",
+            "        fetch = +refs/heads/*:refs/remotes/origin/*",
+        ]
+    )
+    ini_file.write_text(ini_content)
+
+    ini.set_option(str(ini_file), {"core": {"sharedRepository": "group"}})
+
+    # The indented options in the untouched section must survive
+    assert (
+        ini.get_option(str(ini_file), 'remote "origin"', "url")
+        == "git@version-control:test.git"
+    )
+    assert (
+        ini.get_option(str(ini_file), 'remote "origin"', "fetch")
+        == "+refs/heads/*:refs/remotes/origin/*"
+    )
+    # The new option was still written
+    assert ini.get_option(str(ini_file), "core", "sharedRepository") == "group"
+
+
+def test_section_refresh_parses_leading_indented_options_36354():
+    """
+    Call the fixed _Section.refresh directly with a section body whose
+    options are all indented (git-style config), the case that used to be
+    silently dropped.
+
+    Regression test for #36354.
+    """
+    # Mirror the production call site in _Ini.refresh: the section body is
+    # passed positionally as inicontents with separator="=" and refresh()
+    # is then called with no arguments, so it parses self.inicontents.
+    sect_ini = os.linesep.join(
+        [
+            "        url = git@version-control:test.git",
+            "        fetch = +refs/heads/*:refs/remotes/origin/*",
+        ]
+    )
+    sect = ini._Section('remote "origin"', sect_ini, separator="=")
+    sect.refresh()
+
+    # Before the fix, refresh() consumed indented lines even when there was
+    # no previous option to append them to, so the section came back empty.
+    assert sect.get("url") == "git@version-control:test.git"
+    assert sect.get("fetch") == "+refs/heads/*:refs/remotes/origin/*"
+
+
+def test_section_refresh_keeps_continuation_lines_36354():
+    """
+    Guard against overcorrection of the #36354 fix: an indented line that
+    follows a normal option must still be folded into that option's value
+    as a continuation line, not parsed as a separate option or dropped.
+    This passes with and without the fix.
+    """
+    sect_ini = os.linesep.join(
+        [
+            "key1 = value1",
+            "    continuation line",
+            "key2 = value2",
+        ]
+    )
+    sect = ini._Section("test", sect_ini, separator="=")
+    sect.refresh()
+
+    assert sect.get("key1") == os.linesep.join(["value1", "    continuation line"])
+    assert sect.get("key2") == "value2"
+    # The continuation line must not have become its own entry
+    assert len(sect) == 2

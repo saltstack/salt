@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import Version
+from salt.utils.versions import Version, warn_until
 
 try:
     import salt.utils.win_network
@@ -72,7 +72,18 @@ def sanitize_host(host):
     """
     Sanitize host string.
     https://tools.ietf.org/html/rfc1123#section-2.1
+
+    If ``host`` is already a valid IP address (IPv4 or IPv6) it is returned
+    unchanged so that characters like ``:`` in IPv6 addresses are not
+    stripped.
     """
+    if isinstance(host, str):
+        try:
+            ipaddress.ip_address(host)
+        except ValueError:
+            pass
+        else:
+            return host
     RFC952_characters = ascii_letters + digits + ".-_"
     return "".join([c for c in host[0:255] if c in RFC952_characters])
 
@@ -1103,7 +1114,7 @@ def netbsd_interfaces():
     address)
     """
     # NetBSD versions prior to 8.0 can still use linux_interfaces()
-    if Version(os.uname()[2]) < Version("8.0"):
+    if Version(os.uname()[2].split("_")[0]) < Version("8.0"):
         return linux_interfaces()
 
     ifconfig_path = salt.utils.path.which("ifconfig")
@@ -2495,3 +2506,31 @@ def slaac(value, mac):
     eui64 = bytes([mac_bytes[0] ^ 0x02]) + mac_bytes[1:3] + b"\xff\xfe" + mac_bytes[3:]
     interface_id = int.from_bytes(eui64, "big")
     return str(ipaddress.IPv6Address(int(network.network_address) | interface_id))
+
+
+def neigh_expand_warning(func_name, expand):
+    """
+    Warn about the upcoming neighbour table return shape change when the
+    caller did not pass ``expand`` explicitly, and return the effective
+    value of ``expand``.
+    """
+    if expand is None:
+        warn_until(
+            3011,
+            f"In salt 3011, {func_name} will return a list of neighbour entry "
+            "dicts by default instead of a mac-to-ip mapping, which silently "
+            "drops entries whenever several IP addresses share a MAC address. "
+            "Pass expand=True to opt in to the new shape now, or expand=False "
+            "to keep the current shape and silence this warning.",
+        )
+        return False
+    return expand
+
+
+def neighs_flatten(entries):
+    """
+    Flatten neighbour entry dicts into the legacy ``{mac: ip}`` shape. When
+    several entries share a MAC address, the last one wins, matching the
+    historical behaviour.
+    """
+    return {entry["mac"]: entry["ip"] for entry in entries}

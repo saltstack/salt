@@ -31,7 +31,6 @@ from datetime import datetime
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
-import salt.utils.versions
 import salt.utils.win_reg
 import salt.utils.win_runas
 import salt.utils.winapi
@@ -467,23 +466,6 @@ def delete(name, purge=False, force=False):
     return True
 
 
-def getUserSid(username):
-    """
-    Deprecated function. Please use get_user_sid instead
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' user.get_user_sid jsnuffy
-    """
-    salt.utils.versions.warn_until(
-        version=3009,
-        message="'getUserSid' is being deprecated. Please use get_user_sid instead",
-    )
-    return get_user_sid(username)
-
-
 def get_user_sid(username):
     """
     Get the Security ID for the user
@@ -533,7 +515,15 @@ def setpassword(name, password):
 
         salt '*' user.setpassword jsnuffy sup3rs3cr3t
     """
-    return update(name=name, password=password)
+    # update() returns the Win32 error string on failure (e.g. when the user
+    # does not exist), which is truthy and would otherwise be misreported as
+    # success by callers that check the return value as a boolean. Verify the
+    # user exists first so we can return a proper ``False`` and surface a
+    # clear log message.
+    if not info(name):
+        log.error("User '%s' does not exist", name)
+        return False
+    return update(name=name, password=password) is True
 
 
 def addgroup(name, group):

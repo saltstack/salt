@@ -11,6 +11,14 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    # vcert 0.18+ hard-pins pynacl/cryptography/six against the rest of CI, and
+    # pylint 4.x turns pre-existing warnings into hard CI failures; both are
+    # deliberately held (see the comments in requirements/static/ci/*.txt).
+    ignore:
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+      - dependency-name: "pylint"
+        versions: [">=4.0.0"]
     groups:
       all-pip-updates:
         patterns:
@@ -27,6 +35,11 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+      - dependency-name: "pylint"
+        versions: [">=4.0.0"]
     groups:
       all-pip-updates:
         patterns:
@@ -43,6 +56,11 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+      - dependency-name: "pylint"
+        versions: [">=4.0.0"]
     groups:
       all-pip-updates:
         patterns:
@@ -59,6 +77,11 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+      - dependency-name: "pylint"
+        versions: [">=4.0.0"]
     groups:
       all-pip-updates:
         patterns:

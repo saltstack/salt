@@ -1,6 +1,7 @@
 import logging
 import socket
 import textwrap
+import warnings
 
 import pytest
 
@@ -222,6 +223,30 @@ def test_sanitize_host_name():
     """
     ret = network.sanitize_host("foo_bar")
     assert ret == "foo_bar"
+
+
+def test_sanitize_host_ipv6():
+    """
+    Should preserve colons in IPv6 addresses (regression for #68995).
+    """
+    ret = network.sanitize_host("2607:f8b0:4004:c19::66")
+    assert ret == "2607:f8b0:4004:c19::66"
+
+
+def test_sanitize_host_ipv6_full():
+    """
+    Should preserve a fully-expanded IPv6 address.
+    """
+    ret = network.sanitize_host("2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+    assert ret == "2001:0db8:85a3:0000:0000:8a2e:0370:7334"
+
+
+def test_sanitize_host_ipv6_loopback():
+    """
+    Should preserve the IPv6 loopback address.
+    """
+    ret = network.sanitize_host("::1")
+    assert ret == "::1"
 
 
 def test_host_to_ips():
@@ -1730,3 +1755,94 @@ def test_cidr_merge_span(value, expected):
 )
 def test_slaac(value, mac, expected):
     assert network.slaac(value, mac) == expected
+
+
+def test_neighs_flatten_maps_mac_to_ip():
+    """
+    neighs_flatten collapses neighbour entry dicts into the legacy
+    ``{mac: ip}`` mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.2", "mac": "00:00:5e:00:53:02", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {
+        "00:00:5e:00:53:01": "203.0.113.1",
+        "00:00:5e:00:53:02": "203.0.113.2",
+    }
+
+
+def test_neighs_flatten_last_wins_on_duplicate_mac():
+    """
+    When several entries share a MAC address the last one parsed wins,
+    matching the historical lossy behaviour of the flat mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.9", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {"00:00:5e:00:53:01": "203.0.113.9"}
+
+
+def test_neigh_expand_warning_returns_expand_when_set():
+    """
+    neigh_expand_warning returns an explicit expand value unchanged and does
+    not emit a deprecation warning.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert network.neigh_expand_warning("network.arp", True) is True
+        assert network.neigh_expand_warning("network.arp", False) is False
+
+
+def test_neigh_expand_warning_none_warns_and_returns_false():
+    """
+    When expand is not supplied, neigh_expand_warning emits the deprecation
+    warning and falls back to the legacy (False) shape.
+    """
+    with pytest.warns(DeprecationWarning, match="network.arp"):
+        result = network.neigh_expand_warning("network.arp", None)
+    assert result is False
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "uname_release",
+    [
+        "10.1_STABLE",
+        "10.1_BETA",
+        "9.3_STABLE",
+    ],
+)
+def test_netbsd_interfaces_version_with_suffix(uname_release):
+    """
+    netbsd_interfaces() must not raise InvalidVersion when os.uname()[2]
+    contains a suffix separated by underscore (e.g. '10.1_STABLE').
+    """
+    from packaging.version import Version
+
+    # Build a fake uname result where index 2 (release) has the given value.
+    # os.uname() is accessed as os.uname()[2] in netbsd_interfaces().
+    fake_uname = ("NetBSD", "hostname", uname_release, "", "amd64")
+    uname_mock = MagicMock(return_value=fake_uname)
+
+    version_part = uname_release.split("_")[0]
+    is_old = Version(version_part) < Version("8.0")
+
+    with patch("os.uname", uname_mock):
+        if is_old:
+            with patch.object(network, "linux_interfaces", MagicMock(return_value={})):
+                result = network.netbsd_interfaces()
+                assert result == {}
+        else:
+            with patch("salt.utils.path.which", return_value="/sbin/ifconfig"), patch(
+                "subprocess.Popen"
+            ) as mock_popen:
+                mock_popen.return_value.communicate.return_value = (b"", None)
+                with patch.object(
+                    network,
+                    "_netbsd_interfaces_ifconfig",
+                    MagicMock(return_value={}),
+                ):
+                    result = network.netbsd_interfaces()
+                    assert isinstance(result, dict)

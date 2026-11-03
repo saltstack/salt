@@ -490,7 +490,7 @@ def set_restart_delay(seconds):
         only work on certain versions of Mac Server X. This article explains the
         issue in more detail, though it is quite old.
 
-        http://lists.apple.com/archives/macos-x-server/2006/Jul/msg00967.html
+        https://web.archive.org/web/20140116070347/http://lists.apple.com/archives/macos-x-server/2006/Jul/msg00967.html
 
     :param int seconds: The number of seconds. Must be a multiple of 30
 

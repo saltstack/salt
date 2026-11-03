@@ -53,6 +53,12 @@ def find_file(path, saltenv="base", **kwargs):
             )
             saltenv = "__env__"
         else:
+            log.debug(
+                "Failed to find file(path: %s; saltenv: %s): saltenv not found "
+                "in file_roots",
+                path,
+                saltenv,
+            )
             return fnd
 
     def _add_file_stat(fnd):
@@ -93,6 +99,9 @@ def find_file(path, saltenv="base", **kwargs):
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
             fnd["rel"] = path
+            log.debug(
+                "Found file(path: %s; saltenv: %s): %s", path, actual_saltenv, full
+            )
             return _add_file_stat(fnd)
         return fnd
     for root in __opts__["file_roots"][saltenv]:
@@ -109,7 +118,18 @@ def find_file(path, saltenv="base", **kwargs):
         if os.path.isfile(full) and not salt.fileserver.is_file_ignored(__opts__, full):
             fnd["path"] = full
             fnd["rel"] = path
+            log.debug(
+                "Found file(path: %s; saltenv: %s): %s", path, actual_saltenv, full
+            )
             return _add_file_stat(fnd)
+    log.debug(
+        "Failed to find file(path: %s; saltenv: %s): No file matching '%s' was "
+        "found in the '%s' saltenv",
+        path,
+        actual_saltenv,
+        path,
+        actual_saltenv,
+    )
     return fnd
 
 

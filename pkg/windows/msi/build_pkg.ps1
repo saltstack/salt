@@ -174,17 +174,19 @@ $RUNTIMES | ForEach-Object {
 #-------------------------------------------------------------------------------
 
 Write-Host "Getting internal version: " -NoNewline
-[regex]$tagRE = '(?:[^\d]+)?(?<major>[\d]{1,4})(?:\.(?<minor>[\d]{1,2}))?(?:\.(?<bugfix>[\d]{0,2}))?'
+[regex]$tagRE = '(?:[^\d]+)?(?<major>[\d]{1,4})(?:\.(?<minor>[\d]{1,2}))?(?:\.(?<bugfix>[\d]{0,2}))?(?:-(?<patch>[\d]{1,2}))?'
 $tagREM = $tagRE.Match($Version)
 $major  = $tagREM.groups["major"].ToString()
 $minor  = $tagREM.groups["minor"]
 $bugfix = $tagREM.groups["bugfix"]
-if ([string]::IsNullOrEmpty($minor)) {$minor = 0}
+$patch  = $tagREM.groups["patch"]
+if ([string]::IsNullOrEmpty($minor))  {$minor  = 0}
 if ([string]::IsNullOrEmpty($bugfix)) {$bugfix = 0}
+if ([string]::IsNullOrEmpty($patch))  {$patch  = 0}
 # Assumption: major is a number
 $major1 = $major.substring(0, 2)
 $major2 = $major.substring(2)
-$INTERNAL_VERSION = "$major1.$major2.$minor"
+$INTERNAL_VERSION = "$major1.$major2.$minor.$patch"
 Write-Result $INTERNAL_VERSION -ForegroundColor Green
 
 #-------------------------------------------------------------------------------

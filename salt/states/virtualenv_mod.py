@@ -2,6 +2,12 @@
 Setup of Python virtualenv sandboxes.
 
 .. versionadded:: 0.17.0
+
+.. note::
+
+    This state module is loaded under the ``virtualenv`` virtual name. Use
+    ``virtualenv.managed`` (and not ``virtualenv_mod.managed``) in your
+    state SLS files.
 """
 
 import logging
@@ -68,6 +74,13 @@ def managed(
     venv_bin: virtualenv
         The name (and optionally path) of the virtualenv command. This can also
         be set globally in the minion config file as ``virtualenv.venv_bin``.
+        The special value ``venv`` selects the python standard library
+        ``venv`` module instead of a virtualenv binary; a python interpreter
+        (e.g. ``/usr/bin/python3.11``) may also be given, in which case the
+        environment is created with ``<interpreter> -m venv``.
+
+        .. versionchanged:: 3006.28
+            A python interpreter is now accepted as ``venv_bin``.
 
     requirements: None
         Path to a pip requirements file. If the path begins with ``salt://``
@@ -80,6 +93,12 @@ def managed(
         Python executable used to build the virtualenv. When Salt is installed
         from a onedir package. You will likely want to specify which python
         interperter should be used.
+
+        .. versionchanged:: 3006.28
+            Also honoured with ``venv_bin: venv``: the environment is created
+            by running ``<python> -m venv``, so distros whose virtualenv
+            binary is outdated (e.g. EL8) can still build environments for
+            any installed interpreter.
 
     user: None
         The user under which to run virtualenv and pip.
@@ -122,8 +141,15 @@ def managed(
 
         .. versionadded:: 2017.7.0
 
-    Also accepts any kwargs that the virtualenv module will. However, some
-    kwargs, such as the ``pip`` option, require ``- distribute: True``.
+    Also accepts any keyword argument accepted by
+    :py:func:`virtualenv.create <salt.modules.virtualenv_mod.create>` --
+    including ``system_site_packages``, ``distribute``, ``clear``,
+    ``extra_search_dir``, ``never_download``, ``prompt``, ``index_url``,
+    ``extra_index_url``, ``pre_releases``, ``pip_download``,
+    ``pip_download_cache``, ``pip_ignore_installed``, ``use_vt``,
+    ``pip_no_cache_dir`` and ``pip_cache_dir``. Refer to that execution
+    module for argument semantics. Some kwargs, such as the ``pip`` option,
+    require ``- distribute: True``.
 
     .. code-block:: yaml
 

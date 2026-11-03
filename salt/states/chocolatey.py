@@ -131,7 +131,7 @@ def installed(
             if name.lower() == pkg.lower():
                 full_name = pkg
 
-        installed_version = pre_install[full_name]
+        installed_version = pre_install[full_name][0]
 
         if version:
             if salt.utils.versions.compare(

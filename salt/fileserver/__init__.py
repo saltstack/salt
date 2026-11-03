@@ -383,6 +383,12 @@ class Fileserver:
         """
         return self.opts
 
+    def destroy(self):
+        if hasattr(self, "servers") and self.servers is not None:
+            if hasattr(self.servers, "destroy"):
+                self.servers.destroy()
+            self.servers = {}
+
     def update_opts(self):
         # This fix func monkey patching by pillar
         for name, func in self.servers.items():
@@ -589,6 +595,12 @@ class Fileserver:
         for fsb in back:
             fstr = f"{fsb}.find_file"
             if fstr in self.servers:
+                log.info("Calling %s find_file", fsb)
+                log.debug(
+                    "Full find_file call: find_file((), {'path': %r, 'saltenv': %r})",
+                    path,
+                    saltenv,
+                )
                 fnd = self.servers[fstr](path, saltenv, **kwargs)
                 if fnd.get("path"):
                     fnd["back"] = fsb
@@ -879,4 +891,7 @@ class FSChan:
         return getattr(self.fs, cmd)(load)
 
     def close(self):
-        pass
+        if hasattr(self, "fs") and self.fs is not None:
+            if hasattr(self.fs, "destroy"):
+                self.fs.destroy()
+            self.fs = None

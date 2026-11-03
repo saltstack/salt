@@ -458,6 +458,7 @@ def install(
     reinstall=False,
     downloadonly=False,
     ignore_epoch=False,
+    normalize=True,
     **kwargs,
 ):
     """
@@ -549,11 +550,20 @@ def install(
 
         .. versionadded:: 2018.3.0
 
+    normalize : True
+        Normalize the package name by removing the architecture. Set this to
+        ``False`` to preserve explicitly arch-qualified package names such as
+        ``name:amd64``.
+
     Multiple Package Installation Options:
 
     pkgs
         A list of packages to install from a software repository. Must be
         passed as a python list.
+
+        For multiarch packages, use the arch-qualified package name (for
+        example ``name:amd64``) when you need Salt to target that exact APT
+        package name.
 
         CLI Example:
 
@@ -640,7 +650,11 @@ def install(
 
     try:
         pkg_params, pkg_type = __salt__["pkg_resource.parse_targets"](
-            name, pkgs, sources, **kwargs
+            name,
+            pkgs,
+            sources,
+            normalize=normalize and kwargs.get("split_arch", True),
+            **kwargs,
         )
     except MinionError as exc:
         raise CommandExecutionError(exc)
@@ -1185,6 +1199,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1193,6 +1211,10 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
 
     pkgs
         A list of packages to hold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -1248,6 +1270,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
     name
         The name of the package, e.g., 'tmux'
 
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
+
         CLI Example:
 
         .. code-block:: bash
@@ -1256,6 +1282,10 @@ def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W06
 
     pkgs
         A list of packages to unhold. Must be passed as a python list.
+
+        For multiarch packages, dpkg may record the held package name with an
+        architecture suffix such as ``:amd64``. In those cases, the
+        arch-qualified package name may need to be used.
 
         CLI Example:
 
@@ -2083,14 +2113,28 @@ def get_repo_keys(aptkey=True, keydir=None):
     return ret
 
 
-def _decrypt_key(key):
+def _decrypt_key(key, keyfile=None):
     """
     Check if the key needs to be decrypted. If it needs
     to be decrypt it, do so with the gpg binary.
+
+    When the destination ``keyfile`` uses the ``.asc`` extension, the key is
+    intentionally left ASCII-armored: per the apt-secure(8) spec, ``.asc``
+    keyrings are accepted by apt without dearmoring. This also lets keyfiles
+    that bundle more than one armored key (which ``gpg --dearmor`` cannot
+    losslessly round-trip in all configurations) pass through unchanged and
+    avoids requiring ``gpg`` on the minion just to copy the file.
     """
     try:
         with salt.utils.files.fopen(key, "r") as fp:
             if fp.read().strip("-").startswith("BEGIN PGP"):
+                if keyfile and str(keyfile).endswith(".asc"):
+                    log.debug(
+                        "Destination keyfile %s uses .asc extension; "
+                        "leaving key ASCII-armored.",
+                        keyfile,
+                    )
+                    return key
                 if not salt.utils.path.which("gpg"):
                     log.error(
                         "Detected an ASCII armored key %s and the gpg binary is not available. Not decrypting the key.",
@@ -2160,16 +2204,34 @@ def add_repo_key(
     if not isinstance(keydir, pathlib.Path):
         keydir = pathlib.Path(keydir)
     if not aptkey and not keydir.is_dir():
-        log.error(
-            "The directory %s does not exist. Please create this directory only writable by root",
-            keydir,
-        )
-        return False
+        # Debian 11 / Ubuntu 22.04 ship apt versions that support the
+        # ``/etc/apt/keyrings/`` convention but do not create the
+        # directory on install.  apt-secure(8) explicitly documents that
+        # admins may create it themselves; do that on their behalf with
+        # the standard root-owned, world-readable 0755 mode so the
+        # ``salt://key -> add_repo_key(aptkey=False)`` workflow works
+        # out of the box on those distros.  If we cannot create it
+        # (e.g. read-only fs, EPERM), fall through to the pre-existing
+        # error path -- do not silently succeed.
+        try:
+            keydir.mkdir(mode=0o755, parents=True, exist_ok=True)
+        except OSError as exc:
+            log.error(
+                "The directory %s does not exist and could not be created: %s."
+                " Please create this directory writable only by root.",
+                keydir,
+                exc,
+            )
+            return False
 
     if not salt.utils.path.which("apt-key"):
         aptkey = False
     cmd = ["apt-key"]
     kwargs = {}
+    # NOTE: Populated below only for the ``not aptkey`` + ``keyserver``
+    #   branch, so that the keyring file gpg writes can be chmod'd to be
+    #   world-readable afterwards (see the matching os.chmod() call below).
+    keyring_file = None
 
     # If the keyid is provided or determined, check it against the existing
     # repo key ids to determine whether it needs to be imported.
@@ -2187,7 +2249,11 @@ def add_repo_key(
             return False
 
         if not aptkey:
-            key = _decrypt_key(cached_source_path)
+            # Decide the destination filename up front so _decrypt_key can
+            # honor the apt-secure(8) convention that .asc keyrings are kept
+            # ASCII-armored rather than dearmored.
+            dest_keyfile = keyfile or pathlib.Path(cached_source_path).name
+            key = _decrypt_key(cached_source_path, keyfile=dest_keyfile)
             if not key:
                 return False
             key = pathlib.Path(str(key))
@@ -2195,7 +2261,16 @@ def add_repo_key(
                 keyfile = key.name
                 if keyfile.endswith(".decrypted"):
                     keyfile = keyfile[:-10]
-            shutil.copyfile(str(key), str(keydir / keyfile))
+            dest = keydir / keyfile
+            shutil.copyfile(str(key), str(dest))
+            # NOTE: shutil.copyfile() does not copy permission bits, so the
+            #   destination file's mode is subject to the process umask. On
+            #   systems hardened with a restrictive umask (e.g. 077), this
+            #   left the keyring unreadable by the unprivileged _apt user,
+            #   causing "NO_PUBKEY" errors on the next apt-get update. Force
+            #   a sane, world-readable mode to match what apt-secure(8)
+            #   expects of keyring files.
+            os.chmod(str(dest), 0o644)
             return True
         else:
             cmd.extend(["add", cached_source_path])
@@ -2215,11 +2290,12 @@ def add_repo_key(
                     "You must define the name of the key file to save the key. See keyfile argument"
                 )
                 return False
+            keyring_file = keydir / keyfile
             cmd = [
                 "gpg",
                 "--no-default-keyring",
                 "--keyring",
-                keydir / keyfile,
+                keyring_file,
                 "--keyserver",
                 keyserver,
                 "--recv-keys",
@@ -2238,6 +2314,12 @@ def add_repo_key(
     cmd_ret = _call_apt(cmd, **kwargs)
 
     if cmd_ret["retcode"] == 0:
+        if keyring_file is not None:
+            # NOTE: gpg creates keyring files subject to the process umask,
+            #   which can leave them unreadable by the unprivileged _apt
+            #   user on systems with a restrictive umask. See the longer
+            #   explanation above the other os.chmod() call in this function.
+            os.chmod(str(keyring_file), 0o644)
         return True
     log.error("Unable to add repo key: %s", cmd_ret["stderr"])
     return False

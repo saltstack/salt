@@ -290,6 +290,122 @@ def test_tar_bsdtar_with_trim_output():
         assert ret["comment"].endswith("Output was trimmed to 1 number of lines")
 
 
+def test_tar_bsdtar_without_trim_output_59570():
+    """
+    Direct-altitude regression test for #59570.
+
+    When extraction actually happens but trim_output is left at its default
+    (the ``trim_output=False`` parameter default), no output is trimmed, so
+    the "Output was trimmed to ... number of lines" message must NOT be
+    appended. Previously it was appended unconditionally, producing the
+    nonsensical "Output was trimmed to False number of lines".
+    """
+    bsdtar = MagicMock(return_value="tar (bsdtar)")
+    source = "/tmp/foo.tar.gz"
+    mock_false = MagicMock(return_value=False)
+    mock_true = MagicMock(return_value=True)
+    state_single_mock = MagicMock(return_value={"local": {"result": True}})
+    run_all = MagicMock(
+        return_value={"retcode": 0, "stdout": "stdout", "stderr": "stderr"}
+    )
+    mock_source_list = MagicMock(return_value=(source, None))
+    list_mock = MagicMock(
+        return_value={
+            "dirs": [],
+            "files": ["stderr"],
+            "links": [],
+            "top_level_dirs": [],
+            "top_level_files": ["stderr"],
+            "top_level_links": [],
+        }
+    )
+    isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+    with patch.dict(
+        archive.__salt__,
+        {
+            "cmd.run": bsdtar,
+            "file.directory_exists": mock_false,
+            "file.file_exists": mock_false,
+            "state.single": state_single_mock,
+            "file.makedirs": mock_true,
+            "cmd.run_all": run_all,
+            "archive.list": list_mock,
+            "file.source_list": mock_source_list,
+        },
+    ), patch.dict(archive.__states__, {"file.directory": mock_true}), patch.object(
+        os.path, "isfile", isfile_mock
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value=True)
+    ):
+        # trim_output intentionally omitted -> uses the default (False)
+        ret = archive.extracted(
+            os.path.join(os.sep + "tmp", "out"),
+            source,
+            options="xvzf",
+            enforce_toplevel=False,
+            keep_source=True,
+        )
+        assert ret["result"] is True
+        assert ret["changes"]["extracted_files"] == ["stderr"]
+        assert "Output was trimmed" not in ret["comment"]
+
+
+def test_tar_bsdtar_with_trim_output_zero():
+    """
+    Peripheral coverage for #59570: an explicit falsy trim_output (0) means
+    "do not trim", so the trimmed-output message must also be suppressed.
+    """
+    bsdtar = MagicMock(return_value="tar (bsdtar)")
+    source = "/tmp/foo.tar.gz"
+    mock_false = MagicMock(return_value=False)
+    mock_true = MagicMock(return_value=True)
+    state_single_mock = MagicMock(return_value={"local": {"result": True}})
+    run_all = MagicMock(
+        return_value={"retcode": 0, "stdout": "stdout", "stderr": "stderr"}
+    )
+    mock_source_list = MagicMock(return_value=(source, None))
+    list_mock = MagicMock(
+        return_value={
+            "dirs": [],
+            "files": ["stderr"],
+            "links": [],
+            "top_level_dirs": [],
+            "top_level_files": ["stderr"],
+            "top_level_links": [],
+        }
+    )
+    isfile_mock = MagicMock(side_effect=_isfile_side_effect)
+
+    with patch.dict(
+        archive.__salt__,
+        {
+            "cmd.run": bsdtar,
+            "file.directory_exists": mock_false,
+            "file.file_exists": mock_false,
+            "state.single": state_single_mock,
+            "file.makedirs": mock_true,
+            "cmd.run_all": run_all,
+            "archive.list": list_mock,
+            "file.source_list": mock_source_list,
+        },
+    ), patch.dict(archive.__states__, {"file.directory": mock_true}), patch.object(
+        os.path, "isfile", isfile_mock
+    ), patch(
+        "salt.utils.path.which", MagicMock(return_value=True)
+    ):
+        ret = archive.extracted(
+            os.path.join(os.sep + "tmp", "out"),
+            source,
+            options="xvzf",
+            enforce_toplevel=False,
+            keep_source=True,
+            trim_output=0,
+        )
+        assert ret["changes"]["extracted_files"] == ["stderr"]
+        assert "Output was trimmed" not in ret["comment"]
+
+
 def test_extracted_when_if_missing_path_exists():
     """
     When if_missing exists, we should exit without making any changes.

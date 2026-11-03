@@ -98,6 +98,16 @@ def test_config():
                 ),
                 "title": "Thin Directory",
             },
+            "relenv": {
+                "default": False,
+                "type": "boolean",
+                "description": (
+                    "Deploy and use a relenv (Salt+Python bundled) environment"
+                    " on the SSH target, equivalent to the --relenv CLI flag"
+                    " but scoped to this roster entry."
+                ),
+                "title": "Relenv",
+            },
             # The actuall representation of the minion options would make this HUGE!
             "minion_opts": ssh_schemas.DictItem(
                 title="Minion Options",
@@ -117,6 +127,7 @@ def test_config():
             "sudo",
             "timeout",
             "thin_dir",
+            "relenv",
             "minion_opts",
         ],
         "additionalProperties": False,
@@ -204,14 +215,32 @@ def test_config_validate():
     except jsonschema.exceptions.ValidationError as exc:
         pytest.fail(f"ValidationError raised: {exc}")
 
+    try:
+        # Regression for #69885 - roster may set relenv per host
+        jsonschema.validate(
+            {
+                "host": "127.1.0.1",
+                "user": "root",
+                "passwd": "foo",
+                "relenv": True,
+            },
+            ssh_schemas.RosterEntryConfig.serialize(),
+            format_checker=jsonschema.FormatChecker(),
+        )
+    except jsonschema.exceptions.ValidationError as exc:
+        pytest.fail(f"ValidationError raised: {exc}")
+
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(
             {"host": "127.1.0.1", "user": "", "passwd": "foo"},
             ssh_schemas.RosterEntryConfig.serialize(),
             format_checker=jsonschema.FormatChecker(),
         )
-    _msg = excinfo.value.message
-    assert "is too short" in _msg or "non-empty" in _msg.lower(), _msg
+    if JSONSCHEMA_VERSION >= Version("4.0.0"):
+        # jsonschema 4.x renamed the minLength/minItems failure message.
+        assert "should be non-empty" in excinfo.value.message
+    else:
+        assert "is too short" in excinfo.value.message
 
     with pytest.raises(jsonschema.exceptions.ValidationError) as excinfo:
         jsonschema.validate(

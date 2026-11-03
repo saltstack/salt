@@ -51,6 +51,7 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 _DFLT_REFSPECS = ["+refs/heads/*:refs/remotes/origin/*", "+refs/tags/*:refs/tags/*"]
+_DFLT_DISABLED_GRAINS = ["fqdns"]
 DEFAULT_INTERVAL = 60
 DEFAULT_HASH_TYPE = "sha256"
 
@@ -60,27 +61,14 @@ if salt.utils.platform.is_windows():
     # support in ZeroMQ, we want the default to be something that has a
     # chance of working.
     _DFLT_IPC_MODE = "tcp"
-    _DFLT_FQDNS_GRAINS = False
     _MASTER_TRIES = -1
     # This needs to be SYSTEM in order for salt-master to run as a Service
     # Otherwise, it will not respond to CLI calls
     _MASTER_USER = "SYSTEM"
-elif salt.utils.platform.is_proxy():
-    _DFLT_IPC_MODE = "ipc"
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.user.get_user()
-elif salt.utils.platform.is_darwin():
-    _DFLT_IPC_MODE = "ipc"
-    # fqdn resolution can be very slow on macOS, see issue #62168
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
-    _MASTER_USER = salt.utils.user.get_user()
 else:
-    _DFLT_IPC_MODE = "ipc"
-    _DFLT_FQDNS_GRAINS = False
-    _MASTER_TRIES = 1
     _MASTER_USER = salt.utils.user.get_user()
+    _MASTER_TRIES = -1
+    _DFLT_IPC_MODE = "ipc"
 
 
 def _gather_buffer_space():
@@ -172,6 +160,22 @@ VALID_OPTS = immutabletypes.freeze(
         # what commands the master is processing and what the rates are of the executions
         "master_stats": bool,
         "master_stats_event_iter": int,
+        # Opt-in switch to enable async MWorker dispatch (AESFuncs / ClearFuncs /
+        # AuthFuncs handlers offload blocking work to a thread executor and the
+        # PoolRoutingChannel uses one IPC socket per MWorker for fair dispatch).
+        # DEFAULT: False on LTS (3008.x). When False, MWorker uses the pre-PR
+        # synchronous handlers and single-socket IPC routing (byte-for-byte
+        # identical to Argon v3008.2 and earlier).
+        "master_async_mworker": bool,
+        # Per-MWorker cap on the number of concurrent request handlers.
+        # Only has effect when ``master_async_mworker`` is True.  Default
+        # 0 = unlimited (backwards compatible).  When positive, each
+        # MWorker uses its own asyncio.BoundedSemaphore, so the effective
+        # total cap across the pool is
+        # ``master_mworker_max_inflight * worker_threads``.  Coroutines
+        # blocked on the semaphore create natural TCP / ZMQ backpressure
+        # — no error return, no dropped requests.
+        "master_mworker_max_inflight": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
         "syndic_finger": str,
@@ -336,6 +340,11 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_returners": list,
         # Tell the loader to only load modules in this list
         "whitelist_modules": list,
+        # State-loader counterpart to ``whitelist_modules``.  When set,
+        # only state modules whose name is in this list are loadable; an
+        # SLS that references any other state module fails compile with
+        # ``State '<mod>.<fun>' was not found in SLS ...``.
+        "whitelist_state_modules": list,
         # A list of additional directories to search for salt modules in
         "module_dirs": list,
         # A list of additional directories to search for salt returners in
@@ -424,9 +433,9 @@ VALID_OPTS = immutabletypes.freeze(
         "test": bool,
         # Tell the loader to attempt to import *.pyx cython files if cython is available
         "cython_enable": bool,
-        # Whether or not to load grains for FQDNs
+        # Whether or not to load grains for FQDNs (deprecated)
         "enable_fqdns_grains": bool,
-        # Whether or not to load grains for the GPU
+        # Whether or not to load grains for the GPU (deprecated)
         "enable_gpu_grains": bool,
         # Tell the loader to attempt to import *.zip archives
         "enable_zip_modules": bool,
@@ -554,6 +563,17 @@ VALID_OPTS = immutabletypes.freeze(
         # Set the zeromq high water mark on the publisher interface.
         # http://api.zeromq.org/3-2:zmq-setsockopt
         "pub_hwm": int,
+        # Per-subscriber timeout (seconds) for the TCP PubServer to drain
+        # a single publish write.  Subscribers that don't drain within
+        # this window are closed and removed to keep publish_payload
+        # from wedging on a slow peer.  See #69988.
+        "publish_drain_timeout": float,
+        # Per-subscriber cap on queued publish payloads for the TCP
+        # PubServer.  Subscribers that let their writer coroutine back
+        # up beyond this many payloads are treated as slow and
+        # disconnected.  Bounds in-flight drain-task allocation to one
+        # writer task per subscriber under bursty load.  See #70147.
+        "pub_server_write_queue_size": int,
         # IPC buffer size
         # Refs https://github.com/saltstack/salt/issues/34215
         "ipc_write_buffer": int,
@@ -698,6 +718,10 @@ VALID_OPTS = immutabletypes.freeze(
         "pillar_source_merging_strategy": str,
         # Recursively merge lists by aggregating them instead of replacing them.
         "pillar_merge_lists": bool,
+        # When False, changes pillar.items()'s default (when the caller
+        # doesn't pass unmask=) to return unmasked pillar values. Does not
+        # affect pillar.get/item/raw/ext, no_log states, or general output.
+        "pillar_mask_output": bool,
         # If True, values from included pillar SLS targets will override
         "pillar_includes_override_sls": bool,
         # How to merge multiple top files from multiple salt environments
@@ -821,6 +845,7 @@ VALID_OPTS = immutabletypes.freeze(
         # be, we'll just skip type-checking.
         "winrepo_cache_expire_max": int,
         "winrepo_cache_expire_min": int,
+        "winrepo_installer_cache_expire": int,
         "winrepo_remotes": list,
         "winrepo_remotes_ng": list,
         "winrepo_ssl_verify": bool,
@@ -834,13 +859,15 @@ VALID_OPTS = immutabletypes.freeze(
         "winrepo_refspecs": list,
         # Set a hard limit for the amount of memory modules can consume on a minion.
         "modules_max_memory": int,
-        # Blacklist specific core grains to be filtered
+        # Blacklist specific core grains to be filtered (after computation)
         "grains_blacklist": list,
         # The number of minutes between the minion refreshing its cache of grains
         "grains_refresh_every": int,
         # Enable grains refresh prior to any operation
         "grains_refresh_pre_exec": bool,
-        # Use lspci to gather system data for grains on a minion
+        # Disable grain computation (replaces grain-specific options)
+        "disabled_grains": list,
+        # Use lspci to gather system data for grains on a minion (deprecated)
         "enable_lspci": bool,
         # The number of seconds for the salt client to wait for additional syndics to
         # check in with their lists of expected minions before giving up
@@ -872,6 +899,13 @@ VALID_OPTS = immutabletypes.freeze(
         "auth_timeout": int,
         # The number of attempts to authenticate to a master before giving up
         "auth_tries": int,
+        # Cap on the AsyncAuth outer retry loop on the minion. When the master
+        # answers sign_in() with a ``retry`` sentinel (key not yet accepted,
+        # AES rotation in flight, multi-master probe), the minion sleeps and
+        # retries.  Set this to a positive integer to bail out with
+        # ``SaltClientError`` after that many outer attempts.  Default is ``0``
+        # which preserves the pre-3006.26 behavior of retrying forever.
+        "auth_retries": int,
         # The number of attempts to connect to a master before giving up.
         # Set this to -1 for unlimited attempts. This allows for a master to have
         # downtime and the minion to reconnect to it later when it comes back up.
@@ -993,6 +1027,19 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": bool,
         # Use the native OS certificate store instead of the bundled certifi CA bundle
         "use_os_truststore": bool,
+        # Let salt-pip's pip subprocess inherit PYTHONPATH from the calling
+        # process instead of isolating it to just the onedir extras directory
+        "saltpip_use_pythonpath": bool,
+        # Force salt-pip to always pass --no-deps to pip (via PIP_NO_DEPS)
+        "saltpip_no_deps": bool,
+        # Force salt-pip to always pass --no-index to pip (via PIP_NO_INDEX)
+        "saltpip_no_index": bool,
+        # Force salt-pip to always pass --disable-pip-version-check to pip
+        # (via PIP_DISABLE_PIP_VERSION_CHECK)
+        "saltpip_disable_pip_version_check": bool,
+        # If False, strip any inherited PIP_FIND_LINKS from salt-pip's pip
+        # subprocess environment, independent of saltpip_no_index
+        "saltpip_allow_find_links": bool,
         # Controls how a multi-function job returns its data. If this is False,
         # it will return its data using a dictionary with the function name as
         # the key. This is compatible with legacy systems. If this is True, it
@@ -1148,6 +1195,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "grains_cache": False,
         "grains_cache_expiration": 300,
         "grains_deep_merge": False,
+        "disabled_grains": _DFLT_DISABLED_GRAINS,
         "conf_file": os.path.join(salt.syspaths.CONFIG_DIR, "minion"),
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "minion"),
         "sock_pool_size": 1,
@@ -1165,6 +1213,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "pillar_opts": False,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
+        "pillar_mask_output": True,
         "pillar_includes_override_sls": False,
         # ``pillar_cache``, ``pillar_cache_ttl``, ``pillar_cache_backend``,
         # ``gpg_cache``, ``gpg_cache_ttl`` and ``gpg_cache_backend``
@@ -1267,6 +1316,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "disable_modules": [],
         "disable_returners": [],
         "whitelist_modules": [],
+        "whitelist_state_modules": [],
         "module_dirs": [],
         "returner_dirs": [],
         "grains_dirs": [],
@@ -1307,12 +1357,10 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "log_rotate_max_bytes": 0,
         "log_rotate_backup_count": 0,
         "max_event_size": 1048576,
-        "enable_legacy_startup_events": True,
+        "enable_legacy_startup_events": False,
         "test": False,
         "ext_job_cache": "",
         "cython_enable": False,
-        "enable_fqdns_grains": _DFLT_FQDNS_GRAINS,
-        "enable_gpu_grains": True,
         "enable_zip_modules": False,
         "state_verbose": True,
         "state_output": "full",
@@ -1355,6 +1403,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "winrepo_cachefile": "winrepo.p",
         "winrepo_cache_expire_max": 604800,
         "winrepo_cache_expire_min": 1800,
+        "winrepo_installer_cache_expire": 0,
         "winrepo_remotes": ["https://github.com/saltstack/salt-winrepo.git"],
         "winrepo_remotes_ng": ["https://github.com/saltstack/salt-winrepo-ng.git"],
         "winrepo_branch": "master",
@@ -1388,6 +1437,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "transport": "zeromq",
         "auth_timeout": 5,
         "auth_tries": 7,
+        "auth_retries": 0,
         "master_tries": _MASTER_TRIES,
         "master_tops_first": False,
         "auth_safemode": False,
@@ -1398,7 +1448,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "username": None,
         "password": None,
         "zmq_filtering": False,
-        "zmq_monitor": False,
+        "zmq_monitor": True,
         "cache_sreqs": True,
         "cmd_safe": True,
         "sudo_user": "",
@@ -1431,6 +1481,11 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "reactor_niceness": None,
         "fips_mode": False,
         "use_os_truststore": False,
+        "saltpip_use_pythonpath": False,
+        "saltpip_no_deps": False,
+        "saltpip_no_index": False,
+        "saltpip_disable_pip_version_check": False,
+        "saltpip_allow_find_links": True,
         "features": {},
         "encryption_algorithm": "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA1",
@@ -1516,6 +1571,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "publish_port": 4505,
         "zmq_backlog": 1000,
         "pub_hwm": 1000,
+        "publish_drain_timeout": 60.0,
+        "pub_server_write_queue_size": 10000,
         "auth_mode": 1,
         "user": _MASTER_USER,
         "worker_threads": 5,
@@ -1628,6 +1685,13 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "max_event_size": 1048576,
         "master_stats": False,
         "master_stats_event_iter": 60,
+        # LTS default: sync MWorker path preserved; async is opt-in.
+        # See DEFAULT_MASTER_OPTS type table for details.
+        "master_async_mworker": False,
+        # Default 0 = unlimited (backwards compatible).  See the
+        # DEFAULT_MASTER_OPTS type table for the semantics.  Only has
+        # effect when ``master_async_mworker`` is True.
+        "master_mworker_max_inflight": 0,
         "minionfs_env": "base",
         "minionfs_mountpoint": "",
         "minionfs_whitelist": [],
@@ -1638,6 +1702,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "pillar_safe_render_error": True,
         "pillar_source_merging_strategy": "smart",
         "pillar_merge_lists": False,
+        "pillar_mask_output": True,
         "pillar_includes_override_sls": False,
         "pillar_cache": False,
         "pillar_cache_ttl": 3600,
@@ -1758,7 +1823,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "ssh_list_nodegroups": {},
         "ssh_use_home_key": False,
         "cython_enable": False,
-        "enable_gpu_grains": False,
+        "disabled_grains": ["gpu"],
         # XXX: Remove 'key_logfile' support in 2014.1.0
         "key_logfile": os.path.join(salt.syspaths.LOGS_DIR, "key"),
         "verify_env": True,
@@ -2682,6 +2747,8 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     apply_sdb(opts)
 
     _validate_opts(opts)
+    if "grains" in opts and hasattr(opts["grains"], "destroy"):
+        opts["grains"].destroy()
     opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
     return opts
@@ -2786,7 +2853,6 @@ def syndic_config(
     minion_defaults=None,
     master_defaults=None,
 ):
-
     if minion_defaults is None:
         minion_defaults = DEFAULT_MINION_OPTS.copy()
 
@@ -3214,7 +3280,6 @@ def old_to_new(opts):
     )
 
     for provider in providers:
-
         provider_config = {}
         for opt, val in opts.items():
             if provider in opt:
@@ -3457,7 +3522,6 @@ def apply_cloud_providers_config(overrides, defaults=None):
                 handled_providers.add(details["driver"])
 
         for entry in val:
-
             if "driver" not in entry:
                 entry["driver"] = f"-only-extendable-{ext_count}"
                 ext_count += 1
@@ -4237,7 +4301,42 @@ def apply_minion_config(
     if "__cachedir" not in opts:
         opts["__cachedir"] = opts["cachedir"]
 
+    # Update disabled_grains from deprecated, grain-specific options
+    _update_disabled_grains(opts)
+
     return opts
+
+
+def _update_disabled_grains(opts):
+    """
+    Update disabled grains based on (deprecated) grain-specific options.
+
+    This function provides backwards compatibility for grain-specific options
+    such as ``enable_fqdns_grains: False``
+    """
+    grain_specific_option = re.compile(r"(?:enable_)?(?P<grain>[\w_]+)grains$")
+    if "disabled_grains" not in opts:
+        opts["disabled_grains"] = []
+
+    for opt_name, opt_val in opts.items():
+        m = re.match(grain_specific_option, opt_name)
+        if m:
+            grain = m["grain"].rstrip("_")
+            if opt_val is True and grain in opts["disabled_grains"]:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
+                opts["disabled_grains"].remove(grain)
+            elif opt_val is False:
+                salt.utils.versions.warn_until(
+                    "Calcium",
+                    f"The '{opt_name}' option is deprecated. Use 'disabled_grains' instead.",
+                )
+                opts["disabled_grains"].append(grain)
+            else:
+                # regex hit a non-bool option such as start_event_grains
+                pass
 
 
 def _update_discovery_config(opts):
@@ -4348,6 +4447,21 @@ def apply_master_config(overrides=None, defaults=None):
     opts["__fs_update"] = True
 
     _adjust_log_file_override(overrides, defaults["log_file"])
+    # Soft-deprecation alias: the master-cluster Raft rewrite (introduced in
+    # 3008.0) accidentally read the peer-pool port from ``cluster_port``
+    # instead of the documented ``cluster_pool_port``. ``cluster_port`` was
+    # never registered in ``VALID_OPTS``/``DEFAULT_MASTER_OPTS``, so any
+    # operator who happened to set it silently overrode nothing. If an
+    # operator explicitly set ``cluster_port`` (and not
+    # ``cluster_pool_port``), honor their intent by aliasing it across, and
+    # warn that the alias will be removed in a future release. See #69877.
+    if "cluster_port" in overrides and "cluster_pool_port" not in overrides:
+        log.warning(
+            "The 'cluster_port' master opt is deprecated and will be "
+            "removed in Argon+1 / Potassium; use 'cluster_pool_port' "
+            "instead."
+        )
+        overrides["cluster_pool_port"] = overrides["cluster_port"]
     if overrides:
         opts.update(overrides)
     # `keep_acl_in_token` will be forced to True when using external authentication
@@ -4554,6 +4668,10 @@ def apply_master_config(overrides=None, defaults=None):
         )
 
     salt.features.setup_features(opts)
+
+    # Update disabled_grains from deprecated, individual configs
+    _update_disabled_grains(opts)
+
     return opts
 
 

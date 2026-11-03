@@ -136,11 +136,14 @@ In this example ``foo.conf`` in the ``dev`` environment will be used instead.
         - mode: '0644'
         - attrs: i
 
-.. warning::
+.. note::
 
-    When using a mode that includes a leading zero you must wrap the
-    value in single quotes. If the value is not wrapped in quotes it
-    will be read by YAML as an integer and evaluated as an octal.
+    Salt's YAML loader special-cases octal-looking file modes, so all of
+    ``644``, ``0644``, ``0o644``, ``'644'``, ``'0644'`` and ``'0o644'``
+    resolve to the same value (octal ``0o644``). Quoting a mode with a
+    leading zero is therefore not required for correctness; some operators
+    still prefer to quote (for example ``'0644'``) so the literal mode is
+    visually obvious in the SLS file.
 
 .. _use-names-parameter:
 
@@ -365,7 +368,6 @@ import re
 import shutil
 import stat
 import sys
-import time
 import traceback
 import urllib.parse
 from collections import OrderedDict, defaultdict
@@ -398,7 +400,6 @@ if salt.utils.platform.is_windows():
     import salt.utils.winapi
 
 if salt.utils.platform.is_windows():
-    import pywintypes
     import win32com.client
 
 log = logging.getLogger(__name__)
@@ -884,6 +885,31 @@ def _check_file(name):
         msg = f"{name}: file not found"
 
     return ret, msg
+
+
+def _read_file_text(name):
+    """
+    Return the contents of ``name`` as text, for building diffs. Files that
+    start with a UTF-8, UTF-16 or UTF-32 byte order mark are decoded in that
+    encoding with the byte order mark removed.
+    """
+    with salt.utils.files.fopen(name, "rb") as fp_:
+        data = fp_.read()
+    encoding = salt.utils.files.get_bom_encoding(name)
+    if encoding:
+        text = data.decode(encoding)
+        return text[1:] if text.startswith("\ufeff") else text
+    return data.decode(__salt_system_encoding__)
+
+
+def _is_text_file(name):
+    """
+    Return ``True`` if a diff can be shown for ``name``, which includes files
+    that start with a UTF-16 or UTF-32 byte order mark.
+    """
+    if __utils__["files.is_text"](name):
+        return True
+    return salt.utils.files.get_bom_encoding(name) not in (None, "UTF-8")
 
 
 def _find_keep_files(root, keep):
@@ -4264,7 +4290,7 @@ def directory(
     Because ``cmd.run`` has no way of communicating that it's creating a file,
     ``will_always_clean`` will remove the newly created file. Of course, every
     time the states run the same thing will happen - the
-    ``silly_way_of_creating_a_file`` will crete the file and
+    ``silly_way_of_creating_a_file`` will create the file and
     ``will_always_clean`` will always remove it. Over and over again, no matter
     how many times you run it.
 
@@ -5925,6 +5951,13 @@ def replace(
                 - repl: "PowerShellVersion = '3.0'"
                 - encoding: utf-16
 
+        .. versionchanged:: 3008.5
+
+            Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark
+            (BOM) are detected automatically, and the BOM and byte order are
+            preserved.
+            ``encoding`` is only required for multi-byte files without a BOM.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -6467,6 +6500,14 @@ def blockreplace(
         marker will be replaced, so it's important to ensure that your marker
         includes the beginning of the text you wish to replace.
 
+        .. note::
+
+            ``marker_end`` must not contain ``marker_start`` as a substring,
+            and the two markers must not be equal. When the start marker is
+            also present inside the end marker the block cannot be located
+            and the state fails with ``Unterminated marked block. End of
+            file reached before marker_end.``.
+
     content
         The content to be used between the two lines identified by
         ``marker_start`` and ``marker_end``
@@ -6728,6 +6769,12 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 
     Comment out specified lines in a file.
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+
     name
         The full path to the file to be edited
     regex
@@ -6801,24 +6848,18 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(name).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, True, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(name).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6835,6 +6876,12 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 def uncomment(name, regex, char="#", backup=".bak"):
     """
     Uncomment specified commented lines in a file
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The full path to the file to be edited
@@ -6899,14 +6946,12 @@ def uncomment(name, regex, char="#", backup=".bak"):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = salt.utils.data.decode(fp_.readlines())
+    slines = _read_file_text(name).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, False, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = salt.utils.data.decode(fp_.readlines())
+    nlines = _read_file_text(name).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](
@@ -6914,7 +6959,7 @@ def uncomment(name, regex, char="#", backup=".bak"):
     )
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6947,6 +6992,12 @@ def append(
 
     The text will not be appended if it already exists in the file.
     A single string of text or a list of strings may be appended.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The location of the file to append to.
@@ -7145,10 +7196,7 @@ def append(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines()
+    slines = _read_file_text(name).splitlines()
 
     append_lines = []
     try:
@@ -7175,7 +7223,7 @@ def append(
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7193,13 +7241,10 @@ def append(
     else:
         ret["comment"] = f"File {name} is in correct state"
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines()
+    nlines = _read_file_text(name).splitlines()
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"
@@ -7231,6 +7276,13 @@ def prepend(
 
     The text will not be prepended again if it already exists in the file. You
     may specify a single line of text or a list of lines to append.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+        The text is inserted after the BOM.
 
     name
         The location of the file to prepend to.
@@ -7445,10 +7497,7 @@ def prepend(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(name).splitlines(True)
 
     count = 0
     test_lines = []
@@ -7479,7 +7528,7 @@ def prepend(
     if __opts__["test"]:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7494,33 +7543,27 @@ def prepend(
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.files.fopen(name, "rb") as fp_:
-            # read as many lines of target file as length of user input
-            contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__)
-            contents = contents.splitlines(True)
-            target_head = contents[0 : len(preface)]
-            target_lines = []
-            # strip newline chars from list entries
-            for chunk in target_head:
-                target_lines += chunk.splitlines()
-            # compare current top lines in target file with user input
-            # and write user input if they differ
-            if target_lines != preface:
-                __salt__["file.prepend"](name, *preface)
-            else:
-                # clear changed lines counter if target file not modified
-                count = 0
+        # read as many lines of target file as length of user input
+        contents = _read_file_text(name).splitlines(True)
+        target_head = contents[0 : len(preface)]
+        target_lines = []
+        # strip newline chars from list entries
+        for chunk in target_head:
+            target_lines += chunk.splitlines()
+        # compare current top lines in target file with user input
+        # and write user input if they differ
+        if target_lines != preface:
+            __salt__["file.prepend"](name, *preface)
+        else:
+            # clear changed lines counter if target file not modified
+            count = 0
     else:
         __salt__["file.prepend"](name, *preface)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(name).splitlines(True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"
@@ -8059,7 +8102,10 @@ def copy_(
     .. note::
         This state only copies files from one location on a minion to another
         location on the same minion. For copying files from the master, use a
-        :py:func:`file.managed <salt.states.file.managed>` state.
+        :py:func:`file.managed <salt.states.file.managed>` state. To fetch
+        a single file from the master inside an execution module, runner or
+        Jinja template, use
+        :py:func:`cp.get_file <salt.modules.cp.get_file>`.
 
     name
         The location of the file to copy to
@@ -8288,15 +8334,17 @@ def copy_(
 
 def rename(name, source, force=False, makedirs=False, **kwargs):
     """
-    If the source file exists on the system, rename it to the named file. The
-    named file will not be overwritten if it already exists unless the force
-    option is set to True.
+    If the source path exists on the system, rename it to the named path.
+    Both files and directories are supported. The named path will not be
+    overwritten if it already exists unless the force option is set to
+    ``True``.
 
     name
-        The location of the file to rename to
+        The location to rename the source to (file or directory)
 
     source
-        The location of the file to move to the location specified with name
+        The location of the file or directory to move to the location
+        specified with ``name``
 
     force
         If the target location is present then the file will not be moved,
@@ -8762,7 +8810,10 @@ def serialize(
         return _error(ret, "Only one of 'dataset' and 'dataset_pillar' is permitted")
 
     if dataset_pillar:
-        dataset = __salt__["pillar.get"](dataset_pillar)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the real values are serialized into the file instead
+        # of the redaction placeholder, matching file.managed contents_pillar.
+        dataset = __salt__["pillar.get"](dataset_pillar, unmask=True)
 
     if dataset is None:
         return _error(ret, "Neither 'dataset' nor 'dataset_pillar' was defined")
@@ -9255,7 +9306,10 @@ def decode(
     elif encoded_data:
         content = encoded_data
     elif contents_pillar:
-        content = __salt__["pillar.get"](contents_pillar, False)
+        # Since 3008, pillar.get masks scalar string values by default; pass
+        # unmask=True so the decoded data written to the file is the real
+        # value rather than the redaction placeholder.
+        content = __salt__["pillar.get"](contents_pillar, False, unmask=True)
         if content is False:
             raise CommandExecutionError("Pillar data not found.")
     else:
@@ -9294,266 +9348,6 @@ def decode(
             "new": __salt__["hashutil.digest_file"](name, checksum),
         }
 
-    return ret
-
-
-def shortcut(
-    name,
-    target,
-    arguments=None,
-    working_dir=None,
-    description=None,
-    icon_location=None,
-    force=False,
-    backupname=None,
-    makedirs=False,
-    user=None,
-    **kwargs,
-):
-    """
-    Create a Windows shortcut
-
-    If the file already exists and is a shortcut pointing to any location other
-    than the specified target, the shortcut will be replaced. If it is
-    a regular file or directory then the state will return False. If the
-    regular file or directory is desired to be replaced with a shortcut pass
-    force: True, if it is to be renamed, pass a backupname.
-
-    name
-        The location of the shortcut to create. Must end with either
-        ".lnk" or ".url"
-
-    target
-        The location that the shortcut points to
-
-    arguments
-        Any arguments to pass in the shortcut
-
-    working_dir
-        Working directory in which to execute target
-
-    description
-        Description to set on shortcut
-
-    icon_location
-        Location of shortcut's icon
-
-    force
-        If the name of the shortcut exists and is not a file and
-        force is set to False, the state will fail. If force is set to
-        True, the link or directory in the way of the shortcut file
-        will be deleted to make room for the shortcut, unless
-        backupname is set, when it will be renamed
-
-    backupname
-        If the name of the shortcut exists and is not a file, it will be
-        renamed to the backupname. If the backupname already
-        exists and force is False, the state will fail. Otherwise, the
-        backupname will be removed first.
-
-    makedirs
-        If the location of the shortcut does not already have a parent
-        directory then the state will fail, setting makedirs to True will
-        allow Salt to create the parent directory. Setting this to True will
-        also create the parent for backupname if necessary.
-
-    user
-        The user to own the file, this defaults to the user salt is running as
-        on the minion
-
-        The default mode for new files and directories corresponds umask of salt
-        process. For existing files and directories it's not enforced.
-    """
-    salt.utils.versions.warn_until(
-        version="Potassium",
-        message="This function is being deprecated in favor of 'shortcut.present'",
-    )
-    user = _test_owner(kwargs, user=user)
-    ret = {"name": name, "changes": {}, "result": True, "comment": ""}
-    if not salt.utils.platform.is_windows():
-        return _error(ret, "Shortcuts are only supported on Windows")
-    if not name:
-        return _error(ret, "Must provide name to file.shortcut")
-    if not name.endswith(".lnk") and not name.endswith(".url"):
-        return _error(ret, 'Name must end with either ".lnk" or ".url"')
-
-    # Normalize paths; do this after error checks to avoid invalid input
-    # getting expanded, e.g. '' turning into '.'
-    name = os.path.realpath(os.path.expanduser(name))
-    if name.endswith(".lnk"):
-        target = os.path.realpath(os.path.expanduser(target))
-    if working_dir:
-        working_dir = os.path.realpath(os.path.expanduser(working_dir))
-    if icon_location:
-        icon_location = os.path.realpath(os.path.expanduser(icon_location))
-
-    if user is None:
-        user = __opts__["user"]
-
-    # Make sure the user exists in Windows
-    # Salt default is 'root'
-    if not __salt__["user.info"](user):
-        # User not found, use the account salt is running under
-        # If username not found, use System
-        user = __salt__["user.current"]()
-        if not user:
-            user = "SYSTEM"
-
-    preflight_errors = []
-    uid = __salt__["file.user_to_uid"](user)
-
-    if uid == "":
-        preflight_errors.append(f"User {user} does not exist")
-
-    if not os.path.isabs(name):
-        preflight_errors.append(f"Specified file {name} is not an absolute path")
-
-    if preflight_errors:
-        msg = ". ".join(preflight_errors)
-        if len(preflight_errors) > 1:
-            msg += "."
-        return _error(ret, msg)
-
-    tresult, tcomment, tchanges = _shortcut_check(
-        name, target, arguments, working_dir, description, icon_location, force, user
-    )
-    if __opts__["test"]:
-        ret["result"] = tresult
-        ret["comment"] = tcomment
-        ret["changes"] = tchanges
-        return ret
-
-    if not os.path.isdir(os.path.dirname(name)):
-        if makedirs:
-            try:
-                _makedirs(name=name, user=user)
-            except CommandExecutionError as exc:
-                return _error(ret, f"Drive {exc.message} is not mapped")
-        else:
-            return _error(
-                ret,
-                'Directory "{}" for shortcut is not present'.format(
-                    os.path.dirname(name)
-                ),
-            )
-
-    if os.path.isdir(name) or os.path.islink(name):
-        # It is not a shortcut, but a dir or symlink
-        if backupname is not None:
-            # Make a backup first
-            if os.path.lexists(backupname):
-                if not force:
-                    return _error(
-                        ret,
-                        "File exists where the backup target {} should go".format(
-                            backupname
-                        ),
-                    )
-                else:
-                    __salt__["file.remove"](backupname)
-                    time.sleep(1)  # wait for asynchronous deletion
-            if not os.path.isdir(os.path.dirname(backupname)):
-                if makedirs:
-                    try:
-                        _makedirs(name=backupname)
-                    except CommandExecutionError as exc:
-                        return _error(ret, f"Drive {exc.message} is not mapped")
-                else:
-                    return _error(
-                        ret,
-                        'Directory does not exist for backup at "{}"'.format(
-                            os.path.dirname(backupname)
-                        ),
-                    )
-            os.rename(name, backupname)
-            time.sleep(1)  # wait for asynchronous rename
-        elif force:
-            # Remove whatever is in the way
-            __salt__["file.remove"](name)
-            ret["changes"]["forced"] = "Shortcut was forcibly replaced"
-            time.sleep(1)  # wait for asynchronous deletion
-        else:
-            # Otherwise throw an error
-            return _error(
-                ret,
-                'Directory or symlink exists where the shortcut "{}" should be'.format(
-                    name
-                ),
-            )
-
-    # This will just load the shortcut if it already exists
-    # It won't create the file until calling scut.Save()
-    with salt.utils.winapi.Com():
-        shell = win32com.client.Dispatch("WScript.Shell")
-        scut = shell.CreateShortcut(name)
-
-        # The shortcut target will automatically be created with its
-        # canonical capitalization; no way to override it, so ignore case
-        state_checks = [scut.TargetPath.lower() == target.lower()]
-        if arguments is not None:
-            state_checks.append(scut.Arguments == arguments)
-        if working_dir is not None:
-            state_checks.append(scut.WorkingDirectory.lower() == working_dir.lower())
-        if description is not None:
-            state_checks.append(scut.Description == description)
-        if icon_location is not None:
-            state_checks.append(scut.IconLocation.lower() == icon_location.lower())
-
-        if __salt__["file.file_exists"](name):
-            # The shortcut exists, verify that it matches the desired state
-            if not all(state_checks):
-                # The target is wrong, delete it
-                os.remove(name)
-            else:
-                if _check_shortcut_ownership(name, user):
-                    # The shortcut looks good!
-                    ret["comment"] = "Shortcut {} is present and owned by {}".format(
-                        name, user
-                    )
-                else:
-                    if _set_shortcut_ownership(name, user):
-                        ret["comment"] = "Set ownership of shortcut {} to {}".format(
-                            name, user
-                        )
-                        ret["changes"]["ownership"] = f"{user}"
-                    else:
-                        ret["result"] = False
-                        ret[
-                            "comment"
-                        ] += "Failed to set ownership of shortcut {} to {}".format(
-                            name, user
-                        )
-                return ret
-
-        if not os.path.exists(name):
-            # The shortcut is not present, make it
-            try:
-                scut.TargetPath = target
-                if arguments is not None:
-                    scut.Arguments = arguments
-                if working_dir is not None:
-                    scut.WorkingDirectory = working_dir
-                if description is not None:
-                    scut.Description = description
-                if icon_location is not None:
-                    scut.IconLocation = icon_location
-                scut.Save()
-            except (AttributeError, pywintypes.com_error) as exc:
-                ret["result"] = False
-                ret["comment"] = "Unable to create new shortcut {} -> {}: {}".format(
-                    name, target, exc
-                )
-                return ret
-            else:
-                ret["comment"] = f"Created new shortcut {name} -> {target}"
-                ret["changes"]["new"] = name
-
-            if not _check_shortcut_ownership(name, user):
-                if not _set_shortcut_ownership(name, user):
-                    ret["result"] = False
-                    ret["comment"] += ", but was unable to set ownership to {}".format(
-                        user
-                    )
     return ret
 
 

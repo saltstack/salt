@@ -721,10 +721,10 @@ def make_repo(
 
         # import_keys
         pkg_pub_key_file = "{}/{}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None)
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_pub_keyname", None, unmask=True)
         )
         pkg_priv_key_file = "{}/{}".format(
-            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None)
+            gnupghome, __salt__["pillar.get"]("gpg_pkg_priv_keyname", None, unmask=True)
         )
 
         if pkg_pub_key_file is None or pkg_priv_key_file is None:
@@ -809,7 +809,7 @@ def make_repo(
 
         if use_passphrase:
             _check_repo_gpg_phrase_utils()
-            phrase = __salt__["pillar.get"]("gpg_passphrase")
+            phrase = __salt__["pillar.get"]("gpg_passphrase", unmask=True)
             cmd = (
                 "/usr/lib/gnupg2/gpg-preset-passphrase --verbose --preset --passphrase"
                 ' "{}" {}'.format(phrase, local_keygrip_to_use)

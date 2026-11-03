@@ -707,7 +707,7 @@ def set_lcm_config(
 ):
     """
     For detailed descriptions of the parameters see:
-    https://msdn.microsoft.com/en-us/PowerShell/DSC/metaConfig
+    https://learn.microsoft.com/en-us/powershell/dsc/managing-nodes/metaconfig?view=dsc-1.1
 
     Args:
 

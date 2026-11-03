@@ -361,6 +361,44 @@ def test_requisites_require_ordering_and_errors_5(state, state_tree):
         assert ret.errors == [errmsg]
 
 
+def test_requisites_require_ordering_duplicate_extend_id(state, state_tree):
+    """
+    Regression test for PR #63673.
+
+    When the target of an extend (or a require_in, which desugars to extend)
+    cannot be resolved to a single state because multiple states share the
+    same ``name`` parameter, the compiler should fail with a "not unique"
+    error that names every duplicate, instead of the older generic
+    "not part of the high state" message.
+    """
+    sls_contents = """
+    state_a:
+      test.succeed_without_changes:
+        - name: duplicate-target
+
+    state_b:
+      test.succeed_without_changes:
+        - name: duplicate-target
+
+    trigger:
+      test.succeed_without_changes:
+        - require_in:
+          - test: duplicate-target
+    """
+    errmsg = (
+        "Cannot extend ID 'duplicate-target' in 'base:requisite'. It is not"
+        " unique in the running high state.\nThis is likely due to more than"
+        " one state using the same `name` parameter. Ensure that\nthe state"
+        " with an ID of 'duplicate-target' is unique in environment 'base'"
+        " and to SLS 'requisite'.\nDuplicate states IDs are:"
+        " 'test: state_a, test: state_b'"
+    )
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert ret.failed
+        assert ret.errors == [errmsg]
+
+
 def test_requisites_require_with_order_first_last(state, state_tree):
     """
     Call sls file containing a state with require_in order first
@@ -799,3 +837,42 @@ def test_issue_61121_extend_is_to_strict(state, state_tree):
         ret = state.sls("requisite")
         result = normalize_ret(ret.raw)
         assert result == expected_result
+
+
+def test_issue_30971_sls_empty_output_requisite_not_found(state, state_tree):
+    """
+    Requiring an SLS file that produces no output (empty) should not result
+    in a "requisites were not found" error.
+
+    Issue #30971: When an SLS file has conditional logic that results in no
+    states being generated (e.g., empty pillar data), a state that requires
+    that SLS file should still succeed since the SLS was processed.
+    """
+    empty_sls_contents = """
+    {% if False %}
+    test_state:
+      test.succeed_without_changes:
+        - name: test
+    {% endif %}
+    """
+
+    requiring_sls_contents = """
+    include:
+      - empty_sls
+
+    test_requiring_state:
+      test.succeed_without_changes:
+        - name: test_requiring
+        - require:
+          - sls: empty_sls
+    """
+
+    with pytest.helpers.temp_file(
+        "empty_sls.sls", empty_sls_contents, state_tree
+    ), pytest.helpers.temp_file("requiring.sls", requiring_sls_contents, state_tree):
+        ret = state.sls("requiring")
+        for state_return in ret:
+            assert (
+                state_return.result is True
+            ), f"State {state_return.name} failed: {state_return.comment}"
+            assert "The following requisites were not found" not in state_return.comment

@@ -21,6 +21,7 @@ import pytest
 import salt.channel.server
 import salt.crypt
 import salt.master
+import salt.utils.files
 import salt.utils.stringutils
 
 log = logging.getLogger(__name__)
@@ -271,6 +272,47 @@ def test_session_keys_are_unique_per_minion(req_server):
     b = req_server.session_key("minionB")
     c = req_server.session_key("minionC")
     assert len({a, b, c}) == 3
+
+
+def test_session_key_refreshes_when_peer_master_rotated_file(req_server):
+    """
+    Regression test for #69193.
+
+    In a master cluster (shared PKI + cachedir on a shared filesystem
+    such as GlusterFS), each master keeps its own ``self.sessions``
+    in-memory cache but the ``sessions/<minion>`` file is shared. When
+    peer master ``B`` rotates the on-disk key, master ``A``'s cached
+    ``(mtime, key)`` entry becomes stale but the "cache is still fresh"
+    check ``now - self.sessions[minion][0] < publish_session`` continues
+    to serve the old key -- causing minions that authenticated against
+    ``B`` (and therefore hold the new key) to fail decryption of
+    request-server replies from ``A`` with
+    ``salt.exceptions.AuthenticationError: message authentication
+    failed``.
+
+    ``session_key`` must invalidate the in-memory cache when the file
+    mtime on disk is newer than the mtime we cached, and re-read the
+    fresh key from disk.
+    """
+    original = req_server.session_key("minionA")
+    path = pathlib.Path(req_server.opts["cachedir"]) / "sessions" / "minionA"
+    cached_mtime = req_server.sessions["minionA"][0]
+
+    # Simulate a peer master rotating the file: overwrite the on-disk
+    # key with a different value and bump its mtime forward. Do NOT
+    # touch the in-memory cache -- that's what the buggy master would
+    # keep serving.
+    new_key = salt.crypt.Crypticle.generate_key_string()
+    assert new_key != original
+    with salt.utils.files.fopen(path, "w") as fp:
+        fp.write(new_key)
+    newer = cached_mtime + 5
+    os.utime(path, (newer, newer))
+
+    assert req_server.session_key("minionA") == new_key
+    # And the in-memory cache is now aligned with the on-disk value.
+    assert req_server.sessions["minionA"][1] == new_key
+    assert req_server.sessions["minionA"][0] == newer
 
 
 async def test_handle_message_rejects_non_dict(req_server, io_loop):

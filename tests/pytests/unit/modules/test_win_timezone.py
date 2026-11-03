@@ -2,15 +2,17 @@
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import importlib.util
+
 import pytest
 
 import salt.modules.win_timezone as win_timezone
 from salt.exceptions import CommandExecutionError
 from tests.support.mock import MagicMock, patch
 
-pytestmark = [
-    pytest.mark.skipif(not win_timezone.HAS_PYTZ, reason="This test requires pytz"),
-]
+requires_tzdata = pytest.mark.skipif(
+    not importlib.util.find_spec("tzdata"), reason="requires tzdata"
+)
 
 
 @pytest.fixture
@@ -117,9 +119,11 @@ def test_get_zone_error():
             win_timezone.get_zone()
 
 
+@requires_tzdata
 def test_get_offset():
     """
-    Test if it get current numeric timezone offset from UCT (i.e. +0530)
+    India Standard Time is a fixed +05:30 offset with no DST, so the result
+    is predictable regardless of when the test runs.
     """
     mock_read = MagicMock(
         return_value={
@@ -129,14 +133,48 @@ def test_get_offset():
             "stdout": "India Standard Time",
         }
     )
-
     with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read}):
         assert win_timezone.get_offset() == "+0530"
 
 
+@requires_tzdata
+def test_get_offset_negative():
+    """
+    Hawaiian Standard Time is a fixed -10:00 offset with no DST.
+    """
+    mock_read = MagicMock(
+        return_value={
+            "pid": 78,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "Hawaiian Standard Time",
+        }
+    )
+    with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read}):
+        assert win_timezone.get_offset() == "-1000"
+
+
+@requires_tzdata
+def test_get_offset_utc():
+    """
+    UTC maps to Etc/GMT which is always +0000.
+    """
+    mock_read = MagicMock(
+        return_value={
+            "pid": 78,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "UTC",
+        }
+    )
+    with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read}):
+        assert win_timezone.get_offset() == "+0000"
+
+
+@requires_tzdata
 def test_get_zonecode():
     """
-    Test if it get current timezone (i.e. PST, MDT, etc)
+    India Standard Time uses the fixed abbreviation IST.
     """
     mock_read = MagicMock(
         return_value={
@@ -146,9 +184,25 @@ def test_get_zonecode():
             "stdout": "India Standard Time",
         }
     )
-
     with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read}):
         assert win_timezone.get_zonecode() == "IST"
+
+
+@requires_tzdata
+def test_get_zonecode_hawaii():
+    """
+    Hawaiian Standard Time uses the fixed abbreviation HST (no DST).
+    """
+    mock_read = MagicMock(
+        return_value={
+            "pid": 78,
+            "retcode": 0,
+            "stderr": "",
+            "stdout": "Hawaiian Standard Time",
+        }
+    )
+    with patch.dict(win_timezone.__salt__, {"cmd.run_all": mock_read}):
+        assert win_timezone.get_zonecode() == "HST"
 
 
 def test_set_zone():

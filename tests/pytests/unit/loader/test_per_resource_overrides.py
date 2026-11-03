@@ -1,6 +1,7 @@
 """
 Unit tests for the per-type directory override mechanism introduced
-for Gap 2 / Gap 4 / Gap 5.
+for Gap 2 / Gap 4 / Gap 5, and for the deny-by-default surface of
+:func:`salt.loader.resource_modules`.
 
 The salt loader's :func:`_module_dirs` checks for
 ``resources/<rtype>/<ext_type>/`` subdirectories under every layer that
@@ -9,14 +10,19 @@ entry-point packages, the in-tree salt package).  When found, the
 per-type subdir is prepended before that layer's standard directory,
 giving per-type overrides priority for that layer.
 
+The per-resource execution loader built by :func:`resource_modules`
+must expose **only** per-type override modules (from those overlay
+dirs) plus the ``__minion__`` escape hatch.  Stock ``salt/modules/*``
+must not be reachable via that loader — resource-context code that
+needs the managing minion calls ``__minion__["module.fun"]`` explicitly.
+
 These tests exercise the override mechanism end-to-end:
 
-* A resource type that opts in via ``<extension_modules>/resources/<rtype>/modules/state.py``
-  — its ``state.sls`` wins when the per-resource loader is built for
-  that rtype.
-* A resource type with no override — the standard ``salt/modules/state.py``
-  is the one that gets resolved (Gap 5 fix: standard ``state.py`` no
-  longer has a broad ``__virtual__`` guard against ``resource_type``).
+* A resource type that opts in via ``<extension_modules>/resources/<rtype>/modules/test.py``
+  — its ``test.whoami`` is present and callable when the per-resource
+  loader is built for that rtype.
+* A resource type with no override — the resource loader is empty
+  (no stock modules leak through).
 * The ``__minion__`` dunder is packed into the per-resource execution
   loader when ``minion_mods`` is supplied — providing the escape-hatch
   back to the managing minion's loader.
@@ -81,13 +87,20 @@ def test_per_type_dir_override_wins_over_standard(loader_opts):
     assert loader["test.whoami"]() == "override-wins"
 
 
-def test_no_override_falls_through_to_standard_state_module(loader_opts):
+def test_no_override_hides_stock_modules(loader_opts):
     """
-    Resource type with no per-type override for ``state.py``: the standard
-    ``salt.modules.state`` is loaded via the per-resource loader (post-Gap-5
-    fix — no broad ``__virtual__`` guard).  The operator can run
-    ``state.sls`` against the resource without the type having to ship its
-    own override.
+    Resource type with no per-type overrides: the per-resource loader
+    exposes NO stock ``salt/modules/*`` functions.  The documented
+    Resources safety contract requires that ``salt <resource-id> cmd.run
+    …`` / ``grains.setval …`` / ``state.sls …`` fail with "not supported
+    for resource type" instead of silently executing on the managing
+    minion.  The resource loader is the surface that decides this — if
+    stock modules are present here, they will run.
+
+    NOTE: this replaces an earlier test that asserted stock ``state.sls``
+    was present in the resource loader.  That assertion documented the
+    buggy behavior fixed by #69881; the contract restored here matches
+    the resource-loader design (deny-by-default, type-local only).
     """
     utils = salt.loader.utils(loader_opts)
     rfuncs = salt.loader.resource(loader_opts, utils=utils)
@@ -95,11 +108,62 @@ def test_no_override_falls_through_to_standard_state_module(loader_opts):
         loader_opts, "logical_test", resource_funcs=rfuncs, utils=utils
     )
 
-    # state.sls is present despite no per-type override existing for
-    # 'logical_test'.  This is the GAP5 win.
-    assert "state.sls" in loader, sorted(
-        k for k in loader.keys() if k.startswith("state.")
-    )[:10]
+    leaked = sorted(
+        k
+        for k in loader.keys()
+        if k.split(".", 1)[0]
+        in (
+            "cmd",
+            "state",
+            "grains",
+            "file",
+            "system",
+            "disk",
+            "pkg",
+            "service",
+            "sys",
+            "saltutil",
+        )
+    )
+    assert not leaked, (
+        "stock salt/modules leaked into the resource loader for a type "
+        f"with no per-type overrides: {leaked[:20]}"
+    )
+    # Empty surface is the correct default for an inventory-only resource
+    # type that ships no override modules.
+    assert list(loader.keys()) == [], sorted(loader.keys())[:20]
+
+
+def test_per_type_override_present_and_callable(loader_opts):
+    """
+    A per-type override at <extmods>/resources/<rtype>/modules/<slot>.py
+    is present in the per-resource loader AND stock modules for the same
+    resource-type surface are absent.  Confirms deny-by-default plus the
+    per-type overlay together — the override is what the operator gets
+    to invoke against the resource, nothing more.
+    """
+    body = "def ping():\n    return 'override-pong'\n"
+    _drop_override(loader_opts["extension_modules"], "posovr", "test", body)
+
+    utils = salt.loader.utils(loader_opts)
+    rfuncs = salt.loader.resource(loader_opts, utils=utils)
+    loader = salt.loader.resource_modules(
+        loader_opts, "posovr", resource_funcs=rfuncs, utils=utils
+    )
+
+    assert "test.ping" in loader, sorted(
+        k for k in loader.keys() if k.startswith("test.")
+    )
+    assert loader["test.ping"]() == "override-pong"
+
+    # Only the override slot's functions are visible; no stock cmd/state/…
+    leaked = sorted(
+        k
+        for k in loader.keys()
+        if k.split(".", 1)[0]
+        in ("cmd", "state", "grains", "file", "system", "sys", "saltutil")
+    )
+    assert not leaked, leaked[:20]
 
 
 def test_minion_mods_packed_as_dunder(loader_opts):

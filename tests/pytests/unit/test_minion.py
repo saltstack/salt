@@ -1,23 +1,34 @@
 import asyncio
 import contextlib
 import copy
+import inspect
 import logging
 import os
 import pathlib
 import signal
+import threading
 import time
 import uuid
 
 import pytest
 import tornado
 import tornado.gen
+import tornado.ioloop
 import tornado.testing
 
+import salt.defaults.exitcodes
+import salt.loader.context
 import salt.minion
+import salt.modules.sysmod
 import salt.modules.test as test_mod
+import salt.payload
 import salt.syspaths
 import salt.utils.crypt
+import salt.utils.doc
+import salt.utils.files
 import salt.utils.jid
+import salt.utils.json
+import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.state
@@ -115,6 +126,7 @@ def test_send_req_fires_completion_event(event, minion_opts):
     req_id = uuid.uuid4()
     event_enter = MagicMock()
     event_enter.send.side_effect = event[1]
+    event_enter.get_event.return_value = {"ret": True}
     event = MagicMock()
     event.__enter__.return_value = event_enter
 
@@ -487,6 +499,14 @@ def test_process_count_max(minion_opts, io_loop):
         yield
 
     fopen_mock = MagicMock()
+    # ``_handle_decoded_payload`` calls ``get_proc_dir`` on the parent side
+    # (to precompute the finalize-registered proc-file path for the job
+    # child). ``get_proc_dir`` requires ``<cachedir>/proc`` to be
+    # ``os.stat``-able; patching ``os.makedirs`` to a no-op below would
+    # otherwise leave the directory missing on real disk. Create it up
+    # front so the un-patched ``os.stat`` call inside ``get_proc_dir``
+    # succeeds without touching production code.
+    os.makedirs("/tmp/salt_test_cache/proc", exist_ok=True)
     with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
         "salt.minion.SignalHandlingProcess",
         MagicMock(side_effect=mock_proc_side_effect),
@@ -719,6 +739,76 @@ async def test_scheduler_before_connect(minion_opts):
             assert "beacons" not in minion.periodic_callbacks
         finally:
             minion.destroy()
+
+
+@pytest.mark.slow_test
+async def test_scheduler_not_run_when_not_schedule_leader(minion_opts):
+    """
+    Tests that a minion that is not the schedule_leader, ie. a minion spawned
+    by a MinionManager in a multimaster configuration connected to every master
+    but the first one, does not have its scheduler initialized.
+    """
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch(
+        "salt.minion.Minion.sync_connect_master",
+        MagicMock(side_effect=RuntimeError("stop execution")),
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.start",
+        MagicMock(return_value=True),
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.join",
+        MagicMock(return_value=True),
+    ):
+        minion_opts["scheduler_before_connect"] = True
+        minion_opts["schedule_leader"] = False
+        io_loop = tornado.ioloop.IOLoop()
+        minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+        try:
+            try:
+                await minion.tune_in(start=True)
+            except RuntimeError:
+                pass
+
+            # Make sure the scheduler was not initialized
+            assert "schedule" not in minion.periodic_callbacks
+        finally:
+            minion.destroy()
+
+
+async def test_spawn_minions_schedule_leader(minion_opts):
+    """
+    Tests that, in a multimaster configuration, only the minion connected to
+    the first master is the schedule_leader.
+    """
+    minion_opts["master"] = ["10.0.0.1", "10.0.0.2"]
+
+    created_opts = []
+
+    def _create_minion_object(opts, *args, **kwargs):
+        created_opts.append(dict(opts))
+        minion = MagicMock(name="minion")
+        minion.opts = opts
+        return minion
+
+    async def _connect_minion(minion):
+        return None
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        with patch.object(
+            mm, "_create_minion_object", _create_minion_object
+        ), patch.object(mm, "_connect_minion", _connect_minion):
+            mm._spawn_minions()
+            # Give the fake connect coroutines a chance to run
+            await asyncio.sleep(0)
+    finally:
+        mm.io_loop = MagicMock()
+        mm.destroy()
+
+    assert len(created_opts) == 2
+    assert created_opts[0]["beacons_leader"] is True
+    assert created_opts[0]["schedule_leader"] is True
+    assert created_opts[1]["beacons_leader"] is False
+    assert created_opts[1]["schedule_leader"] is False
 
 
 def test_minion_module_refresh(minion_opts):
@@ -1326,6 +1416,35 @@ def test_fire_start_event_missing_jid_does_not_raise(minion_opts):
 
 
 @pytest.mark.slow_test
+def test_return_pub_handles_send_req_timeout(minion_opts):
+    """
+    Ensure _return_pub catches SaltReqTimeoutError from _send_req_sync and
+    returns an empty string rather than letting the exception propagate.
+
+    This is the end-to-end contract between the two methods: _send_req_sync
+    must raise SaltReqTimeoutError (not the bare TimeoutError builtin) so
+    that _return_pub's except clause fires correctly.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    io_loop.make_current()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.proc_dir = salt.minion.get_proc_dir(minion_opts["cachedir"])
+        minion._send_req_sync = MagicMock(side_effect=SaltReqTimeoutError("timed out"))
+        result = minion._return_pub(
+            {
+                "id": minion_opts["id"],
+                "jid": "20260101000000000001",
+                "return": True,
+                "fun": "test.ping",
+            }
+        )
+        assert result == ""
+    finally:
+        minion.destroy()
+
+
+@pytest.mark.slow_test
 def test_minion_retry_dns_count(minion_opts):
     """
     Tests that the resolve_dns will retry dns look ups for a maximum of
@@ -1342,6 +1461,110 @@ def test_minion_retry_dns_count(minion_opts):
     )
     with pytest.raises(SaltMasterUnresolvableError):
         salt.minion.resolve_dns(minion_opts)
+
+
+def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    The resolve_dns() retry loop must wake up promptly when a shutdown is
+    requested (e.g. SIGTERM via MinionManager.stop()) instead of blocking
+    the io_loop for the full ``retry_dns`` interval. Without the fix the
+    blocking ``time.sleep(opts["retry_dns"])`` inside resolve_dns starved
+    the io_loop and the shutdown callback never ran until systemd sent
+    SIGKILL.
+    """
+    # The fix exposes a public module-level abort hook used by
+    # MinionManager.stop(). Its absence is itself a regression.
+    assert hasattr(salt.minion, "request_resolve_dns_abort"), (
+        "salt.minion is missing request_resolve_dns_abort(); the SIGTERM "
+        "path cannot interrupt the DNS retry loop. See #69466."
+    )
+    assert hasattr(salt.minion, "_RESOLVE_DNS_ABORT"), (
+        "salt.minion is missing the _RESOLVE_DNS_ABORT event used to "
+        "wake an in-progress resolve_dns() retry. See #69466."
+    )
+
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A retry interval that is much larger than the test deadline.
+            # If the abort path is not honored, this test would block for
+            # the full 90 seconds.
+            "retry_dns": 90,
+            "retry_dns_count": None,
+        },
+    )
+
+    # The resolve_dns abort flag is process-wide; make sure we leave it
+    # clean for other tests.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    def trip_abort():
+        # Give resolve_dns a moment to enter its sleep, then request abort
+        # the same way MinionManager.stop() does on SIGTERM.
+        time.sleep(0.25)
+        salt.minion.request_resolve_dns_abort()
+
+    aborter = threading.Thread(target=trip_abort, daemon=True)
+    started = time.monotonic()
+    try:
+        aborter.start()
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    finally:
+        aborter.join(timeout=5)
+        salt.minion._RESOLVE_DNS_ABORT.clear()
+
+    elapsed = time.monotonic() - started
+    # The fix should wake well under 5s; the broken code would sleep for
+    # the full retry_dns (90s) per iteration.
+    assert elapsed < 5, (
+        f"resolve_dns did not honor the shutdown abort flag "
+        f"(elapsed={elapsed:.2f}s); regression of #69466."
+    )
+
+
+def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
+    """
+    Regression test for #69466.
+
+    ``MinionManager.stop()`` is the entry point invoked from the SIGTERM
+    handler. It must trip the resolve_dns abort flag before scheduling
+    the async shutdown so a minion currently stuck in the DNS retry loop
+    yields the io_loop. Without this, ``stop_async`` is queued but never
+    runs and systemd escalates to SIGKILL after 90 seconds.
+    """
+    # The abort flag must be cleared at entry; stop() should set it.
+    salt.minion._RESOLVE_DNS_ABORT.clear()
+    assert not salt.minion._RESOLVE_DNS_ABORT.is_set()
+
+    manager = salt.minion.MinionManager.__new__(salt.minion.MinionManager)
+    manager.io_loop = MagicMock()
+    # Populate the attributes __del__ -> destroy() touches so the
+    # interpreter does not log an AttributeError at GC time.
+    manager.minions = []
+    manager.event_publisher = None
+    manager.event = None
+    try:
+        manager.stop(signal.SIGTERM, lambda *a, **kw: None)
+        assert salt.minion._RESOLVE_DNS_ABORT.is_set(), (
+            "MinionManager.stop() did not request a resolve_dns abort; "
+            "a SIGTERM during the DNS retry loop will be ignored. See #69466."
+        )
+        # MinionManager.stop() schedules stop_async via
+        # ``io_loop.create_task`` (the 3007.x refactor replaced the earlier
+        # ``add_callback`` form).  Either call is acceptable evidence that
+        # the async shutdown got queued.
+        assert (
+            manager.io_loop.create_task.call_count
+            + manager.io_loop.add_callback.call_count
+            == 1
+        )
+    finally:
+        salt.minion._RESOLVE_DNS_ABORT.clear()
 
 
 @pytest.mark.slow_test
@@ -1365,6 +1588,864 @@ def test_gen_modules_executors(minion_opts):
         )
     finally:
         minion.destroy()
+
+
+@contextlib.contextmanager
+def _threaded_minion_61830(minion_opts, pillar=None):
+    """
+    A real Minion set up the way a threaded minion (multiprocessing: False)
+    runs jobs, with _return_pub replaced by a recorder. Yields
+    ``(minion, delivered)``.
+    """
+    minion_opts["multiprocessing"] = False
+    minion_opts["file_client"] = "local"
+    minion_opts["grains"] = {}
+    minion_opts["pillar"] = pillar or {}
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.gen_modules()
+        minion.connected = True
+        proc_dir = os.path.join(minion_opts["cachedir"], "proc")
+        os.makedirs(proc_dir, exist_ok=True)
+        minion.proc_dir = proc_dir
+        delivered = []
+        minion._return_pub = lambda ret, *args, **kwargs: delivered.append(ret)
+        yield minion, delivered
+    finally:
+        minion.destroy()
+
+
+def _racing_gen_modules_61830(minion, state, prepare=None):
+    """
+    Return a stand-in for ``minion.gen_modules`` that runs the job's own real
+    gen_modules() and then a sibling job's real gen_modules(), which rebinds
+    the shared minion.functions, minion.executors and minion.resource_loaders
+    before the job uses any of them. The job's own return value is passed
+    through untouched.
+
+    Both generations are recorded in ``state`` as ``<label>_functions``,
+    ``<label>_executors`` and ``<label>_resource_loaders`` (label ``job`` or
+    ``sibling``). ``prepare(label)`` runs right after each of the two real
+    calls, while the shared attributes still point at that generation, so a
+    test can install per-generation fakes.
+    """
+    real_gen_modules = minion.gen_modules
+
+    def record(label):
+        if prepare is not None:
+            prepare(label)
+        state[f"{label}_functions"] = minion.functions
+        state[f"{label}_executors"] = minion.executors
+        state[f"{label}_resource_loaders"] = minion.resource_loaders
+
+    def racing_gen_modules(*args, **kwargs):
+        own = real_gen_modules(*args, **kwargs)
+        record("job")
+        real_gen_modules()
+        record("sibling")
+        return own
+
+    return racing_gen_modules
+
+
+def _assert_distinct_generations_61830(state):
+    # The race really produced two loader generations that do not share a
+    # __context__; otherwise the test would prove nothing.
+    assert state["job_functions"] is not state["sibling_functions"]
+    assert state["job_executors"] is not state["sibling_executors"]
+    assert (
+        state["job_functions"].pack["__context__"]
+        is not state["sibling_functions"].pack["__context__"]
+    )
+
+
+def _sibling_job_61830(minion, functions, code, fun="test.retcode", exec_fn=None):
+    """
+    A sibling job's real _execute_job_function on ``functions``: the
+    start-of-job retcode reset, then ``fun`` writes ``code`` into that
+    loader's __context__.
+    """
+    if exec_fn is None:
+        exec_fn = salt.minion.Minion._execute_job_function
+    exec_fn(
+        minion,
+        fun,
+        [code],
+        ["direct_call"],
+        minion.opts,
+        {
+            "jid": f"20260101000001{code:06d}",
+            "fun": fun,
+            "arg": [code],
+            "ret": "",
+        },
+        functions=functions,
+    )
+
+
+def _run_job_thread_61830(target, minion, data):
+    """
+    Run a job runner (``Minion._thread_return``) on its own thread, the way a
+    threaded minion (multiprocessing: False) runs every job.
+
+    For a job with ``data["resource_target"]``, _thread_return sets
+    ``salt.loader.context.resource_ctxvar`` and never resets it: the job's
+    thread, and the context it set the value in, end with the job. Called on
+    the pytest main thread, that value would outlive the test and leak into
+    every later test that reads the variable.
+    """
+    errors = []
+
+    def run():
+        try:
+            target(minion, minion.opts, data)
+        except BaseException as exc:  # pylint: disable=broad-except
+            errors.append(exc)
+
+    thread = threading.Thread(target=run, name=str(data["jid"]))
+    thread.start()
+    thread.join(timeout=120)
+    assert not thread.is_alive(), "job thread did not finish"
+    if errors:
+        raise errors[0]
+
+
+@contextlib.contextmanager
+def _sudo_available_61830():
+    """
+    The sudo executor's __virtual__ needs sudo on the PATH as well as
+    sudo_user; report it present without touching any other lookup.
+    """
+    real_which = salt.utils.path.which
+
+    def which(exe):
+        if exe == "sudo":
+            return "/usr/bin/sudo"
+        return real_which(exe)
+
+    with patch("salt.utils.path.which", which):
+        yield
+
+
+def _sudo_stdout_61830(retcode):
+    # What ``salt-call --out json --metadata -- test.retcode <n>`` prints.
+    return salt.utils.json.dumps(
+        {"local": {"fun": "test.retcode", "return": True, "retcode": retcode}}
+    )
+
+
+# (this job's test.retcode argument, what cmd.run_all returns for the
+# ``sudo -u <user> salt-call ...`` command, expected delivered retcode,
+# expected delivered return)
+SUDO_CASES_61830 = pytest.mark.parametrize(
+    "code,cmd_ret,expected_retcode,expected_return",
+    [
+        # salt-call ran the job under sudo and the job failed; the sudo
+        # executor takes the retcode from salt-call's metadata.
+        (
+            42,
+            {"pid": 4242, "retcode": 0, "stdout": _sudo_stdout_61830(42), "stderr": ""},
+            42,
+            True,
+        ),
+        # sudo itself failed, salt-call never ran; the sudo executor takes
+        # sudo's exit code.
+        (
+            42,
+            {
+                "pid": 4242,
+                "retcode": 1,
+                "stdout": "",
+                "stderr": "sudo: a password is required",
+            },
+            1,
+            "sudo: a password is required",
+        ),
+        # Inverse must-not: a job that passed under sudo stays passing.
+        (
+            0,
+            {"pid": 4242, "retcode": 0, "stdout": _sudo_stdout_61830(0), "stderr": ""},
+            salt.defaults.exitcodes.EX_OK,
+            True,
+        ),
+    ],
+    ids=["job-failed-under-sudo", "sudo-failed", "passing-job-stays-passing"],
+)
+
+
+def _fake_sudo_salt_call_61830(minion, cmd_ret, calls):
+    """
+    ``prepare`` hook for _racing_gen_modules_61830: replace cmd.run_all on
+    each loader generation with a fake for the ``sudo -u <user> salt-call``
+    command the sudo executor runs through ``__salt__["cmd.run_all"]``.
+    """
+
+    def prepare(label):
+        def run_all(cmd, **kwargs):
+            calls.append(cmd)
+            return dict(cmd_ret)
+
+        minion.functions["cmd.run_all"] = run_all
+
+    return prepare
+
+
+def _assert_sudo_call_61830(calls, code):
+    # The job really ran through the sudo executor, exactly once, with this
+    # job's argument.
+    assert len(calls) == 1
+    assert calls[0][:3] == ["sudo", "-u", "saltdev"]
+    assert calls[0][-1] == str(code)
+
+
+def test_thread_return_retcode_owns_captured_loader_61830(minion_opts):
+    """
+    #61830: with multiprocessing=False every threaded job shares one
+    minion_instance, and every job calls minion_instance.gen_modules() at its
+    top. That builds a new loader generation with a fresh, empty __context__
+    and rebinds the shared minion_instance.functions to it.
+
+    On 3008.x the resource-loader work already makes _thread_return capture
+    ``functions_to_use = minion_instance.functions`` once and pass it to
+    _execute_job_function, so a sibling rebind between this job's retcode
+    write and its retcode read no longer changes which loader is read. The
+    remaining single-function gap is earlier: the window between the job's own
+    gen_modules() call and that capture. A sibling job's gen_modules() landing
+    there makes this job capture the SIBLING's loader, so both jobs share one
+    __context__ and the sibling's start-of-job retcode reset in
+    _execute_job_function (``__context__["retcode"] = 0``) overwrites the
+    retcode this job wrote: a failed command is reported as success, and a
+    failing sibling's retcode leaks into a passing job. The fix makes
+    _thread_return use the loaders its own gen_modules() call returned.
+
+    This drives the REAL Minion._thread_return end to end:
+
+    - the job's own gen_modules() call is wrapped so a real sibling
+      gen_modules() runs right after it, before _thread_return captures a
+      loader;
+    - the sibling job's real _execute_job_function (retcode reset, then
+      test.retcode on the sibling's own loader) runs in this job's write->read
+      window (the only thing _thread_return does there is
+      log.info("... execution finished")).
+
+    test.retcode writes the retcode into its loader's __context__ exactly like
+    a production module.
+    """
+    with _threaded_minion_61830(minion_opts) as (minion, delivered):
+        original_info = salt.minion.log.info
+        state = {}
+
+        def sibling_starts_info(msg, *args, **kwargs):
+            # The sibling job starts executing in this job's write->read
+            # window, on the loader its own gen_modules() built.
+            if "execution finished" in str(msg) and not state.get("sibling_ran"):
+                state["sibling_ran"] = True
+                _sibling_job_61830(
+                    minion, state["sibling_functions"], state["sibling_code"]
+                )
+            return original_info(msg, *args, **kwargs)
+
+        def run(code, sibling_code=0):
+            delivered.clear()
+            state.clear()
+            state["sibling_code"] = sibling_code
+            data = {
+                "jid": f"20260101000000{code:06d}",
+                "fun": "test.retcode",
+                "arg": [code],
+                "ret": "",
+            }
+            with patch.object(
+                minion, "gen_modules", _racing_gen_modules_61830(minion, state)
+            ), patch.object(salt.minion.log, "info", sibling_starts_info):
+                salt.minion.Minion._thread_return(minion, minion.opts, data)
+            assert state.get("sibling_ran"), "sibling job never ran in the window"
+            _assert_distinct_generations_61830(state)
+            assert len(delivered) == 1
+            return delivered[0]
+
+        # A FAILED job (retcode 42) whose sibling passes must be delivered as
+        # failed. Pre-fix this job ran on the sibling's loader and the sibling's
+        # reset turned it into retcode=0/success=True (the bug).
+        ret = run(42)
+        assert ret["retcode"] == 42
+        assert ret["success"] is False
+        # The retcode lives in, and was read from, the loader this job built;
+        # the sibling's loader only holds the sibling's own retcode.
+        assert state["job_functions"].pack["__context__"]["retcode"] == 42
+        assert (
+            state["sibling_functions"].pack["__context__"]["retcode"]
+            == salt.defaults.exitcodes.EX_OK
+        )
+
+        # Inverse must-not: a SUCCEEDING job (retcode 0) under the same forced
+        # interleave must still be delivered as success; the fix must not flip
+        # a genuinely-passing job to failed.
+        ret = run(0)
+        assert ret["retcode"] == salt.defaults.exitcodes.EX_OK
+        assert ret["success"] is True
+
+        # Inverse must-not: a FAILING sibling (retcode 7) must not leak its
+        # retcode into a passing job. Pre-fix this job was delivered as
+        # retcode=7/success=False.
+        ret = run(0, sibling_code=7)
+        assert ret["retcode"] == salt.defaults.exitcodes.EX_OK
+        assert ret["success"] is True
+
+
+@SUDO_CASES_61830
+def test_thread_return_sudo_executor_owns_job_generation_61830(
+    minion_opts, code, cmd_ret, expected_retcode, expected_return
+):
+    """
+    #61830 with ``sudo_user`` set: the sudo executor runs the job as
+    ``sudo -u <sudo_user> salt-call ...`` through ``__salt__["cmd.run_all"]``
+    and writes the retcode into the ``__context__`` of the loader generation
+    the EXECUTOR belongs to, not the one the function lookup used.
+    _thread_return reads the retcode back from the generation its own
+    gen_modules() call returned, so it must also run through that
+    generation's executors.
+
+    A sibling job's gen_modules() between this job's own gen_modules() and its
+    executor call rebinds minion.executors. A job that owned its functions
+    loader but still ran through the shared minion.executors (the first
+    version of this fix) had the sudo executor write the retcode into the
+    sibling's __context__ and read its own, freshly reset one: a failed job
+    was reported as success.
+
+    Stock 3008.x passes this by design: it captures minion.functions only
+    after the sibling's rebind and runs through minion.executors, so its
+    write and its read both land in the sibling's generation. This guards
+    against loader ownership breaking the sudo case.
+    """
+    minion_opts["sudo_user"] = "saltdev"
+    state = {}
+    calls = []
+    with _threaded_minion_61830(minion_opts) as (
+        minion,
+        delivered,
+    ), _sudo_available_61830():
+        data = {
+            "jid": f"20260101000000{code:06d}",
+            "fun": "test.retcode",
+            "arg": [code],
+            "ret": "",
+        }
+        racing = _racing_gen_modules_61830(
+            minion, state, _fake_sudo_salt_call_61830(minion, cmd_ret, calls)
+        )
+        with patch.object(minion, "gen_modules", racing):
+            salt.minion.Minion._thread_return(minion, minion.opts, data)
+
+    _assert_distinct_generations_61830(state)
+    _assert_sudo_call_61830(calls, code)
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert ret["return"] == expected_return
+    assert ret["retcode"] == expected_retcode
+    assert ret["success"] is (expected_retcode == salt.defaults.exitcodes.EX_OK)
+
+
+@SUDO_CASES_61830
+def test_thread_multi_return_sudo_executor_owns_job_generation_61830(
+    minion_opts, code, cmd_ret, expected_retcode, expected_return
+):
+    """
+    #61830, multi-function path, with ``sudo_user`` set: the sudo executor
+    writes the retcode into the ``__context__`` of the generation the
+    executor belongs to, and _thread_multi_return reads it back from the
+    generation its own gen_modules() call returned, so it must also run each
+    function through that generation's executors.
+
+    A sibling job's gen_modules() between this job's own gen_modules() and
+    the function call rebinds minion.executors. Passing only the job's
+    functions loader to _execute_job_function (the first version of this
+    fix) left the call on the shared minion.executors: the sudo executor
+    wrote the retcode into the sibling's __context__ and the job read its
+    own, freshly reset one, so a failed function was reported as success.
+
+    Stock 3008.x passes this by design: it runs on the shared minion.functions
+    and minion.executors and reads the shared minion.functions back, so its
+    write and its read both land in the sibling's generation here. This
+    guards against loader ownership breaking the sudo case.
+    """
+    minion_opts["sudo_user"] = "saltdev"
+    state = {}
+    calls = []
+    with _threaded_minion_61830(minion_opts) as (
+        minion,
+        delivered,
+    ), _sudo_available_61830():
+        data = {
+            "jid": f"20260101000000{code:06d}",
+            "fun": ["test.retcode"],
+            "arg": [[code]],
+            "ret": "",
+        }
+        racing = _racing_gen_modules_61830(
+            minion, state, _fake_sudo_salt_call_61830(minion, cmd_ret, calls)
+        )
+        with patch.object(minion, "gen_modules", racing):
+            salt.minion.Minion._thread_multi_return(minion, minion.opts, data)
+
+    _assert_distinct_generations_61830(state)
+    _assert_sudo_call_61830(calls, code)
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert ret["return"]["test.retcode"] == expected_return
+    assert ret["retcode"]["test.retcode"] == expected_retcode
+    assert ret["success"]["test.retcode"] is (
+        expected_retcode == salt.defaults.exitcodes.EX_OK
+    )
+
+
+# A custom execution module for the ``dummy`` resource type, installed the way
+# saltutil.sync_* would (under extension_modules). Like salt.modules.test.retcode
+# it writes the retcode into its loader's __context__.
+RESOURCE_RETCODE_MODULE_61830 = """
+def retcode(code=42):
+    __context__["retcode"] = code
+    return True
+"""
+
+
+@pytest.mark.parametrize(
+    "code,sibling_code",
+    [
+        # A failed resource job must be delivered as failed.
+        (42, 0),
+        # Inverse must-not: a passing resource job stays passing.
+        (0, 0),
+        # Inverse must-not: a failing sibling's retcode on the shared
+        # resource loader must not leak into this passing job.
+        (0, 7),
+    ],
+    ids=["failed-job-stays-failed", "passing-job-stays-passing", "no-sibling-leak"],
+)
+def test_thread_return_resource_job_owns_job_generation_61830(
+    minion_opts, tmp_path, code, sibling_code
+):
+    """
+    #61830, resource jobs: a job with ``data["resource_target"]`` runs its
+    function on the per-type execution loader for that resource type and
+    reads its retcode back from that loader's ``__context__``. The per-type
+    loaders are built by gen_modules() with that call's context, and stock
+    3008.x (and the first version of this fix) took the loader from the
+    shared minion.resource_loaders, which every job's gen_modules() rebinds.
+
+    A sibling job's gen_modules() between this job's own gen_modules() and
+    the loader lookup made this job run on the SIBLING's resource loader; a
+    sibling resource job then reset (and wrote) the retcode on that shared
+    loader in this job's write->read window, so a failed job was reported as
+    success and a failing sibling's retcode leaked into a passing job. The
+    fix takes the loader from the generation the job's own gen_modules()
+    returned.
+
+    This drives the REAL Minion._thread_return, on its own job thread as a
+    threaded minion runs it, with a production-shaped resource job (what
+    _handle_payload dispatches for ``T@dummy:dummy-01``): real pillar-driven
+    discovery of the shipped ``dummy`` resource type, the real per-type loader
+    from salt.loader.resource_modules, and a custom ``dummy`` resource
+    execution module under extension_modules whose function writes the
+    retcode into its loader's __context__.
+    """
+    moddir = tmp_path / "extmods" / "resources" / "dummy" / "modules"
+    moddir.mkdir(parents=True)
+    with salt.utils.files.fopen(str(moddir / "rctest.py"), "w") as fp_:
+        fp_.write(RESOURCE_RETCODE_MODULE_61830)
+    minion_opts["extension_modules"] = str(tmp_path / "extmods")
+    pillar = {"resources": {"dummy": {"resource_ids": ["dummy-01"]}}}
+    resource = {"id": "dummy-01", "type": "dummy"}
+    state = {}
+
+    with _threaded_minion_61830(minion_opts, pillar=pillar) as (minion, delivered):
+        original_info = salt.minion.log.info
+
+        def sibling_starts_info(msg, *args, **kwargs):
+            # A sibling resource job starts on the shared per-type loader in
+            # this job's write->read window.
+            if "execution finished" in str(msg) and not state.get("sibling_ran"):
+                state["sibling_ran"] = True
+                _sibling_job_61830(
+                    minion,
+                    minion.resource_loaders["dummy"],
+                    sibling_code,
+                    fun="rctest.retcode",
+                )
+            return original_info(msg, *args, **kwargs)
+
+        data = {
+            "jid": f"20260101000000{code:06d}",
+            "fun": "rctest.retcode",
+            "arg": [code],
+            "ret": "",
+            "tgt": "T@dummy:dummy-01",
+            "tgt_type": "compound",
+            "resource_targets": [resource],
+            "pure_resource_target": True,
+            "minion_is_target": False,
+            "resource_target": resource,
+            "resource_job": True,
+        }
+        with patch.object(
+            minion, "gen_modules", _racing_gen_modules_61830(minion, state)
+        ), patch.object(salt.minion.log, "info", sibling_starts_info):
+            _run_job_thread_61830(salt.minion.Minion._thread_return, minion, data)
+
+    assert state.get("sibling_ran"), "sibling job never ran in the window"
+    _assert_distinct_generations_61830(state)
+    job_loader = state["job_resource_loaders"]["dummy"]
+    sibling_loader = state["sibling_resource_loaders"]["dummy"]
+    assert job_loader is not sibling_loader
+    assert job_loader.pack["__context__"] is not sibling_loader.pack["__context__"]
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert ret["resource_id"] == "dummy-01"
+    assert ret["return"] is True
+    assert ret["retcode"] == code
+    assert ret["success"] is (code == salt.defaults.exitcodes.EX_OK)
+    # The job's function ran on, and wrote its retcode into, the per-type
+    # loader of the generation its own gen_modules() built.
+    assert job_loader.pack["__context__"].get("retcode") == code
+    # The resource_target the job set stayed on the job's thread.
+    assert salt.loader.context.resource_ctxvar.get() == {}
+
+
+# state.apply for the ``dummy`` resource type, installed under
+# extension_modules like RESOURCE_RETCODE_MODULE_61830: a one-state run whose
+# state fails when the job applies ``failing``. It leaves the retcode to the
+# executor below.
+RESOURCE_STATE_MODULE_61830 = """
+def apply(mods=None):
+    return {
+        "test_|-check_|-check_|-check": {
+            "name": "check",
+            "result": mods != "failing",
+            "comment": "",
+            "changes": {},
+            "__run_num__": 0,
+        }
+    }
+"""
+
+# A custom executor, installed the way saltutil.sync_executors would (under
+# extension_modules) and selected with ``salt --module-executors``. Like the
+# sudo executor it records the job's retcode in its own __context__ instead of
+# leaving that to the function: a state run with a failed state is
+# EX_STATE_FAILURE.
+STATE_RETCODE_EXECUTOR_61830 = """
+import salt.defaults.exitcodes
+
+
+def execute(opts, data, func, args, kwargs):
+    ret = func(*args, **kwargs)
+    if not all(state["result"] for state in ret.values()):
+        __context__["retcode"] = salt.defaults.exitcodes.EX_STATE_FAILURE
+    return ret
+"""
+
+
+@pytest.mark.parametrize(
+    "mods,sibling_code,expected",
+    [
+        # A failed resource state run must be delivered as failed.
+        ("failing", 0, salt.defaults.exitcodes.EX_STATE_FAILURE),
+        # Inverse must-not: a passing resource state run stays passing.
+        ("passing", 0, salt.defaults.exitcodes.EX_OK),
+        # Inverse must-not: a failing sibling's retcode on the shared
+        # resource loader must not leak into this passing run.
+        ("passing", 7, salt.defaults.exitcodes.EX_OK),
+    ],
+    ids=["failed-run-stays-failed", "passing-run-stays-passing", "no-sibling-leak"],
+)
+def test_thread_return_merge_resource_job_owns_job_generation_61830(
+    minion_opts, tmp_path, mods, sibling_code, expected
+):
+    """
+    #61830, merge-mode resource jobs: for a state function in
+    ``_MERGE_RESOURCE_FUNS`` aimed only at resources (``salt -C
+    'T@dummy:dummy-01' state.apply``) the managing minion runs no job of its
+    own. _thread_return's merge block runs the function once per resource on
+    that resource type's per-type loader, through the job's executors, reads
+    each resource's retcode back from the per-type loader's __context__ and
+    sends one return per resource.
+
+    All of those resolve against one loader generation only if the block
+    takes both the per-type loader and the executors from the generation the
+    job's own gen_modules() call returned. Stock 3008.x and the first version
+    of this fix took the per-type loader from the shared
+    minion.resource_loaders and ran through the shared minion.executors,
+    both of which a sibling job's gen_modules() rebinds:
+
+    - on the shared per-type loader, a sibling resource job's retcode reset
+      and its own retcode write, landing between this run's
+      _execute_job_function return and the retcode read, replaced this run's
+      retcode: a failed run was delivered as success, and a failing
+      sibling's retcode leaked into a passing run;
+    - an executor that records the retcode itself (as sudo does) wrote it
+      into the __context__ of the generation the executor belongs to, so
+      running through the sibling's executors put a failed run's retcode in
+      the sibling's __context__ and left this run's freshly reset one: a
+      failed run was delivered as success.
+
+    This drives the REAL Minion._thread_return on its own job thread with a
+    production-shaped merge-mode job (what _target_load hands to
+    _handle_decoded_payload for a pure resource target): real pillar-driven
+    discovery of the shipped ``dummy`` resource type, the real per-type
+    loader, a custom ``dummy`` state.apply under extension_modules, and a
+    custom executor under extension_modules that records the retcode. A real
+    sibling gen_modules() runs right after the job's own, and a sibling
+    resource job's real _execute_job_function runs on the shared per-type
+    loader right after this run's _execute_job_function returns.
+    """
+    extmods = tmp_path / "extmods"
+    moddir = extmods / "resources" / "dummy" / "modules"
+    moddir.mkdir(parents=True)
+    with salt.utils.files.fopen(str(moddir / "state.py"), "w") as fp_:
+        fp_.write(RESOURCE_STATE_MODULE_61830)
+    with salt.utils.files.fopen(str(moddir / "rctest.py"), "w") as fp_:
+        fp_.write(RESOURCE_RETCODE_MODULE_61830)
+    execdir = extmods / "executors"
+    execdir.mkdir()
+    with salt.utils.files.fopen(str(execdir / "staterc.py"), "w") as fp_:
+        fp_.write(STATE_RETCODE_EXECUTOR_61830)
+    minion_opts["extension_modules"] = str(extmods)
+    pillar = {"resources": {"dummy": {"resource_ids": ["dummy-01"]}}}
+    resource = {"id": "dummy-01", "type": "dummy"}
+    state = {}
+
+    with _threaded_minion_61830(minion_opts, pillar=pillar) as (minion, delivered):
+        real_exec = salt.minion.Minion._execute_job_function
+
+        def racing_exec(self, *args, **kwargs):
+            # This run's function returns and the executor records its
+            # retcode; then a sibling resource job runs on the shared per-type
+            # loader before the merge block reads the retcode back.
+            result = real_exec(self, *args, **kwargs)
+            if not state.get("sibling_ran"):
+                state["sibling_ran"] = True
+                _sibling_job_61830(
+                    minion,
+                    minion.resource_loaders["dummy"],
+                    sibling_code,
+                    fun="rctest.retcode",
+                    exec_fn=real_exec,
+                )
+            return result
+
+        data = {
+            "jid": f"20260101000000{expected:03d}{sibling_code:03d}",
+            "fun": "state.apply",
+            "arg": [mods],
+            "ret": "",
+            "tgt": "T@dummy:dummy-01",
+            "tgt_type": "compound",
+            "module_executors": ["staterc"],
+            "resource_targets": [resource],
+            "pure_resource_target": True,
+            "minion_is_target": True,
+        }
+        with patch.object(
+            minion, "gen_modules", _racing_gen_modules_61830(minion, state)
+        ), patch.object(salt.minion.Minion, "_execute_job_function", racing_exec):
+            _run_job_thread_61830(salt.minion.Minion._thread_return, minion, data)
+
+    assert state.get("sibling_ran"), "sibling job never ran in the window"
+    _assert_distinct_generations_61830(state)
+    job_loader = state["job_resource_loaders"]["dummy"]
+    sibling_loader = state["sibling_resource_loaders"]["dummy"]
+    assert job_loader is not sibling_loader
+    assert job_loader.pack["__context__"] is not sibling_loader.pack["__context__"]
+    # One return, for the resource, and none under the managing minion's id.
+    assert len(delivered) == 1
+    ret = delivered[0]
+    assert ret["resource_id"] == "dummy-01"
+    assert ret["fun"] == "state.apply"
+    assert ret["out"] == "highstate"
+    assert ret["return"] == {
+        "test_|-check_|-check_|-check": {
+            "name": "check",
+            "result": mods != "failing",
+            "comment": "",
+            "changes": {},
+            "__run_num__": 0,
+        }
+    }
+    assert ret["retcode"] == expected
+    assert ret["success"] is (expected == salt.defaults.exitcodes.EX_OK)
+    # The run's retcode lives in, and was read from, the generation the job's
+    # own gen_modules() built; the sibling's per-type loader only holds the
+    # sibling's own retcode.
+    assert job_loader.pack["__context__"].get("retcode") == expected
+    assert sibling_loader.pack["__context__"].get("retcode") == sibling_code
+
+
+def test_sys_reload_modules_returns_none_and_is_serializable_61830(minion_opts):
+    """
+    #61830 follow-on: gen_modules() now returns the loaders it built (a
+    ModuleGeneration holding the functions, executors and resource_loaders it
+    just bound to the minion) so a threaded job can run against them.
+    LazyLoaders are not serializable, so sys.reload_modules must not be bound
+    to gen_modules directly (its return would be put on the wire). It is bound
+    to _reload_modules, which reloads the modules and returns None.
+    """
+    minion_opts["file_client"] = "local"
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.gen_modules()
+        before = minion.functions
+        reload_fn = minion.functions["sys.reload_modules"]
+        result = reload_fn()
+        assert result is None
+        # It really reloaded the modules.
+        assert minion.functions is not before
+        # The wire payload must round-trip without raising.
+        salt.payload.dumps({"return": result})
+
+        # gen_modules() itself returns the generation it just bound to the
+        # minion attributes.
+        generation = minion.gen_modules()
+        assert isinstance(generation, salt.minion.ModuleGeneration)
+        assert generation.functions is minion.functions
+        assert generation.executors is minion.executors
+        assert generation.resource_loaders is minion.resource_loaders
+        # The loaders of one generation share that call's __context__.
+        assert (
+            generation.executors.pack["__context__"]
+            is generation.functions.pack["__context__"]
+        )
+        # That return value is not serializable, which is exactly why
+        # sys.reload_modules needs the None-returning wrapper.
+        with pytest.raises(TypeError):
+            salt.payload.dumps({"return": generation})
+    finally:
+        minion.destroy()
+
+
+def test_sys_doc_reload_modules_shows_user_docstring_61830(minion_opts):
+    """
+    #61830 follow-on: sys.reload_modules is served by whatever gen_modules()
+    binds to it, so ``salt '*' sys.doc sys.reload_modules`` shows that
+    callable's docstring, not the stub in salt/modules/sysmod.py (whose
+    comment says its docstring must be mirrored in minion.py). Binding it to
+    the _reload_modules wrapper must keep the user-facing text there; the
+    first version of this fix showed the wrapper's internal notes instead.
+    """
+    minion_opts["file_client"] = "local"
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.gen_modules()
+        docs = minion.functions["sys.doc"]("sys.reload_modules")
+    finally:
+        minion.destroy()
+
+    assert list(docs) == ["sys.reload_modules"]
+    # sys.doc strips the reST directives; compare what it shows with the same
+    # processing of the sysmod stub's docstring (the online docs).
+    expected = salt.utils.doc.strip_rst(
+        {"sys.reload_modules": salt.modules.sysmod.reload_modules.__doc__}
+    )["sys.reload_modules"]
+    assert inspect.cleandoc(docs["sys.reload_modules"]) == inspect.cleandoc(expected)
+    assert inspect.cleandoc(docs["sys.reload_modules"]) == (
+        "Tell the minion to reload the execution modules\n"
+        "\n"
+        "CLI Example:\n"
+        "\n"
+        "    salt '*' sys.reload_modules"
+    )
+
+
+def test_thread_multi_return_retcode_owns_captured_loader_61830(minion_opts):
+    """
+    #61830, multi-function path. On 3008.x the single-function path already
+    captures one loader for the retcode reset, write and read, but
+    _thread_multi_return still called _execute_job_function without a loader
+    (so the call ran on the shared minion.functions and minion.executors) and
+    read each function's retcode back from the shared minion.functions. With
+    multiprocessing=False every job's gen_modules() rebinds those attributes,
+    so the write->read desync remains on this path (and in the proxy and
+    deltaproxy job runners):
+
+    - a sibling job's gen_modules() between this job's own gen_modules() and
+      the function call makes the function run on the sibling's loader;
+    - a sibling job's start-of-job retcode reset and its own retcode write on
+      the shared loader, landing between this job's retcode write and its
+      read, change what this job delivers.
+
+    A failed function was reported as success, and a failing sibling's
+    retcode leaked into a passing function. The fix passes the functions and
+    executors of the generation the job's own gen_modules() returned to
+    _execute_job_function and reads the retcode back from that generation.
+
+    Both windows are forced with real code: a real sibling gen_modules() right
+    after the job's own, and the sibling job's real _execute_job_function on
+    the sibling's loader right after this job's function returns.
+    """
+    with _threaded_minion_61830(minion_opts) as (minion, delivered):
+        real_exec = salt.minion.Minion._execute_job_function
+        state = {}
+
+        def racing_exec(self, *args, **kwargs):
+            # The job's function writes its retcode; then the sibling job runs
+            # on the sibling's loader before _thread_multi_return reads the
+            # retcode back.
+            result = real_exec(self, *args, **kwargs)
+            if not state.get("sibling_ran"):
+                state["sibling_ran"] = True
+                _sibling_job_61830(
+                    minion,
+                    state["sibling_functions"],
+                    state["sibling_code"],
+                    exec_fn=real_exec,
+                )
+            return result
+
+        def run(code, sibling_code=0):
+            delivered.clear()
+            state.clear()
+            state["sibling_code"] = sibling_code
+            data = {
+                "jid": f"20260101000000{code:06d}",
+                "fun": ["test.retcode"],
+                "arg": [[code]],
+                "ret": "",
+            }
+            with patch.object(
+                minion, "gen_modules", _racing_gen_modules_61830(minion, state)
+            ), patch.object(salt.minion.Minion, "_execute_job_function", racing_exec):
+                salt.minion.Minion._thread_multi_return(minion, minion.opts, data)
+            assert state.get("sibling_ran"), "sibling job never ran in the window"
+            _assert_distinct_generations_61830(state)
+            assert len(delivered) == 1
+            return delivered[0]
+
+        # A FAILED function (retcode 42) whose sibling passes must be delivered
+        # as failed. Pre-fix this delivered retcode=0/success=True.
+        ret = run(42)
+        assert ret["retcode"]["test.retcode"] == 42
+        assert ret["success"]["test.retcode"] is False
+        # The retcode lives in, and was read from, the loader this job built.
+        assert state["job_functions"].pack["__context__"]["retcode"] == 42
+        assert (
+            state["sibling_functions"].pack["__context__"]["retcode"]
+            == salt.defaults.exitcodes.EX_OK
+        )
+
+        # Inverse must-not: a SUCCEEDING function (retcode 0) under the same
+        # forced interleave must still be delivered as success.
+        ret = run(0)
+        assert ret["retcode"]["test.retcode"] == salt.defaults.exitcodes.EX_OK
+        assert ret["success"]["test.retcode"] is True
+
+        # Inverse must-not: a FAILING sibling (retcode 7) must not leak its
+        # retcode into a passing function. Pre-fix this was delivered as
+        # retcode=7/success=False.
+        ret = run(0, sibling_code=7)
+        assert ret["retcode"]["test.retcode"] == salt.defaults.exitcodes.EX_OK
+        assert ret["success"]["test.retcode"] is True
 
 
 def test_minion_manage_schedule(minion_opts):
@@ -1504,6 +2585,7 @@ async def test_master_type_failover(minion_opts):
             "master": ["master1", "master2"],
             "__role": "",
             "retry_dns": 0,
+            "master_tries": 1,
         }
     )
 
@@ -1562,6 +2644,68 @@ async def test_master_type_failover_no_masters(minion_opts):
             # Mock the io_loop so calls to stop/close won't happen.
             minion.io_loop = MagicMock()
             await minion.connect_master()
+
+
+def test_eval_master_single_master_closes_pub_channel_on_failure_68901(minion_opts):
+    """
+    Regression test for #68901: every AsyncPubChannel constructed by
+    Minion.eval_master in the single-master sign-in path must be close()-d
+    when the connection attempt fails, regardless of which exception type
+    pub_channel.connect() raised. Failing to do so leaks the channel's
+    underlying socket file descriptor on each retry, which over time
+    exhausts the minion's fd limit.
+    """
+    minion_opts.update(
+        {
+            "master": "127.0.0.1",
+            "master_type": "str",
+            "transport": "zeromq",
+            "__role": "",
+            "retry_dns": 0,
+            "acceptance_wait_time": 0,
+            "acceptance_wait_time_max": 0,
+            "master_tries": 1,
+        }
+    )
+
+    created = []
+
+    class MockPubChannel:
+        def __init__(self):
+            self.closed = 0
+            created.append(self)
+
+        @tornado.gen.coroutine
+        def connect(self):
+            # Non-SaltClientError on purpose: prior to the fix, this leaks
+            # the channel because the single-master path only closes
+            # pub_channel inside an `except SaltClientError` clause.
+            raise OSError("simulated transport failure")
+
+        def close(self):
+            self.closed += 1
+
+    def mock_channel_factory(opts, **kwargs):
+        return MockPubChannel()
+
+    def mock_resolve_dns(opts, fallback=True):
+        return {"master_ip": "127.0.0.1", "master_uri": "tcp://127.0.0.1:4506"}
+
+    io_loop = tornado.ioloop.IOLoop()
+    try:
+        with patch("salt.minion.resolve_dns", mock_resolve_dns), patch(
+            "salt.channel.client.AsyncPubChannel.factory", mock_channel_factory
+        ), patch("salt.loader.grains", MagicMock(return_value={})):
+            minion = salt.minion.Minion(minion_opts, io_loop=io_loop, load_grains=False)
+            with pytest.raises(OSError):
+                io_loop.run_sync(lambda: minion.eval_master(minion_opts, timeout=1))
+    finally:
+        io_loop.close(all_fds=True)
+
+    assert len(created) == 1, "exactly one pub channel should have been created"
+    assert (
+        created[0].closed == 1
+    ), "pub channel was not closed on connection failure (#68901 leak)"
 
 
 def test_config_cache_path_overrides():
@@ -1694,6 +2838,76 @@ async def test_master_type_disable(minion_opts):
         assert minion.connected is False
     finally:
         # Mock the io_loop so calls to stop/close won't happen.
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
+async def test_masterless_minion_does_not_connect_to_master(minion_opts):
+    """
+    When file_client is local and use_master_when_local is False (the default),
+    MinionManager._connect_minion must not call connect_master.
+    Regression test for https://github.com/saltstack/salt/issues/57866 and
+    https://github.com/saltstack/salt/issues/64952.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": False,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert not connect_master_called, (
+            "connect_master should not be called when file_client=local and"
+            " use_master_when_local=False"
+        )
+    finally:
+        minion.io_loop = MagicMock()
+        minion.destroy()
+
+
+async def test_masterless_minion_connects_when_use_master_when_local(minion_opts):
+    """
+    When file_client is local and use_master_when_local is True,
+    MinionManager._connect_minion must still call connect_master.
+    """
+    minion_opts.update(
+        {
+            "file_client": "local",
+            "use_master_when_local": True,
+            "__role": "",
+            "pub_ret": False,
+        }
+    )
+
+    minion = salt.minion.Minion(minion_opts)
+    try:
+        connect_master_called = False
+
+        async def mock_connect_master(failed=False):
+            nonlocal connect_master_called
+            connect_master_called = True
+
+        minion.connect_master = mock_connect_master
+        minion_man = salt.minion.MinionManager(minion_opts)
+        await minion_man._connect_minion(minion)
+        assert connect_master_called, (
+            "connect_master should be called when file_client=local and"
+            " use_master_when_local=True"
+        )
+    finally:
         minion.io_loop = MagicMock()
         minion.destroy()
 
@@ -1838,6 +3052,56 @@ async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     assert mm.event is None
 
 
+async def test_minion_manager_destroy_closes_event_publisher(
+    io_loop, minion_opts, tmp_path
+):
+    """
+    Regression test for issue #70175.
+
+    ``MinionManager.destroy()`` is invoked from
+    ``cli.daemons.Minion.shutdown()`` (KeyboardInterrupt, SaltSystemExit,
+    the ``shutdown(1)`` guard in ``prepare()``) and from
+    ``MinionManager.__del__`` on GC.  It must close the ``event_publisher``
+    ``PublishServer`` graph -- otherwise the three-warning cascade
+    from #70175 fires at interpreter shutdown:
+
+      - ``unclosed publish server <PublishServer>``
+      - ``unclosed SyncWrapper for cls=<_TCPPubServerPublisher>``
+      - ``unclosed publisher client <_TCPPubServerPublisher>``
+
+    Only the ``stop_async`` shutdown path (invoked from the SIGTERM
+    signal handler) used to close these; ``destroy()`` did not, so any
+    non-SIGTERM exit leaked them.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    mm = salt.minion.MinionManager(minion_opts)
+    mm._bind()
+    assert mm.event_publisher is not None
+    assert mm.event is not None
+
+    # Wait for pub server to bind so the underlying PublishServer graph
+    # is fully constructed.
+    while not list(pathlib.Path(minion_opts["sock_dir"]).glob("*")):
+        await tornado.gen.sleep(0.1)
+
+    ep = mm.event_publisher
+    ev = mm.event
+
+    # Call destroy directly (the buggy path).  Post-fix it must close
+    # both resources and null the references.
+    mm.destroy()
+
+    assert mm.event_publisher is None
+    assert mm.event is None
+    # PublishServer.close() sets _closing=True so __del__ won't warn.
+    assert ep._closing is True
+    # SaltEvent.destroy() closes pusher / subscriber and clears them.
+    assert ev.subscriber is None
+    assert ev.pusher is None
+
+
 def test_minion_io_loop_is_asyncio_loop(minion_opts):
     """
     Test that Minion io_loop is converted to asyncio.AbstractEventLoop.
@@ -1912,3 +3176,325 @@ def test_syndic_manager_io_loop_is_asyncio_loop(minion_opts):
         assert not hasattr(sm.io_loop, "spawn_callback")
     finally:
         sm.destroy()
+
+
+def _run_eval_master(opts):
+    """
+    Drive MinionBase.eval_master far enough to hit the single-master branch
+    (where the random_master warning lives) without touching the network:
+    DNS resolution is stubbed and the pub channel connects immediately.
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.MinionBase(opts)
+    mock_channel = MagicMock()
+    mock_channel.connect.return_value = tornado.gen.maybe_future(None)
+    mock_channel.auth.gen_token.return_value = b"token"
+    try:
+        with patch(
+            "salt.channel.client.AsyncPubChannel.factory", return_value=mock_channel
+        ), patch("salt.minion.resolve_dns", return_value={}), patch(
+            "salt.minion.prep_ip_port", return_value={}
+        ):
+            io_loop.run_sync(lambda: minion.eval_master(opts))
+    finally:
+        io_loop.close()
+
+
+def _single_master_opts(minion_opts):
+    minion_opts["master"] = "salt-master-1"
+    minion_opts["master_type"] = "str"
+    minion_opts["random_master"] = True
+    minion_opts["transport"] = "zeromq"
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master_tries"] = 1
+    return minion_opts
+
+
+def test_eval_master_random_master_warning_suppressed_for_multimaster(
+    minion_opts, caplog
+):
+    """
+    In multi-master mode the MinionManager spawns one Minion per master, each
+    bound to a single master but inheriting random_master (multimaster=True).
+    Those children must NOT emit the "random_master ... only one master ...
+    Ignoring" warning. Regression test for the spurious per-master warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts["multimaster"] = True
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert (
+        "random_master is True but there is only one master specified"
+        not in caplog.text
+    )
+
+
+def test_eval_master_random_master_warning_for_real_single_master(minion_opts, caplog):
+    """
+    A genuinely single-master minion (not a multimaster child) with
+    random_master set still gets warned -- random_master really is a no-op
+    there. Guards against over-suppressing the warning.
+    """
+    opts = _single_master_opts(minion_opts)
+    opts.pop("multimaster", None)
+    with caplog.at_level(logging.WARNING):
+        _run_eval_master(opts)
+    assert "random_master is True but there is only one master specified" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Graceful-stop fixup unit tests (issue #70050 audit follow-up)
+# ---------------------------------------------------------------------------
+
+
+def test_remove_proc_file_swallows_missing_file(tmp_path):
+    """
+    ``_remove_proc_file`` is a finalize callback invoked from inside
+    ``SignalHandlingProcess._handle_signals``. A race where the file is
+    already gone (happy-path completion beat the signal) must NOT raise
+    -- an exception in a signal-handler callback aborts the remaining
+    finalize methods on the loop at ``salt/utils/process.py:1058-1068``.
+    """
+    missing = tmp_path / "nope" / "jid"
+    salt.minion._remove_proc_file(str(missing))  # no exception
+
+
+def test_remove_proc_file_deletes_existing_file(tmp_path):
+    """
+    Happy path: file exists, gets removed.
+    """
+    fn = tmp_path / "20260814000000000000"
+    fn.write_bytes(b"payload")
+    salt.minion._remove_proc_file(str(fn))
+    assert not fn.exists()
+
+
+async def test_handle_decoded_payload_registers_proc_file_finalize(
+    minion_opts, tmp_path, io_loop
+):
+    """
+    Gap-2 fix: when ``_handle_decoded_payload`` spawns a
+    ``SignalHandlingProcess`` for a job, it must register
+    ``_remove_proc_file`` as a finalize method against the resolved
+    ``<cachedir>/proc/<jid>`` path so that a graceful SIGTERM triggers
+    proc-file cleanup even though ``SignalHandlingProcess._handle_signals``
+    later calls ``os._exit`` and skips ``_thread_return``'s own finally
+    block.
+    """
+    minion_opts["cachedir"] = str(tmp_path)
+    minion_opts["multiprocessing"] = True
+
+    jid = "20260814000000000001"
+    data = {"jid": jid, "fun": "test.sleep", "arg": [30]}
+
+    captured = {}
+
+    class _FakeProcess:
+        def __init__(self, *args, **kwargs):
+            self.name = kwargs.get("name", "fake")
+            self.pid = 0
+            self._alive = False
+            self.finalize = []
+
+        def register_finalize_method(self, function, *args, **kwargs):
+            self.finalize.append((function, args, kwargs))
+
+        def start(self):
+            captured["started"] = True
+
+        def is_alive(self):
+            return self._alive
+
+    fake_process = None
+
+    def _factory(*args, **kwargs):
+        nonlocal fake_process
+        fake_process = _FakeProcess(*args, **kwargs)
+        return fake_process
+
+    minion = salt.minion.Minion(
+        minion_opts, jid_queue=[], load_grains=False, io_loop=io_loop
+    )
+    try:
+        minion.connected = True
+        minion.subprocess_list = salt.utils.process.SubprocessList()
+        # _handle_decoded_payload's early-exit paths reference these:
+        minion.functions = {}
+        minion._system_resource_limit_hit_timestamp = 0
+        with patch("salt.minion.SignalHandlingProcess", side_effect=_factory), patch(
+            "salt.minion.default_signals"
+        ) as default_signals_mock:
+            default_signals_mock.return_value.__enter__ = MagicMock()
+            default_signals_mock.return_value.__exit__ = MagicMock(return_value=False)
+            await minion._handle_decoded_payload(data)
+    finally:
+        minion.destroy()
+
+    assert fake_process is not None, "SignalHandlingProcess was never constructed"
+    expected_proc_file = os.path.join(str(tmp_path), "proc", jid)
+    assert (
+        salt.minion._remove_proc_file,
+        (expected_proc_file,),
+        {},
+    ) in fake_process.finalize, (
+        f"_remove_proc_file finalize not registered on the job child; "
+        f"finalize list was: {fake_process.finalize!r}"
+    )
+
+
+def test_terminate_subprocess_list_none():
+    """``_terminate_subprocess_list(None, ...)`` is a valid no-op."""
+    salt.minion._terminate_subprocess_list(None, signal.SIGTERM)
+
+
+def test_terminate_subprocess_list_signals_live_only():
+    """
+    Gap-1 fix: iterate ``subprocess_list.processes``, deliver ``signum``
+    to each live entry, then escalate the ones that ignored it. Dead
+    entries must be skipped (no ``os.kill`` against ESRCH pids). The
+    escalation uses SIGKILL on POSIX (``proc.terminate()`` re-sends
+    SIGTERM which a stubborn child by definition ignored).
+    """
+    live = MagicMock(name="live-proc", pid=4242)
+    # Alive at the pre-filter, dead by the escalation loop (as if it
+    # honoured the SIGTERM during the join).
+    live.is_alive.side_effect = [True, False]
+    live.join = MagicMock()
+    live.terminate = MagicMock()
+    live.kill = MagicMock()
+
+    dead = MagicMock(name="dead-proc", pid=999999)
+    dead.is_alive.return_value = False
+    dead.join = MagicMock()
+    dead.terminate = MagicMock()
+    dead.kill = MagicMock()
+
+    stubborn = MagicMock(name="stubborn-proc", pid=4243)
+    stubborn.is_alive.return_value = True  # always alive
+    stubborn.join = MagicMock()
+    stubborn.terminate = MagicMock()
+    stubborn.kill = MagicMock()
+
+    subprocess_list = MagicMock(processes=[live, dead, stubborn])
+
+    with patch("salt.utils.platform.is_windows", return_value=False), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+
+    signaled_pairs = {(call.args[0], call.args[1]) for call in kill_mock.call_args_list}
+    # Live and stubborn both got the graceful signum.
+    assert (4242, signal.SIGTERM) in signaled_pairs
+    assert (4243, signal.SIGTERM) in signaled_pairs
+    # Stubborn escalates to SIGKILL; live doesn't (it exited during the join).
+    assert (4243, signal.SIGKILL) in signaled_pairs
+    assert (4242, signal.SIGKILL) not in signaled_pairs
+    # Dead child never receives anything.
+    assert not any(pid == 999999 for pid, _ in signaled_pairs)
+
+    dead.terminate.assert_not_called()
+    dead.kill.assert_not_called()
+
+
+def test_terminate_subprocess_list_windows_skips_signal():
+    """
+    On Windows, job children have no SIGTERM handler; sending SIGTERM
+    would kill them mid-signal-handler and orphan grandchildren. Fall
+    straight through to ``.kill()`` (which maps to ``TerminateProcess``).
+    """
+    proc = MagicMock(pid=1234)
+    proc.is_alive.return_value = True
+    proc.join = MagicMock()
+    proc.terminate = MagicMock()
+    proc.kill = MagicMock()
+    subprocess_list = MagicMock(processes=[proc])
+
+    with patch("salt.utils.platform.is_windows", return_value=True), patch(
+        "salt.minion.os.kill"
+    ) as kill_mock:
+        salt.minion._terminate_subprocess_list(
+            subprocess_list, signal.SIGTERM, grace_seconds=0.01
+        )
+    kill_mock.assert_not_called()
+    proc.kill.assert_called_once()
+
+
+def test_notify_systemd_stopping_no_socket_and_no_bindings(monkeypatch):
+    """
+    Gap-3 fix: ``notify_systemd_stopping`` must be a silent no-op when
+    the systemd bindings are absent *and* ``systemd-notify`` is not on
+    ``PATH`` (i.e. the daemon was not started under a Type=notify unit,
+    or was started on a non-systemd platform).
+    """
+    monkeypatch.delenv("NOTIFY_SOCKET", raising=False)
+
+    def _no_bindings(name, *a, **kw):
+        if name == "systemd.daemon":
+            raise ImportError("no systemd bindings")
+        return original_import(name, *a, **kw)
+
+    import builtins
+
+    original_import = builtins.__import__
+    monkeypatch.setattr(builtins, "__import__", _no_bindings)
+    monkeypatch.setattr("salt.utils.path.which", lambda name: None)
+    assert salt.utils.process.notify_systemd_stopping() is False
+
+
+def test_notify_systemd_stopping_uses_systemd_daemon(monkeypatch):
+    """
+    When the ``systemd`` Python bindings ARE available and the host is
+    systemd-booted, ``notify_systemd_stopping`` calls ``systemd.daemon.notify``
+    with the literal ``"STOPPING=1"`` payload (not ``"READY=1"``).
+    """
+    fake_daemon = MagicMock()
+    fake_daemon.booted.return_value = True
+    fake_module = MagicMock(daemon=fake_daemon)
+    fake_pkg = MagicMock(daemon=fake_daemon)
+    monkeypatch.setitem(__import__("sys").modules, "systemd", fake_pkg)
+    monkeypatch.setitem(__import__("sys").modules, "systemd.daemon", fake_daemon)
+
+    salt.utils.process.notify_systemd_stopping()
+    fake_daemon.notify.assert_called_once_with("STOPPING=1")
+
+
+async def test_stop_async_calls_notify_stopping_and_terminates_subprocess_list(
+    minion_opts,
+):
+    """
+    Gap-1 + Gap-3 wired into ``MinionManager.stop_async``:
+      - ``notify_systemd_stopping`` fires on entry
+      - ``_terminate_subprocess_list`` is invoked per-managed-minion with
+        the incoming signum (before ``kill_children`` and ``destroy``)
+    """
+    manager = salt.minion.MinionManager(minion_opts)
+    try:
+        fake_minion = MagicMock()
+        fake_minion.subprocess_list = MagicMock(processes=[])
+        manager.minions = [fake_minion]
+        manager.event = None
+        manager.event_publisher = None
+
+        parent = MagicMock()
+
+        async def _instant_sleep(_):
+            return None
+
+        with patch("salt.utils.process.notify_systemd_stopping") as notify_mock, patch(
+            "salt.minion._terminate_subprocess_list"
+        ) as term_mock, patch("salt.minion.asyncio.sleep", side_effect=_instant_sleep):
+            await manager.stop_async(signal.SIGTERM, parent)
+
+        notify_mock.assert_called_once()
+        term_mock.assert_called_once()
+        args, kwargs = term_mock.call_args
+        assert args[0] is fake_minion.subprocess_list
+        assert args[1] == signal.SIGTERM
+        parent.assert_called_once_with(signal.SIGTERM, None)
+    finally:
+        # MinionManager owns an io_loop but no persistent resources on this
+        # code path; the .destroy() call would try to tear down channels
+        # we never created. A best-effort close is enough.
+        pass

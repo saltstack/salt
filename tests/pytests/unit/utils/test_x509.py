@@ -1224,6 +1224,9 @@ class TestCreateExtension:
         (
             ("DNS", "می\u200cخواهم\u200c.iran"),
             salt.exceptions.CommandExecutionError,
+            # idna < 3.18 says "Joiner U+200C not allowed at position 9";
+            # idna 3.18+ says "Unknown codepoint adjacent to joiner U+200C
+            # at position 9". Accept either.
             r".*U\+200C.*position 9.*",
         ),
         (

@@ -2,6 +2,8 @@
 Helper functions for transport components to handle message framing
 """
 
+import struct
+
 import salt.utils.msgpack
 
 
@@ -20,10 +22,14 @@ def frame_msg(body, header=None, raw_body=False):  # pylint: disable=unused-argu
 
 def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-argument
     """
-    Frame the given message with our wire protocol for IPC
+    Frame the given message with our wire protocol for IPC.
 
-    For IPC, we don't need to be backwards compatible, so
-    use the more efficient "use_bin_type=True" on Python 3.
+    Prefixes the msgpack payload with a 4-byte big-endian length so the
+    receiver can read exactly the right number of bytes per message.  This
+    prevents msgpack stream corruption when concurrent large writes exceed
+    the Unix socket PIPE_BUF atomic-write boundary (~65 536 bytes on Linux),
+    which caused interleaved bytes and UnicodeDecodeError / ExtraData crashes
+    in subscribers such as EventReturn under high event-bus load.
     """
     framed_msg = {}
     if header is None:
@@ -31,7 +37,8 @@ def frame_msg_ipc(body, header=None, raw_body=False):  # pylint: disable=unused-
 
     framed_msg["head"] = header
     framed_msg["body"] = body
-    return salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
+    payload = salt.utils.msgpack.dumps(framed_msg, use_bin_type=True)
+    return struct.pack(">I", len(payload)) + payload
 
 
 def _decode_embedded_list(src):

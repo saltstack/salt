@@ -1,3 +1,5 @@
+from urllib.parse import unquote, urlparse
+
 import salt.utils.platform
 import salt.utils.url
 from tests.support.mock import MagicMock, patch
@@ -388,6 +390,28 @@ class UrlTestCase(TestCase):
             expected = expected.replace("http://", "https://", 1)
             result = salt.utils.url.add_http_basic_auth(**kwargs)
             self.assertEqual(result, expected)
+
+    def test_http_basic_auth_quotes_userinfo(self):
+        """
+        Reserved characters in the user or password must be percent-encoded so
+        they do not corrupt the resulting URL (see #55561).
+        """
+        result = salt.utils.url.add_http_basic_auth(
+            "https://example.com/repo.git",
+            user="some@User",
+            password="some+Generated/Password",
+        )
+        self.assertEqual(
+            result,
+            "https://some%40User:some%2BGenerated%2FPassword@example.com/repo.git",
+        )
+        # The encoded URL must round-trip back to the original credentials and
+        # leave the host/path intact.
+        parsed = urlparse(result)
+        self.assertEqual(parsed.hostname, "example.com")
+        self.assertEqual(parsed.path, "/repo.git")
+        self.assertEqual(unquote(parsed.username), "some@User")
+        self.assertEqual(unquote(parsed.password), "some+Generated/Password")
 
     def test_http_basic_auth_https_only(self):
         """

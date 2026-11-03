@@ -22,4 +22,4 @@ guidelines for filing bug reports:
 
 **Salt Project Support** - If you need dedicated, prioritized support, please
 consider taking a look at the Enterprise product:
-`Tanzu Salt <https://www.vmware.com/products/app-platform/tanzu-salt>`__
+`VMware Salt <https://techdocs.broadcom.com/us/en/vmware-cis/other/vmware-salt/8-18.html>`__

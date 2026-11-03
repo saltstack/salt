@@ -89,10 +89,10 @@ def list_tokens(opts):
     List all tokens in the store.
 
     :param opts: Salt master config options
-    :returns: List of dicts (tokens)
+    :returns: Generator of tokens
     """
-    ret = []
-    for dirpath, dirnames, filenames in salt.utils.path.os_walk(opts["token_dir"]):
-        for token in filenames:
-            ret.append(token)
-    return ret
+    if not os.path.exists(opts["token_dir"]):
+        return
+    for entry in os.scandir(opts["token_dir"]):
+        if entry.is_file():
+            yield entry.name

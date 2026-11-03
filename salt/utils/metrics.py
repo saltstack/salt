@@ -38,6 +38,13 @@ The default ``otlp-http`` exporter is pure-Python and ships in salt's
 base requirements.  The ``otlp-grpc`` exporter is opt-in: install
 ``opentelemetry-exporter-otlp-proto-grpc`` separately to use it.
 
+**Multi-process semantics**: every salt process that records metrics
+(the master parent and each MWorker) is its own OpenTelemetry producer.
+Each one carries a distinct ``service.instance.id`` resource attribute
+(``<hostname>/<process name>``, e.g. ``salt-master-01/MWorker-2``) so
+cumulative series from different processes do not overwrite each other.
+Aggregate across processes with ``sum by (...)``.
+
 **Cardinality**: every instrument's labels must come from a bounded
 domain.  Acceptable: ``fun`` (bounded by the salt module space),
 ``result`` (small enum), ``returner`` (configured returner names).
@@ -48,42 +55,78 @@ span attributes if you need them.
 import atexit
 import logging
 import os
+import socket
 import threading
+from types import SimpleNamespace
 
 log = logging.getLogger(__name__)
 
 _INSTRUMENTATION_NAME = "salt"
 
-# OpenTelemetry is optional.  It is not shipped in the salt-ssh thin
-# tarball, may be absent from older installed onedirs that the upgrade /
-# downgrade tests still exercise, and may be intentionally uninstalled
-# by operators who want a minimal footprint.  When opentelemetry is
-# missing, every public function in this module short-circuits to a
-# no-op, exactly as if ``opts['metrics']['enabled']`` were false.
-try:
-    from opentelemetry import metrics as otel_metrics
-    from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
-        OTLPMetricExporter as _OTLPMetricExporterHTTP,
-    )
-    from opentelemetry.sdk.metrics import MeterProvider
-    from opentelemetry.sdk.metrics.export import (
-        ConsoleMetricExporter,
-        PeriodicExportingMetricReader,
-    )
-    from opentelemetry.sdk.metrics.view import ExplicitBucketHistogramAggregation, View
-    from opentelemetry.sdk.resources import Resource
+# Deferred OpenTelemetry state.  ``None`` means "we have not yet tried
+# to import"; ``True`` / ``False`` are set by :func:`_load_otel` on
+# first use.  ``_otel`` is a ``SimpleNamespace`` of the symbols we need
+# from ``opentelemetry`` once the probe succeeds.
+#
+# Prior to this deferral the ``opentelemetry`` package was imported at
+# module load, which cost ~15 MB per Python process.  Every salt daemon
+# entry point transitively imports ``salt.utils.metrics`` (via
+# ``salt.master`` / ``salt.minion``), so a ~15-process salt-master
+# container was paying ~225 MB up front for a subsystem that defaults
+# to disabled.  Deferring keeps that memory reserved for actual salt
+# state on the vast majority of deployments where metrics are off.
+_OTEL_AVAILABLE = None
+_otel = None
+_otel_load_lock = threading.Lock()
 
-    _OTEL_AVAILABLE = True
-except ImportError:  # pragma: no cover - exercised when opentelemetry is absent
-    _OTEL_AVAILABLE = False
-    otel_metrics = None  # type: ignore[assignment]
-    _OTLPMetricExporterHTTP = None  # type: ignore[assignment]
-    MeterProvider = None  # type: ignore[assignment]
-    PeriodicExportingMetricReader = None  # type: ignore[assignment]
-    ConsoleMetricExporter = None  # type: ignore[assignment]
-    ExplicitBucketHistogramAggregation = None  # type: ignore[assignment]
-    View = None  # type: ignore[assignment]
-    Resource = None  # type: ignore[assignment]
+
+def _load_otel():
+    """
+    Attempt to import opentelemetry on first use.  Returns ``True`` if
+    available.
+
+    Only called from paths where metrics have already been confirmed
+    enabled, so daemons with ``metrics.enabled = false`` (the default)
+    never pay the per-process import cost.  Idempotent; the second call
+    short-circuits on the memoised flag.
+    """
+    global _OTEL_AVAILABLE, _otel  # pylint: disable=global-statement
+    if _OTEL_AVAILABLE is not None:
+        return _OTEL_AVAILABLE
+    with _otel_load_lock:
+        if _OTEL_AVAILABLE is not None:
+            return _OTEL_AVAILABLE
+        try:
+            # pylint: disable=import-outside-toplevel
+            from opentelemetry import metrics as otel_metrics
+            from opentelemetry.exporter.otlp.proto.http.metric_exporter import (
+                OTLPMetricExporter as OTLPMetricExporterHTTP,
+            )
+            from opentelemetry.sdk.metrics import MeterProvider
+            from opentelemetry.sdk.metrics.export import (
+                ConsoleMetricExporter,
+                PeriodicExportingMetricReader,
+            )
+            from opentelemetry.sdk.metrics.view import (
+                ExplicitBucketHistogramAggregation,
+                View,
+            )
+            from opentelemetry.sdk.resources import Resource
+        except ImportError:  # pragma: no cover - exercised when otel is absent
+            _OTEL_AVAILABLE = False
+            return False
+        _otel = SimpleNamespace(
+            otel_metrics=otel_metrics,
+            OTLPMetricExporterHTTP=OTLPMetricExporterHTTP,
+            MeterProvider=MeterProvider,
+            PeriodicExportingMetricReader=PeriodicExportingMetricReader,
+            ConsoleMetricExporter=ConsoleMetricExporter,
+            ExplicitBucketHistogramAggregation=ExplicitBucketHistogramAggregation,
+            View=View,
+            Resource=Resource,
+        )
+        _OTEL_AVAILABLE = True
+        return True
 
 
 _lock = threading.Lock()
@@ -119,10 +162,18 @@ _NOOP_OBSERVABLE = _NoopObservableGauge()
 
 
 def is_enabled():
-    """Return True if metrics are configured and enabled."""
-    if not _OTEL_AVAILABLE:
+    """
+    Return True if metrics are configured, enabled, and opentelemetry
+    can be imported.
+
+    Structured so the disabled path never touches opentelemetry: when
+    ``_cached_opts`` is unset or ``enabled`` is false (both true by
+    default), :func:`_load_otel` is not called and the imports stay
+    deferred.
+    """
+    if not _cached_opts or not _cached_opts.get("enabled"):
         return False
-    return bool(_cached_opts and _cached_opts.get("enabled"))
+    return _load_otel()
 
 
 def configure(opts):
@@ -135,20 +186,13 @@ def configure(opts):
     no-op that just caches the opts so subsequent calls in fork children
     can pick up the same setting.
     """
-    global _cached_opts, _atexit_registered
+    global _cached_opts, _atexit_registered  # pylint: disable=global-statement
     metrics_opts = (opts or {}).get("metrics") or {}
     _cached_opts = dict(metrics_opts)
     _cached_opts.setdefault("service_name", _default_service_name(opts))
-    if not _OTEL_AVAILABLE:
-        if _cached_opts.get("enabled"):
-            log.warning(
-                "metrics.enabled is true but opentelemetry is not installed; "
-                "metrics remain disabled in this process."
-            )
-        return
-    if not _atexit_registered:
-        atexit.register(shutdown)
-        _atexit_registered = True
+    instance = (opts or {}).get("__metrics_instance")
+    if isinstance(instance, dict):
+        _cached_opts["_instance"] = {**instance, "pid": os.getpid()}
     if not _cached_opts.get("enabled"):
         log.debug(
             "metrics.configure called but metrics.enabled is false (pid=%d, service=%s)",
@@ -156,6 +200,15 @@ def configure(opts):
             _cached_opts.get("service_name"),
         )
         return
+    if not _load_otel():
+        log.warning(
+            "metrics.enabled is true but opentelemetry is not installed; "
+            "metrics remain disabled in this process."
+        )
+        return
+    if not _atexit_registered:
+        atexit.register(shutdown)
+        _atexit_registered = True
     log.info(
         "Enabling OpenTelemetry metrics (pid=%d, service=%s, exporter=%s, endpoint=%s)",
         os.getpid(),
@@ -276,14 +329,43 @@ def _build_provider():
             "metrics enabled but no reader could be built; instruments "
             "will record into the void."
         )
-    provider = MeterProvider(
+    provider = _otel.MeterProvider(
         resource=resource,
         metric_readers=readers,
         views=views,
     )
-    otel_metrics.set_meter_provider(provider)
+    _otel.otel_metrics.set_meter_provider(provider)
     _provider = provider
     _meter = provider.get_meter(_INSTRUMENTATION_NAME)
+
+
+def _own_instance(opts):
+    """
+    Return the instance info supplied to :func:`configure`, but only if it
+    was supplied by this very process.  A fork child that never called
+    ``configure`` itself must not reuse its parent's identity.
+    """
+    instance = opts.get("_instance") or {}
+    if instance.get("pid") != os.getpid():
+        return {}
+    return instance
+
+
+def _instance_id(opts):
+    """
+    Return a stable per-process identity, ``<hostname>/<process name>``,
+    e.g. ``salt-master-01/MWorker-2``.
+
+    The name is stable across restarts, so a restarted worker continues its
+    own series instead of starting a new one.  The hostname keeps processes
+    with the same name on different masters apart.  Falls back to
+    ``<hostname>/<pid>`` when the caller did not supply a name.
+    """
+    host = socket.gethostname()
+    ident = _own_instance(opts).get("id")
+    if ident:
+        return f"{host}/{ident}"
+    return f"{host}/{os.getpid()}"
 
 
 def _build_resource(opts):
@@ -291,7 +373,13 @@ def _build_resource(opts):
     extra = opts.get("resource_attributes") or {}
     if isinstance(extra, dict):
         attrs.update(extra)
-    return Resource.create(attrs)
+    instance_id = attrs.pop("service.instance.id", None) or _instance_id(opts)
+    # ``Resource.create`` may fill ``service.instance.id`` itself (SDK >= 1.43)
+    # and some releases overrode a value passed in.  ``merge`` lets the right
+    # side win on every SDK version.
+    return _otel.Resource.create(attrs).merge(
+        _otel.Resource({"service.instance.id": instance_id})
+    )
 
 
 def _build_views(opts):
@@ -317,9 +405,11 @@ def _build_views(opts):
             )
             continue
         views.append(
-            View(
+            _otel.View(
                 instrument_name=instrument_name,
-                aggregation=ExplicitBucketHistogramAggregation(boundaries=float_bounds),
+                aggregation=_otel.ExplicitBucketHistogramAggregation(
+                    boundaries=float_bounds
+                ),
             )
         )
     return views
@@ -340,8 +430,8 @@ def _build_readers(opts):
 
     if name == "console":
         return [
-            PeriodicExportingMetricReader(
-                ConsoleMetricExporter(),
+            _otel.PeriodicExportingMetricReader(
+                _otel.ConsoleMetricExporter(),
                 export_interval_millis=int(interval_seconds * 1000),
             )
         ]
@@ -353,16 +443,17 @@ def _build_readers(opts):
         if headers:
             kwargs["headers"] = headers
         return [
-            PeriodicExportingMetricReader(
-                _OTLPMetricExporterHTTP(**kwargs),
+            _otel.PeriodicExportingMetricReader(
+                _otel.OTLPMetricExporterHTTP(**kwargs),
                 export_interval_millis=int(interval_seconds * 1000),
             )
         ]
 
     if name == "otlp-grpc":
         try:
+            # pylint: disable=import-outside-toplevel
             from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-                OTLPMetricExporter as _OTLPMetricExporterGRPC,
+                OTLPMetricExporter as OTLPMetricExporterGRPC,
             )
         except ImportError:
             log.error(
@@ -377,8 +468,8 @@ def _build_readers(opts):
         if headers:
             kwargs["headers"] = headers
         return [
-            PeriodicExportingMetricReader(
-                _OTLPMetricExporterGRPC(**kwargs),
+            _otel.PeriodicExportingMetricReader(
+                OTLPMetricExporterGRPC(**kwargs),
                 export_interval_millis=int(interval_seconds * 1000),
             )
         ]

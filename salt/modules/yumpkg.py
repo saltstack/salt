@@ -51,6 +51,11 @@ log = logging.getLogger(__name__)
 
 __HOLD_PATTERN = r"[\w+]+(?:[.-][^-]+)*"
 
+# dnf5 stores version locks in a TOML file rather than the legacy plain
+# text output exposed by ``dnf versionlock list``. The path is fixed in
+# upstream dnf5; tests override this constant.
+_DNF5_VERSIONLOCK_PATH = "/etc/dnf/versionlock.toml"
+
 PKG_ARCH_SEPARATOR = "."
 
 # Define the module's virtual name
@@ -451,7 +456,10 @@ def normalize_name(name):
     except ValueError:
         return name
     stripped_name = name[: -(len(arch) + 1)]
-    if salt.utils.pkg.rpm.resolve_name(stripped_name, arch) == stripped_name:
+    if (
+        salt.utils.pkg.rpm.resolve_name(stripped_name, arch, __grains__["osarch"])
+        == stripped_name
+    ):
         return stripped_name
     return name
 
@@ -2295,7 +2303,12 @@ def hold(
                 ret[target].update(result=None)
                 ret[target]["comment"] = f"Package {target} is set to be held."
             else:
-                out = _call_yum(["versionlock", target])
+                # The explicit ``add`` sub-command is supported by all
+                # versionlock plugins (yum, dnf, dnf5); dnf5 *requires*
+                # it ("Unknown argument" otherwise) so use it
+                # unconditionally to mirror the ``versionlock delete``
+                # form used by ``unhold``.
+                out = _call_yum(["versionlock", "add", target])
                 if out["retcode"] == 0:
                     ret[target].update(result=True)
                     ret[target]["comment"] = "Package {} is now being held.".format(
@@ -2420,6 +2433,12 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     .. versionchanged:: 2015.5.10,2015.8.4,2016.3.0
         Function renamed from ``pkg.get_locked_pkgs`` to ``pkg.list_holds``.
 
+    .. note::
+        On dnf5 (and any newer dnf) systems, holds are read directly
+        from ``/etc/dnf/versionlock.toml`` because ``versionlock list``
+        no longer emits the legacy text format. The ``pattern`` argument
+        is ignored in that case.
+
     List information on locked packages
 
     .. note::
@@ -2445,12 +2464,104 @@ def list_holds(pattern=__HOLD_PATTERN, full=True):
     """
     _check_versionlock()
 
+    # Backends that still emit the legacy ``name-epoch:ver-rel.arch.*``
+    # text format from ``versionlock list``. Anything else (dnf5 today,
+    # and presumably any future dnf6+) is assumed to use the structured
+    # TOML store at ``/etc/dnf/versionlock.toml``.
+    if _yum() not in ("yum", "dnf", "tdnf"):
+        return _list_holds_dnf5(full=full)
+
     out = __salt__["cmd.run"]([_yum(), "versionlock", "list"], python_shell=False)
     ret = []
     for line in salt.utils.itertools.split(out, "\n"):
         match = _get_hold(line, pattern=pattern, full=full)
         if match is not None:
             ret.append(match)
+    return ret
+
+
+def _list_holds_dnf5(full=True):
+    """
+    Parse ``/etc/dnf/versionlock.toml`` to enumerate dnf5 version locks.
+
+    dnf5's ``versionlock list`` writes a structured human-readable format
+    rather than the legacy ``name-epoch:ver-rel.arch.*`` token that
+    ``_get_hold`` expects, so we read the on-disk configuration directly.
+
+    .. note::
+        Parsing prefers the standard-library :py:mod:`tomllib`, which exists
+        only on Python 3.11+. The Salt onedir packages ship Python 3.10 through
+        3006.26 and do **not** bundle the third-party ``toml`` library (it is a
+        CI-only dependency), so on those builds neither parser is available and
+        this returns an empty list. Reliable dnf5 hold reporting therefore
+        depends on the Python 3.11 bump landing in 3006.27 (see #69526); where
+        the optional ``toml`` library happens to be installed it is used as a
+        fallback on older interpreters.
+    """
+    # Prefer the standard-library tomllib (Python 3.11+). Fall back to the
+    # optional third-party ``toml`` library via the salt serializer on older
+    # interpreters that have it installed. Imported inside the function so the
+    # top-level import graph stays unchanged.
+    try:
+        import tomllib
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH, "rb") as fp_:
+                return tomllib.load(fp_)
+
+    except ImportError:
+        import salt.serializers.tomlmod as tomlmod
+
+        def _read_versionlock():
+            with salt.utils.files.fopen(_DNF5_VERSIONLOCK_PATH) as fp_:
+                return tomlmod.deserialize(fp_)
+
+    try:
+        data = _read_versionlock()
+    except OSError:
+        log.debug(
+            "dnf5 versionlock file %s is missing; no holds to report",
+            _DNF5_VERSIONLOCK_PATH,
+        )
+        return []
+    except Exception as exc:  # pylint: disable=broad-except
+        log.warning(
+            "Failed to parse dnf5 versionlock file %s: %s",
+            _DNF5_VERSIONLOCK_PATH,
+            exc,
+        )
+        return []
+
+    pkgs = data.get("packages", []) or []
+    if not full:
+        # Preserve insertion order while deduplicating.
+        seen = set()
+        names = []
+        for pkg in pkgs:
+            name = pkg.get("name")
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            names.append(name)
+        return names
+
+    ret = []
+    for pkg in pkgs:
+        name = pkg.get("name")
+        if not name:
+            continue
+        evr = None
+        for cond in pkg.get("conditions", []) or []:
+            if cond.get("key") == "evr" and cond.get("comparator") == "=":
+                evr = cond.get("value")
+                break
+        if evr is None:
+            # Without a concrete EVR there is no legacy-form token to
+            # emit; skip rather than report a partial entry.
+            continue
+        if ":" not in evr:
+            evr = "0:" + evr
+        ret.append(f"{name}-{evr}.*")
     return ret
 
 
@@ -2511,6 +2622,37 @@ def group_list():
         "available environment groups:": "available environments",
         "available language groups:": "available languages",
     }
+
+    if _yum() == "dnf5":
+        # dnf5 lists environment groups and language groups under separate
+        # subcommands ("dnf5 environment list"), not under "group list", so the
+        # "installed/available environments" and "available languages" keys
+        # stay empty on dnf5 (the dnf/yum path below still fills them).
+        out = __salt__["cmd.run_stdout"](
+            [_yum(), "group", "list", "--hidden"],
+            output_loglevel="trace",
+            python_shell=False,
+        )
+        for line in salt.utils.itertools.split(out, "\n"):
+            # dnf5 'group list' is a whitespace-aligned table:
+            #   ID   Name (may contain spaces)   Installed (yes|no)
+            # Tokenize the row rather than matching the name with a regex, so a
+            # group name that happens to contain the word "yes" or "no" cannot
+            # be mistaken for the trailing Installed column. The header row and
+            # any blank/administrative lines have no yes/no last column and are
+            # skipped here.
+            parts = line.split()
+            if len(parts) < 3:
+                continue
+            installed = parts[-1].lower()
+            if installed not in ("yes", "no"):
+                continue
+            group_id = parts[0]
+            if installed == "yes":
+                ret["installed"].append(group_id)
+            else:
+                ret["available"].append(group_id)
+        return ret
 
     out = __salt__["cmd.run_stdout"](
         [_yum(), "grouplist", "hidden"], output_loglevel="trace", python_shell=False
@@ -2615,7 +2757,10 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         }
     )
 
-    cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
+    if _yum() == "dnf5":
+        cmd = [_yum(), "--quiet"] + options + ["group", "info", name]
+    else:
+        cmd = [_yum(), "--quiet"] + options + ["groupinfo", name]
     out = __salt__["cmd.run_stdout"](cmd, output_loglevel="trace", python_shell=False)
 
     g_info = {}
@@ -2630,9 +2775,17 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
         ret["type"] = "environment group"
     elif "group" in g_info:
         ret["type"] = "package group"
+    elif "name" in g_info:
+        # dnf5 'group info' labels a package group with "Name"/"Id" rather than
+        # the "Group"/"Group-Id" that dnf uses.
+        ret["type"] = "package group"
 
-    ret["group"] = g_info.get("environment group") or g_info.get("group")
-    ret["id"] = g_info.get("environment-id") or g_info.get("group-id")
+    ret["group"] = (
+        g_info.get("environment group") or g_info.get("group") or g_info.get("name")
+    )
+    ret["id"] = (
+        g_info.get("environment-id") or g_info.get("group-id") or g_info.get("id")
+    )
     if not ret["group"] and not ret["id"]:
         raise CommandExecutionError(f"Group '{name}' not found")
 
@@ -2643,7 +2796,14 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
     for pkgtype in pkgtypes:
         target_found = False
         for line in salt.utils.itertools.split(out, "\n"):
-            line = line.strip().lstrip(string.punctuation)
+            line = line.strip().lstrip(string.punctuation).strip()
+            # ``member`` is the group member (a package or, for environment
+            # groups, a subgroup) this line contributes. For an ordinary member
+            # line it is the line itself; a dnf5 section header (below) carries
+            # its section's first member inline and overrides it.
+            member = line
+            # dnf (yum): the section header sits on its own line, e.g.
+            # "Mandatory Packages:", with members on the lines that follow.
             match = re.match(
                 pkgtypes_capturegroup + r" (?:groups|packages):\s*$", line.lower()
             )
@@ -2656,26 +2816,61 @@ def group_info(name, expand=False, ignore_groups=None, **kwargs):
                         # We've reached the targeted section
                         target_found = True
                     continue
+            # dnf5: the section header carries this section's first member
+            # inline, e.g. "Mandatory packages   : gettext".
+            match_dnf5 = re.match(
+                pkgtypes_capturegroup + r" (?:groups|packages)\s*:\s*(.*?)$",
+                line.lower(),
+            )
+            if match_dnf5:
+                if target_found:
+                    # We've reached a new section, break from loop
+                    break
+                if match_dnf5.group(1) != pkgtype:
+                    continue
+                # We've reached the targeted section
+                target_found = True
+                # Pull the inline first member into its own variable (keeping
+                # the original case) rather than overwriting ``line``: a header
+                # with trailing spaces or localized text could otherwise leave
+                # an empty string and silently drop the member.
+                first_member = re.match(r"^[^:]+:\s*(.+)$", line)
+                if first_member is None:
+                    continue
+                member = first_member.group(1).strip()
             if target_found:
                 if expand and ret["type"] == "environment group":
-                    if not line or line in completed_groups:
+                    if not member or member in completed_groups:
                         continue
                     log.trace(
                         'Adding group "%s" to completed list: %s',
-                        line,
+                        member,
                         completed_groups,
                     )
-                    completed_groups.append(line)
-                    # Using the @ prefix on the group here in order to prevent multiple matches
-                    # being returned, such as with gnome-desktop
-                    expanded = group_info(
-                        "@" + line, expand=True, ignore_groups=completed_groups
-                    )
+                    completed_groups.append(member)
+                    # The @ prefix disambiguates single-token group ids (e.g.
+                    # gnome-desktop) that would otherwise match multiple
+                    # groups, but dnf cannot resolve "@" + a multi-word group
+                    # display name (e.g. "@Common NetworkManager submodules"),
+                    # which is how an environment group lists its member
+                    # groups. Try the @ form first, then fall back to the bare
+                    # name so multi-word member groups still expand (#60276).
+                    try:
+                        expanded = group_info(
+                            "@" + member, expand=True, ignore_groups=completed_groups
+                        )
+                    except CommandExecutionError:
+                        expanded = group_info(
+                            member, expand=True, ignore_groups=completed_groups
+                        )
                     # Don't shadow the pkgtype variable from the outer loop
                     for p_type in pkgtypes:
                         ret[p_type].update(set(expanded[p_type]))
-                else:
-                    ret[pkgtype].add(line)
+                elif member:
+                    # Skip blank lines that fall inside the section (e.g. a
+                    # trailing/blank line before the next header) rather than
+                    # recording an empty package name.
+                    ret[pkgtype].add(member)
 
     for pkgtype in pkgtypes:
         ret[pkgtype] = sorted(ret[pkgtype])

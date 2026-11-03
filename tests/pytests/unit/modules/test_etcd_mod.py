@@ -192,23 +192,25 @@ def test_watch(etcd_client_mock, instance):
             "key": "/salt",
         }
         assert etcd_mod.watch("/salt") == instance.watch.return_value
-        instance.watch.assert_called_with("/salt", recurse=False, timeout=0, index=None)
+        instance.watch.assert_called_with(
+            "/salt", recurse=False, timeout=0, start_revision=None
+        )
 
         instance.watch.return_value["dir"] = True
         assert (
-            etcd_mod.watch("/some-dir", recurse=True, timeout=5, index=10)
+            etcd_mod.watch("/some-dir", recurse=True, timeout=5, start_revision=10)
             == instance.watch.return_value
         )
         instance.watch.assert_called_with(
-            "/some-dir", recurse=True, timeout=5, index=10
+            "/some-dir", recurse=True, timeout=5, start_revision=10
         )
 
         assert (
-            etcd_mod.watch("/some-dir", True, None, 5, 10)
+            etcd_mod.watch("/some-dir", True, None, 5, start_revision=10)
             == instance.watch.return_value
         )
         instance.watch.assert_called_with(
-            "/some-dir", recurse=True, timeout=5, index=10
+            "/some-dir", recurse=True, timeout=5, start_revision=10
         )
 
 

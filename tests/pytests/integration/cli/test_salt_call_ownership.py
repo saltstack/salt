@@ -62,8 +62,19 @@ def non_root_minion(salt_master, salt_factories):
         random_string("non-root-minion-"),
         overrides=config_overrides,
     )
-    with factory.started():
-        yield factory
+    try:
+        with factory.started():
+            yield factory
+    finally:
+        # ``factory.started()`` stops the minion daemon but leaves the
+        # minion's accepted key under ``{master_pki_dir}/minions/<id>``.
+        # The subsequent ``test_salt_key.py::test_list_*`` tests in the same
+        # session enumerate PKI keys and fail their expected-list assertions
+        # when this stale key is present.  Delete it explicitly.
+        # ``salt_master.salt_key_cli`` is a *factory* method on the saltfactories
+        # ``SaltMaster``, not an attribute -- it must be called to obtain a
+        # runnable ``SaltKey`` CLI factory.
+        salt_master.salt_key_cli().run("-d", factory.id, "-y")
 
 
 @pytest.mark.skipif(shutil.which("sudo") is None, reason="sudo is not available")

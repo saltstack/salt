@@ -5,9 +5,11 @@ Unit Tests for functions located in salt/utils/files.py
 import copy
 import io
 import os
+import threading
 
 import pytest
 
+import salt.exceptions
 import salt.utils.files
 from tests.support.mock import MagicMock, mock_open, patch
 
@@ -324,3 +326,151 @@ def test_is_binary_returns_false_for_text_files():
     ):
         result = salt.utils.files.is_binary("/fake/file")
         assert result is False
+
+
+def test_wait_lock_does_not_raise_when_lock_file_removed_during_pre_check(tmp_path):
+    """
+    Regression test for #68931.
+
+    The pre-check in ``wait_lock`` used to call ``os.path.exists`` followed by
+    ``os.path.isfile`` as two separate ``stat`` calls. If another process
+    removed the lock file between those calls, ``os.path.exists`` returned
+    ``True`` (file present at the first stat) while ``os.path.isfile``
+    returned ``False`` (file gone by the second stat). That made
+    ``wait_lock`` raise ``FileLockError: lock_fn ... exists and is not a
+    file`` even though the path was never anything other than a regular
+    file.
+
+    Simulate the race by patching the two checks directly and assert that
+    ``wait_lock`` proceeds to acquire the lock instead of raising.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    real_exists = os.path.exists
+    real_isfile = os.path.isfile
+
+    def racy_exists(p):
+        if p == lock_fn:
+            return True
+        return real_exists(p)
+
+    def racy_isfile(p):
+        if p == lock_fn:
+            return False
+        return real_isfile(p)
+
+    with patch("os.path.exists", side_effect=racy_exists), patch(
+        "os.path.isfile", side_effect=racy_isfile
+    ):
+        with salt.utils.files.wait_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            # The lock should have been acquired; the file should exist now.
+            assert real_exists(lock_fn)
+            assert real_isfile(lock_fn)
+    # The lock file is cleaned up on exit.
+    assert not real_exists(lock_fn)
+
+
+def test_wait_lock_raises_when_lock_path_is_directory(tmp_path):
+    """
+    The pre-check must still refuse to spin if the lock path is a real
+    directory (a misconfiguration / leftover from a previous Salt version).
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    os.mkdir(lock_fn)
+    with pytest.raises(salt.exceptions.FileLockError, match="not a file"):
+        with salt.utils.files.wait_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            pass
+
+
+async def test_await_lock_does_not_raise_when_lock_file_removed_during_pre_check(
+    tmp_path,
+):
+    """
+    Async sibling of the #68931 regression test for ``await_lock``.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    real_exists = os.path.exists
+    real_isfile = os.path.isfile
+
+    def racy_exists(p):
+        if p == lock_fn:
+            return True
+        return real_exists(p)
+
+    def racy_isfile(p):
+        if p == lock_fn:
+            return False
+        return real_isfile(p)
+
+    with patch("os.path.exists", side_effect=racy_exists), patch(
+        "os.path.isfile", side_effect=racy_isfile
+    ):
+        async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            assert real_exists(lock_fn)
+            assert real_isfile(lock_fn)
+    assert not real_exists(lock_fn)
+
+
+async def test_await_lock_raises_when_lock_path_is_directory(tmp_path):
+    """
+    Async sibling: the pre-check must still refuse a directory lock path.
+    """
+    lock_fn = str(tmp_path / "queue.lock")
+    os.mkdir(lock_fn)
+    with pytest.raises(salt.exceptions.FileLockError, match="not a file"):
+        async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            pass
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_is_serialized_across_threads():
+    """
+    The umask is process-global. If two threads overlap inside set_umask,
+    one restores the other's temporary mask and the process umask stays
+    changed permanently (issue #66607). A thread must not be able to enter
+    set_umask while another thread is inside it, and the original umask
+    must survive concurrent use.
+    """
+    orig = salt.utils.files.get_umask()
+    holder_entered = threading.Event()
+    release_holder = threading.Event()
+    contender_done = []
+
+    def holder():
+        with salt.utils.files.set_umask(0o277):
+            holder_entered.set()
+            release_holder.wait(timeout=10)
+
+    def contender():
+        with salt.utils.files.set_umask(0o022):
+            contender_done.append(True)
+
+    holder_thread = threading.Thread(target=holder)
+    holder_thread.start()
+    try:
+        assert holder_entered.wait(timeout=10)
+        contender_thread = threading.Thread(target=contender)
+        contender_thread.start()
+        # While the holder is inside set_umask, the contender must block
+        contender_thread.join(timeout=0.5)
+        assert not contender_done
+        release_holder.set()
+        contender_thread.join(timeout=10)
+        assert contender_done
+    finally:
+        release_holder.set()
+        holder_thread.join(timeout=10)
+
+    assert salt.utils.files.get_umask() == orig
+
+
+@pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
+def test_set_umask_nests_in_a_single_thread():
+    """
+    A thread already holding the umask lock must be able to nest
+    set_umask calls without deadlocking.
+    """
+    orig = salt.utils.files.get_umask()
+    with salt.utils.files.set_umask(0o277):
+        with salt.utils.files.set_umask(0o022):
+            pass
+    assert salt.utils.files.get_umask() == orig

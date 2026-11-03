@@ -1,6 +1,6 @@
 """
     :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
-    :codeauthor: Gareth J. Greenaway <ggreenaway@vmware.com>
+    :codeauthor: Gareth J. Greenaway
 """
 
 from collections import OrderedDict

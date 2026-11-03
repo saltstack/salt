@@ -112,13 +112,14 @@ Using ``aptkey: False`` with ``keyserver`` and ``keyid``:
         - aptkey: False
 """
 
+import os
 import sys
 
 import salt.utils.data
 import salt.utils.files
 import salt.utils.pkg.deb
 import salt.utils.pkg.rpm
-import salt.utils.versions
+import salt.utils.stringutils
 from salt.exceptions import CommandExecutionError, SaltInvocationError
 from salt.state import STATE_INTERNAL_KEYWORDS as _STATE_INTERNAL_KEYWORDS
 
@@ -262,7 +263,7 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         Included to reduce confusion due to YUM/DNF/Zypper's use of the
         ``enabled`` argument. If this is passed for an APT-based distro, then
         the reverse will be passed as ``disabled``. For example, passing
-        ``enabled=False`` will assume ``disabled=False``.
+        ``enabled=False`` will assume ``disabled=True``.
 
     architectures
         On apt-based systems, ``architectures`` can restrict the available
@@ -290,6 +291,13 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     keyserver
         This is the name of the keyserver to retrieve GPG keys from. The
         ``keyid`` option must also be set for this option to work.
+
+        .. note::
+
+            If retrieval fails with an error such as ``gpg: keyserver
+            receive failed: End of file``, try specifying the keyserver
+            using the explicit ``hkp://`` scheme (and port), for example
+            ``hkp://keyserver.ubuntu.com:80``.
 
     key_url
         URL to retrieve a GPG key from. Allows the usage of
@@ -347,10 +355,14 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         this argument.
 
 
-    allow_insecure_key : True
+    allow_insecure_key : False
         Whether to allow an insecure (e.g. http vs. https) key_url.
 
         .. versionadded:: 3006.0
+
+        .. versionchanged:: 3009.0
+
+            The default was changed from ``True`` to ``False``.
     """
     if not salt.utils.path.which("apt-key"):
         aptkey = False
@@ -397,21 +409,14 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
         # If neither argument was passed we assume the repo will be enabled
         enabled = True
 
-    # To be changed in version 3009: default to False and still log a warning
-    allow_insecure_key = kwargs.pop("allow_insecure_key", True)
+    allow_insecure_key = kwargs.pop("allow_insecure_key", False)
     key_is_insecure = kwargs.get("key_url", "").strip().startswith("http:")
-    if key_is_insecure:
-        if allow_insecure_key:
-            salt.utils.versions.warn_until(
-                3009,
-                "allow_insecure_key will default to False starting in salt 3008.",
-            )
-        else:
-            ret["result"] = False
-            ret["comment"] = (
-                "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
-            )
-            return ret
+    if key_is_insecure and not allow_insecure_key:
+        ret["result"] = False
+        ret["comment"] = (
+            "Cannot have 'key_url' using http with 'allow_insecure_key' set to False"
+        )
+        return ret
 
     kwargs["name"] = repo = name
 
@@ -479,7 +484,38 @@ def managed(name, ppa=None, copr=None, aptkey=True, **kwargs):
     else:
         sanitizedkwargs = kwargs
 
-    if pre:
+    # Issue #68208: when ``clean_file`` is requested the user expects the
+    # managed file to be truncated and re-populated with *only* the desired
+    # repo line. If the file currently contains any other non-blank, non-
+    # comment line the state is out-of-sync even though ``pkg.get_repo``
+    # found a matching definition; force the clean + reconfigure path in
+    # that case. When the file is already exactly the desired line (the
+    # common steady-state case) the "already configured" short-circuit
+    # below is still hit and ``test=True`` correctly reports no changes.
+    clean_file_needs_reconfigure = False
+    if (
+        pre
+        and kwargs.get("clean_file", False)
+        and kwargs.get("file")
+        and os.path.isfile(kwargs["file"])
+    ):
+        try:
+            with salt.utils.files.fopen(kwargs["file"], "r") as _cf:
+                _stale = [
+                    _line
+                    for _line in (
+                        salt.utils.stringutils.to_unicode(_raw).strip() for _raw in _cf
+                    )
+                    if _line and not _line.startswith("#") and _line != name.strip()
+                ]
+            if _stale:
+                clean_file_needs_reconfigure = True
+        except OSError:
+            # If we cannot read the file, fall through to the normal flow;
+            # downstream code will surface the real error.
+            pass
+
+    if pre and not clean_file_needs_reconfigure:
         # 22412: Remove file attribute in case same repo is set up multiple times but with different files
         pre.pop("file", None)
         sanitizedkwargs.pop("file", None)

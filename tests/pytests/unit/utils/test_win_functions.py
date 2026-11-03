@@ -206,3 +206,34 @@ def test_get_sam_name(test_user):
 def test_shlex_split(string, expected):
     result = win_functions.shlex_split(string=string)
     assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# is_domain_controller
+# ---------------------------------------------------------------------------
+
+
+def test_is_domain_controller_true():
+    """Returns True when ProductType registry value is LanmanNT."""
+    with patch("salt.utils.win_reg.read_value", return_value={"vdata": "LanmanNT"}):
+        assert win_functions.is_domain_controller() is True
+
+
+def test_is_domain_controller_false_member_server():
+    """Returns False when ProductType is ServerNT (Member Server)."""
+    with patch("salt.utils.win_reg.read_value", return_value={"vdata": "ServerNT"}):
+        assert win_functions.is_domain_controller() is False
+
+
+def test_is_domain_controller_false_workstation():
+    """Returns False when ProductType is WinNT (Workstation/Client)."""
+    with patch("salt.utils.win_reg.read_value", return_value={"vdata": "WinNT"}):
+        assert win_functions.is_domain_controller() is False
+
+
+def test_is_domain_controller_false_on_exception():
+    """Returns False safely when the registry read raises."""
+    with patch(
+        "salt.utils.win_reg.read_value", side_effect=Exception("registry error")
+    ):
+        assert win_functions.is_domain_controller() is False

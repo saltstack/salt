@@ -57,6 +57,13 @@ from salt.utils.process import Process
 from salt.utils.zeromq import zmq
 
 try:
+    import fcntl
+
+    HAS_FCNTL = True
+except ImportError:
+    HAS_FCNTL = False
+
+try:
     import saltwinshell
 
     HAS_WINSHELL = True
@@ -327,6 +334,137 @@ else:
 log = logging.getLogger(__name__)
 
 
+def cache_context_manager(cache_path):
+    """Returns a context manager that allows for disk file cache persistence.
+
+    Uses the fcntl module.  If no fcntl module is available, falls back to no cache.
+
+    This is multiprocessing-safe because fcntl works across processes.
+    """
+
+    if HAS_FCNTL:
+
+        class filecache:
+            """fcntl-enabled single-file disk cache."""
+
+            def __init__(self, path):
+                self.path = path
+                self.file = None
+                self.payload = None
+
+            def __enter__(self):
+                """Tries to create and lock the cache file.
+
+                On failure, returns an ineffective but usable self.
+                """
+                cdir = os.path.dirname(self.path)
+                try:
+                    if not os.path.isdir(cdir):
+                        os.makedirs(cdir)
+                    self.file = (
+                        salt.utils.files.fopen(  # pylint: disable=resource-leakage
+                            self.path, "a+b"
+                        )
+                    )
+                    fcntl.flock(self.file.fileno(), fcntl.LOCK_EX)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Cache file %s could not be opened or locked; proceeding without cache",
+                        self.path,
+                    )
+                return self
+
+            def __exit__(self, _, __, ___):
+                if self.file:
+                    try:
+                        fcntl.flock(self.file.fileno(), fcntl.LOCK_UN)
+                        self.file.close()
+                    finally:
+                        self.file = None
+
+            def invalidate(self):
+                """Invalidates the cache."""
+                if self.file:
+                    self.file.seek(0)
+                    self.file.truncate()
+
+            def retrieve(self):
+                """Retrieves the cache.  Returns None if no valid cache is found."""
+                if not self.file:
+                    return None
+                try:
+                    log.debug("Loading from %s", self.path)
+                    self.file.seek(0)
+                    payload = self.file.read()
+                    if not payload:
+                        log.debug("No data in cache file")
+                        return None
+                    self.payload = payload
+                    # Do not use payload.load -- closes file.
+                    return salt.payload.loads(payload)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Cached data could not be loaded from file %s; proceeding without cache",
+                        self.path,
+                    )
+                    self.invalidate()
+
+            def persist(self, data):
+                """Persists into cache.  Handles errors best-effort."""
+                if not self.file:
+                    return
+                payload = salt.payload.dumps(data)
+                if self.payload == payload:
+                    log.debug(
+                        "Not saving data to cache file %s -- it has not changed",
+                        self.path,
+                    )
+                    return
+                log.debug("Saving to cache file %s", self.path)
+                try:
+                    self.file.seek(0)
+                    self.file.truncate()
+                    self.file.write(payload)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception(
+                        "Data could not be persisted to cache file %s; ignoring and proceeding",
+                        self.path,
+                    )
+                    self.invalidate()
+
+            def older_than(self, timestamp):
+                """Is cache older than the supplied UNIX timestamp?"""
+                if not self.file:
+                    return True
+                return os.stat(self.path).st_mtime < timestamp
+
+    class nocache:
+        """Dummy version of the cache above."""
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _, __, ___):
+            pass
+
+        def invalidate(self):
+            pass
+
+        def retrieve(self):
+            return None
+
+        def persist(self, _):
+            pass
+
+        def older_than(self, _):
+            return True
+
+    if HAS_FCNTL and cache_path:
+        return filecache(cache_path)
+
+    return nocache()
+
+
 class SSH(MultiprocessingStateMixin):
     """
     Create an SSH execution system
@@ -445,6 +583,13 @@ class SSH(MultiprocessingStateMixin):
             )
             self.opts["ssh_wipe"] = "True"
         self.returners = salt.loader.returners(self.opts, {})
+        # salt-ssh has no maintenance thread to refresh fileserver backends
+        # (e.g. gitfs_remotes). master_config() sets ``__fs_update = True``
+        # to suppress the refresh done by FSChan, on the assumption that the
+        # master daemon's maintenance thread will keep things current. Remove
+        # the flag here so the FSClient instantiated for salt-ssh triggers an
+        # initial refresh of the fileserver backends.
+        self.opts.pop("__fs_update", None)
         self.fsclient = salt.fileclient.FSClient(self.opts)
         if self.opts.get("relenv"):
             self.thin = None
@@ -1138,6 +1283,7 @@ class Single:
         mods=None,
         fsclient=None,
         thin=None,
+        relenv=False,
         mine=False,
         minion_opts=None,
         identities_only=False,
@@ -1163,6 +1309,12 @@ class Single:
             self.wipe = False
         else:
             self.wipe = bool(self.opts.get("ssh_wipe"))
+        # Allow the roster to enable relenv per-host, mirroring the --relenv
+        # CLI flag.  This is additive only: an explicit CLI/global True must
+        # not be silently downgraded by a roster that omits the key.
+        # See #69885.
+        if relenv:
+            self.opts["relenv"] = True
         if kwargs.get("thin_dir"):
             self.thin_dir = kwargs["thin_dir"]
         elif self.winrm:
@@ -1282,7 +1434,17 @@ class Single:
                 f"{self.thin_dir}/running_data/var/cache/salt/minion/extmods"
             )
             self.minion_opts["module_dirs"] = self.opts["module_dirs"]
-            self.minion_opts["__master_opts__"] = self.context["master_opts"]
+            # Note: __master_opts__ is intentionally NOT added here. It's a
+            # master-side-only convention consumed by the Python wrapper
+            # modules (salt/client/ssh/wrapper/*.py) while they run on the
+            # master -- nothing on the remote target reads it from its own
+            # minion config. self.context["master_opts"] is also mutated as
+            # nested Single/wrapper calls restore/adjust the master cachedir
+            # (see #69605, #68458), so embedding it here caused this
+            # (otherwise fixed-size) minion config to grow, unbounded, with
+            # every nested Single created during a single state run, until
+            # it exceeded the kernel's ARG_MAX and the ssh command failed
+            # with "Argument list too long" (#70186).
 
             # Re-serialize the minion config after updating relenv-specific paths
             self.minion_config = salt.serializers.yaml.serialize(self.minion_opts)
@@ -1523,109 +1685,129 @@ class Single:
         """
         # Ensure that opts/grains are up to date
         # Execute routine
-        data_cache = False
-        data = None
-        cdir = os.path.join(self.opts["cachedir"], "minions", self.id)
-        if not os.path.isdir(cdir):
-            os.makedirs(cdir)
-        datap = os.path.join(cdir, "ssh_data.p")
-        refresh = False
-        if not os.path.isfile(datap):
-            refresh = True
-        else:
-            passed_time = (time.time() - os.stat(datap).st_mtime) / 60
-            if passed_time > self.opts.get("cache_life", 60):
-                refresh = True
 
-        if self.opts.get("refresh_cache"):
-            refresh = True
-        conf_grains = {}
-        # Save conf file grains before they get clobbered
-        if "ssh_grains" in self.opts:
-            conf_grains = self.opts["ssh_grains"]
-        if not data_cache:
-            refresh = True
-        if refresh:
-            # Make the datap
-            # TODO: Auto expire the datap
-            pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
-                self.opts,
-                self.id,
-                fsclient=self.fsclient,
-                minion_opts=self.minion_opts,
-                **self.target,
+        # Implement a very lightweight cache, whose only purpose is to avoid
+        # contacting the minion twice on every SSH operation.  The computation
+        # that used to be cached by Salt pre-2014 is no longer cached.  Only
+        # the minion test.opts_pkg call result is cached, resulting in a solid
+        # performance improvement, most noticeable in large orchestration runs.
+        #
+        # The code used for the cache is generic and can be used to implement
+        # other types of caches.
+        minion_cache_timeout = self.opts.get("ssh_minion_opts_cache", 0)
+        if not isinstance(minion_cache_timeout, int) or minion_cache_timeout < 0:
+            log.warning("ssh_minion_opts_cache set but not a positive integer")
+            minion_cache_timeout = 0
+
+        if minion_cache_timeout and not HAS_FCNTL:
+            log.warning(
+                "ssh_minion_opts_cache option cannot be enabled on systems without"
+                "the fcntl module; proceeding without minion cache anyway"
             )
+            minion_cache_timeout = 0
 
-            opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
+        cache_path = (
+            os.path.join(
+                os.path.join(self.opts["cachedir"], "minions", self.id),
+                "ssh_test_opts_pkg.p",
+            )
+            if minion_cache_timeout
+            else None
+        )
+        context = cache_context_manager(cache_path)
 
-            opts_pkg["file_roots"] = self.opts["file_roots"]
-            opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
-            opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
-            # For SSH, don't override extension_modules if it's already set correctly in minion_opts
-            # (pointing to the remote system's cache, not the master's cache)
-            if (
-                "extension_modules" not in opts_pkg
-                or opts_pkg["extension_modules"] == self.opts["extension_modules"]
-            ):
-                # Only override if it's still using the master's path or not set
-                if "extension_modules" in self.minion_opts:
-                    opts_pkg["extension_modules"] = self.minion_opts[
-                        "extension_modules"
-                    ]
-                else:
-                    opts_pkg["extension_modules"] = self.opts["extension_modules"]
-            opts_pkg["module_dirs"] = self.opts["module_dirs"]
-            opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
-            opts_pkg["thin_dir"] = self.opts["thin_dir"]
-            opts_pkg["master_tops"] = self.opts["master_tops"]
-            opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
-            opts_pkg["__master_opts__"] = self.context["master_opts"]
-            if "known_hosts_file" in self.opts:
-                opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
-            if "_caller_cachedir" in self.opts:
-                opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
+        with context as cache:
+            opts_pkg = None
+            if self.opts.get("refresh_cache"):
+                cache.invalidate()
+            elif cache.older_than(time.time() - minion_cache_timeout):
+                cache.invalidate()
             else:
-                opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
-            # Use the ID defined in the roster file
-            opts_pkg["id"] = self.id
+                opts_pkg = cache.retrieve()
 
-            retcode = salt.defaults.exitcodes.EX_OK
+            # Save conf file grains before they get clobbered.
+            # It is currently unclear to me if the call to the
+            # pre_wrapper will clobber these opts, but we need
+            # them below to complete the opts_pkg.  I'm carrying
+            # this precaution from the prior commit anyway.
+            conf_grains = self.opts.get("ssh_grains", {})
+            if opts_pkg is None:
+                pre_wrapper = salt.client.ssh.wrapper.FunctionWrapper(
+                    self.opts,
+                    self.id,
+                    fsclient=self.fsclient,
+                    minion_opts=self.minion_opts,
+                    **self.target,
+                )
+                opts_pkg = pre_wrapper["test.opts_pkg"]()  # pylint: disable=E1102
 
-            # Restore master grains
-            for grain in conf_grains:
-                opts_pkg["grains"][grain] = conf_grains[grain]
-            # Enable roster grains support
-            if "grains" in self.target:
-                for grain in self.target["grains"]:
-                    opts_pkg["grains"][grain] = self.target["grains"][grain]
+            if "_error" in opts_pkg:
+                # Refresh failed
+                cache.invalidate()
+                retcode = opts_pkg["retcode"]
+                ret = salt.utils.json.dumps({"local": opts_pkg})
+                return ret, retcode
+            else:
+                cache.persist(opts_pkg)
 
-            # Pillar compilation needs the master opts primarily,
-            # same as during regular operation.
-            popts = {}
-            popts.update(opts_pkg)
-            popts.update(opts_pkg["__master_opts__"])
-            pillar = salt.pillar.Pillar(
-                popts,
-                opts_pkg["grains"],
-                opts_pkg["id"],
-                opts_pkg.get("saltenv", "base"),
-            )
-            pillar_data = pillar.compile_pillar()
+        opts_pkg["file_roots"] = self.opts["file_roots"]
+        opts_pkg["pillar_roots"] = self.opts["pillar_roots"]
+        opts_pkg["ext_pillar"] = self.opts["ext_pillar"]
+        # For SSH, don't override extension_modules if it's already set correctly in minion_opts
+        # (pointing to the remote system's cache, not the master's cache)
+        if (
+            "extension_modules" not in opts_pkg
+            or opts_pkg["extension_modules"] == self.opts["extension_modules"]
+        ):
+            # Only override if it's still using the master's path or not set
+            if "extension_modules" in self.minion_opts:
+                opts_pkg["extension_modules"] = self.minion_opts["extension_modules"]
+            else:
+                opts_pkg["extension_modules"] = self.opts["extension_modules"]
+        opts_pkg["module_dirs"] = self.opts["module_dirs"]
+        opts_pkg["_ssh_version"] = self.opts["_ssh_version"]
+        opts_pkg["thin_dir"] = self.opts["thin_dir"]
+        opts_pkg["master_tops"] = self.opts["master_tops"]
+        opts_pkg["extra_filerefs"] = self.opts.get("extra_filerefs", "")
+        opts_pkg["__master_opts__"] = self.context["master_opts"]
+        if "known_hosts_file" in self.opts:
+            opts_pkg["known_hosts_file"] = self.opts["known_hosts_file"]
+        if "_caller_cachedir" in self.opts:
+            opts_pkg["_caller_cachedir"] = self.opts["_caller_cachedir"]
+        else:
+            opts_pkg["_caller_cachedir"] = self.opts["cachedir"]
+        # Use the ID defined in the roster file
+        opts_pkg["id"] = self.id
 
-            # TODO: cache minion opts in datap in master.py
-            data = {
-                "opts": opts_pkg,
-                "grains": opts_pkg["grains"],
-                "pillar": pillar_data,
-            }
-            if data_cache:
-                with salt.utils.files.fopen(datap, "w+b") as fp_:
-                    fp_.write(salt.payload.dumps(data))
-        if not data and data_cache:
-            with salt.utils.files.fopen(datap, "rb") as fp_:
-                data = salt.payload.load(fp_)
-        opts = data.get("opts", {})
-        opts["grains"] = data.get("grains")
+        retcode = salt.defaults.exitcodes.EX_OK
+
+        # Restore master grains
+        for grain in conf_grains:
+            opts_pkg["grains"][grain] = conf_grains[grain]
+        # Enable roster grains support
+        if "grains" in self.target:
+            for grain in self.target["grains"]:
+                opts_pkg["grains"][grain] = self.target["grains"][grain]
+
+        # Pillar compilation needs the master opts primarily,
+        # same as during regular operation.
+        popts = {}
+        popts.update(opts_pkg)
+        popts.update(opts_pkg["__master_opts__"])
+        pillar = salt.pillar.Pillar(
+            popts,
+            opts_pkg["grains"],
+            opts_pkg["id"],
+            opts_pkg.get("saltenv", "base"),
+        )
+        pillar_data = pillar.compile_pillar()
+        # TODO: cache generated pkg_opts and pillar in a separate cache
+        # context manager instance. Invalidation of this cached data
+        # will be difficult due to the need to determine what inputs
+        # and environment of this function influence these values.
+
+        opts = opts_pkg
+        opts["grains"] = opts_pkg["grains"]
 
         # Restore master grains and roster grains
         # Use dict merge instead of nested mutations to avoid OptsDict deepcopy
@@ -1637,12 +1819,10 @@ class Single:
         if grains_updates:
             opts["grains"] = {**opts["grains"], **grains_updates}
 
-        opts["pillar"] = data.get("pillar")
+        opts["pillar"] = pillar_data
 
         # Restore --wipe. Note: Since it is also a CLI option, it should not
-        # be read from cache, hence it is restored here. This is currently only
-        # of semantic distinction since data_cache has been disabled, so refresh
-        # above always evaluates to True. TODO: cleanup?
+        # be read from cache, hence it is restored here.
         opts["ssh_wipe"] = self.opts.get("ssh_wipe", False)
 
         # Propagate relenv settings to nested Single instances (wrapper-initiated calls)
@@ -1660,6 +1840,15 @@ class Single:
             minion_opts=self.minion_opts,
             **self.target,
         )
+        # Do not propagate the per-minion ``cachedir`` (which is rooted under
+        # the on-target ``thin_dir``) onto the master-side fileclient. The
+        # fileclient lives on the master and serves files for state rendering
+        # there; pointing its ``cachedir`` at a thin_dir path causes the
+        # master to cache state fileserver artifacts under that path on the
+        # master filesystem (see #68458). The state ``cachedir`` is corrected
+        # inside ``SSHHighState`` / ``SSHState`` so the per-minion ``opts``
+        # surfaced to ssh wrapper modules (e.g. ``config.get cachedir``)
+        # still reports the minion's cachedir.
         self.wfuncs = salt.loader.ssh_wrapper(opts, wrapper, self.context)
         wrapper.wfuncs = self.wfuncs
 
@@ -2142,9 +2331,22 @@ ARGS = {arguments}\n'''.format(
         log.debug("Regenerating extension modules tarball before command execution")
         self.mods = mod_data(self.fsclient)
 
-        # Deploy the fresh tarball to the remote system
-        log.debug("Deploying extension modules tarball to remote system")
-        self.deploy_ext()
+        # Deploy the fresh tarball only if the remote thin dir already exists;
+        # otherwise the subsequent shim invocation will trigger a full
+        # ``deploy()`` which uploads the thin (creating the dir) and then
+        # ``deploy_ext()`` using the regenerated ``self.mods`` from above.
+        # Skipping this when the dir is missing avoids an scp failure on
+        # OpenSSH 9+ clients, whose scp uses SFTP by default and refuses to
+        # upload into a non-existent remote directory.
+        if self.check_thin_dir():
+            log.debug("Deploying extension modules tarball to remote system")
+            self.deploy_ext()
+        else:
+            log.debug(
+                "Remote thin dir %s does not exist yet; deferring ext_mods "
+                "deployment to the full deploy() triggered by the shim.",
+                self.thin_dir,
+            )
 
         cmd_str = self._cmd_str()
         trace_carrier = {}

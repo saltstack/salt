@@ -77,14 +77,14 @@ How to build rpm packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. (Optional) To build a specific Salt version, you will need to install tools and changelog dependencies:
 
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       pip install -r requirements/static/ci/py{python_version}/changelog.lock
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
@@ -118,13 +118,13 @@ How to build deb packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. (Optional) To build a specific Salt version, you will need to install changelog dependencies:
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/changelog.txt
+       pip install -r requirements/static/ci/py{python_version}/changelog.lock
 
 #. (Optional) To build a specific Salt version, run tools and set Salt version:
 
@@ -155,7 +155,7 @@ How to build MacOS packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. Build the MacOS package:
 
@@ -180,7 +180,7 @@ How to build Windows packages
 
     .. code-block:: bash
 
-       pip install -r requirements/static/ci/py{python_version}/tools.txt
+       pip install -r requirements/static/ci/py{python_version}/tools.lock
 
 #. Build the MacOS package:
 
@@ -197,6 +197,262 @@ How to access python binary
 
 The python library is available in the install directory of the onedir package. For example
 on linux the default location would be ``/opt/saltstack/salt/bin/python3``.
+
+.. _salt-pip-onedir:
+
+Installing optional Python dependencies into a onedir
+=====================================================
+
+The onedir packages bundle a pinned Python interpreter and a vendored Salt
+install. To add a runtime dependency that one of Salt's modules needs --
+for example ``boto3`` for the AWS execution modules, ``pymysql`` for the
+``mysql`` modules, or any pure-Python library called from a custom module --
+use ``salt-pip`` rather than the system ``pip``:
+
+.. code-block:: bash
+
+    salt-pip install boto3
+    salt-pip install --upgrade pymysql
+    salt-pip list
+
+``salt-pip`` is a thin wrapper around the onedir's bundled ``pip`` that
+targets an ``extras-<py-major>.<py-minor>`` directory alongside the onedir
+install root (default ``/opt/saltstack/salt/extras-3.N``). Packages installed
+there are picked up by the onedir Python via a ``.pth`` file, survive
+package upgrades, and are isolated from the system Python.
+
+.. note::
+
+    Using the system ``pip3 install salt-...`` against the onedir's Python is
+    not supported. The bundled interpreter is built with ``relenv`` and its
+    site-packages layout differs from a system Python install.
+
+The :py:mod:`pip execution module and state <salt.modules.pip>` work the
+same way. On a onedir minion, ``pip.install``/``pip.installed`` without
+``bin_env``/``pip_bin`` also install into the extras directory above, not
+the system Python. To target the system Python instead, pass ``bin_env``
+with the system's pip path, for example ``bin_env: /usr/bin/pip3``.
+
+You can point ``bin_env``/``pip_bin``, or ``salt-pip install
+--target=...``, at the onedir's real site-packages instead of the extras
+directory, but this is unsupported: site-packages is replaced on every
+Salt upgrade, so anything installed there is lost.
+
+Restoring local dependencies on upgrade
+---------------------------------------
+
+The extras directory is specific to the bundled Python major/minor version.
+Its contents survive ordinary package upgrades, but an upgrade from, for
+example, Python 3.10 to 3.11 selects a different extras directory. Dependencies
+must be installed again for that interpreter, especially compiled extensions.
+
+Onedir packages support an optional, operator-managed requirements file:
+
+* Linux DEB and RPM packages and macOS installers:
+  ``/etc/salt/local-requirements.txt``.
+* Windows MSI and NSIS installers: ``<Salt root directory>\conf\local-requirements.txt``.
+  The default is ``C:\ProgramData\Salt Project\Salt\conf\local-requirements.txt``;
+  a custom configuration/root directory is respected.
+
+For example, create the file with the packages your deployment needs, using
+appropriate version constraints:
+
+.. code-block:: text
+
+    pymysql==1.1.1
+    psycopg2-binary==2.9.10
+
+During a package upgrade, the package or installer runs the newly installed
+``salt-pip install --requirement <file>`` after installing the runtime and before
+its package-managed service starts or restarts. This runs even when the bundled
+Python version has not changed. If the file does not exist, no pip command runs.
+
+This is a package/installer hook, not a service-start hook. Ordinary service
+starts, restarts, and system boots do not run ``salt-pip`` or reinstall
+requirements. The hook also runs on fresh installation and when the relevant
+package configuration or installer actions are repeated: Debian
+reconfiguration, RPM base-package reinstallation, Windows MSI repair, or
+rerunning the macOS or Windows NSIS installer.
+
+The installer does not create or overwrite the file. Packages previously
+installed manually are not automatically recorded in it. Removing a requirement
+does not uninstall an already installed package.
+
+Standard pip requirements syntax is supported, including ``--no-index`` and
+``--find-links`` for a local wheel directory. Provide wheels compatible with
+the new interpreter for offline upgrades. Requirements installation uses the
+normal ``salt-pip`` configuration and permissions; it does not load a Salt state
+or require a connection to a master. Linux packages also source their setup
+files so a configured ``SALT_EXTRAS_DIR`` reaches pip.
+
+If installation fails, Debian leaves ``salt-common`` unconfigured, blocking
+configuration of dependent daemon packages. Correct the requirements or package
+source and rerun ``dpkg --configure -a``.
+
+RPM installs requirements once in the base ``salt`` package's post-install
+scriptlet. If that fails, it leaves
+``/var/lib/rpm-state/salt/local-requirements.failed`` in place. The daemon
+scriptlets check this marker before their package-managed service starts or
+restarts, since RPM continues the transaction after a scriptlet failure. These
+checks only read the marker; they do not run pip, and ordinary service starts
+and restarts do not perform these checks. Correct the requirements
+or package source and reinstall the base ``salt`` package to retry and clear
+the marker. Reinstalling only a daemon subpackage does not retry requirements
+installation.
+
+On macOS, installation fails before registering or starting launchd services.
+Correct the cause and rerun the installer. Windows MSI reports an installation
+failure and performs its normal rollback; NSIS aborts before its successful-install
+service-start callback. NSIS can leave an updated installation with the service
+stopped; correct the cause and rerun the installer. A pip failure can leave
+partially installed Python dependencies; these are not transactionally rolled
+back by this feature.
+
+.. note::
+
+    A minion configured to run as a non-root user must already have write access
+    to the target extras directory. On Linux the base-package hook runs before
+    the daemon post-install ownership setup. Requirements files and referenced
+    artifacts must be managed by an administrator, since installing
+    Python dependencies can execute code during package installation.
+
+Relocating the extras directory
+-------------------------------
+
+To put the extras outside ``/opt/saltstack/salt`` (for example so it lives on
+a separate volume, or so it is owned by an unprivileged user), set
+``SALT_EXTRAS_DIR`` in ``/etc/default/salt-setup`` (deb) or
+``/etc/sysconfig/salt-minion-setup`` (rpm) before installing the package:
+
+.. code-block:: bash
+
+    echo 'SALT_EXTRAS_DIR=/srv/salt-extras' >> /etc/default/salt-setup
+    salt-pip install boto3
+
+The package post-install scripts source the same file on upgrade and reset
+ownership of ``SALT_EXTRAS_DIR`` to the package's runtime user, so packages
+installed under it are not orphaned by an upgrade.
+
+Running ``salt-pip`` as a non-root user
+---------------------------------------
+
+When the minion runs as a non-root user (see
+:ref:`configuration-non-root-user`), ``salt-pip`` reads ``user`` from the
+minion config and drops privileges to that account before invoking pip. The
+target user must own the onedir's extras directory. If you set
+``SALT_EXTRAS_DIR`` to a non-default path, make sure that path is writable
+by the configured ``user``.
+
+Locking down salt-pip's network access and PYTHONPATH
+-------------------------------------------------------
+
+Five minion config options let an operator control this behavior
+centrally, instead of relying on every ``salt-pip`` caller to pass the
+right flags by hand:
+
+- :conf_minion:`saltpip_use_pythonpath` (default ``False``) -- opt back
+  into inheriting the calling process's ``PYTHONPATH`` instead of the
+  isolated-by-default behavior described above.
+- :conf_minion:`saltpip_no_deps`, :conf_minion:`saltpip_no_index`, and
+  :conf_minion:`saltpip_disable_pip_version_check` (all default ``False``)
+  -- force ``salt-pip`` to never resolve dependencies, never query an
+  index, and never check for a newer pip release, respectively. Turning
+  on all three guarantees ``salt-pip`` can only install packages already
+  present locally (e.g. pushed to the minion ahead of time) and never
+  reaches out to PyPI or any other index.
+- :conf_minion:`saltpip_allow_find_links` (default ``True``) -- set to
+  ``False`` to also strip any inherited ``PIP_FIND_LINKS``, closing the
+  one network path ``saltpip_no_index`` deliberately leaves open (pip
+  treats ``--find-links`` as independent of the index, by design, so
+  ``saltpip_no_index`` alone doesn't cover it).
+
+See :ref:`configuration-salt-minion` for the full description of each
+option.
+
+Patching a vulnerable bundled dependency (advanced, unsupported)
+----------------------------------------------------------------
+
+A security scan may flag a CVE in a Python package bundled in the onedir's
+site-packages (for example ``aiohttp``) before an official Salt release
+fixes it. This section is an unsupported stop-gap for that situation. See
+:ref:`disclosure` for how Salt ships security fixes, and move to an
+official release as soon as one is available.
+
+.. warning::
+
+    This installs directly into the onedir's real site-packages, using its
+    bundled ``pip``. Unlike ``salt-pip``, it does not isolate
+    ``PYTHONPATH``. A stray or inherited ``PYTHONPATH`` here creates the
+    same risk described in `issue #70151
+    <https://github.com/saltstack/salt/issues/70151>`_, with nothing to
+    protect you. Always clear ``PYTHONPATH`` first.
+
+#. Stop ``salt-minion``/``salt-master``. A running process won't pick up
+   the patch until it restarts.
+#. Find the fixed package version, and any closely coupled dependencies, in
+   the ``requirements/static/pkg/py<major.minor>/<platform>.lock`` file
+   from the Salt release that fixes the CVE. Match your onedir's Python
+   version (``/opt/saltstack/salt/bin/python3 --version``) and platform.
+   For ``aiohttp``, also check ``aiohappyeyeballs``, ``aiosignal``,
+   ``frozenlist``, ``multidict``, ``propcache``, and ``yarl`` -- upgrading
+   ``aiohttp`` alone can pull in an incompatible version of one of these.
+#. Install the fixed versions with ``PYTHONPATH`` cleared, pinning each
+   version instead of using ``--force-reinstall`` (which can uninstall a
+   package from anywhere pip finds it on ``sys.path``, not just
+   site-packages):
+
+   .. code-block:: bash
+
+       PYTHONPATH= /opt/saltstack/salt/bin/python3 -m pip install \
+           "aiohttp==<fixed-version>" "multidict==<matching-version>" \
+           "yarl==<matching-version>" "frozenlist==<matching-version>" \
+           "aiosignal==<matching-version>" "aiohappyeyeballs==<matching-version>" \
+           "propcache==<matching-version>"
+
+#. Confirm the new version: ``/opt/saltstack/salt/bin/python3 -m pip show
+   aiohttp``.
+#. Restart ``salt-minion``/``salt-master``.
+
+Keep in mind:
+
+* Site-packages is replaced on every Salt upgrade. Reapply the patch after
+  each upgrade until an official release includes the fix, then drop it.
+* Mismatched dependency versions can cause new problems of their own.
+* This is a temporary measure, not a long-term solution.
+
+Installing Salt Extensions
+==========================
+
+A Salt Extension is a separately distributed package of execution modules,
+state modules, runners, or other plugin types. Extensions ship as standard
+Python wheels named ``saltext.<name>`` (for example ``saltext.vmware``,
+``saltext.cloud_aws``).
+
+Install them into a onedir with ``salt-pip``:
+
+.. code-block:: bash
+
+    salt-pip install saltext.vmware
+    systemctl restart salt-minion
+
+Verify the extension's modules loaded:
+
+.. code-block:: bash
+
+    salt-call --local sys.list_modules | grep -i vmware
+
+Notes:
+
+* Pin to a version that matches the Salt major you have installed; many
+  extensions require a minimum Salt release.
+* If the extension provides state modules, they appear under their own
+  virtual name -- ``saltext.cloud_aws`` exposes ``boto3_ec2`` and similar.
+  Use ``salt-call --local sys.list_state_modules`` to enumerate.
+* For source installs of an extension during development, use ``salt-pip
+  install -e /path/to/saltext-foo`` so the editable install lands in the
+  onedir's extras directory.
+* See :ref:`salt_extensions` for the policy on which modules ship as
+  extensions versus core.
 
 Testing the packages
 ====================

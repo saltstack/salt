@@ -297,6 +297,7 @@ def test_info():
                     "origin:",
                     "homepage:http://tiswww.case.edu/php/chet/bash/bashtop.html",
                     "status:ii ",
+                    "install_date:1560199259",
                     "description:GNU Bourne Again SHell",
                     " Bash is an sh-compatible command language interpreter that"
                     " executes",
@@ -324,8 +325,6 @@ def test_info():
         dpkg.__grains__, {"os": "Ubuntu", "osrelease_info": (18, 4)}
     ), patch("salt.utils.path.which", MagicMock(return_value=False)), patch(
         "os.path.exists", MagicMock(return_value=False)
-    ), patch(
-        "os.path.getmtime", MagicMock(return_value=1560199259.0)
     ):
         assert dpkg.info("bash") == {
             "bash": {
@@ -351,6 +350,7 @@ def test_info():
                     ]
                 ),
                 "homepage": "http://tiswww.case.edu/php/chet/bash/bashtop.html",
+                "install_date": "2019-06-10T20:40:59Z",
                 "maintainer": (
                     "Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>"
                 ),
@@ -361,6 +361,165 @@ def test_info():
                 "version": "4.4.18-2ubuntu1",
             }
         }
+
+
+def test_info_uses_dpkg_query_only(tmp_path):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/52605:
+    dpkg_lowpkg must not read /var/lib/dpkg/{available,info/*.list} directly.
+    It must only invoke dpkg-query. Lintian flags direct dpkg-database access
+    via the ``uses-dpkg-database-directly`` tag.
+    """
+    seen_cmds = []
+
+    def fake_run_all(cmd, **kwargs):
+        seen_cmds.append(cmd)
+        return {
+            "retcode": 0,
+            "stderr": "",
+            "stdout": os.linesep.join(
+                [
+                    "package:bash",
+                    "revision:",
+                    "architecture:amd64",
+                    "maintainer:",
+                    "summary:",
+                    "source:bash",
+                    "version:4.4.18",
+                    "section:shells",
+                    "installed_size:1588",
+                    "size:",
+                    "MD5:",
+                    "SHA1:",
+                    "SHA256:",
+                    "origin:",
+                    "homepage:",
+                    "status:ii ",
+                    "install_date:1560199259",
+                    "description:GNU Bourne Again SHell",
+                    "",
+                    "*/~^\\*",  # pylint: disable=W1401
+                ]
+            ),
+        }
+
+    # The dpkg-query call must be passed as a list (no shell), and dselect
+    # is mocked absent so dpkg-query --print-avail is not invoked.
+    with patch.dict(
+        dpkg.__salt__, {"cmd.run_all": MagicMock(side_effect=fake_run_all)}
+    ), patch.dict(dpkg.__grains__, {"os": "Ubuntu", "osrelease_info": (18, 4)}), patch(
+        "salt.utils.path.which", MagicMock(return_value=False)
+    ), patch(
+        "os.path.exists", MagicMock(return_value=False)
+    ):
+        dpkg.info("bash")
+
+    # First (and only) cmd.run_all call must be `dpkg-query -W ...` as a list,
+    # not a shell string. This pins the "pass cmd as list" half of the fix.
+    assert seen_cmds, "cmd.run_all was never called"
+    cmd = seen_cmds[0]
+    assert isinstance(cmd, list), f"cmd must be a list, got {type(cmd).__name__}"
+    assert cmd[0] == "dpkg-query"
+    assert cmd[1] == "-W"
+    # The format string must request install_date from dpkg's public field,
+    # not from /var/lib/dpkg/info/<pkg>.list mtime.
+    assert "${db-fsys:Last-Modified}" in cmd[2]
+    # No call to dpkg-query should reference /var/lib/dpkg internals.
+    for seen in seen_cmds:
+        assert "/var/lib/dpkg/info" not in " ".join(seen)
+        assert "/var/lib/dpkg/available" not in " ".join(seen)
+
+
+def test_info_handles_missing_install_date():
+    """
+    Older dpkg (< 1.19.3) does not expose ``${db-fsys:Last-Modified}`` and
+    substitutes an empty value. Salt must not crash and must omit
+    ``install_date`` from the result rather than raising.
+    """
+    mock = MagicMock(
+        return_value={
+            "retcode": 0,
+            "stderr": "",
+            "stdout": os.linesep.join(
+                [
+                    "package:bash",
+                    "revision:",
+                    "architecture:amd64",
+                    "maintainer:",
+                    "summary:",
+                    "source:bash",
+                    "version:4.4.18",
+                    "section:shells",
+                    "installed_size:1588",
+                    "size:",
+                    "MD5:",
+                    "SHA1:",
+                    "SHA256:",
+                    "origin:",
+                    "homepage:",
+                    "status:ii ",
+                    "install_date:",
+                    "description:GNU Bourne Again SHell",
+                    "",
+                    "*/~^\\*",  # pylint: disable=W1401
+                ]
+            ),
+        }
+    )
+    with patch.dict(dpkg.__salt__, {"cmd.run_all": mock}), patch.dict(
+        dpkg.__grains__, {"os": "Ubuntu", "osrelease_info": (18, 4)}
+    ), patch("salt.utils.path.which", MagicMock(return_value=False)), patch(
+        "os.path.exists", MagicMock(return_value=False)
+    ):
+        result = dpkg.info("bash")
+
+    assert "install_date" not in result["bash"]
+    assert result["bash"]["package"] == "bash"
+
+
+def test_get_pkg_ds_avail_uses_dpkg_query():
+    """
+    ``_get_pkg_ds_avail`` must call ``dpkg-query --print-avail`` instead of
+    reading ``/var/lib/dpkg/available`` directly. When dselect is not
+    installed it returns an empty dict without invoking dpkg-query.
+    """
+    # dselect absent: must not call dpkg-query, returns empty dict.
+    run_all_mock = MagicMock()
+    with patch("salt.utils.path.which", MagicMock(return_value=None)), patch.dict(
+        dpkg.__salt__, {"cmd.run_all": run_all_mock}
+    ):
+        assert dpkg._get_pkg_ds_avail() == {}
+    assert run_all_mock.call_count == 0
+
+    # dselect present: must call `dpkg-query --print-avail` as a list, parse output.
+    run_all_mock = MagicMock(
+        return_value={
+            "retcode": 0,
+            "stderr": "",
+            "stdout": (
+                "Package: bash\n"
+                "Architecture: amd64\n"
+                "Version: 4.4.18-2ubuntu1\n"
+                "\n"
+                "Package: hostname\n"
+                "Architecture: amd64\n"
+                "Version: 3.20\n"
+            ),
+        }
+    )
+    with patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/dselect")
+    ), patch.dict(dpkg.__salt__, {"cmd.run_all": run_all_mock}):
+        result = dpkg._get_pkg_ds_avail()
+
+    assert run_all_mock.call_count == 1
+    called_cmd = run_all_mock.call_args[0][0]
+    assert isinstance(called_cmd, list)
+    assert called_cmd == ["dpkg-query", "--print-avail"]
+    # parsed entries must contain both packages with lowercased keys
+    assert "bash" in result
+    assert result["bash"]["package"] == "bash"
+    assert "hostname" in result
 
 
 def test_get_pkg_license():

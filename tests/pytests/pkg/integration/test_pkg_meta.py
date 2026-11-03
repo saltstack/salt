@@ -82,14 +82,21 @@ def package(install_salt, artifact_version, pkg_arch):
     match the real file from ``install_salt.pkgs`` instead of string-building.
     """
     rpm_re = re.compile(
-        rf"^salt-\d.*-0\.{re.escape(pkg_arch)}\.rpm$",
+        rf"^salt-\d.*-\d+\.{re.escape(pkg_arch)}\.rpm$",
         re.IGNORECASE,
     )
     for pkg_path in install_salt.pkgs:
         path = pathlib.Path(pkg_path)
         if rpm_re.match(path.name):
             return path
-    name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
+    import packaging.version as _pv
+
+    _parsed = _pv.parse(artifact_version)
+    if _parsed.post is not None:
+        _base = ".".join(str(p) for p in _parsed.release)
+        name = f"salt-{_base}-{_parsed.post}.{pkg_arch}.rpm"
+    else:
+        name = f"salt-{artifact_version}-0.{pkg_arch}.rpm"
     return ARTIFACTS_DIR / name
 
 
@@ -167,6 +174,15 @@ def test_requires(
         "manual: dmidecode",
         "manual: openssl",
         "manual: pciutils",
+        # Scriptlet-only tool dependencies declared via Requires(pre)/
+        # Requires(post)/Requires(preun)/Requires(posttrans) on the base
+        # package (see pkg/rpm/salt.spec).
+        "pre: /usr/bin/getent",
+        "pre: coreutils",
+        "pre: grep",
+        "post: coreutils",
+        "preun: findutils",
+        "posttrans: findutils",
         # Not sure how often these will change, if this check causes things to
         # break often we'll want to re-factor.
         "rpmlib: rpmlib(CompressedFileNames) <= 3.0.4-1",
@@ -174,10 +190,13 @@ def test_requires(
         "rpmlib: rpmlib(PayloadFilesHavePrefix) <= 4.0-1",
         "manual: which",
     ]
-    proc = subprocess.run(
-        ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+    requires_lines = proc = (
+        subprocess.run(
+            ["rpm", "-q", "-v", "-requires", package], capture_output=True, check=True
+        )
+        .stdout.decode()
+        .splitlines()
     )
-    requires_lines = proc.stdout.decode().splitlines()
     # ``rpmlib(TildeInVersions)`` appears only for some packages (e.g. ``~`` in
     # NEVRA) and the bound varies by ``rpm`` version; accept the exact line from
     # this RPM so GA packages (no such line) and future ``rpm`` strings stay valid.

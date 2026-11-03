@@ -2,7 +2,7 @@ mock >= 5.2.0
 # PyTest
 docker >= 7.1.0; python_version >= '3.8'
 docker < 7.1.0; python_version < '3.8'
-pytest >= 8.4.2
+pytest >= 8.4.2, <9
 pytest-salt-factories >= 1.0.5
 pytest-helpers-namespace >= 2021.12.29
 pytest-subtests

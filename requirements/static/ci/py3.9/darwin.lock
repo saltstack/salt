@@ -23,7 +23,6 @@ apache-libcloud==3.8.0
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 asn1crypto==1.5.1
     # via
     #   certvalidator
@@ -62,9 +61,10 @@ botocore==1.42.33
     #   s3transfer
 cachetools==5.5.2
     # via google-auth
-certifi==2026.1.4
+certifi==2026.6.17
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
+    #   -r requirements/base.txt
     #   kubernetes
     #   requests
 certvalidator==0.11.1
@@ -125,9 +125,7 @@ distro==1.9.0
     #   -r requirements/base.txt
     #   pytest-skip-markers
 dnspython==2.7.0
-    # via
-    #   -r requirements/static/ci/common.txt
-    #   python-etcd
+    # via -r requirements/static/ci/common.txt
 docker==7.1.0
     # via -r requirements/pytest.txt
 durationpy==0.10
@@ -157,12 +155,10 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.2.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
-    #   -r requirements/static/ci/darwin.txt
 google-auth==2.35.0
     # via -r requirements/static/ci/common.txt
 googleapis-common-protos==1.75.0
@@ -294,9 +290,10 @@ msgpack==1.1.2
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.0.4
+multidict==6.7.1
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
+    #   -r requirements/base.txt
     #   aiohttp
     #   yarl
 napalm==5.0.0
@@ -402,9 +399,11 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.12
+    # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.3
+pyasn1==0.6.4
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
@@ -505,8 +504,6 @@ python-discovery==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   virtualenv
-python-etcd==0.4.5
-    # via -r requirements/static/ci/common.txt
 python-gnupg==0.5.6
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
@@ -553,7 +550,6 @@ requests==2.32.5
     #   requests-oauthlib
     #   responses
     #   vcert
-    #   vultr
 requests-oauthlib==2.0.0
     # via kubernetes
 responses==0.25.8
@@ -629,7 +625,7 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.2.1
     # via pytest
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
@@ -657,6 +653,7 @@ typing-extensions==4.14.1
     #   aiosignal
     #   cryptography
     #   gitpython
+    #   multidict
     #   napalm
     #   opentelemetry-api
     #   opentelemetry-exporter-otlp-proto-http
@@ -674,7 +671,6 @@ urllib3==1.26.20
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 vcert==0.9.1
@@ -685,10 +681,6 @@ virtualenv==21.4.2
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-vultr==1.0.1
-    # via
-    #   -c requirements/static/pkg/py3.9/darwin.lock
-    #   -r requirements/base.txt
 watchdog==6.0.0
     # via -r requirements/static/ci/common.txt
 websocket-client==1.9.0

@@ -2,6 +2,8 @@
 Unit tests for salt.utils.metrics — the OpenTelemetry metrics wrapper.
 """
 
+import multiprocessing
+import os
 import socket
 import subprocess
 import sys
@@ -18,6 +20,9 @@ def _reset_metrics_state(monkeypatch):
     """Reset module-level state between tests so they are isolated."""
     metrics.shutdown()
     monkeypatch.setattr(metrics, "_cached_opts", None)
+    # Force _load_otel() to re-probe on next call.
+    monkeypatch.setattr(metrics, "_OTEL_AVAILABLE", None)
+    monkeypatch.setattr(metrics, "_otel", None)
     yield
     metrics.shutdown()
 
@@ -258,8 +263,12 @@ def test_module_works_when_opentelemetry_missing():
 
         import salt.utils.metrics as m
 
-        assert m._OTEL_AVAILABLE is False, 'expected otel to look absent'
+        # _OTEL_AVAILABLE is now a tri-state; None until first probe.
+        # After a configure() with enabled=True the probe fires (via
+        # _load_otel) and finds the blocker; the flag settles to False.
+        assert m._OTEL_AVAILABLE is None
         m.configure({'metrics': {'enabled': True}, '__role': 'master'})
+        assert m._OTEL_AVAILABLE is False, 'expected otel to look absent'
         assert m.is_enabled() is False, 'enabled must stay false without otel'
         c = m.counter('foo')
         assert c is m._NOOP_COUNTER
@@ -297,3 +306,171 @@ def test_configure_idempotent(in_memory_reader):
     )
     # Configure does not rebuild when PID + opts are still valid.
     assert metrics._provider is first
+
+
+def test_import_does_not_load_opentelemetry():
+    """
+    Regression test for the OTel eager-import baseline shift.
+
+    Importing ``salt.utils.metrics`` (which happens transitively via
+    ``salt.master`` / ``salt.minion`` / ``salt.engines`` / any daemon
+    entry point) must not cause ``opentelemetry`` to end up in
+    ``sys.modules``.  Prior to the fix, the module unconditionally
+    imported the OTel SDK at module top, adding ~15 MB per Python
+    process for a subsystem that defaults to disabled.
+
+    Runs in a fresh subprocess so no earlier test that flipped metrics
+    on can pollute the assertion.
+    """
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+
+        assert not any(k.startswith('opentelemetry') for k in sys.modules), (
+            'baseline interpreter already has opentelemetry loaded'
+        )
+
+        import salt.utils.metrics  # noqa: F401
+
+        leaked = sorted(k for k in sys.modules if k.startswith('opentelemetry'))
+        assert not leaked, (
+            'salt.utils.metrics import pulled in opentelemetry: '
+            + repr(leaked)
+        )
+
+        # Disabled-path configure() stays quiet as well.
+        salt.utils.metrics.configure({'metrics': {'enabled': False}})
+        salt.utils.metrics.counter('x').add(1)
+        salt.utils.metrics.histogram('h').record(1)
+        leaked = sorted(k for k in sys.modules if k.startswith('opentelemetry'))
+        assert not leaked, (
+            'disabled metrics still pulled in opentelemetry: ' + repr(leaked)
+        )
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
+def test_enabling_metrics_loads_opentelemetry_lazily():
+    """The mirror: ``configure({..., enabled: True})`` triggers the import."""
+    import subprocess
+    import sys
+    import textwrap
+
+    script = textwrap.dedent(
+        """
+        import sys
+        import salt.utils.metrics as m
+
+        assert not any(k.startswith('opentelemetry') for k in sys.modules)
+        m.configure({'metrics': {'enabled': True, 'exporter': 'console'},
+                     '__role': 'master'})
+        assert m.is_enabled() is True
+        assert any(k.startswith('opentelemetry') for k in sys.modules), \
+            'enabling metrics should have imported opentelemetry'
+        c = m.counter('probe')
+        c.add(1)
+        print('OK')
+        """
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, (
+        f"subprocess failed (rc={result.returncode}):\n"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    assert "OK" in result.stdout
+
+
+def _resource_attrs(opts):
+    metrics.configure(opts)
+    return dict(metrics._build_resource(metrics._cached_opts).attributes)
+
+
+def test_resource_instance_id_falls_back_to_hostname_and_pid():
+    attrs = _resource_attrs({"metrics": {"enabled": True}, "__role": "master"})
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/{os.getpid()}"
+    assert "process.pid" not in attrs
+
+
+def test_resource_uses_process_name_as_instance_id():
+    attrs = _resource_attrs(
+        {
+            "metrics": {"enabled": True},
+            "__role": "master",
+            "__metrics_instance": {"id": "MWorker-2"},
+        }
+    )
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/MWorker-2"
+
+
+def test_resource_attributes_override_instance_id():
+    attrs = _resource_attrs(
+        {
+            "metrics": {
+                "enabled": True,
+                "resource_attributes": {"service.instance.id": "custom"},
+            },
+            "__role": "master",
+            "__metrics_instance": {"id": "MWorker-2"},
+        }
+    )
+    assert attrs["service.instance.id"] == "custom"
+
+
+def test_inherited_instance_not_reused_after_fork(monkeypatch):
+    metrics.configure(
+        {"metrics": {"enabled": True}, "__metrics_instance": {"id": "Master"}}
+    )
+    monkeypatch.setattr(os, "getpid", lambda: 1)
+    attrs = dict(metrics._build_resource(metrics._cached_opts).attributes)
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/1"
+
+
+def _child(name, queue):
+    try:
+        metrics.configure(
+            {"metrics": {"enabled": True}, "__metrics_instance": {"id": name}}
+        )
+        attrs = dict(metrics._build_resource(metrics._cached_opts).attributes)
+        queue.put(attrs["service.instance.id"])
+    except Exception as exc:  # pylint: disable=broad-except
+        queue.put(f"error: {exc!r}")
+
+
+@pytest.mark.skipif(
+    "fork" not in multiprocessing.get_all_start_methods(), reason="needs fork"
+)
+def test_forked_children_get_distinct_instance_ids():
+    ctx = multiprocessing.get_context("fork")
+    queue = ctx.Queue()
+    names = ["MWorker-0", "MWorker-1", "MWorker-2"]
+    procs = [ctx.Process(target=_child, args=(n, queue)) for n in names]
+    for p in procs:
+        p.start()
+    results = [queue.get(timeout=30) for _ in procs]
+    for p in procs:
+        p.join(timeout=10)
+    host = socket.gethostname()
+    assert sorted(results) == [f"{host}/{n}" for n in names]

@@ -47,7 +47,15 @@ def _check_valid_version():
     npm_path = salt.utils.path.which("npm")
 
     # pylint: disable=no-member
-    res = salt.modules.cmdmod.run(f"{npm_path} --version", output_loglevel="quiet")
+    # NO_UPDATE_NOTIFIER stops npm from contacting the registry to check for
+    # updates. Since this runs at module-load time from __virtual__, a blocked
+    # registry (e.g. behind a corporate firewall/proxy) would otherwise stall
+    # every salt-call for minutes while npm's update-notifier times out.
+    res = salt.modules.cmdmod.run(
+        f"{npm_path} --version",
+        output_loglevel="quiet",
+        env={"NO_UPDATE_NOTIFIER": "1"},
+    )
     npm_version = Version(res)
     valid_version = Version("1.2")
     # pylint: enable=no-member

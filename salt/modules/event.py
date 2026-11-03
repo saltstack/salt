@@ -85,10 +85,21 @@ def fire_master(data, tag, preload=None):
         # Usually, we can send the event via the minion, which is faster
         # because it is already authenticated
         try:
-            return salt.utils.event.MinionEvent(__opts__, listen=False).fire_event(
-                {"data": data, "tag": tag, "events": None, "pretag": None},
-                "fire_master",
-            )
+            # Use MinionEvent as a context manager so its subscriber /
+            # pusher / SyncWrapper chain is closed synchronously on the
+            # way out.  Previous ``MinionEvent(...).fire_event(...)``
+            # left the temporary event object unreferenced and reliant
+            # on GC to run ``__del__`` -- each per-job invocation from
+            # returners / callers leaked one ``PublishServer`` +
+            # ``_TCPPubServerPublisher`` + ``SyncWrapper`` bundle onto
+            # the minion event bus, surfacing as the ``unclosed publish
+            # server`` / ``unclosed publisher client`` / ``unclosed
+            # SyncWrapper`` triad flagged by issue #70175.
+            with salt.utils.event.MinionEvent(__opts__, listen=False) as evt:
+                return evt.fire_event(
+                    {"data": data, "tag": tag, "events": None, "pretag": None},
+                    "fire_master",
+                )
         except Exception:  # pylint: disable=broad-except
             exc_type, exc_value, exc_traceback = sys.exc_info()
             lines = traceback.format_exception(exc_type, exc_value, exc_traceback)

@@ -159,7 +159,9 @@ def show_dbs(*dbs):
         log.debug("get dbs from pillar: %s", dbs)
         result = {}
         for db in dbs:
-            result[db] = __salt__["pillar.get"]("oracle:dbs:" + db)
+            # run_query() connects with the uri from this data, so the
+            # credentials must not be masked
+            result[db] = __salt__["pillar.get"]("oracle:dbs:" + db, unmask=True)
         return result
     else:
         pillar_dbs = __salt__["pillar.get"]("oracle:dbs")

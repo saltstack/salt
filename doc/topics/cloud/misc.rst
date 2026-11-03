@@ -84,6 +84,8 @@ A present and non-falsy value that doesn't match one of these list items will
 assume `all`, so `sync_after_install: True` and `sync_after_install: all` are
 equivalent (though the former will produce a warning).
 
+Do not use this feature until https://github.com/saltstack/salt/pull/58394 is merged and released.
+
 
 Setting Up New Salt Masters
 ===========================

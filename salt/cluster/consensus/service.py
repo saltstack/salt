@@ -611,7 +611,7 @@ class RaftService:
 
         pusher = self._peer_pushers.get(addr)
         if pusher is None:
-            port = self.opts.get("cluster_port", 55596)
+            port = self.opts["cluster_pool_port"]
             pusher = salt.transport.tcp.PublishServer(
                 self.opts,
                 pull_host=addr,

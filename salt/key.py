@@ -60,6 +60,32 @@ class KeyCLI:
 
         self.auth = {}
 
+    def destroy(self):
+        """
+        Release the ``WheelClient`` this ``KeyCLI`` is holding.
+
+        Without this, exiting ``salt-key`` drops the last reference to
+        ``self.client`` (a :class:`salt.wheel.WheelClient`) and its
+        ``__del__`` finalizer emits an ``unclosed WheelClient`` warning
+        via :func:`salt.utils.resource_warnings.warn_until_close` -- once
+        as a Python ``ResourceWarning`` (filtered by default) and once
+        as a ``log.warning`` record that reaches stdout/stderr, breaking
+        consumers that parse ``salt-key --out json``. Called
+        automatically by the context-manager protocol.
+        """
+        client = getattr(self, "client", None)
+        if client is not None:
+            try:
+                client.destroy()
+            finally:
+                self.client = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
     def _update_opts(self):
         # get the key command
         for cmd in (

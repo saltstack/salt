@@ -95,7 +95,7 @@ def info(name, root=None):
             "inact": data.sp_inact,
             "expire": data.sp_expire,
         }
-    except (KeyError, FileNotFoundError):
+    except (KeyError, OSError):
         return {
             "name": "",
             "passwd": "",

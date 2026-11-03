@@ -3,6 +3,7 @@ Tests for salt.loader.lazy
 """
 
 import sys
+import textwrap
 
 import pytest
 
@@ -197,3 +198,55 @@ async def test_loaded_coro_ensures_test_boolean(loader_dir, test_value, expected
     loaded_coro = loader["mod_a.get_opts_async"]
     ret = await loaded_coro("test")
     assert ret is expected
+
+
+def test_virtualname_collision_surfaces_all_reasons(tmp_path):
+    """
+    When two modules declare the same __virtualname__ and both __virtual__()
+    return False, the loader should surface every failure reason under the
+    shared virtualname instead of only the first one seen.
+
+    Regression test for #68625, where salt-ssh users running x509 functions
+    saw only the v1 "Superseded, using x509_v2" message and never the
+    underlying x509_v2 "Could not load cryptography" reason.
+    """
+    (tmp_path / "x509.py").write_text(
+        textwrap.dedent(
+            """
+            __virtualname__ = "x509"
+
+            def __virtual__():
+                return (False, "Superseded, using x509_v2")
+
+            def expires(*args, **kwargs):
+                return True
+            """
+        )
+    )
+    (tmp_path / "x509_v2.py").write_text(
+        textwrap.dedent(
+            """
+            __virtualname__ = "x509"
+
+            def __virtual__():
+                return (False, "Could not load cryptography")
+
+            def expires(*args, **kwargs):
+                return True
+            """
+        )
+    )
+
+    opts = {"optimization_order": [0, 1, 2]}
+    loader = salt.loader.lazy.LazyLoader([str(tmp_path)], opts)
+    with pytest.raises(KeyError):
+        _ = loader["x509.expires"]
+
+    reason = loader.missing_modules.get("x509")
+    assert reason is not None
+    assert "Superseded, using x509_v2" in reason
+    assert "Could not load cryptography" in reason
+
+    msg = loader.missing_fun_string("x509.expires")
+    assert "Superseded, using x509_v2" in msg
+    assert "Could not load cryptography" in msg

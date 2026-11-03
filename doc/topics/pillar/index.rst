@@ -337,6 +337,122 @@ Since both pillar SLS files contained a ``bind`` key which contained a nested
 dictionary, the pillar dictionary's ``bind`` key contains the combined contents
 of both SLS files' ``bind`` keys.
 
+.. _pillar-merge-strategies:
+
+Pillar Merge Strategies
+=======================
+
+When pillar data comes from multiple sources (multiple SLS files in the
+``top.sls``, plus external pillars and pillar includes), Salt must decide
+how to combine overlapping keys. The behavior is controlled by two master
+options:
+
+* :conf_master:`pillar_source_merging_strategy` selects how *dictionaries*
+  from different sources are combined. Allowed values are:
+
+  .. list-table::
+     :header-rows: 1
+     :widths: 14 86
+
+     * - Strategy
+       - Behavior
+     * - ``smart`` (default)
+       - Picks ``recurse`` unless the renderer pipeline ends in ``yamlex``,
+         in which case it picks ``aggregate``. This is what most users want.
+     * - ``recurse``
+       - Recursively merges nested dictionaries. Keys present in both
+         sources keep both branches; conflicting leaf values use the
+         later source.
+     * - ``aggregate``
+       - Aggregates values for entries tagged with ``!aggregate`` in the
+         yamlex renderer. Requires the renderer pipeline to end in
+         ``yamlex``.
+     * - ``overwrite``
+       - Discards earlier sources whenever a later source declares the
+         same key. This is the pre-2014.1 behavior.
+     * - ``none``
+       - Does not merge at all. Only the requested environment (and
+         ``base`` as a fallback) is consulted.
+
+* :conf_master:`pillar_merge_lists` controls how *lists* are merged when
+  ``pillar_source_merging_strategy`` is ``recurse`` or ``smart`` (and the
+  smart-selected strategy is ``recurse``):
+
+  * ``False`` (default): the later source replaces the earlier list.
+  * ``True``: the later list is appended to the earlier one. Order is
+    preserved; duplicates are kept.
+
+Worked example
+--------------
+
+Given two pillar SLS files merged via ``recurse``:
+
+``a.sls``:
+
+.. code-block:: yaml
+
+    web:
+      vhosts:
+        - example.com
+      tls:
+        cert: /etc/ssl/site.crt
+        key: /etc/ssl/site.key
+
+``b.sls``:
+
+.. code-block:: yaml
+
+    web:
+      vhosts:
+        - admin.example.com
+      tls:
+        cert: /etc/ssl/site-2024.crt
+
+With ``pillar_merge_lists: False`` (default) the merged result is:
+
+.. code-block:: yaml
+
+    web:
+      vhosts:
+        - admin.example.com
+      tls:
+        cert: /etc/ssl/site-2024.crt
+        key: /etc/ssl/site.key
+
+With ``pillar_merge_lists: True`` the merged result is:
+
+.. code-block:: yaml
+
+    web:
+      vhosts:
+        - example.com
+        - admin.example.com
+      tls:
+        cert: /etc/ssl/site-2024.crt
+        key: /etc/ssl/site.key
+
+Notice that the ``tls`` dictionary is recursively merged (``key`` is
+preserved from ``a.sls``) regardless of ``pillar_merge_lists``; the option
+only changes how *lists* are handled.
+
+Pillar includes
+---------------
+
+A separate option, :conf_master:`pillar_includes_override_sls`, controls
+the ordering between an SLS file and its ``include:`` entries. Since
+2017.7.3 the default is to merge all includes together first and then
+merge the including SLS on top, so the including SLS wins on conflicts.
+Set this option to ``True`` to restore the pre-2017.7.3 behavior, where
+the includes are layered on top of the SLS.
+
+Grain merging
+-------------
+
+Grains follow a simpler rule: grains discovered from grain modules are
+combined with grains declared in the minion config, and the minion config
+always wins on conflicting keys. Pillar merge strategies do not apply to
+grains.
+
 .. _pillar-include:
 
 Including Other Pillars

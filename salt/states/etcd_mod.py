@@ -4,7 +4,7 @@ Manage etcd Keys
 
 .. versionadded:: 2015.8.0
 
-:depends:  - python-etcd or etcd3-py
+:depends:  - etcd3-py
 
 This state module supports setting and removing keys from etcd.
 
@@ -29,13 +29,11 @@ or clusters are available.
     etcd.host: 127.0.0.1
     etcd.port: 4001
 
-In order to choose whether to use etcd API v2 or v3, you can put the following
-configuration option in the same place as your etcd configuration.  This option
-defaults to true, meaning you will use v2 unless you specify otherwise.
+.. versionchanged:: 3009.0
 
-.. code-block:: yaml
-
-    etcd.require_v2: True
+    The etcd v2 API was removed. Only the v3 API is supported; the
+    ``etcd.require_v2`` option is no longer accepted and setting it to
+    ``True`` raises a ``CommandExecutionError``.
 
 When using API v3, there are some specific options available to be configured
 within your etcd profile.  They are defaulted to the following...
@@ -165,10 +163,7 @@ __func_alias__ = {
 try:
     import salt.utils.etcd_util  # pylint: disable=W0611
 
-    if salt.utils.etcd_util.HAS_ETCD_V2 or salt.utils.etcd_util.HAS_ETCD_V3:
-        HAS_LIBS = True
-    else:
-        HAS_LIBS = False
+    HAS_LIBS = salt.utils.etcd_util.HAS_ETCD_V3
 except ImportError:
     HAS_LIBS = False
 
@@ -177,7 +172,7 @@ NO_PROFILE_MSG = "No profile found, using a profile is always recommended"
 
 def __virtual__():
     """
-    Only return if python-etcd is installed
+    Only return if etcd3-py is installed
     """
     if HAS_LIBS:
         return __virtualname__
@@ -369,7 +364,7 @@ def wait_rm(name, recurse=False, profile=None, **kwargs):
         The etcd key name to remove, for example ``/foo/bar/baz``.
     recurse
         Optional, defaults to ``False``. If ``True`` performs a recursive
-        delete, see: https://python-etcd.readthedocs.io/en/latest/#delete-a-key.
+        delete of keys under the given prefix.
     profile
         Optional, defaults to ``None``. Sets the etcd profile to use which has
         been defined in the Salt Master config.

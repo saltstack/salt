@@ -623,15 +623,22 @@ def _run(
 
             msg = f"env command: {env_cmd}"
             log.debug(log_callback(msg))
-            env_bytes, env_encoded_err = subprocess.Popen(
-                env_cmd,
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stdin=subprocess.PIPE,
-            ).communicate(salt.utils.stringutils.to_bytes(py_code))
+            try:
+                env_bytes, env_encoded_err = subprocess.Popen(
+                    env_cmd,
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                ).communicate(salt.utils.stringutils.to_bytes(py_code), timeout=10)
+            except subprocess.TimeoutExpired:
+                marker_count = 0
+                env_encoded_err = None
+                env_bytes = None
+            else:
+                marker_count = env_bytes.count(marker_b)
+
             if salt.utils.pkg.check_bundled():
                 os.remove(fp.name)
-            marker_count = env_bytes.count(marker_b)
             if marker_count == 0:
                 # Possibly PAM prevented the login
                 log.error(
@@ -1222,6 +1229,18 @@ def run(
 
                 cmd.run 'echo '\''h=\"baz\"'\''' runas=macuser
 
+        .. note::
+
+            On Linux ``runas`` switches the effective user but does **not**
+            run a login shell, so the supplementary groups, ``$HOME`` and
+            ``$PATH`` of the target account are not loaded. The primary
+            group of the salt-minion process (typically ``root``) is kept,
+            which is why ``id`` from inside the executed command may report
+            ``gid=0(root)``. Pass ``group=`` to switch the primary group as
+            well, or invoke a login shell explicitly (for example
+            ``su - <user> -c '...'``) when the full target environment is
+            required.
+
     :param str group: Group to run command as. Not currently supported
         on Windows.
 
@@ -1231,6 +1250,14 @@ def run(
         privileges it can obtain a logon token for the target user through
         Windows impersonation APIs without needing their credentials. This
         parameter is ignored on non-Windows platforms.
+
+        .. note::
+
+            On Windows, when ``runas`` is supplied but no logon token is
+            available (i.e. the salt-minion is not running as SYSTEM or as
+            an elevated Administrator), ``password`` must also be provided.
+            Omitting it surfaces as an opaque "embedded null character"
+            error.
 
         .. versionadded:: 2016.3.0
 
@@ -3086,10 +3113,20 @@ def script(
 
     win_cwd = False
     if salt.utils.platform.is_windows() and runas:
-        # Let's make sure the user exists first
+        # user.info uses NetUserGetInfo which only resolves local-machine
+        # accounts (and, when a DC is reachable, accounts in the joined
+        # domain). It silently returns an empty dict for many valid runas
+        # forms such as DOMAIN\user, user@DOMAIN and SIDs. Treat a missing
+        # lookup as advisory: log it and continue. salt.utils.win_runas
+        # uses LookupAccountName / LogonUser downstream and will surface a
+        # precise Win32 error if the account is truly invalid.
         if not __salt__["user.info"](runas):
-            msg = f"Invalid user: {runas}"
-            raise CommandExecutionError(msg)
+            log.warning(
+                "cmd.script: user.info did not return information for "
+                "runas user '%s'; continuing and letting the underlying "
+                "runas implementation validate the account.",
+                runas,
+            )
         if cwd is None:
             # Create a temp working directory
             cwd = tempfile.mkdtemp(dir=__opts__["cachedir"])

@@ -91,3 +91,87 @@ def test_reconnect_when_disconnecting_dead_socket_raises(connection_params):
         salt.utils.vmware.get_service_instance(**connection_params)
     assert mock_disconnect.call_count == 1
     assert mock_get_si.call_count == 2
+
+
+def test_userpass_does_not_pass_deprecated_b64token_mechanism():
+    """
+    pyvmomi 9 raises Exception('b64token and mechanism are no longer
+    supported') as soon as either keyword argument is truthy. For the
+    userpass mechanism Salt has no token at all, so SmartConnect must be
+    called without the deprecated b64token/mechanism keywords (issue
+    #68211).
+    """
+    mock_sc = MagicMock()
+    with patch("salt.utils.vmware.SmartConnect", mock_sc), patch(
+        "salt.utils.vmware.Disconnect", MagicMock()
+    ):
+        salt.utils.vmware._get_service_instance(
+            host="fake_host.fqdn",
+            username="fake_username",
+            password="fake_password",
+            protocol="fake_protocol",
+            port=1,
+            mechanism="userpass",
+            principal=None,
+            domain=None,
+        )
+    assert mock_sc.call_count == 1
+    kwargs = mock_sc.call_args.kwargs
+    assert "b64token" not in kwargs
+    assert "mechanism" not in kwargs
+
+
+def test_sspi_uses_token_and_tokenType_not_b64token_mechanism():
+    """
+    pyvmomi 9 replaced the deprecated b64token/mechanism keywords with
+    token/tokenType. For the sspi mechanism Salt now forwards the gssapi
+    token through the new keyword arguments so SmartConnect does not raise
+    (issue #68211).
+    """
+    mock_sc = MagicMock()
+    mock_token = MagicMock(return_value="fake_token")
+    with patch("salt.utils.vmware.SmartConnect", mock_sc), patch(
+        "salt.utils.vmware.get_gssapi_token", mock_token
+    ), patch("salt.utils.vmware.Disconnect", MagicMock()):
+        salt.utils.vmware._get_service_instance(
+            host="fake_host.fqdn",
+            username="fake_username",
+            password="fake_password",
+            protocol="fake_protocol",
+            port=1,
+            mechanism="sspi",
+            principal="fake_principal",
+            domain="fake_domain",
+        )
+    assert mock_sc.call_count == 1
+    kwargs = mock_sc.call_args.kwargs
+    assert "b64token" not in kwargs
+    assert "mechanism" not in kwargs
+    assert kwargs.get("token") == "fake_token"
+    assert kwargs.get("tokenType") == "sspi"
+
+
+def test_userpass_verify_ssl_false_does_not_pass_b64token_mechanism():
+    """
+    The verify_ssl=False code path also must not forward the deprecated
+    b64token/mechanism keywords to pyvmomi 9 SmartConnect (issue #68211).
+    """
+    mock_sc = MagicMock()
+    with patch("salt.utils.vmware.SmartConnect", mock_sc), patch(
+        "salt.utils.vmware.Disconnect", MagicMock()
+    ), patch("ssl._create_unverified_context", MagicMock()):
+        salt.utils.vmware._get_service_instance(
+            host="fake_host.fqdn",
+            username="fake_username",
+            password="fake_password",
+            protocol="fake_protocol",
+            port=1,
+            mechanism="userpass",
+            principal=None,
+            domain=None,
+            verify_ssl=False,
+        )
+    assert mock_sc.call_count == 1
+    kwargs = mock_sc.call_args.kwargs
+    assert "b64token" not in kwargs
+    assert "mechanism" not in kwargs

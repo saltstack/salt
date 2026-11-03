@@ -14,6 +14,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import urllib.parse
 
@@ -96,6 +97,12 @@ else:
 
 
 log = logging.getLogger(__name__)
+
+# The umask is global to the process, so concurrent calls to get_umask() and
+# set_umask() must be serialized or they can restore each other's saved value
+# and leave the process umask permanently changed. An RLock is used so a
+# thread holding the lock can still nest set_umask() calls.
+_umask_lock = threading.RLock()
 
 LOCAL_PROTOS = ("", "file")
 REMOTE_PROTOS = ("http", "https", "ftp", "swift", "s3")
@@ -323,8 +330,28 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # A single os.stat() call replaces the previous
+        # ``os.path.exists() and not os.path.isfile()`` pre-check. The
+        # original two-call form had a TOCTOU window where another process
+        # could remove the lock file between the two stats, leaving
+        # exists()=True and isfile()=False and so raising a spurious
+        # "exists and is not a file" error (issue #68931). os.stat()
+        # follows symlinks the same way the old helpers did: a missing
+        # path (or a dangling symlink) raises ENOENT and we fall through to
+        # the create attempt; only a path that resolves to a non-regular
+        # file (e.g. a directory) trips the guard.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -392,8 +419,21 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise FileLockError(msg, time_start=time_start)
 
     try:
-        if os.path.exists(lock_fn) and not os.path.isfile(lock_fn):
-            _raise_error(f"lock_fn {lock_fn} exists and is not a file")
+        # See note in wait_lock() above: a single os.stat() avoids the
+        # TOCTOU race between os.path.exists() and os.path.isfile() that
+        # produced the spurious "exists and is not a file" error in #68931.
+        try:
+            lock_stat = os.stat(lock_fn)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                _raise_error(
+                    "Error {} encountered checking file lock {}: {}".format(
+                        exc.errno, lock_fn, exc.strerror
+                    )
+                )
+        else:
+            if not stat.S_ISREG(lock_stat.st_mode):
+                _raise_error(f"lock_fn {lock_fn} exists and is not a file")
 
         open_flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         while time.time() - time_start < timeout:
@@ -445,8 +485,9 @@ def get_umask():
     """
     Returns the current umask
     """
-    ret = os.umask(0)  # pylint: disable=blacklisted-function
-    os.umask(ret)  # pylint: disable=blacklisted-function
+    with _umask_lock:
+        ret = os.umask(0)  # pylint: disable=blacklisted-function
+        os.umask(ret)  # pylint: disable=blacklisted-function
     return ret
 
 
@@ -459,11 +500,12 @@ def set_umask(mask):
         # Don't attempt on Windows, or if no mask was passed
         yield
     else:
-        orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
-        try:
-            yield
-        finally:
-            os.umask(orig_mask)  # pylint: disable=blacklisted-function
+        with _umask_lock:
+            orig_mask = os.umask(mask)  # pylint: disable=blacklisted-function
+            try:
+                yield
+            finally:
+                os.umask(orig_mask)  # pylint: disable=blacklisted-function
 
 
 def fopen(*args, **kwargs):
@@ -938,6 +980,43 @@ def case_insensitive_filesystem(path=None):
     """
     with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
         return os.path.exists(tmp_file.name.lower())
+
+
+def get_bom_encoding(path):
+    """
+    Return the codec named by a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+    at the start of a file, otherwise ``None``.
+
+    UTF-16 and UTF-32 files contain null bytes, so :py:func:`is_text` treats
+    them as binary. The codecs returned keep the BOM as ``U+FEFF`` when
+    decoding and never add one when encoding.
+
+    .. versionadded:: 3008.5
+
+    Args:
+
+        path (str): The path to the file to check
+
+    Returns:
+        str: ``UTF-32-LE``, ``UTF-32-BE``, ``UTF-16-LE``, ``UTF-16-BE``,
+        ``UTF-8`` or ``None``
+    """
+    try:
+        with fopen(path, "rb") as fp_:
+            data = fp_.read(4)
+    except OSError:
+        return None
+    # The UTF-32-LE BOM starts with the UTF-16-LE BOM, so check UTF-32 first
+    for encoding, bom in (
+        ("UTF-32-LE", codecs.BOM_UTF32_LE),
+        ("UTF-32-BE", codecs.BOM_UTF32_BE),
+        ("UTF-16-LE", codecs.BOM_UTF16_LE),
+        ("UTF-16-BE", codecs.BOM_UTF16_BE),
+        ("UTF-8", codecs.BOM_UTF8),
+    ):
+        if data.startswith(bom):
+            return encoding
+    return None
 
 
 def get_encoding(path):

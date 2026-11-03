@@ -3,16 +3,14 @@ Module for managing timezone on Windows systems.
 """
 
 import logging
-
-import salt.utils.timeutil
-from salt.exceptions import CommandExecutionError
+from datetime import datetime, timezone
 
 try:
-    import pytz
-
-    HAS_PYTZ = True
+    from zoneinfo import ZoneInfo
 except ImportError:
-    HAS_PYTZ = False
+    from backports.zoneinfo import ZoneInfo
+
+from salt.exceptions import CommandExecutionError
 
 log = logging.getLogger(__name__)
 
@@ -191,8 +189,6 @@ def __virtual__():
     """
     if not __utils__["platform.is_windows"]():
         return False, "Module win_timezone: Not on Windows client"
-    if not HAS_PYTZ:
-        return False, "Module win_timezone: pytz not found"
     if not __utils__["path.which"]("tzutil"):
         return False, "Module win_timezone: tzutil not found"
     return __virtualname__
@@ -240,12 +236,9 @@ def get_offset():
 
         salt '*' timezone.get_offset
     """
-    # http://craigglennie.com/programming/python/2013/07/21/working-with-timezones-using-Python-and-pytz-localize-vs-normalize/
-    tz_object = pytz.timezone(get_zone())
-    utc_time = pytz.utc.localize(salt.utils.timeutil.utcnow())
-    loc_time = utc_time.astimezone(tz_object)
-    norm_time = tz_object.normalize(loc_time)
-    return norm_time.strftime("%z")
+    tz = ZoneInfo(get_zone())
+    now = datetime.now(tz=timezone.utc).astimezone(tz)
+    return now.strftime("%z")
 
 
 def get_zonecode():
@@ -261,9 +254,9 @@ def get_zonecode():
 
         salt '*' timezone.get_zonecode
     """
-    tz_object = pytz.timezone(get_zone())
-    loc_time = tz_object.localize(salt.utils.timeutil.utcnow())
-    return loc_time.tzname()
+    tz = ZoneInfo(get_zone())
+    now = datetime.now(tz=timezone.utc).astimezone(tz)
+    return now.tzname()
 
 
 def set_zone(timezone):

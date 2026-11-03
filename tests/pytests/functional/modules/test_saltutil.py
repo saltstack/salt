@@ -56,3 +56,52 @@ def test__get_top_file_envs(modules, get_top, destroy):
     assert get_top.called
     # Ensure destroy is getting called
     assert destroy.called
+
+
+def test_refresh_grains_regenerates_cached_grain_value(
+    minion_opts, tmp_path, monkeypatch
+):
+    """
+    Functional regression test for #55667.
+
+    With ``grains_cache`` enabled, ``salt.loader.grains`` serves grain values
+    from the on-disk cache without re-running the grain functions.
+    ``saltutil.refresh_grains`` must invalidate that cache so a changed grain
+    value actually takes effect on the next load -- the real end-to-end
+    behaviour the unit tests only approximate. Exercised through the real
+    ``minion_mods`` loader and the real grains loader; only the orthogonal
+    pillar refresh is mocked (it just avoids master auth and does not touch the
+    grains cache). Without the fix the cache survives, the stale value persists,
+    and the final assertion fails.
+    """
+    # A custom grain whose value we drive via an environment variable, so we can
+    # change "the source" between loads without touching the grains cache.
+    grains_dir = tmp_path / "grains"
+    grains_dir.mkdir()
+    (grains_dir / "refresh55667.py").write_text(
+        "import os\n\n\n"
+        "def refresh55667():\n"
+        '    return {"refresh55667_grain": os.environ.get("REFRESH55667_CTL", "")}\n'
+    )
+    minion_opts["cachedir"] = str(tmp_path)
+    minion_opts["grains_cache"] = True
+    minion_opts["grains_dirs"] = [str(grains_dir)]
+    cache_file = tmp_path / "grains.cache.p"
+
+    # First load runs the grain and writes the on-disk cache.
+    monkeypatch.setenv("REFRESH55667_CTL", "before")
+    assert salt.loader.grains(minion_opts)["refresh55667_grain"] == "before"
+    assert cache_file.is_file()
+
+    # The source changes, but a plain load still serves the stale cached value.
+    monkeypatch.setenv("REFRESH55667_CTL", "after")
+    assert salt.loader.grains(minion_opts)["refresh55667_grain"] == "before"
+
+    # refresh_grains (real module, real __opts__) invalidates the cache.
+    modules = salt.loader.minion_mods(minion_opts, context={})
+    with patch("salt.modules.saltutil.refresh_pillar"):
+        modules["saltutil.refresh_grains"]()
+    assert not cache_file.exists()
+
+    # The refreshed grain value now takes effect.
+    assert salt.loader.grains(minion_opts)["refresh55667_grain"] == "after"

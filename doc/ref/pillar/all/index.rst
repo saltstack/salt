@@ -18,5 +18,6 @@ pillar modules
     gpg
     nodegroups
     postgres
+    reclass_adapter
     sql_base
     stack

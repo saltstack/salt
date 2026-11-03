@@ -90,7 +90,7 @@ def container_path(model, key=None, container=None, delim=DEFAULT_TARGET_DELIM):
         - interfaces:interface:Ethernet1:subinterfaces:subinterface:0:config
         - interfaces:interface:Ethernet2:config
     """
-    return list(_container_path(model))
+    return list(_container_path(model, key=key, container=container, delim=delim))
 
 
 def setval(key, val, dict_=None, delim=DEFAULT_TARGET_DELIM):
@@ -287,7 +287,7 @@ def render_field(dictionary, field, prepend=None, append=None, quotes=False, **o
     if prepend is None:
         prepend = field.replace("_", "-")
     if append is None:
-        if __grains__["os"] in ("junos",):
+        if __grains__.get("os") in ("junos",):
             append = ";"
         else:
             append = ""

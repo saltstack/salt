@@ -1,0 +1,28 @@
+(release-3006.27)=
+# Salt 3006.27 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## Python 3.11 upgrade
+
+Starting with Salt 3006.27, the bundled onedir packages (Linux, macOS, and
+Windows) ship CPython 3.11.15 instead of 3.10.20. Python 3.10 reaches end of
+security support in October 2026, while the 3006.x series must continue
+shipping security fixes through July 2027; aligning the bundled interpreter
+with 3.11 keeps Salt's security cadence on a supported CPython.
+
+Users upgrading from a previous 3006.x onedir package need to reinstall any
+Salt extensions installed via `salt-pip`, because the onedir `extras-3.10`
+directory is replaced by `extras-3.11`. See
+[#69526](https://github.com/saltstack/salt/issues/69526) /
+[#69527](https://github.com/saltstack/salt/pull/69527) for details.
+
+<!--
+Do not edit the changelog below.
+This is auto generated.
+-->
+## Changelog
+{{ changelog }}

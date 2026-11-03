@@ -23,6 +23,8 @@ on:
       - 3006.x
       - 3007.x
       - 3008.x
+      - '[0-9][0-9][0-9][0-9].[0-9]*-[0-9]*'
+      - '[0-9][0-9][0-9][0-9].[0-9]*-patch'
       - master
   pull_request:
     types:
@@ -53,7 +55,6 @@ permissions:
 <%- if workflow_slug not in ("nightly", "scheduled") %>
   actions: read  # for technote-space/workflow-conclusion-action to get the job statuses
 <%- endif %>
-
 
 <%- endblock permissions %>
 

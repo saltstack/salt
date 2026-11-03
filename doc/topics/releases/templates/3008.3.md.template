@@ -1,0 +1,21 @@
+(release-3008.3)=
+# Salt 3008.3 release notes{{ unreleased }}
+{{ warning }}
+
+<!--
+Add release specific details below
+-->
+
+## Upgrading a Master to 3008.x
+> :warning: **Reminder**: <br>
+If your master is being upgraded from 3006.x/3007.x, see the
+[3008.0 release notes](3008.0.md#minion-data-cache-reorganized-refresh-grains-after-upgrading-the-master)
+about the minion data cache reorganization — run
+``salt '*' saltutil.refresh_grains`` on minions after the upgrade.
+
+<!--
+Do not edit the changelog below.
+This is auto generated.
+-->
+## Changelog
+{{ changelog }}

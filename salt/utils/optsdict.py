@@ -462,6 +462,10 @@ class OptsDict(dict):
         self._base = base_dict if base_dict is not None else {}
         self._name = name or f"OptsDict@{id(self)}"
         self._lock = threading.RLock()
+        # Cache of {key: (proxy, id(underlying_value))} to avoid re-allocating
+        # a DictProxy/ListProxy on every read of the same mutable value.
+        # Invalidated on __setitem__/__delitem__/COW (id changes).
+        self._proxy_cache: dict[str, tuple[Any, int]] = {}
 
         # Mutation tracking
         if parent and parent._tracker:
@@ -541,7 +545,8 @@ class OptsDict(dict):
 
         When accessing mutable values from parent/base, we return a proxy object
         that triggers copy-on-write on first mutation. This provides isolation
-        without copying until actually needed.
+        without copying until actually needed. Proxies are cached per key so
+        repeated reads of the same underlying value don't reallocate.
         """
         with self._ensure_lock():
             # Check local first - if already copied, return direct reference
@@ -561,9 +566,9 @@ class OptsDict(dict):
                         raise KeyError(key)
                     # Wrap mutable values in proxies to catch mutations
                     if isinstance(value, dict) and not isinstance(value, OptsDict):
-                        return DictProxy(value, self, key)
+                        return self._proxy_for(key, value, DictProxy)
                     elif isinstance(value, list):
-                        return ListProxy(value, self, key)
+                        return self._proxy_for(key, value, ListProxy)
                     # Immutable values can be returned directly
                     return value
 
@@ -573,12 +578,26 @@ class OptsDict(dict):
                 # Even root instances need proxies to track when values are mutated
                 # This allows us to know when a key has been accessed/modified
                 if isinstance(value, dict) and not isinstance(value, OptsDict):
-                    return DictProxy(value, self, key)
+                    return self._proxy_for(key, value, DictProxy)
                 elif isinstance(value, list):
-                    return ListProxy(value, self, key)
+                    return self._proxy_for(key, value, ListProxy)
                 return value
 
             raise KeyError(key)
+
+    def _proxy_for(self, key: str, value: Any, cls: type) -> Any:
+        """
+        Return a cached proxy for ``value`` at ``key``, allocating a new one
+        only when the underlying object identity has changed.
+        """
+        entry = self._proxy_cache.get(key)
+        if entry is not None:
+            proxy, cached_id = entry
+            if cached_id == id(value):
+                return proxy
+        proxy = cls(value, self, key)
+        self._proxy_cache[key] = (proxy, id(value))
+        return proxy
 
     def __setitem__(self, key: str, value: Any):
         """
@@ -606,6 +625,10 @@ class OptsDict(dict):
                 # Subsequent mutation of already-local key
                 self._tracker.record_mutation(key, original_value, value)
 
+            # Invalidate any cached proxy for this key: the underlying value
+            # is changing, so a re-read must not hand back a proxy pointing
+            # at the stale target.
+            self._proxy_cache.pop(key, None)
             # Store the value locally
             self._local[key] = value
 
@@ -635,6 +658,9 @@ class OptsDict(dict):
             if key not in self:
                 raise KeyError(key)
 
+            # Invalidate any cached proxy for this key.
+            self._proxy_cache.pop(key, None)
+
             if key in self._local:
                 # Key is in local - check if it's already deleted
                 if self._local[key] is _DELETED:
@@ -650,12 +676,21 @@ class OptsDict(dict):
                 self._local[key] = _DELETED
 
     def __iter__(self):
-        """Iterate over all keys (local + parent chain + base), excluding deleted keys."""
+        """Iterate over all keys (local + parent chain + base), excluding deleted keys.
+
+        The returned iterator is over a snapshot list of keys built under
+        the lock, not over the underlying dict.  Iterating the underlying
+        dict is not safe when another thread may be mutating it via
+        ``__setitem__`` / ``__delitem__`` / a second ``__iter__``, which
+        clears+repopulates the same dict; that races produce
+        ``RuntimeError: dictionary changed size during iteration``.
+        """
         with self._ensure_lock():
-            # Sync underlying dict for C-level iteration (e.g., JSON serialization)
-            # This ensures json.dumps() works without needing to_dict()
-            # Build items dict first to avoid leaving underlying dict in bad state
-            # if an exception occurs during iteration
+            # Sync underlying dict for C-level access (e.g., JSON
+            # serialization via json.dumps()) so it doesn't need to
+            # _go through to_dict().  This is best-effort: concurrent
+            # iterators may repopulate it, but consumers of __iter__
+            # walk the snapshot below.
             items = {}
             for key in self._get_all_keys():
                 try:
@@ -671,7 +706,10 @@ class OptsDict(dict):
             for key, value in items.items():
                 dict.__setitem__(self, key, value)
 
-            return dict.__iter__(self)
+            # Return an iterator over a snapshot list; the underlying
+            # dict may be cleared/rebuilt by concurrent __iter__ calls
+            # once we release the lock below.
+            return iter(list(items))
 
     def _get_all_keys(self):
         """Get all keys from local, parent chain, and base."""
@@ -693,11 +731,23 @@ class OptsDict(dict):
         return keys
 
     def __len__(self) -> int:
-        """Return total number of keys."""
+        """
+        Return the number of live keys visible from this node.
+
+        A key is live when the closest layer that defines it (``self._local``,
+        then each ancestor's ``_local``, then the root ``_base``) does not
+        mark it ``_DELETED``.  ``_get_all_keys`` yields the union of every
+        name reachable through the parent chain; ``key in self`` applies the
+        deletion-aware lookup, so a key deleted at any level -- including an
+        intermediate ancestor whose ``_DELETED`` sentinel never appears in
+        ``self._local`` -- is correctly excluded from the count.
+
+        The count is computed without materialising a fresh ``items`` dict
+        or triggering the underlying-dict sync that ``__iter__`` performs;
+        Python's ``len()`` slot dispatches directly through this override.
+        """
         with self._ensure_lock():
-            # Sync underlying dict for C-level access
-            _ = iter(self)
-            return dict.__len__(self)
+            return sum(1 for key in self._get_all_keys() if key in self)
 
     def __contains__(self, key: str) -> bool:
         """Check if key exists in local, parent chain, or base (excluding deleted keys)."""

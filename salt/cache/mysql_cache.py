@@ -36,7 +36,7 @@ could be set in the master config. These are the defaults:
     # This may be enabled to create a fresh connection on every call
     mysql.fresh_connection: false
 
-Related docs can be found in the `python-mysql documentation`_.
+Related docs can be found in the `PyMySQL documentation`_.
 
 To use the mysql as a minion data cache backend, set the master ``cache`` config
 value to ``mysql``:
@@ -47,7 +47,7 @@ value to ``mysql``:
 
 
 .. _`MySQL documentation`: https://github.com/coreos/mysql
-.. _`python-mysql documentation`: http://python-mysql.readthedocs.io/en/latest/
+.. _`PyMySQL documentation`: https://pymysql.readthedocs.io/en/latest/
 
 """
 
@@ -319,13 +319,40 @@ def ls(bank):
     bank.
     """
     _init_client()
+    # Return both direct keys in this bank AND first-level sub-bank names.
+    # MySQL stores entries flat; a "sub-bank" is a row whose bank column
+    # starts with <bank>/.  Direct keys have bank == <bank> exactly.
+    out = set()
+
+    # Query 1: direct keys (etcd_key) for rows whose bank exactly matches.
     query = "SELECT etcd_key FROM {} WHERE bank=%s".format(
         __context__["mysql_table_name"]
     )
     cur, _ = run_query(__context__.get("mysql_client"), query, args=(bank,))
-    out = [row[0] for row in cur.fetchall()]
+    for row in cur.fetchall():
+        out.add(row[0])
     cur.close()
-    return out
+
+    # Query 2: first-level sub-bank names for rows nested below this bank.
+    bank_path = bank + "/"
+    # SUBSTR(bank, N) strips the "<bank>/" prefix (MySQL SUBSTR is 1-indexed);
+    # SUBSTRING_INDEX(..., '/', 1) keeps only the first path component so
+    # deeper nesting doesn't leak through.
+    prefix_len = len(bank_path) + 1
+    query = (
+        "SELECT DISTINCT SUBSTRING_INDEX(SUBSTR(bank, %s), '/', 1)"
+        " FROM {} WHERE bank LIKE %s".format(__context__["mysql_table_name"])
+    )
+    cur, _ = run_query(
+        __context__.get("mysql_client"),
+        query,
+        args=(prefix_len, bank_path + "%"),
+    )
+    for row in cur.fetchall():
+        out.add(row[0])
+    cur.close()
+
+    return list(out)
 
 
 def contains(bank, key):

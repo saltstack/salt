@@ -269,46 +269,38 @@ def test_grain_targeting_only_matching_resource(salt_minion, salt_cli):
         assert data is True or data == {}, f"Unexpected response shape: {data!r}"
 
 
-def test_grains_items_returns_resource_grains_not_minion_grains(salt_minion, salt_cli):
+def test_grains_items_rejected_when_dummy_ships_no_grains_override(
+    salt_minion, salt_cli
+):
     """
-    ``salt 'dummy-01' grains.items`` must return the dummy resource's grains
-    (produced by ``salt.resources.dummy.grains``), not the managing minion's
-    grains. This exercises the end-to-end grain-swap pipeline:
+    ``salt 'dummy-01' grains.items`` — the ``dummy`` resource type ships no
+    per-type ``grains`` override, so under the deny-by-default resource
+    loader (#69881) ``grains.items`` is not reachable via the resource
+    surface.  The dispatch returns the "not supported for resource type"
+    rejection at the minion, and the CLI response is keyed to the
+    resource id (not the managing minion).
 
-    * Master targeting matches the bare resource id ``dummy-01`` and
-      dispatches a job whose payload includes ``resource_target`` for the
-      ``dummy`` type.
-    * Minion ``_thread_return`` packs ``__grains__`` from
-      ``resource_funcs["dummy.grains"]()`` before the function runs.
-    * The function (``grains.items``) returns the resource grain dict.
-    * Master ``_return`` re-keys ``resource_id`` → response key ``dummy-01``.
+    NOTE: this replaces an earlier test that asserted
+    ``salt.resources.dummy.grains()`` was reachable through the resource
+    loader's ``__grains__`` swap.  The swap still runs when a resource
+    function IS present in the loader — but ``grains.items`` itself
+    isn't there.  A dummy resource type that wanted to expose grains
+    would ship ``salt/resources/dummy/modules/grains.py`` (thin-wrap
+    ``__resource_funcs__["dummy.grains"]()`` or ``__minion__["grains.items"]``).
     """
     ret = salt_cli.run("grains.items", minion_tgt="dummy-01")
-    assert ret.returncode == 0, ret
+    # Rejection returns non-zero.
+    assert ret.returncode != 0, ret
 
     data = _salt_cli_json_dict(ret)
     assert isinstance(data, dict), f"Expected dict, got: {data!r}"
-    # Salt-factories unwraps the single-key envelope when ``minion_tgt`` is
-    # the only response key, so ``data`` may be either the grains dict itself
-    # or ``{"dummy-01": grains_dict}``. Accept both shapes.
-    grains = data.get("dummy-01") if "dummy-01" in data else data
+    payload = data.get("dummy-01") if "dummy-01" in data else data
     assert isinstance(
-        grains, dict
-    ), f"Expected dict for dummy-01 grains, got: {grains!r}"
-
-    # The resource grains must be present.
-    assert grains.get("dummy_grain_1") == "one"
-    assert grains.get("dummy_grain_2") == "two"
-    assert grains.get("dummy_grain_3") == "three"
-    assert grains.get("resource_id") == "dummy-01"
-
-    # The managing minion's grains must NOT bleed through. ``os`` is a stock
-    # core grain on every supported Linux/macOS test target; if it appears
-    # the swap didn't take effect.
-    assert "os" not in grains, (
-        "Managing minion's 'os' grain leaked into resource grains response — "
-        "the dispatch path is returning minion grains instead of resource grains"
-    )
+        payload, str
+    ), f"Expected rejection string for dummy-01 grains.items, got: {payload!r}"
+    assert "not supported for resource type 'dummy'" in payload, payload
+    # The managing minion must NOT appear at the top level.
+    assert salt_minion.id not in data, data
 
 
 def test_grain_pcre_targeting_matches_resources(salt_minion, salt_cli):
@@ -414,34 +406,26 @@ def test_pillar_addition_at_runtime_registers_new_resource(
 
 def test_state_single_against_resource_no_phantom_no_response(salt_minion, salt_cli):
     """
-    Regression for ``RESOURCE_STATE_RETURN_ATTRIBUTION_BUG.md``.
+    Regression for ``RESOURCE_STATE_RETURN_ATTRIBUTION_BUG.md`` — updated
+    for the #69881 deny-by-default loader.
 
     A merge-fun state job against a pure-resource compound target —
     ``salt -C 'T@dummy:dummy-01' state.single test.nop ...`` — must not
     produce a ``Minion did not return. [No response]`` line for the
     targeted resource id. The original bug report observed both a
-    successful state result *and* a phantom resource-id timeout in the
-    CLI output, indicating the master's wait set wrongly contained the
+    resource-side return *and* a phantom resource-id timeout in the CLI
+    output, indicating the master's wait set wrongly contained the
     resource id alongside the managing minion.
 
-    ``state.single`` is in :py:attr:`~salt.minion.Minion._MERGE_RESOURCE_FUNS`,
-    so the design has the managing minion run the state inline and
-    return ONE combined response under its own id. The master's
-    targeting path (``CkMinions._check_resource_minions``) is supposed
-    to remap pure-resource ``T@`` terms to the managing minion's id
-    for merge funs — the bug is when that remap is bypassed and the
-    resource id ends up in the wait set too, where it never produces a
-    separate return and times out.
-
-    Mirrors the bug's reproduction shape against the bundled ``dummy``
-    type (the original report used ``vcenter`` from a Salt extension).
-    Pins the in-tree contract end-to-end so a regression in the wait-set
-    logic — e.g. an `_augment_with_resources` path firing for compound
-    targets, or a merge-fun check skipped because ``fun`` plumbing
-    drops out somewhere — fails this assertion loudly.
+    Post-#69881: the ``dummy`` resource type ships no per-type
+    ``state.py`` override, so the per-resource loader rejects
+    ``state.single`` with "not supported for resource type 'dummy'."
+    The "no phantom did not return" contract still applies — the
+    rejection IS a real return; there must not be a separate
+    "did not return" line for the resource id alongside it.
 
     Asserts:
-      * The state runs (``test.nop`` chunk appears in the response).
+      * The rejection is present under the resource id key.
       * No ``did not return`` / ``No response`` text in stdout or stderr.
       * No top-level response key whose value is a "did not return"
         error string.
@@ -469,45 +453,42 @@ def test_state_single_against_resource_no_phantom_no_response(salt_minion, salt_
     data = _salt_cli_json_dict(ret)
     assert isinstance(data, dict), f"Expected dict, got: {data!r}"
 
-    # No top-level response key with an error-string value (the bug
-    # produced ``{"<resource-id>": "Minion did not return..."}``
-    # alongside the real result).
+    # No top-level response key with a "did not return" error string
+    # (the original bug produced ``{"<resource-id>": "Minion did not
+    # return..."}`` alongside the real result).
     for key, value in data.items():
         assert not (isinstance(value, str) and "did not return" in value.lower()), (
             f"Response contains a 'did not return' string under key "
             f"{key!r}: {value!r}"
         )
 
-    # The state must have actually run somewhere in the response.
-    def _has_state_result(node):
-        if isinstance(node, dict):
-            if any(k.endswith("_|-nop") for k in node):
-                return True
-            return any(_has_state_result(v) for v in node.values())
-        return False
-
-    assert _has_state_result(
-        data
-    ), f"No test.nop state result anywhere in the response payload: {data!r}"
+    # The rejection must land under the resource id (this IS the
+    # resource's return; the "no phantom did not return" contract is
+    # satisfied because the resource returned a real value, just a
+    # negative one).
+    assert (
+        target_id in data
+    ), f"Expected resource id {target_id!r} in response; got {list(data)}"
+    body = data[target_id]
+    assert isinstance(body, str), f"Expected rejection string, got: {body!r}"
+    assert "not supported for resource type 'dummy'" in body, body
 
 
 def test_state_single_against_single_resource_keyed_by_resource_id(
     salt_minion, salt_cli
 ):
     """
-    Desired API shape (Option B from the design discussion): for a
-    merge-fun state job against a pure-resource compound target, the
+    For a state job against a pure-resource compound target, the
     response must be keyed by the **resource id**, not by the managing
     minion. Matches the shape of ``test.ping`` against the same target
     so consumers can write one ``data[resource_id]`` pattern regardless
     of function.
 
-    Today the framework folds per-resource state results into a single
-    return under the managing minion's id with state-chunk keys
-    prefixed by the resource id. This test fails until the minion's
-    merge-fold path is changed to emit one return per resource with
-    ``ret["resource_id"]`` set (then the master's existing
-    ``resource_id`` remap re-keys the response to the resource id).
+    Post-#69881: the ``dummy`` resource type ships no per-type
+    ``state.py`` override, so ``state.single`` is rejected at the
+    per-resource loader with "not supported for resource type 'dummy'".
+    The key-by-resource-id shape contract still holds — the rejection
+    string lands under the resource id, not under the managing minion.
     """
     target_id = DUMMY_RESOURCES[0]
     ret = salt_cli.run(
@@ -517,48 +498,40 @@ def test_state_single_against_single_resource_keyed_by_resource_id(
         "name=resource-id-keyed-state-return",
         minion_tgt=f"T@dummy:{target_id}",
     )
-    assert ret.returncode == 0, ret
+    # Rejection returns non-zero.
+    assert ret.returncode != 0, ret
 
     data = _salt_cli_json_dict(ret)
     assert isinstance(data, dict), f"Expected dict, got: {data!r}"
 
-    # Top-level key must be the resource id.
-    assert target_id in data, (
-        f"Expected top-level response key {target_id!r}; "
-        f"got {list(data)} (managing-minion-id keying is the OLD shape)."
-    )
-    # The managing minion must NOT appear at the top level.
+    # Top-level key must be the resource id (not the managing minion).
+    assert (
+        target_id in data
+    ), f"Expected top-level response key {target_id!r}; got {list(data)}"
     assert salt_minion.id not in data, (
         f"Managing minion {salt_minion.id!r} appears as response key; "
-        f"merge-fun state returns must be keyed by resource id only."
+        f"resource-scoped returns must be keyed by resource id only."
     )
 
     body = data[target_id]
-    assert isinstance(body, dict), f"Resource body must be dict, got: {body!r}"
-
-    # State-chunk keys inside the resource body must NOT be prefixed
-    # with the resource id any more — the wrapping key already conveys
-    # provenance, so the prefix is redundant noise.
-    chunk_keys = [k for k in body if k.endswith("_|-nop")]
-    assert chunk_keys, f"No test.nop chunk in resource body: {body!r}"
-    for k in chunk_keys:
-        parts = k.split("_|-")
-        # State low key shape: ``{module}_|-{id}_|-{name}_|-{function}``.
-        # parts[1] is the state id; with resource-id-keyed responses it
-        # should be the plain state id (no leading "<rid> " prefix).
-        assert not parts[1].startswith(f"{target_id} "), (
-            f"State id {parts[1]!r} still has the redundant resource-id "
-            f"prefix. With resource-id-keyed responses the wrapping key "
-            f"already conveys the resource."
-        )
+    assert isinstance(
+        body, str
+    ), f"Expected rejection string under {target_id!r}, got: {body!r}"
+    assert "not supported for resource type 'dummy'" in body, body
 
 
 def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_cli):
     """
-    Bare-type merge fun (``T@dummy`` matches all 3 dummy resources): the
-    response must contain one top-level entry per resource — matching
-    how ``salt -C 'T@dummy' test.ping`` already renders — instead of a
-    single merged block under the managing minion id.
+    Bare-type resource target (``T@dummy`` matches all 3 dummy
+    resources): the response must contain one top-level entry per
+    resource — matching how ``salt -C 'T@dummy' test.ping`` already
+    renders — instead of a single merged block under the managing
+    minion id.
+
+    Post-#69881: ``state.single`` is rejected per resource (dummy
+    ships no ``state.py`` override), so each per-resource entry
+    carries the "not supported for resource type" string.  The
+    per-resource shape contract still holds.
     """
     ret = salt_cli.run(
         "-C",
@@ -567,7 +540,8 @@ def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_c
         "name=bare-type-per-resource-return",
         minion_tgt="T@dummy",
     )
-    assert ret.returncode == 0, ret
+    # Rejection returns non-zero.
+    assert ret.returncode != 0, ret
 
     data = ret.data
     assert isinstance(data, dict), f"Expected dict, got: {data!r}"
@@ -582,9 +556,8 @@ def test_state_single_against_bare_type_returns_per_resource(salt_minion, salt_c
     ), f"Managing minion unexpectedly in bare-type response: {list(data)}"
 
     for rid, body in data.items():
-        assert isinstance(body, dict), f"{rid!r} body not dict: {body!r}"
-        chunk_keys = [k for k in body if k.endswith("_|-nop")]
-        assert chunk_keys, f"No test.nop chunk under {rid!r}: {body!r}"
+        assert isinstance(body, str), f"{rid!r} body not string: {body!r}"
+        assert "not supported for resource type 'dummy'" in body, (rid, body)
 
 
 def test_state_single_against_bare_resource_id_keyed_by_resource_id(
@@ -595,28 +568,20 @@ def test_state_single_against_bare_resource_id_keyed_by_resource_id(
     resource id, ``tgt_type=glob``, no wildcards) must return under
     the resource id — same shape as ``salt 'dummy-01' test.ping``.
 
-    The minion-side bug: for a bare-id glob target, ``minion_matches``
-    is False (the target string isn't the managing minion's id) so
-    ``minion_is_target`` would normally be False; meanwhile
-    ``_is_pure_resource_target`` only recognised compound ``T@`` /
-    ``M@`` expressions as pure-resource, so the merge-fold + per-resource
-    fan-out logic both got skipped. A bare-id glob with a merge-mode
-    state function ran nothing on the managing minion and produced no
-    return — only the master's "did not return" timeout.
+    The minion-side bug this test guards against: for a bare-id glob
+    target, ``_is_pure_resource_target`` used to only recognise
+    compound ``T@`` / ``M@`` expressions as pure-resource, so a bare-id
+    glob for a merge-mode function produced no return — only the
+    master's "did not return" timeout.  The fix in ``salt/minion.py``
+    recognises an exact (no-wildcard) glob whose ``tgt`` names a
+    managed resource as a pure-resource target so the resource
+    dispatch fires.
 
-    The fix is two-sided in ``salt/minion.py``:
-
-    * ``_is_pure_resource_target`` recognises an exact (no-wildcard)
-      glob whose ``tgt`` names a managed resource as a pure-resource
-      target.
-    * ``_target_load`` treats the managing minion as a target whenever
-      ``is_merge_fun and resource_targets``, regardless of whether the
-      glob also matched the minion's own id — the managing minion has
-      to run the inline merge for the resource.
-
-    Non-merge funs (``test.ping``) already worked through the
-    per-resource fan-out path; this test asserts merge funs now work
-    too with the same shape.
+    Post-#69881: ``state.single`` is rejected at the per-resource
+    loader (dummy ships no ``state.py`` override).  The bare-id
+    keying + no-phantom-timeout contracts still hold — the response
+    lands under the resource id with the "not supported for resource
+    type" rejection, and there is no phantom "did not return" line.
     """
     target_id = DUMMY_RESOURCES[0]
     ret = salt_cli.run(
@@ -625,7 +590,8 @@ def test_state_single_against_bare_resource_id_keyed_by_resource_id(
         "name=bare-id-keyed-state-return",
         minion_tgt=target_id,
     )
-    assert ret.returncode == 0, ret
+    # Rejection returns non-zero.
+    assert ret.returncode != 0, ret
 
     data = _salt_cli_json_dict(ret)
     # Salt-factories unwraps single-key envelopes when ``minion_tgt``
@@ -635,18 +601,22 @@ def test_state_single_against_bare_resource_id_keyed_by_resource_id(
         # Managing minion must not appear at the top level.
         assert salt_minion.id not in data, (
             f"Managing minion {salt_minion.id!r} appears as response key; "
-            f"bare-id merge-fun state returns must be keyed by resource id."
+            f"bare-id resource returns must be keyed by resource id."
         )
     else:
         # Unwrapped envelope: body IS the resource's payload.
         body = data
-    assert isinstance(body, dict), f"Resource body must be dict, got: {body!r}"
-
-    chunk_keys = [k for k in body if k.endswith("_|-nop")]
-    assert chunk_keys, f"No test.nop chunk in resource body: {body!r}"
+    assert isinstance(body, str), f"Expected rejection string, got: {body!r}"
+    assert "not supported for resource type 'dummy'" in body, body
     # No phantom "did not return" entries.
     if isinstance(data, dict):
         for key, value in data.items():
             assert not (
                 isinstance(value, str) and "did not return" in value.lower()
             ), f"Phantom 'did not return' under {key!r}: {value!r}"
+    # And no such phrase in stdout/stderr either.
+    combined_output = (ret.stdout or "") + "\n" + (ret.stderr or "")
+    assert "did not return" not in combined_output.lower(), (
+        f"Phantom 'Minion did not return' in output: "
+        f"stdout={ret.stdout!r} stderr={ret.stderr!r}"
+    )
