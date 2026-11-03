@@ -2376,7 +2376,7 @@ def list_repo_pkgs(*args, **kwargs):
         out = __salt__["cmd.run_stdout"](
             _pkg(jail=jail, chroot=chroot, root=root) + cmd,
             output_loglevel="trace",
-            python_shell=False
+            python_shell=False,
         )
 
         for line in salt.utils.itertools.split(out, "\n"):
