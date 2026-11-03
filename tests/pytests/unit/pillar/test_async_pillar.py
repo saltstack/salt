@@ -1,7 +1,7 @@
 import asyncio
-from unittest.mock import MagicMock, patch
 
 import salt.pillar
+from tests.support.mock import MagicMock, patch
 
 
 def test_local_async_pillar_aclose():
