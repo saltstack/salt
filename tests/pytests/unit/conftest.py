@@ -250,7 +250,10 @@ def master_opts(tmp_path):
     Default master configuration with relative temporary paths to not require root permissions.
     """
     root_dir = tmp_path / "master"
-    opts = salt.config.master_config(None)
+    # Set the ID before configuration loading to avoid host DNS discovery.
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults["id"] = "unit-test-master"
+    opts = salt.config.master_config(None, defaults=defaults)
     opts["__role"] = "master"
     opts["root_dir"] = str(root_dir)
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
