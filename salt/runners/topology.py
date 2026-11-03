@@ -71,7 +71,19 @@ def _opts():
 
 
 def _pki_dir(opts):
-    return pathlib.Path(opts.get("pki_dir", ""))
+    """Return the pki root where topology peer keys live.
+
+    Clustered 3008.x masters seed accepted peer keys under
+    ``cluster_pki_dir`` (shared across replicas); solo masters use
+    ``pki_dir``.  Mirror of :func:`salt.topology.link_manager._masters_subdir`
+    --- when the two diverge the runner reports stale/empty peer state.
+    """
+    base = (
+        opts.get("cluster_pki_dir")
+        if opts.get("cluster_id") and opts.get("cluster_pki_dir")
+        else opts.get("pki_dir", "")
+    )
+    return pathlib.Path(base)
 
 
 def _masters_dir(opts, name):

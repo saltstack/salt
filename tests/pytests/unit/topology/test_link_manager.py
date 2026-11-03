@@ -652,13 +652,95 @@ def test_reconnect_loop_schedules_degraded_links(clean_state, monkeypatch):
     asyncio.new_event_loop().run_until_complete(_run())
 
     # Exactly two scheduled reconnects: one for ``east`` (DEGRADED),
-    # one for ``south`` (DISCONNECTED).  The CONNECTED and provisional
-    # entries must not be touched.
+    # one for ``south`` (DISCONNECTED).  The CONNECTED and provisional-
+    # key-mid-CONNECTING entries must not be touched.
     assert len(scheduled) >= 2, f"expected >=2 reconnects; got {len(scheduled)}"
     # Idempotence over multiple ticks: at least one reconnect per
     # degraded/disconnected link.  (The healthy / pending stayed off.)
     assert healthy.connects == 0
     assert pending.connects == 0
+
+
+def test_reconnect_loop_recovers_provisional_disconnected_links(
+    clean_state, monkeypatch
+):
+    """BUG-022: a link whose FIRST handshake left it in
+    :data:`LinkHealth.DISCONNECTED` or
+    :data:`LinkHealth.PENDING_ACCEPT` under a provisional
+    ``__pending__:host:port`` key MUST be re-scheduled by the
+    reconnect sweeper.
+
+    Pre-fix: the sweeper short-circuited on ``__pending__:`` prefix
+    believing a connect task was still in flight.  In the clustered-
+    master sandbox the receiver's ``_cluster_is_ready`` gate returned
+    ``cluster_retry`` for every handshake attempt until the receiver's
+    Raft committed; the sender's first-pass bounded retry burned out,
+    marked the link DISCONNECTED/PENDING_ACCEPT under its provisional
+    key, and the sweeper then ignored it -- 22/24 masters stayed stuck
+    on ``configured`` forever.
+
+    Post-fix: the sweeper SKIPs provisional keys only while they are
+    actively CONNECTING; the terminal states fall through and get a
+    fresh ``_connect_and_register`` scheduled.
+    """
+    disconnected_pending = _ReconnectWitnessLink(None, LinkHealth.DISCONNECTED)
+    pending_accept_pending = _ReconnectWitnessLink(None, LinkHealth.PENDING_ACCEPT)
+    connecting_pending = _ReconnectWitnessLink(None, LinkHealth.CONNECTING)
+
+    link_manager._LINKS.clear()  # pylint: disable=protected-access
+    link_manager._LINKS["__pending__:1.1.1.1:4515"] = (  # pylint: disable=protected-access
+        disconnected_pending
+    )
+    link_manager._LINKS["__pending__:2.2.2.2:4515"] = (  # pylint: disable=protected-access
+        pending_accept_pending
+    )
+    link_manager._LINKS["__pending__:3.3.3.3:4515"] = (  # pylint: disable=protected-access
+        connecting_pending
+    )
+
+    monkeypatch.setattr(link_manager, "_RECONNECT_INTERVAL", 0.01)
+
+    scheduled = []
+    real_ensure_future = asyncio.ensure_future
+
+    def _fake_ensure_future(coro, *args, **kwargs):
+        name = getattr(coro, "__name__", None) or getattr(
+            getattr(coro, "cr_code", None), "co_name", ""
+        )
+        if name == "_connect_and_register":
+            scheduled.append(coro)
+            coro.close()
+
+            class _Dummy:
+                def cancel(self):
+                    pass
+
+            return _Dummy()
+        return real_ensure_future(coro, *args, **kwargs)
+
+    monkeypatch.setattr(link_manager.asyncio, "ensure_future", _fake_ensure_future)
+
+    async def _run():
+        task = asyncio.ensure_future(link_manager._reconnect_loop({}))
+        await asyncio.sleep(0.05)
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    asyncio.new_event_loop().run_until_complete(_run())
+
+    # Both the DISCONNECTED and PENDING_ACCEPT provisional links should
+    # be rescheduled; the CONNECTING one must still be left alone (a
+    # fresh connect task is actively in flight for it).
+    assert len(scheduled) >= 2, (
+        f"expected >=2 reconnects for provisional terminal-state links; "
+        f"got {len(scheduled)}"
+    )
+    # The connecting link was never touched -- its placeholder connect
+    # was presumed still mid-flight.
+    assert connecting_pending.connects == 0
 
 
 # ---------------------------------------------------------------------------
@@ -1008,3 +1090,167 @@ def test_verify_session_master_auth_bypass_preserved(clean_state):
         assert link_manager._verify_session(  # pylint: disable=protected-access
             payload
         ), f"{tag} must bypass session check"
+
+
+# ---------------------------------------------------------------------------
+# BUG-022: cluster_pki_dir must be consulted for topology peer keys
+# ---------------------------------------------------------------------------
+
+
+def test_masters_subdir_prefers_cluster_pki_dir_when_cluster_id_set(tmp_path):
+    """BUG-022 (ROOT CAUSE): on a clustered 3008.x master,
+    :func:`_masters_subdir` MUST resolve ``masters``/``masters_pre``/etc
+    against ``cluster_pki_dir``, NOT ``pki_dir``.
+
+    Pre-accepted topology peer keys are seeded under ``cluster_pki_dir``
+    so all N replicas in a cluster share the accept state.  Pre-fix the
+    topology module looked only at ``pki_dir`` and so could never find
+    those pre-accepted keys -- every handshake returned ``status=retry``
+    on every attempt, parking the mesh at ``configured``/``pending``
+    forever.
+    """
+    cluster_pki = tmp_path / "cluster-pki"
+    pki = tmp_path / "pki"
+    cluster_pki.mkdir()
+    pki.mkdir()
+    opts = {
+        "cluster_id": "east",
+        "cluster_pki_dir": str(cluster_pki),
+        "pki_dir": str(pki),
+    }
+    result = link_manager._masters_subdir(  # pylint: disable=protected-access
+        opts, "masters"
+    )
+    assert result == str(cluster_pki / "masters")
+
+
+def test_masters_subdir_falls_back_to_pki_dir_for_solo_master(tmp_path):
+    """A solo master (no ``cluster_id``) uses ``pki_dir/masters``."""
+    pki = tmp_path / "pki"
+    pki.mkdir()
+    opts = {
+        "pki_dir": str(pki),
+    }
+    result = link_manager._masters_subdir(  # pylint: disable=protected-access
+        opts, "masters"
+    )
+    assert result == str(pki / "masters")
+
+
+def test_handle_master_auth_accepts_key_in_cluster_pki_dir(
+    opts, clean_state, monkeypatch, tmp_path
+):
+    """BUG-022: when the receiver is clustered and the peer's key lives
+    at ``<cluster_pki_dir>/masters/<cluster_id>.pub``,
+    :func:`_handle_master_auth` MUST return ``status=ok`` (not
+    ``status=retry``) and populate ``_INBOUND[cluster_id]``.
+    """
+    cluster_pki = tmp_path / "cluster-pki-recv"
+    cluster_pki.mkdir()
+    (cluster_pki / "masters").mkdir()
+    accepted = cluster_pki / "masters" / "east.pub"
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\npeer-east-key\n-----END PUBLIC KEY-----\n"
+    )
+    cluster_opts = dict(opts)
+    cluster_opts["cluster_id"] = "self"
+    cluster_opts["cluster_pki_dir"] = str(cluster_pki)
+    monkeypatch.setattr(link_manager, "_OPTS", cluster_opts)
+
+    load = {"cluster_id": "east", "nonce": "deadbeef"}
+    reply = asyncio.new_event_loop().run_until_complete(
+        link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+    )
+    assert reply["status"] == "ok", (
+        f"Pre-fix: receiver looked only at pki_dir/masters/east.pub and "
+        f"returned status=retry.  Post-fix: looks at "
+        f"cluster_pki_dir/masters/east.pub and returns ok.  Got: {reply}"
+    )
+    assert (
+        "east" in link_manager._INBOUND  # pylint: disable=protected-access
+    ), "post-fix must populate _INBOUND after accept"
+
+
+def test_inbound_listener_bypasses_cluster_ready_gate(opts, clean_state, monkeypatch):
+    """BUG-022: the inbound topology ``ReqServerChannel`` MUST be built
+    with ``cluster_peers=[]`` in its channel-opts so that
+    :func:`salt.channel.server._cluster_is_ready` short-circuits True.
+
+    The topology peer handshake is a key-on-disk identity exchange that
+    must work BEFORE Raft commits (startup) and must stay functional
+    through Raft flaps.  Pre-fix the listener inherited
+    ``cluster_peers`` from the master's opts and so the gate blocked
+    every inbound ``topology/_master_auth`` with a ``cluster_retry``
+    reply --- the sender's handshake never reached
+    :func:`_handle_master_auth`, so handshakes stayed stuck at
+    ``pending`` forever on 3-master clusters.
+    """
+    captured_opts = {}
+
+    class _FakeReqServerChannel:
+        @classmethod
+        def factory(cls, chan_opts):
+            captured_opts.update(chan_opts)
+            inst = cls()
+            inst.post_fork = lambda handler, loop, **kwargs: None
+            return inst
+
+    import salt.channel.server
+
+    monkeypatch.setattr(
+        salt.channel.server, "ReqServerChannel", _FakeReqServerChannel
+    )
+    # Prime the clustered-master shape so the fixture resembles the sandbox.
+    cluster_opts = dict(opts)
+    cluster_opts["cluster_peers"] = ["10.0.0.2", "10.0.0.3"]
+    cluster_opts["cluster_id"] = "self"
+
+    loop = asyncio.new_event_loop()
+    try:
+        result = link_manager._open_inbound_listener(  # pylint: disable=protected-access
+            cluster_opts, loop
+        )
+    finally:
+        loop.close()
+
+    assert result is not None, "inbound listener build failed"
+    assert captured_opts.get("cluster_peers") == [], (
+        f"inbound topology listener MUST zero cluster_peers so the "
+        f"_cluster_is_ready gate short-circuits True; got "
+        f"{captured_opts.get('cluster_peers')!r}"
+    )
+
+
+def test_handle_master_auth_writes_pending_to_cluster_pki_dir(
+    opts, clean_state, monkeypatch, tmp_path
+):
+    """BUG-022: when no accepted key exists, the receiver must write
+    the pending-key sentinel under ``<cluster_pki_dir>/masters_pre/``
+    (NOT ``pki_dir/masters_pre/``) so all cluster replicas see the
+    same pending state.
+    """
+    cluster_pki = tmp_path / "cluster-pki-recv2"
+    cluster_pki.mkdir()
+    cluster_opts = dict(opts)
+    cluster_opts["cluster_id"] = "self"
+    cluster_opts["cluster_pki_dir"] = str(cluster_pki)
+    monkeypatch.setattr(link_manager, "_OPTS", cluster_opts)
+
+    load = {
+        "cluster_id": "east",
+        "nonce": "deadbeef",
+        "public_key": b"-----BEGIN PUBLIC KEY-----\neast-id\n-----END PUBLIC KEY-----\n",
+    }
+    reply = asyncio.new_event_loop().run_until_complete(
+        link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+    )
+    assert reply["status"] == "retry"
+    pending_path = cluster_pki / "masters_pre" / "east.pub"
+    assert pending_path.exists(), (
+        f"pending-key sentinel must land under cluster_pki_dir/masters_pre; "
+        f"got nothing at {pending_path}"
+    )
+    assert pending_path.read_bytes() == load["public_key"], (
+        "pending-key file must carry the sender's public_key bytes "
+        "(pre-fix: handshake load omitted public_key -> zero-byte file)"
+    )

@@ -60,6 +60,32 @@ log = logging.getLogger(__name__)
 _HEALTH_SNAPSHOT_DIRNAME = "topology_link_health"
 
 
+def _identity_pub_bytes(opts):
+    """Return this master's topology identity public-key bytes.
+
+    Clustered 3008.x masters present their shared ``cluster.pub`` under
+    ``cluster_pki_dir`` --- the same key the receiver stores on accept
+    as ``cluster_pki_dir/masters/<cluster_id>.pub``.  Solo masters fall
+    back to ``pki_dir/master.pub``.  Returns ``b""`` when neither file
+    exists so the handshake can still proceed to the pending-key path
+    (where an empty-bytes write exposes a clean misconfig signal
+    instead of a silently-malformed accept state).
+    """
+    cluster_pki = opts.get("cluster_pki_dir")
+    if opts.get("cluster_id") and cluster_pki:
+        path = os.path.join(cluster_pki, "cluster.pub")
+    else:
+        path = os.path.join(opts.get("pki_dir", ""), "master.pub")
+    if not path or not os.path.exists(path):
+        return b""
+    try:
+        with salt.utils.files.fopen(path, "rb") as fh:
+            return fh.read()
+    except OSError:
+        log.warning("topology: unable to read identity pub at %r", path, exc_info=True)
+        return b""
+
+
 #: Default retry backoff while waiting for the peer to accept us.
 _DEFAULT_HANDSHAKE_BACKOFF = 2.0
 
@@ -591,6 +617,15 @@ class PeerMasterLink:
                 "tag": "topology/_master_auth",
                 "cluster_id": self.opts.get("cluster_id"),
                 "nonce": os.urandom(16).hex(),
+                # The receiver's :func:`_handle_master_auth` writes
+                # unknown peers to ``masters_pre/<cluster_id>.pub``;
+                # without this the file lands at zero bytes and any
+                # later promotion via ``salt-key -a`` would hand the
+                # peer an empty "accepted" record.  Clustered masters
+                # present their shared ``cluster.pub`` so the three
+                # replicas serving the same cluster_id all authenticate
+                # against the same key.
+                "public_key": _identity_pub_bytes(self.opts),
             }
             try:
                 # tries=1: AsyncReqChannel's built-in retry sends on the
@@ -652,6 +687,22 @@ class PeerMasterLink:
                 )
                 self._health = LinkHealth.DISCONNECTED
                 return
+
+            # ``salt.channel.server.ReqServerChannel.handle_message`` gates
+            # every non-``_auth`` request on ``_cluster_is_ready(opts)`` and
+            # short-circuits with
+            # ``{"enc": "clear", "load": {"ret": False, "cluster_retry": True}}``
+            # when the receiving master's Raft voter CONFIG has not yet
+            # committed (startup race) or has reverted (membership change).
+            # The topology handshake uses ``cmd=topology/_master_auth``, so
+            # this gate fires before :func:`_handle_master_auth` ever runs.
+            # Unwrap the wire envelope and treat ``cluster_retry`` as a
+            # retriable deferral (same as a topology-level ``status=retry``)
+            # so the handshake doesn't fall through to the "unknown status"
+            # fatal branch and park the link DISCONNECTED on every startup.
+            inner = reply.get("load") if "enc" in reply else None
+            if isinstance(inner, dict) and inner.get("cluster_retry"):
+                reply = {"status": "retry", "cluster_id": self.opts.get("cluster_id")}
 
             status = reply.get("status")
             last_status = status

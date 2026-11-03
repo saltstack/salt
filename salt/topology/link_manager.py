@@ -587,12 +587,22 @@ async def _reconnect_loop(opts):
             with _LOCK:
                 snapshot = list(_LINKS.items())
             for key, link in snapshot:
-                if isinstance(key, str) and key.startswith("__pending__:"):
-                    # Provisional key -- a connect task is already
-                    # in flight for this link; don't double up.
-                    continue
                 health = getattr(link, "health", None)
-                if health in (LinkHealth.DEGRADED, LinkHealth.DISCONNECTED):
+                if isinstance(key, str) and key.startswith("__pending__:"):
+                    # Provisional key: the first-connect task may have
+                    # finished and left the link in DISCONNECTED or
+                    # PENDING_ACCEPT without ever learning the peer's
+                    # cluster_id (so no re-key under _register_connected_link
+                    # ran).  Skip only while the connect is actively mid-
+                    # flight (CONNECTING); otherwise the link stays wedged
+                    # under its provisional key forever.
+                    if health == LinkHealth.CONNECTING:
+                        continue
+                if health in (
+                    LinkHealth.DEGRADED,
+                    LinkHealth.DISCONNECTED,
+                    LinkHealth.PENDING_ACCEPT,
+                ):
                     log.info(
                         "topology: scheduling re-handshake for peer=%r "
                         "(health=%r, send_fault_count=%d)",
@@ -880,6 +890,20 @@ def _open_inbound_listener(opts, io_loop):
         # every inbound topology REQ gets "bad load" back and the
         # east<->west handshake deadlocks.
         channel_opts["minimum_auth_version"] = 0
+        # Bypass the ``_cluster_is_ready`` gate at
+        # :func:`salt.channel.server.ReqServerChannel.handle_message`.
+        # That gate exists for minion/CLI traffic that depends on Raft
+        # state --- a publish, a key accept, a jid lookup.  Topology peer
+        # handshake has NO such dependency: it is a key-on-disk identity
+        # exchange that runs before Raft committed state is relevant and
+        # that must work on a brand-new cluster whose Raft is still
+        # forming consensus.  Zeroing ``cluster_peers`` in the listener's
+        # channel-opts dict makes the gate short-circuit to True via its
+        # "no cluster_peers -> non-cluster master" branch, so inbound
+        # ``topology/_master_auth`` reaches our dispatch table instead
+        # of being replied-to with ``cluster_retry`` and never
+        # progressing past PENDING_ACCEPT.
+        channel_opts["cluster_peers"] = []
         # Force the plain (non-pooled) :class:`ReqServerChannel`
         # irrespective of ``worker_pools_enabled``.  The pooled
         # :class:`PoolRoutingChannel` routes every request through
@@ -2148,8 +2172,28 @@ async def _handle_inbound_channel(payload):
 
 
 def _masters_subdir(opts, name):
-    """Return ``pki_dir/<name>`` (creating it on first use)."""
-    path = os.path.join(opts.get("pki_dir", ""), name)
+    """Return ``<cluster_pki_dir or pki_dir>/<name>`` (creating it on first use).
+
+    Clustered 3008.x masters share pre-accepted topology peer keys under
+    ``cluster_pki_dir`` so all N replicas in a cluster see the same
+    accept state (keyed by peer ``cluster_id``, not by replica node id).
+    When ``cluster_pki_dir`` is set in opts, resolve the ``masters``
+    tree against it; otherwise fall back to the non-clustered
+    ``pki_dir`` which is correct for solo masters.
+
+    Mirror of the ``self.pki_dir = cluster_pki_dir if cluster_id else
+    pki_dir`` pattern in :class:`salt.master.Maintenance.__init__` and
+    the parallel channel-server resolution --- the topology module was
+    the odd-one-out that looked only at ``pki_dir`` and so never saw
+    the accepted peer keys that are seeded under ``cluster_pki_dir``
+    on a 3-master cluster.
+    """
+    base = (
+        opts.get("cluster_pki_dir")
+        if opts.get("cluster_id") and opts.get("cluster_pki_dir")
+        else opts.get("pki_dir", "")
+    )
+    path = os.path.join(base, name)
     try:
         os.makedirs(path, exist_ok=True)
     except OSError:
@@ -2235,9 +2279,16 @@ async def _handle_master_auth(load):
         return {"status": "rejected"}
 
     opts = _current_opts(load)
-    pki_dir = opts.get("pki_dir")
-    if not pki_dir:
-        log.warning("topology _master_auth: pki_dir missing from opts")
+    # Clustered masters' topology peer keys live under ``cluster_pki_dir``;
+    # solo masters use ``pki_dir``.  :func:`_masters_subdir` picks the
+    # right root; here just assert at least one of the two is set so a
+    # missing-opts misconfig surfaces loudly instead of silently writing
+    # into the current working directory.
+    if not opts.get("cluster_pki_dir") and not opts.get("pki_dir"):
+        log.warning(
+            "topology _master_auth: both cluster_pki_dir and pki_dir "
+            "missing from opts"
+        )
         return {"status": "rejected"}
 
     accepted = os.path.join(_masters_subdir(opts, "masters"), f"{cluster_id}.pub")

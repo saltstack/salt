@@ -620,3 +620,154 @@ def test_successful_send_records_last_send_success_at():
     assert link.last_send_success_at is not None
     assert link.send_fault_count == 0
     assert link.last_send_fault_at is None
+
+
+# ---------------------------------------------------------------------------
+# BUG-022: handshake must carry the local master's identity public key
+# ---------------------------------------------------------------------------
+
+
+class _CapturingReqChannel:
+    """Record every payload passed to ``send`` and return a canned reply."""
+
+    def __init__(self, reply):
+        self.payloads = []
+        self._reply = reply
+        self.closes = 0
+
+    async def send(self, payload, tries=1):
+        self.payloads.append(payload)
+        return self._reply
+
+    def close(self):
+        self.closes += 1
+
+
+def test_handshake_load_carries_identity_public_key(tmp_path):
+    """BUG-022: the outbound ``topology/_master_auth`` load MUST include
+    the sender's identity public-key bytes.
+
+    The receiver's :func:`salt.topology.link_manager._handle_master_auth`
+    writes unknown peers to ``masters_pre/<cluster_id>.pub``.  Pre-fix
+    the handshake load omitted ``public_key``, so that file landed at
+    zero bytes and any later ``salt-key -a`` promotion would hand the
+    peer an empty, unverifiable "accepted" record.  On clustered
+    masters the identity is the shared ``<cluster_pki_dir>/cluster.pub``;
+    on solo masters it's ``<pki_dir>/master.pub``.
+    """
+    cluster_pki = tmp_path / "cluster-pki"
+    cluster_pki.mkdir()
+    pub_bytes = b"-----BEGIN PUBLIC KEY-----\nMIIBtest\n-----END PUBLIC KEY-----\n"
+    (cluster_pki / "cluster.pub").write_bytes(pub_bytes)
+
+    opts = {
+        "cluster_id": "west",
+        "cluster_pki_dir": str(cluster_pki),
+        "topology_link_port": 4521,
+        "pki_dir": str(tmp_path / "pki"),
+        "topology_handshake_backoff": 0.0,
+        "topology_handshake_max_tries": 1,
+    }
+    seed = PeerRef(host="127.0.0.1", port=4521, finger=None)
+    loop = asyncio.new_event_loop()
+    try:
+        link = PeerMasterLink(opts, seed, loop)
+    finally:
+        loop.close()
+    chan = _CapturingReqChannel(reply={"status": "retry"})
+    link._req_channel = chan
+
+    async def _call():
+        await link.connect()
+
+    asyncio.run(_call())
+    assert len(chan.payloads) == 1
+    sent = chan.payloads[0]
+    assert sent.get("public_key") == pub_bytes, (
+        f"handshake load MUST carry the identity public_key bytes; got "
+        f"{sent.get('public_key')!r}"
+    )
+
+
+def test_handshake_load_solo_master_identity_falls_back_to_pki_dir(tmp_path):
+    """Solo (non-clustered) masters present ``<pki_dir>/master.pub``."""
+    pki = tmp_path / "pki"
+    pki.mkdir()
+    pub_bytes = b"-----BEGIN PUBLIC KEY-----\nsolo\n-----END PUBLIC KEY-----\n"
+    (pki / "master.pub").write_bytes(pub_bytes)
+
+    opts = {
+        # Solo master: no cluster_id.
+        "pki_dir": str(pki),
+        "topology_link_port": 4521,
+        "topology_handshake_backoff": 0.0,
+        "topology_handshake_max_tries": 1,
+    }
+    seed = PeerRef(host="127.0.0.1", port=4521, finger=None)
+    loop = asyncio.new_event_loop()
+    try:
+        link = PeerMasterLink(opts, seed, loop)
+    finally:
+        loop.close()
+    chan = _CapturingReqChannel(reply={"status": "retry"})
+    link._req_channel = chan
+
+    async def _call():
+        await link.connect()
+
+    asyncio.run(_call())
+    assert chan.payloads[0].get("public_key") == pub_bytes
+
+
+def test_connect_cluster_retry_wire_envelope_is_retriable():
+    """BUG-022: when the receiving master's Raft voter CONFIG has not
+    yet committed, ``ReqServerChannel.handle_message`` returns a bare
+    ``{"enc": "clear", "load": {"ret": False, "cluster_retry": True}}``
+    wire envelope that short-circuits the topology dispatch table.  The
+    outbound handshake MUST recognize this wire-level deferral as a
+    retriable condition (same as a topology-level ``status=retry``)
+    rather than tripping the "unknown handshake status" fatal branch.
+
+    This is a startup/membership-race path --- the receiver's Raft can
+    catch up seconds after the sender starts, OR flap back to
+    not-ready during a cluster membership change.  Without this
+    unwrap, the handshake burns its bounded retry budget on wire-level
+    deferrals and parks the link DISCONNECTED without ever reaching
+    the receiver's :func:`_handle_master_auth`.
+    """
+    cluster_retry_envelope = {
+        "enc": "clear",
+        "load": {"ret": False, "cluster_retry": True},
+    }
+    ok_reply = {
+        "status": "ok",
+        "aes": b"\x11" * 32,
+        "cluster_id": "east",
+        "endpoints": [],
+    }
+
+    class _Scripted:
+        def __init__(self, replies):
+            self.replies = list(replies)
+            self.sends = 0
+
+        async def send(self, payload, tries=1):
+            self.sends += 1
+            return self.replies.pop(0)
+
+        def close(self):
+            pass
+
+    link = _make_link()
+    link.opts["topology_handshake_backoff"] = 0.0
+    link.opts["topology_handshake_max_tries"] = 5
+    chan = _Scripted([cluster_retry_envelope, cluster_retry_envelope, ok_reply])
+    link._req_channel = chan
+
+    async def _call():
+        await link.connect()
+
+    asyncio.run(_call())
+    assert chan.sends == 3
+    assert link.health == LinkHealth.CONNECTED
+    assert link.peer_cluster_id == "east"
