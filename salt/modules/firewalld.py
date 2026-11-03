@@ -1172,7 +1172,7 @@ def info_ipset(ipset):
     return __parse_ipset(cmd)
 
 
-def new_ipset(ipset, ipset_type, family=None, options=None, restart=False):
+def new_ipset(ipset, ipset_type, family="inet", options=None, restart=False):
     """
     Add a new ipset
 
