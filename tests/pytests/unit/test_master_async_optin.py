@@ -18,6 +18,7 @@ import pytest
 import salt.channel.server
 import salt.config
 import salt.master
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -283,3 +284,27 @@ def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
     # And the opts we passed in must be visible so ``publish`` can
     # branch on them.
     assert ps.opts.get("master_async_mworker") is False
+
+
+async def test_publishserver_awaits_ipc_when_flag_on(master_opts):
+    """With the flag on, IPC delivery is awaited without an inner wrapper."""
+    import salt.transport.tcp
+
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts, master_async_mworker=True),
+        pub_host="127.0.0.1",
+        pub_port=0,
+        pull_host="127.0.0.1",
+        pull_port=0,
+    )
+    with patch(
+        "salt.utils.asynchronous.SyncWrapper",
+        side_effect=AssertionError("Unexpected nested SyncWrapper"),
+    ), patch("salt.transport.tcp._AsyncPubServerPublisher", autospec=True) as pub:
+        try:
+            await server.publish(b"event")
+            pub.return_value.connect.assert_awaited_once()
+            pub.return_value.send.assert_awaited_once_with(b"event")
+        finally:
+            server.close()
+        pub.return_value.close.assert_called_once()
