@@ -340,7 +340,7 @@ salt/transport/tcp.py:
   - pytests.unit.test_master_async_optin
   - pytests.unit.transport.test_tcp
   - pytests.functional.transport.tcp.test_pub_server
-  - pytests.functional.transport.tcp.test_native_publisher
+  - pytests.functional.transport.tcp.test_async_publisher
 
 tests/support/mock.py:
   - unit.test_mock

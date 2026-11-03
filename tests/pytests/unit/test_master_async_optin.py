@@ -286,7 +286,7 @@ def test_publishserver_publish_sync_mode_uses_pub_sock(sync_master_opts):
     assert ps.opts.get("master_async_mworker") is False
 
 
-async def test_publishserver_awaits_native_ipc_when_flag_on(master_opts):
+async def test_publishserver_awaits_ipc_when_flag_on(master_opts):
     """With the flag on, IPC delivery is awaited without an inner wrapper."""
     import salt.transport.tcp
 

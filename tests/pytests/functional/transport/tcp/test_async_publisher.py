@@ -1,4 +1,4 @@
-"""Native IPC publishing preserves framing and the caller's loop."""
+"""Async IPC publishing preserves framing and the caller's loop."""
 
 import asyncio
 import socket
@@ -14,7 +14,7 @@ import salt.utils.msgpack
 from tests.support.mock import Mock, patch
 
 
-async def test_concurrent_native_publishes_preserve_large_frames():
+async def test_concurrent_async_publishes_preserve_large_frames():
     received = []
     readers = []
     complete = asyncio.Event()
@@ -62,7 +62,7 @@ async def test_concurrent_native_publishes_preserve_large_frames():
 
 
 @pytest.mark.parametrize("async_mworker", [False, True])
-async def test_legacy_outer_wrapper_uses_native_ipc_connection(async_mworker):
+async def test_outer_wrapper_publishes_over_ipc(async_mworker):
     """
     Unmigrated sync events need only their existing outer wrapper.
 
@@ -99,6 +99,8 @@ async def test_legacy_outer_wrapper_uses_native_ipc_connection(async_mworker):
         await asyncio.wait_for(asyncio.to_thread(publish), 3)
         assert await asyncio.wait_for(received, 3) == b"event"
         await asyncio.wait_for(asyncio.gather(*handlers), 3)
+        # connect() and publish() share one connection.
+        assert len(handlers) == 1
 
 
 async def test_connection_timeout_closes_stream():
@@ -117,6 +119,145 @@ async def test_connection_timeout_closes_stream():
         assert publisher.stream is None
     finally:
         publisher.close()
+
+
+async def test_connect_waits_for_a_listener_that_starts_late():
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", port, None)
+    task = asyncio.create_task(publisher.connect(timeout=3))
+    try:
+        await asyncio.sleep(0.3)
+        assert not task.done()
+        async with await asyncio.start_server(
+            lambda r, w: w.close(), "127.0.0.1", port
+        ):
+            assert await asyncio.wait_for(task, 3) is True
+            assert publisher.connected()
+    finally:
+        publisher.close()
+
+
+async def test_connect_retries_at_a_steady_pace_until_the_timeout():
+    attempts = 0
+
+    async def refuse(stream, address):
+        nonlocal attempts
+        attempts += 1
+        raise ConnectionRefusedError()
+
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 1, None)
+    loop = asyncio.get_running_loop()
+    try:
+        with patch.object(tornado.iostream.IOStream, "connect", refuse):
+            start = loop.time()
+            with pytest.raises(ConnectionRefusedError):
+                await publisher.connect(timeout=0.5)
+            elapsed = loop.time() - start
+        assert 0.4 <= elapsed < 2
+        # One attempt per retry delay, not a busy loop.
+        assert 3 <= attempts <= 8
+    finally:
+        publisher.close()
+
+
+async def test_concurrent_connects_share_one_timeout():
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", port, None)
+    loop = asyncio.get_running_loop()
+    try:
+        start = loop.time()
+        results = await asyncio.gather(
+            *(publisher.connect(timeout=0.5) for _ in range(3)),
+            return_exceptions=True,
+        )
+        # Three callers wait about 0.5 s in total, not 3 x 0.5 s.
+        assert loop.time() - start < 1.0
+        assert all(isinstance(result, Exception) for result in results)
+    finally:
+        publisher.close()
+
+
+async def test_concurrent_connects_open_one_connection():
+    accepted = []
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", port, None)
+
+    def accept(reader, writer):
+        accepted.append(writer)
+
+    async with await asyncio.start_server(accept, "127.0.0.1", port):
+        try:
+            results = await asyncio.gather(*(publisher.connect() for _ in range(3)))
+            assert results == [True, True, True]
+            await asyncio.sleep(0.1)
+            assert len(accepted) == 1
+        finally:
+            # The server waits for open connections when it closes.
+            publisher.close()
+            for writer in accepted:
+                writer.close()
+
+
+async def test_publish_reconnects_once_after_the_peer_drops_the_connection():
+    received = []
+    writers = []
+
+    async def consume(reader, writer):
+        writers.append(writer)
+        try:
+            while True:
+                size = struct.unpack(">I", await reader.readexactly(4))[0]
+                frame = salt.utils.msgpack.loads(
+                    await reader.readexactly(size), raw=False
+                )
+                received.append(frame["body"])
+        except (asyncio.IncompleteReadError, ConnectionError):
+            pass
+        finally:
+            writer.close()
+
+    async with await asyncio.start_server(consume, "127.0.0.1", 0) as listener:
+        host, port = listener.sockets[0].getsockname()
+        server = salt.transport.tcp.PublishServer(
+            {"master_async_mworker": True}, pull_host=host, pull_port=port
+        )
+        loop = asyncio.get_running_loop()
+        try:
+            await server.publish(b"first")
+            for _ in range(100):
+                if received:
+                    break
+                await asyncio.sleep(0.02)
+            assert received == [b"first"]
+            publisher, lock = server._async_pub_by_loop[loop]
+            writers[0].close()
+            for _ in range(100):
+                if not publisher.connected():
+                    break
+                await asyncio.sleep(0.02)
+            assert not publisher.connected()
+
+            payloads = [bytes([index]) * 1000 for index in range(5)]
+            await asyncio.gather(*(server.publish(item) for item in payloads))
+            for _ in range(100):
+                if len(received) == 6:
+                    break
+                await asyncio.sleep(0.02)
+
+            assert sorted(received[1:]) == sorted(payloads)
+            # One reconnect, on the same publisher and the same lock.
+            assert len(writers) == 2
+            assert server._async_pub_by_loop[loop] == (publisher, lock)
+        finally:
+            server.close()
+            for writer in writers:
+                writer.close()
 
 
 async def test_cancelled_publish_drains_connect():

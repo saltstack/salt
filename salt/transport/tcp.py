@@ -1817,7 +1817,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # TODO: opts!
     # Based on default used in tornado.netutil.bind_sockets()
     backlog = 128
-    # ``connect`` is only awaited on the native path; ``__init__`` adds it
+    # ``connect`` is only awaited when the flag is on; ``__init__`` adds it
     # when ``master_async_mworker`` is on.
     async_methods = [
         "publish",
@@ -1842,11 +1842,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):
         self.opts = opts
         # Decided once: the object does not change behavior afterwards.
-        self._native = bool((opts or {}).get("master_async_mworker"))
+        self._async_mworker = bool((opts or {}).get("master_async_mworker"))
         # REMOVE-WITH-FLAG(master_async_mworker): pub_sock is only used when the
         # flag is off. It is a SyncWrapper nested inside the outer wrapper.
         self.pub_sock = None
-        if self._native:
+        if self._async_mworker:
             self.async_methods = ["connect", "publish"]
             self._async_pub_by_loop = weakref.WeakKeyDictionary()
         self.pub_host = pub_host
@@ -2037,7 +2037,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     pass
         entry = self._async_pub_by_loop.get(loop)
         if entry is None:
-            # Legacy event callers can still share a server across loops.
+            # One server can still be used from several loops.
             # Each connection and its send lock belong to the calling loop.
             entry = (self._new_publisher(loop), asyncio.Lock())
             self._async_pub_by_loop[loop] = entry
@@ -2046,11 +2046,11 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     def connect(self, timeout=None):
         # Flag on: returns a coroutine (``connect`` is in ``async_methods``).
         # Flag off: connects synchronously, as before.
-        if self._native:
-            return self._connect_native(timeout)
-        return self._connect_legacy(timeout)
+        if self._async_mworker:
+            return self._connect_async(timeout)
+        return self._connect_sync(timeout)
 
-    async def _connect_native(self, timeout=None):
+    async def _connect_async(self, timeout=None):
         loop, (_, lock) = self._publisher_for_loop()
         async with lock:
             if self._closing:
@@ -2059,7 +2059,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             await publisher.connect(timeout=timeout)
 
     # REMOVE-WITH-FLAG(master_async_mworker)
-    def _connect_legacy(self, timeout=None):
+    def _connect_sync(self, timeout=None):
         # ``ipc_write_buffer`` caps the publisher-side (MWorker fire_event
         # -> EP pull) tornado write buffer.  Without a cap the buffer is
         # unbounded and a wedged EP io_loop lets MWorkers grow RSS
@@ -2084,7 +2084,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         """
         Publish "load" to minions
         """
-        if not self._native:
+        if not self._async_mworker:
             # REMOVE-WITH-FLAG(master_async_mworker): original path, unchanged.
             if not self.pub_sock:
                 self.connect()
@@ -2561,6 +2561,12 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
         "connect",
     ]
 
+    # Seconds between connection attempts, the same delay ``AsyncAuth`` uses.
+    # ``tcp_reconnect_backoff`` is not used: it is for the network connection
+    # to the master (1 s by default, minion option) and would make the local
+    # event bus wait that long too.
+    _connect_retry_delay = 0.1
+
     def __init__(self, host, port, path, io_loop=None, max_write_buffer_size=None):
         if io_loop is None:
             io_loop = asyncio.get_running_loop()
@@ -2577,6 +2583,9 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
         self, timeout=None
     ):  # pylint: disable=arguments-differ,invalid-overridden-method
         """Connect on the caller's loop without a detached connection task."""
+        # Callers waiting for the lock share their timeout, so N of them wait
+        # for at most ``timeout`` in total.
+        deadline = None if timeout is None else self.io_loop.time() + timeout
         async with self._connect_lock:
             if self._closing:
                 raise ClosingError("Publisher is closed")
@@ -2589,7 +2598,6 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
                     socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
                 )
                 sock_addr = (self.host, self.port)
-            deadline = None if timeout is None else self.io_loop.time() + timeout
             while True:
                 if self._closing:
                     raise ClosingError("Publisher is closed")
@@ -2612,18 +2620,22 @@ class _AsyncPubServerPublisher(_TCPPubServerPublisher):
                     self.stream.close()
                     self.stream = None
                     raise
-                except Exception:  # pylint: disable=broad-except
+                except Exception as exc:  # pylint: disable=broad-except
                     self.stream.close()
                     self.stream = None
                     if self._closing:
                         raise ClosingError(
                             "Publisher closed before connect completed"
                         ) from None
-                    if deadline is None or self.io_loop.time() >= deadline:
-                        raise
-                    await asyncio.sleep(
-                        min(0.1, max(0, deadline - self.io_loop.time()))
+                    remaining = (
+                        None if deadline is None else deadline - self.io_loop.time()
                     )
+                    if remaining is None or remaining <= 0:
+                        raise
+                    await asyncio.sleep(min(self._connect_retry_delay, remaining))
+                    if remaining <= self._connect_retry_delay:
+                        # That wait used up the time: report the real error.
+                        raise exc
 
 
 class RequestClient(salt.transport.base.RequestClient):

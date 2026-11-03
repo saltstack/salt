@@ -2264,7 +2264,7 @@ async def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
         server.close()
 
 
-def test_publish_server_connect_wires_ipc_write_buffer_into_legacy_publisher(
+def test_publish_server_connect_wires_ipc_write_buffer_into_sync_publisher(
     master_opts,
 ):
     """

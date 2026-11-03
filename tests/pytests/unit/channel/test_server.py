@@ -955,7 +955,7 @@ async def test_cluster_peer_failure_reannounces_key_and_allows_reconnect(
             channel.send_aes_key_event.assert_called_once_with()
 
             # Recovery must not close the PublishServer permanently. The next
-            # publication reconnects using its native per-loop publisher.
+            # publication reconnects using its per-loop publisher.
             await channel.publish_payload(load)
             assert connect.await_count == 3
             assert send.await_count == (1 if failure_stage == "connect" else 3)
