@@ -26,9 +26,9 @@ WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", 10 * 60))
 # Master RSS slope (bytes/sec) above which the run fails.  Master RSS is not
 # flat even without a leak: it oscillates by a few hundred MB with a period
 # of about 6 minutes, so the fit over a window of a few periods keeps some
-# noise.  A 30m run measured about 13 KB/sec after the warm-up, so the
-# limit is doubled to 20 KB/sec (it was 10 KB/sec).
-MASTER_RSS_SLOPE_LIMIT = 20 * 1024
+# noise.  Two 30m runs measured about 13 and 7 KB/sec after the warm-up, so
+# the limit is 15 KB/sec (it was 10 KB/sec).
+MASTER_RSS_SLOPE_LIMIT = 15 * 1024
 
 # Smallest slice of data (the end of the run) the check will judge on.
 # Fewer points make the slope too noisy to compare with the thresholds.
