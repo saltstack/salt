@@ -2501,6 +2501,24 @@ auto-loading modules when states run, set this value to ``False``.
 
     autoload_dynamic_modules: True
 
+.. conf_minion:: sync_on_missing_function
+
+``sync_on_missing_function``
+-----------------------------
+
+Default: ``False``
+
+When enabled, if a requested function (execution module, state module, etc.)
+is not found in the minion's local cache, the minion will attempt an
+on-demand sync of just that module from the master before giving up. This
+allows dynamic modules to be used without requiring an explicit,
+environment-wide ``saltutil.sync_*`` call beforehand, which can be expensive
+in large environments.
+
+.. code-block:: yaml
+
+    sync_on_missing_function: True
+
 .. conf_minion:: clean_dynamic_modules
 
 ``clean_dynamic_modules``
