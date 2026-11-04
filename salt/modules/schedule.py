@@ -1325,7 +1325,7 @@ def postpone_job(name, current_time, new_time, **kwargs):
             # Validate date string
             datetime.datetime.strptime(current_time, time_fmt)
         except (TypeError, ValueError):
-            log.error("Date string could not be parsed: %s, %s", new_time, time_fmt)
+            log.error("Date string could not be parsed: %s, %s", current_time, time_fmt)
 
             ret["comment"] = "Date string could not be parsed."
             ret["result"] = False
