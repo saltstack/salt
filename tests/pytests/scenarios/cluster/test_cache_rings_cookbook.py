@@ -150,8 +150,14 @@ def test_cache_rings_cookbook_end_to_end(
     migrate = _run_runner(originator, "cluster.migrate_jobs_to_cache")
     assert isinstance(migrate, dict), f"migrate returned {migrate!r}"
     assert migrate.get("status") == "ok", migrate
-    assert migrate.get("migrated") == 1, migrate
-    assert migrate.get("scanned") == 1, migrate
+    # ``>= 1`` rather than ``== 1``: a live cluster has background
+    # salt-run invocations (``cluster.members`` during our baseline
+    # check) that drop their own JIDs under ``local_cache`` too, so
+    # the migrator counts those alongside the seeded one.  The point
+    # is that OUR seeded JID landed in the new banks — asserted
+    # below.
+    assert migrate.get("migrated", 0) >= 1, migrate
+    assert migrate.get("scanned", 0) >= 1, migrate
 
     # Doc guarantee: the source tree is left on disk.
     assert (jid_dir / ".load.p").is_file(), (
