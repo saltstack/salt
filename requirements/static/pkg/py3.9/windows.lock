@@ -241,6 +241,8 @@ typing-extensions==4.15.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
+tzdata==2026.2
+    # via -r requirements/base.txt
 urllib3==1.26.20
     # via
     #   -r requirements/base.txt

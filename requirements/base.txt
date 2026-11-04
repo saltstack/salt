@@ -94,6 +94,7 @@ python-gnupg>=0.5.6
 pythonnet>=3.0.1; sys_platform == 'win32' and python_version < '3.11'
 pythonnet>=3.0.4; sys_platform == 'win32' and python_version >= '3.11' and python_version < '3.13'
 pythonnet>=3.1.0rc0; sys_platform == 'win32' and python_version >= '3.13'
+tzdata; sys_platform == 'win32'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
 PyYAML>=6.0.3
