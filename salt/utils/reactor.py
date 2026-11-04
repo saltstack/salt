@@ -299,6 +299,12 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                                     self.call_reactions(chunks)
                                 except SystemExit:
                                     log.warning("Exit ignored by reactor")
+                                except Exception:  # pylint: disable=broad-except
+                                    log.exception(
+                                        "Unhandled exception while running reactions "
+                                        "for tag %s",
+                                        data["tag"],
+                                    )
 
 
 class ReactWrap:
@@ -362,11 +368,23 @@ class ReactWrap:
         """
         Execute a reaction by invoking the proper wrapper func
         """
+        if low["state"] not in self.reaction_class:
+            log.error(
+                "Reactor '%s' uses unknown reaction type '%s'. Valid reaction "
+                "types are: %s. Check the Reactor System documentation for the "
+                "correct SLS format.",
+                low.get("__id__"),
+                low["state"],
+                ", ".join(sorted(self.reaction_class)),
+            )
+            return
+
         self.populate_client_cache(low)
         try:
             l_fun = getattr(self, low["state"])
         except AttributeError:
             log.error("ReactWrap is missing a wrapper function for '%s'", low["state"])
+            return
 
         try:
             wrap_call = salt.utils.args.format_call(l_fun, low)
