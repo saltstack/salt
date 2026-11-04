@@ -500,6 +500,80 @@ class TestMembershipStateMachine:
         assert "m2" in r
         assert "version=2" in r
 
+    def test_stale_config_apply_does_not_regress_voters(self):
+        """
+        A CONFIG apply at an index <= the SM's last-applied CONFIG index
+        must not overwrite the authoritative voter/learner view.
+
+        This guards against log truncation (leader stomps a divergent
+        follower tail) or a recovery replay re-delivering an older
+        CONFIG after a newer one has already applied.  Pre-fix the SM
+        silently regressed to the older view; ``Node._applied_config_index``
+        only gated the ``on_change`` callback, not the SM's own state.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        received = []
+        sm = MembershipStateMachine(
+            on_change=lambda v, l: received.append((list(v), list(l)))
+        )
+        # Apply newer CONFIG first.
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Stale CONFIG at a lower index must be ignored --- voters MUST
+        # still be {A, B, C}, membership_version MUST still be 5, and
+        # the on_change callback MUST NOT fire a second time.
+        sm.apply({"voters": ["A"], "learners": []}, index=3)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.current_learners() == []
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Equal-index apply is also a no-op (same entry re-delivered
+        # via truncation + re-replication).
+        sm.apply({"voters": ["X"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # A strictly-newer CONFIG still wins (regression guard for the
+        # existing increasing-index path).
+        sm.apply({"voters": ["A", "B"], "learners": ["D"]}, index=6)
+        assert sm.current_voters() == ["A", "B"]
+        assert sm.current_learners() == ["D"]
+        assert sm.membership_version == 6
+        assert received == [
+            (["A", "B", "C"], []),
+            (["A", "B"], ["D"]),
+        ]
+
+    def test_stale_config_skip_survives_snapshot_roundtrip(self):
+        """
+        ``_membership_version`` already round-trips through
+        get_snapshot / restore_snapshot as the ``version`` field, so
+        a restored SM must reject stale CONFIG entries just like a
+        hot SM does.  Regression guard for the round-trip of the
+        short-circuit gate introduced for the CONFIG-downgrade fix.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=7)
+        snap = sm.get_snapshot()
+        assert snap["version"] == 7
+
+        restored = MembershipStateMachine()
+        restored.restore_snapshot(snap)
+        assert restored.membership_version == 7
+
+        # Stale CONFIG at index < 7 must be ignored on the restored SM.
+        restored.apply({"voters": ["X"], "learners": []}, index=4)
+        assert restored.current_voters() == ["A", "B", "C"]
+        assert restored.membership_version == 7
+
 
 # ---------------------------------------------------------------------------
 # Coverage gaps: LogEntryCommitStatus.set, LogEntry paths, Log edge cases,

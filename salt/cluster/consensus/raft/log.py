@@ -677,7 +677,34 @@ class MembershipStateMachine(BaseStateMachine):
                       Non-dict values are treated as a plain voter list
                       with no learners and no versions.
         :param index: Raft log index of this entry (used as version stamp).
+
+        A stale CONFIG at an index less than or equal to the SM's
+        ``_membership_version`` is ignored: log truncation (leader
+        stomps a divergent follower tail) or a recovery replay can
+        re-deliver an older CONFIG after a newer one has already
+        applied, and silently overwriting ``_voters`` / ``_learners``
+        with the older view would regress routing and ring bring-up.
+        ``Node.on_config_change`` is already gated by
+        ``_applied_config_index`` at the callsite so the ``on_change``
+        hook does not double-fire, but that gate does not protect the
+        SM's own state --- hence the skip here.  ``index == -1``
+        (the no-index default used by test harnesses) always applies
+        to preserve the pre-existing "I do not care about replay
+        safety" contract.
         """
+        if (
+            index >= 0
+            and self._membership_version >= 0
+            and index <= self._membership_version
+        ):
+            log.debug(
+                "MembershipStateMachine.apply: ignoring stale CONFIG at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._membership_version,
+            )
+            return
+
         if isinstance(cmd, dict):
             voters = list(cmd.get("voters", []))
             learners = list(cmd.get("learners", []))
