@@ -34,21 +34,15 @@ MASTER_RSS_SLOPE_LIMIT = 15 * 1024
 # Fewer points make the slope too noisy to compare with the thresholds.
 MIN_ANALYSIS_SECONDS = 10 * 60
 
-# Default (and largest) window of the slope check: the last 30 minutes, as
-# before.  Longer runs are judged on their last 30 minutes only, so a leak
-# that starts late is not averaged away over hours of flat data.  It is
-# also the window when the start time of the run is unknown.
-DEFAULT_WINDOW_SECONDS = 30 * 60
-
 # The workflow's shortest run (nightly-stress-test.yml ``duration``
 # options) must be at least WARMUP_SECONDS + MIN_ANALYSIS_SECONDS = 20m.
 # Keep the two in step.
 #
 # The workflow exports ``STRESS_START_EPOCH`` when the stress starts; the
-# slope window then covers the time after ``start + WARMUP_SECONDS``, at
-# most DEFAULT_WINDOW_SECONDS (a 20m run is judged on its last 10m, a 30m
-# run on its last 20m, a 60m run on its last 30m).  Without it the window
-# is DEFAULT_WINDOW_SECONDS, which can include the warm-up of a short run.
+# slope window then covers everything after ``start + WARMUP_SECONDS``
+# (a 20m run is judged on its last 10m, a 60m run on its last 50m).
+# Without it the window is MIN_ANALYSIS_SECONDS, the one span that no
+# allowed run overlaps with the warm-up.
 
 
 def query_prom(query):
@@ -71,15 +65,13 @@ def get_elapsed_seconds():
 
 def get_slope_window():
     """
-    Prometheus range-selector duration for the slope check: the time after
-    the warm-up period at the start of the stress run, at most the last
-    DEFAULT_WINDOW_SECONDS.
+    Prometheus range-selector duration for the slope check: everything
+    after the warm-up period at the start of the stress run.
     """
     elapsed = get_elapsed_seconds()
     if elapsed is None:
-        return f"{DEFAULT_WINDOW_SECONDS}s"
-    window = max(elapsed - WARMUP_SECONDS, MIN_ANALYSIS_SECONDS)
-    return f"{min(window, DEFAULT_WINDOW_SECONDS)}s"
+        return f"{MIN_ANALYSIS_SECONDS}s"
+    return f"{max(elapsed - WARMUP_SECONDS, MIN_ANALYSIS_SECONDS)}s"
 
 
 def get_linear_slope(metric_name, duration=None):
