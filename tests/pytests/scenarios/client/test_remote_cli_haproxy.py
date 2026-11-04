@@ -345,7 +345,7 @@ class TestRemoteCLIBehindClusterLB:
 
         Instantiate a :class:`salt.wheel.RemoteWheelClient` (which is
         what ``salt-key -L`` ends up using when ``__role=client``) and
-        invoke ``key.list_clients``.  The call opens an AES ReqChannel
+        invoke ``key.list_all_client``.  The call opens an AES ReqChannel
         to the proxy -- the proxy routes it to one of the three
         cluster masters round-robin -- the master dispatches to
         ClearFuncs.wheel under ``auth_type="client"``, which authorises
@@ -358,7 +358,7 @@ class TestRemoteCLIBehindClusterLB:
         opts = salt.config.client_config(remote_client_setup_cluster["config_file"])
         wheel = salt.wheel.RemoteWheelClient(opts)
         try:
-            result = wheel.cmd_sync({"fun": "key.list_clients"})
+            result = wheel.cmd_sync({"fun": "key.list_all_client"})
         finally:
             wheel.destroy()
 
@@ -388,7 +388,7 @@ class TestRemoteCLIBehindClusterLB:
         for _ in range(6):
             wheel = salt.wheel.RemoteWheelClient(opts)
             try:
-                wheel.cmd_sync({"fun": "key.list_clients"})
+                wheel.cmd_sync({"fun": "key.list_all_client"})
             finally:
                 wheel.destroy()
 
