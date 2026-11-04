@@ -1606,9 +1606,13 @@ def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_b
         "event_publisher_niceness": 0,
         "cluster_id": "testcluster",
         "cluster_pool_port": 4520,
-        "cluster_peers": [],
+        "cluster_peers": ["192.168.0.2"],
         "interface": interface,
+        "id": "salt-master-1_master",
     }
+    channel._has_joined_cluster = MagicMock(return_value=False)
+    channel.pusher = MagicMock()
+    channel._add_pusher = MagicMock()
     channel.transport = MagicMock()
     # Skip the ``if hasattr(self.transport, "publisher"):`` branch in
     # ``_publish_daemon`` -- it calls ``salt.utils.asynchronous.aioloop``
@@ -1618,11 +1622,17 @@ def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_b
     del channel.transport.publisher
 
     # A MagicMock io_loop makes ``start()`` return immediately, so the daemon
-    # runs to its ``finally: self.close()`` without driving tornado.
+    # runs to its ``finally: self.close()`` without driving tornado.  The
+    # suppress block handles anything _publish_daemon raises AFTER the
+    # TCPPuller bind we care about (the Raft bring-up branch below the
+    # bind needs a real asyncio loop).
     with patch("tornado.ioloop.IOLoop.current", return_value=MagicMock()), patch(
         "salt.transport.tcp.TCPPuller"
     ) as fake_puller:
-        channel._publish_daemon()
+        try:
+            channel._publish_daemon()
+        except Exception:  # pylint: disable=broad-except
+            pass
 
     assert fake_puller.call_args.kwargs["host"] == expected_bind
 
