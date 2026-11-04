@@ -299,6 +299,19 @@ VALID_OPTS = immutabletypes.freeze(
         # tallies.  Consumed by Phase 2's completion loop; reserved here
         # so the config schema is stable across Phase 1/2 releases.
         "topology_pub_complete_timeout": float,
+        # Phase 1.5: receiver-side emission of topology/pub-complete.  When
+        # True the inbound dispatcher spawns a bounded per-jid collector
+        # that watches salt/job/<jid>/ret/* and emits pub-complete when the
+        # ack'd minion set is drained (or when topology_pub_complete_timeout
+        # fires, whichever comes first).  Default-on; peers running without
+        # emission never fire the frame and the originator falls back to
+        # the pre-RFC silence-mode timeout.
+        "topology_pub_complete_enabled": bool,
+        # Upper bound on concurrent in-flight pub-complete collectors.  Caps
+        # memory under a publish flood; when exceeded new jids skip spawning
+        # with a WARNING log and the originator falls back to --timeout for
+        # those jids.  See RFC pub-ack-complete, Phase 1.5.
+        "topology_pub_complete_max_inflight": int,
         # Grace window in seconds for pub-ack arrival before relying on
         # syndic-style silent-inference fallback.  See RFC pub-ack-complete.
         "topology_wait": float,
@@ -2088,6 +2101,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "topology_summary_grains": [],
         "topology_pub_ack": True,
         "topology_pub_complete_timeout": 60.0,
+        "topology_pub_complete_enabled": True,
+        "topology_pub_complete_max_inflight": 1024,
         "topology_wait": 2.0,
         "topology_pub_ack_consumer": False,
         "features": {},

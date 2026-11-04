@@ -143,6 +143,14 @@ _EVENT_BUS = None
 
 _LOCK = threading.RLock()
 
+#: Registry of in-flight ``topology/pub-complete`` collectors keyed by
+#: jid.  Populated by :func:`_spawn_pub_complete_collector`, cleared
+#: by the collector coroutine's ``finally`` block.  Bounded by
+#: ``opts["topology_pub_complete_max_inflight"]`` so a publish flood
+#: cannot leak unbounded asyncio.Task objects.  See RFC
+#: ``doc/topics/master-topology/rfc-pub-ack-complete.md`` Phase 1.5.
+_PUB_COMPLETE_COLLECTORS = {}
+
 
 def _reset_module_state():
     """Reset every module-level variable to its post-import default.
@@ -160,6 +168,17 @@ def _reset_module_state():
         except Exception:  # pylint: disable=broad-except
             log.debug("topology: cached PubServerChannel close failed", exc_info=True)
     _PUB_CHANNEL_CACHE.clear()
+    # Cancel any outstanding pub-complete collectors so a re-start does
+    # not inherit stale per-jid tasks from the prior process generation.
+    for task in list(_PUB_COMPLETE_COLLECTORS.values()):
+        try:
+            task.cancel()
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "topology: pub-complete collector cancel on reset failed",
+                exc_info=True,
+            )
+    _PUB_COMPLETE_COLLECTORS.clear()
     _FIRE_EVENT = None
     _EVENT_BUS = None
     _LINKS = {}
@@ -1440,6 +1459,25 @@ async def _dispatch_pub(payload):
                     load.get("jid"),
                     exc_info=True,
                 )
+            # Phase 1.5: spawn the per-jid return collector that will emit
+            # ``topology/pub-complete`` once every ack'd minion returns
+            # (or on local timeout, whichever comes first).  The spawn
+            # happens AFTER the pub-ack is scheduled so the originator
+            # sees the ack before the complete.  See RFC pub-ack-complete
+            # "topology/pub-complete" wire section.
+            try:
+                _spawn_pub_complete_collector(
+                    load.get("jid"),
+                    matched_for_ack,
+                    inbound_link,
+                    [router.cluster_id] if router.cluster_id else None,
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: pub-complete collector spawn failed for jid=%r",
+                    load.get("jid"),
+                    exc_info=True,
+                )
 
     if local_match and isinstance(load, dict):
         # Origin side of the return path (``route_return`` returned
@@ -1911,6 +1949,321 @@ async def _send_pub_ack_fire_and_forget(
             jid,
             exc_info=True,
         )
+
+
+def _spawn_pub_complete_collector(jid, expected_minions, inbound_link, path):
+    """Spawn a per-jid return collector that emits ``topology/pub-complete``.
+
+    Called from :func:`_dispatch_pub` immediately after the pub-ack is
+    scheduled, so the collector exists before local returns can start
+    arriving.  Design points (Phase 1.5 of RFC pub-ack-complete):
+
+    * **Empty match path**: when ``expected_minions`` is empty the peer
+      had zero local matches.  Emit pub-complete immediately on the
+      current event loop (no collector task).  The originator needs this
+      to distinguish "zero match" from "peer unreachable" the same way
+      pub-ack does.
+    * **Enabled opt**: honours ``opts["topology_pub_complete_enabled"]``
+      (default True).  When False the spawn is a silent no-op; the
+      originator falls back to pre-RFC silence-mode on ``--timeout``.
+    * **Bounded in-flight**: caps concurrent collectors at
+      ``opts["topology_pub_complete_max_inflight"]`` (default 1024).
+      Over-cap jids are logged at WARNING and skipped -- they get the
+      same silence-mode fallback as a disabled peer.  Prevents a publish
+      flood from leaking Task objects when returns are slow.
+    * **Idempotent per jid**: a second call for the same jid is a no-op
+      (the first collector owns that jid's completion).
+
+    :param jid: The publish's jid.
+    :param expected_minions: List (or set) of minion ids the pub-ack
+        promised.  ``returned ^ missed == set(expected_minions)``
+        invariant at emit time.
+    :param inbound_link: The link we received the publish on; the
+        complete frame travels back up this hop, same as the ack did.
+    :param path: Optional path list to carry on the complete envelope;
+        defaults to this cluster's single-entry id list.
+    """
+    if _OPTS is None:
+        return
+    if not _OPTS.get("topology_pub_ack", True):
+        # Phase 1 gate also turns off the collector: the originator
+        # cannot consume complete without ack, so suppressing both
+        # keeps the mixed-deployment story clean.
+        return
+    if not _OPTS.get("topology_pub_complete_enabled", True):
+        return
+    if not jid or inbound_link is None:
+        return
+    expected = set(expected_minions or [])
+    # Empty-match fast path.  The RFC explicitly requires an empty ack +
+    # complete pair so the originator can distinguish "peer had no local
+    # match" from "peer unreachable".  Emit synchronously on the current
+    # loop; no task bookkeeping needed.
+    if not expected:
+        try:
+            asyncio.ensure_future(
+                _emit_pub_complete_once(
+                    inbound_link,
+                    jid,
+                    returned=[],
+                    missed=[],
+                    path=path,
+                )
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "topology: empty-match pub-complete emit failed for jid=%r",
+                jid,
+                exc_info=True,
+            )
+        return
+    # Enforce max-inflight.  Check against the current task count, not
+    # the size of the dict post-insert, so the cap is a hard ceiling
+    # rather than a "cap+1" soft limit.
+    max_inflight = int(_OPTS.get("topology_pub_complete_max_inflight", 1024) or 1024)
+    if len(_PUB_COMPLETE_COLLECTORS) >= max_inflight:
+        log.warning(
+            "topology: pub-complete collector in-flight cap reached "
+            "(max=%d); skipping spawn for jid=%r -- originator will "
+            "fall back to --timeout",
+            max_inflight,
+            jid,
+        )
+        return
+    # Idempotency: a second spawn for the same jid is a no-op.  Could
+    # happen if a peer re-dispatches a publish mid-collection (shouldn't,
+    # but defense in depth).
+    if jid in _PUB_COMPLETE_COLLECTORS:
+        return
+    timeout_s = float(_OPTS.get("topology_pub_complete_timeout", 60.0) or 60.0)
+    try:
+        task = asyncio.ensure_future(
+            _collect_and_emit_pub_complete(jid, expected, inbound_link, path, timeout_s)
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: pub-complete collector task ensure_future failed jid=%r",
+            jid,
+            exc_info=True,
+        )
+        return
+    _PUB_COMPLETE_COLLECTORS[jid] = task
+
+
+async def _emit_pub_complete_once(inbound_link, jid, returned, missed, path):
+    """Send a single ``topology/pub-complete`` frame with fault isolation.
+
+    Thin wrapper around :meth:`PeerMasterLink.send_pub_complete` that
+    swallows DISCONNECTED (``LinkUnavailable``) and bounded timeouts so
+    a collector never raises into the io_loop.  The frame is fire-and-
+    forget per the RFC: if delivery fails the originator falls back to
+    its own ``--timeout`` and reconstructs completion from
+    ``topology/ret`` arrivals.
+
+    Always emits ``cancelled=False, cancel_reason=None`` -- operator-
+    cancel semantics are out of scope for Phase 1.5 (tracked under the
+    Tier-2 ``topology/jid-cancel`` RFC).
+    """
+    try:
+        await asyncio.wait_for(
+            inbound_link.send_pub_complete(
+                jid,
+                returned=list(returned),
+                missed=list(missed),
+                cancelled=False,
+                cancel_reason=None,
+                path=list(path) if path else None,
+            ),
+            timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "topology: send_pub_complete to upstream=%r timed out for "
+            "jid=%r after %ss; originator falls back to --timeout",
+            getattr(inbound_link, "peer_cluster_id", None),
+            jid,
+            _TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except Exception:  # pylint: disable=broad-except
+        # Includes LinkUnavailable (DISCONNECTED health gate).  The RFC
+        # calls this out explicitly: a down link stops the emission, the
+        # originator falls back to --timeout.  Do NOT retry.
+        log.debug(
+            "topology: send_pub_complete to upstream=%r failed for jid=%r",
+            getattr(inbound_link, "peer_cluster_id", None),
+            jid,
+            exc_info=True,
+        )
+
+
+async def _collect_and_emit_pub_complete(jid, expected, inbound_link, path, timeout_s):
+    """Watch ``salt/job/<jid>/ret/*`` and emit ``topology/pub-complete``.
+
+    Runs as an asyncio.Task spawned by
+    :func:`_spawn_pub_complete_collector`.  Exits (and emits) when:
+
+    * every minion id in ``expected`` has appeared in a
+      ``salt/job/<jid>/ret/<id>`` event, OR
+    * ``timeout_s`` seconds elapse (peer's local-return deadline).
+
+    Whichever path terminates, this coroutine calls
+    :meth:`PeerMasterLink.send_pub_complete` exactly once with the
+    current ``returned`` / ``missed`` split and then cleans up its
+    event-bus subscription in a ``finally`` block.
+
+    :param jid: The publish's jid.
+    :param expected: Set of minion ids that the pub-ack named.  May be
+        passed as a set; a defensive copy is NOT made -- callers must
+        not mutate after handoff.
+    :param inbound_link: The link we received the publish on.
+    :param path: Optional path list to carry on the complete envelope.
+    :param timeout_s: Upper bound on collection (default 60.0 from
+        ``topology_pub_complete_timeout``).
+    """
+    returned = set()
+    tag = f"salt/job/{jid}/ret/"
+    event_bus = None
+    try:
+        # Open a dedicated listen-mode bus for this jid.  Using
+        # ``get_master_event`` with ``listen=True`` establishes the
+        # subscriber socket to ``master_event_pub.ipc``; the separate
+        # module-level ``_EVENT_BUS`` is listen=False (publish-only) so
+        # we cannot reuse it for receive.  The dedicated bus is closed
+        # in ``finally`` so a leak-check of fds under load stays clean.
+        try:
+            event_bus = salt.utils.event.get_master_event(
+                _OPTS,
+                (_OPTS or {}).get("sock_dir"),
+                io_loop=asyncio.get_event_loop(),
+                listen=True,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "topology: pub-complete collector get_master_event failed jid=%r",
+                jid,
+                exc_info=True,
+            )
+            event_bus = None
+        if event_bus is not None:
+            try:
+                event_bus.subscribe(tag, match_type="startswith")
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: pub-complete subscribe failed jid=%r",
+                    jid,
+                    exc_info=True,
+                )
+
+        deadline = asyncio.get_event_loop().time() + timeout_s
+        poll_interval = 0.05
+        # Poll loop: short sleep + non-blocking ``get_event`` drain.  We
+        # avoid ``set_event_handler`` here because it installs a
+        # single-handler callback on the subscriber's on_recv -- fine for
+        # one bus-wide subscriber (as :func:`_start_return_subscriber`
+        # does) but per-jid collectors would fight for that single slot.
+        # Polling keeps each collector self-contained.
+        while True:
+            remaining = deadline - asyncio.get_event_loop().time()
+            if remaining <= 0:
+                break
+            if event_bus is not None:
+                try:
+                    # ``get_event`` with wait=0 is non-blocking; it pulls
+                    # any already-queued matching event out of the pending
+                    # buffer and returns None when the queue is empty.
+                    pkg = event_bus.get_event(
+                        wait=0,
+                        tag=tag,
+                        match_type="startswith",
+                        full=True,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    pkg = None
+                    log.debug(
+                        "topology: pub-complete get_event raised jid=%r",
+                        jid,
+                        exc_info=True,
+                    )
+                drained_any = False
+                while pkg is not None:
+                    drained_any = True
+                    raw_tag = pkg.get("tag", "")
+                    data = pkg.get("data") or {}
+                    # Tag shape: ``salt/job/<jid>/ret/<minion_id>``.
+                    minion_id = None
+                    if isinstance(raw_tag, str) and raw_tag.startswith(tag):
+                        minion_id = raw_tag[len(tag) :]
+                    if not minion_id and isinstance(data, dict):
+                        minion_id = data.get("id")
+                    if minion_id and minion_id in expected:
+                        returned.add(minion_id)
+                    if returned >= expected:
+                        break
+                    try:
+                        pkg = event_bus.get_event(
+                            wait=0,
+                            tag=tag,
+                            match_type="startswith",
+                            full=True,
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        pkg = None
+                        break
+                if returned >= expected:
+                    break
+                # If we drained nothing this tick, sleep briefly.
+                if not drained_any:
+                    await asyncio.sleep(poll_interval)
+                else:
+                    # Yield once so other coroutines (and new events
+                    # arriving on the bus) get a chance before we loop.
+                    await asyncio.sleep(0)
+            else:
+                # No bus wired (test harness / misconfigured sock_dir).
+                # Sleep until the timeout so we still emit with an
+                # empty-returned set rather than spinning the loop.
+                await asyncio.sleep(min(poll_interval, max(remaining, 0)))
+
+        missed = expected - returned
+        await _emit_pub_complete_once(
+            inbound_link,
+            jid,
+            returned=sorted(returned),
+            missed=sorted(missed),
+            path=path,
+        )
+    except asyncio.CancelledError:  # pylint: disable=try-except-raise
+        # Clean shutdown path (e.g. ``_reset_module_state``).  Do not
+        # emit on cancel -- the receiving-side daemon is going away and
+        # the frame would race the socket teardown.  The explicit catch-
+        # then-re-raise exists so the ``finally`` cleanup runs without
+        # the broader ``except Exception`` branch swallowing the cancel.
+        raise
+    except Exception:  # pylint: disable=broad-except
+        log.exception("topology: pub-complete collector raised for jid=%r", jid)
+    finally:
+        if event_bus is not None:
+            try:
+                event_bus.unsubscribe(tag, match_type="startswith")
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: pub-complete unsubscribe failed jid=%r",
+                    jid,
+                    exc_info=True,
+                )
+            try:
+                close = getattr(event_bus, "destroy", None) or getattr(
+                    event_bus, "close", None
+                )
+                if close is not None:
+                    close()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: pub-complete event_bus close failed jid=%r",
+                    jid,
+                    exc_info=True,
+                )
+        _PUB_COMPLETE_COLLECTORS.pop(jid, None)
 
 
 def _resolve_local_match(load):
