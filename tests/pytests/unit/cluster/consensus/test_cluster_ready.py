@@ -10,6 +10,7 @@ Covers:
 import asyncio
 import multiprocessing
 
+import salt.cluster
 from tests.support.mock import AsyncMock, MagicMock, patch
 
 
@@ -313,7 +314,7 @@ class TestRaftServiceReadinessSticky:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         # Pre-seed storage with a committed-shape CONFIG entry.
         storage = SaltStorage(my_addr, opts)
@@ -356,7 +357,7 @@ class TestRaftServiceReadinessSticky:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         config_entry = LogEntry(
@@ -422,7 +423,7 @@ class TestRaftServiceReadinessSticky:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         # Earlier entry: we WERE a voter.
@@ -506,7 +507,7 @@ class TestCommitIndexPersistenceRestart:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         storage.append_log(
@@ -556,7 +557,7 @@ class TestCommitIndexPersistenceRestart:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         storage.append_log(
@@ -605,7 +606,7 @@ class TestCommitIndexPersistenceRestart:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         storage.append_log(
@@ -655,7 +656,7 @@ class TestCommitIndexPersistenceRestart:
         from salt.cluster.consensus.storage import SaltStorage
 
         opts = self._build_opts(tmp_path)
-        my_addr = opts["interface"]
+        my_addr = salt.cluster.node_id(opts)
 
         storage = SaltStorage(my_addr, opts)
         # Committed CONFIG at index 0 — we ARE a voter here.
