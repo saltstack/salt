@@ -178,16 +178,147 @@ def test_salt_storage_state_roundtrip(storage):
         "term": 7,
         "voted_for": "voter-a",
         "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
     }
     storage.save_state(8, None)
-    assert storage.load_state() == {"term": 8, "voted_for": None, "leader_id": None}
+    assert storage.load_state() == {
+        "term": 8,
+        "voted_for": None,
+        "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
+    }
     # Round-trip with an explicit leader_id (observability path).
     storage.save_state(9, "voter-b", leader_id="voter-b")
     assert storage.load_state() == {
         "term": 9,
         "voted_for": "voter-b",
         "leader_id": "voter-b",
+        "commit_index": -1,
+        "last_applied": -1,
     }
+
+
+def test_salt_storage_persists_commit_index(storage):
+    """
+    ``save_state`` round-trips the Raft ``commit_index`` (BUG-025).
+
+    Without durable ``commit_index`` a master restart cannot replay
+    the committed suffix into its state machines when no peer is
+    reachable — the whole motivation for persisting the field.
+    """
+    storage.save_state(5, "voter-a", leader_id="voter-a", commit_index=42)
+    loaded = storage.load_state()
+    assert loaded["term"] == 5
+    assert loaded["commit_index"] == 42
+
+
+def test_salt_storage_preserves_commit_index_when_only_term_updates(storage):
+    """
+    A subsequent ``save_state`` that omits ``commit_index`` must not
+    regress the persisted value.  The commit hot path updates
+    ``commit_index`` independently of term/voted_for; if a later
+    term bump wiped commit_index we'd drop on-disk durability.
+    """
+    storage.save_state(1, "voter-a", commit_index=17)
+    # Bumping term without passing commit_index must keep 17.
+    storage.save_state(2, "voter-a")
+    loaded = storage.load_state()
+    assert loaded["term"] == 2
+    assert loaded["commit_index"] == 17
+
+
+def test_salt_storage_save_commit_index_merges_with_existing_state(storage):
+    """
+    ``save_commit_index`` writes only the commit_index field but must
+    preserve everything else already in state.p.
+    """
+    storage.save_state(3, "voter-b", leader_id="voter-b", commit_index=0)
+    storage.save_commit_index(99)
+    loaded = storage.load_state()
+    assert loaded["term"] == 3
+    assert loaded["voted_for"] == "voter-b"
+    assert loaded["leader_id"] == "voter-b"
+    assert loaded["commit_index"] == 99
+
+
+def test_salt_storage_commit_index_defaults_when_missing(storage):
+    """
+    Pre-BUG-025 state files were written without a ``commit_index``
+    field.  ``load_state`` must surface ``-1`` as the default so a
+    newly upgraded master sees "no persisted commit" and falls back
+    to the BUG-024 seed / peer AppendEntries recovery paths.
+    """
+    storage.save_state(4, "voter-c")  # no commit_index passed
+    loaded = storage.load_state()
+    assert loaded["commit_index"] == -1
+
+
+def test_log_persists_commit_index_across_restart(storage):
+    """
+    End-to-end: a ``Log`` that commits through index N must restore
+    that index on a fresh ``Log(storage=...)`` construction.  This
+    is the core BUG-025 invariant — without it ``apply_entries`` on
+    startup replays nothing and the cluster-ready gate latches
+    closed when no peer is reachable.
+    """
+    log_a = Log(storage=storage)
+    log_a.add(1, "a")
+    log_a.add(1, "b")
+    log_a.add(1, "c")
+    log_a.commit(2)
+    assert log_a.commit_index == 2
+
+    log_b = Log(storage=storage)
+    assert log_b.commit_index == 2
+
+
+def test_log_init_handles_missing_commit_index_field(storage):
+    """
+    Backward compat: an on-disk state file without ``commit_index``
+    (pre-BUG-025) must load as ``-1`` so recovery is purely
+    additive — no node upgrades into a broken state.
+    """
+    # Write a state record without commit_index (simulates pre-upgrade).
+    storage.save_state(2, "voter-a")
+    log = Log(storage=storage)
+    assert log.commit_index == -1
+
+
+def test_log_commit_is_monotonic_across_peer_sync(storage):
+    """
+    A loaded ``commit_index=N`` that later receives a lower
+    ``leader_commit`` from a peer AppendEntries must not retreat.
+    Raft's commit_index invariant is strictly monotonic; a merge
+    through ``Log.commit`` enforces that via ``max(new, current)``.
+    """
+    log_a = Log(storage=storage)
+    for i in range(5):
+        log_a.add(1, f"cmd{i}")
+    log_a.commit(4)  # commit everything we have
+
+    log_b = Log(storage=storage)
+    assert log_b.commit_index == 4
+    log_b.commit(2)  # simulate a stale AppendEntries with lower leader_commit
+    assert log_b.commit_index == 4
+
+
+def test_log_init_clamps_commit_index_against_snapshot(storage):
+    """
+    If a snapshot restored at ``last_included_index = L`` is present
+    and the persisted ``commit_index`` is ``N < L``, the effective
+    commit on load must be ``max(N, L)`` — the snapshot already
+    compacted entries up through L into the SMs, so commit_index
+    can never sit below it.
+    """
+    # Seed a snapshot at index 5 and persist commit_index=3.
+    storage.save_snapshot(b"snapshot-data", 5, 1)
+    storage.save_state(1, None, commit_index=3)
+    log = Log(storage=storage)
+    assert log.last_included_index == 5
+    # commit_index is clamped up to the snapshot's last_included_index.
+    assert log.commit_index == 5
 
 
 def test_salt_storage_log_append_and_reload(storage):
@@ -201,7 +332,13 @@ def test_salt_storage_log_append_and_reload(storage):
 
 
 def test_salt_storage_defaults_when_empty(storage):
-    assert storage.load_state() == {"term": 0, "voted_for": None, "leader_id": None}
+    assert storage.load_state() == {
+        "term": 0,
+        "voted_for": None,
+        "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
+    }
     assert storage.load_log() == []
     assert storage.load_snapshot() is None
 

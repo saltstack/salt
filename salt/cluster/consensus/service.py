@@ -237,22 +237,38 @@ class RaftService:
         # without extra plumbing.
         self._dispatcher = RaftDispatcher(self._nodes, node_id, self._peer_pushers)
 
-        # Readiness is sticky across RaftService restarts.  Raft safety
-        # forbids a newly-elected leader from committing CONFIG entries
-        # written in prior terms via ``advance_commit_index`` (Raft §5.4),
-        # and ``commit_index`` itself is not persisted — so a master that
-        # restarts in isolation (no reachable quorum partner) never
-        # reruns ``apply_entries`` for the on-disk CONFIG that originally
-        # admitted it as a voter.  Without this seeding the cluster-ready
-        # gate (``_cluster_is_ready``) latches closed on every restart
-        # and ``LocalClient`` publishes fail with ``cluster_retry``
-        # forever.
+        # Readiness is sticky across RaftService restarts.  The primary
+        # recovery path is ``Log.__init__`` loading the persisted
+        # ``commit_index`` from ``state.p`` (BUG-025) and this call to
+        # ``apply_entries`` driving every registered state machine —
+        # membership, ring registry, routing, and the application SM —
+        # through the on-disk committed suffix.  Every registration
+        # (``ring_registry_sm``, ``routing_sm``) has completed above, so
+        # the replay fans out to all of them atomically.
         #
-        # Replay the latest on-disk CONFIG entry into ``membership_sm``
-        # so the subsequent ``reconcile_membership`` call sees the
-        # restored voter view.  Safe because: (1) entries that reached
-        # on-disk append were already known at write time; (2) a stale
-        # view converges the moment the next AppendEntries arrives.
+        # Raft safety (§5.4) forbids a newly-elected leader from
+        # committing CONFIG entries written in prior terms via
+        # ``advance_commit_index`` — that rule is about CLIENT-VISIBILITY
+        # of still-uncommitted entries, not local durability.  Entries
+        # that this node already persisted at a known-good
+        # ``commit_index`` are safe to re-apply (the SMs are idempotent
+        # under ``_applied_config_index`` / ``_applied_index`` guards).
+        if self._node.log.commit_index > self._node.log.last_applied:
+            log.info(
+                "RaftService: replaying committed suffix on startup "
+                "(commit_index=%s, last_applied=%s)",
+                self._node.log.commit_index,
+                self._node.log.last_applied,
+            )
+            self._node.apply_entries()
+
+        # Defence-in-depth seed for state records written before BUG-025
+        # (which lacked a persisted ``commit_index``).  On a cleanly
+        # upgraded node ``apply_entries`` above has already populated
+        # ``membership_sm`` and the seed early-returns at the
+        # ``current_voters()`` guard.  On a mixed-vintage state file
+        # (pre-upgrade ``state.p``), the seed is the recovery path that
+        # keeps the cluster-ready gate from latching closed.
         self._seed_membership_from_log()
 
         # If Node started from a saved snapshot the membership SM was
@@ -314,14 +330,15 @@ class RaftService:
         Populate ``membership_sm`` from the latest CONFIG entry on disk
         so ``reconcile_membership`` sees the restored voter view.
 
-        Without this seed, a master that restarts in isolation (no
-        reachable quorum partner) never reruns ``apply_entries`` for
-        the CONFIG entry that admitted it as a voter: ``commit_index``
-        is not persisted (fresh ``Log.__init__`` resets to ``-1``) and
-        Raft §5.4 forbids a newly-elected leader from committing
-        prior-term entries via ``advance_commit_index``.  Result: the
-        SM stays empty, ``reconcile_membership`` early-returns, and
-        the ``cluster_ready`` gate latches closed forever.
+        Defence-in-depth path kept for pre-BUG-025 state files that
+        lack a persisted ``commit_index``.  On a cleanly upgraded node
+        ``Log.__init__`` restores ``commit_index`` from ``state.p`` and
+        ``RaftService.__init__`` drives ``apply_entries`` directly —
+        making this seed a no-op because the SM is already populated
+        (``current_voters()`` guard below).  When a master upgrades
+        with an on-disk state file that pre-dates commit_index
+        persistence, this seed is the fallback that keeps the
+        cluster-ready gate from latching closed.
 
         Only the latest on-disk CONFIG index is applied — the SM is a
         pure store (last write wins) and newer AppendEntries will
@@ -329,16 +346,31 @@ class RaftService:
         seed so ``reconcile_membership`` remains the single call site
         that drives ``_on_membership_change``.  A no-op when the log
         is empty, when no CONFIG is present, or when the SM has
-        already been populated by a snapshot restore.
+        already been populated by a snapshot restore / replay.
         """
         if self._node.log is None or not self._node.log.entries:
             return
         if self._node.membership_sm.current_voters():
             return
+        # Bound the seed by ``commit_index`` when it's persisted
+        # (BUG-025).  Applying an *uncommitted* CONFIG (an entry the
+        # leader wrote but never committed, e.g. after a late crash
+        # pre-commit) would pin ``_applied_config_index`` above
+        # ``commit_index`` and later suppress a legitimately-committed
+        # CONFIG at the same index arriving from a new leader.  A
+        # pre-BUG-025 state file reads ``commit_index = -1`` from
+        # ``load_state`` — in that case fall back to the historical
+        # "latest on-disk CONFIG" behaviour, which is safe because a
+        # cluster that was previously up had its CONFIG entries
+        # committed before they reached disk via normal AppendEntries.
+        commit_bound = self._node.log.commit_index
         latest_config = None
         for entry in self._node.log.entries:
-            if entry.type == LogEntryType.CONFIG:
-                latest_config = entry
+            if entry.type != LogEntryType.CONFIG:
+                continue
+            if commit_bound >= 0 and entry.index > commit_bound:
+                continue
+            latest_config = entry
         if latest_config is None:
             return
         cmd = latest_config.cmd
