@@ -299,6 +299,17 @@ VALID_OPTS = immutabletypes.freeze(
         # tallies.  Consumed by Phase 2's completion loop; reserved here
         # so the config schema is stable across Phase 1/2 releases.
         "topology_pub_complete_timeout": float,
+        # Grace window in seconds for pub-ack arrival before relying on
+        # syndic-style silent-inference fallback.  See RFC pub-ack-complete.
+        "topology_wait": float,
+        # Originator-side CLI consumption of topology/pub-ack +
+        # topology/pub-complete.  Default off so the semantic change to the
+        # CLI wait-loop's exit condition is strictly opt-in; emission (gated
+        # by ``topology_pub_ack``) stays default-on because it is pure
+        # telemetry.  Flipping this to True enables "exit the wait loop as
+        # soon as every ack'd peer has signaled pub-complete" rather than
+        # always waiting ``--timeout``.  See RFC pub-ack-complete, Phase 2.
+        "topology_pub_ack_consumer": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -2077,6 +2088,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "topology_summary_grains": [],
         "topology_pub_ack": True,
         "topology_pub_complete_timeout": 60.0,
+        "topology_wait": 2.0,
+        "topology_pub_ack_consumer": False,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

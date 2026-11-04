@@ -437,6 +437,15 @@ class LocalClient:
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
+        # Phase 2 of RFC pub-ack-complete: originator-side aggregation
+        # state that persists after :meth:`get_iter_returns` has
+        # exhausted.  Callers inspect these to render per-peer missed /
+        # ack / complete context distinct from "CLI never heard from
+        # peer X".  See doc/topics/master-topology/rfc-pub-ack-complete.md.
+        self._last_topology_missed_by_peer = {}
+        self._last_topology_peers_acked = set()
+        self._last_topology_peers_complete = set()
+        self._last_topology_expected_set = set()
 
     def __read_master_key(self):
         """
@@ -563,6 +572,18 @@ class LocalClient:
             self.event.subscribe("syndic/.*/{}".format(pub_data["jid"]), "regex")
 
         self.event.subscribe("salt/job/{}".format(pub_data["jid"]))
+
+        # Phase 2 of RFC pub-ack-complete: originator-side consumption of
+        # topology/pub-ack + topology/pub-complete.  Gated on both the
+        # consumer opt (semantic change to the wait-loop exit condition)
+        # and cluster_id (a non-cluster master cannot originate topology
+        # frames so there is nothing to consume).  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.
+        if self.opts.get("topology_pub_ack_consumer") and self.opts.get("cluster_id"):
+            self.event.subscribe(
+                "salt/topology/pub-(ack|complete)/{}".format(pub_data["jid"]),
+                "regex",
+            )
 
         return pub_data
 
@@ -1378,6 +1399,36 @@ class LocalClient:
         open_jids = set()
         timeout_at = time.time() + timeout
         gather_syndic_wait = time.time() + self.opts["syndic_wait"]
+
+        # Phase 2 of RFC pub-ack-complete: originator-side consumption of
+        # topology/pub-ack + topology/pub-complete.  Gated on both the
+        # consumer opt and cluster_id (a non-cluster master cannot
+        # originate topology frames).  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.
+        topology_consumer_active = bool(
+            self.opts.get("topology_pub_ack_consumer") and self.opts.get("cluster_id")
+        )
+        # Expected set grows as pub-ack frames arrive from peers.  The
+        # publisher's own local matcher output (``minions``) seeds it.
+        topo_expected_set = set(minions) if topology_consumer_active else set()
+        # Set of origin_cluster_id of peers that have emitted a pub-ack.
+        topo_peers_acked = set()
+        # Set of origin_cluster_id of peers that have emitted a pub-complete.
+        topo_peers_complete = set()
+        # ``origin_cluster_id -> [minion_id, ...]`` reported missed in
+        # pub-complete by each peer.  Surfaced to the caller via
+        # ``self._last_topology_missed_by_peer`` after the loop returns.
+        topo_missed_by_peer = {}
+        if topology_consumer_active:
+            topo_iter = self.get_returns_no_block(
+                f"salt/topology/pub-(ack|complete)/{jid}", "regex"
+            )
+            topo_pub_ack_deadline = time.time() + float(
+                self.opts.get("topology_wait", 2.0)
+            )
+        else:
+            topo_iter = None
+            topo_pub_ack_deadline = 0.0
         # are there still minions running the job out there
         # start as True so that we ping at least once
         minions_running = True
@@ -1451,6 +1502,46 @@ class LocalClient:
                     log.debug("jid %s return from %s", jid, display_id)
                     yield ret
 
+            # Drain topology/pub-ack + topology/pub-complete frames.
+            # Each pub-ack grows ``topo_expected_set`` by the peer's
+            # matched_minion_ids list and records the peer's cluster_id
+            # in ``topo_peers_acked``.  Each pub-complete records the
+            # peer in ``topo_peers_complete`` and captures its
+            # ``missed`` list.  See RFC pub-ack-complete, "Originator
+            # aggregation" section.
+            if topology_consumer_active:
+                for raw in topo_iter:
+                    if raw is None:
+                        break
+                    tag = raw.get("tag", "")
+                    data = raw.get("data") or {}
+                    topo_info = data.get("topology") or {}
+                    origin = topo_info.get("origin")
+                    if tag.startswith("salt/topology/pub-ack/"):
+                        matched = data.get("matched_minion_ids")
+                        if isinstance(matched, list):
+                            topo_expected_set.update(matched)
+                        if origin:
+                            topo_peers_acked.add(origin)
+                        log.debug(
+                            "jid %s pub-ack from %s matched=%s",
+                            jid,
+                            origin,
+                            matched,
+                        )
+                    elif tag.startswith("salt/topology/pub-complete/"):
+                        if origin:
+                            topo_peers_complete.add(origin)
+                            missed = data.get("missed")
+                            if isinstance(missed, list) and missed:
+                                topo_missed_by_peer[origin] = list(missed)
+                        log.debug(
+                            "jid %s pub-complete from %s missed=%s",
+                            jid,
+                            origin,
+                            data.get("missed"),
+                        )
+
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
             #
             # Topology forwarding (:mod:`salt.topology`) carries publishes
@@ -1465,6 +1556,36 @@ class LocalClient:
             # time to arrive.  Local topology publishes (non-empty
             # ``minions`` populated from a glob match) still short-circuit
             # as usual once every expected minion has returned.
+            #
+            # Topology pub-ack-complete early-exit (RFC Phase 2): when
+            # ``topology_pub_ack_consumer`` is on and we have a cluster_id,
+            # exit as soon as returned_set >= expected_set (happy path) or
+            # every ack'd peer has sent pub-complete AND the pub-ack
+            # grace window has elapsed (so a late-arriving peer's ack
+            # does not get skipped).  The generic ``--timeout`` branch
+            # still catches silent peers.
+            if topology_consumer_active:
+                if topo_expected_set and found >= topo_expected_set:
+                    log.debug(
+                        "jid %s topology happy-path exit: returned_set covers "
+                        "expected_set=%s",
+                        jid,
+                        topo_expected_set,
+                    )
+                    break
+                if (
+                    topo_peers_acked
+                    and topo_peers_complete >= topo_peers_acked
+                    and time.time() > topo_pub_ack_deadline
+                ):
+                    log.debug(
+                        "jid %s topology peers-complete exit: peers_complete=%s "
+                        "peers_acked=%s",
+                        jid,
+                        topo_peers_complete,
+                        topo_peers_acked,
+                    )
+                    break
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
@@ -1618,6 +1739,20 @@ class LocalClient:
         if open_jids:
             for jid in open_jids:
                 self.event.unsubscribe(jid)
+
+        # Surface the pub-complete ``missed`` lists for post-loop
+        # inspection.  Callers that care (e.g. a CLI wrapper rendering
+        # per-peer failure context) read ``self._last_topology_missed_by_peer``
+        # after the generator has exhausted.  Dict is keyed by the peer
+        # cluster_id so operators can distinguish "peer east-sub timed
+        # out on 2 of its minions" from "CLI never heard from east-sub."
+        # Underscore prefix avoids clashing with real minion ids in any
+        # downstream dict merge.  See RFC pub-ack-complete, "Originator
+        # aggregation" + Phase 2.
+        self._last_topology_missed_by_peer = topo_missed_by_peer
+        self._last_topology_peers_acked = set(topo_peers_acked)
+        self._last_topology_peers_complete = set(topo_peers_complete)
+        self._last_topology_expected_set = set(topo_expected_set)
 
         if expect_minions:
             yield from _iter_failed_missing_returns(self.opts, found, minions - found)
