@@ -312,7 +312,7 @@ def test_get_aggregate_chunks():
             "name": "packages-2",
             "state": "pkg",
             "fun": "installed",
-            "pkgs": ["cowsay", "fortune-mod"],
+            "pkgs": ["cowsay", "fortune-mod", {"tput": "1.0.1"}],
             "require": ["requirement"],
         },
         {
@@ -388,7 +388,7 @@ def test_get_dependencies():
             "name": "packages-2",
             "state": "pkg",
             "fun": "installed",
-            "pkgs": ["cowsay", "fortune-mod"],
+            "pkgs": ["cowsay", "fortune-mod", {"tput": "1.0.1"}],
             "require": ["requirement"],
         },
         {
@@ -465,7 +465,7 @@ def test_get_dependencies_when_aggregated():
             "name": "packages-2",
             "state": "pkg",
             "fun": "installed",
-            "pkgs": ["cowsay", "fortune-mod"],
+            "pkgs": ["cowsay", "fortune-mod", {"tput": "1.0.1"}],
             "require": ["requirement"],
         },
         {

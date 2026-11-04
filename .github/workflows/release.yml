@@ -163,6 +163,7 @@ jobs:
           git config --global commit.gpgsign true
 
       - name: Setup GnuPG
+        if: ${{ github.repository == 'saltstack/salt' || github.repository == 'saltstack/salt-priv' || github.repository == 'saltstack/salt-nightlies' }}
         env:
           SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}

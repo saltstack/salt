@@ -41,7 +41,6 @@ import salt.utils.user
 import salt.utils.verify
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.pillar import git_pillar
 
 try:
     import pwd
@@ -86,13 +85,7 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get("ext_pillar", [])]:
         if "git" in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(
-                    opts,
-                    opts_dict["git"],
-                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
-                    global_only=git_pillar.GLOBAL_ONLY,
-                )
+                pillar = salt.utils.gitfs.GitPillar(opts, opts_dict["git"])
                 ret.append(pillar)
             except salt.exceptions.FileserverConfigError:
                 if opts.get("git_pillar_verify_config", True):
@@ -309,6 +302,7 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
+                keyfile = os.path.join(opts["cachedir"], f".{user}_key")
                 if os.path.exists(keyfile):
                     with salt.utils.files.fopen(keyfile, "r") as fp:
                         keys[user] = salt.utils.stringutils.to_unicode(fp.read())

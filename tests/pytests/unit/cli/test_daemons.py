@@ -6,6 +6,7 @@ import logging
 import multiprocessing
 
 import salt.cli.daemons
+from salt.exceptions import SaltClientError
 from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
@@ -409,3 +410,67 @@ def test_master_prepare_cluster(tmp_path):
     assert (cluster_dir / "minions_denied").exists()
     assert (cluster_dir / "minions_autosign").exists()
     assert (cluster_dir / "minions_rejected").exists()
+
+
+def test_minion_start_destroys_minion_manager_on_lost_master():
+    """
+    ``Minion.start()`` must destroy the MinionManager whenever
+    ``_real_start()`` raises ``SaltClientError`` (i.e. the minion lost its
+    master connection and isn't retrying), instead of returning with
+    ``event_publisher``/``event`` left for ``__del__``'s GC-time safety net
+    to reclaim. See #70175.
+    """
+    minion = salt.cli.daemons.Minion()
+    minion.options = MagicMock(daemon=False)
+    minion.minion = MagicMock()
+
+    with patch("salt.utils.parsers.DaemonMixIn.start", MagicMock()), patch.object(
+        minion, "_real_start", side_effect=SaltClientError("Minion could not connect")
+    ):
+        minion.start()
+
+    minion.minion.destroy.assert_called_once()
+
+
+def test_minion_start_destroys_minion_manager_before_daemon_retry():
+    """
+    Same as above, but for the daemonized multi-master failover retry
+    branch -- the MinionManager must be destroyed *and replaced with a
+    fresh instance* before ``continue`` re-enters ``_real_start()``.
+
+    Destroying alone isn't enough: the old MinionManager's io_loop was
+    already closed by tune_in()'s own finally clause, so re-entering
+    tune_in() on that same, now-stale instance would immediately raise
+    "RuntimeError: Event loop is closed". See #70178 (the destroy()-only
+    fix from #70175 stopped the resource leak but not this crash).
+    """
+    minion = salt.cli.daemons.Minion()
+    minion.options = MagicMock(daemon=True)
+    minion.config = {"id": "test-minion"}
+    first_manager = MagicMock(name="first_manager")
+    minion.minion = first_manager
+
+    calls = {"count": 0}
+
+    def _real_start_side_effect():
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise SaltClientError("Minion could not connect")
+        # Second attempt "succeeds" (returns normally).
+
+    second_manager = MagicMock(name="second_manager")
+
+    with patch("salt.utils.parsers.DaemonMixIn.start", MagicMock()), patch.object(
+        minion, "_real_start", side_effect=_real_start_side_effect
+    ), patch(
+        "salt.minion.MinionManager", MagicMock(return_value=second_manager)
+    ) as manager_cls:
+        minion.start()
+
+    assert calls["count"] == 2
+    first_manager.destroy.assert_called_once()
+    manager_cls.assert_called_once_with(minion.config)
+    assert minion.minion is second_manager
+    # The replacement instance must not itself be destroyed by this same
+    # retry pass -- only the stale one it replaced.
+    second_manager.destroy.assert_not_called()

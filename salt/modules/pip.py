@@ -36,9 +36,10 @@ to your current salt environment:
    salt <minion> pip.list cwd='C:\salt\bin\Scripts' bin_env='C:\salt\bin\Scripts\pip.exe'
 
 Specifying the ``cwd`` and ``bin_env`` options ensures you're modifying the
-salt environment. If these are omitted, it will default to the local
-installation of python. If python is not installed locally it will fail saying
-it couldn't find pip.
+salt environment. If these are omitted on a onedir minion, it will default
+to ``salt-pip`` rather than any locally installed Python (see
+`Onedir / bundled minions`_ above). If neither Salt's bundled Python nor a
+local Python can be found, it will fail saying it couldn't find pip.
 
 State File Support
 ------------------
@@ -448,6 +449,30 @@ def _format_env_vars(env_vars):
     return ret
 
 
+def _get_proxy_env(proxy):
+    """
+    Return the environment used to hand the proxy to pip.
+
+    The proxy is passed as ``PIP_PROXY`` rather than ``--proxy`` so that
+    credentials embedded in the URL do not show up in the process list.
+
+    An explicit ``proxy`` takes precedence over the Minion's global proxy
+    configuration. ``proxy=False`` ignores the global configuration.
+    """
+    if proxy:
+        return {"PIP_PROXY": proxy}
+    if proxy is False:
+        return {}
+    config = __opts__
+    if not (config.get("proxy_host") and config.get("proxy_port")):
+        return {}
+    if config.get("proxy_username") and config.get("proxy_password"):
+        url = "http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}"
+    else:
+        url = "http://{proxy_host}:{proxy_port}"
+    return {"PIP_PROXY": url.format(**config)}
+
+
 def normalize(name):
     """Normalize a package name according to the recommendations in PEP 503.
 
@@ -823,18 +848,7 @@ def install(
 
         cmd.extend(["--log", log])
 
-    config = __opts__
-    if proxy:
-        cmd.extend(["--proxy", proxy])
-    # If proxy arg is set to False we won't use the global proxy even if it's set.
-    elif proxy is not False and config.get("proxy_host") and config.get("proxy_port"):
-        if config.get("proxy_username") and config.get("proxy_password"):
-            http_proxy_url = "http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}".format(
-                **config
-            )
-        else:
-            http_proxy_url = "http://{proxy_host}:{proxy_port}".format(**config)
-        cmd.extend(["--proxy", http_proxy_url])
+    proxy_env = _get_proxy_env(proxy)
 
     if timeout:
         try:
@@ -1075,6 +1089,9 @@ def install(
     if env_vars:
         cmd_kwargs.setdefault("env", {}).update(_format_env_vars(env_vars))
 
+    if proxy_env:
+        cmd_kwargs.setdefault("env", {}).update(proxy_env)
+
     try:
         if cwd:
             cmd_kwargs["cwd"] = cwd
@@ -1121,6 +1138,11 @@ def uninstall(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir minion, omitting ``bin_env`` uninstalls from the isolated
+        extras directory via ``salt-pip``, not the system Python. Pass
+        ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system Python
+        instead. See `Onedir / bundled minions`_ above.
 
     log
         Log file where a complete (maximum verbosity) record will be kept
@@ -1196,18 +1218,7 @@ def uninstall(
 
         cmd.extend(["--log", log])
 
-    config = __opts__
-    if proxy:
-        cmd.extend(["--proxy", proxy])
-    # If proxy arg is set to False we won't use the global proxy even if it's set.
-    elif proxy is not False and config.get("proxy_host") and config.get("proxy_port"):
-        if config.get("proxy_username") and config.get("proxy_password"):
-            http_proxy_url = "http://{proxy_username}:{proxy_password}@{proxy_host}:{proxy_port}".format(
-                **config
-            )
-        else:
-            http_proxy_url = "http://{proxy_host}:{proxy_port}".format(**config)
-        cmd.extend(["--proxy", http_proxy_url])
+    proxy_env = _get_proxy_env(proxy)
 
     if timeout:
         try:
@@ -1257,8 +1268,11 @@ def uninstall(
     cmd_kwargs = dict(
         python_shell=False, runas=user, cwd=cwd, saltenv=saltenv, use_vt=use_vt
     )
+    env = dict(proxy_env)
     if bin_env and os.path.isdir(bin_env):
-        cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
+        env["VIRTUAL_ENV"] = bin_env
+    if env:
+        cmd_kwargs["env"] = env
 
     try:
         return __salt__["cmd.run_all"](cmd, **cmd_kwargs)
@@ -1282,6 +1296,11 @@ def freeze(bin_env=None, user=None, cwd=None, use_vt=False, env_vars=None, **kwa
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir minion, omitting ``bin_env`` lists packages via
+        ``salt-pip``, not the system Python. Pass ``bin_env`` (e.g.
+        ``/usr/bin/pip3``) to target the system Python instead. See
+        `Onedir / bundled minions`_ above.
 
     user
         The user under which to run pip
@@ -1426,11 +1445,18 @@ def list_(prefix=None, bin_env=None, user=None, cwd=None, env_vars=None, **kwarg
         ``freeze`` function output will be used to determine the name and
         version of installed modules.
 
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir minion, omitting
+        ``bin_env`` lists packages via ``salt-pip``, not the system Python.
+        Pass ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system
+        Python instead. See `Onedir / bundled minions`_ above.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' pip.list salt
+        salt '*' pip.list bin_env=/usr/bin/pip3
     """
 
     packages = {}
@@ -1493,6 +1519,11 @@ def version(bin_env=None, cwd=None, user=None):
     Returns the version of pip. Use ``bin_env`` to specify the path to a
     virtualenv and get the version of pip in that virtualenv.
 
+    On a onedir minion, omitting ``bin_env`` returns the version of the pip
+    behind ``salt-pip``, not the system Python's. Pass ``bin_env`` (e.g.
+    ``/usr/bin/pip3``) to target the system Python instead. See
+    `Onedir / bundled minions`_ above.
+
     If unable to detect the pip version, returns ``None``.
 
     .. versionchanged:: 3001.1
@@ -1534,6 +1565,12 @@ def version(bin_env=None, cwd=None, user=None):
 def list_upgrades(bin_env=None, user=None, cwd=None):
     """
     Check whether or not an upgrade is available for all packages
+
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir minion, omitting
+        ``bin_env`` checks via ``salt-pip``, not the system Python. Pass
+        ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system Python
+        instead. See `Onedir / bundled minions`_ above.
 
     CLI Example:
 
@@ -1642,6 +1679,12 @@ def upgrade_available(pkg, bin_env=None, user=None, cwd=None):
 
     Check whether or not an upgrade is available for a given package
 
+    bin_env
+        Path to pip (or to a virtualenv). On a onedir minion, omitting
+        ``bin_env`` checks via ``salt-pip``, not the system Python. Pass
+        ``bin_env`` (e.g. ``/usr/bin/pip3``) to target the system Python
+        instead. See `Onedir / bundled minions`_ above.
+
     CLI Example:
 
     .. code-block:: bash
@@ -1723,6 +1766,7 @@ def list_all_versions(
     cwd=None,
     index_url=None,
     extra_index_url=None,
+    proxy=None,
 ):
     """
     .. versionadded:: 2017.7.3
@@ -1737,6 +1781,11 @@ def list_all_versions(
         to the pip to use when more than one Python release is installed (e.g.
         ``/usr/bin/pip-2.7`` or ``/usr/bin/pip-2.6``. If a directory path is
         specified, it is assumed to be a virtualenv.
+
+        On a onedir minion, omitting ``bin_env`` queries via ``salt-pip``,
+        not the system Python. Pass ``bin_env`` (e.g. ``/usr/bin/pip3``) to
+        target the system Python instead. See `Onedir / bundled minions`_
+        above.
 
     include_alpha
         Include alpha versions in the list
@@ -1760,6 +1809,11 @@ def list_all_versions(
     extra_index_url
         Additional URL of Python Package Index
         .. versionadded:: 2019.2.0
+
+    proxy
+        Proxy URL to use when querying package versions. If omitted, use the
+        Minion's global proxy configuration. Set to ``False`` to ignore the
+        Minion's global proxy configuration.
 
     CLI Example:
 
@@ -1794,11 +1848,17 @@ def list_all_versions(
         if not salt.utils.url.validate(extra_index_url, VALID_PROTOS):
             raise CommandExecutionError(f"'{extra_index_url}' is not a valid URL")
         cmd.extend(["--extra-index-url", extra_index_url])
+
+    proxy_env = _get_proxy_env(proxy)
+
     cmd_kwargs = dict(
         cwd=cwd, runas=user, output_loglevel="quiet", redirect_stderr=True
     )
+    env = dict(proxy_env)
     if bin_env and os.path.isdir(bin_env):
-        cmd_kwargs["env"] = {"VIRTUAL_ENV": bin_env}
+        env["VIRTUAL_ENV"] = bin_env
+    if env:
+        cmd_kwargs["env"] = env
 
     result = __salt__["cmd.run_all"](cmd, **cmd_kwargs)
 

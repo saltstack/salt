@@ -33,7 +33,7 @@ def _run(coro):
 
 def _make_opts(node_id, peers):
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cluster_id": "test-cluster",
         "cluster_peers": peers,
@@ -879,7 +879,7 @@ def _make_ring_opts(node_id, peers, tmp_path):
     the module-level ``_TMPDIR`` lets prior tests leak state.
     """
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cluster_id": "test-cluster",
         "cluster_peers": peers,

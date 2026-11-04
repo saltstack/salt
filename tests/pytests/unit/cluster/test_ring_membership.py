@@ -27,8 +27,8 @@ def _isolate_ring():
     ring_membership.reset()
 
 
-def _opts(interface):
-    return {"interface": interface}
+def _opts(node_id):
+    return {"id": node_id}
 
 
 # ---------------------------------------------------------------------------
@@ -46,13 +46,13 @@ def test_owns_returns_true_for_empty_ring():
     assert ring_membership.owns(_opts("master-1"), "minion-A") is True
 
 
-def test_owns_true_when_interface_missing():
+def test_owns_true_when_id_missing():
     """
-    Defensive: opts dicts without an ``interface`` (some test fixtures)
-    are treated as standalone — every key is owned locally.
+    Defensive: opts dicts without an ``id`` (some test fixtures) are treated
+    as standalone — every key is owned locally.
     """
     assert ring_membership.owns({}, "jid-99") is True
-    assert ring_membership.owns({"id": "host"}, "jid-99") is True
+    assert ring_membership.owns({"interface": "127.0.0.1"}, "jid-99") is True
 
 
 def test_get_ring_returns_singleton():

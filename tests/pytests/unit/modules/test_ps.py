@@ -8,7 +8,11 @@ import salt.modules.ps
 import salt.modules.ps as ps
 import salt.utils.data
 import salt.utils.platform
-from salt.exceptions import CommandExecutionError, SaltInvocationError
+from salt.exceptions import (
+    CommandExecutionError,
+    CommandNotFoundError,
+    SaltInvocationError,
+)
 from tests.support.mock import MagicMock, Mock, call, patch
 
 # TestCase Exceptions are tested in tests/unit/modules/test_ps.py
@@ -882,21 +886,31 @@ root     2710129  0.0  0.0  18000  7428 pts/4    S+   Aug21   0:33 sudo -E salt-
 root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-master -l debug
 """
 
-    with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
-        expected = [
-            "salt-master",
-            [
-                "root     2710129  0.0  0.0  18000  7428 pts/4    S+   Aug21   0:33 sudo -E salt-master -l debug",
-                "root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-master -l debug",
-            ],
-            "2 occurrence(s).",
-        ]
-        ret = ps.psaux("salt-master")
-        assert ret == expected
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/ps")):
+        with patch.dict(ps.__salt__, {"cmd.run": MagicMock(return_value=cmd_run_mock)}):
+            expected = [
+                "salt-master",
+                [
+                    "root     2710129  0.0  0.0  18000  7428 pts/4    S+   Aug21   0:33 sudo -E salt-master -l debug",
+                    "root     2710131  0.0  0.0  18000  1196 pts/6    Ss   Aug21   0:00 sudo -E salt-master -l debug",
+                ],
+                "2 occurrence(s).",
+            ]
+            ret = ps.psaux("salt-master")
+            assert ret == expected
 
-        expected = ["salt-minion", [], "0 occurrence(s)."]
-        ret = ps.psaux("salt-minion")
-        assert ret == expected
+            expected = ["salt-minion", [], "0 occurrence(s)."]
+            ret = ps.psaux("salt-minion")
+            assert ret == expected
+
+
+def test_psaux_command_not_found():
+    """
+    Testing psaux raises CommandNotFoundError when the ps binary is missing
+    """
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with pytest.raises(CommandNotFoundError):
+            ps.psaux("salt-master")
 
 
 @pytest.mark.skip_on_windows(reason="ss not available in Windows")
@@ -992,7 +1006,7 @@ sshd    1743 root    4u  IPv6              31916      0t0     TCP *:ssh (LISTEN)
 
     apache2_cmd_run_mock = ""
 
-    with patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/netstat")):
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/bin/lsof")):
         with patch.dict(
             ps.__salt__, {"cmd.run": MagicMock(return_value=sshd_cmd_run_mock)}
         ):
@@ -1009,6 +1023,15 @@ sshd    1743 root    4u  IPv6              31916      0t0     TCP *:ssh (LISTEN)
             expected = ["apache2", ""]
             ret = ps.lsof("apache2")
             assert ret == expected
+
+
+def test_lsof_command_not_found():
+    """
+    Testing lsof raises CommandNotFoundError when the lsof binary is missing
+    """
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with pytest.raises(CommandNotFoundError):
+            ps.lsof("sshd")
 
 
 def test_boot_time():

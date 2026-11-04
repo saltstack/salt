@@ -144,8 +144,14 @@ def test_user_present_nondefault(grains, modules, states, username, user_home):
     if not salt.utils.platform.is_darwin() and not salt.utils.platform.is_windows():
         assert user_home.is_dir()
 
-    if grains["os_family"] == "Suse" and not (
-        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+    if (
+        grains["os_family"] == "Suse"
+        and not grains.get("transactional", False)
+        and grains.get("osmajorrelease", 0) < 16
+        and (
+            grains.get("osrelease_info", ()) < (15, 6)
+            or grains.get("osfullname", "") == "SLES"
+        )
     ):
         expected_group_name = "users"
     elif grains["os_family"] == "MacOS":
@@ -415,7 +421,12 @@ def test_user_present_change_groups(
 ):
     expected_groups = [group_2.name, group_1.name]
     if grains["os_family"] == "Suse" and (
-        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+        grains.get("transactional", False)
+        or grains.get("osmajorrelease", 0) >= 16
+        or (
+            grains.get("osrelease_info", ()) >= (15, 6)
+            and grains.get("osfullname", "") != "SLES"
+        )
     ):
         expected_groups.append(username)
 
@@ -449,7 +460,12 @@ def test_user_present_change_optional_groups(
 ):
     expected_groups = [group_2.name, group_1.name]
     if grains["os_family"] == "Suse" and (
-        grains.get("transactional", False) or grains.get("osmajorrelease", 0) >= 16
+        grains.get("transactional", False)
+        or grains.get("osmajorrelease", 0) >= 16
+        or (
+            grains.get("osrelease_info", ()) >= (15, 6)
+            and grains.get("osfullname", "") != "SLES"
+        )
     ):
         expected_groups.append(username)
 
@@ -610,3 +626,135 @@ def test_win_user_present_new_password(states, account_with_password):
     ret = states.user.present(name=account_with_password, password="N3wP@ssW0rd!")
     assert ret.result is True
     assert ret.changes.get("passwd") == "XXX-REDACTED-XXX", ret.changes
+
+
+# ---------------------------------------------------------------------------
+# Windows user/group name collision, new Windows-only fields, fullname bugs
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_group_name_collision(modules, states, username):
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups, so user.present must fail fast with a clear message
+    when a group.present of the same name has already run, instead of ever
+    calling user.add/NetUserAdd.
+    """
+    try:
+        ret = states.group.present(name=username)
+        assert ret.result is True
+
+        ret = states.user.present(name=username)
+        assert ret.result is False
+        assert "already exists" in ret.comment
+        assert modules.user.info(username) == {}
+
+        # Must also fail fast in test mode -- this restriction can't be
+        # resolved by a later requisite, unlike a merely-missing group.
+        ret = states.user.present(name=username, test=True)
+        assert ret.result is False
+        assert "already exists" in ret.comment
+    finally:
+        states.group.absent(name=username)
+
+
+@pytest.mark.skip_unless_on_windows
+@pytest.mark.parametrize(
+    "param_name, value, info_field, expected",
+    [
+        ("win_password_never_expires", True, "password_never_expires", None),
+        ("win_disallow_change_password", True, "disallow_change_password", None),
+        ("win_account_disabled", True, "account_disabled", None),
+        ("win_expiration_date", "3/19/2030", "expiration_date", "2030-03-19 00:00:00"),
+    ],
+)
+def test_user_present_windows_account_flags(
+    modules, states, username, param_name, value, info_field, expected
+):
+    """
+    Regression test for #38563: these Windows-only user.update() fields
+    must be settable through user.present, and applying them a second time
+    must be a no-op (idempotent).
+    """
+    ret = states.user.present(name=username)
+    assert ret.result is True
+
+    ret = states.user.present(name=username, **{param_name: value})
+    assert ret.result is True
+    assert ret.changes
+
+    user_info = modules.user.info(username)
+    expected = expected if expected is not None else value
+    assert user_info[info_field] == expected
+
+    # Re-applying the same value should produce no changes.
+    ret = states.user.present(name=username, **{param_name: value})
+    assert ret.result is True
+    assert ret.changes == {}
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_unlock_account_noop_when_not_locked(states, username):
+    """
+    win_useradd.update()'s unlock_account only supports unlocking (True);
+    applying win_unlock_account=True to an account that isn't locked must be
+    a safe no-op per the documented asymmetry (see states.user._changes).
+    """
+    ret = states.user.present(name=username)
+    assert ret.result is True
+
+    ret = states.user.present(name=username, win_unlock_account=True)
+    assert ret.result is True
+    assert ret.changes == {}
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_clear_fullname(modules, states, username):
+    """
+    Regression test: win_useradd.update() used a truthy check on fullname,
+    so user.present could never clear the Windows "Full Name" field.
+    """
+    ret = states.user.present(name=username, fullname="Something")
+    assert ret.result is True
+
+    ret = states.user.present(name=username, fullname="")
+    assert ret.result is True
+    assert ret.changes
+    assert modules.user.info(username)["fullname"] == ""
+
+
+@pytest.mark.skip_unless_on_windows
+def test_user_present_windows_fullname_with_comma(states, username):
+    """
+    Bonus fix: Windows "Full Name" is not comma-delimited GECOS data, so a
+    comma in fullname must not be rejected there.
+    """
+    ret = states.user.present(name=username, fullname="Doe, John")
+    assert ret.result is True
+    assert "Unsupported char" not in ret.comment
+
+
+@pytest.mark.skip_unless_on_linux(
+    reason="user.present's shell param only applies on Linux/Unix"
+)
+def test_user_present_shell_not_leaked_to_onlyif(modules, states, username):
+    """
+    Regression test for #59420: user.present's `shell` (login shell) must
+    never be forwarded as the shell to run onlyif/unless check commands in.
+
+    Before the fix, the onlyif check below was executed under /bin/false
+    (borrowed from the state's `shell` param), which always exits 1
+    regardless of its argument -- so the onlyif was treated as unmet, the
+    state was skipped, and the shell was never actually set.
+    """
+    ret = states.user.present(
+        name=username,
+        shell="/bin/false",
+        onlyif="/bin/true",
+    )
+    assert ret.result is True
+    assert ret.changes
+
+    user_info = modules.user.info(username)
+    assert user_info["shell"] == "/bin/false"

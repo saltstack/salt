@@ -19,6 +19,20 @@ def test_salt_run_exception_exit(salt_run_cli):
     assert ret.returncode == 1
 
 
+def test_salt_run_system_exit(salt_run_cli):
+    """
+    A SystemExit raised inside a runner (e.g. from Ctrl-C's SIGINT handler,
+    or a runner module calling sys.exit() directly) should propagate and
+    exit the process normally, not be reported as a runner "Exception
+    occurred" error.
+    """
+    ret = salt_run_cli.run("error.error", "name='SystemExit'", "message='Bye'")
+    assert ret.returncode == 1
+    assert "Bye" in ret.stderr
+    assert "Exception occurred in runner" not in ret.stdout
+    assert "Exception occurred in runner" not in ret.stderr
+
+
 def test_salt_run_non_exception_exit(salt_run_cli):
     """
     Test standard exitcode and output when runner works.

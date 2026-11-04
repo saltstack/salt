@@ -150,10 +150,7 @@ def salt_ssh_cli_parameterized(
 
 @pytest.fixture(scope="package", autouse=True)
 def _auto_skip_on_system_python_too_recent(grains):
-    if (
-        grains["osfinger"] in ("Fedora Linux-40", "Ubuntu-24.04", "Debian-13")
-        or grains["os_family"] == "Arch"
-    ):
+    if grains["osfinger"] in ("Ubuntu-24.04", "Debian-13"):
         pytest.skip(
             "System ships with a version of python that is too recent for salt-ssh tests",
             # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
@@ -161,6 +158,8 @@ def _auto_skip_on_system_python_too_recent(grains):
             # has been deprecated since Python 3.7, so, the logic goes into trying to import
             # backports.ssl-match-hostname which is not installed on the system.
             # Debian 13 ships with Python 3.13 which has similar compatibility issues.
+            # Fedora 40 and Arch Linux dropped from this list: Fedora 40 reached EOL
+            # (replaced by fedora-43 in CI) and Arch Linux is not part of the CI matrix.
         )
     if system_python_version() < (3, 10):
         pytest.skip("System python too old for these tests")
