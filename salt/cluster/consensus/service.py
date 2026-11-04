@@ -237,6 +237,24 @@ class RaftService:
         # without extra plumbing.
         self._dispatcher = RaftDispatcher(self._nodes, node_id, self._peer_pushers)
 
+        # Readiness is sticky across RaftService restarts.  Raft safety
+        # forbids a newly-elected leader from committing CONFIG entries
+        # written in prior terms via ``advance_commit_index`` (Raft §5.4),
+        # and ``commit_index`` itself is not persisted — so a master that
+        # restarts in isolation (no reachable quorum partner) never
+        # reruns ``apply_entries`` for the on-disk CONFIG that originally
+        # admitted it as a voter.  Without this seeding the cluster-ready
+        # gate (``_cluster_is_ready``) latches closed on every restart
+        # and ``LocalClient`` publishes fail with ``cluster_retry``
+        # forever.
+        #
+        # Replay the latest on-disk CONFIG entry into ``membership_sm``
+        # so the subsequent ``reconcile_membership`` call sees the
+        # restored voter view.  Safe because: (1) entries that reached
+        # on-disk append were already known at write time; (2) a stale
+        # view converges the moment the next AppendEntries arrives.
+        self._seed_membership_from_log()
+
         # If Node started from a saved snapshot the membership SM was
         # restored before this on_change wiring existed, so the cluster-
         # ready / peer-table side effects never fired.  Reconcile now so
@@ -290,6 +308,68 @@ class RaftService:
             )
             self._on_ready()
             self._on_ready = None  # fire only once
+
+    def _seed_membership_from_log(self):
+        """
+        Populate ``membership_sm`` from the latest CONFIG entry on disk
+        so ``reconcile_membership`` sees the restored voter view.
+
+        Without this seed, a master that restarts in isolation (no
+        reachable quorum partner) never reruns ``apply_entries`` for
+        the CONFIG entry that admitted it as a voter: ``commit_index``
+        is not persisted (fresh ``Log.__init__`` resets to ``-1``) and
+        Raft §5.4 forbids a newly-elected leader from committing
+        prior-term entries via ``advance_commit_index``.  Result: the
+        SM stays empty, ``reconcile_membership`` early-returns, and
+        the ``cluster_ready`` gate latches closed forever.
+
+        Only the latest on-disk CONFIG index is applied — the SM is a
+        pure store (last write wins) and newer AppendEntries will
+        converge any stale view.  ``on_change`` is stashed during the
+        seed so ``reconcile_membership`` remains the single call site
+        that drives ``_on_membership_change``.  A no-op when the log
+        is empty, when no CONFIG is present, or when the SM has
+        already been populated by a snapshot restore.
+        """
+        if self._node.log is None or not self._node.log.entries:
+            return
+        if self._node.membership_sm.current_voters():
+            return
+        latest_config = None
+        for entry in self._node.log.entries:
+            if entry.type == LogEntryType.CONFIG:
+                latest_config = entry
+        if latest_config is None:
+            return
+        cmd = latest_config.cmd
+        if isinstance(cmd, (bytes, bytearray, memoryview)):
+            try:
+                import json  # pylint: disable=import-outside-toplevel
+
+                cmd = json.loads(bytes(cmd).decode("utf-8"))
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "RaftService: could not decode on-disk CONFIG entry at index %s",
+                    latest_config.index,
+                )
+                return
+        log.info(
+            "RaftService: seeding membership_sm from on-disk CONFIG at index %s",
+            latest_config.index,
+        )
+        # Suppress on_change for the seed apply; reconcile_membership
+        # (called right after this) is the single site that fans out
+        # to _on_membership_change / on_config_change.  Also bump
+        # Node._applied_config_index so a future AppendEntries carrying
+        # an older CONFIG cannot downgrade this restored view.
+        saved_on_change = self._node.membership_sm.on_change
+        self._node.membership_sm.on_change = None
+        try:
+            self._node.membership_sm.apply(cmd, index=latest_config.index)
+        finally:
+            self._node.membership_sm.on_change = saved_on_change
+        if latest_config.index > self._node._applied_config_index:
+            self._node._applied_config_index = latest_config.index
 
     def _on_ring_registry_change(self, ring_id, founding_voters, status):
         """
