@@ -1037,6 +1037,66 @@ async def test_publish_payload_cluster_runner_shed_unowned_all_decodes(master_op
     channel.transport.publish_payload.assert_not_called()
 
 
+async def test_run_shed_unowned_all_fans_out_cluster_peer_shed_request(master_opts):
+    """
+    The published ring documentation says ``cluster.shed_unowned_all``
+    fans out to every peer via a ``cluster/peer/shed-request`` event
+    carrying the runner's parameters, cluster_aes-encrypted.  Pin:
+
+    1. Every pusher receives a ``publish`` call.
+    2. Each event's outer tag is exactly
+       ``cluster/peer/shed-request``.
+    3. The envelope round-trips through the ``cluster_aes`` crypticle
+       and restores the original request payload — a regression that
+       dropped the encryption (or truncated the payload) trips here.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+    from tests.support.mock import patch as _patch
+
+    channel = _pub_channel(
+        master_opts,
+        pushers=[MagicMock(pull_host="peer-a"), MagicMock(pull_host="peer-b")],
+    )
+    for pusher in channel.pushers:
+        pusher.publish = AsyncMock(return_value=None)
+
+    # Secrets stub for the Crypticle.  SMaster.secrets["cluster_aes"]
+    # is the shared cluster AES key; a 32-byte token is enough to
+    # satisfy ``Crypticle.generate_key_string`` consumers.
+    secrets = {
+        "cluster_aes": {
+            "secret": MagicMock(value=salt.crypt.Crypticle.generate_key_string())
+        }
+    }
+    payload = {
+        "ring_id": "jobs",
+        "banks": ["jobs/loads", "jobs/minions"],
+        "subbank_template": "jobs/returns/{key}",
+        "driver": None,
+        "dry_run": False,
+    }
+
+    with _patch.object(server.salt.master.SMaster, "secrets", secrets):
+        await channel._run_shed_unowned_all(payload)
+
+    for pusher in channel.pushers:
+        pusher.publish.assert_called_once()
+    # Inspect the envelope on one of the publishes.
+    envelope = channel.pushers[0].publish.call_args.args[0]
+    tag, body = salt.utils.event.SaltEvent.unpack(envelope)
+    assert tag == "cluster/peer/shed-request", (
+        "fan-out envelope tag drifted from the documented "
+        f"'cluster/peer/shed-request': got {tag!r}"
+    )
+    # Round-trip the encrypted body through a fresh Crypticle sharing
+    # the same cluster_aes secret — proves the envelope stayed
+    # encrypted and the full payload survived.
+    crypticle = salt.crypt.Crypticle(
+        master_opts, secrets["cluster_aes"]["secret"].value
+    )
+    assert crypticle.loads(body) == payload
+
+
 async def test_publish_payload_cluster_runner_delegate_write_decodes(master_opts):
     """
     ``cluster/runner/delegate_write`` decodes and dispatches

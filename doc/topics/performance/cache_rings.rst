@@ -73,12 +73,30 @@ sites in :mod:`salt.master` ask
 *key* for *data_type*; the gate consults the routing table, then the
 named ring's ownership answer.
 
-An unroutable or empty ring answers *True* for every key, so a master
-that has not had its ring populated (subprocess pre-fork, or one without
-a routing entry) keeps the pre-multi-ring broadcast behaviour.  There is
-no state in which a routed cache stops writing — the worst case is a
-briefly stale ring that routes to the wrong master, and the operator
-runners below detect that.
+The gate's decision table for a write arriving at a master:
+
+* **No routing entry for the data type** (or the route points at
+  ``None``): broadcast — every master owns, the write persists
+  locally.  This is the pre-multi-ring default and the state every
+  master is in before :func:`cluster.route_set` commits.
+* **Route points at a ring this master does not host locally**:
+  returns ``False`` — the write is dropped locally, counted under
+  ``not_a_member`` in :func:`salt.cluster.ring_membership.drop_stats`.
+  The load balancer is expected to steer traffic for a routed cache
+  to a master that *is* in the ring; this drop is the "misconfig"
+  signal.
+* **Route points at a local ring**: defers to the ring's
+  :meth:`HashRing.owns` answer.  Non-owners drop under
+  ``other_ring_member`` (the expected shard-miss path, not a
+  misconfig), and :meth:`_delegate_on_miss` in :mod:`salt.master`
+  forwards the write back onto the cluster bus so the owning master
+  picks it up.
+
+A master whose ring is empty (subprocess pre-fork, or a ring whose
+per-ring Raft group has not yet committed membership) behaves as "not
+a member" and drops routed writes — this is why the operator
+cookbook below verifies ring state via ``cluster.rings`` before
+clearing the pre-route broadcast assumption.
 
 What is actually consistent, and what is eventual
 -------------------------------------------------
@@ -192,8 +210,15 @@ Verify the registry caught up on every master:
 
     salt-run cluster.rings
     # => active_rings: [..., "jobs"]
-    salt-run cluster.ring_info
-    # => rings: {"jobs": {"members": ["m1","m2","m3"], "replicas": 1, ...}}
+
+``cluster.rings`` is authoritative — it replays the committed cluster
+Raft log.  ``cluster.ring_info`` reports the runner-subprocess copy of
+the ring, which in 3008.x is intentionally empty (the publish daemon's
+ring is in a separate process; a shared-memory ring is a future
+improvement — see ``GAPS.md``).  Prefer ``cluster.rings`` and
+``cluster.routes`` for topology verification; use the master log
+(``cluster/registry/ring_created``, ``_on_ring_config_change_for``
+lines) for gate-side state.
 
 3. Route the data type to the ring
 ----------------------------------
@@ -306,9 +331,10 @@ every peer:
   created).
 * :func:`salt.runners.cluster.routes` — the committed
   ``data_type → ring_id`` routing table.
-* :func:`salt.runners.cluster.ring_info` — this master's live
-  per-process ring state (what the gate sites will actually consult on
-  the next write).
+* :func:`salt.runners.cluster.ring_info` — the runner-subprocess
+  ring (empty in 3008.x; see note under *Verify the registry caught
+  up* above).  The publish-daemon's ring is in a separate process;
+  gate-side state is observable via the master log.
 * :func:`salt.runners.cluster.shed_status` — this master's last-shed
   sentinel (status, counts, bank layout).
 
@@ -335,14 +361,12 @@ Interaction with other cluster features
 Troubleshooting
 ===============
 
-A master's ``ring_info`` disagrees with ``rings``
-    ``ring_info`` is the *per-process* ring populated by
-    ``RaftService``; ``rings`` is the cluster-log view.  A brief
-    disagreement is normal around a membership change — the per-ring
-    Raft group has to commit a ``CONFIG`` entry before the local ring
-    is rebuilt.  Persistent disagreement after a full publish-daemon
-    restart is a bug; check the master log for ``_on_ring_config_change``
-    errors.
+``cluster.ring_info`` reports ``is_clustered=False`` even after the ring is up
+    Expected in 3008.x.  The runner runs in its own subprocess and
+    cannot see the publish-daemon's ring instance; the design puts a
+    shared-memory ring behind the runner surface as a later stage
+    (see ``GAPS.md``).  Use ``cluster.rings`` for authoritative ring
+    state and the master log for gate-side state.
 
 Writes for a routed cache seem to still fan out
     Either the route has not committed (``cluster.routes`` to confirm),
@@ -357,7 +381,7 @@ Shed never completes on one master
     ``perform_shed``.  Re-run ``cluster.shed_unowned`` directly on the
     problem master to produce a fresh sentinel.
 
-A master I removed still appears in ``cluster.ring_info``
+A master I removed still appears in ``cluster.rings``
     Ring membership follows the ring's Raft-group CONFIG, not the
     cluster-wide one.  Remove the master from the ring explicitly with
     ``cluster.ring_set`` or by issuing a ring-local ``remove-server``.
