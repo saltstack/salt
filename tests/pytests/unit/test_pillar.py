@@ -1542,3 +1542,28 @@ async def test_async_remote_pillar_sends_snapshot_flag(minion_opts):
         await pillar.aclose()
     load = channel.crypted_transfer_decode_dictentry.call_args.args[0]
     assert load["snapshot"] is True
+
+
+@pytest.mark.parametrize(
+    "load, expected",
+    [
+        ({}, True),
+        ({"snapshot": True}, True),
+        ({"snapshot": False}, False),
+        ({"snapshot": True, "pillar_override": {}}, True),
+        ({"snapshot": True, "pillar_override": {"a": 1}}, False),
+        ({"pillar_override": {"a": 1}}, False),
+    ],
+)
+def test_update_minion_snapshot(load, expected):
+    assert salt.pillar.update_minion_snapshot(load) is expected
+
+
+def test_get_pillar_local_ignores_snapshot(minion_opts):
+    """
+    Only the remote pillar sends the flag; local compilation must not choke
+    on it.
+    """
+    minion_opts["file_client"] = "local"
+    pillar = salt.pillar.get_pillar(minion_opts, {}, "minion", "base", snapshot=True)
+    assert isinstance(pillar, salt.pillar.Pillar)
