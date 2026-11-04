@@ -1378,6 +1378,69 @@ async def _dispatch_pub(payload):
         # Legacy / fake router: nothing to do with local_match.
         return result
     links, local_match = result
+    # Resolve the local-match set BEFORE dispatching to local minions so
+    # the topology/pub-ack frame (see
+    # doc/topics/master-topology/rfc-pub-ack-complete.md) carries the
+    # exact minion-id list the peer will publish to.  The RFC requires
+    # the ack to precede any return the acked peer could emit; firing
+    # before ``_publish_to_local_minions`` satisfies that invariant.
+    # Gated on ``topology_pub_ack`` opt (default True); peers running
+    # without the feature simply don't send the ack and the originator
+    # falls back to pre-RFC silent-inference behavior.
+    matched_for_ack = None
+    if (
+        local_match
+        and isinstance(load, dict)
+        and load.get("jid")
+        and not _looks_like_minion_return(load)
+        and (_OPTS or {}).get("topology_pub_ack", True)
+        and inbound_link is not None
+    ):
+        try:
+            loop = asyncio.get_event_loop()
+            matched_for_ack = await loop.run_in_executor(
+                None, _resolve_local_match, load
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "topology: pub-ack local-match resolution failed for jid=%r",
+                load.get("jid"),
+                exc_info=True,
+            )
+            matched_for_ack = []
+        envelope = load.get("topology") or {}
+        path_list = envelope.get("path") or []
+        # ``forward_publish`` appends self to the authenticated path, so
+        # path[0] is the originator.  Fall back to envelope.origin for
+        # legacy senders that pre-date the authenticated-path append.
+        target_cluster_id = path_list[0] if path_list else envelope.get("origin")
+        if target_cluster_id:
+            try:
+                # Schedule + yield once so the pub-ack coroutine takes its
+                # first synchronous step (health-gate + envelope build +
+                # ``AsyncReqChannel.send`` kickoff) BEFORE the awaited
+                # :func:`_publish_to_local_minions` begins its IPC fan-out.
+                # The RFC requires the ack to precede any return from this
+                # peer; yielding here guarantees the ack has at least begun
+                # its wire send before local minions can execute, without
+                # blocking the dispatcher on the remote ack delivery.
+                asyncio.ensure_future(
+                    _send_pub_ack_fire_and_forget(
+                        inbound_link,
+                        load.get("jid"),
+                        target_cluster_id,
+                        matched_for_ack,
+                        router.cluster_id,
+                    )
+                )
+                await asyncio.sleep(0)
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: pub-ack schedule failed for jid=%r",
+                    load.get("jid"),
+                    exc_info=True,
+                )
+
     if local_match and isinstance(load, dict):
         # Origin side of the return path (``route_return`` returned
         # ``None`` above -- no breadcrumb points upstream because this
@@ -1396,7 +1459,7 @@ async def _dispatch_pub(payload):
                 )
         else:
             try:
-                await _publish_to_local_minions(load)
+                await _publish_to_local_minions(load, matched=matched_for_ack)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "topology: local-minion publish failed for forwarded jid=%r",
@@ -1570,7 +1633,7 @@ def _store_forwarded_return(load):
             )
 
 
-async def _publish_to_local_minions(load):
+async def _publish_to_local_minions(load, matched=None):
     """
     Fan a forwarded publish out to this master's own minions.
 
@@ -1603,6 +1666,12 @@ async def _publish_to_local_minions(load):
     MWorker's ``_return`` handler, skipping the subsequent
     ``_maybe_fire_topology_return`` call.  Pre-seeding here ensures
     ``.minions.p`` exists before any return arrives.
+
+    :param matched: Optional pre-resolved local matched-minion list.
+        When the caller has already run :func:`_resolve_local_match`
+        (e.g. :func:`_dispatch_pub` resolving ahead of a pub-ack
+        emission), it passes the result in so the seed path reuses
+        the same list instead of re-running ``check_minions``.
     """
     import salt.channel.server
     import salt.utils.channel
@@ -1619,14 +1688,19 @@ async def _publish_to_local_minions(load):
     # the PKI directory and ``save_load`` does fsync + atomic rename;
     # both are synchronous disk I/O that blocks the publish daemon's
     # io_loop and starves the IPC pull-socket reader under load.
-    matched = None
     try:
         loop = asyncio.get_event_loop()
-        matched = await loop.run_in_executor(
-            None, _seed_local_cache_for_forwarded_publish, stripped
+        seeded = await loop.run_in_executor(
+            None, _seed_local_cache_for_forwarded_publish, stripped, matched
         )
     except Exception:  # pylint: disable=broad-except
         log.debug("topology: seed_local_cache offload failed", exc_info=True)
+        seeded = None
+    # Prefer the caller-supplied list so the event payload reflects the
+    # same set that was reported in pub-ack; fall back to the on-disk
+    # seed result when the caller did not pre-resolve.
+    if matched is None:
+        matched = seeded
     # Announce the forwarded publish on the LOCAL master event bus so
     # reactors, returners, and metrics exporters that key off new-job
     # or publish-job events see it on THIS receiving master too.
@@ -1728,7 +1802,7 @@ def _get_cached_pub_channel(transport, opts):
     return chan
 
 
-def _seed_local_cache_for_forwarded_publish(load):
+def _seed_local_cache_for_forwarded_publish(load, matched=None):
     """Write ``.load.p`` + ``.minions.p`` for a forwarded publish jid.
 
     Returns the resolved local matched-minion list (possibly empty) so
@@ -1742,6 +1816,13 @@ def _seed_local_cache_for_forwarded_publish(load):
     the subsequent MWorker ``_return`` path treats this jid as an
     already-recorded publish and skips the ``save_load`` branch that
     races on ``.minions.p``.
+
+    :param matched: Optional pre-resolved local matched-minion list.
+        When the caller has already computed the match (e.g. the
+        topology/pub-ack emission path in :func:`_dispatch_pub` resolves
+        the match before dispatching so the ack carries the exact list),
+        pass the same list in here so we persist the same set to
+        ``.minions.p`` instead of re-running ``check_minions``.
     """
     global _MMINION_CACHE
     if _OPTS is None or not isinstance(load, dict):
@@ -1758,18 +1839,19 @@ def _seed_local_cache_for_forwarded_publish(load):
         save_load_fn = _MMINION_CACHE.returners.get(f"{job_cache}.save_load")
         if save_load_fn is None:
             return None
-        import salt.utils.minions  # pylint: disable=import-outside-toplevel
+        if matched is None:
+            import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
-        # Resolve the local matched minions for this master so the
-        # on-disk ``.minions.p`` reflects just the minions that THIS
-        # master actually published to (the ones that will later issue
-        # ``_return``).  Peer-master minions are routed via their own
-        # masters' cache files.
-        ckminions = salt.utils.minions.CkMinions(_OPTS)
-        resolved = ckminions.check_minions(
-            load.get("tgt"), load.get("tgt_type", "glob")
-        )
-        matched = resolved.get("minions") if isinstance(resolved, dict) else None
+            # Resolve the local matched minions for this master so the
+            # on-disk ``.minions.p`` reflects just the minions that THIS
+            # master actually published to (the ones that will later
+            # issue ``_return``).  Peer-master minions are routed via
+            # their own masters' cache files.
+            ckminions = salt.utils.minions.CkMinions(_OPTS)
+            resolved = ckminions.check_minions(
+                load.get("tgt"), load.get("tgt_type", "glob")
+            )
+            matched = resolved.get("minions") if isinstance(resolved, dict) else None
         try:
             save_load_fn(jid, load, minions=matched)
         except TypeError:
@@ -1782,6 +1864,90 @@ def _seed_local_cache_for_forwarded_publish(load):
             exc_info=True,
         )
         return None
+
+
+async def _send_pub_ack_fire_and_forget(
+    inbound_link, jid, target_cluster_id, matched, own_cluster_id
+):
+    """Send a ``topology/pub-ack`` upstream with fault isolation.
+
+    Wraps :meth:`salt.topology.link.PeerMasterLink.send_pub_ack` with a
+    bounded :func:`asyncio.wait_for` and broad exception handling so a
+    wedged peer does not stall the dispatch coroutine.  Fire-and-forget
+    per RFC: if the ack never reaches the originator, the originator's
+    loop simply falls back to the pre-RFC timeout-based completion
+    path.
+
+    :param inbound_link: The link we received the publish on; the ack
+        travels back up this hop.
+    :param jid: The publish's jid.
+    :param target_cluster_id: The originator cluster (path[0]).
+    :param matched: The exact minion-id list the peer will publish to.
+    :param own_cluster_id: This cluster's cluster_id, used as the ack
+        frame's single-entry path (this master is the first hop).
+    """
+    try:
+        await asyncio.wait_for(
+            inbound_link.send_pub_ack(
+                jid,
+                target_cluster_id,
+                matched,
+                path=[own_cluster_id] if own_cluster_id else None,
+            ),
+            timeout=_TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "topology: send_pub_ack to upstream=%r timed out for jid=%r "
+            "after %ss; originator falls back to silent-inference",
+            getattr(inbound_link, "peer_cluster_id", None),
+            jid,
+            _TOPOLOGY_AWAIT_TIMEOUT,
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: send_pub_ack to upstream=%r failed for jid=%r",
+            getattr(inbound_link, "peer_cluster_id", None),
+            jid,
+            exc_info=True,
+        )
+
+
+def _resolve_local_match(load):
+    """Return this master's locally-matched minion-id list for *load*.
+
+    Runs :meth:`salt.utils.minions.CkMinions.check_minions` against
+    the publish's topology-stripped target.  Returns an empty list on
+    any failure (missing opts, lookup error, bad shape) --- the caller
+    (:func:`_dispatch_pub`) uses the result for the topology/pub-ack
+    ``matched_minion_ids`` field and the empty list is the RFC's
+    "zero-match peer still emits an ack" case.
+
+    Synchronous and disk-bound (PKI scan); callers should offload via
+    :meth:`loop.run_in_executor` the same way
+    :func:`_seed_local_cache_for_forwarded_publish` does.
+    """
+    if _OPTS is None or not isinstance(load, dict):
+        return []
+    tgt = load.get("tgt")
+    try:
+        stripped_tgt = router_mod.strip_cluster_scope(tgt)
+    except Exception:  # pylint: disable=broad-except
+        stripped_tgt = tgt
+    try:
+        import salt.utils.minions  # pylint: disable=import-outside-toplevel
+
+        ckminions = salt.utils.minions.CkMinions(_OPTS)
+        resolved = ckminions.check_minions(stripped_tgt, load.get("tgt_type", "glob"))
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology: _resolve_local_match raised for jid=%r",
+            load.get("jid"),
+            exc_info=True,
+        )
+        return []
+    matched = resolved.get("minions") if isinstance(resolved, dict) else None
+    return list(matched) if isinstance(matched, list) else []
 
 
 async def _dispatch_ret(payload):
@@ -1926,6 +2092,184 @@ def _dispatch_sum(payload):
     return None
 
 
+def _fire_local_event(tag, data):
+    """Fire *data* under *tag* on the local master event bus.
+
+    Prefers the cached :data:`_EVENT_BUS` client (reused across fires so
+    paired writes land in order on ``master_event_pull.ipc``), falls
+    back to :data:`_FIRE_EVENT` for test harnesses that did not wire the
+    async bus.  Silent no-op when neither is available: the dispatcher
+    is strictly a passthrough from wire to local bus, so a harness
+    without an event bus should still accept the frame without raising.
+    """
+    if _EVENT_BUS is not None:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        fire_async = getattr(_EVENT_BUS, "fire_event_async", None)
+        if fire_async is not None and loop is not None:
+            try:
+                loop.create_task(fire_async(data, tag))
+                return
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: fire_event_async failed for %s", tag, exc_info=True
+                )
+        try:
+            _EVENT_BUS.fire_event(data, tag)
+            return
+        except Exception:  # pylint: disable=broad-except
+            log.debug("topology: fire_event failed for %s", tag, exc_info=True)
+    if _FIRE_EVENT is not None:
+        try:
+            _FIRE_EVENT(tag, data)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("topology: _FIRE_EVENT hook failed for %s", tag, exc_info=True)
+
+
+def _validate_pub_ack_payload(inner):
+    """Return True when *inner* carries a well-formed pub-ack load.
+
+    Enforced fields (per RFC "Wire format" / pub-ack):
+
+    * ``load.jid`` is a non-empty str.
+    * ``load.matched_minion_ids`` is a list (may be empty).
+    * ``session_generation`` is present on the outer frame.
+    * ``origin_cluster_id`` is present on the outer frame.
+
+    Rejection path is WARNING log + return False; the caller drops
+    the frame without raising (lossy by design per the RFC).
+    """
+    if not isinstance(inner, dict):
+        return False
+    load = inner.get("load")
+    if not isinstance(load, dict):
+        log.warning(
+            "topology: dropping topology/pub-ack with non-dict load: %r",
+            type(load).__name__,
+        )
+        return False
+    jid = load.get("jid")
+    if not isinstance(jid, str) or not jid:
+        log.warning("topology: dropping topology/pub-ack with invalid jid=%r", jid)
+        return False
+    matched = load.get("matched_minion_ids")
+    if not isinstance(matched, list):
+        log.warning(
+            "topology: dropping topology/pub-ack jid=%r with non-list "
+            "matched_minion_ids=%r",
+            jid,
+            type(matched).__name__,
+        )
+        return False
+    if inner.get("session_generation") is None:
+        log.warning(
+            "topology: dropping topology/pub-ack jid=%r without session_generation",
+            jid,
+        )
+        return False
+    if not inner.get("origin_cluster_id"):
+        log.warning(
+            "topology: dropping topology/pub-ack jid=%r without origin_cluster_id",
+            jid,
+        )
+        return False
+    return True
+
+
+def _validate_pub_complete_payload(inner):
+    """Return True when *inner* carries a well-formed pub-complete load.
+
+    Enforced fields (per RFC "Wire format" / pub-complete):
+
+    * ``load.jid`` is a non-empty str.
+    * ``load.returned`` and ``load.missed`` are both lists.
+    * ``session_generation`` is present on the outer frame.
+    * ``origin_cluster_id`` is present on the outer frame.
+    """
+    if not isinstance(inner, dict):
+        return False
+    load = inner.get("load")
+    if not isinstance(load, dict):
+        log.warning(
+            "topology: dropping topology/pub-complete with non-dict load: %r",
+            type(load).__name__,
+        )
+        return False
+    jid = load.get("jid")
+    if not isinstance(jid, str) or not jid:
+        log.warning("topology: dropping topology/pub-complete with invalid jid=%r", jid)
+        return False
+    returned = load.get("returned")
+    missed = load.get("missed")
+    if not isinstance(returned, list) or not isinstance(missed, list):
+        log.warning(
+            "topology: dropping topology/pub-complete jid=%r with non-list "
+            "returned=%r / missed=%r",
+            jid,
+            type(returned).__name__,
+            type(missed).__name__,
+        )
+        return False
+    if inner.get("session_generation") is None:
+        log.warning(
+            "topology: dropping topology/pub-complete jid=%r without "
+            "session_generation",
+            jid,
+        )
+        return False
+    if not inner.get("origin_cluster_id"):
+        log.warning(
+            "topology: dropping topology/pub-complete jid=%r without "
+            "origin_cluster_id",
+            jid,
+        )
+        return False
+    return True
+
+
+def _dispatch_pub_ack(payload):
+    """Handle an inbound ``topology/pub-ack`` frame.
+
+    Validates the shape via :func:`_validate_pub_ack_payload` and
+    (on accept) re-fires the inner payload on this master's local
+    event bus under ``salt/topology/pub-ack/<jid>``.  Phase 1 does
+    NOT consume the ack; the re-fire exists so Phase 2's CLI loop
+    can subscribe to it with existing event-bus plumbing.
+
+    Rejection path is WARNING log + silent drop; the frame is
+    optional telemetry per the RFC.
+    """
+    if not _validate_pub_ack_payload(payload):
+        return None
+    load = payload["load"]
+    jid = load["jid"]
+    tag = f"salt/topology/pub-ack/{jid}"
+    _fire_local_event(tag, load)
+    return None
+
+
+def _dispatch_pub_complete(payload):
+    """Handle an inbound ``topology/pub-complete`` frame.
+
+    Validates the shape via :func:`_validate_pub_complete_payload`
+    and (on accept) re-fires the inner payload on this master's
+    local event bus under ``salt/topology/pub-complete/<jid>``.
+    Phase 1 does NOT consume it; the re-fire exists so Phase 2's
+    CLI loop can subscribe with existing event-bus plumbing.
+
+    Rejection path is WARNING log + silent drop.
+    """
+    if not _validate_pub_complete_payload(payload):
+        return None
+    load = payload["load"]
+    jid = load["jid"]
+    tag = f"salt/topology/pub-complete/{jid}"
+    _fire_local_event(tag, load)
+    return None
+
+
 #: Map inbound tag -> dispatcher callable.  Kept module-level and
 #: public-ish for unit tests that assert the dispatch surface.
 _DISPATCH_TABLE = {
@@ -1935,6 +2279,8 @@ _DISPATCH_TABLE = {
     "topology/ret": _dispatch_ret,
     "topology/evt": _dispatch_evt,
     "topology/sum": _dispatch_sum,
+    "topology/pub-ack": _dispatch_pub_ack,
+    "topology/pub-complete": _dispatch_pub_complete,
 }
 
 

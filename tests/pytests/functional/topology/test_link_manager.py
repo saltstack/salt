@@ -639,7 +639,10 @@ def test_handle_inbound_pub_local_match_publishes_to_local_minions(
 
         local_calls = []
 
-        async def _spy_publish(load):
+        async def _spy_publish(load, matched=None):
+            # ``matched`` added to the signature when the pub-ack emission
+            # path landed (RFC pub-ack: caller may pre-resolve the local
+            # match so pub-ack and _publish_to_local_minions share it).
             local_calls.append(load)
 
         monkeypatch.setattr(link_manager, "_publish_to_local_minions", _spy_publish)
@@ -686,7 +689,8 @@ def test_handle_inbound_pub_no_local_match_skips_local_publish(
 
         local_calls = []
 
-        async def _spy_publish(load):
+        async def _spy_publish(load, matched=None):
+            # See sibling test; ``matched`` kwarg added for pub-ack path.
             local_calls.append(load)
 
         monkeypatch.setattr(link_manager, "_publish_to_local_minions", _spy_publish)

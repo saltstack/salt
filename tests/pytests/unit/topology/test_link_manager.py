@@ -866,7 +866,10 @@ def _install_forwarded_publish_fakes(monkeypatch, *, seed_result, mode="async"):
     monkeypatch.setattr(
         lm,
         "_seed_local_cache_for_forwarded_publish",
-        lambda _load: seed_result,
+        # Accept the optional ``matched`` kwarg added when the pub-ack
+        # emission path landed (RFC pub-ack: caller may pre-resolve the
+        # local match and pass it in so the seed path reuses the list).
+        lambda _load, matched=None: seed_result,
     )
     # ``iter_transport_opts`` normally reads opts; stub it to a single
     # transport pair so the publish loop runs once.  ``link_manager``

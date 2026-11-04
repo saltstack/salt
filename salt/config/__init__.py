@@ -288,6 +288,17 @@ VALID_OPTS = immutabletypes.freeze(
         # Grains the summary thread fans out alongside the periodic
         # topology summary.  Empty list disables the extra fan-out.
         "topology_summary_grains": list,
+        # topology/pub-ack + topology/pub-complete frame emission.  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.  Default-on;
+        # peers running without the opt (or older code) simply don't send
+        # the frames and the originator falls back to the pre-RFC silent-
+        # inference behavior.  No breaking change in mixed deployments.
+        "topology_pub_ack": bool,
+        # Seconds a peer's local-return collector waits before giving up and
+        # emitting topology/pub-complete with its current returned/missed
+        # tallies.  Consumed by Phase 2's completion loop; reserved here
+        # so the config schema is stable across Phase 1/2 releases.
+        "topology_pub_complete_timeout": float,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -2064,6 +2075,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "topology_registry_cache_key_size": 64,
         "topology_detach_quiesce": 60,
         "topology_summary_grains": [],
+        "topology_pub_ack": True,
+        "topology_pub_complete_timeout": 60.0,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

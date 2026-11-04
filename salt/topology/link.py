@@ -566,8 +566,12 @@ class PeerMasterLink:
         if self._health == LinkHealth.CONNECTED:
             return
         if self._health == LinkHealth.QUIESCING:
-            # Returns drain through quiesce; everything else is rejected.
-            if tag == "topology/ret":
+            # Returns drain through quiesce; pub-complete drains with them
+            # (RFC pub-ack/pub-complete, "Health gating" section).  Every
+            # other tag --- including topology/pub-ack --- is rejected: a
+            # quiescing peer has stopped accepting publishes so it cannot
+            # have an ack to emit.
+            if tag in ("topology/ret", "topology/pub-complete"):
                 return
             raise LinkUnavailable(
                 f"link to {self._peer_cluster_id!r} is QUIESCING; "
@@ -1063,3 +1067,102 @@ class PeerMasterLink:
         body = {"subscribe": patterns}
         payload = self._build_envelope_payload(body, "topology/sub")
         return await self._send_with_fault_handling(payload, "topology/sub")
+
+    async def send_pub_ack(self, jid, target_cluster_id, matched_minion_ids, path=None):
+        """
+        Send a ``topology/pub-ack`` frame upstream toward the originator.
+
+        Emitted by a peer that has accepted a flooded ``topology/pub``
+        immediately after local-match resolution and BEFORE the local
+        publish dispatches to the peer's own minions (see
+        ``doc/topics/master-topology/rfc-pub-ack-complete.md``,
+        "Wire format" / "pub-ack" section).  One frame per peer per
+        jid; peers that match zero minions still emit an empty-list
+        ack so the originator can distinguish "didn't match" from
+        "peer unreachable".
+
+        Health gating: permitted only in :data:`LinkHealth.CONNECTED`.
+        A QUIESCING peer has stopped accepting publishes so it cannot
+        have an ack to emit --- :meth:`_assert_sendable` rejects.
+
+        :param jid: Publish's jid; identifies the ack among concurrent
+            forwarded publishes.
+        :param target_cluster_id: ``cluster_id`` of the ORIGINATOR
+            cluster that issued the publish.  The originator keys its
+            per-jid state on ``(jid, target_cluster_id)`` so acks that
+            happen to collide on jid across clusters do not alias.
+        :param matched_minion_ids: Exact list of minion ids the sending
+            peer will publish to after this ack.  May be empty.
+        :param path: Optional list of ``cluster_id`` strings already
+            traversed; defaults to this cluster's id only.  Caller is
+            responsible for authentication-path hygiene (never trust
+            sender-supplied path; the receiver authenticates on recv).
+        :raises LinkUnavailable: If the link is not :data:`CONNECTED`.
+        """
+        self._assert_sendable("topology/pub-ack")
+        own_id = self.opts.get("cluster_id")
+        body = {
+            "jid": jid,
+            "target_cluster_id": target_cluster_id,
+            "matched_minion_ids": list(matched_minion_ids or []),
+            "topology": {
+                "origin": own_id,
+                "path": list(path) if path is not None else [own_id],
+            },
+        }
+        payload = self._build_envelope_payload(body, "topology/pub-ack")
+        return await self._send_with_fault_handling(payload, "topology/pub-ack")
+
+    async def send_pub_complete(
+        self,
+        jid,
+        returned,
+        missed,
+        cancelled=False,
+        cancel_reason=None,
+        path=None,
+    ):
+        """
+        Send a ``topology/pub-complete`` frame upstream toward the originator.
+
+        Emitted by a peer when its local-return collection ends --- either
+        every ack'd minion has returned or the peer's local collection
+        timeout fired (see RFC, "Wire format" / "pub-complete" section).
+        One frame per peer per jid; carries no return payloads (those
+        still flow as ``topology/ret``).
+
+        Health gating: permitted in :data:`LinkHealth.CONNECTED` and
+        :data:`LinkHealth.QUIESCING`, same as ``topology/ret``.  Returns
+        drain through quiesce; completes must drain with them.
+
+        :param jid: The publish's jid.
+        :param returned: List of minion ids whose returns arrived
+            locally before the collection ended.
+        :param missed: List of minion ids the prior ``pub-ack`` named
+            but that did not return within the local timeout window.
+        :param cancelled: True only if the peer received a
+            ``topology/jid-cancel`` (deferred to Tier 2 RFC) or saw its
+            parent cluster disappear mid-job.  For a clean local-timeout
+            set False and populate ``missed``.
+        :param cancel_reason: Optional free-text reason when
+            ``cancelled`` is True; ``None`` otherwise.
+        :param path: Optional list of ``cluster_id`` strings already
+            traversed; defaults to this cluster's id only.
+        :raises LinkUnavailable: If the link is DISCONNECTED or
+            PENDING_ACCEPT (QUIESCING is permitted per the RFC).
+        """
+        self._assert_sendable("topology/pub-complete")
+        own_id = self.opts.get("cluster_id")
+        body = {
+            "jid": jid,
+            "returned": list(returned or []),
+            "missed": list(missed or []),
+            "cancelled": bool(cancelled),
+            "cancel_reason": cancel_reason,
+            "topology": {
+                "origin": own_id,
+                "path": list(path) if path is not None else [own_id],
+            },
+        }
+        payload = self._build_envelope_payload(body, "topology/pub-complete")
+        return await self._send_with_fault_handling(payload, "topology/pub-complete")
