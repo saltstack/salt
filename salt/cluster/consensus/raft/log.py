@@ -726,11 +726,22 @@ class RingConfigStateMachine(BaseStateMachine):
         :param cmd:   ``dict`` with keys ``"members"`` (str, one of
                       ``RING_MEMBERS_VALID``) and ``"replicas"`` (int).
                       Either may be omitted to keep the existing value
-                      — useful for partial updates that only flip one
+                      -- useful for partial updates that only flip one
                       knob.  Unknown keys are ignored.
         :param index: Raft log index of this entry; stored as the
                       version stamp visible via :attr:`config_version`.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for ring-policy state.
         """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RingConfigStateMachine.apply: ignoring stale RING_CONFIG at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if isinstance(cmd, dict):
             new_members = cmd.get("members", self._members)
             new_replicas = cmd.get("replicas", self._replicas)
@@ -862,7 +873,18 @@ class RingRegistryStateMachine(BaseStateMachine):
         Status defaults to ``"active"`` so the common create case is
         a two-field commit; founding voters are sorted to canonicalise
         the on-disk representation.  ``ring_id`` is required.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for ring-registry state.
         """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RingRegistryStateMachine.apply: ignoring stale RING_REGISTRY "
+                "at index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if not isinstance(cmd, dict):
             log.warning("RingRegistryStateMachine: ignoring non-dict cmd %r", cmd)
             return
@@ -998,7 +1020,19 @@ class RoutingStateMachine(BaseStateMachine):
     # ------------------------------------------------------------------
 
     def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
-        """Apply a committed ROUTE entry."""
+        """Apply a committed ROUTE entry.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for routing-table state.
+        """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RoutingStateMachine.apply: ignoring stale ROUTE at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if not isinstance(cmd, dict):
             log.warning("RoutingStateMachine: ignoring non-dict cmd %r", cmd)
             return
