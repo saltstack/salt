@@ -122,6 +122,102 @@ def test_minion_load_grains_default(minion_opts):
             minion.destroy()
 
 
+def test_sync_grains_masterless_syncs_every_file_roots_env(minion_opts):
+    """
+    A masterless minion syncs ``_grains`` from its local file_roots, ``base``
+    first, without removing modules that are not in the file roots.
+    """
+    minion_opts["file_client"] = "local"
+    minion_opts["file_roots"] = {"prod": ["/prod"], "base": ["/base"], "dev": ["/dev"]}
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_called_once()
+    assert sync.call_args.args[1] == "grains"
+    assert sync.call_args.kwargs == {
+        "saltenv": ["base", "dev", "prod"],
+        "clean": False,
+    }
+
+
+def test_sync_grains_uses_a_throwaway_cachedir(minion_opts):
+    """
+    The sync must not leave fileserver state (file lists, cached files) in the
+    real ``cachedir``: it runs against a temporary one, which is removed
+    afterwards, and does not modify the opts it was given.
+    """
+    minion_opts["file_client"] = "local"
+    real_cachedir = minion_opts["cachedir"]
+    expected = copy.deepcopy(minion_opts)
+    seen = {}
+
+    def fake_sync(opts, form, **kwargs):
+        seen["cachedir"] = opts["cachedir"]
+        seen["existed"] = os.path.isdir(opts["cachedir"])
+        seen["others"] = {k: v for k, v in opts.items() if k != "cachedir"}
+
+    with patch("salt.utils.extmods.sync", fake_sync):
+        salt.minion._sync_grains(minion_opts)
+
+    assert seen["cachedir"] != real_cachedir
+    assert seen["existed"] is True
+    assert not os.path.exists(seen["cachedir"])
+    assert seen["others"] == {k: v for k, v in expected.items() if k != "cachedir"}
+    assert minion_opts == expected
+
+
+def test_sync_grains_masterless_defaults_to_base_env(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts.pop("file_roots", None)
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    assert sync.call_args.kwargs["saltenv"] == ["base"]
+
+
+def test_sync_grains_remote_file_client_does_not_sync(minion_opts):
+    """
+    A minion that gets its files from a master must not sync here; the
+    master serves the files and ``saltutil.sync_grains`` handles it.
+    """
+    minion_opts["file_client"] = "remote"
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_not_called()
+
+
+def test_sync_grains_failure_does_not_prevent_startup(minion_opts, caplog):
+    minion_opts["file_client"] = "local"
+    with caplog.at_level(logging.ERROR):
+        with patch("salt.utils.extmods.sync", side_effect=OSError("boom")):
+            salt.minion._sync_grains(minion_opts)
+    assert "Failed to sync custom grains" in caplog.text
+    assert "boom" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "file_client,expect_sync", [("local", True), ("remote", False)]
+)
+def test_sminion_syncs_grains_before_loading_them(
+    minion_opts, file_client, expect_sync
+):
+    """
+    ``SMinion`` (salt-call) syncs ``_grains`` before it loads grains, because
+    pillar is compiled from those grains.
+    """
+    minion_opts["file_client"] = file_client
+    calls = MagicMock()
+    with patch("salt.utils.extmods.sync", calls.sync), patch(
+        "salt.loader.grains", calls.grains
+    ), patch.object(salt.minion.SMinion, "gen_modules"), patch.object(
+        salt.minion.SMinion, "eval_master", AsyncMock(return_value=(None, MagicMock()))
+    ):
+        salt.minion.SMinion(minion_opts)
+    called = [c[0] for c in calls.mock_calls]
+    if expect_sync:
+        assert called[:2] == ["sync", "grains"]
+    else:
+        assert "sync" not in called
+
+
 @pytest.mark.parametrize(
     "event",
     [

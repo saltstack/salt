@@ -16,6 +16,7 @@ import random
 import signal
 import stat
 import sys
+import tempfile
 import threading
 import time
 import traceback
@@ -211,6 +212,48 @@ def _interruptible_sleep(duration, abort_event, chunk=1.0):
 # 4. Store the AES key
 # 5. Connect to the publisher
 # 6. Handle publications
+
+
+def _sync_grains(opts):
+    """
+    Sync custom grains from ``salt://_grains`` when the minion uses the local
+    file client.
+
+    Custom grains can be referenced from pillar, and pillar is compiled before
+    ``saltutil.sync_grains`` has had a chance to run, so without this the
+    custom grains are missing and pillar rendering fails. A minion that gets
+    its files from a master is not affected: the sync runs against the master
+    once the minion has connected.
+
+    Every environment in ``file_roots`` is synced, because the environments in
+    the top file cannot be known before pillar is available.
+
+    This only adds and updates grains. It never removes any, whatever
+    ``clean_dynamic_modules`` says: modules in ``extension_modules`` that are
+    not in ``file_roots`` (those shipped by salt-ssh, for example) are not ours
+    to delete implicitly at start-up.
+
+    The sync runs against a throwaway ``cachedir`` so that it leaves nothing
+    behind in the real one. The fileserver caches its file lists per
+    environment and backend, not per set of roots, so a list cached here could
+    later be served to something that reads the same ``cachedir`` with
+    different roots (``state.pkg`` on a salt-ssh target, for instance).
+
+    A failure here is logged and otherwise ignored so it cannot prevent the
+    minion from starting.
+    """
+    if opts.get("file_client", "remote") != "local":
+        return
+
+    file_roots = opts.get("file_roots") or {}
+    saltenv = ["base"] + sorted(env for env in file_roots if env != "base")
+    try:
+        with tempfile.TemporaryDirectory(prefix="salt-grains-sync-") as cachedir:
+            sync_opts = opts.copy()
+            sync_opts["cachedir"] = cachedir
+            salt.utils.extmods.sync(sync_opts, "grains", saltenv=saltenv, clean=False)
+    except Exception as exc:  # pylint: disable=broad-except
+        log.error("Failed to sync custom grains: %s", exc)
 
 
 def resolve_dns(opts, fallback=True):
@@ -1554,6 +1597,7 @@ class SMinion(MinionBase):
         # We need to call super().__init__ first to get the OptsDict conversion
         super().__init__(opts)
 
+        _sync_grains(self.opts)
         new_grains = salt.loader.grains(self.opts)
         self.opts.mutate_key("grains", new_grains)
 

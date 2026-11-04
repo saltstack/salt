@@ -357,3 +357,64 @@ def test_state_running(
             time.sleep(1)
         else:
             pytest.fail("state.pkg is still reported as running")
+
+
+@pytest.fixture
+def recurse_sls(base_env_state_tree_root_dir):
+    """
+    A state tree with a ``_grains`` directory and a directory for
+    ``file.recurse``. A salt-ssh target runs ``salt-call --local``, which, being
+    masterless, syncs ``_grains`` while it starts up.
+    """
+    root = pathlib.Path(base_env_state_tree_root_dir)
+    sls_dir = root / "ssh_recurse"
+    files_dir = sls_dir / "files" / "a_dir"
+    grains_dir = root / "_grains"
+    dest = pathlib.Path(RUNTIME_VARS.TMP) / "ssh_recurse_dest"
+    created = [sls_dir]
+    try:
+        files_dir.mkdir(parents=True)
+        (files_dir / "a.txt").write_text("a\n")
+        (files_dir / "b.txt").write_text("b\n")
+        (sls_dir / "init.sls").write_text(
+            textwrap.dedent(
+                f"""
+                recurse_dir:
+                  file.recurse:
+                    - name: {dest}
+                    - source: salt://ssh_recurse/files/a_dir
+                """
+            )
+        )
+        grains_dir.mkdir(exist_ok=True)
+        (grains_dir / "ssh_recurse_grain.py").write_text(
+            'def main():\n    return {"ssh_recurse_grain": "yes"}\n'
+        )
+        created.append(grains_dir / "ssh_recurse_grain.py")
+        yield dest
+    finally:
+        shutil.rmtree(dest, ignore_errors=True)
+        for path in created:
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                path.unlink(missing_ok=True)
+
+
+def test_state_file_recurse_from_salt_url(salt_ssh_cli, recurse_sls):
+    """
+    ``file.recurse`` finds its ``salt://`` source on a salt-ssh target.
+
+    The grains sync that the target's ``salt-call`` does at start-up lists the
+    target's own (default) ``file_roots``. ``state.pkg`` then points
+    ``file_roots`` at the extracted state tree, and must not be served the file
+    list that was cached for the other roots.
+    """
+    ret = salt_ssh_cli.run("state.sls", "ssh_recurse")
+    data = _assert_state_dict(ret)
+    assert all(item["result"] is True for item in data.values()), data
+
+    for name in ("a.txt", "b.txt"):
+        exists = salt_ssh_cli.run("file.file_exists", str(recurse_sls / name))
+        assert exists.returncode == 0
+        assert exists.data is True
