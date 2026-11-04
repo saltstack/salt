@@ -137,3 +137,55 @@ def test_setup_logging_with_unseeded_options():
     """
     with patch.object(set_logging_options_dict, "__options_dict__", None, create=True):
         setup_logging()
+
+
+@pytest.fixture
+def collected_records():
+    """
+    Attach a record-collecting handler to a logger of our own and yield the
+    list it fills.
+
+    A dedicated logger keeps these assertions off the root handlers that
+    importing ``salt._logging.impl`` installs, so the record under test is
+    unambiguously the one the test emitted.
+    """
+    records = []
+
+    class Collector(logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    logger = logging.getLogger("tests.logging_extra")
+    handler = Collector()
+    logger.addHandler(handler)
+    original_level = logger.level
+    logger.setLevel(logging.INFO)
+    try:
+        yield logger, records
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(original_level)
+
+
+def test_makerecord_passes_extra_to_the_record(collected_records):
+    """
+    Regression test for issue #70557.
+
+    ``extra`` must reach the ``LogRecord``.
+    """
+    logger, records = collected_records
+    logger.info("structured", extra={"cluster_id": "cluster-a"})
+    assert len(records) == 1
+    assert records[0].cluster_id == "cluster-a"
+
+
+def test_makerecord_does_not_break_stack_info(collected_records):
+    """
+    Regression test for issue #70557.
+
+    ``stack_info=True`` must populate ``record.stack_info`` and not raise.
+    """
+    logger, records = collected_records
+    logger.info("with stack", stack_info=True)
+    assert len(records) == 1
+    assert records[0].stack_info

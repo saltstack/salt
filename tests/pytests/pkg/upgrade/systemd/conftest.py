@@ -99,7 +99,7 @@ def master_systemd(salt_factories_systemd, install_salt_systemd, pkg_tests_accou
         ],
     }
     if platform.is_darwin():
-        config_defaults["enable_fqdns_grains"] = False
+        config_defaults["disabled_grains"] = ["fqdns"]
     config_overrides = {
         "timeout": 30,
         "file_roots": {
@@ -265,7 +265,7 @@ def minion_systemd(salt_factories_systemd, master_systemd, install_salt_systemd)
         "log_handlers_dirs": master_systemd.config["log_handlers_dirs"].copy(),
     }
     if platform.is_darwin():
-        config_defaults["enable_fqdns_grains"] = False
+        config_defaults["disabled_grains"] = ["fqdns"]
     config_overrides = {
         "id": minion_id,
         "file_roots": master_systemd.config["file_roots"].copy(),

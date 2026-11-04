@@ -25,6 +25,70 @@ pytestmark = [
 ]
 
 
+async def test_request_client_close_resolves_pending_reply():
+    received = asyncio.Event()
+    disconnected = asyncio.Event()
+
+    async def handle(reader, writer):
+        try:
+            await reader.read(4096)
+            received.set()
+            await reader.read()
+        finally:
+            writer.close()
+            await writer.wait_closed()
+            disconnected.set()
+
+    server = await asyncio.start_server(handle, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    client = salt.transport.tcp.RequestClient(
+        {"master_uri": f"tcp://127.0.0.1:{port}"}, asyncio.get_running_loop()
+    )
+    request = asyncio.create_task(client.send({"probe": True}, timeout=None))
+    reader_task = None
+    try:
+        await asyncio.wait_for(received.wait(), timeout=5)
+        reader_task = client.task
+        client.close()
+        with pytest.raises(tornado.iostream.StreamClosedError):
+            await asyncio.wait_for(request, timeout=1)
+        assert client.send_future_map == {}
+        await asyncio.wait_for(disconnected.wait(), timeout=5)
+    finally:
+        client.close()
+        request.cancel()
+        await asyncio.gather(request, return_exceptions=True)
+        if reader_task is not None:
+            await asyncio.gather(reader_task, return_exceptions=True)
+        client._tcp_client.close()
+        server.close()
+        await server.wait_closed()
+
+
+async def test_request_client_close_preserves_finished_replies():
+    loop = asyncio.get_running_loop()
+    client = salt.transport.tcp.RequestClient(
+        {"master_uri": "tcp://127.0.0.1:4506"}, loop
+    )
+    pending = loop.create_future()
+    completed = loop.create_future()
+    completed.set_result("reply")
+    cancelled = loop.create_future()
+    cancelled.cancel()
+    client.send_future_map.update({1: pending, 2: completed, 3: cancelled})
+    try:
+        client.close()
+        client.close()
+        assert isinstance(pending.exception(), tornado.iostream.StreamClosedError)
+        assert completed.result() == "reply"
+        assert cancelled.cancelled()
+        assert client.send_future_map == {}
+        client.timeout_message(1, "expired")
+    finally:
+        client.close()
+        client._tcp_client.close()
+
+
 @pytest.fixture
 def _fake_keys():
     with patch("salt.crypt.AsyncAuth.get_keys", autospec=True):
@@ -2527,3 +2591,45 @@ def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
     )
     # And the stream itself must be closed.
     fake_stream.close.assert_called()
+
+
+@pytest.mark.parametrize(
+    "host,resolved,expected",
+    [
+        ("peer.example.test", socket.AF_INET6, socket.AF_INET6),
+        ("peer.example.test", socket.AF_INET, socket.AF_INET),
+        # Literals must keep working.
+        ("2001:db8::1", socket.AF_INET6, socket.AF_INET6),
+        ("192.0.2.1", socket.AF_INET, socket.AF_INET),
+    ],
+)
+def test_socket_family_follows_resolution(host, resolved, expected):
+    """
+    Regression test for issue #70559.
+
+    ``_socket_family`` must take the address family from the resolver if possible.
+    """
+    addrinfo = [(resolved, socket.SOCK_STREAM, 6, "", ("", 0))]
+    with patch("socket.getaddrinfo", return_value=addrinfo) as getaddrinfo:
+        assert salt.transport.tcp._socket_family(host) == expected
+    assert getaddrinfo.call_args.args[0] == host
+
+
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        ("2001:db8::1", socket.AF_INET6),
+        ("peer.example.test", socket.AF_INET),
+        ("", socket.AF_INET),
+        (None, socket.AF_INET),
+    ],
+)
+def test_socket_family_falls_back_when_unresolvable(host, expected):
+    """
+    Regression test for issue #70559.
+
+    If the host doesn't resolve, fall back to the heuristic approach: if the
+    host contains colon, attempt to connect via IPv6.
+    """
+    with patch("socket.getaddrinfo", side_effect=socket.gaierror):
+        assert salt.transport.tcp._socket_family(host) == expected

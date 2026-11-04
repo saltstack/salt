@@ -1144,6 +1144,14 @@ def test_pkg_purged_with_removed_pkg(grains, PKG_TARGETS, states, modules):
     }
 
 
+@pytest.mark.skip(
+    reason="chocolatey community-repo dropped side-by-side support for "
+    "7zip 19.00.00.0 next to 22.01.00.0; the install_7zip fixture's "
+    "second /qn install is rejected as a downgrade. Sister unit test "
+    "test_pkg_removed_version_specific_covers_multi_version_installed "
+    "in tests/pytests/unit/states/test_pkg.py covers the state contract "
+    "via mocks without requiring a real side-by-side install."
+)
 @pytest.mark.skip_unless_on_windows()
 def test_pkg_removed_with_version_multiple(install_7zip, modules, states):
     """

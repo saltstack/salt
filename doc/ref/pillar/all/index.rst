@@ -16,8 +16,10 @@ pillar modules
     file_tree
     git_pillar
     gpg
+    nacl
     nodegroups
     postgres
     reclass_adapter
+    saltclass
     sql_base
     stack

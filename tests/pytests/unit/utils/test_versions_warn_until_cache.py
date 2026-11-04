@@ -100,13 +100,13 @@ def test_warn_until_makes_zero_saltstackversion_allocations_after_warmup():
         # Warmup — this call is allowed to allocate.
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            salt.utils.versions.warn_until(3010, "warmup")
+            salt.utils.versions.warn_until(3009, "warmup", _version_info_=(3008, 3))
 
         call_count["n"] = 0
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             for _ in range(1000):
-                salt.utils.versions.warn_until(3010, "test")
+                salt.utils.versions.warn_until(3009, "test", _version_info_=(3008, 3))
         assert call_count["n"] == 0
     finally:
         salt.version.SaltStackVersion.__init__ = original_init
@@ -135,11 +135,13 @@ def test_warn_until_accepts_saltversion_target():
     ``TypeError: unhashable type: 'SaltVersion'`` before the function
     body even runs. Regression test for the CI failure on the initial
     landing of the memoize change."""
-    # CALCIUM is well in the future relative to 3009.x so warn_until
+    # CALCIUM is well in the future relative to 3008.x so warn_until
     # won't fire the "past release" branch when _version_info_ is set to
-    # the current running version.
+    # the simulated running version.
     future_saltversion = salt.version.SaltVersionsInfo.CALCIUM
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         # Should not raise TypeError; the SaltVersion branch handles it.
-        salt.utils.versions.warn_until(future_saltversion, "future")
+        salt.utils.versions.warn_until(
+            future_saltversion, "future", _version_info_=(3008, 3)
+        )

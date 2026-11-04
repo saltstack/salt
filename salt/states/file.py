@@ -835,7 +835,9 @@ def _gen_keep_files(name, require, walk_d=None):
 
     keep = set()
     if isinstance(require, list):
-        required_files = [comp for comp in require if "file" in comp]
+        required_files = [
+            comp for comp in require if isinstance(comp, dict) and "file" in comp
+        ]
         for comp in required_files:
             for low in __lowstate__:
                 # A requirement should match either the ID and the name of
@@ -885,6 +887,38 @@ def _check_file(name):
         msg = f"{name}: file not found"
 
     return ret, msg
+
+
+def _read_file_text(name, encoding=None, encoding_errors="strict"):
+    """
+    Return the contents of ``name`` as text, for building diffs. An explicit
+    ``encoding`` takes precedence. Otherwise, files that start with a UTF-8,
+    UTF-16 or UTF-32 byte order mark are decoded in that encoding with the
+    byte order mark removed. Falls back to ``__salt_system_encoding__``.
+
+    ``encoding_errors`` (default ``"strict"``) is applied on every decode
+    path so #50903's ``errors="replace"`` escape hatch works even when the
+    file has no BOM and no explicit ``encoding`` was supplied.
+    """
+    with salt.utils.files.fopen(name, "rb") as fp_:
+        data = fp_.read()
+    if encoding:
+        return data.decode(encoding, errors=encoding_errors)
+    bom_encoding = salt.utils.files.get_bom_encoding(name)
+    if bom_encoding:
+        text = data.decode(bom_encoding, errors=encoding_errors)
+        return text[1:] if text.startswith("\ufeff") else text
+    return data.decode(__salt_system_encoding__, errors=encoding_errors)
+
+
+def _is_text_file(name):
+    """
+    Return ``True`` if a diff can be shown for ``name``, which includes files
+    that start with a UTF-16 or UTF-32 byte order mark.
+    """
+    if __utils__["files.is_text"](name):
+        return True
+    return salt.utils.files.get_bom_encoding(name) not in (None, "UTF-8")
 
 
 def _find_keep_files(root, keep):
@@ -4265,7 +4299,7 @@ def directory(
     Because ``cmd.run`` has no way of communicating that it's creating a file,
     ``will_always_clean`` will remove the newly created file. Of course, every
     time the states run the same thing will happen - the
-    ``silly_way_of_creating_a_file`` will crete the file and
+    ``silly_way_of_creating_a_file`` will create the file and
     ``will_always_clean`` will always remove it. Over and over again, no matter
     how many times you run it.
 
@@ -4647,9 +4681,6 @@ def directory(
             file_mode = None
             dir_mode = None
 
-        if "silent" in recurse_set:
-            ret["changes"] = {"recursion": "Changes silenced"}
-
         check_files = "ignore_files" not in recurse_set
         check_dirs = "ignore_dirs" not in recurse_set
 
@@ -4697,6 +4728,9 @@ def directory(
                     except CommandExecutionError as exc:
                         if not exc.strerror.startswith("Path not found"):
                             errors.append(exc.strerror)
+
+        if "silent" in recurse_set:
+            ret["changes"] = {"recursion": "Changes silenced"}
 
     if clean:
         keep = _gen_keep_files(name, require, walk_d)
@@ -5926,6 +5960,13 @@ def replace(
                 - repl: "PowerShellVersion = '3.0'"
                 - encoding: utf-16
 
+        .. versionchanged:: 3008.5
+
+            Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark
+            (BOM) are detected automatically, and the BOM and byte order are
+            preserved.
+            ``encoding`` is only required for multi-byte files without a BOM.
+
     For complex regex patterns, it can be useful to avoid the need for complex
     quoting and escape sequences by making use of YAML's multiline string
     syntax.
@@ -6730,12 +6771,26 @@ def blockreplace(
     return ret
 
 
-def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
+def comment(
+    name,
+    regex,
+    char="#",
+    backup=".bak",
+    ignore_missing=False,
+    encoding=None,
+    encoding_errors="strict",
+):
     """
     .. versionadded:: 0.9.5
     .. versionchanged:: 3005
 
     Comment out specified lines in a file.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The full path to the file to be edited
@@ -6765,6 +6820,28 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         file.
 
         .. versionadded:: 3005
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Usage:
 
@@ -6810,24 +6887,22 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, True, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](name, comment_regex, multiline=True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6844,6 +6919,12 @@ def comment(name, regex, char="#", backup=".bak", ignore_missing=False):
 def uncomment(name, regex, char="#", backup=".bak"):
     """
     Uncomment specified commented lines in a file
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The full path to the file to be edited
@@ -6908,14 +6989,12 @@ def uncomment(name, regex, char="#", backup=".bak"):
         ret["result"] = None
         return ret
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = salt.utils.data.decode(fp_.readlines())
+    slines = _read_file_text(name).splitlines(True)
 
     # Perform the edit
     __salt__["file.comment_line"](name, regex, char, False, backup)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = salt.utils.data.decode(fp_.readlines())
+    nlines = _read_file_text(name).splitlines(True)
 
     # Check the result
     ret["result"] = __salt__["file.search"](
@@ -6923,7 +7002,7 @@ def uncomment(name, regex, char="#", backup=".bak"):
     )
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         else:
             # Changes happened, add them
@@ -6950,12 +7029,20 @@ def append(
     context=None,
     ignore_whitespace=True,
     show_changes=True,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the end of a file.
 
     The text will not be appended if it already exists in the file.
     A single string of text or a list of strings may be appended.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     name
         The location of the file to append to.
@@ -7046,6 +7133,28 @@ def append(
 
         Output a unified diff of the old file and the new file.
         Set this option to  ``False`` to disable this.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -7154,10 +7263,9 @@ def append(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines()
+    slines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines()
 
     append_lines = []
     try:
@@ -7184,7 +7292,7 @@ def append(
         nlines = list(slines)
         nlines.extend(append_lines)
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7202,13 +7310,12 @@ def append(
     else:
         ret["comment"] = f"File {name} is in correct state"
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines()
+    nlines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines()
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"
@@ -7234,12 +7341,21 @@ def prepend(
     context=None,
     header=None,
     show_changes=True,
+    encoding=None,
+    encoding_errors="strict",
 ):
     """
     Ensure that some text appears at the beginning of a file
 
     The text will not be prepended again if it already exists in the file. You
     may specify a single line of text or a list of lines to append.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+        The text is inserted after the BOM.
 
     name
         The location of the file to prepend to.
@@ -7334,6 +7450,28 @@ def prepend(
 
         Output a unified diff of the old file and the new file.
         Set this option to  ``False`` to disable this.
+
+    encoding
+        If specified, this encoding is used to decode the file when building
+        the diff used for change detection. Otherwise the system locale
+        encoding (usually UTF-8) is used. This does not affect the file's
+        contents, which are modified as raw bytes by the underlying execution
+        module. See
+        https://docs.python.org/3/library/codecs.html#standard-encodings for
+        the list of available encodings.
+
+        .. versionadded:: 3006.28
+
+    encoding_errors
+        Error handling scheme used when decoding the file for the diff.
+        Default is ``'strict'``, matching Python's default, which raises a
+        ``UnicodeDecodeError`` if the file contains bytes that are not valid in
+        the chosen encoding. Set to ``'replace'`` / ``'ignore'`` (or supply the
+        correct ``encoding``) to handle such files. See
+        https://docs.python.org/3/library/codecs.html#error-handlers for the
+        list of available schemes.
+
+        .. versionadded:: 3006.28
 
     Multi-line example:
 
@@ -7454,10 +7592,9 @@ def prepend(
 
     text = _validate_str_list(text)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        slines = fp_.read()
-        slines = slines.decode(__salt_system_encoding__)
-        slines = slines.splitlines(True)
+    slines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     count = 0
     test_lines = []
@@ -7488,7 +7625,7 @@ def prepend(
     if __opts__["test"]:
         nlines = test_lines + slines
         if slines != nlines:
-            if not __utils__["files.is_text"](name):
+            if not _is_text_file(name):
                 ret["changes"]["diff"] = "Replace binary file"
             elif not show_changes:
                 ret["changes"]["diff"] = "<show_changes=False>"
@@ -7503,33 +7640,31 @@ def prepend(
 
     # if header kwarg is True, use verbatim compare
     if header:
-        with salt.utils.files.fopen(name, "rb") as fp_:
-            # read as many lines of target file as length of user input
-            contents = fp_.read()
-            contents = contents.decode(__salt_system_encoding__)
-            contents = contents.splitlines(True)
-            target_head = contents[0 : len(preface)]
-            target_lines = []
-            # strip newline chars from list entries
-            for chunk in target_head:
-                target_lines += chunk.splitlines()
-            # compare current top lines in target file with user input
-            # and write user input if they differ
-            if target_lines != preface:
-                __salt__["file.prepend"](name, *preface)
-            else:
-                # clear changed lines counter if target file not modified
-                count = 0
+        # read as many lines of target file as length of user input
+        contents = _read_file_text(
+            name, encoding=encoding, encoding_errors=encoding_errors
+        ).splitlines(True)
+        target_head = contents[0 : len(preface)]
+        target_lines = []
+        # strip newline chars from list entries
+        for chunk in target_head:
+            target_lines += chunk.splitlines()
+        # compare current top lines in target file with user input
+        # and write user input if they differ
+        if target_lines != preface:
+            __salt__["file.prepend"](name, *preface)
+        else:
+            # clear changed lines counter if target file not modified
+            count = 0
     else:
         __salt__["file.prepend"](name, *preface)
 
-    with salt.utils.files.fopen(name, "rb") as fp_:
-        nlines = fp_.read()
-        nlines = nlines.decode(__salt_system_encoding__)
-        nlines = nlines.splitlines(True)
+    nlines = _read_file_text(
+        name, encoding=encoding, encoding_errors=encoding_errors
+    ).splitlines(True)
 
     if slines != nlines:
-        if not __utils__["files.is_text"](name):
+        if not _is_text_file(name):
             ret["changes"]["diff"] = "Replace binary file"
         elif not show_changes:
             ret["changes"]["diff"] = "<show_changes=False>"
@@ -7909,8 +8044,8 @@ def patch(
             # Try to reverse-apply hunks from rejects file using a dry-run.
             # If this returns a retcode of 0, we know that the patch was
             # already applied. Rejects are written from the base of the
-            # directory, so the strip option doesn't apply here.
-            reverse_pass = _patch(patch_rejects, ["-R", "-f"], dry_run=True)
+            # directory, so the required strip level is 0.
+            reverse_pass = _patch(patch_rejects, ["-R", "-f", "-p0"], dry_run=True)
             already_applied = reverse_pass["retcode"] == 0
 
             # Check if the patch command threw an error upon execution

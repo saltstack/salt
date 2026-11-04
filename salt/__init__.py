@@ -4,6 +4,7 @@ Salt package
 
 import asyncio
 import importlib
+import importlib.util
 import os
 import re
 import sys
@@ -82,10 +83,10 @@ class NaclImporter:
 
     loading = False
 
-    def find_module(self, module_name, package_path=None):
-        if not NaclImporter.loading and module_name.startswith("nacl"):
+    def find_spec(self, fullname, path=None, target=None):
+        if not NaclImporter.loading and fullname.startswith("nacl"):
             NaclImporter.loading = True
-            return self
+            return importlib.util.spec_from_loader(fullname, self)
         return None
 
     def create_module(self, spec):

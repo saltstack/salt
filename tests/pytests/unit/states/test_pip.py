@@ -17,6 +17,39 @@ def configure_loader_modules():
     return {pip_state: {"__env__": "base", "__opts__": {"test": False}}}
 
 
+@pytest.mark.parametrize("proxy", [None, False, "http://proxy.example.invalid:8080"])
+def test_installed_upgrade_passes_proxy_to_version_query(proxy):
+    versions = MagicMock(return_value=["1.0"])
+    install = MagicMock()
+    with patch.dict(
+        pip_state.__salt__,
+        {
+            "pip.list": MagicMock(return_value={"example": "1.0"}),
+            "pip.version": MagicMock(return_value="26.2"),
+            "pip.normalize": pip_module.normalize,
+            "pip.list_all_versions": versions,
+            "pip.install": install,
+        },
+    ):
+        ret = pip_state.installed("example", upgrade=True, proxy=proxy)
+
+    assert ret["result"] is True
+    assert ret["changes"] == {}
+    versions.assert_called_once_with(
+        "example",
+        bin_env=None,
+        include_alpha=False,
+        include_beta=False,
+        include_rc=False,
+        user=None,
+        cwd=None,
+        index_url=None,
+        extra_index_url=None,
+        proxy=proxy,
+    )
+    install.assert_not_called()
+
+
 def test_issue_64169(caplog):
     pkg_to_install = "nonexistent_package"
     exception_message = "Invalid JSON (test_issue_64169)"

@@ -2,7 +2,7 @@
 #    uv pip compile requirements/static/ci/lint.txt --python-platform=linux --python-version=3.13 --constraint requirements/constraints.txt --no-emit-index-url --unsafe-package=setuptools -c=requirements/static/ci/py3.13/linux.lock -c=requirements/static/pkg/py3.13/linux.lock -o=requirements/static/ci/py3.13/linux-lint.lock
 astroid==3.1.0
     # via pylint
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock
@@ -49,7 +49,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.txt
 tomlkit==0.15.1
     # via pylint
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -c requirements/static/pkg/py3.13/linux.lock

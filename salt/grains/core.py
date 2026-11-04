@@ -2874,7 +2874,7 @@ def os_data():
         grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
         grains.update(_bsd_cpudata(grains))
     elif grains["kernel"] in ("OpenBSD", "NetBSD"):
-        grains["os_family"] = grains["os"] = grains["kernel"]
+        grains["os_family"] = grains["osfullname"] = grains["os"] = grains["kernel"]
         grains.update(_bsd_cpudata(grains))
         grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
@@ -3003,24 +3003,13 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
-    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
+    To disable the fqdns grain, add "fqdns" to "disabled_grains" in the minion
+    configuration file.
     """
     # Provides:
     # fqdns
     opt = {"fqdns": []}
-    if __opts__.get(
-        "enable_fqdns_grains",
-        (
-            False
-            if salt.utils.platform.is_windows()
-            or salt.utils.platform.is_proxy()
-            or salt.utils.platform.is_sunos()
-            or salt.utils.platform.is_aix()
-            or salt.utils.platform.is_junos()
-            or salt.utils.platform.is_darwin()
-            else True
-        ),
-    ):
+    if "fqdns" not in __opts__.get("disabled_grains", []):
         opt = __salt__["network.fqdns"]()
     return opt
 
@@ -3218,7 +3207,19 @@ def pythonversion():
     """
     # Provides:
     #   pythonversion
-    return {"pythonversion": list(sys.version_info)}
+    #   pythonrelease
+    #   pythonrelease_info
+    #
+    # ``pythonversion`` is a list rather than a dotted string, which is
+    # inconsistent with the ``<foo>release`` / ``<foo>release_info`` pair used
+    # by the other version grains (e.g. ``osrelease`` / ``osrelease_info``).
+    # ``pythonrelease`` and ``pythonrelease_info`` follow that convention;
+    # ``pythonversion`` is kept unchanged for backwards compatibility.
+    return {
+        "pythonversion": list(sys.version_info),
+        "pythonrelease": platform.python_version(),
+        "pythonrelease_info": list(sys.version_info),
+    }
 
 
 def pythonpath():

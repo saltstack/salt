@@ -15,6 +15,7 @@ import tornado.concurrent
 import tornado.ioloop
 
 import salt.utils.resource_warnings
+import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
@@ -22,14 +23,22 @@ log = logging.getLogger(__name__)
 def aioloop(io_loop, warn=False):
     """
     Ensure the ioloop is an asyncio loop not a tornado ioloop.
+
+    With ``warn=True``, deprecate Tornado loop arguments at an API boundary.
+    Native asyncio loop arguments remain supported without a warning.
     """
     if isinstance(io_loop, asyncio.AbstractEventLoop):
         return io_loop
     elif isinstance(io_loop, tornado.ioloop.IOLoop):
         if warn:
-            import traceback
-
-            log.warning("Passed tornado loop %s", "".join(traceback.format_stack()))
+            salt.utils.versions.warn_until(
+                (3009, 2),
+                "Passing a Tornado IOLoop as io_loop is deprecated and will "
+                "be removed in Salt {version}. Omit io_loop to use the current "
+                "asyncio event loop, or pass the Tornado loop's asyncio_loop "
+                "attribute to keep using that loop.",
+                stacklevel=4,
+            )
         return io_loop.asyncio_loop
     else:
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
@@ -107,7 +116,7 @@ class SyncWrapper:
         # as the transport classes in ``salt/transport/tcp.py``.
         self._creator_pid = os.getpid()
         if loop_kwarg:
-            kwargs[self.loop_kwarg] = self.io_loop
+            kwargs[self.loop_kwarg] = self.asyncio_loop
         with current_ioloop(self.io_loop):
             self.obj = cls(*args, **kwargs)
         self._async_methods = list(
@@ -151,27 +160,17 @@ class SyncWrapper:
             return False
         return True
 
-    def close(self):
-        for method in self._close_methods:
-            if method in self._async_methods:
-                method = self._wrap(method)
-            else:
-                try:
-                    method = getattr(self.obj, method)
-                except AttributeError:
-                    log.error("No sync method %s on object %r", method, self.obj)
-                    continue
-            try:
-                method()
-            except AttributeError:
-                log.error("No async method %s on object %r", method, self.obj)
-            except Exception as exc:  # pylint: disable=broad-except
-                log.exception(
-                    "Exception encountered while running stop method: %s", exc
-                )
-        # Shut down asyncio resources before closing the IOLoop so file descriptors
-        # held by pending tasks, async generators, and the default executor are released.
-        #
+    def _shutdown_asyncio_loop(self):
+        """
+        Cancel and drain pending tasks, then shut down async generators and
+        the default executor of ``self.asyncio_loop``.
+
+        Must be called from a thread with no running event loop, otherwise
+        ``run_until_complete`` raises and the tasks are left pending.  It
+        returns only once every cancelled task has finished, the async
+        generators are closed and every job in the default executor has
+        returned; none of these waits has a timeout.
+        """
         # Each of the three ``run_until_complete`` calls below takes a freshly
         # constructed coroutine object as its argument.  If the loop is already
         # closed (or running) at that point ``run_until_complete`` raises
@@ -237,6 +236,50 @@ class SyncWrapper:
 
         except Exception as exc:  # pylint: disable=broad-except
             log.error("Error during asyncio shutdown: %s", exc)
+
+    def close(self):
+        for method in self._close_methods:
+            if method in self._async_methods:
+                method = self._wrap(method)
+            else:
+                try:
+                    method = getattr(self.obj, method)
+                except AttributeError:
+                    log.error("No sync method %s on object %r", method, self.obj)
+                    continue
+            try:
+                method()
+            except AttributeError:
+                log.error("No async method %s on object %r", method, self.obj)
+            except Exception as exc:  # pylint: disable=broad-except
+                log.exception(
+                    "Exception encountered while running stop method: %s", exc
+                )
+        # Shut down asyncio resources before closing the IOLoop so file descriptors
+        # held by pending tasks, async generators, and the default executor are released.
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            self._shutdown_asyncio_loop()
+        else:
+            # ``close()`` was called from code running on another event loop
+            # in this thread, i.e. a ``SyncWrapper`` such as a ``ReqChannel``
+            # used from a coroutine (in #70353, the synchronous ``_mine_send``
+            # called by ``Minion.handle_event``).
+            # ``run_until_complete`` refuses to run ``self.asyncio_loop`` while
+            # that loop is running, so the drain would fail and the loop would
+            # be closed below with its cancelled tasks still pending.  Their
+            # coroutines never resume, so the ZMQ sockets they hold (e.g. an
+            # ``AsyncAuth._authenticate`` suspended in
+            # ``RequestClient.close_async``) are never closed, and the
+            # ``_finalize_zmq_context`` finalizer later blocks in
+            # ``zmq_ctx_term()`` (#70353).  Drain from a helper thread instead,
+            # the same way ``_wrap`` runs methods.  As with ``_wrap`` and the
+            # branch above, the caller (and so its loop) is blocked until the
+            # drain is done, including any job left in the default executor.
+            thread = threading.Thread(target=self._shutdown_asyncio_loop)
+            thread.start()
+            thread.join()
 
         io_loop = self.io_loop
         try:
