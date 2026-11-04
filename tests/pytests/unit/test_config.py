@@ -54,7 +54,6 @@ def test_minion_config_non_dict_grains_reverts_to_default(grains_value, tmp_path
     assert config["grains"] == {}
 
 
-
 # ---------------------------------------------------------------------------
 # client_config: master_port -> ret_port translation
 #
