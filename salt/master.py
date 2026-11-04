@@ -6692,6 +6692,11 @@ class ClearFuncs(TransportMethods):
                 username = salt.utils.user.get_user()
 
         try:
+            # Strip AES-bridge protocol fields before we spread
+            # ``clear_load`` as kwargs into the wheel function; see
+            # :meth:`wheel` async above for the full rationale.
+            for _bridge_field in ("client_id", "id", "ts"):
+                clear_load.pop(_bridge_field, None)
             jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")
