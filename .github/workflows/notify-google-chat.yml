@@ -59,6 +59,7 @@ jobs:
           # The message is still useful without it, so ignore API errors.
           # No pipe into clean(): a pipeline's exit status is that of its last
           # command, so a failed gh call would not reach the || fallback.
+          # shellcheck disable=SC2016  # $s is a jq variable, not a shell one
           jobs=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/jobs?per_page=100" \
             --jq '[.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .name + (([.steps[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .name] | join(", ")) as $s | if $s == "" then "" else " (" + $s + ")" end)] | join(", ")' \
             2>/dev/null) || jobs=""
