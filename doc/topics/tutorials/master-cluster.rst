@@ -40,7 +40,8 @@ That identity material can be provided in one of two ways:
   over the cluster transport before being promoted to a Raft voter, and
   job/cache state moves between masters via the Raft+HashRing layer.  See
   the :ref:`Topology section <master-cluster-topology>` for a side-by-side
-  comparison.
+  comparison, and :ref:`cache-rings` for how to shard a cache across
+  masters using the HashRing layer.
 
 Each master in a cluster maintains its own public and private key, and an in
 memory aes key. Each cluster peer also has access to the ``cluster_pki_dir``
@@ -86,7 +87,7 @@ identical.
         ``salt-run cluster.sync_roots``
     * - Job / grain cache routing
       - Through the shared cachedir
-      - Through Raft + HashRing
+      - Through Raft + HashRing (see :ref:`cache-rings`)
     * - Recommended :conf_master:`keys.cache_driver`
       - ``localfs_key`` (default)
       - ``mmap_key`` (see :ref:`mmap-cache`)
@@ -295,6 +296,10 @@ one master at a time.
 
         salt-run cluster.members
         salt-run cluster.ring_info
+
+    See :ref:`cache-rings` for the full set of ring-inspection runners
+    (``cluster.rings``, ``cluster.routes``, ``cluster.shed_status``) and
+    for how to shard a cache across the cluster.
 
     ``cluster.members`` shows every Raft voter (and any learners that
     haven't caught up yet).  ``cluster.ring_info`` shows the HashRing

@@ -12,3 +12,4 @@ for Salt.
 
     mmap_cache
     worker_pools
+    cache_rings
