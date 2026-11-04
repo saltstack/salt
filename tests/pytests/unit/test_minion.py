@@ -4962,3 +4962,24 @@ async def test_minion_process_process_queue_keeps_task_reference(
     with contextlib.suppress(Exception):
         await asyncio.gather(*minion._background_tasks, return_exceptions=True)
     minion.destroy()
+
+
+async def test_pillar_refresh_marks_request_as_regular_fetch():
+    """
+    The minion's own pillar refresh is what updates the master's targeting
+    data, so it must ask for it.
+    """
+    minion = MagicMock(
+        opts={"grains": {}, "id": "m1", "saltenv": "base", "pillarenv": "dev"},
+        connected=True,
+    )
+    pillar = MagicMock()
+    pillar.compile_pillar = AsyncMock(side_effect=SaltClientError("down"))
+    pillar.aclose = AsyncMock()
+    with patch("salt.pillar.get_async_pillar", return_value=pillar) as get_pillar:
+        with patch("salt.utils.event.get_event"):
+            await salt.minion.Minion.pillar_refresh(minion, clean_cache=True)
+    kwargs = get_pillar.call_args.kwargs
+    assert kwargs["snapshot"] is True
+    assert kwargs["pillarenv"] == "dev"
+    assert kwargs["clean_cache"] is True
