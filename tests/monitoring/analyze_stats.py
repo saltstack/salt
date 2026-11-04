@@ -32,15 +32,15 @@ MASTER_RSS_SLOPE_LIMIT = 15 * 1024
 
 # Smallest slice of data (the end of the run) the check will judge on.
 # Fewer points make the slope too noisy to compare with the thresholds.
-MIN_ANALYSIS_SECONDS = 5 * 60
+MIN_ANALYSIS_SECONDS = 10 * 60
 
 # The workflow's shortest run (nightly-stress-test.yml ``duration``
-# options) must be at least WARMUP_SECONDS + MIN_ANALYSIS_SECONDS = 15m.
+# options) must be at least WARMUP_SECONDS + MIN_ANALYSIS_SECONDS = 20m.
 # Keep the two in step.
 #
 # The workflow exports ``STRESS_START_EPOCH`` when the stress starts; the
 # slope window then covers everything after ``start + WARMUP_SECONDS``
-# (a 15m run is judged on its last 5m, a 60m run on its last 50m).
+# (a 20m run is judged on its last 10m, a 60m run on its last 50m).
 # Without it the window is MIN_ANALYSIS_SECONDS, the one span that no
 # allowed run overlaps with the warm-up.
 

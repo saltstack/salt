@@ -14,10 +14,10 @@ on:
         default: '0.5h'
         type: choice
         options:
-          # 15m is the minimum: analyze_stats.py ignores the first 10
-          # minutes (warm-up), so a shorter run leaves too little data
-          # for a meaningful RSS/FD slope.
-          - '15m'
+          # 20m is the minimum: analyze_stats.py ignores the first 10
+          # minutes (warm-up) and needs at least 10 more for a meaningful
+          # RSS/FD slope.
+          - '20m'
           - '0.5h'
           - '1h'
           - '1.5h'
