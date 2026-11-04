@@ -223,3 +223,28 @@ def test_mine_get_acl_rejected(funcs):
             }
         )
     assert ret == {}
+
+
+@pytest.mark.parametrize(
+    "extra, updates",
+    [
+        ({}, True),  # minions that predate the snapshot field
+        ({"snapshot": True}, True),
+        ({"snapshot": False}, False),
+        ({"snapshot": True, "pillar_override": {"x": 1}}, False),
+    ],
+)
+def test_pillar_snapshot_only_for_regular_requests(master_opts, extra, updates):
+    remote = masterapi.RemoteFuncs.__new__(masterapi.RemoteFuncs)
+    remote.opts = {**master_opts, "minion_data_cache": True}
+    remote.cache = FakeCache()
+    remote.mminion = MagicMock()
+    remote.event = MagicMock()
+    pillar = MagicMock()
+    pillar.compile_pillar.return_value = {"role": "db"}
+    remote.cache.store("pillar", "minion-1", {"role": "web"})
+    load = {"id": "minion-1", "grains": {}, "pillarenv": "prod", **extra}
+    with patch("salt.pillar.get_pillar", return_value=pillar):
+        assert remote._pillar(load) == {"role": "db"}
+    expected = {"role": "db"} if updates else {"role": "web"}
+    assert remote.cache.fetch("pillar", "minion-1") == expected

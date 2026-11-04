@@ -241,3 +241,51 @@ async def test_async_master_updates_snapshot(opts, enabled):
     assert snapshot == (PILLARS["base"] if enabled else {})
     if enabled:
         _matched(handler, "web")
+
+
+@pytest.mark.parametrize(
+    "extra, updates",
+    [
+        ({}, True),
+        ({"snapshot": True}, True),
+        ({"snapshot": False}, False),
+        ({"snapshot": True, "pillar_override": {"x": 1}}, False),
+    ],
+)
+async def test_async_master_only_regular_requests_update_snapshot(opts, extra, updates):
+    handler = _handler(opts)
+    handler.masterapi.cache.store("pillar", MINION_ID, PILLARS["base"])
+    pillar = SimpleNamespace(compile_pillar=AsyncMock(return_value=PILLARS["dev"]))
+    with patch("salt.pillar.get_async_pillar", return_value=pillar):
+        await handler._pillar(
+            {"id": MINION_ID, "grains": {}, "pillarenv": "dev", **extra}
+        )
+    expected = PILLARS["dev"] if updates else PILLARS["base"]
+    assert handler.masterapi.cache.fetch("pillar", MINION_ID) == expected
+
+
+@pytest.mark.parametrize(
+    "pillar_cache, minion_data_cache, expected",
+    [
+        (False, False, salt.pillar.Pillar),
+        (False, True, salt.pillar.Pillar),
+        (True, False, salt.pillar.PillarCache),
+        (True, True, salt.pillar.PillarCache),
+    ],
+)
+def test_get_pillar_only_caches_compilation_for_pillar_cache(
+    opts, pillar_cache, minion_data_cache, expected
+):
+    """
+    ``minion_data_cache`` alone no longer routes through ``PillarCache``; the
+    handlers write the targeting snapshot themselves.
+    """
+    opts.update(
+        {
+            "pillar_cache": pillar_cache,
+            "minion_data_cache": minion_data_cache,
+            "file_client": "local",
+        }
+    )
+    pillar = salt.pillar.get_pillar(opts, {}, MINION_ID, "base", snapshot=True)
+    assert type(pillar) is expected
