@@ -3439,7 +3439,18 @@ class MasterPubServerChannel:
         if self.opts.get("topology_enabled"):
             link_manager = importlib.import_module("salt.topology.link_manager")
             aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
-            aio_loop.create_task(link_manager.start(self.opts, self.io_loop))
+            # Hand through ``self._raft_service``.  This is usually
+            # ``None`` at schedule time (the founder path defers Raft
+            # start via ``call_later(cluster_join_timeout)``; the
+            # learner path waits for a join-reply), but when the daemon
+            # resumes on an already-joined cluster the service is live
+            # above (line 3361) and the migration step inside
+            # ``link_manager.start`` can propose immediately instead of
+            # deferring.  ``promote_solo_to_clustered`` tolerates
+            # ``None`` with an INFO log — see BUG-029.
+            aio_loop.create_task(
+                link_manager.start(self.opts, self.io_loop, self._raft_service)
+            )
         # run forever
         try:
             self.io_loop.start()

@@ -249,7 +249,17 @@ def promote_solo_to_clustered(opts, raft_service):
                           caller owns leader-only + wait-for-commit
                           semantics; migration logic treats
                           ``propose`` as "the cmd will eventually
-                          apply."
+                          apply."  May be ``None`` when the publish
+                          daemon hasn't finished its deferred Raft
+                          startup yet (founder case: service is
+                          created via ``call_later(cluster_join_timeout)``
+                          but ``link_manager.start`` runs before that
+                          fires).  In that case this call is a no-op
+                          and the eventual :meth:`RaftService.__init__`
+                          ``apply_entries`` replay (BUG-025) converges
+                          the state machine from the on-disk log
+                          suffix.  Logs the deferral at INFO so the
+                          operator can tell this from a real skip.
     """
     if not _is_clustered(opts):
         log.debug(
@@ -261,6 +271,24 @@ def promote_solo_to_clustered(opts, raft_service):
         log.debug(
             "migration.promote_solo_to_clustered: registry already converged "
             "with Raft applied state; nothing to propose"
+        )
+        return
+    if raft_service is None:
+        # The publish daemon schedules ``link_manager.start`` before it
+        # finishes constructing the RaftService (founder: deferred by
+        # ``cluster_join_timeout``; learner: deferred until join-reply).
+        # Crashing here used to spam a confusing ``AttributeError:
+        # 'NoneType' object has no attribute 'propose'`` traceback on
+        # every restart with an existing registry.  The migration is
+        # NOT required for correctness on restart: the committed Raft
+        # log on disk is replayed by :meth:`RaftService.__init__` via
+        # ``apply_entries`` (BUG-025) and the state machine converges
+        # without us re-proposing.  Log INFO (not WARNING) and return.
+        log.info(
+            "migration.promote_solo_to_clustered: deferring %d pending "
+            "entries; Raft service not started yet (will converge via "
+            "committed-log replay in RaftService.__init__)",
+            len(entries),
         )
         return
     log.info(

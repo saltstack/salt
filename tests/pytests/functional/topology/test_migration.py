@@ -458,3 +458,62 @@ def test_needs_migration_false_after_promote(opts, sm):
         except Exception:  # pylint: disable=broad-except
             pass
     assert migration.needs_migration(opts) is False
+
+
+def test_promote_tolerates_none_raft_service(opts, sm, caplog):
+    """
+    BUG-029 regression: ``promote_solo_to_clustered`` is called from
+    :func:`salt.topology.link_manager.start` at daemon boot, but the
+    publish daemon's ``RaftService`` is created only after a
+    ``cluster_join_timeout`` call_later fires (founder) or a
+    join-reply arrives (learner).  That ordering means
+    ``raft_service`` is almost always ``None`` at the moment the
+    migration step runs on restart.
+
+    Pre-fix: ``raft_service.propose(entry)`` raised
+    ``AttributeError: 'NoneType' object has no attribute 'propose'``
+    on every restart with an existing registry, spamming a Traceback.
+    Post-fix: the function detects ``None``, logs INFO, and returns
+    without touching ``propose`` --- the eventual ``apply_entries``
+    replay in :meth:`RaftService.__init__` converges the state from
+    the committed on-disk log (BUG-025).
+
+    Asserts:
+      * no exception is raised;
+      * the INFO log message names the pending-entry count so
+        operators can tell "deferred with N entries" from the
+        "nothing to propose" steady-state log;
+      * no partial state is written (``needs_migration`` is still
+        True afterwards because nothing was proposed through
+        ``_sm.apply``).
+    """
+    _write_identity_pem_to_disk(opts)
+    try:
+        sm.registry.close()
+    except Exception:  # pylint: disable=broad-except
+        pass
+    _seed_solo_registry(
+        opts,
+        [
+            ("east", b"-----BEGIN PUBLIC KEY-----\nE\n-----END PUBLIC KEY-----\n"),
+            ("west", b"-----BEGIN PUBLIC KEY-----\nW\n-----END PUBLIC KEY-----\n"),
+        ],
+    )
+    assert migration.needs_migration(opts) is True
+    with caplog.at_level(logging.INFO, logger="salt.topology.migration"):
+        # Must not raise.  Pre-fix this was ``AttributeError:
+        # 'NoneType' object has no attribute 'propose'``.
+        migration.promote_solo_to_clustered(opts, None)
+    # INFO log fired with the deferred entry count (identity + 2 peers = 3).
+    deferred_logs = [
+        rec
+        for rec in caplog.records
+        if "deferring" in rec.message and "Raft service not started yet" in rec.message
+    ]
+    assert len(deferred_logs) == 1, (
+        "expected exactly one 'deferring' log from promote_solo_to_clustered "
+        f"with raft_service=None, got {[rec.message for rec in caplog.records]}"
+    )
+    # Nothing was proposed, so the migration-needed state is unchanged.
+    # The eventual Raft apply_entries replay is what converges this.
+    assert migration.needs_migration(opts) is True
