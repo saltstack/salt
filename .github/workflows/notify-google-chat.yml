@@ -46,7 +46,7 @@ jobs:
           # there is no workflow_run event.
           RUN_ID: ${{ github.event.workflow_run.id || github.run_id }}
           RUN_URL: ${{ github.event.workflow_run.html_url || format('{0}/{1}/actions/runs/{2}', github.server_url, github.repository, github.run_id) }}
-          WORKFLOW: ${{ github.event.workflow_run.name || 'Test message: the Google Chat webhook works' }}
+          WORKFLOW: ${{ github.event.workflow_run.name || 'Test message - the Google Chat webhook works' }}
           BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
           EVENT: ${{ github.event.workflow_run.event || github.event_name }}
           CONCLUSION: ${{ github.event.workflow_run.conclusion || 'test' }}
