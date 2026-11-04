@@ -5285,9 +5285,10 @@ under the plain minion id in the default cache backend.
 With ``minion_data_cache`` enabled, the snapshot is refreshed when a minion
 fetches its own regular pillar: on startup, on ``saltutil.refresh_pillar`` and
 during a highstate. This also happens when the compiled pillar was already
-cached. One-off queries such as ``pillar.items pillarenv=dev``, requests with a
-``pillar`` override, and direct compilation such as ``pillar.show_pillar`` do
-not change the snapshot. Minions older than this change always refresh it.
+cached. One-off queries such as ``pillar.items pillarenv=dev``, runs that use
+another ``pillarenv`` than the minion config (``state.apply pillarenv=dev``),
+requests with a ``pillar`` override, and direct compilation such as
+``pillar.show_pillar`` do not change the snapshot. Minions older than this change always refresh it.
 
 After upgrading, old compilation entries in the ``pillar`` bank are not reused;
 each requested minion/environment combination is compiled again on first use.
