@@ -270,8 +270,35 @@ jobs:
       - name: Publish Release v${{ needs.prepare-workflow.outputs.salt-version }}
         env:
           GH_TOKEN: ${{ github.token }}
+          SALT_VERSION: ${{ inputs.salt-version }}
         run: |
-          gh release edit v${{ inputs.salt-version }} --draft=false
+          # Only mark this release as "latest" when it is newer than the current
+          # latest release. Otherwise publishing e.g. a 3006.x release, or a
+          # 3008.1-1 patch after 3008.2, would steal the "latest" label.
+          CURRENT_LATEST="$(gh release list --exclude-drafts --json tagName,isLatest \
+            --jq '.[] | select(.isLatest) | .tagName')"
+          MAKE_LATEST="$(python3 - "${SALT_VERSION}" "${CURRENT_LATEST}" <<'EOF'
+          import re
+          import sys
+
+
+          def parse(version):
+              version = version.lstrip("v")
+              prerelease = "rc" in version or "~" in version
+              nums = [int(n) for n in re.findall(r"\d+", re.sub(r"(rc|~).*", "", version))]
+              # 3008.1-1 -> (3008, 1, 1); 3008.2 -> (3008, 2, 0)
+              nums += [0] * (3 - len(nums))
+              return prerelease, tuple(nums)
+
+
+          new, current = sys.argv[1], sys.argv[2]
+          is_prerelease, new_key = parse(new)
+          newer = not current or new_key > parse(current)[1]
+          print("true" if newer and not is_prerelease else "false")
+          EOF
+          )"
+          echo "Publishing v${SALT_VERSION} (current latest: '${CURRENT_LATEST}', make_latest: ${MAKE_LATEST})"
+          gh release edit "v${SALT_VERSION}" --draft=false --latest="${MAKE_LATEST}"
 
   set-pipeline-exit-status:
     # This step is just so we can make github require this step, to pass checks
