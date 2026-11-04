@@ -2327,12 +2327,29 @@ async def _handle_master_auth(load):
 
     # Register the server-side inbound link so follow-on
     # ``topology/pub|ret|evt|sum`` frames from this peer pass
-    # :func:`_verify_session`.  The sender's
-    # :class:`salt.topology.link.PeerMasterLink` increments its own
-    # :attr:`session_generation` from 0 -> 1 on receipt of this ``ok``
-    # reply (and bumps on each re-handshake), so mirror by incrementing
-    # the server-side counter here.  Prior ``_INBOUND[cluster_id]`` is
-    # a re-handshake; absence is a first-handshake.
+    # :func:`_verify_session`.
+    #
+    # Generation strategy (why we do NOT increment on re-auth):
+    # In a 3-master cluster each node independently connects to the peer
+    # cluster, so ``_handle_master_auth`` fires once per cluster-node --
+    # 3 auth calls for a 3-node cluster, all carrying
+    # ``origin_cluster_id = cluster_id``.  If we incremented on every
+    # call we would end up at gen=3 after the third auth while the first
+    # two nodes already received gen=1 and gen=2 respectively.  Every
+    # frame the first two nodes send would then fail :func:`_verify_session`
+    # (expected=3, got=1 or 2).
+    #
+    # The correct model: only bump when creating a fresh entry
+    # (``existing is None``), which signals the peer cluster is
+    # connecting to us for the first time.  Re-auth calls (nodes 2..N
+    # or same-node reconnects) reuse the existing generation so all N
+    # cluster nodes agree on the same gen.
+    #
+    # Security note: the generation counter provides a soft session fence
+    # (discard frames from before the last full disconnect) rather than
+    # cryptographic AES integrity.  Keeping gen stable across cluster-node
+    # re-auths is correct here: the new AES returned in each reply is still
+    # used by the sender, and the receiver still maintains the mapping.
     #
     # Hold ``_LOCK`` around the read-modify-write: the Raft-SM apply
     # thread's :func:`remove_link` also touches ``_INBOUND`` under the
@@ -2340,7 +2357,7 @@ async def _handle_master_auth(load):
     # inbound record for a cluster_id the SM has just detached.
     with _LOCK:
         existing = _INBOUND.get(cluster_id)
-        next_gen = existing.session_generation + 1 if existing is not None else 1
+        next_gen = existing.session_generation if existing is not None else 1
         _INBOUND[cluster_id] = _InboundLink(
             peer_cluster_id=cluster_id,
             session_generation=next_gen,
@@ -2351,6 +2368,12 @@ async def _handle_master_auth(load):
         "aes": aes,
         "cluster_id": opts.get("cluster_id") or (_CONFIG.cluster_id if _CONFIG else ""),
         "endpoints": endpoints,
+        # Carry the receiver-side session generation so the sender can
+        # pin its own ``_session_generation`` to match.  Without this,
+        # nodes 2..N in a clustered sender get a gen that diverges from
+        # node 1's gen, causing :func:`_verify_session` failures for all
+        # but the last node to authenticate.
+        "session_generation": next_gen,
     }
 
     # Clustered masters also propose the attach into Raft so every

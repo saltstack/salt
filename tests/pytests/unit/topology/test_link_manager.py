@@ -409,6 +409,57 @@ def test_handle_master_auth_holds_lock_on_inbound_write(
     )
 
 
+def test_handle_master_auth_pins_generation_across_cluster_node_reauth(
+    opts, clean_state, monkeypatch
+):
+    """Regression: in a 3-master peer cluster each node auths
+    independently against ``_handle_master_auth``.  If the handler
+    incremented ``session_generation`` on every call the 3-node
+    sender would end up at gen=3 while nodes that got gen=1 and
+    gen=2 still have stale state --- every frame from them fails
+    :func:`_verify_session`.
+
+    Fix: only bump when creating a fresh entry.  Re-auth calls
+    reuse the existing gen so all N cluster-nodes converge.  The
+    reply must also carry ``session_generation`` so the sender
+    can pin its own counter.
+    """
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = (
+        pytest.importorskip("pathlib").Path(opts["pki_dir"]) / "masters" / "east.pub"
+    )
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+
+    load = {"cluster_id": "east", "nonce": "deadbeef"}
+    loop = asyncio.new_event_loop()
+    try:
+        first = loop.run_until_complete(
+            link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+        )
+        second = loop.run_until_complete(
+            link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+        )
+        third = loop.run_until_complete(
+            link_manager._handle_master_auth(load)  # pylint: disable=protected-access
+        )
+    finally:
+        loop.close()
+
+    # Each reply must carry the server-side gen so the sender pins.
+    assert first.get("session_generation") == 1
+    # Re-auth from nodes 2 and 3 of the same cluster must reuse the
+    # existing gen, not increment.  This is the regression guard.
+    assert second.get("session_generation") == 1
+    assert third.get("session_generation") == 1
+    # And the module-level _INBOUND must agree.
+    assert (
+        link_manager._INBOUND["east"].session_generation == 1
+    )  # pylint: disable=protected-access
+
+
 def test_maybe_lazy_register_inbound_holds_lock_on_inbound_write(
     opts, clean_state, inbound_lock_witness, monkeypatch
 ):
@@ -688,14 +739,14 @@ def test_reconnect_loop_recovers_provisional_disconnected_links(
     connecting_pending = _ReconnectWitnessLink(None, LinkHealth.CONNECTING)
 
     link_manager._LINKS.clear()  # pylint: disable=protected-access
-    link_manager._LINKS["__pending__:1.1.1.1:4515"] = (  # pylint: disable=protected-access
-        disconnected_pending
+    link_manager._LINKS["__pending__:1.1.1.1:4515"] = (
+        disconnected_pending  # pylint: disable=protected-access
     )
-    link_manager._LINKS["__pending__:2.2.2.2:4515"] = (  # pylint: disable=protected-access
-        pending_accept_pending
+    link_manager._LINKS["__pending__:2.2.2.2:4515"] = (
+        pending_accept_pending  # pylint: disable=protected-access
     )
-    link_manager._LINKS["__pending__:3.3.3.3:4515"] = (  # pylint: disable=protected-access
-        connecting_pending
+    link_manager._LINKS["__pending__:3.3.3.3:4515"] = (
+        connecting_pending  # pylint: disable=protected-access
     )
 
     monkeypatch.setattr(link_manager, "_RECONNECT_INTERVAL", 0.01)
@@ -1197,9 +1248,7 @@ def test_inbound_listener_bypasses_cluster_ready_gate(opts, clean_state, monkeyp
 
     import salt.channel.server
 
-    monkeypatch.setattr(
-        salt.channel.server, "ReqServerChannel", _FakeReqServerChannel
-    )
+    monkeypatch.setattr(salt.channel.server, "ReqServerChannel", _FakeReqServerChannel)
     # Prime the clustered-master shape so the fixture resembles the sandbox.
     cluster_opts = dict(opts)
     cluster_opts["cluster_peers"] = ["10.0.0.2", "10.0.0.3"]
@@ -1207,8 +1256,10 @@ def test_inbound_listener_bypasses_cluster_ready_gate(opts, clean_state, monkeyp
 
     loop = asyncio.new_event_loop()
     try:
-        result = link_manager._open_inbound_listener(  # pylint: disable=protected-access
-            cluster_opts, loop
+        result = (
+            link_manager._open_inbound_listener(  # pylint: disable=protected-access
+                cluster_opts, loop
+            )
         )
     finally:
         loop.close()

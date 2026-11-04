@@ -349,15 +349,28 @@ class PeerMasterLink:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _rotate_session(self, aes):
+    def _rotate_session(self, aes, session_generation=None):
         """Install a fresh session AES and bump the generation counter.
 
         A fresh handshake clears the send-fault bookkeeping: the prior
         wedged REQ channel has been torn down and the new session starts
         from a clean slate.
+
+        :param session_generation: When the ``_master_auth`` ``ok`` reply
+            includes a ``session_generation`` field, pass it here so the
+            sender's counter mirrors what the receiver stored.  Without
+            this, a peer restart resets the sender's gen to 1 while the
+            receiver increments from the prior value (e.g. 1 -> 2), causing
+            every inbound frame to fail ``_verify_session`` (sender reports
+            gen=1, receiver expects gen=2).  Defaults to
+            ``self._session_generation + 1`` when not provided, preserving
+            backward compatibility with peers that pre-date this field.
         """
         self._session_aes = aes
-        self._session_generation += 1
+        if session_generation is not None:
+            self._session_generation = int(session_generation)
+        else:
+            self._session_generation += 1
         self._last_send_fault_at = None
         self._write_health_snapshot()
 
@@ -716,7 +729,9 @@ class PeerMasterLink:
                     self._health = LinkHealth.DISCONNECTED
                     return
                 self._peer_cluster_id = reply.get("cluster_id")
-                self._rotate_session(aes)
+                self._rotate_session(
+                    aes, session_generation=reply.get("session_generation")
+                )
                 # Harvest any additional endpoints the peer advertised.
                 for ep in reply.get("endpoints") or []:
                     if isinstance(ep, dict) and "host" in ep:
