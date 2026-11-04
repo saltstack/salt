@@ -425,3 +425,63 @@ def test_handle_signals_default_int_handler_typeerror():
     # KeyboardInterrupt (what Python does natively on SIGINT).
     with pytest.raises(KeyboardInterrupt):
         pm._handle_signals(signal.SIGTERM, None)
+
+
+class _PickleRoundTripProcess(salt.utils.process.SignalHandlingProcess):
+    """Used by ``test_setstate_reseeds_args_for_second_generation_pickle``.
+
+    Needs two required positional args so a lossy ``__setstate__`` fails
+    loudly with ``TypeError`` instead of silently constructing a broken
+    instance.
+    """
+
+    def __init__(self, opts, ipc_publisher, **kwargs):
+        super().__init__(**kwargs)
+        self.opts = opts
+        self.ipc_publisher = ipc_publisher
+
+    def run(self):
+        pass
+
+
+def test_setstate_reseeds_args_for_second_generation_pickle():
+    """Regression: a ``Process`` object must round-trip through pickle
+    repeatedly without losing its constructor args.
+
+    Pickle's default unpickle flow calls ``cls.__new__(cls)`` with no
+    arguments, so the ``_args_for_getstate`` / ``_kwargs_for_getstate``
+    attributes that ``Process.__new__`` normally captures are empty on
+    the unpickled instance.  ``Process.__setstate__`` then rebuilds state
+    via ``self.__init__(*args, **kwargs)``, but prior to the fix did NOT
+    re-seed ``_args_for_getstate`` / ``_kwargs_for_getstate`` on the
+    reconstructed instance.  The next pickle (second-generation --- when
+    a child process spawns a grandchild via its own ``ProcessManager``)
+    would emit an empty args tuple, and the grandchild's
+    ``__setstate__`` would call ``self.__init__()`` with no positional
+    args and crash with ``TypeError: ... missing required positional
+    arguments``.
+
+    Observed in the wild on Windows topology masters whose
+    ``RequestServer`` sub-process spawns ``EventMonitor`` via its own
+    ``ProcessManager`` (second-generation pickle).
+    """
+    import pickle
+
+    original = _PickleRoundTripProcess("opts_val", "ipc_val", name="orig")
+    assert original._args_for_getstate == ("opts_val", "ipc_val")
+
+    first = pickle.loads(pickle.dumps(original))
+    assert first.opts == "opts_val"
+    assert first.ipc_publisher == "ipc_val"
+    # The round-trip MUST re-seed the pickle-support attributes so a
+    # subsequent pickle emits the same args, not empty ones.
+    assert first._args_for_getstate == ("opts_val", "ipc_val"), (
+        "second-generation pickle would lose args; " f"got {first._args_for_getstate!r}"
+    )
+
+    # Second-generation round-trip: this is where the original bug blew
+    # up with ``TypeError: __init__() missing 2 required positional
+    # arguments``.
+    second = pickle.loads(pickle.dumps(first))
+    assert second.opts == "opts_val"
+    assert second.ipc_publisher == "ipc_val"
