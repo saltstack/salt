@@ -237,8 +237,8 @@ async def test_async_master_updates_snapshot(opts, enabled):
             await handler._pillar({"id": MINION_ID, "grains": {}, "pillarenv": "base"})
             == PILLARS["base"]
         )
-    snapshot = handler.masterapi.cache.fetch("pillar", MINION_ID)
-    assert snapshot == (PILLARS["base"] if enabled else {})
+    expected = PILLARS["base"] if enabled else {}
+    assert handler.masterapi.cache.fetch("pillar", MINION_ID) == expected
     if enabled:
         _matched(handler, "web")
 
