@@ -24,7 +24,12 @@ from tests.pytests.functional.cluster.consensus.test_raft_learner import _elect
 # ---------------------------------------------------------------------------
 
 # Shared temporary directory for the test module so SaltStorage can write.
+# Each _make_opts call gets a fresh per-invocation subdir so
+# on-disk state from a previous test (log entries + persisted
+# commit_index) does not bleed into the next test's RaftService startup
+# apply_entries replay.
 _TMPDIR = tempfile.mkdtemp(prefix="salt_raft_svc_test_")
+_OPTS_COUNTER = [0]
 
 
 def _run(coro):
@@ -32,12 +37,17 @@ def _run(coro):
 
 
 def _make_opts(node_id, peers):
+    _OPTS_COUNTER[0] += 1
+    import os  # pylint: disable=import-outside-toplevel
+
+    cachedir = os.path.join(_TMPDIR, f"opts-{_OPTS_COUNTER[0]}")
+    os.makedirs(cachedir, exist_ok=True)
     return {
         "id": node_id,
         "interface": node_id,
         "cluster_id": "test-cluster",
         "cluster_peers": peers,
-        "cachedir": _TMPDIR,
+        "cachedir": cachedir,
         # Use the legacy tight election window so in-process functional
         # tests stay fast (real cluster masters override the defaults via
         # opts to ride out CI heartbeat jitter).
