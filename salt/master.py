@@ -5687,6 +5687,21 @@ class ClearFuncs(TransportMethods):
 
         # Authorized. Do the job!
         try:
+            # Strip AES-bridge protocol fields before we spread
+            # ``clear_load`` as kwargs into the wheel function.  When
+            # the request arrives via :meth:`_is_client_bridge`, the
+            # payload carries ``id`` / ``ts`` (AES channel protocol)
+            # and ``client_id`` (injected by
+            # :meth:`salt.wheel.RemoteWheelClient.master_call`).  None
+            # of these are valid kwargs for any wheel function; wheel
+            # signatures like ``def list_all_client()`` reject them
+            # via ``format_call`` with ``SaltInvocationError``.  Leave
+            # them in on the master-local path too — they're never
+            # present there, so popping with ``None`` default is a
+            # no-op, and doing it unconditionally keeps the dispatch
+            # predictable regardless of which auth_type won.
+            for _bridge_field in ("client_id", "id", "ts"):
+                clear_load.pop(_bridge_field, None)
             jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")
