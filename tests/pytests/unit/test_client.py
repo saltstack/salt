@@ -10,7 +10,7 @@ import tornado.ioloop
 import salt.client as client
 import salt.config
 from salt.exceptions import SaltClientError, SaltInvocationError, SaltReqTimeoutError
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 pytestmark = [
     pytest.mark.skip_on_windows,
@@ -613,8 +613,8 @@ async def test_pub_async_default_timeout(master_opts):
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
                 mock_channel = MagicMock()
-                mock_channel.__enter__ = MagicMock(return_value=mock_channel)
-                mock_channel.__exit__ = MagicMock(return_value=False)
+                mock_channel.__aenter__ = AsyncMock(return_value=mock_channel)
+                mock_channel.__aexit__ = AsyncMock(return_value=False)
 
                 # Mock the async send to return a coroutine that resolves to the payload
                 async def mock_send(*args, **kwargs):
@@ -653,8 +653,8 @@ async def test_pub_async_explicit_timeout(master_opts):
                 "salt.channel.client.AsyncReqChannel.factory"
             ) as mock_channel_factory:
                 mock_channel = MagicMock()
-                mock_channel.__enter__ = MagicMock(return_value=mock_channel)
-                mock_channel.__exit__ = MagicMock(return_value=False)
+                mock_channel.__aenter__ = AsyncMock(return_value=mock_channel)
+                mock_channel.__aexit__ = AsyncMock(return_value=False)
 
                 # Mock the async send to return a coroutine that resolves to the payload
                 async def mock_send(*args, **kwargs):
@@ -728,8 +728,8 @@ def test_pub_async_uses_publish_timeout_from_config(master_opts):
             raise tornado.gen.Return({"load": {"jid": "test_jid", "minions": ["m1"]}})
 
         mock_channel = MagicMock()
-        mock_channel.__enter__ = MagicMock(return_value=mock_channel)
-        mock_channel.__exit__ = MagicMock(return_value=False)
+        mock_channel.__aenter__ = AsyncMock(return_value=mock_channel)
+        mock_channel.__aexit__ = AsyncMock(return_value=False)
         mock_channel.send = mock_send
 
         with patch("os.path.exists", return_value=True), patch(

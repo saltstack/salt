@@ -15,12 +15,14 @@ pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.requires_sshd_server,
     pytest.mark.skipif(
-        'grains["osfinger"].startswith(("Fedora Linux-40", "Ubuntu-24.04", "Arch Linux"))',
+        'grains["osfinger"].startswith("Ubuntu-24.04")',
         reason="System ships with a version of python that is too recent for salt-ssh tests",
         # Actually, the problem is that the tornado we ship is not prepared for Python 3.12,
         # and it imports `ssl` and checks if the `match_hostname` function is defined, which
         # has been deprecated since Python 3.7, so, the logic goes into trying to import
         # backports.ssl-match-hostname which is not installed on the system.
+        # Fedora 40 and Arch Linux dropped from this list: Fedora 40 reached EOL
+        # (replaced by fedora-43 in CI) and Arch Linux is not part of the CI matrix.
     ),
     pytest.mark.skipif(
         system_python_version() < (3, 10),

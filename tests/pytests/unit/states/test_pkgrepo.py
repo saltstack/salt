@@ -92,7 +92,7 @@ def test_managed_insecure_key():
         assert ret["result"] is False
         assert (
             ret["comment"]
-            == "Cannot have 'key_url' using http with 'allow_insecure_key' set to True"
+            == "Cannot have 'key_url' using http with 'allow_insecure_key' set to False"
         )
 
 

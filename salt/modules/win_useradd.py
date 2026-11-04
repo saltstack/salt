@@ -31,7 +31,6 @@ from datetime import datetime
 import salt.utils.args
 import salt.utils.dateutils
 import salt.utils.platform
-import salt.utils.versions
 import salt.utils.win_reg
 import salt.utils.win_runas
 import salt.utils.winapi
@@ -81,6 +80,11 @@ def add(
     homedrive=None,
     profile=None,
     logonscript=None,
+    expiration_date=None,
+    account_disabled=None,
+    unlock_account=None,
+    password_never_expires=None,
+    disallow_change_password=None,
 ):
     """
     Add a user to the minion.
@@ -129,6 +133,43 @@ def add(
 
             Default is ``None``.
 
+        expiration_date (:obj:`date`, optional):
+            The date the account expires. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        account_disabled (:obj:`bool`, optional):
+            ``True`` disables the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        unlock_account (:obj:`bool`, optional):
+            ``True`` unlocks the account. See ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        password_never_expires (:obj:`bool`, optional):
+            ``True`` sets the password to never expire. See ``user.update``
+            for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
+        disallow_change_password (:obj:`bool`, optional):
+            ``True`` blocks the user from changing the password. See
+            ``user.update`` for details.
+
+            Default is ``None``.
+
+            .. versionadded:: 3008.5
+
     Returns:
         bool: ``True`` if successful, otherwise ``False``.
 
@@ -160,9 +201,25 @@ def add(
         log.error("nbr: %s", exc.winerror)
         log.error("ctx: %s", exc.funcname)
         log.error("msg: %s", exc.strerror)
+        if exc.winerror == 2220:  # NERR_GroupExists
+            return (
+                f"Cannot create user '{name}': a local group with this name "
+                "already exists. Windows does not allow a local user and a "
+                "local group to share the same name."
+            )
         return exc.strerror
 
-    update(name=name, homedrive=homedrive, profile=profile, fullname=fullname)
+    update(
+        name=name,
+        homedrive=homedrive,
+        profile=profile,
+        fullname=fullname,
+        expiration_date=expiration_date,
+        account_disabled=account_disabled,
+        unlock_account=unlock_account,
+        password_never_expires=password_never_expires,
+        disallow_change_password=disallow_change_password,
+    )
 
     ret = chgroups(name, groups) if groups else True
 
@@ -305,7 +362,7 @@ def update(
         user_info["comment"] = description
     if logonscript:
         user_info["script_path"] = logonscript
-    if fullname:
+    if fullname is not None:
         user_info["full_name"] = fullname
     if profile:
         user_info["profile"] = profile
@@ -465,23 +522,6 @@ def delete(name, purge=False, force=False):
         return exc.strerror
 
     return True
-
-
-def getUserSid(username):
-    """
-    Deprecated function. Please use get_user_sid instead
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' user.get_user_sid jsnuffy
-    """
-    salt.utils.versions.warn_until(
-        version=3009,
-        message="'getUserSid' is being deprecated. Please use get_user_sid instead",
-    )
-    return get_user_sid(username)
 
 
 def get_user_sid(username):

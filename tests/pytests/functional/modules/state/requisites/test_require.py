@@ -361,6 +361,44 @@ def test_requisites_require_ordering_and_errors_5(state, state_tree):
         assert ret.errors == [errmsg]
 
 
+def test_requisites_require_ordering_duplicate_extend_id(state, state_tree):
+    """
+    Regression test for PR #63673.
+
+    When the target of an extend (or a require_in, which desugars to extend)
+    cannot be resolved to a single state because multiple states share the
+    same ``name`` parameter, the compiler should fail with a "not unique"
+    error that names every duplicate, instead of the older generic
+    "not part of the high state" message.
+    """
+    sls_contents = """
+    state_a:
+      test.succeed_without_changes:
+        - name: duplicate-target
+
+    state_b:
+      test.succeed_without_changes:
+        - name: duplicate-target
+
+    trigger:
+      test.succeed_without_changes:
+        - require_in:
+          - test: duplicate-target
+    """
+    errmsg = (
+        "Cannot extend ID 'duplicate-target' in 'base:requisite'. It is not"
+        " unique in the running high state.\nThis is likely due to more than"
+        " one state using the same `name` parameter. Ensure that\nthe state"
+        " with an ID of 'duplicate-target' is unique in environment 'base'"
+        " and to SLS 'requisite'.\nDuplicate states IDs are:"
+        " 'test: state_a, test: state_b'"
+    )
+    with pytest.helpers.temp_file("requisite.sls", sls_contents, state_tree):
+        ret = state.sls("requisite")
+        assert ret.failed
+        assert ret.errors == [errmsg]
+
+
 def test_requisites_require_with_order_first_last(state, state_tree):
     """
     Call sls file containing a state with require_in order first

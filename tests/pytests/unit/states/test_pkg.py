@@ -467,7 +467,7 @@ def test_mod_aggregate():
             "__sls__": "47628",
             "__env __": "base",
             "__id__": "other_pkgs",
-            "pkgs": ["byobu"],
+            "pkgs": ["byobu", {"tput": "1.0.1"}],
             "aggregate": True,
             "order": 10002,
             "fun": "installed",
@@ -552,7 +552,7 @@ def test_mod_aggregate():
     }
 
     expected = {
-        "pkgs": ["byobu", "vim", "tmux", "google-cloud-sdk"],
+        "pkgs": ["byobu", {"tput": "1.0.1"}, "vim", "tmux", "google-cloud-sdk"],
         "name": "other_pkgs",
         "fun": "installed",
         "aggregate": True,
@@ -577,7 +577,6 @@ def test_installed_with_changes_test_true(list_pkgs):
             "pkg.list_pkgs": list_pkgs,
         },
     ):
-
         expected = {"dummy": {"new": "some version here", "old": ""}}
         # Run state with test=true
         with patch.dict(pkg.__opts__, {"test": True}):
@@ -594,15 +593,18 @@ def test_installed_with_sources(list_pkgs, tmp_path):
     list_pkgs = MagicMock(return_value=list_pkgs)
     pkg_source = tmp_path / "pkga-package-0.3.0.deb"
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "cp.cache_file": cp.cache_file,
-            "pkg.list_pkgs": list_pkgs,
-            "pkg_resource.pack_sources": pkg_resource.pack_sources,
-            "lowpkg.bin_pkg_info": MagicMock(),
-        },
-    ), patch("salt.fileclient.get_file_client", return_value=MagicMock()):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "cp.cache_file": cp.cache_file,
+                "pkg.list_pkgs": list_pkgs,
+                "pkg_resource.pack_sources": pkg_resource.pack_sources,
+                "lowpkg.bin_pkg_info": MagicMock(),
+            },
+        ),
+        patch("salt.fileclient.get_file_client", return_value=MagicMock()),
+    ):
         try:
             ret = pkg.installed("install-pkgd", sources=[{"pkga": str(pkg_source)}])
             assert ret["result"] is False
@@ -610,6 +612,130 @@ def test_installed_with_sources(list_pkgs, tmp_path):
             if "got multiple values for keyword argument 'saltenv'" in str(exc):
                 pytest.fail(f"TypeError should have not been raised: {exc}")
             raise exc from None
+
+
+def test_installed_sources_allow_updates_no_downgrade():
+    """
+    pkg.installed with ``sources`` and ``allow_updates=True`` should not
+    reinstall/downgrade when the installed version is newer than the version
+    reported by the source package. Regression test for #35385.
+    """
+    source = "salt://server/check-mk-agent.deb"
+
+    def _list_pkgs(**kwargs):
+        if kwargs.get("purge_desired"):
+            return {}
+        return {"check-mk-agent": ["2.0.0"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": MagicMock(side_effect=_list_pkgs),
+            "pkg_resource.pack_sources": MagicMock(
+                return_value={"check-mk-agent": source}
+            ),
+            "cp.cache_file": MagicMock(return_value="/cached/check-mk-agent.deb"),
+            "lowpkg.bin_pkg_info": MagicMock(
+                return_value={"name": "check-mk-agent", "version": "1.0.0"}
+            ),
+        },
+    ), patch("salt.states.pkg.os.path.exists", return_value=True):
+        result = pkg._find_install_targets(
+            name="check-mk-agent",
+            sources=[{"check-mk-agent": source}],
+            allow_updates=True,
+            saltenv="base",
+        )
+
+    # When nothing needs to be installed, _find_install_targets returns a dict
+    # (result True). If allow_updates were ignored for sources, the newer
+    # installed version would be flagged for reinstall and a tuple of targets
+    # would be returned instead.
+    assert isinstance(result, dict)
+    assert result["result"] is True
+    assert result["changes"] == {}
+
+
+def test_installed_sources_without_allow_updates_still_downgrades_35385():
+    """
+    Inverse of the #35385 fix, guarding against overcorrection: with
+    ``sources`` and ``allow_updates`` left at its default (False), a newer
+    installed version must STILL be targeted for reinstall/downgrade to the
+    version reported by the source package. The fix must only change
+    behaviour when allow_updates is explicitly enabled.
+    """
+    source = "salt://server/check-mk-agent.deb"
+
+    def _list_pkgs(**kwargs):
+        if kwargs.get("purge_desired"):
+            return {}
+        return {"check-mk-agent": ["2.0.0"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": MagicMock(side_effect=_list_pkgs),
+            "pkg_resource.pack_sources": MagicMock(
+                return_value={"check-mk-agent": source}
+            ),
+            "cp.cache_file": MagicMock(return_value="/cached/check-mk-agent.deb"),
+            "lowpkg.bin_pkg_info": MagicMock(
+                return_value={"name": "check-mk-agent", "version": "1.0.0"}
+            ),
+        },
+    ), patch("salt.states.pkg.os.path.exists", return_value=True):
+        # allow_updates=False is what pkg.installed passes in kwargs by
+        # default (kwargs["allow_updates"] = allow_updates)
+        result = pkg._find_install_targets(
+            name="check-mk-agent",
+            sources=[{"check-mk-agent": source}],
+            allow_updates=False,
+            saltenv="base",
+        )
+
+    # A tuple means targets were found; targets is the second element
+    assert isinstance(result, tuple)
+    targets = result[1]
+    assert targets == {"check-mk-agent": source}
+
+
+def test_installed_sources_allow_updates_still_upgrades_35385():
+    """
+    Inverse of the #35385 fix, guarding against overcorrection:
+    ``allow_updates=True`` must only tolerate a NEWER installed version. When
+    the installed version is older than the one reported by the source
+    package, the package must still be targeted for installation.
+    """
+    source = "salt://server/check-mk-agent.deb"
+
+    def _list_pkgs(**kwargs):
+        if kwargs.get("purge_desired"):
+            return {}
+        return {"check-mk-agent": ["1.0.0"]}
+
+    with patch.dict(
+        pkg.__salt__,
+        {
+            "pkg.list_pkgs": MagicMock(side_effect=_list_pkgs),
+            "pkg_resource.pack_sources": MagicMock(
+                return_value={"check-mk-agent": source}
+            ),
+            "cp.cache_file": MagicMock(return_value="/cached/check-mk-agent.deb"),
+            "lowpkg.bin_pkg_info": MagicMock(
+                return_value={"name": "check-mk-agent", "version": "2.0.0"}
+            ),
+        },
+    ), patch("salt.states.pkg.os.path.exists", return_value=True):
+        result = pkg._find_install_targets(
+            name="check-mk-agent",
+            sources=[{"check-mk-agent": source}],
+            allow_updates=True,
+            saltenv="base",
+        )
+
+    assert isinstance(result, tuple)
+    targets = result[1]
+    assert targets == {"check-mk-agent": source}
 
 
 @pytest.mark.parametrize("action", ["removed", "purged"])
@@ -843,20 +969,19 @@ def test_installed_with_single_normalize():
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
-    ), patch.object(
-        yumpkg, "list_holds", MagicMock()
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+        ),
+        patch.object(yumpkg, "list_holds", MagicMock()),
     ):
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
@@ -931,7 +1056,6 @@ def test_installed_with_freebsd_origin():
             },
         ),
     ):
-
         ret = pkg.installed("test/pkga")
         install_mock.assert_not_called()
         assert ret["result"]
@@ -965,12 +1089,13 @@ def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
-    ), patch.dict(
-        pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian", "osarch": "amd64"}
+        ),
+        patch.dict(pkg_resource.__grains__, {"os": "Ubuntu", "os_family": "Debian"}),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1053,15 +1178,18 @@ def test_verify_install_normalizes_debian_multiarch_names():
     desired = {"zlib1g:amd64": "1:1.3.dfsg-3.1ubuntu2.1"}
     new_pkgs = {"zlib1g": ["1:1.3.dfsg-3.1ubuntu2.1"]}
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.normalize_name": lambda name: (
-                name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
-            ),
-            "pkg_resource.version_clean": pkg_resource.version_clean,
-        },
-    ), patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.normalize_name": lambda name: (
+                    name.rsplit(":", 1)[0] if name.endswith(":amd64") else name
+                ),
+                "pkg_resource.version_clean": pkg_resource.version_clean,
+            },
+        ),
+        patch.dict(pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}),
+    ):
         ok, failed = pkg._verify_install(desired, new_pkgs)
 
     assert ok == ["zlib1g:amd64"]
@@ -1075,13 +1203,16 @@ def test_verify_install_normalizes_yum_arch_names():
     desired = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch": "20220214-2.1"}
     new_pkgs = {"weird-name-1.2.3-1234.5.6.test7tst.x86_64": ["20220214-2.1"]}
 
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.normalize_name": yumpkg.normalize_name,
-            "pkg_resource.version_clean": pkg_resource.version_clean,
-        },
-    ), patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.normalize_name": yumpkg.normalize_name,
+                "pkg_resource.version_clean": pkg_resource.version_clean,
+            },
+        ),
+        patch.dict(pkg.__grains__, {"os": "CentOS", "os_family": "RedHat"}),
+    ):
         ok, failed = pkg._verify_install(desired, new_pkgs)
 
     assert ok == ["weird-name-1.2.3-1234.5.6.test7tst.x86_64.noarch"]
@@ -1138,16 +1269,15 @@ def test_removed_with_single_normalize():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
     ):
         expected = {
             "weird-name-1.2.3-1234.5.6.test7tst.x86_64": {
@@ -1180,6 +1310,77 @@ def test_removed_with_single_normalize():
         )
         assert ret["result"]
         assert ret["changes"] == expected
+
+
+def test_pkg_removed_version_specific_covers_multi_version_installed():
+    """
+    Sister unit test for the Windows functional
+    ``test_pkg_removed_with_version_multiple`` (currently skipped on
+    Windows due to a chocolatey community-repo regression that broke
+    the 7zip 19.00.00.0 + 22.01.00.0 side-by-side install fixture).
+
+    Validates the ``pkg.removed`` state contract when a specific version
+    is targeted and the package has multiple versions installed:
+
+    * ``_find_remove_targets`` must identify the package as a removal
+      target because the requested version is one of the installed
+      versions.
+    * ``pkg.remove`` must be dispatched exactly once with the requested
+      version so the module-level implementation can scope the
+      uninstall to that version.
+    * After the simulated ``pkg.remove``, ``_uninstall``'s post-check
+      against ``pkg.list_pkgs`` must see the requested version gone
+      from the installed-versions list and report
+      ``result=True`` with the expected changes dict.
+    """
+    pkg_name = "7zip"
+    requested_version = "19.00.00.0"
+    remaining_version = "22.01.00.0"
+
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            # _find_remove_targets() asks with versions_as_list=True
+            {pkg_name: [requested_version, remaining_version]},
+            # _uninstall() post-check after pkg.remove dispatch
+            {pkg_name: [remaining_version]},
+        ]
+    )
+    pkg_remove_mock = MagicMock(
+        return_value={pkg_name: {"old": requested_version, "new": remaining_version}}
+    )
+
+    salt_dict = {
+        "pkg.list_pkgs": list_pkgs_mock,
+        "pkg.remove": pkg_remove_mock,
+        "pkg.normalize_name": lambda pkgname: pkgname,
+        "pkg.version_cmp": MagicMock(return_value=0),
+        "pkg_resource.parse_targets": pkg_resource.parse_targets,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(pkg.__grains__, {"os": "Windows", "os_family": "Windows"}),
+        patch.dict(pkg_resource.__grains__, {"os": "Windows"}),
+    ):
+        ret = pkg.removed(name=pkg_name, version=requested_version)
+
+    assert ret["result"] is True, ret
+    assert ret["comment"] == "All targeted packages were removed."
+    assert ret["changes"] == {
+        pkg_name: {"old": requested_version, "new": remaining_version}
+    }
+
+    # pkg.remove must be invoked exactly once, scoped to the requested
+    # version (so the module uninstalls only that version and leaves
+    # the other installed version intact).
+    pkg_remove_mock.assert_called_once()
+    call_args, call_kwargs = pkg_remove_mock.call_args
+    assert call_args[0] == pkg_name
+    assert call_kwargs.get("version") == requested_version
+    assert call_kwargs.get("pkgs") is None
+    assert call_kwargs.get("split_arch") is False
 
 
 def test_installed_with_single_normalize_32bit():
@@ -1229,18 +1430,18 @@ def test_installed_with_single_normalize_32bit():
         "pkg_resource.parse_targets": pkg_resource.parse_targets,
     }
 
-    with patch("salt.modules.yumpkg.list_pkgs", list_pkgs), patch(
-        "salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)
-    ), patch(
-        "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
-    ) as call_yum_mock, patch.dict(
-        pkg.__salt__, salt_dict
-    ), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+    with (
+        patch("salt.modules.yumpkg.list_pkgs", list_pkgs),
+        patch("salt.modules.yumpkg.version_cmp", MagicMock(return_value=0)),
+        patch(
+            "salt.modules.yumpkg._call_yum", MagicMock(return_value={"retcode": 0})
+        ) as call_yum_mock,
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 7}
+        ),
     ):
         expected = {
             "xz-devel.i686": {
@@ -1261,13 +1462,16 @@ def test_installed_with_single_normalize_32bit():
 def test__get_installable_versions_no_version_found():
     mock_latest_versions = MagicMock(return_value={})
     mock_list_repo_pkgs = MagicMock(return_value={})
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.latest_version": mock_latest_versions,
-            "pkg.list_pkgs": mock_list_repo_pkgs,
-        },
-    ), patch.dict(pkg.__opts__, {"test": True}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.latest_version": mock_latest_versions,
+                "pkg.list_pkgs": mock_list_repo_pkgs,
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
         expected = {"dummy": {"new": "installed", "old": ""}}
         ret = pkg._get_installable_versions({"dummy": None}, current=None)
         assert ret == expected
@@ -1276,13 +1480,16 @@ def test__get_installable_versions_no_version_found():
 def test__get_installable_versions_version_found():
     mock_latest_versions = MagicMock(return_value={"dummy": "1.0.1"})
     mock_list_repo_pkgs = MagicMock(return_value={})
-    with patch.dict(
-        pkg.__salt__,
-        {
-            "pkg.latest_version": mock_latest_versions,
-            "pkg.list_pkgs": mock_list_repo_pkgs,
-        },
-    ), patch.dict(pkg.__opts__, {"test": True}):
+    with (
+        patch.dict(
+            pkg.__salt__,
+            {
+                "pkg.latest_version": mock_latest_versions,
+                "pkg.list_pkgs": mock_list_repo_pkgs,
+            },
+        ),
+        patch.dict(pkg.__opts__, {"test": True}),
+    ):
         expected = {"dummy": {"new": "1.0.1", "old": ""}}
         ret = pkg._get_installable_versions({"dummy": None}, current=None)
         assert ret == expected
@@ -1360,12 +1567,15 @@ def test_installed_arch_qualified_native_name_already_installed_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1410,12 +1620,15 @@ def test_find_install_targets_arch_qualified_native_already_installed_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         # split_arch=False is the key trigger: pkg.installed passes this to
         # preserve APT multiarch names (e.g. foo:amd64).  With split_arch=False,
@@ -1471,12 +1684,15 @@ def test_installed_arch_qualified_foreign_arch_not_confused_with_native_69604():
         "pkg_resource.version_clean": pkg_resource.version_clean,
     }
 
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        pkg_resource.__salt__, salt_dict
-    ), patch.dict(
-        pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
-    ), patch.dict(
-        yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(
+            pkg.__grains__, {"os": "CentOS", "os_family": "RedHat", "osarch": "x86_64"}
+        ),
+        patch.dict(
+            yumpkg.__grains__, {"os": "CentOS", "osarch": "x86_64", "osmajorrelease": 8}
+        ),
     ):
         ret = pkg.installed(
             "test_install",
@@ -1545,12 +1761,14 @@ def test_yumpkg_group_installed_with_repo_options(
     }
 
     name = "MyGroup"
-    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
-        yumpkg.__salt__, salt_dict
-    ), patch.object(
-        yumpkg,
-        "list_pkgs",
-        MagicMock(return_value=list_pkgs),
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(yumpkg.__salt__, salt_dict),
+        patch.object(
+            yumpkg,
+            "list_pkgs",
+            MagicMock(return_value=list_pkgs),
+        ),
     ):
         ret = pkg.group_installed(name, **kwargs)
         assert ret["result"]

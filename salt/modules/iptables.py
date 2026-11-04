@@ -1011,16 +1011,24 @@ def flush(table="filter", chain="", family="ipv4"):
 
 def _parse_conf(conf_file=None, in_mem=False, family="ipv4"):
     """
-    If a file is not passed in, and the correct one for this OS is not
-    detected, return False
+    Parse an iptables-save style ruleset into a dict.
+
+    The rules come from ``conf_file`` when it is passed in, otherwise from the
+    running ruleset when ``in_mem`` is True, otherwise from this OS's default
+    iptables file. If the file being read (passed in or the OS default) does
+    not exist, return an empty dict. If no file is passed in, ``in_mem`` is
+    False and this OS has no default file, raise SaltException.
     """
     if _conf() and not conf_file and not in_mem:
         conf_file = _conf(family)
 
     rules = ""
     if conf_file:
-        with salt.utils.files.fopen(conf_file, "r") as ifile:
-            rules = ifile.read()
+        try:
+            with salt.utils.files.fopen(conf_file, "r") as ifile:
+                rules = ifile.read()
+        except FileNotFoundError:
+            return {}
     elif in_mem:
         cmd = f"{_iptables_cmd(family)}-save"
         rules = __salt__["cmd.run_stdout"](cmd)

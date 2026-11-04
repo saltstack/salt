@@ -119,24 +119,25 @@ def test_init_client_normalises_path_prefix_and_strips_outer_slashes():
         assert etcd3_cache.path_prefix == "/my/prefix"
 
 
-def test_init_client_forces_require_v2_off_in_resolved_conf():
+def test_init_client_strips_require_v2_from_resolved_conf():
     """
-    The cache is inherently v3; it must force ``etcd.require_v2`` off in
-    the resolved conf so EtcdClientV3 constructs (it raises otherwise) and
-    the user does not have to set a "require v2" option to use it.
+    The cache is inherently v3; it must strip any lingering
+    ``etcd.require_v2`` key from the resolved conf so stale user config
+    (``require_v2: True``) does not trip ``get_conn``'s hard-reject guard.
     """
     with patch.dict(
         etcd3_cache.__opts__, {"etcd.path_prefix": "/test_cache"}, clear=True
     ), patch.object(etcd3_cache, "client", None), patch.object(
         etcd3_cache, "path_prefix", None
     ), patch(
-        "salt.utils.etcd_util._get_etcd_opts", return_value={"etcd.host": "h"}
+        "salt.utils.etcd_util._get_etcd_opts",
+        return_value={"etcd.host": "h", "etcd.require_v2": True},
     ), patch(
         "salt.utils.etcd_util.EtcdClientV3"
     ) as client_cls:
         etcd3_cache._init_client()
         conf = client_cls.call_args.args[0]
-        assert conf["etcd.require_v2"] is False
+        assert "etcd.require_v2" not in conf
         assert client_cls.call_args.kwargs.get("has_etcd_opts") is True
         # The module operates on the raw etcd3-py client, not the wrapper.
         assert etcd3_cache.client is client_cls.return_value.client

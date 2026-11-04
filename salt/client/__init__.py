@@ -251,8 +251,6 @@ def get_local_client(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
 
-    :param bool keep_loop: Do not destroy the event loop when closing the event
-                           subsriber.
 
     :param bool auto_reconnect: When True the event subscriber will reconnect
                                 automatically if a disconnect error is raised.
@@ -2199,7 +2197,7 @@ class LocalClient:
             + str(self.opts["ret_port"])
         )
 
-        with salt.channel.client.AsyncReqChannel.factory(
+        async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, io_loop=io_loop, crypt="clear", master_uri=master_uri
         ) as channel:
             try:

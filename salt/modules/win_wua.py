@@ -50,14 +50,48 @@ As of Windows 10 and Windows Server 2016, the ability to modify the Windows
 Update settings has been restricted. The settings can be modified in the Local
 Group Policy using the ``lgpo`` module.
 
+.. note::
+
+    **Troubleshooting an update that reports success but doesn't persist**
+
+    If :py:func:`win_wua.install <salt.modules.win_wua.install>` reports
+    success but the update does not appear installed after a reboot, start
+    with :py:func:`win_wua.get_needs_reboot
+    <salt.modules.win_wua.get_needs_reboot>` to make sure no reboot is
+    already pending (installing/resetting while a reboot is pending can
+    itself be the cause). Next use :py:func:`win_wua.get_cbs_log
+    <salt.modules.win_wua.get_cbs_log>` and :py:func:`win_wua.get_windows_update_log
+    <salt.modules.win_wua.get_windows_update_log>` to look for the
+    underlying servicing-stack (CBS) or Windows Update Agent error --
+    ``install()``'s return value only reflects the installer job's result
+    at call time, not whether the update actually persisted through a
+    required reboot. To confirm persistence, re-run
+    :py:func:`win_wua.installed <salt.modules.win_wua.installed>` or
+    :py:func:`win_wua.get <salt.modules.win_wua.get>` after the reboot
+    completes and compare against what was requested. Only after the logs
+    point at WUA datastore/catalog-cache corruption specifically should you
+    reach for :py:func:`win_wua.reset <salt.modules.win_wua.reset>` (or
+    :py:func:`win_wua.reset_datastore <salt.modules.win_wua.reset_datastore>`
+    / :py:func:`win_wua.reset_catroot <salt.modules.win_wua.reset_catroot>`)
+    as a troubleshooting last resort -- these do not fix component-store
+    (CBS)-level rejections, which require ``DISM /Cleanup-Image
+    /RestoreHealth`` instead.
+
 .. versionadded:: 2015.8.0
 
 :depends: salt.utils.win_update
 """
 
 import logging
+import os
+import shutil
+import tempfile
+import time
 
+import salt.utils.data
+import salt.utils.files
 import salt.utils.platform
+import salt.utils.win_pwsh
 import salt.utils.win_service
 import salt.utils.win_update
 import salt.utils.winapi
@@ -75,6 +109,11 @@ log = logging.getLogger(__name__)
 __func_alias__ = {
     "list_": "list",
 }
+
+# Services stopped/started (in this order) when resetting the WU datastore
+# or catalog cache. TrustedInstaller is intentionally excluded: it is
+# trigger-started by Windows and should not be manually stopped/started.
+_WU_SERVICES = ("wuauserv", "CryptSvc", "BITS", "msiserver")
 
 
 def __virtual__():
@@ -1232,3 +1271,598 @@ def get_needs_reboot():
         salt '*' win_wua.get_needs_reboot
     """
     return salt.utils.win_update.needs_reboot()
+
+
+def _windir():
+    """
+    Return the current ``%WinDir%``. Computed on every call (rather than
+    frozen as a module-level constant) so tests can sandbox it with
+    ``monkeypatch.setenv("WINDIR", ...)``.
+    """
+    return os.environ.get("WINDIR", r"C:\Windows")
+
+
+def _softwaredistribution_path():
+    return os.path.join(_windir(), "SoftwareDistribution")
+
+
+def _catroot2_path():
+    return os.path.join(_windir(), "System32", "catroot2")
+
+
+def _cbs_log_path():
+    return os.path.join(_windir(), "Logs", "CBS", "CBS.log")
+
+
+def _stop_wu_services():
+    """
+    Stop the Windows Update related services. Raises CommandExecutionError
+    (without touching any files) if any service fails to stop.
+    """
+    ret = {}
+    failed = []
+    for svc in _WU_SERVICES:
+        result = __salt__["service.stop"](svc)
+        ret[svc] = result
+        if not result:
+            failed.append(svc)
+
+    if failed:
+        raise CommandExecutionError(
+            "Failed to stop the following service(s), aborting reset: {}".format(
+                ", ".join(failed)
+            )
+        )
+
+    return ret
+
+
+def _start_wu_services():
+    """
+    Start the Windows Update related services. Raises
+    CommandExecutionError if any service fails to start.
+    """
+    ret = {}
+    failed = []
+    for svc in _WU_SERVICES:
+        result = __salt__["service.start"](svc)
+        ret[svc] = result
+        if not result:
+            failed.append(svc)
+
+    if failed:
+        raise CommandExecutionError(
+            "Failed to start the following service(s) after reset: {}".format(
+                ", ".join(failed)
+            )
+        )
+
+    return ret
+
+
+def _reset_dir(path, purge_old):
+    """
+    Rename ``path`` to ``path.old.<ms-timestamp>``, or delete it outright if
+    ``purge_old`` is true. No-op (but not an error) if ``path`` doesn't
+    exist.
+    """
+    ret = {"old_path": path, "new_path": None, "purged": False, "result": True}
+
+    if not os.path.isdir(path):
+        return ret
+
+    if salt.utils.data.is_true(purge_old):
+        try:
+            shutil.rmtree(path)
+        except OSError as exc:
+            raise CommandExecutionError(f"Failed to remove '{path}': {exc}")
+        ret["purged"] = True
+        return ret
+
+    new_path = f"{path}.old.{int(time.time() * 1000)}"
+    while os.path.exists(new_path):
+        new_path = f"{path}.old.{int(time.time() * 1000)}"
+
+    try:
+        os.rename(path, new_path)
+    except OSError as exc:
+        raise CommandExecutionError(f"Failed to rename '{path}' to '{new_path}': {exc}")
+
+    ret["new_path"] = new_path
+    return ret
+
+
+def reset_datastore(purge_old=False):
+    """
+    .. versionadded:: 3009.0
+
+    Resets the Windows Update datastore by stopping the Windows Update
+    related services, renaming the ``SoftwareDistribution`` directory, and
+    restarting the services. This is a common troubleshooting step for
+    Windows Update issues, such as an update that reports success but does
+    not persist (see the module-level note above for the full diagnostic
+    workflow).
+
+    .. warning::
+
+        This stops the Windows Update related services (interrupting any
+        in-progress download/install) and renames -- or, with
+        ``purge_old=True``, permanently **deletes** -- the
+        ``SoftwareDistribution`` directory, including all cached update
+        payloads and the local update history/metadata. This is a
+        destructive troubleshooting action and should not be run routinely
+        or included in a default highstate. ``purge_old=True`` is
+        irreversible: no ``.old.<timestamp>`` copy is left behind to
+        recover from.
+
+    Args:
+
+        purge_old (bool, optional):
+            If ``True``, deletes the existing ``SoftwareDistribution``
+            directory instead of renaming it. This is irreversible.
+
+            Default is ``False``
+
+    Returns:
+
+        dict: A dictionary containing the results of the reset
+
+        .. code-block:: cfg
+
+            {
+                "reboot_pending": False,
+                "SoftwareDistribution": {
+                    "old_path": "C:\\Windows\\SoftwareDistribution",
+                    "new_path": "C:\\Windows\\SoftwareDistribution.old.<ts>",
+                    "purged": False,
+                    "result": True,
+                }
+            }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wua.reset_datastore
+        salt '*' win_wua.reset_datastore purge_old=True
+    """
+    reboot_pending = salt.utils.win_update.needs_reboot()
+    _stop_wu_services()
+    try:
+        result = _reset_dir(_softwaredistribution_path(), purge_old)
+    finally:
+        _start_wu_services()
+
+    return {"reboot_pending": reboot_pending, "SoftwareDistribution": result}
+
+
+def reset_catroot(purge_old=False):
+    """
+    .. versionadded:: 3009.0
+
+    Resets the Windows Update catalog cache by stopping the Windows Update
+    related services, renaming the ``catroot2`` directory, and restarting
+    the services. This is a common troubleshooting step for Windows Update
+    issues (see the module-level note above for the full diagnostic
+    workflow).
+
+    .. warning::
+
+        This stops the Windows Update related services (interrupting any
+        in-progress download/install) and renames -- or, with
+        ``purge_old=True``, permanently **deletes** -- the ``catroot2``
+        directory. This is a destructive troubleshooting action and should
+        not be run routinely or included in a default highstate.
+        ``purge_old=True`` is irreversible: no ``.old.<timestamp>`` copy is
+        left behind to recover from.
+
+    Args:
+
+        purge_old (bool, optional):
+            If ``True``, deletes the existing ``catroot2`` directory
+            instead of renaming it. This is irreversible.
+
+            Default is ``False``
+
+    Returns:
+
+        dict: A dictionary containing the results of the reset
+
+        .. code-block:: cfg
+
+            {
+                "reboot_pending": False,
+                "catroot2": {
+                    "old_path": "C:\\Windows\\System32\\catroot2",
+                    "new_path": "C:\\Windows\\System32\\catroot2.old.<ts>",
+                    "purged": False,
+                    "result": True,
+                }
+            }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wua.reset_catroot
+        salt '*' win_wua.reset_catroot purge_old=True
+    """
+    reboot_pending = salt.utils.win_update.needs_reboot()
+    _stop_wu_services()
+    try:
+        result = _reset_dir(_catroot2_path(), purge_old)
+    finally:
+        _start_wu_services()
+
+    return {"reboot_pending": reboot_pending, "catroot2": result}
+
+
+def reset(purge_old=False):
+    """
+    .. versionadded:: 3009.0
+
+    Convenience function that resets both the Windows Update datastore
+    (``SoftwareDistribution``) and the Windows Update catalog cache
+    (``catroot2``) in a single pass. This stops the Windows Update related
+    services once, performs both resets, and restarts the services once,
+    which is more efficient than calling
+    :py:func:`win_wua.reset_datastore <salt.modules.win_wua.reset_datastore>`
+    and :py:func:`win_wua.reset_catroot <salt.modules.win_wua.reset_catroot>`
+    separately.
+
+    .. warning::
+
+        This stops the Windows Update related services (interrupting any
+        in-progress download/install) and renames -- or, with
+        ``purge_old=True``, permanently **deletes** -- both directories,
+        including all cached update payloads and the local update
+        history/metadata. This is a destructive troubleshooting action and
+        should not be run routinely or included in a default highstate.
+        ``purge_old=True`` is irreversible: no ``.old.<timestamp>`` copies
+        are left behind to recover from.
+
+    Args:
+
+        purge_old (bool, optional):
+            If ``True``, deletes the existing directories instead of
+            renaming them. This is irreversible.
+
+            Default is ``False``
+
+    Returns:
+
+        dict: A dictionary containing the results of both resets
+
+        .. code-block:: cfg
+
+            {
+                "reboot_pending": False,
+                "SoftwareDistribution": {
+                    "old_path": "C:\\Windows\\SoftwareDistribution",
+                    "new_path": "C:\\Windows\\SoftwareDistribution.old.<ts>",
+                    "purged": False,
+                    "result": True,
+                },
+                "catroot2": {
+                    "old_path": "C:\\Windows\\System32\\catroot2",
+                    "new_path": "C:\\Windows\\System32\\catroot2.old.<ts>",
+                    "purged": False,
+                    "result": True,
+                },
+            }
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wua.reset
+        salt '*' win_wua.reset purge_old=True
+    """
+    reboot_pending = salt.utils.win_update.needs_reboot()
+    _stop_wu_services()
+    try:
+        sd_result = _reset_dir(_softwaredistribution_path(), purge_old)
+        catroot_result = _reset_dir(_catroot2_path(), purge_old)
+    finally:
+        _start_wu_services()
+
+    return {
+        "reboot_pending": reboot_pending,
+        "SoftwareDistribution": sd_result,
+        "catroot2": catroot_result,
+    }
+
+
+def _tail_lines(path, count):
+    """
+    Return the last ``count`` lines of ``path`` without reading the whole
+    file into memory -- reads backward from EOF in chunks.
+    """
+    chunk_size = 65536
+    with salt.utils.files.fopen(path, "rb") as fp_:
+        fp_.seek(0, os.SEEK_END)
+        remaining = fp_.tell()
+        block = b""
+        while remaining > 0 and block.count(b"\n") <= count:
+            read_size = min(chunk_size, remaining)
+            remaining -= read_size
+            fp_.seek(remaining)
+            block = fp_.read(read_size) + block
+
+    text = block.decode("utf-8", errors="replace")
+    return "\n".join(text.splitlines()[-count:])
+
+
+def _grep_lines(path, patterns, max_matches=200, context=2):
+    """
+    Stream ``path`` line-by-line (no full in-memory read) and return only
+    the lines matching any of ``patterns`` (plain substring match,
+    case-insensitive), plus ``context`` lines before/after each match.
+    Stops once ``max_matches`` matches have been found.
+    """
+    patterns_lower = [p.lower() for p in patterns]
+
+    before_buffer = []
+    after_remaining = 0
+    last_emitted = -1
+    result = []
+    match_count = 0
+    truncated = False
+
+    with salt.utils.files.fopen(path, "r", encoding="utf-8", errors="replace") as fp_:
+        for idx, raw_line in enumerate(fp_):
+            line = raw_line.rstrip("\n")
+            is_match = any(pattern in line.lower() for pattern in patterns_lower)
+
+            if is_match:
+                if match_count >= max_matches:
+                    truncated = True
+                    break
+                match_count += 1
+
+                for b_idx, b_line in before_buffer:
+                    if b_idx > last_emitted:
+                        result.append(b_line)
+                        last_emitted = b_idx
+
+                if idx > last_emitted:
+                    result.append(line)
+                    last_emitted = idx
+
+                after_remaining = context
+            elif after_remaining > 0:
+                result.append(line)
+                last_emitted = idx
+                after_remaining -= 1
+
+            before_buffer.append((idx, line))
+            if len(before_buffer) > context:
+                before_buffer.pop(0)
+
+    text = "\n".join(result)
+    if truncated:
+        text += f"\n... (truncated: max_matches={max_matches} reached)"
+
+    return text
+
+
+def _tail_and_filter(path, tail=500, pattern=None, max_matches=200):
+    """
+    Shared implementation backing get_cbs_log/get_windows_update_log: read
+    ``path``, applying either a ``pattern`` filter (whole-file scan,
+    independent of ``tail``) or a ``tail`` limit (``None`` for the whole
+    file).
+    """
+    if tail is not None and tail < 1:
+        raise CommandExecutionError("'tail' must be a positive integer or None")
+
+    if not os.path.isfile(path):
+        raise CommandExecutionError(f"Log file not found: '{path}'")
+
+    if pattern:
+        # NOTE: this module defines its own module-level `list` function
+        # (the win_wua.list CLI function, see `list()` above), which shadows
+        # the builtin within this module's namespace -- use a comprehension
+        # instead of `list(pattern)` here.
+        patterns = [pattern] if isinstance(pattern, str) else [p for p in pattern]
+        return _grep_lines(path, patterns, max_matches=max_matches)
+
+    if tail is None:
+        with salt.utils.files.fopen(
+            path, "r", encoding="utf-8", errors="replace"
+        ) as fp_:
+            return fp_.read()
+
+    return _tail_lines(path, tail)
+
+
+def _write_out_file(out_file, content):
+    out_dir = os.path.dirname(out_file)
+    if out_dir and not os.path.isdir(out_dir):
+        os.makedirs(out_dir)
+
+    try:
+        with salt.utils.files.fopen(out_file, "w", encoding="utf-8") as fp_:
+            fp_.write(content)
+    except OSError as exc:
+        raise CommandExecutionError(f"Failed to write to '{out_file}': {exc}")
+
+
+def get_cbs_log(tail=500, pattern=None, out_file=None, max_matches=200):
+    """
+    .. versionadded:: 3009.0
+
+    Retrieves the contents of the Component-Based Servicing (CBS) log,
+    located at ``%WinDir%\\Logs\\CBS\\CBS.log``. This log often contains
+    detailed information about servicing/update failures not present in the
+    Windows Update log -- see :py:func:`win_wua.get_windows_update_log
+    <salt.modules.win_wua.get_windows_update_log>` for the complementary
+    agent-level log; a full diagnosis usually needs both.
+
+    .. note::
+
+        Things worth searching for in the output: ``Failed``,
+        ``Reject``/``rejected`` (a package the servicing stack refused to
+        (re)apply), ``resolved as superseded`` / ``Resolved(...)`` state
+        transitions, the specific package identifier
+        (``Package_for_KB<number>~...``), and HRESULT-style codes
+        (``0x800f...``, ``0x80073...``) which map to CBS/servicing-stack
+        error codes -- a distinct range from the ``0x8024...`` WUA-specific
+        codes seen in the Windows Update log. Searching for the KB number
+        (``pattern="KB1234567"``) is usually the fastest way to find the
+        relevant block in a huge log.
+
+    .. warning::
+
+        ``CBS.log`` can grow very large on long-lived systems. This
+        function defaults to the last 500 lines to stay safe for return
+        over the event bus. Passing ``tail=None`` reads the entire file
+        into memory and returns it, which can be slow/large -- prefer
+        ``pattern`` to search the whole file for specific terms instead.
+
+    Args:
+
+        tail (int, optional):
+            If provided, only the last ``tail`` lines of the log are
+            returned/written. Ignored when ``pattern`` is provided (which
+            always scans the whole file).
+
+            Default is ``500``. Pass ``None`` to return the entire log.
+
+        pattern (str, list, optional):
+            One or more plain substrings (case-insensitive) to search for.
+            When provided, returns only matching lines plus a couple of
+            context lines around each match, scanning the whole file
+            regardless of ``tail``.
+
+            Default is ``None``
+
+        out_file (str, optional):
+            If provided, the resulting (already tailed/filtered) content is
+            also written to this path.
+
+            Default is ``None``
+
+        max_matches (int, optional):
+            When ``pattern`` is used, the maximum number of matches to
+            return.
+
+            Default is ``200``
+
+    Returns:
+
+        str: The contents of the CBS log (or the last ``tail`` lines, or
+        the lines matching ``pattern``)
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wua.get_cbs_log
+        salt '*' win_wua.get_cbs_log tail=2000
+        salt '*' win_wua.get_cbs_log pattern=KB5120233
+        salt '*' win_wua.get_cbs_log pattern=KB5120233 out_file='C:\\temp\\cbs_kb.log'
+    """
+    content = _tail_and_filter(
+        _cbs_log_path(), tail=tail, pattern=pattern, max_matches=max_matches
+    )
+
+    if out_file:
+        _write_out_file(out_file, content)
+
+    return content
+
+
+def get_windows_update_log(tail=500, pattern=None, out_file=None, max_matches=200):
+    """
+    .. versionadded:: 3009.0
+
+    Merges Windows Update ETW trace files into a single, readable
+    ``WindowsUpdate.log`` file using the PowerShell ``Get-WindowsUpdateLog``
+    cmdlet, then returns its contents -- see :py:func:`win_wua.get_cbs_log
+    <salt.modules.win_wua.get_cbs_log>` for the complementary
+    servicing-stack log; a full diagnosis usually needs both. The WU log
+    shows the agent-level request/response, while the CBS log shows what
+    the servicing stack actually did with it.
+
+    .. note::
+
+        Things worth searching for in the output: lines tagged
+        ``FATAL``/``WARNING`` (log severity markers), ``COMAPI`` entries
+        around the time of the install call (WUA-agent-level install/
+        download phase transitions), WU-specific HRESULT codes
+        (``0x8024...`` -- distinct from the ``0x800f...``/``0x80073...``
+        CBS-range codes seen in :py:func:`win_wua.get_cbs_log
+        <salt.modules.win_wua.get_cbs_log>`), and
+        ``reportEventBatch``/install-phase-completion lines around reboot
+        time.
+
+    .. warning::
+
+        This requires an elevated (Administrator) PowerShell session and is
+        only available on Windows 8 / Server 2012 and later. Depending on
+        the amount of Windows Update history on the system, this command
+        can take several minutes to complete -- there is no internal
+        timeout, so a caller needing one should apply it at the job level.
+        The merged output can also be large; this function defaults to the
+        last 500 lines for the same event-bus-size reasons as
+        :py:func:`win_wua.get_cbs_log <salt.modules.win_wua.get_cbs_log>`.
+
+    Args:
+
+        tail (int, optional):
+            If provided, only the last ``tail`` lines are returned. Ignored
+            when ``pattern`` is provided.
+
+            Default is ``500``. Pass ``None`` to return the entire log.
+
+        pattern (str, list, optional):
+            One or more plain substrings (case-insensitive) to search for,
+            returning only matching lines plus a couple of context lines,
+            scanning the whole file regardless of ``tail``.
+
+            Default is ``None``
+
+        out_file (str, optional):
+            The path where the full merged log file should be written (used
+            directly as the cmdlet's ``-LogPath``). The function's return
+            value is still the tailed/filtered content, not the full file.
+
+            Default is ``None``, which writes to a temporary location
+
+        max_matches (int, optional):
+            When ``pattern`` is used, the maximum number of matches to
+            return.
+
+            Default is ``200``
+
+    Returns:
+
+        str: The (tailed/filtered) contents of the merged Windows Update
+        log
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' win_wua.get_windows_update_log
+        salt '*' win_wua.get_windows_update_log pattern=0x8024
+        salt '*' win_wua.get_windows_update_log out_file='C:\\temp\\WindowsUpdate.log'
+    """
+    log_path = out_file or os.path.join(tempfile.gettempdir(), "WindowsUpdate.log")
+
+    cmd = f"Get-WindowsUpdateLog -LogPath '{log_path}'"
+    result = salt.utils.win_pwsh.run_dict(cmd)
+
+    result_path = log_path
+    if isinstance(result, dict) and result.get("Log"):
+        result_path = result["Log"]
+
+    if not os.path.isfile(result_path):
+        raise CommandExecutionError(
+            f"Get-WindowsUpdateLog did not produce a log file at '{result_path}'"
+        )
+
+    return _tail_and_filter(
+        result_path, tail=tail, pattern=pattern, max_matches=max_matches
+    )

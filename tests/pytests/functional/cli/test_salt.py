@@ -1,9 +1,11 @@
 import logging
 import os
 import shutil
+import sys
 
 import pytest
 
+import salt.utils.platform
 import salt.version
 from tests.conftest import CODE_DIR
 
@@ -22,15 +24,28 @@ def _install_salt_extension(shell):
 
     script_path = CODE_DIR / "artifacts" / "salt" / script_name
     assert script_path.exists()
+    # ``--no-deps`` keeps pip's resolver from backtracking into the
+    # already-installed onedir salt and reinstalling it from an sdist
+    # (which, under pip 26+, uninstalls the on-disk onedir salt --
+    # including the salt-pip entry-point script -- and breaks every
+    # subsequent test that invokes salt-pip, e.g. test_salt_pip.py).
+    # ``test_versions_report`` below only needs the extension itself to
+    # be discoverable; its dependencies are not asserted on.
     try:
-        ret = shell.run(str(script_path), "install", "salt-analytics-framework==0.1.0")
+        ret = shell.run(
+            str(script_path),
+            "install",
+            "--no-deps",
+            "salt-analytics-framework==0.1.0",
+        )
         assert ret.returncode == 0
         log.info(ret)
         yield
     finally:
         ret = shell.run(str(script_path), "uninstall", "-y", "salt-analytics-framework")
         log.info(ret)
-        shutil.rmtree(script_path.parent / "extras-3.10", ignore_errors=True)
+        extras_dir = script_path.parent / "extras-{}.{}".format(*sys.version_info)
+        shutil.rmtree(extras_dir, ignore_errors=True)
 
 
 @pytest.mark.windows_whitelisted

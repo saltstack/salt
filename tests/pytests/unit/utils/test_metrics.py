@@ -2,6 +2,8 @@
 Unit tests for salt.utils.metrics — the OpenTelemetry metrics wrapper.
 """
 
+import multiprocessing
+import os
 import socket
 import subprocess
 import sys
@@ -399,3 +401,76 @@ def test_enabling_metrics_loads_opentelemetry_lazily():
         f"stdout={result.stdout}\nstderr={result.stderr}"
     )
     assert "OK" in result.stdout
+
+
+def _resource_attrs(opts):
+    metrics.configure(opts)
+    return dict(metrics._build_resource(metrics._cached_opts).attributes)
+
+
+def test_resource_instance_id_falls_back_to_hostname_and_pid():
+    attrs = _resource_attrs({"metrics": {"enabled": True}, "__role": "master"})
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/{os.getpid()}"
+    assert "process.pid" not in attrs
+
+
+def test_resource_uses_process_name_as_instance_id():
+    attrs = _resource_attrs(
+        {
+            "metrics": {"enabled": True},
+            "__role": "master",
+            "__metrics_instance": {"id": "MWorker-2"},
+        }
+    )
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/MWorker-2"
+
+
+def test_resource_attributes_override_instance_id():
+    attrs = _resource_attrs(
+        {
+            "metrics": {
+                "enabled": True,
+                "resource_attributes": {"service.instance.id": "custom"},
+            },
+            "__role": "master",
+            "__metrics_instance": {"id": "MWorker-2"},
+        }
+    )
+    assert attrs["service.instance.id"] == "custom"
+
+
+def test_inherited_instance_not_reused_after_fork(monkeypatch):
+    metrics.configure(
+        {"metrics": {"enabled": True}, "__metrics_instance": {"id": "Master"}}
+    )
+    monkeypatch.setattr(os, "getpid", lambda: 1)
+    attrs = dict(metrics._build_resource(metrics._cached_opts).attributes)
+    assert attrs["service.instance.id"] == f"{socket.gethostname()}/1"
+
+
+def _child(name, queue):
+    try:
+        metrics.configure(
+            {"metrics": {"enabled": True}, "__metrics_instance": {"id": name}}
+        )
+        attrs = dict(metrics._build_resource(metrics._cached_opts).attributes)
+        queue.put(attrs["service.instance.id"])
+    except Exception as exc:  # pylint: disable=broad-except
+        queue.put(f"error: {exc!r}")
+
+
+@pytest.mark.skipif(
+    "fork" not in multiprocessing.get_all_start_methods(), reason="needs fork"
+)
+def test_forked_children_get_distinct_instance_ids():
+    ctx = multiprocessing.get_context("fork")
+    queue = ctx.Queue()
+    names = ["MWorker-0", "MWorker-1", "MWorker-2"]
+    procs = [ctx.Process(target=_child, args=(n, queue)) for n in names]
+    for p in procs:
+        p.start()
+    results = [queue.get(timeout=30) for _ in procs]
+    for p in procs:
+        p.join(timeout=10)
+    host = socket.gethostname()
+    assert sorted(results) == [f"{host}/{n}" for n in names]

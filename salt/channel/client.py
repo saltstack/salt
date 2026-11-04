@@ -4,14 +4,11 @@ Encapsulate the different transports available to Salt.
 This includes client side transport, for the ReqServer and the Publisher
 """
 
+import asyncio
 import logging
 import os
 import time
 import uuid
-
-import tornado.gen
-import tornado.ioloop
-import tornado.locks
 
 import salt.crypt
 import salt.exceptions
@@ -26,6 +23,19 @@ import salt.utils.verify
 from salt.utils.asynchronous import SyncWrapper, aioloop
 
 log = logging.getLogger(__name__)
+
+
+def _cluster_retry(data):
+    """
+    Check if ``data`` is a clustered master's "come back later" reply.
+    """
+    return (
+        isinstance(data, dict)
+        and data.get("enc") == "clear"
+        and isinstance(data.get("load"), dict)
+        and data["load"].get("cluster_retry")
+    )
+
 
 REQUEST_CHANNEL_TIMEOUT = 60
 REQUEST_CHANNEL_TRIES = 3
@@ -51,6 +61,10 @@ class AsyncReqChannel:
     """
     Factory class to create a asynchronous communication channels to the
     master's ReqServer. ReqChannels connect to the master's ReqServerChannel.
+
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -79,7 +93,9 @@ class AsyncReqChannel:
             opts["master_uri"] = kwargs["master_uri"]
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop, warn=True)
 
         timeout = opts.get("request_channel_timeout", REQUEST_CHANNEL_TIMEOUT)
         tries = opts.get("request_channel_tries", REQUEST_CHANNEL_TRIES)
@@ -115,14 +131,14 @@ class AsyncReqChannel:
         # Serialize concurrent send()/decode_dictentry() calls on this
         # channel so that the AES nonce embedded in the encrypted reply is
         # matched with the request that produced it.  The underlying
-        # transport (AsyncReqMessageClient) already queues sends FIFO, but
+        # transport (``RequestClient``) already queues sends FIFO, but
         # the channel-layer crypt uses ``self.auth.session_crypticle`` which
         # can be swapped mid-flight by a concurrent re-auth, and the master
         # encrypts each reply with a session key drawn from a rotating
         # cache.  Holding this lock across the send + decrypt window makes
         # the request/reply pair atomic w.r.t. any other coroutine on the
         # same io_loop.  See issue #69753.
-        self._req_lock = tornado.locks.Lock()
+        self._req_lock = asyncio.Lock()
 
     @property
     def crypt(self):
@@ -255,11 +271,7 @@ class AsyncReqChannel:
             # otherwise blow up at ``ret["key"]`` below.
             raise salt.crypt.AuthenticationError(
                 "Master did not return a session key for pillar request"
-                + (
-                    " (cluster not ready)"
-                    if isinstance(ret, dict) and ret.get("cluster_retry")
-                    else ""
-                )
+                + (" (cluster not ready)" if _cluster_retry(ret) else "")
             )
         aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
@@ -316,6 +328,8 @@ class AsyncReqChannel:
                 self._package_load(load, nonce, session_crypticle=session_crypticle),
                 timeout=timeout,
             )
+            if _cluster_retry(data):
+                return data
             # we may not have always data
             # as for example for saltcall ret submission, this is a blind
             # communication, we do not subscribe to return events, we just
@@ -333,13 +347,22 @@ class AsyncReqChannel:
         # (send, decrypt-reply) pair atomic w.r.t. any other coroutine
         # driving this same channel.  See issue #69753.
         async with self._req_lock:
-            try:
-                # We did not get data back the first time. Retry.
-                ret = await _do_transfer()
-            except salt.crypt.AuthenticationError:
-                # If auth error, return control back to the caller, continue when authentication succeeds
-                await self.auth.authenticate()
-                ret = await _do_transfer()
+            deadline = time.monotonic() + timeout
+            while True:
+                try:
+                    # We did not get data back the first time. Retry.
+                    ret = await _do_transfer()
+                except salt.crypt.AuthenticationError:
+                    # If auth error, return control back to the caller, continue when authentication succeeds
+                    await self.auth.authenticate()
+                    ret = await _do_transfer()
+                if not _cluster_retry(ret):
+                    break
+                # If master is not ready, try retrying until the deadline is reached.
+                if time.monotonic() >= deadline:
+                    raise salt.crypt.AuthenticationError("master cluster is not ready")
+                log.debug("Master cluster is not ready yet, retrying request")
+                await asyncio.sleep(self.opts.get("acceptance_wait_time", 10))
         return ret
 
     async def _uncrypted_transfer(self, load, timeout):
@@ -408,6 +431,36 @@ class AsyncReqChannel:
         self._closing = True
         self.transport.close()
 
+    async def close_async(self):
+        """Async-aware close.
+
+        When the caller is running on the ioloop that owns the underlying
+        transport, this awaits the transport's ``close_async`` (which in
+        turn awaits its ``_send_recv`` task's exit future) before
+        returning.  That ordering matters: sync ``close()``'s
+        same-thread + loop-running fallback runs teardown immediately,
+        which can race the still-running ``_send_recv`` task and leave
+        the ``zmq.Context`` alive on refs the task holds -- the Context
+        is then finalized from a later ioloop callback and can wedge in
+        ``zmq_ctx_term()``.  Awaiting ``close_async`` lets the send/recv
+        task drain the shutdown sentinel and release its socket
+        reference first, so the subsequent teardown is a clean
+        release-of-last-references rather than a race.
+
+        Falls back to sync ``close()`` for transports (e.g. TCP) that
+        do not implement ``close_async``.  Ioloop-owning callers such
+        as ``salt.minion``'s reconnect path should prefer this method.
+        """
+        if self._closing:
+            return
+        log.debug("Async-closing %s instance", self.__class__.__name__)
+        self._closing = True
+        close_async = getattr(self.transport, "close_async", None)
+        if close_async is None:
+            self.transport.close()
+        else:
+            await close_async()
+
     def __enter__(self):
         return self
 
@@ -415,16 +468,30 @@ class AsyncReqChannel:
         self.close()
 
     async def __aenter__(self):
-        await self.transport.connect()
+        # Match the sync ``__enter__`` pattern: return without eagerly
+        # calling ``transport.connect()``.  ``transport.send()`` does its
+        # own lazy connect on the first send, so all real callers still
+        # get a live socket when they need one.  The eager-connect variant
+        # would allocate a ZMQ ``Context`` (and register the
+        # ``weakref.finalize`` from PR-70315) for every ``async with``
+        # even when no send followed -- an issue in tests that mock the
+        # inner call (e.g. AsyncAuth._authenticate with a mocked
+        # sign_in) but let the real ``AsyncReqChannel.factory`` build
+        # the transport.  Those Contexts accumulated across the run and
+        # eventually wedged pytest under Python 3.14.
         return self
 
     async def __aexit__(self, *_):
-        self.close()
+        await self.close_async()
 
 
 class AsyncPubChannel:
     """
     Factory class to create subscription channels to the master's Publisher
+
+    The factory uses the current thread's asyncio event loop by default.
+    ``io_loop`` is optional and selects a specific asyncio loop when needed.
+    Tornado IOLoop arguments are deprecated and will be removed in Salt 3009.2.
     """
 
     async_methods = [
@@ -456,17 +523,28 @@ class AsyncPubChannel:
 
         io_loop = kwargs.get("io_loop")
         if io_loop is None:
-            io_loop = tornado.ioloop.IOLoop.current()
+            io_loop = asyncio.get_event_loop()
+        else:
+            io_loop = aioloop(io_loop, warn=True)
 
         auth = salt.crypt.AsyncAuth(opts, io_loop=io_loop)
         host = opts.get("master_ip", "127.0.0.1")
         port = int(opts.get("publish_port", 4506))
         transport = salt.transport.publish_client(opts, io_loop, host=host, port=port)
-        return cls(opts, transport, auth, io_loop)
+        try:
+            return cls(opts, transport, auth, io_loop)
+        except BaseException:
+            try:
+                transport.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                log.exception("Failed to close transport after channel initialization")
+            raise
 
     def __init__(self, opts, transport, auth, io_loop=None):
         self.opts = opts
-        self.io_loop = aioloop(io_loop)
+        self.io_loop = (
+            asyncio.get_event_loop() if io_loop is None else aioloop(io_loop, warn=True)
+        )
         self.auth = auth
         try:
             # This loads or generates the minion's public key.
@@ -519,6 +597,7 @@ class AsyncPubChannel:
         """
         Close the channel
         """
+        self._closing = True
         self.transport.close()
         if self.event is not None:
             self.event.destroy()
@@ -613,7 +692,7 @@ class AsyncPubChannel:
                     "data": data,
                     "tag": tag,
                 }
-                with AsyncReqChannel.factory(self.opts) as channel:
+                async with AsyncReqChannel.factory(self.opts) as channel:
                     try:
                         await channel.send(load, timeout=60)
                     except salt.exceptions.SaltReqTimeoutError:
@@ -692,4 +771,4 @@ class AsyncPubChannel:
         return self
 
     async def __aexit__(self, *_):
-        await self.close()
+        self.close()

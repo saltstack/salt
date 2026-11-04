@@ -85,7 +85,7 @@ cachetools==5.5.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   google-auth
-certifi==2026.6.17
+certifi==2026.10.23
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -174,7 +174,6 @@ dnspython==2.7.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -r requirements/static/ci/common.txt
-    #   python-etcd
 docker==7.1.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -215,12 +214,11 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.1.50
+gitpython==3.2.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
 google-auth==2.35.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -560,7 +558,11 @@ psutil==5.9.8
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
-pyasn1==0.6.3
+psycopg2-binary==2.9.12
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/static/ci/common.txt
+pyasn1==0.6.4
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -660,10 +662,6 @@ python-discovery==1.4.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   virtualenv
-python-etcd==0.4.5
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/common.txt
 python-gnupg==0.5.6
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -806,14 +804,6 @@ six==1.16.0
     #   rfc3339-validator
     #   transitions
     #   vcert
-slack-bolt==1.18.0
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   -r requirements/static/ci/linux.txt
-slack-sdk==3.21.3
-    # via
-    #   -c requirements/static/ci/py3.9/linux.lock
-    #   slack-bolt
 smmap==5.0.2
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -862,7 +852,7 @@ tomli==2.2.1
     #   pylint
 tomlkit==0.12.3
     # via pylint
-tornado==6.5.7
+tornado==6.5.10
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -921,7 +911,6 @@ urllib3==1.26.20
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 vcert==0.9.1

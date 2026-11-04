@@ -815,25 +815,50 @@ class ModuleCase(TestCase, SaltClientTestCaseMixin):
         return ret
 
 
-class SyndicCase(TestCase, SaltClientTestCaseMixin):
+class SyndicCase(ShellCase):
     """
     Execute a syndic based execution test
     """
 
-    _salt_client_config_file_name_ = "syndic_master"
-
-    def run_function(self, function, arg=(), timeout=90):
+    # pylint: disable=arguments-differ
+    def run_function(self, function, arg=(), timeout=30):
         """
-        Run a single salt function and condition the return down to match the
-        behavior of the raw function call
+        Run a single salt function through the syndic master and condition the
+        return down to match the behavior of the raw function call
         """
-        orig = self.client.cmd("minion", function, arg, timeout=timeout)
-        if "minion" not in orig:
+        # This uses the salt CLI and not a LocalClient. The loader keeps
+        # __opts__ in module globals, so a LocalClient for the syndic master in
+        # the test process would leave the master's LocalClient reading the
+        # syndic master's job cache for the rest of the session.
+        # The minion behind the syndic has the same id as the syndic
+        minion_id = RUNTIME_VARS.RUNTIME_CONFIGS["syndic"]["id"]
+        # With --hide-timeout a minion that doesn't return is left out of the
+        # output, rather than returning a "Minion did not return" string
+        stdout, stderr, retcode = self.run_script(
+            "salt",
+            "-t {} --hide-timeout --out=json {} {} {}".format(
+                timeout, minion_id, function, " ".join(str(arg_) for arg_ in arg)
+            ),
+            catch_stderr=True,
+            with_retcode=True,
+            timeout=timeout + 30,
+            raw=True,
+            config_dir=RUNTIME_VARS.TMP_SYNDIC_MASTER_CONF_DIR,
+        )
+        try:
+            orig = json.loads(stdout)
+        except ValueError:
+            orig = {}
+        if minion_id not in orig:
             self.fail(
                 "WARNING(SHOULD NOT HAPPEN #1935): Failed to get a reply "
-                "from the minion. Command output: {}".format(orig)
+                "from the minion. Return code: {}, stdout: {}, stderr: {}".format(
+                    retcode, stdout, stderr
+                )
             )
-        return orig["minion"]
+        return orig[minion_id]
+
+    # pylint: enable=arguments-differ
 
 
 @pytest.mark.requires_sshd_server

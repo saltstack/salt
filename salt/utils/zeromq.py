@@ -4,9 +4,7 @@ ZMQ-specific functions
 
 import logging
 
-import salt.utils.versions
 from salt.exceptions import SaltSystemExit
-from salt.utils.network import ip_bracket as _new_ip_bracket
 
 log = logging.getLogger(__name__)
 
@@ -45,15 +43,3 @@ def check_ipc_path_max_len(uri):
             "path or switch to TCP; in the configuration file, "
             'set "ipc_mode: tcp".'.format(uri, ipc_path_max_len)
         )
-
-
-def ip_bracket(addr):
-    "This function has been moved to salt.utils.network.ip_bracket"
-
-    salt.utils.versions.warn_until(
-        3009,
-        "The 'utils.zeromq.ip_bracket' has been moved to 'utils.network.ip_bracket'. "
-        "Please use 'utils.network.ip_bracket' because 'utils.zeromq.ip_bracket' "
-        "will be removed in future releases.",
-    )
-    return _new_ip_bracket(addr)

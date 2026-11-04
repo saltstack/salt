@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import multiprocessing
 import os
+import secrets
 import socket
 import sys
 import time
@@ -101,10 +102,24 @@ def _run_mworkerqueue(opts: dict) -> None:
     guarantee that a raw fd passed via ``args`` remains valid in the
     child (the fd number is not re-inherited across the exec that
     ``spawn`` performs on some platforms).
+
+    Port-open is necessary but not sufficient: ``zmq_device()`` binds its
+    ROUTER/DEALER sockets early, then imports ``salt.master`` and builds a
+    ``RequestRouter`` before entering the ``zmq.device(QUEUE, ...)``
+    forwarding loop.  Pre-import ``salt.master`` here so the heavy import
+    happens before bind -- that minimises the window where ports are open
+    but the device loop is not yet forwarding.  Tests that race the first
+    message through the pipeline (the ``test_requester_churn_fd_bounded``
+    family) hit that window on busy CI runners even with handshake-level
+    waits in place.  The parent additionally calls ``_wait_pipeline_ready``
+    to confirm an end-to-end round-trip before yielding.
     """
-    # Import inside the child so the parent doesn't pull half the master
-    # stack (and its C extensions) until it has to.
-    import salt.transport.zeromq as _z  # noqa: WPS433
+    # Pre-import inside the child so the parent doesn't pull half the master
+    # stack (and its C extensions) until it has to -- but also so that by
+    # the time ``zmq_device()`` binds its sockets, the slow salt.master
+    # import it does mid-flight is already cached.
+    import salt.master  # noqa: WPS433 pylint: disable=unused-import,import-outside-toplevel
+    import salt.transport.zeromq as _z  # noqa: WPS433 pylint: disable=import-outside-toplevel
 
     server = _z.RequestServer(opts)
     try:
@@ -113,6 +128,113 @@ def _run_mworkerqueue(opts: dict) -> None:
         pass
     except KeyboardInterrupt:
         pass
+
+
+def _wait_pipeline_ready(
+    ctx: zmq.Context,
+    router_uri: str,
+    dealer_uri: str,
+    timeout: float = 30.0,
+) -> None:
+    """
+    Block until a REQ -> ROUTER -> device -> DEALER -> REP -> ack
+    round-trip completes end-to-end.
+
+    Port-open means the proxy's sockets are bound, not that the
+    ``zmq.device(QUEUE, ROUTER, DEALER)`` forwarding loop has been entered
+    (bind happens before ``salt.master`` import and ``RequestRouter``
+    construction).  Also, HANDSHAKE_SUCCEEDED on the REP side only
+    reflects the REP's view of the ZMTP handshake with the DEALER; it
+    does not guarantee the DEALER has processed the REP's greeting and
+    added it to its dispatch set.  The only reliable readiness signal is
+    an actual round-trip.
+
+    Each iteration uses a fresh unique token so a stale message from a
+    previous aborted iteration (routed by the DEALER's internal queue
+    once a peer appears) can't masquerade as a successful probe.  Both
+    sockets are closed with ``LINGER=0`` between iterations so the
+    ROUTER's identity binding for the dead REQ is reaped and dropped
+    acks never confuse the next pass.
+    """
+    deadline = time.monotonic() + timeout
+    last_err = ""
+    while time.monotonic() < deadline:
+        token = b"__probe__" + secrets.token_bytes(8)
+        req = ctx.socket(zmq.REQ)
+        req.setsockopt(zmq.LINGER, 0)
+        req.setsockopt(zmq.RCVTIMEO, 500)
+        req.setsockopt(zmq.SNDTIMEO, 500)
+        rep = ctx.socket(zmq.REP)
+        rep.setsockopt(zmq.LINGER, 0)
+        rep.setsockopt(zmq.RCVTIMEO, 500)
+        rep.setsockopt(zmq.SNDTIMEO, 500)
+        try:
+            rep.connect(dealer_uri)
+            req.connect(router_uri)
+            try:
+                req.send(token)
+            except zmq.error.ZMQError as exc:  # pragma: no cover - diagnostic
+                last_err = f"req.send: {exc}"
+                continue
+
+            # Drain anything already queued on REP until we see our token
+            # or exhaust 3 s of inner budget.  Stale messages (from an
+            # earlier iteration's REQ that we've since closed) share the
+            # ``__probe__`` prefix but not this iteration's random suffix.
+            poller = zmq.Poller()
+            poller.register(rep, zmq.POLLIN)
+            inner_deadline = time.monotonic() + 3.0
+            got_token = False
+            while time.monotonic() < inner_deadline:
+                events = dict(poller.poll(500))
+                if rep not in events or not events[rep] & zmq.POLLIN:
+                    continue
+                msg = rep.recv()
+                if msg == token:
+                    got_token = True
+                    break
+                # Stale -- send a throwaway ack back so the REP FSM leaves
+                # the ``must send`` state and we can poll again next pass.
+                try:
+                    rep.send(b"__stale_ack__")
+                except zmq.error.ZMQError:
+                    pass
+            if not got_token:
+                last_err = "no probe seen on REP within 3 s"
+                continue
+
+            try:
+                rep.send(token)
+            except zmq.error.ZMQError as exc:  # pragma: no cover - diagnostic
+                last_err = f"rep.send: {exc}"
+                continue
+
+            poller2 = zmq.Poller()
+            poller2.register(req, zmq.POLLIN)
+            inner2 = time.monotonic() + 3.0
+            while time.monotonic() < inner2:
+                events = dict(poller2.poll(500))
+                if req not in events or not events[req] & zmq.POLLIN:
+                    continue
+                reply = req.recv()
+                if reply == token:
+                    return  # end-to-end round-trip confirmed
+                # Stale ack from an earlier aborted iteration -- discard
+                # and keep waiting for our own.
+            last_err = "no matching ack on REQ within 3 s"
+        finally:
+            try:
+                req.close(linger=0)
+            except Exception:  # pylint: disable=broad-except
+                pass
+            try:
+                rep.close(linger=0)
+            except Exception:  # pylint: disable=broad-except
+                pass
+    raise RuntimeError(
+        f"MWorkerQueue subprocess pipeline did not become live within "
+        f"{timeout}s (last iteration: {last_err})"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -145,15 +267,108 @@ class MWorkerQueueHandle:
         self._sockets.append(s)
         return s
 
-    def worker(self, linger: int = 500) -> zmq.Socket:
-        """Open a fake-worker REP socket connected to the DEALER port."""
+    def worker(self, linger: int = 500, wait_ready: bool = False) -> zmq.Socket:
+        """Open a fake-worker REP socket connected to the DEALER port.
+
+        ``wait_ready=True`` runs an end-to-end REQ -> worker -> ack probe
+        before returning so the caller knows the proxy's inner DEALER has
+        registered this REP as a routable peer.  Tests that race the
+        first message through the pipeline on a freshly attached worker
+        (e.g. ``test_requester_churn_fd_bounded``) need this; tests that
+        attach several workers and tolerate first-few-message loss
+        (e.g. ``test_passthrough_throughput``) do not.
+        """
         s = self.ctx.socket(zmq.REP)
         s.setsockopt(zmq.LINGER, linger)
         s.setsockopt(zmq.RCVTIMEO, 5000)
         s.setsockopt(zmq.SNDTIMEO, 5000)
         s.connect(self.dealer_uri)
         self._sockets.append(s)
+        if wait_ready:
+            self._wait_worker_ready(s)
         return s
+
+    def _wait_worker_ready(self, worker: zmq.Socket, timeout: float = 15.0) -> None:
+        """Confirm this worker is in the proxy's inner DEALER dispatch set.
+
+        HANDSHAKE_SUCCEEDED on the worker's REP monitor only reflects the
+        REP's view of the ZMTP handshake; the DEALER-side peer-list
+        update lags by hundreds of ms on busy CI runners, so a REQ sent
+        in that window is routed to no peer and the worker never
+        receives.  The only reliable readiness signal is an actual
+        REQ -> worker -> ack round-trip.  Each iteration uses a unique
+        token so stale messages from an aborted earlier iteration (that
+        the DEALER drained once a peer appeared) can't masquerade as a
+        successful probe.
+        """
+        deadline = time.monotonic() + timeout
+        last_err = ""
+        while time.monotonic() < deadline:
+            token = b"__probe__" + secrets.token_bytes(8)
+            probe = self.ctx.socket(zmq.REQ)
+            probe.setsockopt(zmq.LINGER, 0)
+            probe.setsockopt(zmq.RCVTIMEO, 500)
+            probe.setsockopt(zmq.SNDTIMEO, 500)
+            probe.connect(self.router_uri)
+            try:
+                try:
+                    probe.send(token)
+                except zmq.error.ZMQError as exc:  # pragma: no cover
+                    last_err = f"probe.send: {exc}"
+                    continue
+
+                poller = zmq.Poller()
+                poller.register(worker, zmq.POLLIN)
+                inner = time.monotonic() + 3.0
+                got_token = False
+                while time.monotonic() < inner:
+                    events = dict(poller.poll(500))
+                    if worker not in events or not events[worker] & zmq.POLLIN:
+                        continue
+                    msg = worker.recv()
+                    if msg == token:
+                        got_token = True
+                        break
+                    # Stale -- a leftover from an earlier aborted
+                    # iteration's REQ.  Send a throwaway ack so the REP
+                    # FSM leaves "must send" state and we can keep
+                    # polling.  The ack is routed to an identity bound
+                    # to a now-closed probe, so the ROUTER silently
+                    # drops it.
+                    try:
+                        worker.send(b"__stale_ack__")
+                    except zmq.error.ZMQError:
+                        pass
+                if not got_token:
+                    last_err = "no probe seen on worker within 3 s"
+                    continue
+
+                try:
+                    worker.send(token)
+                except zmq.error.ZMQError as exc:  # pragma: no cover
+                    last_err = f"worker.send: {exc}"
+                    continue
+
+                poller2 = zmq.Poller()
+                poller2.register(probe, zmq.POLLIN)
+                inner2 = time.monotonic() + 3.0
+                while time.monotonic() < inner2:
+                    events = dict(poller2.poll(500))
+                    if probe not in events or not events[probe] & zmq.POLLIN:
+                        continue
+                    reply = probe.recv()
+                    if reply == token:
+                        return
+                last_err = "no matching ack on probe within 3 s"
+            finally:
+                try:
+                    probe.close(linger=0)
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        raise RuntimeError(
+            f"worker never confirmed routable within {timeout}s "
+            f"(last iteration: {last_err})"
+        )
 
     # ---- lifecycle ----------------------------------------------------
 
@@ -234,10 +449,27 @@ def mworkerqueue(mwq_ctx, tmp_path):
             f"(alive={proc.is_alive()}, exitcode={proc.exitcode})"
         )
 
+    router_uri = f"tcp://127.0.0.1:{ret_port}"
+    dealer_uri = f"tcp://127.0.0.1:{worker_port}"
+
+    # Ports accepting connections only means the sockets are bound -- it
+    # does not mean the ``zmq.device(QUEUE, ROUTER, DEALER)`` forwarding
+    # loop has been entered yet.  Confirm the full pipeline is live
+    # before yielding so individual tests (notably the churn and
+    # malformed-input ones) don't race the device-loop entry with their
+    # first message.
+    try:
+        _wait_pipeline_ready(mwq_ctx, router_uri, dealer_uri)
+    except RuntimeError:
+        if proc.is_alive():
+            proc.terminate()
+            proc.join(2.0)
+        raise
+
     handle = MWorkerQueueHandle(
         process=proc,
-        router_uri=f"tcp://127.0.0.1:{ret_port}",
-        dealer_uri=f"tcp://127.0.0.1:{worker_port}",
+        router_uri=router_uri,
+        dealer_uri=dealer_uri,
         ctx=mwq_ctx,
         opts=opts,
     )

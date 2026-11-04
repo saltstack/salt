@@ -227,6 +227,7 @@ def test_daily():
         "settings": {
             "wake_to_run": False,
             "allow_demand_start": True,
+            "compatibility": 2,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
             "force_stop": True,
@@ -280,6 +281,7 @@ def test_weekly():
         },
         "settings": {
             "allow_demand_start": True,
+            "compatibility": 2,
             "wake_to_run": False,
             "execution_time_limit": "3 days",
             "force_stop": True,
@@ -336,6 +338,7 @@ def test_monthly():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -392,6 +395,7 @@ def test_monthly_day():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -445,6 +449,7 @@ def test_on_idle():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -497,6 +502,7 @@ def test_on_task_creation():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -551,6 +557,7 @@ def test_on_boot():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -604,6 +611,7 @@ def test_on_logon():
         "settings": {
             "force_stop": True,
             "allow_demand_start": True,
+            "compatibility": 2,
             "delete_after": False,
             "multiple_instances": "No New Instance",
             "execution_time_limit": "3 days",
@@ -644,10 +652,11 @@ def test_on_session_change():
             "execution_time_limit": "3 days",
             "wake_to_run": False,
             "force_stop": True,
+            "allow_demand_start": True,
+            "compatibility": 2,
             "multiple_instances": "No New Instance",
             "stop_if_on_batteries": True,
             "restart_interval": False,
-            "allow_demand_start": True,
         },
         "triggers": [
             {

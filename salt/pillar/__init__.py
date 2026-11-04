@@ -282,6 +282,38 @@ class AsyncRemotePillar(RemotePillarMixin):
         ret_pillar = salt.utils.secret.hide(ret_pillar)
         return ret_pillar
 
+    async def aclose(self):
+        """Async-aware teardown.
+
+        ``AsyncRemotePillar`` owns an ``AsyncReqChannel`` and is only
+        ever constructed on an active asyncio loop (via
+        ``get_async_pillar`` from ``async def post_master_init`` /
+        ``pillar_refresh`` / the master's ``_pillar`` handler).  Sync
+        ``destroy`` calls ``channel.close()``, whose same-thread +
+        loop-running fallback cannot await the transport's running
+        ``_send_recv`` task -- so the socket reference the task holds
+        keeps the underlying ``zmq.asyncio.Context`` alive until GC
+        later finalizes it from an ioloop callback and wedges the loop
+        in ``zmq_ctx_term()`` (see the PR-70316 wedge trace).
+
+        Callers that hold an ``AsyncRemotePillar`` on an ioloop must
+        prefer ``await pillar.aclose()`` over ``pillar.destroy()`` so
+        the send/recv task drains its shutdown sentinel and releases
+        the socket before we drop our reference to the channel.  A
+        ``getattr`` guard keeps this compatible with third-party
+        channel subclasses that only expose sync ``close`` -- the
+        same shape ``Minion.connect_master`` and
+        ``Minion.handle_event`` use.
+        """
+        if self._closing:
+            return
+        self._closing = True
+        close_async = getattr(self.channel, "close_async", None)
+        if close_async is not None:
+            await close_async()
+        else:
+            self.channel.close()
+
     def destroy(self):
         if self._closing:
             return
@@ -291,6 +323,20 @@ class AsyncRemotePillar(RemotePillarMixin):
 
     # pylint: disable=W1701
     def __del__(self):
+        # Kept as a defensive net for third-party consumers that
+        # never migrated to ``aclose``.  Async callsites now go
+        # through ``aclose`` first, which flips ``_closing`` and
+        # makes this ``destroy`` a no-op -- so the sync
+        # ``channel.close()`` teardown does not fire from ``__del__``
+        # under normal use.  Emit a debug log if we do reach this
+        # path so a leaked ``AsyncRemotePillar`` is visible in the
+        # logs rather than silent.
+        if not getattr(self, "_closing", False):
+            log.debug(
+                "AsyncRemotePillar reached __del__ without prior aclose(); "
+                "falling back to sync destroy -- caller should await "
+                "aclose() from its ioloop instead."
+            )
         self.destroy()
 
     # pylint: enable=W1701
@@ -431,8 +477,13 @@ class Pillar:
         if functions is None:
             utils = salt.loader.utils(opts, file_client=self.client)
             if opts.get("file_client", "") == "local":
+                # Use self.opts, which __gen_opts has stamped with the target
+                # minion_id, so execution modules called from pillar templates
+                # (e.g. salt["match.compound"]) resolve against the minion the
+                # pillar is being compiled for rather than the master's own id.
+                # This matches the non-local branch below (#58407).
                 self.functions = salt.loader.minion_mods(
-                    opts,
+                    self.opts,
                     utils=utils,
                     file_client=salt.fileclient.ContextlessFileClient(self.fileclient),
                     pillar=self.pillar_data,
@@ -1044,10 +1095,12 @@ class Pillar:
         Builds actual pillar data structure and updates the ``pillar`` variable
         """
         ext = None
-        args = salt.utils.args.get_function_argspec(self.ext_pillars[key]).args
+        valid_kwargs = salt.utils.args.get_function_argspec(
+            self.ext_pillars[key]
+        ).namedargs
 
         if isinstance(val, dict):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1057,7 +1110,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, **val)
         elif isinstance(val, list):
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1067,7 +1120,7 @@ class Pillar:
             else:
                 ext = self.ext_pillars[key](self.minion_id, pillar, *val)
         else:
-            if ("extra_minion_data" in args) and self.extra_minion_data:
+            if ("extra_minion_data" in valid_kwargs) and self.extra_minion_data:
                 ext = self.ext_pillars[key](
                     self.minion_id,
                     pillar,
@@ -1090,16 +1143,9 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.pillar.git_pillar as git_pillar
                 import salt.utils.gitfs as gitfs
 
-                git_pillar = gitfs.GitPillar(
-                    self.opts,
-                    self.ext["git"],
-                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
-                    global_only=git_pillar.GLOBAL_ONLY,
-                )
+                git_pillar = gitfs.GitPillar(self.opts, self.ext["git"])
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

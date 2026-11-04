@@ -411,6 +411,38 @@ def my_function():
     return config_path
 ```
 
+### File Handling
+
+**Always use `salt.utils.files.fopen()` instead of the bare `open()` builtin**
+when reading or writing files in Salt code (modules, states, utils, and
+tests alike). `saltpylint`'s `resource-leakage` check (`W8470`) fails CI on
+any bare `open()` call.
+
+```python
+import salt.utils.files
+
+def my_function(path):
+    """Read/write files the Salt way"""
+    with salt.utils.files.fopen(path, "r") as fp_:
+        content = fp_.read()
+
+    with salt.utils.files.fopen(path, "w") as fp_:
+        fp_.write(content)
+
+    return content
+```
+
+```python
+# Bad - fails the resource-leakage lint check
+with open(path, "r") as fp_:
+    content = fp_.read()
+```
+
+`fopen()` is a thin wrapper around `open()` that additionally normalizes
+line endings/encoding across platforms and ensures file handles are tracked
+and closed consistently. Use it for every `open()` call, including binary
+mode (`"rb"`/`"wb"`) and in unit tests -- the lint check applies there too.
+
 ### Platform Detection
 
 ```python

@@ -12,10 +12,6 @@ state modules
 
     alias
     ansiblegate
-    apache
-    apache_conf
-    apache_module
-    apache_site
     archive
     at
     beacon
@@ -140,5 +136,4 @@ state modules
     win_wua
     win_wusa
     winrepo
-    x509
     x509_v2

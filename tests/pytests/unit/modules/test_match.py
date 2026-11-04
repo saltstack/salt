@@ -28,7 +28,13 @@ def configure_loader_modules(minion_id):
         "pcre_match.match": pcre_match.match,
     }
 
-    with patch("salt.loader.matchers", MagicMock(return_value=matchers_dict)):
+    # PR #64607 made matchers self-reference the loader via a `__matchers__`
+    # dunder. The saltfactories `LoaderModuleMock` dunder allowlist used by
+    # `configure_loader_modules` does not include `__matchers__`, so inject it
+    # directly into the matcher modules' namespaces here instead.
+    with patch(
+        "salt.loader.matchers", MagicMock(return_value=matchers_dict)
+    ), patch.dict(compound_match.__dict__, {"__matchers__": matchers_dict}):
         yield {
             match: {"__opts__": {"extension_modules": "", "id": minion_id}},
             compound_match: {"__opts__": {"id": minion_id}},

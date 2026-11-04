@@ -10,6 +10,7 @@ import pytest
 
 import salt.utils.files
 from salt import fileclient
+from salt.exceptions import MinionError
 from tests.support.mock import AsyncMock, MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -285,6 +286,34 @@ def test_on_header(file_client, header, result):
 
     file_client._on_header(header, write_body, False, False)
     assert write_body[0] == result
+
+
+def test_get_url_raises_on_truncated_content_length(tmp_path):
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69916
+
+    If the server advertises a ``Content-Length`` but delivers fewer bytes
+    than that, ``get_url`` must not silently write the truncated data to
+    the minion's file cache; it should clean up the partial download and
+    raise a clear error instead.
+    """
+    dest = os.path.join(tmp_path, "downloaded_file")
+
+    def fake_query(url, stream, streaming_callback, header_callback, **kwargs):
+        header_callback("HTTP/1.1 200 OK")
+        header_callback("Content-Length: 1000")
+        header_callback("")
+        streaming_callback(b"x" * 500)
+        return {"handle": object()}
+
+    client = fileclient.Client({"cachedir": str(tmp_path)})
+
+    with patch("salt.utils.http.query", side_effect=fake_query):
+        with pytest.raises(MinionError, match="truncated"):
+            client.get_url("http://example.com/file", dest)
+
+    assert not os.path.exists(dest)
+    assert not os.path.exists(f"{dest}.part")
 
 
 def test_get_url_with_hash(client_opts):

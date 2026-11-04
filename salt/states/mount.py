@@ -39,6 +39,8 @@ import logging
 import os.path
 import re
 
+from salt.modules.mount import _resolve_pass_num
+
 log = logging.getLogger(__name__)
 
 
@@ -58,7 +60,7 @@ def mounted(
     mkmnt=False,
     opts="defaults",
     dump=0,
-    pass_num=0,
+    pass_num=None,
     config="/etc/fstab",
     persist=True,
     mount=True,
@@ -197,6 +199,8 @@ def mounted(
     ret = {"name": name, "changes": {}, "result": True, "comment": ""}
 
     update_mount_cache = False
+
+    pass_num = _resolve_pass_num(pass_num, kwargs)
 
     if not name:
         ret["result"] = False
@@ -1129,15 +1133,21 @@ def fstab_present(
     fs_vfstype,
     fs_mntops="defaults",
     fs_freq=0,
-    fs_passno=0,
+    pass_num=None,
     mount_by=None,
     config="/etc/fstab",
     mount=True,
     match_on="auto",
     not_change=False,
     fs_mount=True,
+    **kwargs,
 ):
     """Makes sure that a fstab mount point is present.
+
+    .. versionchanged:: 3009.0
+        The ``fs_passno`` argument is being deprecated in favor of ``pass_num``
+        to align this parameter name with other functions within the mount module.
+        The legacy ``fs_passno`` argument will be removed in Salt 3011.
 
     name
         The name of block device. Can be any valid fs_spec value.
@@ -1156,7 +1166,7 @@ def fstab_present(
         Field is used by dump to determine which fs need to be
         dumped. Default is ``0``
 
-    fs_passno
+    pass_num
         Field is used by fsck to determine the order in which
         filesystem checks are done at boot time. Default is ``0``
 
@@ -1200,6 +1210,8 @@ def fstab_present(
         "changes": {},
         "comment": [],
     }
+
+    pass_num = _resolve_pass_num(pass_num, kwargs)
 
     # Adjust fs_mntops based on the OS
     if fs_mntops == "defaults":
@@ -1256,7 +1268,7 @@ def fstab_present(
                 fstype=fs_vfstype,
                 opts=fs_mntops,
                 dump=fs_freq,
-                pass_num=fs_passno,
+                pass_num=pass_num,
                 config=config,
                 test=True,
                 match_on=match_on,
@@ -1309,7 +1321,7 @@ def fstab_present(
             fstype=fs_vfstype,
             opts=fs_mntops,
             dump=fs_freq,
-            pass_num=fs_passno,
+            pass_num=pass_num,
             config=config,
             match_on=match_on,
             not_change=not_change,

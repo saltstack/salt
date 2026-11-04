@@ -2528,102 +2528,15 @@ def test_dns_return(ipv4_tuple, ipv6_tuple):
         assert core.dns() == {}
 
 
-def test_enable_fqdns_false():
-    """
-    tests enable_fqdns_grains is set to False
-    """
-    with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": False}):
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_true():
-    """
-    testing that grains uses network.fqdns module
-    """
+@pytest.mark.parametrize(
+    "disabled_grains,expected", (([], ["my.fake.domain"]), (["fqdns"], []))
+)
+def test_fqdns_disabling(disabled_grains, expected):
     with patch.dict(
         "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ), patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
-        assert core.fqdns() == "my.fake.domain"
-
-
-def test_enable_fqdns_none():
-    """
-    testing default fqdns grains is returned when enable_fqdns_grains is None
-    """
-    with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": None}):
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_without_patching():
-    """
-    testing fqdns grains is enabled by default
-    """
-    with patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on Windows and macOS
-        if salt.utils.platform.is_windows() or salt.utils.platform.is_darwin():
-            assert core.fqdns() == {"fqdns": []}
-        else:
-            assert core.fqdns() == "my.fake.domain"
-
-
-def test_enable_fqdns_false_is_proxy():
-    """
-    testing fqdns grains is disabled by default for proxy minions
-    """
-    with patch(
-        "salt.utils.platform.is_proxy", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on proxy minions
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_aix():
-    """
-    testing fqdns grains is disabled by default for minions on AIX
-    """
-    with patch(
-        "salt.utils.platform.is_aix", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on AIX
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_sunos():
-    """
-    testing fqdns grains is disabled by default for minions on Solaris platforms
-    """
-    with patch(
-        "salt.utils.platform.is_sunos", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on Solaris platforms
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_junos():
-    """
-    testing fqdns grains is disabled by default for minions on Junos
-    """
-    with patch(
-        "salt.utils.platform.is_junos", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on Junos (Juniper)
-        assert core.fqdns() == {"fqdns": []}
+        {"network.fqdns": MagicMock(return_value={"fqdns": ["my.fake.domain"]})},
+    ), patch.dict("salt.grains.core.__opts__", {"disabled_grains": disabled_grains}):
+        assert core.fqdns() == {"fqdns": expected}
 
 
 @pytest.mark.skip_unless_on_linux
@@ -3486,6 +3399,74 @@ def test_bsd_osfullname():
 
     assert "osfullname" in os_grains
     assert os_grains.get("osfullname") == "FreeBSD 10.3"
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "kernel,kernelrelease,expected_osfullname",
+    [
+        # kernelrelease.split("-")[0] strips the -RELEASE suffix but not _STABLE
+        ("NetBSD", "10.1_STABLE", "NetBSD 10.1_STABLE"),
+        ("OpenBSD", "7.4-RELEASE", "OpenBSD 7.4"),
+    ],
+)
+def test_netbsd_openbsd_osfullname(kernel, kernelrelease, expected_osfullname):
+    """
+    Test that os_data() sets osfullname for NetBSD and OpenBSD without crashing.
+    The OpenBSD/NetBSD branch must set osfullname so that _osrelease_data() can
+    use it later.
+    """
+    nt_uname = namedtuple(
+        "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
+    )
+    mock_uname = MagicMock(
+        return_value=nt_uname(
+            kernel,
+            "hostname",
+            kernelrelease,
+            f"{kernel} {kernelrelease}",
+            "amd64",
+            "amd64",
+        )
+    )
+    empty_mock = MagicMock(return_value={})
+
+    _cmd_run_map = {
+        "/sbin/sysctl -n hw.physmem": "2121781248",
+        "/sbin/sysctl -n vm.swap_total": "419430400",
+    }
+    cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map.get(x, ""))
+
+    with patch.object(platform, "uname", mock_uname), patch.object(
+        salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_freebsd", MagicMock(return_value=False)
+    ), patch(
+        "salt.utils.path.which", return_value="/sbin/sysctl"
+    ):
+        with patch.object(core, "_bsd_cpudata", empty_mock), patch.object(
+            core, "_hw_data", empty_mock
+        ), patch.object(core, "_virtual", empty_mock), patch.object(
+            core, "_virtual_hv", empty_mock
+        ), patch.object(
+            core, "_ps", empty_mock
+        ), patch.object(
+            core, "_memdata", empty_mock
+        ), patch.object(
+            core, "_netbsd_gpu_data", empty_mock
+        ), patch.dict(
+            core.__salt__, {"cmd.run": cmd_run_mock}
+        ):
+            os_grains = core.os_data()
+
+    assert "osfullname" in os_grains
+    assert os_grains.get("osfullname") == expected_osfullname
+    assert os_grains.get("os") == kernel
+    assert os_grains.get("os_family") == kernel
 
 
 def test_saltversioninfo():
@@ -4546,6 +4527,27 @@ def test_pythonversion():
     ret = core.pythonversion()
     assert "pythonversion" in ret
     assert ret["pythonversion"] == python_version
+
+
+def test_pythonrelease():
+    """
+    test pythonrelease and pythonrelease_info
+
+    These follow the ``<foo>release`` / ``<foo>release_info`` convention used
+    by the other version grains, unlike the older list-valued
+    ``pythonversion`` grain which is retained for backwards compatibility.
+    """
+    ret = core.pythonversion()
+
+    assert "pythonrelease" in ret
+    assert ret["pythonrelease"] == platform.python_version()
+    # dotted major.minor.micro, matching the shape of e.g. osrelease
+    assert ret["pythonrelease"] == "{}.{}.{}".format(*sys.version_info[:3])
+
+    assert "pythonrelease_info" in ret
+    assert ret["pythonrelease_info"] == [*sys.version_info]
+    # the pre-existing grain keeps working and stays in sync
+    assert ret["pythonrelease_info"] == ret["pythonversion"]
 
 
 @pytest.mark.skip_unless_on_linux

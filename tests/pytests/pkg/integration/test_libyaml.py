@@ -6,14 +6,10 @@ the Linux onedir build was source-compiling PyYAML under a relenv toolchain
 that has no libyaml, so `yaml.CSafeLoader`/`yaml.CSafeDumper` were absent
 and every YAML load fell back to the ~10-20x slower pure-Python parser.
 
-The test asserts the invariant that matches whatever salt is installed at
-run time, so it works uniformly across the install / upgrade / downgrade
-package-test flavors:
-
-- install / post-upgrade: current onedir is on disk, expect libyaml present
-- post-downgrade: previous onedir is on disk. That release predates the
-  fix, so expect libyaml absent (documenting the pre-fix state so a silent
-  regression on the previous branch is still caught).
+The test asserts libyaml is present in whatever onedir is installed at run
+time. All currently-supported downgrade targets (v3006.28, v3007.15,
+v3008.3+) include PR #69950, so the invariant holds across the install /
+upgrade / downgrade package-test flavors.
 """
 
 import subprocess
@@ -26,13 +22,6 @@ import pytest
 @pytest.fixture
 def python_script_bin(install_salt):
     return install_salt.binary_paths["python"]
-
-
-@pytest.fixture
-def libyaml_expected(install_salt):
-    """Current onedir (install/upgrade) ships libyaml; the previous release
-    (post-downgrade validation) predates PR #69950 and does not."""
-    return not install_salt.use_prev_version
 
 
 @pytest.fixture
@@ -70,7 +59,7 @@ def check_libyaml_file(tmp_path):
     "Windows/macOS already pick libyaml-linked wheels.",
 )
 def test_libyaml_matches_installed_version(
-    install_salt, python_script_bin, check_libyaml_file, libyaml_expected
+    install_salt, python_script_bin, check_libyaml_file
 ):
     ret = install_salt.proc.run(
         *(python_script_bin + [str(check_libyaml_file)]),
@@ -79,17 +68,10 @@ def test_libyaml_matches_installed_version(
         check=False,
         universal_newlines=True,
     )
-    if libyaml_expected:
-        assert ret.returncode == 0, (
-            f"libyaml expected present in the current onedir but the probe "
-            f"failed:\n{ret.stderr}"
-        )
-    else:
-        assert ret.returncode != 0, (
-            "libyaml unexpectedly present in the previous-release onedir. "
-            "If PR #69950 was backported earlier than 3006.28, drop this "
-            "test's downgrade branch."
-        )
+    assert ret.returncode == 0, (
+        f"libyaml expected present in the onedir but the probe "
+        f"failed:\n{ret.stderr}"
+    )
 
 
 @pytest.mark.skipif(
@@ -98,7 +80,7 @@ def test_libyaml_matches_installed_version(
     "Windows/macOS already pick libyaml-linked wheels.",
 )
 def test_salt_yamlloader_matches_installed_version(
-    install_salt, python_script_bin, tmp_path, libyaml_expected
+    install_salt, python_script_bin, tmp_path
 ):
     script_path = tmp_path / "check_yamlloader.py"
     script_path.write_text(
@@ -119,16 +101,7 @@ def test_salt_yamlloader_matches_installed_version(
         check=False,
         universal_newlines=True,
     )
-    if libyaml_expected:
-        assert ret.returncode == 0, (
-            "salt.utils.yamlloader.BaseLoader should be yaml.CSafeLoader in "
-            "the current onedir; it resolved to the pure-Python loader "
-            "instead."
-        )
-    else:
-        assert ret.returncode != 0, (
-            "salt.utils.yamlloader.BaseLoader unexpectedly resolves to "
-            "yaml.CSafeLoader in the previous-release onedir. If PR #69950 "
-            "was backported earlier than 3006.28, drop this test's downgrade "
-            "branch."
-        )
+    assert ret.returncode == 0, (
+        "salt.utils.yamlloader.BaseLoader should be yaml.CSafeLoader in "
+        "the onedir; it resolved to the pure-Python loader instead."
+    )

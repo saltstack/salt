@@ -135,7 +135,10 @@ Runner Events
         (e.g. ``runner.jobs.lookup_jid``)
     :var fun_args: The arguments passed to the runner function (e.g.
         ``['20160829225914848058']``)
-    :var user: The user who executed the runner (e.g. ``root``)
+    :var user: The user who executed the runner (e.g. ``root``). For a runner
+        started by a ``salt.runner`` state in ``state.orchestrate``, the user
+        who started the orchestration, or ``Reactor`` when a reaction started
+        it.
 
 .. salt:event:: salt/run/<JID>/ret
 

@@ -60,6 +60,39 @@ class KeyCLI:
 
         self.auth = {}
 
+    def destroy(self):
+        """
+        Release resources this ``KeyCLI`` is holding.
+
+        Without this, exiting ``salt-key`` drops the last reference to
+        ``self.client`` (a :class:`salt.wheel.WheelClient`) and its
+        ``__del__`` finalizer emits an ``unclosed WheelClient`` warning
+        via :func:`salt.utils.resource_warnings.warn_until_close` -- once
+        as a Python ``ResourceWarning`` (filtered by default) and once
+        as a ``log.warning`` record that reaches stdout/stderr, breaking
+        consumers that parse ``salt-key --out json``. The local ``Key``
+        event bus is also closed here so Python 3.11 does not print
+        ``Exception ignored in: BaseEventLoop.__del__`` during
+        interpreter shutdown. Called automatically by the
+        context-manager protocol.
+        """
+        if not self.opts.get("eauth"):
+            key = getattr(self, "key", None)
+            if key is not None and not isinstance(key, type):
+                key.destroy()
+        client = getattr(self, "client", None)
+        if client is not None:
+            try:
+                client.destroy()
+            finally:
+                self.client = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
     def _update_opts(self):
         # get the key command
         for cmd in (
@@ -324,11 +357,17 @@ class Key:
     STATE_MAP = {"accepted": ACC, "rejected": REJ, "pending": PEND, "denied": DEN}
     DIR_MAP = {v: k for k, v in STATE_MAP.items()}
 
+    # Short-form ``act`` strings fired on ``salt/key`` events.  Peer
+    # masters in a cluster (``salt.master.EventMonitor._PEER_KEY_STATE``)
+    # and the auto-accept auth path both key off the short form, so
+    # ``change_state`` must emit short-form values here, not the
+    # long-form ``DIR_MAP`` values that are stored as the local cache
+    # ``state`` field.  See issue #70401.
     ACT_MAP = {
         ACC: "accept",
         REJ: "reject",
         PEND: "pend",
-        DEN: "denied",
+        DEN: "deny",
     }
 
     def __init__(self, opts, io_loop=None):
@@ -399,10 +438,9 @@ class Key:
         keydir, keyname, keysize, user, cache = self._get_key_attrs(
             keydir, keyname, keysize, user
         )
-        priv = self.master_keys.find_or_create_keys(
-            keyname, keysize=keysize, cache=cache
-        )
-        return salt.utils.crypt.pem_finger(key=priv.public_key())
+        self.master_keys.find_or_create_keys(keyname, keysize=keysize, cache=cache)
+        pub = cache.fetch("master_keys", f"{keyname}.pub")
+        return salt.utils.crypt.pem_finger(key=pub)
 
     def gen_keys_signature(
         self, priv, pub, signature_path, auto_create=False, keysize=None
@@ -753,7 +791,7 @@ class Key:
                     key["state"] = self.DIR_MAP[to_state]
                     self.cache.store("keys", keyname, key)
 
-                eload = {"result": True, "act": self.DIR_MAP[to_state], "id": keyname}
+                eload = {"result": True, "act": self.ACT_MAP[to_state], "id": keyname}
                 # Cluster masters: include the public key body so peer
                 # masters can populate their local ``pki_dir/<bucket>/<id>``
                 # without a shared filesystem.  The bytes are only useful
@@ -955,8 +993,14 @@ class Key:
 
         return self.finger("*", hash_type=hash_type)
 
+    def destroy(self):
+        event = self.__dict__.get("event")
+        if event is not None:
+            event.destroy()
+            self.__dict__.pop("event", None)
+
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
-        self.event.destroy()
+        self.destroy()

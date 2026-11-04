@@ -268,17 +268,27 @@ def test_requester_disconnect_midflight_leaves_worker_alive(
 
         # MWorker had already dispatched and queued the reply for the
         # "drop-me" request before we closed the DEALER; on reconnect
-        # libzmq redelivers that queued reply to our fresh DEALER
-        # first.  Drain it, then send + receive a fresh request.
-        try:
-            stale = handle.recv(timeout=2.0)
-            log.info("drained stale reply after reconnect: %r", stale)
-        except TimeoutError:
-            # Some libzmq versions do not redeliver buffered replies
-            # after a peer identity change; that is fine too.
-            log.info("no stale reply queued")
-
-        good = handle.send_recv(_ping("after-reconnect"), timeout=10.0)
+        # libzmq may redeliver that queued reply to our fresh DEALER.
+        # The timing of that redelivery is not deterministic across
+        # libzmq builds and load levels: sometimes it arrives inside
+        # the first poll window, sometimes after we've already sent
+        # the follow-up request.  Rather than draining with a fixed
+        # timeout and hoping, we send the fresh request first, then
+        # drain replies until we see the one keyed to
+        # ``after-reconnect``.  Any earlier reply keyed to ``drop-me``
+        # is the redelivered stale that we're intentionally skipping.
+        handle.send(_ping("after-reconnect"))
+        good = None
+        drain_deadline = time.monotonic() + 15.0
+        while time.monotonic() < drain_deadline:
+            try:
+                reply = handle.recv(timeout=5.0)
+            except TimeoutError:
+                continue
+            if isinstance(reply, dict) and reply.get("id") == "after-reconnect":
+                good = reply
+                break
+            log.info("drained stale reply after reconnect: %r", reply)
         assert good == {"cmd": "ping", "id": "after-reconnect"}
     finally:
         handle.stop()

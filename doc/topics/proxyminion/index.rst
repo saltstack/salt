@@ -933,6 +933,5 @@ For more information please refer to class `SSHConnection`_.
     ssh
     beacon
     state
-    ../tutorials/esxi_proxy_minion
 
 .. _SSHConnection: https://github.com/saltstack/salt/blob/b8271c7512da7e048019ee26422be9e7d6b795ab/salt/utils/vt_helper.py#L28

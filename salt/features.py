@@ -21,17 +21,6 @@ class Features:
         else:
             log.warning("Features already setup")
 
-    def get(self, key, default=None):
-        import salt.utils.versions
-
-        salt.utils.versions.warn_until(
-            3009,
-            "Please stop checking feature flags using 'salt.features' and instead "
-            "check the 'features' keyword on the configuration dictionary. The "
-            "'salt.features' module will go away in {version}.",
-        )
-        return self.features.get(key, default)
-
 
 features = Features()
 setup_features = features.setup_features

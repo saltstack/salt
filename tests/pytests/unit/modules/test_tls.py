@@ -25,12 +25,12 @@ pytestmark = [
 # functions they exercise raise AttributeError before the assertions
 # run). ``salt.modules.tls.__virtual__`` returns ``False`` under
 # pyOpenSSL 26+ for the same reason; users should migrate to
-# ``salt.modules.x509`` which is backed by ``cryptography`` directly.
+# ``salt.modules.x509_v2`` which is backed by ``cryptography`` directly.
 requires_legacy_pyopenssl = pytest.mark.skipif(
     not tls.HAS_LEGACY_PYOPENSSL,
     reason=(
         "pyOpenSSL 26.0+ removed X509Extension / X509Req / PKCS12 / CRL "
-        "APIs that salt.modules.tls depends on; use salt.modules.x509 "
+        "APIs that salt.modules.tls depends on; use salt.modules.x509_v2 "
         "instead."
     ),
 )
