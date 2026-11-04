@@ -19,6 +19,7 @@ import pytest
 import salt.crypt
 import salt.key
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture
@@ -41,6 +42,13 @@ def master_container(salt_factories):
         "client_acl": {},
         "publisher_acl": {},
         "client_event_port": client_event_port,
+        # Match the suite-wide FIPS convention: swap SHA1-based
+        # signing for SHA224 so sign-in doesn't fail with "Attempt
+        # to authenticate" on a FIPS-enabled host.
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
     }
 
     factory = salt_factories.salt_master_daemon(
@@ -58,9 +66,17 @@ def minion_container(salt_factories, master_container):
     import salt.cache
 
     minion_id = "remote-test-minion"
+    minion_overrides = {
+        # Match the master-side FIPS choices so sign-in handshake
+        # agrees on algorithms.
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": ("OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"),
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
+    }
     factory = salt_factories.salt_minion_daemon(
         minion_id,
         master=master_container,
+        overrides=minion_overrides,
     )
 
     # master_container has auto_accept=False and open_mode=False; pre-generate
@@ -139,6 +155,9 @@ def remote_client_setup(master_container, client_config_dir):
     # Create client config file pointing to master
     master_config = master_container.config
 
+    _fips_bool = "true" if FIPS_TESTRUN else "false"
+    _sign_algo = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    _enc_algo = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
     client_config = textwrap.dedent(
         f"""
         # Client configuration for remote CLI access
@@ -154,6 +173,12 @@ def remote_client_setup(master_container, client_config_dir):
 
         # Transport settings
         transport: {master_config.get('transport', 'zeromq')}
+
+        # Match the master-side FIPS choices so sign-in agrees on
+        # algorithms (SHA1 is disallowed under FIPS).
+        fips_mode: {_fips_bool}
+        signing_algorithm: {_sign_algo}
+        encryption_algorithm: {_enc_algo}
 
         # Timeouts
         timeout: 30

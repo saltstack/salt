@@ -53,6 +53,7 @@ import pytest
 import salt.crypt
 import salt.key
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 # pylint: disable=unused-import
 from tests.pytests.integration.cluster.conftest import (
@@ -255,6 +256,14 @@ def remote_client_setup_cluster(cluster_masters, cluster_lb_proxy, tmp_path):
         )
 
     cluster_m1 = cluster_masters[0]
+    # Match the master-side crypto choices (see cluster_master_1 in
+    # tests/pytests/integration/cluster/conftest.py).  Under FIPS the
+    # defaults ``PKCS1v15-SHA1`` / ``OAEP-SHA1`` fail sign-in because
+    # SHA1 is disallowed; fall through to the standard SHA224 pair
+    # used by the rest of the test suite's FIPS runs.
+    _fips_bool = "true" if FIPS_TESTRUN else "false"
+    _sign_algo = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    _enc_algo = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
     client_config = textwrap.dedent(
         f"""
         id: {client_id}
@@ -271,6 +280,10 @@ def remote_client_setup_cluster(cluster_masters, cluster_lb_proxy, tmp_path):
 
         pki_dir: {pki_dir}
         transport: {cluster_m1.config.get('transport', 'zeromq')}
+
+        fips_mode: {_fips_bool}
+        signing_algorithm: {_sign_algo}
+        encryption_algorithm: {_enc_algo}
 
         timeout: 30
         acceptance_wait_time: 10

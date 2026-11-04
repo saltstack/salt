@@ -23,6 +23,7 @@ import salt.crypt
 import salt.key
 import salt.runner
 import salt.utils.files
+from tests.conftest import FIPS_TESTRUN
 
 
 @pytest.fixture(scope="module")
@@ -49,6 +50,17 @@ def master_cluster(salt_factories):
             # Each master needs its own ``client_event_port``;
             # the default 4507 would collide across all three.
             "client_event_port": ports.get_unused_localhost_port(),
+            # Match the rest of the test suite under FIPS: swap
+            # SHA1-based signing/encryption for SHA224 so sign-in
+            # doesn't fail with "Attempt to authenticate" on a
+            # FIPS-enabled host.
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+            "cluster_encryption_algorithm": (
+                "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+            ),
         }
 
         factory = salt_factories.salt_master_daemon(
@@ -96,6 +108,9 @@ def remote_admin_workstation(tmp_path, master_cluster):
 
     # Create config for each master in cluster
     master_configs = []
+    _fips_bool = "true" if FIPS_TESTRUN else "false"
+    _sign_algo = "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+    _enc_algo = "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
     for i, master in enumerate(master_cluster):
         config_file = workstation_dir / f"master{i+1}"
 
@@ -109,6 +124,10 @@ def remote_admin_workstation(tmp_path, master_cluster):
 
             pki_dir: {pki_dir}
             transport: {master.config.get('transport', 'zeromq')}
+
+            fips_mode: {_fips_bool}
+            signing_algorithm: {_sign_algo}
+            encryption_algorithm: {_enc_algo}
 
             timeout: 30
             acceptance_wait_time: 10
