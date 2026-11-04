@@ -243,9 +243,9 @@ def test_replace_binary_raises(file, tmp_path, data):
     "data",
     [
         pytest.param(b"key = old\r\nnext\r\n", id="ascii"),
-        pytest.param("key = old caf\u00e9\n".encode("utf-8"), id="utf-8"),
+        pytest.param("key = old caf\u00e9\n".encode(), id="utf-8"),
         pytest.param(
-            codecs.BOM_UTF8 + "key = old caf\u00e9\r\n".encode("utf-8"),
+            codecs.BOM_UTF8 + "key = old caf\u00e9\r\n".encode(),
             id="utf-8-bom",
         ),
     ],
