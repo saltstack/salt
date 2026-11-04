@@ -421,15 +421,27 @@ def merge_subreturn(original_return, sub_return, subkey=None):
     return original_return
 
 
+def _mark_pillarenv_override(opts, configured_pillarenv):
+    """
+    Flag opts when this run uses a different ``pillarenv`` than the minion
+    config. Such a run must not update the master's pillar targeting data.
+    """
+    if opts.get("pillarenv") != configured_pillarenv:
+        opts["__pillarenv_overridden"] = True
+
+
 def get_sls_opts(opts, **kwargs):
     """
     Return a copy of the opts for use, optionally load a local config on top
     """
     # Use OptsDict for copy-on-write instead of deep copy
     opts = salt.utils.optsdict.safe_opts_copy(opts, name="get_sls_opts")
+    configured_pillarenv = opts.get("pillarenv")
 
     if "localconfig" in kwargs:
-        return salt.config.minion_config(kwargs["localconfig"], defaults=opts)
+        opts = salt.config.minion_config(kwargs["localconfig"], defaults=opts)
+        _mark_pillarenv_override(opts, configured_pillarenv)
+        return opts
 
     if "saltenv" in kwargs:
         saltenv = kwargs["saltenv"]
@@ -461,4 +473,5 @@ def get_sls_opts(opts, **kwargs):
         else:
             opts["pillarenv"] = saltenv
 
+    _mark_pillarenv_override(opts, configured_pillarenv)
     return opts
