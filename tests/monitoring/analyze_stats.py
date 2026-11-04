@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import json
+import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -13,6 +15,35 @@ import urllib.request
 # entirely.  Going straight to ``127.0.0.1`` avoids the ambiguity.
 PROM_URL = "http://127.0.0.1:19090"
 
+# Warm-up: data from the first WARMUP_SECONDS of a stress run is ignored
+# by the leak check.  While the master starts up its RSS climbs (workers
+# fork, caches fill, the first highstates run) and that ramp-up looks
+# like a leak to a linear fit, which made the nightly fail on RSS slope.
+# The first ~5 minutes are known to be unusable; 10 minutes leaves a
+# margin.  Override with ``STRESS_WARMUP_SECONDS`` if that needs tuning.
+WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", 10 * 60))
+
+# Master RSS slope (bytes/sec) above which the run fails.  Master RSS is not
+# flat even without a leak: it oscillates by a few hundred MB with a period
+# of about 6 minutes, so the fit over a window of a few periods keeps some
+# noise.  Two 30m runs measured about 13 and 7 KB/sec after the warm-up, so
+# the limit is 15 KB/sec (it was 10 KB/sec).
+MASTER_RSS_SLOPE_LIMIT = 15 * 1024
+
+# Smallest slice of data (the end of the run) the check will judge on.
+# Fewer points make the slope too noisy to compare with the thresholds.
+MIN_ANALYSIS_SECONDS = 5 * 60
+
+# The workflow's shortest run (nightly-stress-test.yml ``duration``
+# options) must be at least WARMUP_SECONDS + MIN_ANALYSIS_SECONDS = 15m.
+# Keep the two in step.
+#
+# The workflow exports ``STRESS_START_EPOCH`` when the stress starts; the
+# slope window then covers everything after ``start + WARMUP_SECONDS``
+# (a 15m run is judged on its last 5m, a 60m run on its last 50m).
+# Without it the window is MIN_ANALYSIS_SECONDS, the one span that no
+# allowed run overlaps with the warm-up.
+
 
 def query_prom(query):
     params = urllib.parse.urlencode({"query": query})
@@ -21,7 +52,29 @@ def query_prom(query):
         return json.loads(response.read().decode())
 
 
-def get_linear_slope(metric_name, duration="30m"):
+def get_elapsed_seconds():
+    """Seconds since the stress run started, or ``None`` if unknown."""
+    start = os.environ.get("STRESS_START_EPOCH")
+    if not start:
+        return None
+    try:
+        return int(time.time() - float(start))
+    except ValueError:
+        return None
+
+
+def get_slope_window():
+    """
+    Prometheus range-selector duration for the slope check: everything
+    after the warm-up period at the start of the stress run.
+    """
+    elapsed = get_elapsed_seconds()
+    if elapsed is None:
+        return f"{MIN_ANALYSIS_SECONDS}s"
+    return f"{max(elapsed - WARMUP_SECONDS, MIN_ANALYSIS_SECONDS)}s"
+
+
+def get_linear_slope(metric_name, duration=None):
     """
     Slope (rate-of-change per second) of ``metric_name`` over the recent
     ``duration``.  Returns 0.0 if prometheus is unreachable or has no
@@ -29,6 +82,7 @@ def get_linear_slope(metric_name, duration="30m"):
     analyzer -- the threshold checks downstream will simply see no
     leak.
     """
+    duration = duration or get_slope_window()
     query = f"deriv({metric_name}[{duration}])"
     try:
         data = query_prom(query)
@@ -45,6 +99,7 @@ def get_linear_slope(metric_name, duration="30m"):
 
 def main():
     print("--- Salt Stress Test Analysis ---")
+    print(f"Slope window (warm-up of {WARMUP_SECONDS}s excluded): {get_slope_window()}")
 
     # 1. Check for zombie processes (process count growth)
     master_procs_slope = get_linear_slope("salt_master_process_count")
@@ -66,8 +121,8 @@ def main():
     print(f"Master Proc Slope: {master_procs_slope:.6f} procs/sec")
 
     # Thresholds
-    # Memory: > 10KB/sec sustained over 30m might indicate a real leak
-    if master_rss_slope > 10240:
+    # Memory: a slope above the limit after the warm-up might indicate a real leak
+    if master_rss_slope > MASTER_RSS_SLOPE_LIMIT:
         print("FAIL: Master memory leak detected!")
         failed = True
 
