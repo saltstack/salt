@@ -243,6 +243,8 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pyopenssl
+tzdata==2026.2
+    # via -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt
