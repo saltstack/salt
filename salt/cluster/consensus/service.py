@@ -1243,15 +1243,38 @@ class RaftService:
 def build_peer_pushers(opts, pushers_list):
     """
     Convert the flat ``pushers`` list from ``_publish_daemon`` into the
-    ``dict[addr, PublishServer]`` that ``RaftService`` expects.
+    ``dict[peer_id, PublishServer]`` that ``RaftService`` expects.
 
-    ``_publish_daemon`` builds ``self.pushers`` as a plain list of
-    ``PublishServer`` objects in the same order as
-    ``opts["cluster_peers"]``.  This helper pairs them back up.
+    Keys the dict by each pusher's own ``pull_host`` attribute (set
+    from the ``cluster_peers`` entry when the pusher was constructed in
+    ``_publish_daemon``).  Using ``pull_host`` directly — rather than
+    ``zip``-ing against ``opts["cluster_peers"]`` — is resilient to two
+    classes of desync that silently broke the Raft dispatcher's pusher
+    table (BUG-030):
 
-    :param opts:          Salt master opts.
+    * ``self.pushers`` is deduplicated by ``_add_pusher``; join /
+      discover handlers append to ``self.cluster_peers`` without a
+      dedup check, so ``opts["cluster_peers"]`` can carry a duplicate
+      entry while ``self.pushers`` does not.  A ``zip`` then truncates
+      and the tail entry of ``cluster_peers`` gets no pusher — inbound
+      Raft RPCs from that peer log ``no pusher for <peer_id>, dropping
+      <tag> reply`` and pre-vote / append-entries replies are lost.
+    * ``cluster_peers`` entries can carry an explicit ``host:port``
+      suffix (``peer.rsplit(":", 1)`` branch in ``_publish_daemon``)
+      while the pusher's ``pull_host`` is just ``host``.  A ``zip``
+      produces ``"host:port"`` as the pusher-table key while the
+      dispatcher looks up ``"host"`` (the sender's ``callback_node`` =
+      its ``node_id``), which never matches.
+
+    Mirrors ``_start_raft_as_learner``'s already-robust pattern
+    (``{p.pull_host: p for p in self.pushers}``), unifying all three
+    pusher-dict construction sites on the same keying strategy.
+
+    :param opts:          Salt master opts (unused; kept for API
+                          compatibility with the pre-BUG-030 shape).
     :param pushers_list:  ``self.pushers`` from ``_publish_daemon``.
-    :returns:             ``{peer_addr: PublishServer}``
+    :returns:             ``{peer_id: PublishServer}``
     """
-    peers = opts.get("cluster_peers", [])
-    return dict(zip(peers, pushers_list))
+    # ``opts`` is intentionally ignored: pull_host is authoritative.
+    del opts  # noqa: F841 - kept for API compatibility
+    return {p.pull_host: p for p in pushers_list}
