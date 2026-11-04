@@ -254,3 +254,201 @@ class TestPoolRoutingChannelGate:
 
         # Should get the "no client" error, not cluster_retry
         assert result != {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
+
+# ---------------------------------------------------------------------------
+# RaftService readiness persistence across restarts
+# ---------------------------------------------------------------------------
+
+
+class TestRaftServiceReadinessSticky:
+    """
+    Regression: after a RaftService restart (master process restart, not a
+    simple re-election), the readiness gate must re-open from the on-disk
+    Raft log even if no new CONFIG entry commits in the new leader's term.
+
+    Raft §5.4 forbids a new leader from committing entries written in prior
+    terms via ``advance_commit_index``; without seeding ``membership_sm``
+    from the persisted log, ``_on_membership_change`` never fires and the
+    ``cluster_ready`` Event stays unset forever, latching every publish
+    through the ``cluster_retry`` sentinel.
+    """
+
+    def _build_opts(self, tmp_path, my_addr="192.168.0.1"):
+        import salt.config
+
+        opts = salt.config.master_config("/dev/null")
+        opts["interface"] = my_addr
+        opts["cluster_id"] = "west"
+        opts["cluster_peers"] = ["192.168.0.2", "192.168.0.3"]
+        opts["cluster_pool_port"] = 55596
+        opts["cachedir"] = str(tmp_path)
+        return opts
+
+    def test_on_ready_fires_from_persisted_config_entry(self, tmp_path):
+        """
+        Pre-seed the on-disk Raft log with a CONFIG entry listing this
+        node as a voter, then construct a fresh RaftService.  The
+        ``on_ready`` callback must fire without any AppendEntries
+        arriving — the gate re-opens from disk.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = opts["interface"]
+
+        # Pre-seed storage with a committed-shape CONFIG entry.
+        storage = SaltStorage(my_addr, opts)
+        config_entry = LogEntry(
+            term=1,
+            index=0,
+            cmd={
+                "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                "learners": [],
+                "protocol_versions": {},
+            },
+            node_id=None,
+            type=LogEntryType.CONFIG,
+        )
+        storage.append_log(config_entry)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            assert svc is not None
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()
+
+    def test_no_fire_when_not_in_voter_set(self, tmp_path):
+        """
+        A CONFIG entry that does NOT list this node must not fire
+        ``on_ready`` — the master is still pre-join.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = opts["interface"]
+
+        storage = SaltStorage(my_addr, opts)
+        config_entry = LogEntry(
+            term=1,
+            index=0,
+            cmd={
+                "voters": ["192.168.0.2", "192.168.0.3"],
+                "learners": [],
+                "protocol_versions": {},
+            },
+            node_id=None,
+            type=LogEntryType.CONFIG,
+        )
+        storage.append_log(config_entry)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
+
+    def test_fresh_node_no_log_does_not_fire(self, tmp_path):
+        """
+        A fresh RaftService with no log entries must not fire
+        ``on_ready`` — the gate only opens after real consensus.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.service import RaftService
+
+        opts = self._build_opts(tmp_path)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
+
+    def test_latest_config_wins_when_multiple_in_log(self, tmp_path):
+        """
+        If the log contains several CONFIG entries (membership churn),
+        the seed must apply the LAST one — dropping a node that has
+        since left the voter set should not re-fire readiness for it.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = opts["interface"]
+
+        storage = SaltStorage(my_addr, opts)
+        # Earlier entry: we WERE a voter.
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # Later entry: we were DEMOTED / removed.
+        storage.append_log(
+            LogEntry(
+                term=2,
+                index=1,
+                cmd={
+                    "voters": ["192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
