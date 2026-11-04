@@ -621,6 +621,89 @@ def test_pkg_install_log_message(caplog):
         assert "PKG : retcode: 0" in caplog.messages
 
 
+@pytest.fixture
+def cortex_install():
+    """
+    Run ``pkg.install`` for a package whose winrepo ``full_name`` is
+    ``Cortex 73120981``, with the post install registry listing supplied by the
+    test
+    """
+
+    def _install(new_pkgs, retcode=0):
+        pkg_info = {
+            "7.3.1.20981": {
+                "installer": "runme.msi",
+                "install_flags": "/qn /norestart",
+                "uninstaller": "runme.msi",
+                "uninstall_flags": "/qn /norestart",
+                "msiexec": True,
+                "reboot": False,
+                "locale": "en_US",
+                "full_name": "Cortex 73120981",
+            }
+        }
+        with patch.object(
+            win_pkg, "_get_package_info", MagicMock(return_value=pkg_info)
+        ), patch.object(
+            win_pkg, "list_pkgs", MagicMock(side_effect=[{}, new_pkgs])
+        ), patch.dict(
+            win_pkg.__salt__,
+            {
+                "pkg_resource.parse_targets": MagicMock(
+                    return_value=[{"cortex": "7.3.1.20981"}, None]
+                ),
+                "cp.hash_file": MagicMock(return_value=None),
+                "cp.is_cached": MagicMock(return_value="C:\\fake\\runme.msi"),
+                "cmd.run_all": MagicMock(return_value={"retcode": retcode}),
+                "system.set_reboot_required_witnessed": MagicMock(),
+            },
+        ):
+            return win_pkg.install(pkgs=["cortex"], version="7.3.1.20981")
+
+    return _install
+
+
+def test_pkg_install_warns_when_full_name_not_found_60263(cortex_install, caplog):
+    """
+    The installer succeeds, but the registry name doesn't match ``full_name``.
+    ``pkg.installed`` will report a failure, so ``pkg.install`` must say why
+    """
+    with caplog.at_level(logging.WARNING):
+        result = cortex_install({"Cortex XDR 7.3.1.20981": ["7.3.1.20981"]})
+    assert result["cortex"] == {"install status": "success"}
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert len(warnings) == 1
+    assert "cortex" in warnings[0]
+    assert "Cortex 73120981" in warnings[0]
+    assert "Cortex XDR 7.3.1.20981" in warnings[0]
+
+
+def test_pkg_install_no_warning_when_full_name_found_60263(cortex_install, caplog):
+    """
+    No warning when the installed software maps to the winrepo package name
+    """
+    with caplog.at_level(logging.WARNING):
+        result = cortex_install({"cortex": ["7.3.1.20981"]})
+    assert result["cortex"] == {"old": "", "new": ["7.3.1.20981"]}
+    assert not [r for r in caplog.records if r.levelno == logging.WARNING]
+
+
+@pytest.mark.parametrize(
+    "retcode,status",
+    [
+        (0, "success"),
+        (3010, "success, reboot required"),
+        (1641, "success, reboot initiated"),
+    ],
+)
+def test_pkg_install_msiexec_success_retcodes_60263(cortex_install, retcode, status):
+    """
+    Exit codes 0, 3010 and 1641 are all successful installs
+    """
+    result = cortex_install({}, retcode=retcode)
+    assert result["cortex"] == {"install status": status}
+
+
 def test_pkg_install_multiple_pkgs():
     """
     test pkg.install pkg with extra_install_flags
