@@ -36,6 +36,7 @@ Usage (inside ``_publish_daemon``)
 
 import logging
 
+import salt.cluster
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import AsyncTimeoutScheduler, Node
 from salt.cluster.consensus.raft.log import (
@@ -64,10 +65,10 @@ class RaftService:
 
     :param opts:         Salt master opts dict.
     :param loop:         The *asyncio* event loop running in this process.
-    :param peer_pushers: ``dict[peer_addr, PublishServer]`` - the pushers
+    :param peer_pushers: ``dict[peer_id, PublishServer]`` - the pushers
                          ``_publish_daemon`` already created, keyed by the
-                         peer's interface address (``opts["cluster_peers"]``
-                         entry).
+                         peer's node-id (its ``opts["cluster_peers"]``
+                         entry; see :func:`salt.cluster.node_id`).
     """
 
     def __init__(self, opts, loop, peer_pushers, voting=True, on_ready=None):
@@ -76,11 +77,10 @@ class RaftService:
         self._peer_pushers = dict(peer_pushers)  # addr -> PublishServer (mutable copy)
         self._on_ready = on_ready
 
-        # Use the interface address as the Raft node-id so it matches the
-        # keys in cluster_peers and the peer_pushers dict.  opts["id"] is
-        # the hostname which remote masters do not share; the interface
-        # address is the consistent cluster-wide identity.
-        node_id = opts["interface"]
+        # The Raft node-id has to match the keys in cluster_peers and the
+        # peer_pushers dict, which is exactly the identity the peer handshake
+        # exchanges as ``peer_id``.
+        node_id = salt.cluster.node_id(opts)
         storage = SaltStorage(node_id, opts)
         # voting=False means this node joined dynamically and must wait for a
         # CONFIG entry from the leader before participating in elections.
@@ -189,8 +189,8 @@ class RaftService:
         # for addresses that appear in CONFIG entries (covers learner->voter path).
         self._node.register_peer_factory(self._make_peer)
 
-        # peer_pushers is keyed by interface address, matching the
-        # callback_node field written into RPC envelopes.  Hand the
+        # peer_pushers is keyed by node-id, matching the callback_node
+        # field written into RPC envelopes.  Hand the
         # dispatcher the full ``_nodes`` dict so that inbound RPCs are
         # routed by ``raft_group_id``; passing ``self._nodes``
         # (instead of a bare ``self._node``) means subsequent
@@ -623,7 +623,7 @@ class RaftService:
         return SaltPeer(
             addr,
             pusher,
-            self.opts["interface"],
+            salt.cluster.node_id(self.opts),
             voting=voting,
             raft_group_id=raft_group_id,
         )
@@ -889,8 +889,8 @@ class RaftService:
         list so it will receive ``AppendEntries`` from whichever node
         eventually becomes leader.
 
-        :param peer_addr: The joining master's interface address - the same
-                          value used as ``join_peer_id`` in the
+        :param peer_addr: The joining master's node-id - the same value
+                          used as ``join_peer_id`` in the
                           ``cluster/peer/join-notify`` envelope.
         """
         node_id = self._node.node_id
@@ -1085,12 +1085,12 @@ class RaftService:
 
         if ring_id == "cluster":
             # Deterministic bootstrap pool: sorted set of
-            # {this node} ∪ peer addresses.  Every prospective
+            # {this node} ∪ peer node-ids.  Every prospective
             # founder runs this code, but only the deterministic
-            # founder (lowest interface in the pool; see
-            # ``salt/master.py:920`` and
-            # ``salt/channel/server.py:2101``) actually writes the
-            # CONFIG.
+            # founder (lowest node-id in the pool; see
+            # ``salt.master.Master.start`` and
+            # ``MasterPubServerChannel._publish_daemon``) actually
+            # writes the CONFIG.
             bootstrap_pool = sorted({node.node_id, *[p.node_id for p in node.peers]})
         else:
             # Per-ring founders come from the registry entry on the

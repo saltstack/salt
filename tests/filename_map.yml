@@ -8,6 +8,20 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/__init__.py:
+  - pytests.unit.test_nacl_importer
+
+salt/(modules|runners|pillar|renderers|utils)/nacl\.py:
+  - pytests.unit.modules.test_nacl
+  - pytests.unit.runners.test_nacl
+  - pytests.unit.pillar.test_nacl
+  - pytests.unit.renderers.test_nacl
+  - pytests.unit.utils.test_nacl
+  - pytests.unit.utils.test_nacl_permissions
+  - pytests.unit.test_nacl_files
+  - pytests.integration.runners.test_nacl
+  - pytests.integration.pillar.test_nacl
+
 salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_jid_logging
   - pytests.integration._logging.test_multiple_processes_logging
@@ -190,7 +204,14 @@ salt/utils/(args|functools)\.py:
 
 salt/utils/metrics.py:
   - pytests.functional.utils.test_metrics_otlp_instances
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
   - pytests.unit.utils.test_metrics
+  - pytests.unit.utils.test_metrics_prometheus
+
+salt/utils/metrics_prometheus.py:
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
+  - pytests.unit.utils.test_metrics
+  - pytests.unit.utils.test_metrics_prometheus
 
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
@@ -246,6 +267,7 @@ salt/minion.py:
   - pytests.functional.pillar.test_top
   - pytests.functional.pillar.test_gpg
   - pytests.integration.modules.test_pillar
+  - pytests.unit.utils.test_metrics_prometheus
 
 salt/modules/*_sysctl.py:
   - pytests.unit.states.test_sysctl
@@ -333,11 +355,15 @@ salt/wheel/*:
   - pytests.integration.wheel.test_client
 
 salt/(minion\.py|channel/.+|transport/.+):
+  - pytests.functional.utils.test_asynchronous
   - pytests.scenarios.multimaster.test_multimaster
   - pytests.scenarios.multimaster.test_offline_master
   - pytests.scenarios.multimaster.beacons.test_inotify
   - pytests.scenarios.multimaster.modules.test_test
   - pytests.scenarios.failover.multimaster.test_failover_master
+
+salt/crypt.py:
+  - pytests.functional.utils.test_asynchronous
 
 tests/support/mock.py:
   - unit.test_mock

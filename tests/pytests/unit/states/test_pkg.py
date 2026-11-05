@@ -1312,6 +1312,77 @@ def test_removed_with_single_normalize():
         assert ret["changes"] == expected
 
 
+def test_pkg_removed_version_specific_covers_multi_version_installed():
+    """
+    Sister unit test for the Windows functional
+    ``test_pkg_removed_with_version_multiple`` (currently skipped on
+    Windows due to a chocolatey community-repo regression that broke
+    the 7zip 19.00.00.0 + 22.01.00.0 side-by-side install fixture).
+
+    Validates the ``pkg.removed`` state contract when a specific version
+    is targeted and the package has multiple versions installed:
+
+    * ``_find_remove_targets`` must identify the package as a removal
+      target because the requested version is one of the installed
+      versions.
+    * ``pkg.remove`` must be dispatched exactly once with the requested
+      version so the module-level implementation can scope the
+      uninstall to that version.
+    * After the simulated ``pkg.remove``, ``_uninstall``'s post-check
+      against ``pkg.list_pkgs`` must see the requested version gone
+      from the installed-versions list and report
+      ``result=True`` with the expected changes dict.
+    """
+    pkg_name = "7zip"
+    requested_version = "19.00.00.0"
+    remaining_version = "22.01.00.0"
+
+    list_pkgs_mock = MagicMock(
+        side_effect=[
+            # _find_remove_targets() asks with versions_as_list=True
+            {pkg_name: [requested_version, remaining_version]},
+            # _uninstall() post-check after pkg.remove dispatch
+            {pkg_name: [remaining_version]},
+        ]
+    )
+    pkg_remove_mock = MagicMock(
+        return_value={pkg_name: {"old": requested_version, "new": remaining_version}}
+    )
+
+    salt_dict = {
+        "pkg.list_pkgs": list_pkgs_mock,
+        "pkg.remove": pkg_remove_mock,
+        "pkg.normalize_name": lambda pkgname: pkgname,
+        "pkg.version_cmp": MagicMock(return_value=0),
+        "pkg_resource.parse_targets": pkg_resource.parse_targets,
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+    }
+
+    with (
+        patch.dict(pkg.__salt__, salt_dict),
+        patch.dict(pkg_resource.__salt__, salt_dict),
+        patch.dict(pkg.__grains__, {"os": "Windows", "os_family": "Windows"}),
+        patch.dict(pkg_resource.__grains__, {"os": "Windows"}),
+    ):
+        ret = pkg.removed(name=pkg_name, version=requested_version)
+
+    assert ret["result"] is True, ret
+    assert ret["comment"] == "All targeted packages were removed."
+    assert ret["changes"] == {
+        pkg_name: {"old": requested_version, "new": remaining_version}
+    }
+
+    # pkg.remove must be invoked exactly once, scoped to the requested
+    # version (so the module uninstalls only that version and leaves
+    # the other installed version intact).
+    pkg_remove_mock.assert_called_once()
+    call_args, call_kwargs = pkg_remove_mock.call_args
+    assert call_args[0] == pkg_name
+    assert call_kwargs.get("version") == requested_version
+    assert call_kwargs.get("pkgs") is None
+    assert call_kwargs.get("split_arch") is False
+
+
 def test_installed_with_single_normalize_32bit():
     """
     Test pkg.installed of 32bit package with preventing multiple package name normalisation

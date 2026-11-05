@@ -70,6 +70,19 @@ The network port to set up the publication interface.
 
     publish_port: 4505
 
+.. conf_master:: id
+
+``id``
+------
+
+Default: the host's resolved name with ``_master`` appended
+
+This master's own name for identification.
+
+.. code-block:: yaml
+
+    id: master2
+
 .. conf_master:: master_id
 
 ``master_id``
@@ -242,6 +255,12 @@ When ``cluster_peers`` is defined, this setting is a list of other master
     cluster_peers:
        - master2
        - master3
+
+.. important::
+
+    Members of the cluster should set :conf_master:`id` explicitly, and
+    each master's ``id`` must be the same name its siblings list in their
+    ``cluster_peers``.
 
 .. conf_master:: cluster_pki_dir
 

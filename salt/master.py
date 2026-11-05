@@ -30,6 +30,7 @@ import salt.cache
 import salt.channel.server
 import salt.client
 import salt.client.ssh.client
+import salt.cluster
 import salt.cluster.healthchecks
 import salt.cluster.ring_membership
 import salt.crypt
@@ -1063,9 +1064,6 @@ class Master(SMaster):
                             git_pillar = salt.utils.gitfs.GitPillar(
                                 new_opts,
                                 repo["git"],
-                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                             )
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
@@ -1169,7 +1167,7 @@ class Master(SMaster):
             # completed a join handshake and needs to run the discover->join
             # protocol so existing peers add it as a Raft learner.
             #
-            # The designated founder (lowest interface address among
+            # The designated founder (lowest node-id among
             # ``{self} ∪ cluster_peers``) skips discover entirely — it
             # bootstraps the cluster as the founding voter and waits for
             # everyone else to join.  Letting it discover would race the
@@ -1177,12 +1175,9 @@ class Master(SMaster):
             # the founder itself into a learner via an inbound join-reply,
             # leaving the cluster with zero voters.
             if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
-                bootstrap_pool = sorted(
-                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
-                )
-                is_founder = (
-                    bool(bootstrap_pool) and bootstrap_pool[0] == self.opts["interface"]
-                )
+                node_id = salt.cluster.node_id(self.opts)
+                bootstrap_pool = sorted({node_id, *self.opts.get("cluster_peers", [])})
+                is_founder = bool(bootstrap_pool) and bootstrap_pool[0] == node_id
                 if not ipc_publisher._has_joined_cluster() and not is_founder:
                     log.info("No cluster join sentinel — running cluster discover/join")
                     join_event = multiprocessing.Event()
@@ -1617,7 +1612,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 owner = ring.get_owner(key)
             except Exception:  # pylint: disable=broad-except
                 owner = None
-        if not owner or owner == self.opts.get("interface"):
+        if not owner or owner == salt.cluster.node_id(self.opts):
             # No reachable owner, or we ARE the owner (shouldn't
             # happen — owns_for would have returned True).  Drop
             # silently; ``drop_stats`` already counted this.
@@ -1837,7 +1832,7 @@ class RequestRouter:
                             import salt.crypt
 
                             crypticle = salt.crypt.Crypticle(self.opts, key)
-                            load = crypticle.decrypt(load)
+                            load = crypticle.loads(load)
                     elif enc == "pub":
                         # RSA encryption
                         import salt.crypt
