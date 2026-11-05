@@ -52,3 +52,12 @@ def test_minion_config_non_dict_grains_reverts_to_default(grains_value, tmp_path
         wfh.write(f"root_dir: /\nkey_logfile: key\ngrains: {grains_value}\n")
     config = salt.config.minion_config(conf_file)
     assert config["grains"] == {}
+
+
+def test_event_publish_timeout_default_registered_in_master_opts():
+    # The publish timeout is a master-side event-bus option (#69824).
+    assert salt.config.DEFAULT_MASTER_OPTS["event_publish_timeout"] == 60
+
+
+def test_event_publish_timeout_not_registered_in_minion_opts():
+    assert "event_publish_timeout" not in salt.config.DEFAULT_MINION_OPTS
