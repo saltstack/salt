@@ -2110,9 +2110,6 @@ class Pygit2(GitProvider):
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
         self.enforce_git_config()
-        git_config = os.path.join(self.gitdir, "config")
-        if os.path.exists(git_config) and PYGIT2_VERSION >= Version("0.28.0"):
-            self.repo.config.add_file(git_config)
 
         return new
 

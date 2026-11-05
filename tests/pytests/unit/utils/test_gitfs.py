@@ -259,6 +259,26 @@ def test_checkout_pygit2(_prepare_provider):
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
+def test_init_remote_pygit2_git_config(_prepare_provider):
+    """
+    The repo config already includes .git/config, so init_remote must not add
+    it again (pygit2 >= 1.21 raises TypeError, older versions load it twice and
+    list every fetch refspec twice).
+    """
+    provider = _prepare_provider
+    assert provider.init_remote() is False
+    origin = provider.repo.remotes["origin"]
+    assert origin.url == provider.url
+    assert origin.fetch_refspecs == [
+        "+refs/heads/*:refs/remotes/origin/*",
+        "+refs/tags/*:refs/tags/*",
+    ]
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
 def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
     provider = _prepare_provider
     provider.remotecallbacks = None
