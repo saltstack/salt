@@ -3805,10 +3805,41 @@ def test_mark_manual_nothing_to_do():
 
 
 def test_mark_manual_test_mode():
+    """
+    In test mode the changes that would be made are returned, but nothing runs
+    """
     ret, call_yum = _mark_manual_run("dnf", "", test=True, name="jq")
     assert call_yum.call_count == 1
     assert ret["jq"]["result"] is None
-    assert ret["jq"]["changes"] == {}
+    assert ret["jq"]["changes"] == {"old": "dependency", "new": "user"}
+    assert "would be marked" in ret["jq"]["comment"]
+
+
+def test_get_mark():
+    call_yum = MagicMock(return_value={"retcode": 0, "stdout": "vim\n", "stderr": ""})
+    with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")), patch.object(
+        yumpkg, "_call_yum", call_yum
+    ), patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value={"jq": "1.6", "vim": "9.0"})
+    ):
+        assert yumpkg.get_mark("user") == ["vim"]
+        assert yumpkg.get_mark("dependency") == ["jq"]
+        with pytest.raises(SaltInvocationError):
+            yumpkg.get_mark("hold")
+
+
+@pytest.mark.parametrize("yum_bin,action", [("dnf", "install"), ("dnf5", "user")])
+def test_set_mark(yum_bin, action):
+    call_yum = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    with patch.object(yumpkg, "_yum", MagicMock(return_value=yum_bin)), patch.object(
+        yumpkg, "_call_yum", call_yum
+    ):
+        assert yumpkg.set_mark(["jq", "vim"], "user") is True
+        call_yum.assert_called_once_with(["mark", action, "jq", "vim"])
+        with pytest.raises(SaltInvocationError):
+            yumpkg.set_mark([], "user")
+        with pytest.raises(SaltInvocationError):
+            yumpkg.set_mark(["jq"], "dependency")
 
 
 def test_mark_manual_failure():
