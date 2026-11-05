@@ -1077,6 +1077,24 @@ def test_migrate_jobs_to_cache_round_trip(_runner_opts):
     assert cache.fetch("jobs/returns/20260516-A", "m1")["return"] is True
     assert cache.fetch("jobs/returns/20260516-A", "m1")["retcode"] == 0
 
+    # The published ring documentation says the original
+    # ``jobs/<2>/<28>/`` tree is left on disk so operators can reclaim
+    # the space manually after confirming the new banks parse.  If the
+    # runner ever starts deleting the old layout, operators doing the
+    # recommended "migrate, verify, then delete" dance lose the
+    # pre-flip data between step 1 and step 2.
+    assert jobs_root.is_dir(), "source jobs/ root must survive migration"
+    # Both JIDs' ``.load.p`` must still be readable at the local_cache
+    # path the seed produced.  We check for 2 survivors rather than
+    # pinning the exact path because ``jid_dir`` hashes, matching
+    # production layout.
+    survivors = list(jobs_root.rglob(".load.p"))
+    assert len(survivors) == 2, (
+        f"migrate_jobs_to_cache must not delete the source layout; found "
+        f"{len(survivors)} .load.p survivors (expected 2). The documented "
+        f"behaviour is that operators reclaim the source tree manually."
+    )
+
 
 def test_migrate_jobs_to_cache_merges_syndic_minions(_runner_opts):
     """
