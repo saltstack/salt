@@ -200,7 +200,25 @@ class Batch:
         self.minions = set()
         # Passing listen True to local client will prevent it from purging
         # cached events while iterating over the batches.
-        self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
+        #
+        # ``__role=client`` is set by :func:`salt.config.client_config`
+        # when the CLI was invoked against ``/etc/salt/client`` (remote
+        # workstation).  In that case we have no master-local IPC event
+        # bus and must publish / listen over the AES-authenticated
+        # network path -- ``RemoteClient`` inherits ``cmd_iter`` /
+        # ``cmd_iter_no_block`` / ``run_job`` from ``LocalClient`` and
+        # overrides ``pub`` to use the AES channel, so every method
+        # ``Batch`` calls on ``self.local`` works the same way.  The
+        # one difference is ``self.local.event`` is a
+        # :class:`salt.utils.client_event.ClientEventSubscriber` which
+        # cannot fire events on the master's bus; the ``_event()`` /
+        # ``_fire_event()`` helpers below guard against that so remote
+        # batches degrade visibility (``batch.status`` / ``batch.stop``
+        # runners won't observe them) rather than failing outright.
+        if opts.get("__role") == "client":
+            self.local = salt.client.get_remote_client(opts["conf_file"], listen=True)
+        else:
+            self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
 
     def gather_minions(self):
         """
@@ -595,6 +613,14 @@ class Batch:
         """Fire a batch lifecycle event; never raise."""
         event = self._event()
         if event is None:
+            return
+        # Remote batches run against a ``ClientEventSubscriber`` which
+        # has no ``fire_event`` -- a workstation cannot write to the
+        # master's event bus directly.  Degrade to no-op so sync
+        # batches on remote CLIs run successfully but without
+        # ``batch.status`` / ``batch.stop`` visibility (matches the
+        # "best-effort visibility" docstring above).
+        if not hasattr(event, "fire_event"):
             return
         try:
             event.fire_event(payload, tag)

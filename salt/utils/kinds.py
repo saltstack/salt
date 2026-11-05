@@ -6,7 +6,9 @@ These are used to indicate what kind of Application is using RAET
 from collections import OrderedDict, namedtuple
 
 # Python equivalent of an enum
-APPL_KINDS = OrderedDict([("master", 0), ("minion", 1), ("syndic", 2), ("caller", 3)])
+APPL_KINDS = OrderedDict(
+    [("master", 0), ("minion", 1), ("syndic", 2), ("caller", 3), ("client", 4)]
+)
 APPL_KIND_NAMES = OrderedDict(
     (v, k) for k, v in list(APPL_KINDS.items())
 )  # inverse map

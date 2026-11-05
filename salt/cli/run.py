@@ -20,7 +20,15 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
 
         profiling_enabled = self.options.profiling_enabled
 
-        with salt.runner.Runner(self.config) as runner:
+        # ``client_config()`` sets ``opts["__role"] = "client"`` when the CLI
+        # is pointed at ``/etc/salt/client``.  Pick the remote-only sibling
+        # class in that case so the master-local path stays untouched.
+        if self.config.get("__role") == "client":
+            runner_cls = salt.runner.RemoteRunner
+        else:
+            runner_cls = salt.runner.Runner
+
+        with runner_cls(self.config) as runner:
             if self.options.doc:
                 runner.print_docs()
                 self.exit(salt.defaults.exitcodes.EX_OK)
@@ -28,7 +36,11 @@ class SaltRun(salt.utils.parsers.SaltRunOptionParser):
             # Run this here so SystemExit isn't raised anywhere else when
             # someone tries to use the runners via the python API
             try:
-                if check_user(self.config["user"]):
+                # ``client_config()`` sets ``client_auth=True`` when the CLI is
+                # pointed at ``/etc/salt/client`` (remote operator), False when
+                # it falls back to the master config (local use on the master
+                # host). Skip the local-user check in client mode.
+                if self.config.get("client_auth") or check_user(self.config["user"]):
                     pr = salt.utils.profile.activate_profile(profiling_enabled)
                     try:
                         ret = runner.run(full_return=True)

@@ -119,6 +119,9 @@ def encrypted_requests(tmp_path):
             "master_sign_key_name": "master_sign",
             "id": "master",
             "master_async_mworker": True,
+            "cluster_id": None,
+            "eauth_tokens.cache_driver": None,
+            "eauth_tokens.cluster_id": None,
         }
     )
 
@@ -449,6 +452,7 @@ def test_clear_funcs_black(master_opts):
         "__sizeof__",
         "__str__",
         "__subclasshook__",
+        "_is_known_client",
         "_prep_auth_info",
         "_prep_jid",
         "_prep_pub",
@@ -1475,6 +1479,9 @@ def _git_pillar_base_config(tmp_path):
         # These tests exercise the async ``_pillar`` handler; opt in
         # so ``AESFuncs.__init__`` does not shadow it with the sync body.
         "master_async_mworker": True,
+        "cluster_id": None,
+        "eauth_tokens.cache_driver": None,
+        "eauth_tokens.cluster_id": None,
     }
 
 
@@ -2050,6 +2057,157 @@ async def test_auth_funcs_pending_when_new_minion(auth_funcs):
     )
 
 
+# ---------------------------------------------------------------------------
+# AuthFuncs cross-role collision check
+#
+# After the max_minions/auto_key lookups and before the primary key-bank
+# fetch, _auth_impl / _auth_impl_sync peek at the OTHER role's bank and
+# reject the sign-in if the same id is already registered there.  Without
+# this gate, an attacker who learns the id of an accepted client could
+# re-sign-in with ``role=minion`` using their own keypair; subsequent AES
+# traffic from that minion id would then satisfy the ``_is_client_bridge``
+# membership check and route through ClearFuncs.  The symmetric direction
+# is also blocked so a minion id can't squat in ``client_keys``.
+# ---------------------------------------------------------------------------
+
+
+def _collision_load(role, sender_id="dup-id"):
+    """Build a minimal valid auth load for cross-role collision tests."""
+    return {
+        "id": sender_id,
+        "pub": "incoming-pub",
+        "nonce": "n",
+        "role": role,
+        "enc_algo": salt.crypt.OAEP_SHA1,
+        "sig_algo": salt.crypt.PKCS1v15_SHA1,
+    }
+
+
+def _collision_cache(hits):
+    """Build a cache mock whose ``fetch(bank, id)`` returns the given dict's
+    value for ``bank`` and ``None`` otherwise.  The collision check is the
+    first ``cache.fetch`` call for this id in both _auth_impl paths, so a
+    mock here lets us drive just that one lookup without faking the rest
+    of the auth flow.
+    """
+    cache = MagicMock()
+    cache.fetch.side_effect = lambda bank, _id: hits.get(bank)
+    return cache
+
+
+async def test_auth_funcs_rejects_client_colliding_with_minion_id(auth_funcs):
+    """
+    ``role=client`` sign-in whose id is already in ``keys`` (the minion
+    bank) is rejected before any client-side key state is consulted.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.cache = _collision_cache(
+        {"keys": {"pub": "stored", "state": "accepted"}}
+    )
+    load = _collision_load("client")
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    # Collision was reported on the ``keys`` bank only; nothing was stored
+    # in ``client_keys``.
+    auth_funcs.cache.store.assert_not_called()
+    # The collision check is clients' bank-independent (role=client never
+    # consults auto_key) so neither autosign nor autoreject must fire.
+    auth_funcs.auto_key.check_autosign.assert_not_called()
+    auth_funcs.auto_key.check_autoreject.assert_not_called()
+
+
+async def test_auth_funcs_rejects_minion_colliding_with_client_id(auth_funcs):
+    """
+    ``role=minion`` sign-in whose id is already in ``client_keys`` is
+    rejected -- symmetric to the client-side case.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    auth_funcs.cache = _collision_cache(
+        {"client_keys": {"pub": "stored", "state": "accepted"}}
+    )
+    load = _collision_load("minion")
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    auth_funcs.cache.store.assert_not_called()
+
+
+async def test_auth_funcs_no_collision_falls_through_to_key_bank(auth_funcs):
+    """
+    When the OTHER-role fetch returns ``None`` the collision gate is
+    silent and the handler proceeds to look at this role's own bank.  A
+    fresh minion in that state lands in ``pending``.
+    """
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    cache = MagicMock()
+    cache.fetch.return_value = None
+    auth_funcs.cache = cache
+    load = _collision_load("minion", sender_id="fresh")
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": True}}
+    # Both the collision bank (``client_keys``) and the primary bank
+    # (``keys``) were queried; the primary returned None so the handler
+    # stored a pending entry.
+    fetched_banks = {call.args[0] for call in cache.fetch.call_args_list}
+    assert "client_keys" in fetched_banks
+    assert "keys" in fetched_banks
+    cache.store.assert_called_once_with(
+        "keys", "fresh", {"pub": "incoming-pub", "state": "pending"}
+    )
+
+
+async def test_auth_funcs_rejects_client_colliding_with_minion_id_sync(auth_funcs):
+    """
+    Sync shim mirror of :func:`test_auth_funcs_rejects_client_colliding_with_minion_id`.
+    ``_auth_impl_sync`` runs when ``master_async_mworker`` is off (LTS
+    default) and MUST reject the same collision.  ``_auth`` is still
+    ``async def`` -- it dispatches to the sync shim inside the coroutine
+    frame -- so we await it the same way.
+    """
+    auth_funcs.opts["master_async_mworker"] = False
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.cache = _collision_cache(
+        {"keys": {"pub": "stored", "state": "accepted"}}
+    )
+    load = _collision_load("client")
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    auth_funcs.cache.store.assert_not_called()
+
+
+async def test_auth_funcs_rejects_minion_colliding_with_client_id_sync(auth_funcs):
+    """Sync-shim mirror of the minion-colliding-with-client case."""
+    auth_funcs.opts["master_async_mworker"] = False
+    auth_funcs.opts["max_minions"] = 0
+    auth_funcs.opts["auth_events"] = False
+    auth_funcs.opts["open_mode"] = False
+    auth_funcs.auto_key = MagicMock()
+    auth_funcs.auto_key.check_autoreject.return_value = False
+    auth_funcs.auto_key.check_autosign.return_value = False
+    auth_funcs.cache = _collision_cache(
+        {"client_keys": {"pub": "stored", "state": "accepted"}}
+    )
+    load = _collision_load("minion")
+    ret = await auth_funcs._auth(load, sign_messages=False, version=2)
+    assert ret == {"enc": "clear", "load": {"ret": False}}
+    auth_funcs.cache.store.assert_not_called()
+
+
 def test_register_resources_concurrent_workers_no_data_loss(master_opts, tmp_path):
     """
     Two simulated master workers concurrently registering different
@@ -2129,6 +2287,176 @@ async def test_handle_clear_missing_cmd_returns_empty_reply(caplog):
         ret = await salt.master.MWorker._handle_clear(worker, {})
     assert ret == ({}, {"fun": "send_clear"})
     assert "Received malformed clear command (missing 'cmd')" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# MWorker._is_client_bridge
+#
+# Gate that decides whether an AES-wrapped payload gets routed to
+# ClearFuncs (via ``_handle_clear``) instead of ``_handle_aes``.  Every
+# condition in the decision chain is covered individually to keep this
+# path well-defined without a scenario harness.
+# ---------------------------------------------------------------------------
+
+
+def _bridge_worker(
+    clear_methods=("publish", "runner"),
+    aes_methods=("_file_list", "_pillar"),
+    client_keys=None,
+):
+    """Build a bare :class:`MWorker` wired for ``_is_client_bridge`` tests.
+
+    ``clear_funcs`` / ``aes_funcs`` are simple namespaces exposing just
+    ``expose_methods`` and (for aes_funcs) a ``key_cache`` whose ``fetch``
+    returns ``client_keys[id]`` for the ``"client_keys"`` bank and ``None``
+    otherwise.  Mirrors the shape ``_is_client_bridge`` reads from the real
+    objects without pulling in the master's auth/cache stack.
+    """
+    client_keys = client_keys or {}
+
+    class _Funcs:
+        pass
+
+    clear_funcs = _Funcs()
+    clear_funcs.expose_methods = tuple(clear_methods)
+    aes_funcs = _Funcs()
+    aes_funcs.expose_methods = tuple(aes_methods)
+    key_cache = MagicMock()
+    key_cache.fetch.side_effect = lambda bank, sender_id: (
+        client_keys.get(sender_id) if bank == "client_keys" else None
+    )
+    aes_funcs.key_cache = key_cache
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.clear_funcs = clear_funcs
+    worker.aes_funcs = aes_funcs
+    return worker
+
+
+def test_is_client_bridge_true_for_known_client_calling_clear_only_cmd():
+    """
+    Happy path: cmd in clear_methods only, id present in client_keys.
+    """
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x", "state": "accepted"}})
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is True
+
+
+def test_is_client_bridge_false_when_load_not_dict():
+    """A non-dict load short-circuits to False."""
+    worker = _bridge_worker()
+    assert worker._is_client_bridge(None) is False
+    assert worker._is_client_bridge("evil") is False
+    assert worker._is_client_bridge(42) is False
+
+
+def test_is_client_bridge_false_when_cmd_not_string():
+    """A missing or non-string ``cmd`` short-circuits to False."""
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x"}})
+    assert worker._is_client_bridge({"id": "alice"}) is False
+    assert worker._is_client_bridge({"cmd": None, "id": "alice"}) is False
+    assert worker._is_client_bridge({"cmd": 7, "id": "alice"}) is False
+
+
+def test_is_client_bridge_false_when_cmd_not_in_clear_methods():
+    """
+    Even for a known client, a cmd that ClearFuncs doesn't expose stays on
+    the AES path.
+    """
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x"}})
+    # ``_file_list`` is AES-only; must NOT bridge.
+    assert worker._is_client_bridge({"cmd": "_file_list", "id": "alice"}) is False
+    # Entirely unknown cmd also stays on the AES path.
+    assert worker._is_client_bridge({"cmd": "nope", "id": "alice"}) is False
+
+
+def test_is_client_bridge_false_when_cmd_in_aes_methods_too():
+    """
+    A cmd that is BOTH in ClearFuncs and AESFuncs must not be bridged --
+    don't shadow an AES-native handler just because ClearFuncs happens to
+    expose the same name.
+    """
+    worker = _bridge_worker(
+        clear_methods=("publish", "both"),
+        aes_methods=("both", "_pillar"),
+        client_keys={"alice": {"pub": "x"}},
+    )
+    assert worker._is_client_bridge({"cmd": "both", "id": "alice"}) is False
+    # Sanity: a pure-clear cmd on the same worker still bridges.
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is True
+
+
+def test_is_client_bridge_false_without_id_field():
+    """
+    Missing or empty ``id`` fails -- the bridge requires a specific
+    sender whose client_keys membership can be checked.
+    """
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x"}})
+    assert worker._is_client_bridge({"cmd": "publish"}) is False
+    assert worker._is_client_bridge({"cmd": "publish", "id": ""}) is False
+    assert worker._is_client_bridge({"cmd": "publish", "id": None}) is False
+
+
+def test_is_client_bridge_false_when_id_not_in_client_keys():
+    """
+    A valid clear cmd + an id that is NOT in client_keys stays on AES.
+    This is the minion case: minion ids live in ``keys``, not
+    ``client_keys``, so they deliberately don't satisfy this check.
+    """
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x"}})
+    assert worker._is_client_bridge({"cmd": "publish", "id": "bob"}) is False
+
+
+def test_is_client_bridge_false_when_client_record_is_falsy():
+    """
+    ``bool(client_record)`` is the final gate; an empty dict / None stored
+    under the sender id must not count as a hit.
+    """
+    worker = _bridge_worker(client_keys={"alice": {}})
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is False
+
+
+def test_is_client_bridge_false_when_key_cache_raises():
+    """
+    Any error from ``key_cache.fetch`` is swallowed to False -- a cache
+    glitch must never upgrade a payload to the clear-funcs path.
+    """
+    worker = _bridge_worker(client_keys={"alice": {"pub": "x"}})
+    worker.aes_funcs.key_cache.fetch.side_effect = RuntimeError("cache boom")
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is False
+
+
+def test_is_client_bridge_tolerates_stub_funcs_without_expose_methods():
+    """
+    The ``getattr(..., "expose_methods", ())`` fallback keeps the bridge
+    safe when ``clear_funcs`` / ``aes_funcs`` are bare stubs (as planted
+    by the ``_make_worker`` fixture in the async-handlers suite, which
+    only cares about the AES path).  With no exposed methods the bridge
+    short-circuits to False and the caller falls through to ``_handle_aes``.
+    """
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.clear_funcs = object()
+    worker.aes_funcs = object()
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is False
+
+
+def test_is_client_bridge_false_when_key_cache_is_none():
+    """
+    When ``aes_funcs.key_cache`` is ``None`` (early-init worker before
+    the auth caches wire up) the bridge must stay off; otherwise we'd
+    hit ``AttributeError`` instead of politely falling through.
+    """
+
+    class _Funcs:
+        pass
+
+    clear_funcs = _Funcs()
+    clear_funcs.expose_methods = ("publish",)
+    aes_funcs = _Funcs()
+    aes_funcs.expose_methods = ("_file_list",)
+    aes_funcs.key_cache = None
+    worker = salt.master.MWorker.__new__(salt.master.MWorker)
+    worker.clear_funcs = clear_funcs
+    worker.aes_funcs = aes_funcs
+    assert worker._is_client_bridge({"cmd": "publish", "id": "alice"}) is False
 
 
 @pytest.mark.parametrize(

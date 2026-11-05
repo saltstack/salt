@@ -1109,8 +1109,23 @@ class AsyncAuth:
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
-        self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
-        self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        # Determine paths based on role
+        if self.opts.get("__role") == "client":
+            # Remote CLI client
+            self.pub_path = os.path.join(self.opts["pki_dir"], "client.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "client.pem")
+            self.mpub = "client_master.pub"
+        elif self.opts["__role"] == "syndic":
+            # Syndic (master of masters)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "syndic_master.pub"
+        else:
+            # Regular minion (default)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "minion_master.pub"
+
         self._private_key = None
         # Initialize ``_creds`` so ``_authenticate`` can safely check it even
         # when a sibling ``AsyncAuth`` populates ``creds_map`` between our
@@ -1120,10 +1135,6 @@ class AsyncAuth:
         # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
         # issue #67947).
         self._creds = None
-        if self.opts["__role"] == "syndic":
-            self.mpub = "syndic_master.pub"
-        else:
-            self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         if io_loop is None:
@@ -1555,12 +1566,27 @@ class AsyncAuth:
                 log.info("Generating keys: %s", self.opts["pki_dir"])
                 (priv, pub) = gen_keys(self.opts["keysize"])
 
+                # Determine cache keys based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                    cache_key_pub = "client.pub"
+                else:
+                    # minion/syndic use minion keys
+                    cache_key_priv = "minion.pem"
+                    cache_key_pub = "minion.pub"
+
                 # the cache bank is called master keys but the codepath is shared
-                # on master/minion for interacting with pki
-                self.cache.store("master_keys", "minion.pem", priv)
-                self.cache.store("master_keys", "minion.pub", pub)
+                # on master/minion/client for interacting with pki
+                self.cache.store("master_keys", cache_key_priv, priv)
+                self.cache.store("master_keys", cache_key_pub, pub)
             else:
-                priv = self.cache.fetch("master_keys", "minion.pem")
+                # Determine cache key based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                else:
+                    cache_key_priv = "minion.pem"
+
+                priv = self.cache.fetch("master_keys", cache_key_priv)
 
             self._private_key = PrivateKey.from_str(priv, None)
         return self._private_key
@@ -1595,6 +1621,8 @@ class AsyncAuth:
         payload["nonce"] = uuid.uuid4().hex
         payload["enc_algo"] = self.opts["encryption_algorithm"]
         payload["sig_algo"] = self.opts["signing_algorithm"]
+        # Include role to distinguish clients from minions
+        payload["role"] = self.opts.get("__role", "minion")
         if "autosign_grains" in self.opts:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:
@@ -1898,18 +1926,58 @@ class AsyncAuth:
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
-        log.critical(
-            "The specified fingerprint in the master configuration "
-            "file:\n%s\nDoes not match the authenticating master's "
-            "key:\n%s\nVerify that the configured fingerprint "
-            "matches the fingerprint of the correct master and that "
-            "this minion is not subject to a man-in-the-middle attack.",
-            finger,
-            salt.utils.crypt.pem_finger(
-                path=master_key, sum_type=self.opts["hash_type"]
-            ),
+        actual = salt.utils.crypt.pem_finger(
+            master_key, sum_type=self.opts["hash_type"]
         )
-        sys.exit(42)
+        role = self.opts.get("__role", "minion")
+        # Point the operator at the right file.  ``conf_file`` is the
+        # per-role conf path (``/etc/salt/minion`` or
+        # ``/etc/salt/client``); fall back to the role default if the
+        # opt isn't populated.
+        default_conf = "/etc/salt/client" if role == "client" else "/etc/salt/minion"
+        conf_file = self.opts.get("conf_file") or default_conf
+        # The opt name differs when the sign-in is going through the
+        # syndic branch (see :meth:`handle_signin_response`); report
+        # whichever opt the operator actually set.
+        opt_key = "syndic_finger" if self.opts.get("syndic_master") else "master_finger"
+        # A length mismatch on the two fingerprint strings almost
+        # always means the configured value was produced with a
+        # different hash algorithm than the local ``hash_type`` opt.
+        # Call that out explicitly -- otherwise the error looks
+        # identical to a real MITM and the operator panics.
+        hash_type = self.opts.get("hash_type", "sha256")
+        hash_hint = ""
+        if len(finger.replace(":", "")) != len(actual.replace(":", "")):
+            hash_hint = (
+                "\nFingerprint lengths differ, which usually indicates a hash "
+                "algorithm mismatch.  This %s is using hash_type=%r; "
+                "regenerate the fingerprint with the same algorithm "
+                "(e.g. ``salt-key -F master`` on a master with "
+                "matching hash_type)." % (role, hash_type)
+            )
+        log.critical(
+            "The fingerprint configured as '%s' in %s:\n%s\n"
+            "does not match the authenticating master's key:\n%s\n"
+            "Verify that the configured fingerprint matches the correct "
+            "master's pubkey and that this %s is not subject to a "
+            "man-in-the-middle attack.%s",
+            opt_key,
+            conf_file,
+            finger,
+            actual,
+            role,
+            hash_hint,
+        )
+        # Raise rather than ``sys.exit`` so the error propagates
+        # cleanly through the AsyncAuth retry loop (caught as
+        # ``SaltClientError`` by ``_authenticate``) instead of
+        # terminating the process from inside an asyncio Task --
+        # which triggers a "Task exception was never retrieved"
+        # traceback that drowns out the critical diagnostic above.
+        raise SaltClientError(
+            "master fingerprint mismatch: configured {}={} does not match "
+            "the master's pubkey fingerprint {}".format(opt_key, finger, actual)
+        )
 
 
 # TODO: remove, we should just return a sync wrapper of AsyncAuth

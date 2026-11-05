@@ -577,6 +577,34 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
                 decoded_context[key] = salt.utils.data.decode(value)
 
         jinja_env.globals.update(decoded_context)
+        # ---------------------------------------------------------------
+        # SPLIT-OUT CANDIDATE (not a remote-CLI change) -- when this
+        # branch is reviewed, lift this block + the ``finally`` into
+        # its own PR with a scenario-regression test.
+        #
+        # Jinja templates can invoke runners via ``salt['saltutil.runner']``
+        # from inside a Jinja expression, and some runners (notably
+        # ``pillar.show_pillar``) end up re-rendering more templates
+        # as part of their execution.  Each level of the chain pushes
+        # several Python frames (Jinja sandbox eval, context resolve,
+        # salt loader dispatch, salt.utils.templates render), so a
+        # chain of 15-20 levels can push the stack past Python's
+        # default recursion limit of 1000.  Python 3.14 + coverage
+        # tracing lowers the per-frame headroom further.
+        #
+        # The orchestration scenario at
+        # ``tests/pytests/integration/runners/state/orchestrate/
+        # test_events.py::test_orchestration_with_pillar_dot_items``
+        # fails deterministically on Py 3.14 under coverage with
+        # ``Jinja error: maximum recursion depth exceeded`` for
+        # exactly this reason.  Bump the limit at render entry and
+        # restore it in the ``finally`` block so this bounded increase
+        # doesn't leak to callers that may have intentionally lowered
+        # the limit.
+        # ---------------------------------------------------------------
+        _recursion_limit_was = sys.getrecursionlimit()
+        if _recursion_limit_was < 3000:
+            sys.setrecursionlimit(3000)
         try:
             template = jinja_env.from_string(tmplstr)
             output = template.render(**decoded_context)
@@ -626,6 +654,14 @@ def render_jinja_tmpl(tmplstr, context, tmplpath=None):
             raise SaltRenderError(
                 f"Jinja error: {exc}{out}", line, tmplstr, trace=tracestr
             )
+        finally:
+            # Companion to the recursion-limit bump above (SPLIT-OUT
+            # CANDIDATE marker).  Restore the original limit so this
+            # bounded increase doesn't leak to callers that may have
+            # intentionally lowered the limit.  Only restore if we
+            # actually bumped it.
+            if _recursion_limit_was < 3000:
+                sys.setrecursionlimit(_recursion_limit_was)
     finally:
         if loader and isinstance(loader, salt.utils.jinja.SaltCacheLoader):
             loader.destroy()

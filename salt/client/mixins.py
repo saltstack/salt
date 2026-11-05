@@ -183,17 +183,48 @@ class SyncClientMixin(ClientStateMixin):
                 'eauth': 'pam',
             })
         """
-        with salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=True
-        ) as event:
+        # Use self.event if available AND it's a network event subscriber
+        # For IPC events, always create a new listener since self.event uses listen=False
+        if (
+            hasattr(self, "event")
+            and self.event is not None
+            and hasattr(
+                self.event, "connect"
+            )  # Only ClientEventSubscriber has connect()
+        ):
+            # This is a ClientEventSubscriber (network events for remote execution)
+            event = self.event
+            should_close = False
+            # Ensure connected
+            if not getattr(event, "authenticated", False):
+                event.connect()
+        else:
+            # Create new IPC event listener (needed because self.event uses listen=False)
+            event = salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=True
+            )
+            should_close = True
+
+        try:
             job = self.master_call(**low)
             ret_tag = salt.utils.event.tagify("ret", base=job["tag"])
 
+            # Subscribe to this specific job if using ClientEventSubscriber
+            if hasattr(event, "subscribe_job"):
+                event.subscribe_job(job["jid"])
+
             if timeout is None:
                 timeout = self.opts.get("rest_timeout", 300)
-            ret = event.get_event(
-                tag=ret_tag, full=True, wait=timeout, auto_reconnect=True
-            )
+
+            # ClientEventSubscriber doesn't support auto_reconnect parameter
+            if hasattr(event, "subscribe_job"):
+                # This is a ClientEventSubscriber (network events)
+                ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
+            else:
+                # This is an IPC event (supports auto_reconnect)
+                ret = event.get_event(
+                    tag=ret_tag, full=True, wait=timeout, auto_reconnect=True
+                )
             if ret is None:
                 raise salt.exceptions.SaltClientTimeout(
                     "RunnerClient job '{}' timed out".format(job["jid"]),
@@ -201,6 +232,9 @@ class SyncClientMixin(ClientStateMixin):
                 )
 
             return ret if full_return else ret["data"]["return"]
+        finally:
+            if should_close and hasattr(event, "destroy"):
+                event.destroy()
 
     def cmd(
         self,
