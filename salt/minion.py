@@ -5719,8 +5719,24 @@ class Minion(MinionBase):
                 fun = load.get("fun")
                 is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
                 if not is_merge_fun:
+                    # Build a stripped base load once so each per-resource
+                    # payload stays O(1) rather than O(N).  Without this,
+                    # the full ``resource_targets`` list (and, on CLI
+                    # ``--static`` retries, the N-wide parent ``tgt`` list)
+                    # would ride along in every per-resource copy and, if
+                    # any copy is queued via :meth:`_queue_job`, be
+                    # msgpacked to disk once per resource — causing
+                    # quadratic queued-file disk usage.
+                    base_load = dict(load)
+                    base_load.pop("resource_targets", None)
+                    if (
+                        isinstance(base_load.get("tgt"), (list, tuple))
+                        and len(base_load.get("tgt", ())) > 1
+                    ):
+                        base_load["tgt"] = "*"
+                        base_load["tgt_type"] = "glob"
                     for resource in load.get("resource_targets", []):
-                        resource_load = dict(load)
+                        resource_load = dict(base_load)
                         resource_load["resource_target"] = resource
                         # Flag so _handle_decoded_payload_impl can bypass JID
                         # deduplication — resource jobs share the parent JID by
