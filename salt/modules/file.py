@@ -4701,8 +4701,23 @@ def set_selinux_context(
             path, sel_type=type, sel_user=user, sel_level=range
         )
         if fcontext_result.get("retcode", None) != 0:
-            # Problem setting fcontext policy
-            raise CommandExecutionError(f"Problem setting fcontext: {fcontext_result}")
+            if "equivalency rule" in (
+                fcontext_result.get("stderr", "") or fcontext_result.get("stdout", "")
+            ):
+                # The path is covered by a file-context equivalency rule
+                # (e.g. /etc/systemd/system -> /usr/lib/systemd/system), which
+                # semanage refuses to override. The label is still applied
+                # with chcon below.
+                log.warning(
+                    "Not persisting fcontext policy for %s: %s",
+                    path,
+                    fcontext_result.get("stderr") or fcontext_result.get("stdout"),
+                )
+            else:
+                # Problem setting fcontext policy
+                raise CommandExecutionError(
+                    f"Problem setting fcontext: {fcontext_result}"
+                )
 
     cmd = ["chcon"]
     if user:
