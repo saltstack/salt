@@ -153,15 +153,10 @@ def client_socket():
 
 
 def test_get_socket():
-    socket = salt.transport.tcp._get_socket({"ipv6": True})
-
-    if salt.utils.platform.is_windows():
-        assert int(socket.family) == 23
-    else:
-        assert int(socket.family) == 10
-
-    socket = salt.transport.tcp._get_socket({"ipv6": False})
-    assert int(socket.family) == 2
+    with salt.transport.tcp._get_socket({"ipv6": True}) as sock:
+        assert sock.family == socket.AF_INET6
+    with salt.transport.tcp._get_socket({"ipv6": False}) as sock:
+        assert sock.family == socket.AF_INET
 
 
 def test_get_bind_addr():
@@ -2290,8 +2285,9 @@ def test_publish_server_del_safety_net_calls_close_70175(master_opts):
     saved_pub_server.close.assert_called_once()
     saved_pull_sock.close.assert_called_once()
     # 3. io_loop had stop() + close() driven.
-    saved_io_loop.stop.assert_called_once()
-    saved_io_loop.close.assert_called_once_with(all_fds=True)
+    # io_loop is never set by PublishServer; close() no longer touches it.
+    saved_io_loop.stop.assert_not_called()
+    saved_io_loop.close.assert_not_called()
     # 4. Per-loop cached publisher was drained.
     stale_pub.close.assert_called_once()
 
