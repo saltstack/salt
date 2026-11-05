@@ -1076,6 +1076,33 @@ def _get_installable_versions(targets, current=None):
     return changes
 
 
+def _mark_manual(name, pkgs, ret):
+    """
+    Mark the requested packages as manually installed and merge the outcome
+    into the state return ``ret``.
+    """
+    if "pkg.mark_manual" not in __salt__:
+        ret["comment"] += "\npkg.mark_manual is not supported on this platform"
+        ret["result"] = False
+        return ret
+    try:
+        mark_ret = __salt__["pkg.mark_manual"](name=name, pkgs=pkgs or None)
+    except (CommandExecutionError, SaltInvocationError) as exc:
+        ret["comment"] += f"\nUnable to mark packages as manually installed: {exc}"
+        ret["result"] = False
+        return ret
+    for pkg_name, info in mark_ret.items():
+        if info["comment"]:
+            ret["comment"] += "\n" + info["comment"]
+        if info["changes"]:
+            ret["changes"].setdefault("mark_manual", {})[pkg_name] = info["changes"]
+        if info["result"] is False:
+            ret["result"] = False
+        elif info["result"] is None and ret["result"] is True:
+            ret["result"] = None
+    return ret
+
+
 def installed(
     name,
     version=None,
@@ -1091,6 +1118,7 @@ def installed(
     ignore_epoch=None,
     reinstall=False,
     update_holds=False,
+    mark_manual=False,
     **kwargs,
 ):
     """
@@ -1588,6 +1616,24 @@ def installed(
 
         .. versionadded:: 3003
 
+    :param bool mark_manual:
+        If ``True``, the requested packages are marked as manually installed
+        even when they were already present as automatically installed
+        dependencies of another package. Without this, removing the package
+        that pulled the dependency in (followed by ``autoremove``) also removes
+        the dependency. By default, this parameter is set to ``False``.
+
+        Supported on APT (``apt-mark manual``) and DNF/DNF5
+        (``dnf mark install`` / ``dnf5 mark user``) based systems.
+
+        .. code-block:: yaml
+
+            jq:
+              pkg.installed:
+                - mark_manual: True
+
+        .. versionadded:: 3008.0
+
     :param list names:
         A list of packages to install from a software repository. Each package
         will be installed individually by the package manager.
@@ -1878,6 +1924,8 @@ def installed(
                 for i in failed_hold:
                     result["comment"] += ".\n{}".format(i["comment"])
                     result["result"] = i["result"]
+        if mark_manual and not sources and result.get("result") is not False:
+            _mark_manual(name, pkgs, result)
         return result
 
     if to_unpurge and "lowpkg.unpurge" not in __salt__:
@@ -1959,6 +2007,8 @@ def installed(
             "result": None,
             "comment": "\n".join(comment),
         }
+        if mark_manual and not sources:
+            _mark_manual(name, pkgs, ret)
         if warnings:
             ret.setdefault("warnings", []).extend(warnings)
         return ret
@@ -2248,6 +2298,8 @@ def installed(
         "result": result,
         "comment": "\n".join(comment),
     }
+    if mark_manual and not sources and result is not False:
+        _mark_manual(name, pkgs, ret)
     if warnings:
         ret.setdefault("warnings", []).extend(warnings)
     return ret

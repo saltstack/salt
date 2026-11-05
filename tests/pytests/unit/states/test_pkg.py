@@ -1061,6 +1061,40 @@ def test_installed_with_freebsd_origin():
         assert ret["result"]
 
 
+def test_installed_mark_manual_already_installed():
+    """
+    pkg.installed with mark_manual marks an already installed dependency
+    """
+    mark_mock = MagicMock(
+        return_value={
+            "jq": {
+                "name": "jq",
+                "changes": {"old": "auto", "new": "manual"},
+                "result": True,
+                "comment": "Package jq is now marked as manual.",
+            }
+        }
+    )
+    salt_dict = {
+        "pkg.list_pkgs": MagicMock(return_value={"jq": ["1.7"]}),
+        "pkg.version": MagicMock(return_value="1.7"),
+        "pkg.mark_manual": mark_mock,
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ):
+        ret = pkg.installed("jq", mark_manual=True)
+        mark_mock.assert_called_once_with(name="jq", pkgs=None)
+        assert ret["result"] is True
+        assert ret["changes"]["mark_manual"] == {"jq": {"old": "auto", "new": "manual"}}
+        mark_mock.reset_mock()
+        pkg.installed("jq")
+        mark_mock.assert_not_called()
+
+
 def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
     """
     Test pkg.installed keeps explicit APT multiarch package names intact.
