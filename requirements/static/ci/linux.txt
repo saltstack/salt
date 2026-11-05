@@ -17,7 +17,11 @@ pymysql>=1.2.3
 # Python 3.10+ as a controller and installs cleanly on the py3.11 onedir.
 # See PR #69527 / issue #69526.
 ansible>=10.7.0,<11.0.0; python_version >= '3.10' and python_version < '3.12'
-ansible>=14.4.0; python_version >= '3.12'
+# ansible 14.5.0+ bundles google.cloud 1.15.0, whose gcp_containeranalysis_note
+# module has an option named ``short_description``. ``ansible-doc --list`` takes
+# that as the module's description and crashes (``'_AnsibleTaggedDict' object
+# has no attribute 'strip'``), so salt.modules.ansiblegate fails to load.
+ansible>=14.4.0,<14.5.0; python_version >= '3.12'
 twilio>=9.11.2
 python-telegram-bot>=20.3,<22.0; python_version < '3.10'
 python-telegram-bot>=22.8; python_version >= '3.10'
