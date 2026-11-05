@@ -89,7 +89,7 @@ docutils==0.20.1
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==4.0.12
+filelock==3.32.7
     # via
     #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -434,7 +434,6 @@ urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.15.2
     # via

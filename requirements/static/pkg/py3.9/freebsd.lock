@@ -89,16 +89,11 @@ filelock==3.19.1 ; python_full_version < '3.10'
     #   virtualenv
 filelock==3.29.1 ; python_full_version == '3.10.*'
     # via
-    #   -r requirements/base.txt
-    #   python-discovery
-    #   virtualenv
-filelock==4.2.6 ; python_full_version >= '3.11'
-    # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv
-filelock==4.2.4 ; python_full_version >= '3.11'
+filelock==4.2.6 ; python_full_version >= '3.11'
     # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
@@ -416,7 +411,6 @@ urllib3==1.26.20 ; python_full_version < '3.10'
 urllib3==2.8.0 ; python_full_version >= '3.10'
     # via
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.4.2 ; python_full_version < '3.10'
     # via -r requirements/base.txt
@@ -426,7 +420,7 @@ wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt
 xmltodict==1.0.4 ; sys_platform == 'win32'
     # via -r requirements/base.txt
-xxhash==3.7.0 ; python_full_version < '3.10'
+xxhash==3.7.0
     # via -r requirements/base.txt
 yarl==1.20.1 ; python_full_version < '3.10'
     # via aiohttp

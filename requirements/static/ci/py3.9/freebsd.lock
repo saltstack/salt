@@ -234,20 +234,13 @@ filelock==3.19.1 ; python_full_version < '3.10'
     #   virtualenv
 filelock==3.29.1 ; python_full_version == '3.10.*'
     # via
-    #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   -r requirements/base.txt
-    #   -r requirements/static/ci/common.txt
-    #   python-discovery
-    #   virtualenv
-filelock==4.2.6 ; python_full_version >= '3.11'
-    # via
     #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   python-discovery
     #   virtualenv
-filelock==4.2.4 ; python_full_version >= '3.11'
+filelock==4.2.6 ; python_full_version >= '3.11'
     # via
     #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -709,7 +702,11 @@ pymssql==2.3.11 ; sys_platform == 'win32'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
-pynacl==1.6.2
+pynacl==1.5.0 ; sys_platform == 'linux'
+    # via
+    #   -r requirements/static/ci/common.txt
+    #   paramiko
+pynacl==1.6.2 ; sys_platform != 'linux'
     # via
     #   -r requirements/static/ci/common.txt
     #   paramiko
@@ -1053,7 +1050,6 @@ urllib3==2.8.0 ; python_full_version >= '3.10'
     #   botocore
     #   docker
     #   kubernetes
-    #   opentelemetry-exporter-http-transport
     #   python-etcd
     #   requests
     #   responses
@@ -1101,11 +1097,7 @@ xmltodict==1.0.4
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   moto
-xxhash==3.7.0 ; python_full_version < '3.10'
-    # via
-    #   -c requirements/static/pkg/py3.9/freebsd.lock
-    #   -r requirements/base.txt
-xxhash==4.0.1 ; python_full_version >= '3.10'
+xxhash==3.7.0
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
