@@ -713,10 +713,17 @@ class ClientEventSubscriber:
             # Unwrap the server-minted Crypticle key with our private
             # key.  The server encrypted it under our RSA public key
             # (which it has in ``client_keys`` cache from the sign-in
-            # flow), so only we can read it.
+            # flow), so only we can read it.  Use the same
+            # ``encryption_algorithm`` we advertised in the auth
+            # payload above; the default ``OAEP-SHA1`` is rejected on
+            # FIPS hosts.
             wrapped = response.get("events_key")
             if wrapped is not None:
-                key_string_bytes = priv_key.decrypt(wrapped)
+                enc_algo = self.opts.get(
+                    "encryption_algorithm",
+                    getattr(salt.crypt, "OAEP_SHA1", "OAEP-SHA1"),
+                )
+                key_string_bytes = priv_key.decrypt(wrapped, algorithm=enc_algo)
                 key_string = key_string_bytes.decode()
                 self.crypticle = salt.crypt.Crypticle(self.opts, key_string)
             log.info("Successfully authenticated with event publisher")
