@@ -31,6 +31,19 @@ from salt.version import __version__
 log = logging.getLogger(__name__)
 
 
+def update_minion_snapshot(load):
+    """
+    Whether a master-side ``_pillar`` request should refresh the pillar
+    snapshot in the minion data cache that pillar targeting reads.
+
+    Only a minion's regular pillar fetch qualifies. One-off queries
+    (``pillar.items pillarenv=...``) and requests with ``pillar_override`` do
+    not describe the pillar the minion actually holds. Minions that predate the
+    ``snapshot`` field do not send it, so it defaults to True for them.
+    """
+    return bool(load.get("snapshot", True)) and not load.get("pillar_override")
+
+
 def get_pillar(
     opts,
     grains,
@@ -42,9 +55,14 @@ def get_pillar(
     pillarenv=None,
     extra_minion_data=None,
     clean_cache=False,
+    snapshot=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
+
+    ``snapshot`` marks the request as the minion fetching its own regular
+    pillar (startup, refresh, highstate). Only such requests update the
+    master's minion data cache used for pillar targeting.
     """
     # When file_client is 'local' this makes the minion masterless
     # but sometimes we want the minion to read its files from the local
@@ -63,8 +81,8 @@ def get_pillar(
         file_client = "remote"
 
     ptype = {"remote": RemotePillar, "local": Pillar}.get(file_client, Pillar)
-    # If local pillar and we're caching, run through the cache system first
-    if opts.get("pillar_cache") or opts.get("minion_data_cache"):
+    # Compilation caching is independent of the minion data snapshots.
+    if opts.get("pillar_cache"):
         log.debug("get_pillar using pillar cache with ext: %s", ext)
         return PillarCache(
             opts,
@@ -88,6 +106,7 @@ def get_pillar(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
         extra_minion_data=extra_minion_data,
+        **({"snapshot": snapshot} if file_client == "remote" else {}),
     )
 
 
@@ -103,9 +122,14 @@ def get_async_pillar(
     pillarenv=None,
     extra_minion_data=None,
     clean_cache=False,
+    snapshot=False,
 ):
     """
     Return the correct pillar driver based on the file_client option
+
+    ``snapshot`` marks the request as the minion fetching its own regular
+    pillar (startup, refresh, highstate). Only such requests update the
+    master's minion data cache used for pillar targeting.
     """
     file_client = opts["file_client"]
     if opts.get("master_type") == "disable" and file_client == "remote":
@@ -129,6 +153,7 @@ def get_async_pillar(
             pillarenv=pillarenv,
             extra_minion_data=extra_minion_data,
             clean_cache=clean_cache,
+            snapshot=snapshot,
         )
     return ptype(
         opts,
@@ -218,6 +243,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         pillarenv=None,
         extra_minion_data=None,
         clean_cache=False,
+        snapshot=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
@@ -243,6 +269,7 @@ class AsyncRemotePillar(RemotePillarMixin):
         )
         self._closing = False
         self.clean_cache = clean_cache
+        self.snapshot = snapshot
 
     async def compile_pillar(self):
         """
@@ -255,6 +282,7 @@ class AsyncRemotePillar(RemotePillarMixin):
             "pillarenv": self.opts["pillarenv"],
             "pillar_override": self.pillar_override,
             "extra_minion_data": self.extra_minion_data,
+            "snapshot": self.snapshot,
             "ver": "2",
             "cmd": "_pillar",
         }
@@ -358,6 +386,7 @@ class RemotePillar(RemotePillarMixin):
         pillar_override=None,
         pillarenv=None,
         extra_minion_data=None,
+        snapshot=False,
     ):
         self.opts = opts
         self.opts["saltenv"] = saltenv
@@ -382,6 +411,7 @@ class RemotePillar(RemotePillarMixin):
             merge_lists=True,
         )
         self._closing = False
+        self.snapshot = snapshot
 
     def compile_pillar(self):
         """
@@ -394,6 +424,7 @@ class RemotePillar(RemotePillarMixin):
             "pillarenv": self.opts["pillarenv"],
             "pillar_override": self.pillar_override,
             "extra_minion_data": self.extra_minion_data,
+            "snapshot": self.snapshot,
             "ver": "2",
             "cmd": "_pillar",
         }
@@ -1448,19 +1479,7 @@ class AsyncPillar(Pillar):
 
 
 class PillarCache(Pillar):
-    """
-    Return a cached pillar if it exists, otherwise cache it.
-
-    Pillar caches are structed in two diminensions: minion_id with a dict of
-    saltenvs. Each saltenv contains a pillar dict
-
-    Example data structure:
-
-    ```
-    {'minion_1':
-        {'base': {'pilar_key_1' 'pillar_val_1'}
-    }
-    """
+    """Cache compiled pillar separately from the minion snapshots used for targeting."""
 
     def __init__(
         self,
@@ -1471,11 +1490,10 @@ class PillarCache(Pillar):
     ):
         super().__init__(*args, **kwargs)
         self.clean_cache = clean_cache
-        self.pillar_override = pillar_override or {}
+        self._pillar_override = pillar_override or {}
         self.cache = salt.cache.factory(
             self.opts,
             driver=self.opts["pillar.cache_driver"],
-            expires=self.opts["pillar_cache_ttl"],
         )
 
     @property
@@ -1489,13 +1507,13 @@ class PillarCache(Pillar):
         """
         Return the cached pillar if it exists, or None
         """
-        return self.cache.fetch("pillar", self.pillar_key)
+        return self.cache.fetch("pillar_compile", self.pillar_key)
 
     def clear_pillar(self):
         """
         Clear the pillar cache, if it exists
         """
-        return self.cache.flush("pillar", self.pillar_key)
+        return self.cache.flush("pillar_compile", self.pillar_key)
 
     def compile_pillar(self, *args, **kwargs):  # Will likely just be pillar_dirs
         # matching to consume the same dataset
@@ -1507,8 +1525,7 @@ class PillarCache(Pillar):
             self.opts["pillarenv"],
         )
 
-        # if MDC is on, but not pillar cache, we never read the cache, only write to it
-        if self.opts["minion_data_cache"] and not self.opts["pillar_cache"]:
+        if not self.opts["pillar_cache"]:
             pillar_data = {}
         else:
             # Check the cache!
@@ -1529,13 +1546,19 @@ class PillarCache(Pillar):
             )
             pillar_data = super().compile_pillar(*args, **kwargs)
 
-            self.cache.store("pillar", self.pillar_key, pillar_data)
+            if self.opts["pillar_cache"]:
+                self.cache.store(
+                    "pillar_compile",
+                    self.pillar_key,
+                    pillar_data,
+                    expires=self.opts["pillar_cache_ttl"],
+                )
 
-        # we dont want the pillar_override baked into the cached compile_pillar from above
-        if self.pillar_override:
+        # Apply request overrides after caching the reusable compilation result.
+        if self._pillar_override:
             pillar_data = salt.utils.dictupdate.merge(
                 pillar_data,
-                self.pillar_override,
+                self._pillar_override,
                 self.merge_strategy,
                 self.opts.get("renderer", "yaml"),
                 self.opts.get("pillar_merge_lists", False),

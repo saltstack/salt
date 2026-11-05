@@ -19,7 +19,7 @@ import salt.utils.cache
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 try:
@@ -2973,9 +2973,13 @@ async def test_pillar_async_dispatch_through_handle_aes(master_opts):
     assert args[0] == {"Minion data cache refresh": "minion-async"}
     # Sync-only cache and fileserver helpers were still invoked (offloaded via
     # ``run_in_executor``).
-    aes_funcs.masterapi.cache.store.assert_called_once_with(
-        "grains", "minion-async", {"os": "Debian", "id": "minion-async"}
+    aes_funcs.masterapi.cache.store.assert_has_calls(
+        [
+            call("grains", "minion-async", {"os": "Debian", "id": "minion-async"}),
+            call("pillar", "minion-async", compile_ret),
+        ]
     )
+    assert aes_funcs.masterapi.cache.store.call_count == 2
     aes_funcs.fs_.update_opts.assert_called_once_with()
 
 
@@ -3028,7 +3032,13 @@ async def test_pillar_async_skips_fire_event_when_events_disabled(master_opts):
     with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
         await worker._handle_aes(load)
 
-    aes_funcs.masterapi.cache.store.assert_called_once()
+    aes_funcs.masterapi.cache.store.assert_has_calls(
+        [
+            call("grains", "minion-quiet", {"id": "minion-quiet"}),
+            call("pillar", "minion-quiet", {}),
+        ]
+    )
+    assert aes_funcs.masterapi.cache.store.call_count == 2
     assert aes_funcs.event.fire_event_async.await_count == 0
 
 

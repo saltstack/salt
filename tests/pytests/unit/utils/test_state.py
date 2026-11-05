@@ -133,3 +133,35 @@ def test_get_sls_opts_explicit_pillarenv_kwarg_wins():
 
     new_opts = salt.utils.state.get_sls_opts(opts, pillarenv=None)
     assert new_opts["pillarenv"] is None
+
+
+@pytest.mark.parametrize(
+    "kwargs, config, overridden",
+    [
+        ({}, {"pillarenv": "dev"}, False),
+        ({"pillarenv": "dev"}, {"pillarenv": "dev"}, False),
+        ({"pillarenv": "prod"}, {"pillarenv": "dev"}, True),
+        ({"pillarenv": "prod"}, {"pillarenv": None}, True),
+        ({"pillarenv": None}, {"pillarenv": "dev"}, True),
+        (
+            {"saltenv": "prod"},
+            {"pillarenv": "dev", "pillarenv_from_saltenv": True},
+            True,
+        ),
+        ({"saltenv": "prod"}, {"pillarenv": "dev"}, False),
+    ],
+)
+def test_get_sls_opts_marks_pillarenv_override(kwargs, config, overridden):
+    """
+    A run that uses another ``pillarenv`` than the minion config is flagged so
+    its pillar is not used for master-side targeting.
+    """
+    opts = {
+        "saltenv": "base",
+        "pillarenv_from_saltenv": False,
+        "lock_saltenv": False,
+        **config,
+    }
+    new_opts = salt.utils.state.get_sls_opts(opts, **kwargs)
+    assert new_opts.get("__pillarenv_overridden", False) is overridden
+    assert "__pillarenv_overridden" not in opts

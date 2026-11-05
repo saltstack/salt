@@ -1057,6 +1057,11 @@ class State:
             self.opts["saltenv"],
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
+            # A one-off ``pillarenv`` or pillar override is not the pillar the
+            # minion holds, so the master must not use it for targeting.
+            snapshot=not (
+                self._pillar_override or self.opts.get("__pillarenv_overridden")
+            ),
         )
         try:
             return pillar.compile_pillar()
