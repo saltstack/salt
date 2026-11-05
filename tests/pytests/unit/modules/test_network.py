@@ -116,6 +116,39 @@ def test_fqdns_should_return_sorted_unique_domains(fake_ips):
         }
 
 
+@pytest.mark.parametrize("h_errno", [0, 1, 2, 4])
+def test_fqdns_unresolvable_address_is_not_logged_as_error(
+    h_errno, fake_ips, caplog
+):
+    """
+    Reverse lookup failures such as TRY_AGAIN (errno 2) must not be logged at
+    error level.
+    """
+    with patch(
+        "socket.gethostbyaddr",
+        autospec=True,
+        side_effect=socket.herror(h_errno, "Host name lookup failure"),
+    ):
+        with caplog.at_level(logging.DEBUG):
+            actual = networkmod.fqdns()
+    assert actual == {"fqdns": []}
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+def test_fqdns_unexpected_herror_is_logged_as_error(fake_ips, caplog):
+    with patch(
+        "socket.gethostbyaddr",
+        autospec=True,
+        side_effect=socket.herror(3, "Non-recoverable failure"),
+    ):
+        with caplog.at_level(logging.DEBUG):
+            networkmod.fqdns()
+    assert any(
+        r.levelno == logging.ERROR and "Failed to resolve address" in r.getMessage()
+        for r in caplog.records
+    )
+
+
 def test___virtual__is_windows_true():
     with patch("salt.utils.platform.is_windows", return_value=True):
         result = networkmod.__virtual__()
