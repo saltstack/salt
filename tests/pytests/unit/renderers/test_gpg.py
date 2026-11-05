@@ -83,6 +83,72 @@ def test__decrypt_ciphertext():
             assert "decrypt error" in multidecrypt_error.value.args[0]
 
 
+def test__decrypt_ciphertext_default_fail_loud_41846():
+    """
+    Regression test for #41846 (3008.x+ behavior).
+
+    The default value of ``gpg_decrypt_must_succeed`` was flipped to
+    ``True`` here, so a gpg decrypt failure under default config now
+    raises ``SaltRenderError`` instead of silently returning the raw
+    ciphertext. This test pins the fail-loud default contract so an
+    inadvertent revert is caught.
+
+    The complementary silent-default test lives on 3006.x where LTS
+    backwards compatibility keeps the pre-flip default; see the
+    ``test__decrypt_ciphertext_default_silent_on_3006_41846`` test on
+    that branch.
+    """
+    import salt.config
+
+    opts = salt.config.DEFAULT_MINION_OPTS.copy()
+    assert opts["gpg_decrypt_must_succeed"] is True
+
+    key_dir = "/etc/salt/gpgkeys"
+    crypted = "-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----"
+
+    class GPGNotDecrypt:
+        def communicate(self, *args, **kwargs):
+            return [None, "decrypt error"]
+
+    with patch.dict(gpg.__opts__, opts), patch(
+        "salt.renderers.gpg._get_key_dir", MagicMock(return_value=key_dir)
+    ), patch("salt.utils.path.which", MagicMock()), patch(
+        "salt.renderers.gpg.Popen", MagicMock(return_value=GPGNotDecrypt())
+    ):
+        with pytest.raises(SaltRenderError) as decrypt_error:
+            gpg._decrypt_ciphertexts(crypted)
+        assert decrypt_error.value.args[0].startswith("Could not decrypt cipher ")
+        assert crypted in decrypt_error.value.args[0]
+        assert "decrypt error" in decrypt_error.value.args[0]
+
+
+def test__decrypt_ciphertext_opt_in_raises_41846(minion_opts):
+    """
+    Regression test for #41846 opt-in path.
+
+    Users who explicitly set ``gpg_decrypt_must_succeed: True`` must see
+    a ``SaltRenderError`` on decrypt failure instead of a silent
+    return-ciphertext. This is the recommended opt-in for 3006.x.
+    """
+    key_dir = "/etc/salt/gpgkeys"
+    crypted = "-----BEGIN PGP MESSAGE-----!@#$%^&*()_+-----END PGP MESSAGE-----"
+
+    class GPGNotDecrypt:
+        def communicate(self, *args, **kwargs):
+            return [None, "decrypt error"]
+
+    opt_in = {"gpg_decrypt_must_succeed": True}
+    with patch.dict(gpg.__opts__, opt_in), patch(
+        "salt.renderers.gpg._get_key_dir", MagicMock(return_value=key_dir)
+    ), patch("salt.utils.path.which", MagicMock()), patch(
+        "salt.renderers.gpg.Popen", MagicMock(return_value=GPGNotDecrypt())
+    ):
+        with pytest.raises(SaltRenderError) as decrypt_error:
+            gpg._decrypt_ciphertexts(crypted)
+        assert decrypt_error.value.args[0].startswith("Could not decrypt cipher ")
+        assert crypted in decrypt_error.value.args[0]
+
+
 def test__decrypt_object():
     """
     test _decrypt_object

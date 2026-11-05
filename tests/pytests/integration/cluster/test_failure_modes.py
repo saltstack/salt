@@ -200,7 +200,9 @@ def test_isolated_master_with_unreachable_peers_self_elects(
         },
     }
     factory = salt_factories.salt_master_daemon(
-        "lonely-master",
+        # The peer will become a founding member if its node-id is lowest
+        # among the peers.
+        "127.0.0.1",
         defaults={
             "open_mode": True,
             "transport": request.config.getoption("--transport"),

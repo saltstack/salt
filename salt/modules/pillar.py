@@ -298,7 +298,10 @@ def items(
         pillar_override=pillar_override,
         pillarenv=pillarenv,
     )
-    ret = pillar.compile_pillar()
+    try:
+        ret = pillar.compile_pillar()
+    finally:
+        pillar.destroy()
     if unmask is None:
         # VCOPS-98852: pillar_mask_output only changes items()'s *default*
         # when the caller didn't explicitly request masked/unmasked output —
@@ -715,7 +718,10 @@ def ext(external, pillar=None, unmask=None):
         pillar_override=pillar,
     )
 
-    ret = pillar_obj.compile_pillar()
+    try:
+        ret = pillar_obj.compile_pillar()
+    finally:
+        pillar_obj.destroy()
 
     if unmask is None:
         unmask = not salt.utils.secret.mask_pillar.get()

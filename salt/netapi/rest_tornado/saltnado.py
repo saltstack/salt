@@ -1172,6 +1172,25 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
                 if f is is_finished:
                     if not event.done():
                         event.set_result(None)
+                    # ``set_result(None)`` resolves the Future but leaves
+                    # it in ``event_listener.tag_map`` / ``timeout_map``.
+                    # ``job_not_running`` runs as a ``spawn_callback``
+                    # coroutine independent of the handler; if it has
+                    # already registered a ping wait when the handler's
+                    # ``on_finish`` -> ``clean_by_request`` runs, that
+                    # entry escapes cleanup and lingers up to
+                    # ``gather_job_timeout`` seconds until the timeout
+                    # callback fires. Reap it inline so the maps drain
+                    # promptly (see ``test_mem_leak_in_event_listener``).
+                    listener = self.application.event_listener
+                    timeout_handle = listener.timeout_map.pop(event, None)
+                    if timeout_handle is not None:
+                        tornado.ioloop.IOLoop.current().remove_timeout(timeout_handle)
+                    listener._timeout_future(
+                        ping_tag,
+                        EventListener.prefix_matcher,
+                        event,
+                    )
                     raise tornado.gen.Return(True)
                 event = f.result()
             except TimeoutException:

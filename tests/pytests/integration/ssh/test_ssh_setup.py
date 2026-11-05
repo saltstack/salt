@@ -5,6 +5,7 @@ Integration tests for salt-ssh py_versions
 import logging
 import os
 import signal
+import socket
 import subprocess
 import sys
 import tempfile
@@ -30,6 +31,44 @@ pytestmark = [
         reason="Test does not work in this version of docker-py",
     ),
 ]
+
+
+def check_container_started(timeout_at, container):
+    """
+    Wait until the container's sshd is actually serving the SSH protocol
+    banner, not just accepting TCP. Password-auth salt-ssh key deploys
+    race with sshd startup: the kernel may accept TCP into the backlog
+    before sshd has forked a child that writes the ``SSH-2.0-...``
+    identification line, which manifests as
+    ``kex_exchange_identification: Connection closed by <host>``.
+    """
+    sleeptime = 1
+    while time.time() <= timeout_at:
+        sock = None
+        try:
+            if not container.is_running():
+                return False
+            port = container.get_host_port_binding(22, protocol="tcp")
+            if port is None:
+                time.sleep(sleeptime)
+                continue
+            sock = socket.socket()
+            sock.settimeout(5)
+            sock.connect(("localhost", int(port)))
+            # Read the server identification string. sshd writes
+            # "SSH-2.0-<version>\r\n" immediately on accept. If sshd is
+            # not yet serving, the connection is closed/reset without
+            # any banner.
+            banner = sock.recv(64)
+            if banner.startswith(b"SSH-"):
+                return True
+        except OSError as err:
+            log.debug("SSH readiness check failed: %s", err)
+        finally:
+            if sock is not None:
+                sock.close()
+        time.sleep(sleeptime)
+    return False
 
 
 @pytest.fixture(scope="module")
@@ -79,6 +118,7 @@ def ssh_container(salt_factories, ssh_container_name, ssh_password):
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    container.container_start_check(check_container_started, container)
     with container.started() as factory:
         yield factory
 
@@ -106,6 +146,7 @@ def ssh_sub_container(salt_factories, ssh_sub_container_name, ssh_password):
         skip_on_pull_failure=True,
         skip_if_docker_client_not_connectable=True,
     )
+    container.container_start_check(check_container_started, container)
     with container.started() as factory:
         yield factory
 

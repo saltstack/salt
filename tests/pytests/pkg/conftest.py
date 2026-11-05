@@ -338,7 +338,7 @@ def salt_master(salt_factories, install_salt, pkg_tests_account):
         ],
     }
     if platform.is_darwin():
-        config_defaults["enable_fqdns_grains"] = False
+        config_defaults["disabled_grains"] = ["fqdns"]
     config_overrides = {
         "timeout": 30,
         "file_roots": {
@@ -493,7 +493,7 @@ def salt_minion(salt_factories, salt_master, install_salt):
         "log_handlers_dirs": salt_master.config["log_handlers_dirs"].copy(),
     }
     if platform.is_darwin():
-        config_defaults["enable_fqdns_grains"] = False
+        config_defaults["disabled_grains"] = ["fqdns"]
     config_overrides = {
         "id": minion_id,
         "file_roots": salt_master.config["file_roots"].copy(),

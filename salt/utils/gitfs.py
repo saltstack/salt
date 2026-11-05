@@ -2852,14 +2852,9 @@ class GitCLI(GitProvider):
         if not git_ref:
             return None, None, None
 
-        # Check if file exists and get its metadata
-        # Use ls-tree for specific path
-        # If we have a root, we need to join it
+        # GitFS.find_file() has already applied the root and mountpoint.
+        # Providers receive a path relative to the repository root.
         tree_path = path
-        if self.root(tgt_env):
-            tree_path = salt.utils.path.join(
-                self.root(tgt_env), path, use_posixpath=True
-            )
 
         res = self._run_git(["ls-tree", git_ref, tree_path])
         if res.returncode != 0 or not res.stdout:
@@ -3067,9 +3062,9 @@ class GitBase:
         self,
         opts,
         remotes=None,
-        per_remote_overrides=(),
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -3107,12 +3102,18 @@ class GitBase:
             gitfs = salt.utils.gitfs.GitFS(
                 __opts__,
                 __opts__['gitfs_remotes'],
-                per_remote_overrides=PER_REMOTE_OVERRIDES,
-                per_remote_only=PER_REMOTE_ONLY,
                 git_providers=git_providers)
 
             gitfs.fetch_remotes()
         """
+        if per_remote_overrides is None:
+            raise FileserverConfigError(
+                "Child class must provided 'per_remote_overrides'"
+            )
+        if per_remote_only is None:
+            raise FileserverConfigError("Child class must provided 'per_remote_only'")
+        if global_only is None:
+            raise FileserverConfigError("Child class must provided 'global_only'")
         self.opts = opts
         if git_providers is not None:
             self.git_providers = git_providers
@@ -3826,6 +3827,25 @@ class GitBase:
         return None
 
 
+GITFS_PER_REMOTE_OVERRIDES = (
+    "base",
+    "fallback",
+    "mountpoint",
+    "root",
+    "ssl_verify",
+    "saltenv_whitelist",
+    "saltenv_blacklist",
+    "refspecs",
+    "disable_saltenv_mapping",
+    "ref_types",
+    "update_interval",
+    "proxy",
+    "depth",
+)
+GITFS_PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
+GITFS_GLOBAL_ONLY = ()
+
+
 class GitFS(GitBase):
     """
     Functionality specific to the git fileserver backend
@@ -3838,8 +3858,8 @@ class GitFS(GitBase):
         cls,
         opts,
         remotes=None,
-        per_remote_overrides=(),
-        per_remote_only=PER_REMOTE_ONLY,
+        per_remote_overrides=None,
+        per_remote_only=None,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -3852,6 +3872,18 @@ class GitFS(GitBase):
         used to ensure that we garbage collect instances for threads which have
         exited.
         """
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
         # No need to get the ioloop reference if we're not initializing remotes
         io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
         if not init_remotes or io_loop not in cls.instance_map:
@@ -3862,8 +3894,9 @@ class GitFS(GitBase):
             super(GitFS, obj).__init__(
                 opts,
                 remotes if remotes is not None else [],
-                per_remote_overrides=per_remote_overrides,
-                per_remote_only=per_remote_only,
+                per_remote_overrides=GITFS_PER_REMOTE_OVERRIDES,
+                per_remote_only=GITFS_PER_REMOTE_ONLY,
+                global_only=GITFS_GLOBAL_ONLY,
                 git_providers=(
                     git_providers if git_providers is not None else GIT_PROVIDERS
                 ),
@@ -4193,12 +4226,68 @@ class GitFS(GitBase):
         return {key: val for key, val in symlinks.items() if key.startswith(prefix)}
 
 
+PILLAR_PER_REMOTE_OVERRIDES = (
+    "base",
+    "env",
+    "root",
+    "ssl_verify",
+    "refspecs",
+    "fallback",
+    "proxy",
+    "ref_types",
+    "disable_saltenv_mapping",
+    "depth",
+)
+PILLAR_PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
+PILLAR_GLOBAL_ONLY = ("branch",)
+
+
 class GitPillar(GitBase):
     """
     Functionality specific to the git external pillar
     """
 
     role = "git_pillar"
+
+    def __init__(
+        self,
+        opts,
+        remotes=None,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
+        git_providers=None,
+        cache_root=None,
+        init_remotes=True,
+    ):
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if global_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `global_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        super().__init__(
+            opts,
+            remotes=remotes,
+            per_remote_overrides=PILLAR_PER_REMOTE_OVERRIDES,
+            per_remote_only=PILLAR_PER_REMOTE_ONLY,
+            global_only=PILLAR_GLOBAL_ONLY,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
 
     def checkout(self, fetch_on_fail=True):
         """
@@ -4360,6 +4449,11 @@ class GitPillar(GitBase):
         return True
 
 
+WINREPO_PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback", "proxy")
+WINREPO_PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
+WINREPO_GLOBAL_ONLY = ("branch",)
+
+
 class WinRepo(GitBase):
     """
     Functionality specific to the winrepo runner
@@ -4372,6 +4466,46 @@ class WinRepo(GitBase):
     # Need to define this in case we try to reference it before checking
     # out the repos.
     winrepo_dirs = {}
+
+    def __init__(
+        self,
+        opts,
+        remotes=None,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
+        git_providers=None,
+        cache_root=None,
+        init_remotes=True,
+    ):
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if global_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `global_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        super().__init__(
+            opts,
+            remotes=remotes,
+            per_remote_overrides=WINREPO_PER_REMOTE_OVERRIDES,
+            per_remote_only=WINREPO_PER_REMOTE_ONLY,
+            global_only=WINREPO_GLOBAL_ONLY,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
 
     def checkout(self, fetch_on_fail=True):
         """

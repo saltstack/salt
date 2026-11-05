@@ -49,6 +49,11 @@ cluster-wide aes key is generated and stored in the ``cluster_pki_dir``.
 Further, when operating as a cluster, minion keys are stored in the
 ``cluster_pki_dir`` instead of the master's ``pki_dir``.
 
+Each master should set :conf_master:`id` to a unique value that is the same
+name its siblings specify in ``cluster_peers``. It should be set
+to a hostname or IP address that is reachable by all other masters in the
+cluster. See :conf_master:`cluster_peers` for the details.
+
 .. _master-cluster-topology:
 
 Topology: shared filesystem vs. isolated filesystem
@@ -109,6 +114,14 @@ want to join.
 
 Reference Implementation
 ========================
+
+.. seealso::
+
+    For copy-pasteable 2-node and 3-node walkthroughs using the
+    isolated-filesystem mode, plus a complete HAProxy configuration
+    and the trade-offs of round-robin vs. sticky-session load
+    balancing in front of a cluster, see
+    :ref:`tutorial-master-cluster-reference`.
 
 Gluster: https://docs.gluster.org/en/main/Quick-Start-Guide/Quickstart/
 
