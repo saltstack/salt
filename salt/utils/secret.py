@@ -226,10 +226,11 @@ def hide(value):
 def expose(value, _seen=None):
     """Recursively unwrap MaskedDict / MaskedList to plain Python types.
 
+    Also traverse plain containers, which may contain nested masked values.
     Use at ``unmask=True`` pillar output boundaries so callers receive the
     real values (e.g. ``pillar.get(key, unmask=True)``).
     """
-    if isinstance(value, MaskedDict):
+    if isinstance(value, dict):
         if _seen is None:
             _seen = set()
         vid = id(value)
@@ -240,7 +241,7 @@ def expose(value, _seen=None):
             return {k: expose(v, _seen) for k, v in dict.items(value)}
         finally:
             _seen.discard(vid)
-    if isinstance(value, MaskedList):
+    if isinstance(value, list):
         if _seen is None:
             _seen = set()
         vid = id(value)
