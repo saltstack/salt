@@ -276,11 +276,14 @@ transaction.
 """
 
 import logging
+import os
+import sys
 
 import salt.client.ssh.state
 import salt.client.ssh.wrapper.state
 import salt.exceptions
 import salt.utils.args
+import salt.utils.path
 from salt.modules.state import _check_queue, _prior_running_states, _wait, running
 
 __func_alias__ = {"apply_": "apply"}
@@ -942,9 +945,21 @@ def call(function, *args, **kwargs):
 
     try:
         safe_kwargs = salt.utils.args.clean_kwargs(**kwargs)
+        salt_call = ["salt-call"]
+        if not salt.utils.path.which("salt-call"):
+            # salt-ssh: Salt is only available in the thin directory
+            thin_call = os.path.join(__opts__.get("config_dir", ""), "salt-call")
+            if os.path.isfile(thin_call):
+                salt_call = [
+                    sys.executable,
+                    thin_call,
+                    "--local",
+                    "-c",
+                    __opts__["config_dir"],
+                ]
         salt_argv = (
-            [
-                "salt-call",
+            salt_call
+            + [
                 "--out",
                 "json",
                 "-l",

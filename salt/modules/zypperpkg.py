@@ -255,14 +255,20 @@ class _Zypper:
         """
         if salt.utils.files.is_fcntl_available():
             if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
-                with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
-                    try:
-                        fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    except OSError as err:
-                        if err.errno == errno.EAGAIN:
-                            return True
-                    else:
-                        fcntl.lockf(rfh, fcntl.LOCK_UN)
+                try:
+                    with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
+                        try:
+                            fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        except OSError as err:
+                            if err.errno == errno.EAGAIN:
+                                return True
+                        else:
+                            fcntl.lockf(rfh, fcntl.LOCK_UN)
+                except OSError as err:
+                    # e.g. read-only root filesystem on transactional systems
+                    if err.errno not in (errno.EROFS, errno.EACCES, errno.EPERM):
+                        raise
+                    log.debug("Unable to open %s: %s", self.RPM_LOCK, err)
 
         return False
 

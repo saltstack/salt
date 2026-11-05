@@ -722,3 +722,30 @@ def test_single_queue_true():
             "__no_return__": True,
         }
         assert tu.single("pkg.installed", name="emacs", queue=True) == expected
+
+
+def test_call_uses_thin_salt_call_when_salt_call_missing(tmp_path):
+    """
+    Under salt-ssh there is no salt-call in the system, the one from the
+    thin directory must be used inside the transaction.
+    """
+    thin_call = tmp_path / "salt-call"
+    thin_call.touch()
+    utils_mock = {"json.find_json": MagicMock(return_value={"return": "result"})}
+    salt_mock = {"cmd.run_all": MagicMock(return_value={"retcode": 0, "stdout": ""})}
+    with patch.dict(tu.__utils__, utils_mock), patch.dict(
+        tu.__salt__, salt_mock
+    ), patch.dict(tu.__opts__, {"config_dir": str(tmp_path)}), patch(
+        "salt.utils.path.which", return_value=None
+    ):
+        assert tu.call("state.pkg", "/tmp/x.tgz") == "result"
+        cmd = salt_mock["cmd.run_all"].call_args[0][0]
+        run_idx = cmd.index("run")
+        assert cmd[run_idx + 1 :][:5] == [
+            tu.sys.executable,
+            str(thin_call),
+            "--local",
+            "-c",
+            str(tmp_path),
+        ]
+        assert cmd[-2:] == ["state.pkg", "/tmp/x.tgz"]
