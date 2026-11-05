@@ -815,3 +815,40 @@ def test_systemctl_cmd_with_scope_and_systemd_run_not_found():
                     match="systemd-run is required.*but it was not found.*",
                 ):
                     systemd._systemctl_cmd("status", "sshd", systemd_scope=True)
+
+
+@pytest.mark.parametrize(
+    "kwargs,expected",
+    [({}, {}), ({"output_loglevel": "quiet"}, {"output_loglevel": "quiet"})],
+)
+def test_status_output_loglevel(kwargs, expected):
+    """
+    output_loglevel is only forwarded to cmd.retcode when supplied
+    """
+    retcode = MagicMock(return_value=0)
+    with patch.dict(systemd.__salt__, {"cmd.retcode": retcode}), patch.object(
+        systemd, "_check_for_unit_changes"
+    ) as check, patch.object(systemd, "_systemctl_cmd", return_value=["systemctl"]):
+        assert systemd.status("sshd", **kwargs) is True
+    retcode.assert_called_once_with(
+        ["systemctl"], python_shell=False, ignore_retcode=True, **expected
+    )
+    check.assert_called_once_with("sshd", **expected)
+
+
+def test_status_output_loglevel_reaches_systemctl_status():
+    """
+    The helper commands run by status (systemctl status) are quieted too
+    """
+    run_all = MagicMock(
+        return_value={"stdout": "", "stderr": "", "retcode": 0, "pid": 1}
+    )
+    retcode = MagicMock(return_value=0)
+    with patch.dict(
+        systemd.__salt__, {"cmd.run_all": run_all, "cmd.retcode": retcode}
+    ), patch.object(systemd, "_systemctl_cmd", return_value=["systemctl"]), patch.object(
+        systemd, "_untracked_custom_unit_found", return_value=False
+    ):
+        systemd.status("sshd", output_loglevel="quiet")
+    assert run_all.call_args.kwargs["output_loglevel"] == "quiet"
+    assert retcode.call_args.kwargs["output_loglevel"] == "quiet"

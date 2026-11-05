@@ -95,7 +95,7 @@ def _canonical_unit_name(name):
     return "%s.service" % name
 
 
-def _check_available(name):
+def _check_available(name, **cmd_kwargs):
     """
     Returns boolean telling whether or not the named service is available
     """
@@ -104,7 +104,7 @@ def _check_available(name):
             "Cannot run in offline mode. Failed to get information on unit '%s'" % name
         )
 
-    _status = _systemctl_status(name)
+    _status = _systemctl_status(name, **cmd_kwargs)
     sd_version = salt.utils.systemd.version(__context__)
     if sd_version is not None and sd_version >= 231:
         # systemd 231 changed the output of "systemctl status" for unknown
@@ -131,12 +131,14 @@ def _check_available(name):
     return ret
 
 
-def _check_for_unit_changes(name):
+def _check_for_unit_changes(name, **cmd_kwargs):
     """
     Check for modified/updated unit files, and run a daemon-reload if any are
     found.
     """
-    if _untracked_custom_unit_found(name) or _unit_file_changed(name):
+    if _untracked_custom_unit_found(name, **cmd_kwargs) or _unit_file_changed(
+        name, **cmd_kwargs
+    ):
         systemctl_reload()
 
 
@@ -351,7 +353,7 @@ def _systemctl_cmd(
     return ret
 
 
-def _systemctl_status(name):
+def _systemctl_status(name, **cmd_kwargs):
     """
     Helper function to run 'systemctl status'.
     """
@@ -360,6 +362,7 @@ def _systemctl_status(name):
         python_shell=False,
         redirect_stderr=True,
         ignore_retcode=True,
+        **cmd_kwargs,
     )
 
 
@@ -377,22 +380,24 @@ def _sysv_enabled(name, root):
     return False
 
 
-def _untracked_custom_unit_found(name, root=None):
+def _untracked_custom_unit_found(name, root=None, **cmd_kwargs):
     """
     If the passed service name is not available, but a unit file exist in
     /etc/systemd/system, return True. Otherwise, return False.
     """
     system = _root("/etc/systemd/system", root)
     unit_path = os.path.join(system, _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and not _check_available(name)
+    return os.access(unit_path, os.R_OK) and not _check_available(
+        name, **cmd_kwargs
+    )
 
 
-def _unit_file_changed(name):
+def _unit_file_changed(name, **cmd_kwargs):
     """
     Returns True if systemctl reports that the unit file has changed, otherwise
     returns False.
     """
-    status = _systemctl_status(name)["stdout"].lower()
+    status = _systemctl_status(name, **cmd_kwargs)["stdout"].lower()
     return "'systemctl daemon-reload'" in status
 
 
@@ -1110,7 +1115,7 @@ def force_reload(name, no_block=True, unmask=False, unmask_runtime=False):
 
 # The unused sig argument is required to maintain consistency with the API
 # established by Salt's service management states.
-def status(name, sig=None):  # pylint: disable=unused-argument
+def status(name, sig=None, **kwargs):  # pylint: disable=unused-argument
     """
     Return the status for a service via systemd.
     If the name contains globbing, a dict mapping service name to True/False
@@ -1122,6 +1127,12 @@ def status(name, sig=None):  # pylint: disable=unused-argument
     Args:
         name (str): The name of the service to check
         sig (str): Not implemented
+
+    Kwargs:
+        output_loglevel (str): Passed to ``cmd.retcode``. Set to ``quiet`` to
+            suppress the "Executing command" log lines of every command run
+            by this function, which is useful for callers that poll frequently, such as the ``service`` beacon.
+            By default the command is logged as usual.
 
     Returns:
         bool: True if running, False otherwise
@@ -1138,14 +1149,18 @@ def status(name, sig=None):  # pylint: disable=unused-argument
         services = fnmatch.filter(get_all(), name)
     else:
         services = [name]
+    cmd_kwargs = {}
+    if "output_loglevel" in kwargs:
+        cmd_kwargs["output_loglevel"] = kwargs["output_loglevel"]
     results = {}
     for service in services:
-        _check_for_unit_changes(service)
+        _check_for_unit_changes(service, **cmd_kwargs)
         results[service] = (
             __salt__["cmd.retcode"](
                 _systemctl_cmd("is-active", service),
                 python_shell=False,
                 ignore_retcode=True,
+                **cmd_kwargs,
             )
             == 0
         )
