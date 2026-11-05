@@ -135,6 +135,26 @@ class KeyCLI:
         self.destroy()
 
     def _update_opts(self):
+        # ``--kind`` is a unifying alias for the legacy per-scope
+        # flags.  ``--kind master`` sets the same ``master_scope``
+        # bit the legacy ``--master`` flag sets; ``--kind client``
+        # rewrites the standard ``-L/-a/-d/-F`` opts into their
+        # ``_client`` siblings so the dispatch below picks the
+        # ClientKey route.  ``--kind minion`` (or no ``--kind``)
+        # leaves opts untouched -- that is already the default.
+        kind = self.opts.get("kind")
+        if kind == "master":
+            self.opts["master_scope"] = True
+        elif kind == "client":
+            for base_cmd in ("list", "accept", "reject", "print", "delete", "finger"):
+                client_cmd = f"{base_cmd}_client"
+                # Only rewrite when the client-suffixed opt is still
+                # at its default (empty string / falsy) --- an
+                # operator who passed both ``--kind client`` and
+                # e.g. ``--list-clients=pre`` meant the latter.
+                if self.opts.get(base_cmd) and not self.opts.get(client_cmd):
+                    self.opts[client_cmd] = self.opts[base_cmd]
+                    self.opts[base_cmd] = ""
         # get the key command
         for cmd in (
             "gen_keys",

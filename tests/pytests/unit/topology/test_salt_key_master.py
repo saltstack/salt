@@ -457,3 +457,77 @@ def test_default_scope_uses_minion_methods(monkeypatch):
     names = [call[0] for call in cli.key.calls]
     assert "accept" in names
     assert not cli.master_key.calls, "default scope must not touch MasterKey"
+
+
+# ---------------------------------------------------------------------------
+# ``--kind`` unifying flag
+#
+# Unit coverage for the post-rebase operator-UX unification: a single
+# ``--kind {minion|master|client}`` flag that maps to the legacy
+# ``--master`` boolean / ``--list-clients`` family.  Every test builds
+# a KeyCLI with a specific ``kind`` opt, drives ``_update_opts()``,
+# and asserts the resulting opts dict shape matches what the legacy
+# flag sets.
+# ---------------------------------------------------------------------------
+
+
+def _make_kind_cli(kind, cmd, match, monkeypatch):
+    """Like :func:`_make_keycli` but parametrised on ``kind`` only."""
+    cli = _make_keycli(
+        master_scope=False, cmd=cmd, match=match, monkeypatch=monkeypatch
+    )
+    cli.opts["kind"] = kind
+    return cli
+
+
+def test_kind_master_sets_master_scope(monkeypatch):
+    """``--kind master`` must set ``master_scope`` so _run_cmd
+    dispatches to MasterKey -- equivalent to the legacy ``--master``
+    boolean flag."""
+    cli = _make_kind_cli(
+        kind="master", cmd="accept", match="east", monkeypatch=monkeypatch
+    )
+    assert cli.opts.get("master_scope") is False
+    cli._update_opts()
+    assert cli.opts["master_scope"] is True
+
+
+def test_kind_client_rewrites_action_to_client_suffix(monkeypatch):
+    """``--kind client accept east`` must become ``accept_client=east``
+    so the legacy dispatch picks ClientKey.  The non-client ``accept``
+    is cleared so the dispatch loop stops on the client variant."""
+    cli = _make_kind_cli(
+        kind="client", cmd="accept", match="alice", monkeypatch=monkeypatch
+    )
+    assert cli.opts["accept"] == "alice"
+    assert cli.opts["accept_client"] == ""
+    cli._update_opts()
+    assert cli.opts["accept"] == ""
+    assert cli.opts["accept_client"] == "alice"
+    assert cli.opts["fun"] == "accept_client"
+
+
+def test_kind_minion_is_default_no_op(monkeypatch):
+    """``--kind minion`` (or no ``--kind``) leaves opts untouched."""
+    cli = _make_kind_cli(
+        kind="minion", cmd="accept", match="webmnn", monkeypatch=monkeypatch
+    )
+    cli._update_opts()
+    assert cli.opts["accept"] == "webmnn"
+    assert cli.opts.get("master_scope") is False
+    assert cli.opts.get("accept_client", "") == ""
+    assert cli.opts["fun"] == "accept"
+
+
+def test_kind_client_does_not_override_explicit_client_opt(monkeypatch):
+    """When the operator passes BOTH ``--kind client`` AND an explicit
+    ``--accept-client=alice``, the explicit value wins; we do NOT
+    overwrite it with the ``accept`` opt."""
+    cli = _make_kind_cli(
+        kind="client", cmd="accept_client", match="alice", monkeypatch=monkeypatch
+    )
+    # The legacy ``--accept-client=alice`` already populated accept_client.
+    # ``--kind client`` alone (with empty accept) must not clear it.
+    cli._update_opts()
+    assert cli.opts["accept_client"] == "alice"
+    assert cli.opts["fun"] == "accept_client"
