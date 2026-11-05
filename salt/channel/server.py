@@ -689,14 +689,22 @@ class ReqServerChannel:
                 pki_dir = self.opts["cluster_pki_dir"]
             else:
                 pki_dir = self.opts.get("pki_dir", "")
-            try:
-                pub_path = salt.utils.verify.clean_join(pki_dir, "minions", id_)
-            except salt.exceptions.SaltValidationError:
-                log.warning("Invalid minion id: %s", id_)
-                return False
-            try:
-                pub = salt.crypt.PublicKey.from_file(pub_path)
-            except OSError:
+            # Try the minions pub dir first, then clients -- remote CLI
+            # clients share the AES channel but their keys live under
+            # ``pki_dir/clients`` (see salt.cache.localfs_key).
+            pub = None
+            for subdir in ("minions", "clients"):
+                try:
+                    pub_path = salt.utils.verify.clean_join(pki_dir, subdir, id_)
+                except salt.exceptions.SaltValidationError:
+                    log.warning("Invalid minion id: %s", id_)
+                    return False
+                try:
+                    pub = salt.crypt.PublicKey.from_file(pub_path)
+                    break
+                except OSError:
+                    continue
+            if pub is None:
                 log.warning(
                     "Salt minion claiming to be %s attempted to communicate with "
                     "master, but key could not be read and verification was denied.",

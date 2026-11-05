@@ -4,13 +4,17 @@ Execute salt convenience routines
 
 import logging
 import os
+from collections.abc import Mapping
 
+import salt.channel.client
 import salt.exceptions
 import salt.loader
 import salt.minion
 import salt.utils.args
+import salt.utils.error
 import salt.utils.event
 import salt.utils.files
+import salt.utils.network
 import salt.utils.resource_warnings
 import salt.utils.user
 from salt.client import mixins
@@ -44,7 +48,6 @@ class RunnerClient(mixins.SyncClientMixin, mixins.AsyncClientMixin):
         mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
         self.context = context or {}
-        self.event = None
         self.salt_user = salt.utils.user.get_specific_user()
         self.event = salt.utils.event.get_event(
             "master", self.opts["sock_dir"], opts=self.opts, listen=False
@@ -275,9 +278,23 @@ class Runner(RunnerClient):
     """
 
     def __init__(self, opts, context=None):
+        # In-process callers that construct ``Runner`` with
+        # ``client_auth=True`` expect the opts to look like they came
+        # out of :func:`salt.config.client_config` -- notably with
+        # ``__role=client`` so downstream code (``RemoteRunner`` dispatch,
+        # ``_send_token_request``) can tell this is a workstation client
+        # and not the master-local path.  CLI invocations get this via
+        # ``client_config``; in-process callers (and the tests covering
+        # remote-CLI parity) get it here.  Mirrors the same shim in
+        # :class:`salt.key.KeyCLI` so the two classes stay symmetric.
+        if opts.get("client_auth") and opts.get("__role") != "client":
+            opts = dict(opts)
+            opts["__role"] = "client"
         super().__init__(opts, context=context)
-        self.returners = salt.loader.returners(opts, self.functions, context=context)
-        self.outputters = salt.loader.outputters(opts)
+        self.returners = salt.loader.returners(
+            self.opts, self.functions, context=context
+        )
+        self.outputters = salt.loader.outputters(self.opts)
 
     def destroy(self):
         if hasattr(self, "returners") and self.returners is not None:
@@ -328,7 +345,11 @@ class Runner(RunnerClient):
                 low["arg"] = args
                 low["kwarg"] = kwargs
 
-                if self.opts.get("eauth"):
+                # Skip eauth credential collection for client auth
+                if self.opts.get("client_auth"):
+                    # Client auth uses PKI keys, no credentials needed in low dict
+                    pass
+                elif self.opts.get("eauth"):
                     if "token" in self.opts:
                         try:
                             with salt.utils.files.fopen(
@@ -365,7 +386,7 @@ class Runner(RunnerClient):
 
                 # Run the runner!
                 if self.opts.get("async", False):
-                    if self.opts.get("eauth"):
+                    if self.opts.get("eauth") or self.opts.get("client_auth"):
                         async_pub = self.cmd_async(low)
                     else:
                         async_pub = self.asynchronous(
@@ -385,7 +406,7 @@ class Runner(RunnerClient):
                 if self.opts.get("show_jid"):
                     print(f"jid: {self.jid}")
 
-                if self.opts.get("eauth"):
+                if self.opts.get("eauth") or self.opts.get("client_auth"):
                     ret = self.cmd_sync(low)
                     if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
                         outputter = ret["outputter"]
@@ -435,3 +456,267 @@ class Runner(RunnerClient):
                 log.debug("Runner return: %s", ret)
 
             return ret
+
+
+class RemoteRunnerClient(mixins.SyncClientMixin):
+    """
+    Remote-only runner client.
+
+    Instantiated by the CLI dispatch when ``opts["__role"] == "client"`` --
+    ``salt-run`` running on a workstation against a remote master.  Sends
+    runner calls to the master's ``ClearFuncs.runner`` endpoint over a
+    clear ``ReqChannel`` using eauth / token / client-key authentication.
+
+    The runner result arrives on the event bus as ``salt/run/<jid>/ret``;
+    the inherited :meth:`salt.client.mixins.SyncClientMixin.cmd_sync`
+    subscribes and waits for it via :class:`ClientEventSubscriber`.
+
+    Runner modules are loaded locally only for CLI arg introspection by
+    :meth:`RemoteRunner.run`.  Actual execution happens on the master.
+
+    See :class:`RunnerClient` for the master-local variant.
+    """
+
+    client = "runner"
+    tag_prefix = "run"
+
+    def __init__(self, opts, context=None):
+        mixins.SyncClientMixin.__init__(self, opts, context=context)
+        self.opts = opts
+        self.context = context or {}
+        self.salt_user = salt.utils.user.get_specific_user()
+        # Loaded locally for CLI arg introspection; execution is remote.
+        # Any runner whose dependencies are missing on the client box will
+        # silently fail to load -- not a problem for remote execution.
+        try:
+            self.functions = salt.loader.runner(opts, context=self.context)
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "Failed to load runner modules locally for introspection; "
+                "remote execution still works",
+                exc_info=True,
+            )
+            self.functions = {}
+        from salt.utils import client_event as _client_event
+
+        self.event = _client_event.ClientEventSubscriber(self.opts)
+
+    def destroy(self):
+        if self.event is not None:
+            try:
+                self.event.destroy()
+            finally:
+                self.event = None
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        try:
+            unclosed = getattr(self, "event", None) is not None or getattr(
+                self, "functions", None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                source=self,
+                log=log,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    # pylint: enable=W1701
+
+    def master_call(self, **kwargs):
+        """
+        Send a runner call to the remote master.
+
+        Uses ``crypt="aes"`` so the eauth credentials in ``kwargs``
+        travel encrypted under the PKI-handshake session key.  The
+        master bridges the AES-wrapped ``runner`` cmd through
+        :meth:`salt.master.MWorker._handle_payload_inner` to
+        :meth:`salt.daemons.masterapi.LocalFuncs.runner` on ClearFuncs,
+        which then validates the eauth creds inside the decrypted load.
+        """
+        load = kwargs
+        load["cmd"] = "runner"
+        # Pure-PKI remote clients (no eauth / token in kwargs) still
+        # need to prove identity to ``ClearFuncs.runner``; set
+        # ``client_id`` so the master's ``_prep_auth_info`` can route
+        # them through ``auth_type="client"``.  Stacked PKI+eauth
+        # flows set both; the master prefers eauth/token when present.
+        load.setdefault("client_id", self.opts["id"])
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master),
+            str(self.opts["ret_port"]),
+        )
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri, usage="master_call"
+        ) as channel:
+            ret = channel.send(load)
+        if isinstance(ret, Mapping) and "error" in ret:
+            salt.utils.error.raise_error(**ret["error"])
+        return ret
+
+
+class RemoteRunner(RemoteRunnerClient):
+    """
+    CLI entry for remote ``salt-run``.
+
+    Mirrors :class:`Runner` but drops the local-master execution path --
+    everything flows through :meth:`RemoteRunnerClient.cmd_sync`.
+    """
+
+    def print_docs(self):
+        """
+        Print runner docstrings.
+
+        Reads from the locally-loaded runner modules (``self.functions``
+        populated by ``RemoteRunnerClient.__init__`` for argspec and doc
+        introspection), *not* from the master.  This is a deliberate
+        design choice: doc output is query-only metadata and treating it
+        like ``git`` / ``kubectl`` / ``aws`` ``--help`` -- served from
+        the client binary -- avoids a server round-trip for every
+        introspection call.
+
+        Caveats operators should be aware of:
+          * runners whose dependencies aren't installed on the client
+            workstation won't appear in ``--doc`` output even if the
+            master has them (``salt.loader.runner`` silently skips
+            modules that fail to import)
+          * if client and master run different Salt versions, the
+            printed docstrings may drift from what the server actually
+            implements
+
+        Every other remote-CLI operation (publish / runner execution /
+        wheel / mk_token / batch adopt) routes through the master.
+        """
+        arg = self.opts.get("fun", None)
+        docs = self.get_docs(arg)
+        for fun in sorted(docs):
+            display_output(f"{fun}:", "text", self.opts)
+            print(docs[fun])
+
+    def run(self, full_return=False):
+        """
+        Execute the runner sequence against a remote master.
+        """
+        if self.opts.get("doc", False):
+            self.print_docs()
+            return {}
+
+        low = {"fun": self.opts["fun"]}
+        fun_args = salt.utils.args.parse_input(
+            self.opts["arg"], no_parse=self.opts.get("no_parse", [])
+        )
+
+        if self.functions and low["fun"] in self.functions:
+            verify_fun(self.functions, low["fun"])
+            args, kwargs = salt.minion.load_args_and_kwargs(
+                self.functions[low["fun"]], fun_args
+            )
+        else:
+            # Runner module not loadable locally; forward raw args to master.
+            args, kwargs = fun_args, {}
+            if (
+                isinstance(fun_args, list)
+                and fun_args
+                and isinstance(fun_args[-1], dict)
+            ):
+                args, kwargs = fun_args[:-1], fun_args[-1]
+        low["arg"] = args
+        low["kwarg"] = kwargs
+
+        # Client-auth path uses the PKI identity already on the ReqChannel;
+        # eauth path collects credentials and attaches them to the load.
+        # When eauth is in play we also need a Salt token to authenticate
+        # the event subscriber (otherwise the ClientEventSubscriber would
+        # fall back to its PKI handshake and block on a missing client.pem).
+        if self.opts.get("eauth"):
+            # Aliased import -- a bare ``import salt.auth`` here would
+            # shadow the module-level ``salt`` binding used earlier in
+            # this function for ``salt.utils.args`` / ``salt.minion``.
+            from salt import auth as _auth
+
+            if "token" in self.opts and self.opts["token"]:
+                low["token"] = self.opts["token"]
+            if "token" not in low and self.opts["eauth"]:
+                resolver = _auth.Resolver(self.opts)
+                creds = resolver.cli(self.opts["eauth"])
+                if not creds:
+                    log.error("Authentication failed")
+                    return {}
+                # Always mint a token so the event subscriber can
+                # authenticate on the token path.  ``--make-token`` only
+                # controls whether the token is persisted to disk.
+                tok = resolver.token_cli(self.opts["eauth"], creds)
+                if tok and tok.get("token"):
+                    low["token"] = tok["token"]
+                else:
+                    # Could not mint a token; fall back to passing creds
+                    # directly in the publish load.  Event stream will be
+                    # unusable in this mode -- caller gets JID only.
+                    low.update(creds)
+                low["eauth"] = self.opts["eauth"]
+
+            # If we have a token, pre-authenticate the event subscriber
+            # on the token path so cmd_sync's event.connect() succeeds
+            # without needing a client PKI key.
+            if (
+                "token" in low
+                and self.event is not None
+                and not getattr(self.event, "authenticated", False)
+            ):
+                try:
+                    self.event.connect(
+                        salt_token=low["token"], eauth=self.opts.get("eauth")
+                    )
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Could not pre-authenticate event subscriber on "
+                        "the token path: %s. Event stream may be unusable.",
+                        exc,
+                    )
+
+        if self.opts.get("async", False):
+            async_pub = self.master_call(**low)
+            log.warning(
+                "Running in asynchronous mode. Results of this execution may "
+                "be collected by attaching to the master event bus or by "
+                "examining the master job cache, if configured. This "
+                "execution is running under tag %s",
+                async_pub.get("tag"),
+            )
+            return async_pub.get("jid")
+
+        if self.opts.get("show_jid"):
+            # cmd_sync returns the ret event dict; printing the jid before
+            # the result requires a separate async_pub step -- skip for now.
+            pass
+
+        ret = self.cmd_sync(low)
+        if isinstance(ret, dict) and set(ret) == {"data", "outputter"}:
+            outputter = ret["outputter"]
+            ret = ret["data"]
+        else:
+            outputter = None
+        display_output(ret, outputter, self.opts)
+        return ret

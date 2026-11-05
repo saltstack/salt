@@ -3,6 +3,7 @@ Modules used to control the master itself
 """
 
 import logging
+import os
 from collections.abc import Mapping
 
 import salt.channel.client
@@ -10,8 +11,10 @@ import salt.client.mixins
 import salt.config
 import salt.loader
 import salt.utils.error
+import salt.utils.event
 import salt.utils.network
 import salt.utils.resource_warnings
+import salt.utils.user
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +51,6 @@ class WheelClient(
         salt.client.mixins.AsyncClientMixin.__init__(self, opts, context=context)
         self.opts = opts
         self.context = context or {}
-        self.event = None
         self.salt_user = salt.utils.user.get_specific_user()
         self.event = salt.utils.event.get_event(
             "master", self.opts["sock_dir"], opts=self.opts, listen=False
@@ -223,3 +225,162 @@ class WheelClient(
 
 
 Wheel = WheelClient  # for backward-compat
+
+
+class RemoteWheelClient:
+    """
+    Remote-only wheel client.
+
+    Instantiated by the CLI dispatch when ``opts["__role"] == "client"`` --
+    i.e. ``salt-key`` running on a workstation against a remote master.
+    Sends wheel calls to the master's ``ClearFuncs.wheel`` endpoint over a
+    clear ``ReqChannel`` using eauth / token / client-key authentication.
+
+    The local wheel loader is still populated because :class:`salt.key.KeyCLI`
+    uses ``self.client.functions[fstr]`` to introspect each wheel function's
+    argspec for CLI arg parsing.  The modules themselves do not execute
+    locally -- the master runs them.
+
+    See :class:`WheelClient` for the master-local variant.
+    """
+
+    client = "wheel"
+    tag_prefix = "wheel"
+
+    def __init__(self, opts, context=None):
+        self.opts = opts
+        self.context = context or {}
+        self.salt_user = salt.utils.user.get_specific_user()
+        # Loaded locally for CLI arg introspection only; execution is remote.
+        self.functions = salt.loader.wheels(opts, context=self.context)
+        # Lazy -- sync wheel does not need the event subscriber because the
+        # master's wheel endpoint blocks server-side and returns the full
+        # {tag, data} response inline.  Async callers will populate it.
+        self.event = None
+
+    def destroy(self):
+        if self.event is not None:
+            try:
+                self.event.destroy()
+            finally:
+                self.event = None
+        if hasattr(self, "functions") and self.functions is not None:
+            if hasattr(self.functions, "destroy"):
+                self.functions.destroy()
+            self.functions = {}
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.destroy()
+
+    # pylint: disable=W1701
+    def __del__(self):
+        try:
+            unclosed = getattr(self, "event", None) is not None or getattr(
+                self, "functions", None
+            )
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not unclosed:
+            return
+        try:
+            salt.utils.resource_warnings.warn_until_close(
+                f"unclosed {type(self).__name__} {self!r}; call "
+                f"``destroy()`` or use as a context manager",
+                source=self,
+                log=log,
+            )
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            self.destroy()
+        except Exception:  # pylint: disable=broad-except
+            pass
+
+    # pylint: enable=W1701
+
+    def master_call(self, **kwargs):
+        """
+        Send a wheel call to the remote master.
+
+        Uses ``crypt="aes"`` so eauth credentials inside ``kwargs``
+        travel encrypted under the PKI-handshake session key.  See
+        :class:`salt.runner.RemoteRunnerClient.master_call` for the
+        master-side bridge that routes AES-wrapped ``wheel`` cmds to
+        :meth:`salt.daemons.masterapi.LocalFuncs.wheel`.
+        """
+        load = kwargs
+        load["cmd"] = "wheel"
+        # Pure-PKI remote clients (no eauth / token in kwargs) still
+        # need to prove identity to ``ClearFuncs.wheel``; set
+        # ``client_id`` so the master's ``_prep_auth_info`` can route
+        # them through ``auth_type="client"``.
+        load.setdefault("client_id", self.opts["id"])
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master),
+            str(self.opts["ret_port"]),
+        )
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri, usage="master_call"
+        ) as channel:
+            ret = channel.send(load)
+        if isinstance(ret, Mapping) and "error" in ret:
+            salt.utils.error.raise_error(**ret["error"])
+        return ret
+
+    def cmd_sync(self, low, timeout=None, full_return=False):
+        """
+        Execute a wheel function synchronously via the remote master.
+
+        The master's ``ClearFuncs.wheel`` endpoint blocks on
+        ``wheel_client.call_func(fun, **load)`` and returns
+        ``{"tag": tag, "data": {"return": ..., "success": ..., "jid": ...}}``.
+        Return the full response so callers that match the local
+        :class:`WheelClient` contract (e.g. :class:`salt.key.KeyCLI`) can
+        unwrap ``data["return"]`` themselves.
+        """
+        return self.master_call(**low)
+
+    def cmd_async(self, low):
+        """
+        Execute a wheel function asynchronously; returns ``{"jid", "tag"}``.
+
+        Note: the master's wheel endpoint is synchronous server-side -- the
+        call blocks until the wheel function completes before returning.
+        "async" here means the client does not wait on the event bus for a
+        separate completion event; the ``{jid, tag}`` is extracted from the
+        same synchronous response.
+        """
+        ret = self.master_call(**low)
+        if isinstance(ret, Mapping) and "data" in ret:
+            data = ret["data"]
+            return {"jid": data.get("jid", ""), "tag": ret.get("tag", "")}
+        return ret
+
+    def cmd(
+        self,
+        fun,
+        arg=None,
+        pub_data=None,
+        kwarg=None,
+        print_event=True,
+        full_return=False,
+    ):
+        """
+        Execute a wheel function.  Mirrors :meth:`WheelClient.cmd`.
+        """
+        low = {"fun": fun}
+        if arg:
+            low["arg"] = arg
+        if kwarg:
+            low["kwarg"] = kwarg
+        return self.cmd_sync(low, full_return=full_return)
+
+    def call_func(self, fun, **kwargs):
+        """
+        Backwards-compatibility wrapper.
+        """
+        return self.cmd(fun, kwarg=kwargs)

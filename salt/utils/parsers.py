@@ -2274,6 +2274,15 @@ class SaltCMDOptionParser(
                 " command."
             ),
         )
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
+            ),
+        )
 
     def _mixin_after_parsed(self):
         if (
@@ -2626,6 +2635,67 @@ class SaltKeyOptionParser(
         )
         self.add_option_group(actions_group)
 
+        # Client key management actions
+        client_actions_group = optparse.OptionGroup(
+            self, "Client Key Actions (for remote CLI authentication)"
+        )
+        client_actions_group.set_conflict_handler("resolve")
+
+        client_actions_group.add_option(
+            "--list-clients",
+            default="",
+            metavar="ARG",
+            help=(
+                "List client keys. The args "
+                "'pre', 'un', and 'unaccepted' will list "
+                "unaccepted/unsigned keys. "
+                "'acc' or 'accepted' will list accepted/signed keys. "
+                "'rej' or 'rejected' will list rejected keys. "
+                "'den' or 'denied' will list denied keys. "
+                "Finally, 'all' will list all keys."
+            ),
+        )
+
+        client_actions_group.add_option(
+            "--accept-client",
+            default="",
+            help=(
+                "Accept the specified client public key (use --include-rejected and "
+                "--include-denied to match rejected and denied keys in "
+                "addition to pending keys). Globs are supported."
+            ),
+        )
+
+        client_actions_group.add_option(
+            "--reject-client",
+            default="",
+            help=(
+                "Reject the specified client public key. Use --include-accepted and "
+                "--include-denied to match accepted and denied keys in "
+                "addition to pending keys. Globs are supported."
+            ),
+        )
+
+        client_actions_group.add_option(
+            "--print-client",
+            default="",
+            help="Print the specified client public key.",
+        )
+
+        client_actions_group.add_option(
+            "--delete-client",
+            default="",
+            help="Delete the specified client key. Globs are supported.",
+        )
+
+        client_actions_group.add_option(
+            "--finger-client",
+            default="",
+            help="Print the specified client key's fingerprint.",
+        )
+
+        self.add_option_group(client_actions_group)
+
         self.add_option(
             "-q", "--quiet", default=False, action="store_true", help="Suppress output."
         )
@@ -2658,6 +2728,16 @@ class SaltKeyOptionParser(
                 "security implications if compromised minions auth with "
                 "a previous deleted minion ID. "
                 "Default: %default."
+            ),
+        )
+
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
             ),
         )
 
@@ -3119,6 +3199,15 @@ class SaltRunOptionParser(
             default=False,
             action="store_true",
             help="Do not load grains.",
+        )
+        self.add_option(
+            "--profile",
+            default=None,
+            metavar="PROFILE",
+            help=(
+                "Select a connection profile from /etc/salt/client. Profiles allow "
+                "managing multiple Salt masters. Example: --profile=prod"
+            ),
         )
         group = self.output_options_group = optparse.OptionGroup(
             self, "Output Options", "Configure your preferred output format."

@@ -22,5 +22,9 @@ class SaltKey(salt.utils.parsers.SaltKeyOptionParser):
                 )
 
         with salt.key.KeyCLI(self.config) as key:
-            if check_user(self.config["user"]):
+            # ``client_config()`` sets ``client_auth=True`` when the CLI is
+            # pointed at ``/etc/salt/client`` (remote operator), False when
+            # it falls back to the master config (local use on the master
+            # host). No separate CLI flag; config file is the source of truth.
+            if self.config.get("client_auth") or check_user(self.config["user"]):
                 key.run()

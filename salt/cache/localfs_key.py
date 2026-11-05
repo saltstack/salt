@@ -50,6 +50,13 @@ BASE_MAPPING = {
     "minions_denied": "denied",
 }
 
+CLIENT_BASE_MAPPING = {
+    "clients_pre": "pending",
+    "clients_rejected": "rejected",
+    "clients": "accepted",
+    "clients_denied": "denied",
+}
+
 # master_keys keys that if fetched, even with cluster_id set, will still refer
 # to pki_dir instead of cluster_pki_dir
 NON_CLUSTERED_MASTER_KEYS = []
@@ -94,8 +101,16 @@ def store(bank, key, data, cachedir, user, **kwargs):
     base = None
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
+    if bank in ["client_keys", "client_denied_keys"] and not valid_id(__opts__, key):
+        raise SaltCacheError(f"key {key} is not a valid client_id")
 
-    if bank not in ["keys", "denied_keys", "master_keys"]:
+    if bank not in [
+        "keys",
+        "denied_keys",
+        "client_keys",
+        "client_denied_keys",
+        "master_keys",
+    ]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     if __opts__["permissive_pki_access"]:
@@ -113,10 +128,24 @@ def store(bank, key, data, cachedir, user, **kwargs):
         else:
             raise SaltCacheError("Unrecognized data/bank: {}".format(data["state"]))
         data = data["pub"]
+    elif bank == "client_keys":
+        if data["state"] == "rejected":
+            base = "clients_rejected"
+        elif data["state"] == "pending":
+            base = "clients_pre"
+        elif data["state"] == "accepted":
+            base = "clients"
+        else:
+            raise SaltCacheError("Unrecognized data/bank: {}".format(data["state"]))
+        data = data["pub"]
     elif bank == "denied_keys":
         # denied keys is a list post migration, but is a single key in legacy
         data = data[0]
         base = "minions_denied"
+    elif bank == "client_denied_keys":
+        # denied keys is a list post migration, but is a single key in legacy
+        data = data[0]
+        base = "clients_denied"
     elif bank == "master_keys":
         # private keys are separate from permissive_pki_access
         umask = 0o277
@@ -173,12 +202,20 @@ def store(bank, key, data, cachedir, user, **kwargs):
 
 def fetch(bank, key, cachedir, **kwargs):
     """
-    Fetch and construct state data for a given minion based on the bank and id
+    Fetch and construct state data for a given minion or client based on the bank and id
     """
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
+    if bank in ["client_keys", "client_denied_keys"] and not valid_id(__opts__, key):
+        raise SaltCacheError(f"key {key} is not a valid client_id")
 
-    if bank not in ["keys", "denied_keys", "master_keys"]:
+    if bank not in [
+        "keys",
+        "denied_keys",
+        "client_keys",
+        "client_denied_keys",
+        "master_keys",
+    ]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     if not clean_path(cachedir, key, subdir=True):
@@ -202,10 +239,36 @@ def fetch(bank, key, cachedir, **kwargs):
                     with salt.utils.files.fopen(keyfile, "r") as fh_:
                         return {"state": state, "pub": fh_.read()}
             return None
+        elif bank == "client_keys":
+            for state, bank in [
+                ("rejected", "clients_rejected"),
+                ("pending", "clients_pre"),
+                ("accepted", "clients"),
+            ]:
+                keyfile = Path(cachedir, bank, key)
+
+                if not clean_path(cachedir, str(keyfile), subdir=True):
+                    raise SaltCacheError(f"key {key} is not a valid key path.")
+
+                if keyfile.is_file() and not keyfile.is_symlink():
+                    with salt.utils.files.fopen(keyfile, "r") as fh_:
+                        return {"state": state, "pub": fh_.read()}
+            return None
         elif bank == "denied_keys":
             # there can be many denied keys per minion post refactor, but only 1
             # with the filesystem, so return a list of 1
             pubfn_denied = os.path.join(cachedir, "minions_denied", key)
+
+            if not clean_path(cachedir, pubfn_denied, subdir=True):
+                raise SaltCacheError(f"key {key} is not a valid key path.")
+
+            if os.path.isfile(pubfn_denied):
+                with salt.utils.files.fopen(pubfn_denied, "r") as fh_:
+                    return [fh_.read()]
+        elif bank == "client_denied_keys":
+            # there can be many denied keys per client post refactor, but only 1
+            # with the filesystem, so return a list of 1
+            pubfn_denied = os.path.join(cachedir, "clients_denied", key)
 
             if not clean_path(cachedir, pubfn_denied, subdir=True):
                 raise SaltCacheError(f"key {key} is not a valid key path.")
@@ -239,13 +302,19 @@ def updated(bank, key, cachedir, **kwargs):
     """
     Return the epoch of the mtime for this cache file
     """
-    if not valid_id(__opts__, key):
+    if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
+    if bank in ["client_keys", "client_denied_keys"] and not valid_id(__opts__, key):
+        raise SaltCacheError(f"key {key} is not a valid client_id")
 
     if bank == "keys":
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+    elif bank == "client_keys":
+        bases = [base for base in CLIENT_BASE_MAPPING if base != "clients_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "client_denied_keys":
+        bases = ["clients_denied"]
     elif bank == "master_keys":
         if key in NON_CLUSTERED_MASTER_KEYS:
             cachedir = __opts__["pki_dir"]
@@ -275,20 +344,30 @@ def updated(bank, key, cachedir, **kwargs):
 def flush(bank, key=None, cachedir=None, **kwargs):
     """
     Remove the key from the cache bank with all the key content.
-    flush can take a legacy bank or a keys/denied_keys modern bank
+    flush can take a legacy bank or a keys/denied_keys/client_keys/client_denied_keys modern bank
     """
-    if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
+    if bank in ["keys", "denied_keys"] and key and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
+    if (
+        bank in ["client_keys", "client_denied_keys"]
+        and key
+        and not valid_id(__opts__, key)
+    ):
+        raise SaltCacheError(f"key {key} is not a valid client_id")
 
     if cachedir is None:
         raise SaltCacheError("cachedir missing")
 
     if bank == "keys":
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+    elif bank == "client_keys":
+        bases = [base for base in CLIENT_BASE_MAPPING if base != "clients_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "client_denied_keys":
+        bases = ["clients_denied"]
     elif bank == "master_keys":
-        if key in NON_CLUSTERED_MASTER_KEYS:
+        if key and key in NON_CLUSTERED_MASTER_KEYS:
             cachedir = __opts__["pki_dir"]
         bases = [""]
     else:
@@ -327,12 +406,17 @@ def flush(bank, key=None, cachedir=None, **kwargs):
 def list_(bank, cachedir, **kwargs):
     """
     Return an iterable object containing all entries stored in the specified bank.
-    Uses internal mmap index for O(1) performance when available.
+    Uses internal mmap index for O(1) performance when available (minion keys only).
     """
     if bank == "keys":
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+    elif bank == "client_keys":
+        # Client keys don't use index, go straight to directory scan
+        bases = [base for base in CLIENT_BASE_MAPPING if base != "clients_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "client_denied_keys":
+        bases = ["clients_denied"]
     elif bank == "master_keys":
         bases = [""]
     else:
@@ -357,7 +441,8 @@ def list_(bank, cachedir, **kwargs):
             keyfile = Path(cachedir, base, item)
 
             if (
-                bank in ["keys", "denied_keys"] and not valid_id(__opts__, item)
+                bank in ["keys", "denied_keys", "client_keys", "client_denied_keys"]
+                and not valid_id(__opts__, item)
             ) or not clean_path(cachedir, str(keyfile), subdir=True):
                 log.error("saw invalid id %s, discarding", item)
                 continue
@@ -373,10 +458,10 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
     This is much faster than calling list() + fetch() for each item.
     Returns a dict of {key: data}.
 
-    If include_data is False (default), only the state is returned for 'keys' bank,
+    If include_data is False (default), only the state is returned for 'keys'/'client_keys' bank,
     avoiding expensive file reads.
     """
-    if bank not in ["keys", "denied_keys"]:
+    if bank not in ["keys", "denied_keys", "client_keys", "client_denied_keys"]:
         raise SaltCacheError(f"Unrecognized bank: {bank}")
 
     ret = {}
@@ -423,6 +508,47 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
             except OSError as exc:
                 log.error("Error scanning directory %s: %s", dir_path, exc)
 
+    elif bank == "client_keys":
+        # Map directory names to states for clients
+        state_mapping = {
+            "clients": "accepted",
+            "clients_pre": "pending",
+            "clients_rejected": "rejected",
+        }
+
+        for dir_name, state in state_mapping.items():
+            dir_path = os.path.join(cachedir, dir_name)
+            if not os.path.isdir(dir_path):
+                continue
+
+            try:
+                with os.scandir(dir_path) as it:
+                    for entry in it:
+                        if not entry.is_file() or entry.is_symlink():
+                            continue
+                        if entry.name.startswith("."):
+                            continue
+                        if not valid_id(__opts__, entry.name):
+                            continue
+                        if not clean_path(cachedir, entry.path, subdir=True):
+                            continue
+
+                        if include_data:
+                            # Read the public key
+                            try:
+                                with salt.utils.files.fopen(entry.path, "r") as fh_:
+                                    pub_key = fh_.read()
+                                ret[entry.name] = {"state": state, "pub": pub_key}
+                            except OSError as exc:
+                                log.error(
+                                    "Error reading key file %s: %s", entry.path, exc
+                                )
+                        else:
+                            # Just return the state, no disk read
+                            ret[entry.name] = {"state": state}
+            except OSError as exc:
+                log.error("Error scanning directory %s: %s", dir_path, exc)
+
     elif bank == "denied_keys":
         # Denied keys work differently - multiple keys per minion ID
         dir_path = os.path.join(cachedir, "minions_denied")
@@ -447,21 +573,54 @@ def list_all(bank, cachedir, include_data=False, **kwargs):
             except OSError as exc:
                 log.error("Error scanning denied keys directory: %s", exc)
 
+    elif bank == "client_denied_keys":
+        # Denied client keys work differently - multiple keys per client ID
+        dir_path = os.path.join(cachedir, "clients_denied")
+        if os.path.isdir(dir_path):
+            try:
+                with os.scandir(dir_path) as it:
+                    for entry in it:
+                        if not entry.is_file() or entry.is_symlink():
+                            continue
+                        if not valid_id(__opts__, entry.name):
+                            continue
+                        if not clean_path(cachedir, entry.path, subdir=True):
+                            continue
+
+                        try:
+                            with salt.utils.files.fopen(entry.path, "r") as fh_:
+                                ret[entry.name] = fh_.read()
+                        except OSError as exc:
+                            log.error(
+                                "Error reading denied client key %s: %s",
+                                entry.path,
+                                exc,
+                            )
+            except OSError as exc:
+                log.error("Error scanning denied client keys directory: %s", exc)
+
     return ret
 
 
 def contains(bank, key, cachedir, **kwargs):
     """
     Checks if the specified bank contains the specified key.
-    Uses internal mmap index for O(1) performance when available.
+    Uses internal mmap index for O(1) performance when available (minion keys only).
     """
     if bank in ["keys", "denied_keys"] and not valid_id(__opts__, key):
         raise SaltCacheError(f"key {key} is not a valid minion_id")
+    if bank in ["client_keys", "client_denied_keys"] and not valid_id(__opts__, key):
+        raise SaltCacheError(f"key {key} is not a valid client_id")
 
     if bank == "keys":
         bases = [base for base in BASE_MAPPING if base != "minions_denied"]
+    elif bank == "client_keys":
+        # Client keys don't use index, go straight to filesystem check
+        bases = [base for base in CLIENT_BASE_MAPPING if base != "clients_denied"]
     elif bank == "denied_keys":
         bases = ["minions_denied"]
+    elif bank == "client_denied_keys":
+        bases = ["clients_denied"]
     elif bank == "master_keys":
         if key in NON_CLUSTERED_MASTER_KEYS:
             cachedir = __opts__["pki_dir"]
