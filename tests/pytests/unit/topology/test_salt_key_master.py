@@ -336,8 +336,10 @@ def _make_keycli(master_scope, cmd, match="east", monkeypatch=None):
     """
     opts = {
         "master_scope": master_scope,
+        "client_auth": False,
         "eauth": "",
         "cachedir": "/tmp",
+        "keys.cache_driver": "localfs_key",
         "gen_keys": "",
         "gen_signature": False,
         "list": "",
@@ -352,6 +354,15 @@ def _make_keycli(master_scope, cmd, match="east", monkeypatch=None):
         "delete_all": False,
         "finger": "",
         "finger_all": False,
+        # Client-scope opts added by upstream PR #70656 remote-CLI.
+        # Not used by master-scope tests, but ``_update_opts`` iterates
+        # over them so they must be present.
+        "list_clients": "",
+        "accept_client": "",
+        "reject_client": "",
+        "print_client": "",
+        "delete_client": "",
+        "finger_client": "",
         "include_all": False,
         "include_rejected": False,
         "include_accepted": False,
@@ -361,12 +372,14 @@ def _make_keycli(master_scope, cmd, match="east", monkeypatch=None):
     # ``KeyCLI.__init__`` imports ``salt.wheel`` and builds a
     # WheelClient --- substitute a dummy to keep the unit test cheap.
     # It also calls :func:`salt.key.get_key` which tries to open the
-    # cache; stub both.
+    # cache; stub both.  Upstream PR #70656 added ``ClientKey`` --
+    # stub it too so the test does not open the keys cache.
     import salt.wheel
 
     recorder = _DummyKey()
     monkeypatch.setattr(salt.wheel, "WheelClient", lambda *a, **kw: _DummyWheelClient())
     monkeypatch.setattr(salt.key, "get_key", lambda _opts: recorder)
+    monkeypatch.setattr(salt.key, "ClientKey", lambda *a, **kw: _DummyKey())
     cli = salt.key.KeyCLI(opts)
     cli.key = recorder
     return cli
