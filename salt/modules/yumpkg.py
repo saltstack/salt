@@ -2254,6 +2254,85 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     return remove(name=name, pkgs=pkgs)
 
 
+def mark_manual(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    """
+    .. versionadded:: 3008.0
+
+    Mark packages as user installed, so that ``dnf autoremove`` will not remove
+    them when the package that pulled them in as a dependency is removed.
+    Packages that are not installed or are already user installed are left
+    alone. Requires ``dnf`` or ``dnf5``.
+
+    name
+        The name of the package, e.g., 'jq'
+
+    pkgs
+        A list of packages to mark. Must be passed as a python list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.mark_manual jq
+        salt '*' pkg.mark_manual pkgs='["jq", "oniguruma"]'
+    """
+    if not name and not pkgs:
+        raise SaltInvocationError("One of name or pkgs must be specified.")
+    yum_bin = _yum()
+    if yum_bin not in ("dnf", "dnf5"):
+        raise CommandExecutionError(f"pkg.mark_manual is not supported by {yum_bin}")
+
+    targets = []
+    if pkgs:
+        targets.extend(next(iter(x)) if isinstance(x, dict) else x for x in pkgs)
+    else:
+        targets.append(name)
+
+    installed = set(list_pkgs())
+    user_out = _call_yum(
+        ["repoquery", "--userinstalled", "--queryformat", r"%{name}\n"]
+    )
+    if user_out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to list user installed packages: {user_out['stderr']}"
+        )
+    user_installed = set(user_out["stdout"].split())
+
+    ret = {}
+    to_mark = []
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if target not in installed or target in user_installed:
+            ret[target]["comment"] = (
+                f"Package {target} is not an automatically installed "
+                "dependency, nothing to do."
+            )
+        elif __opts__.get("test"):
+            ret[target]["result"] = None
+            ret[target][
+                "comment"
+            ] = f"Package {target} would be marked as user installed."
+        else:
+            to_mark.append(target)
+
+    if to_mark:
+        # dnf calls this "mark install"; dnf5 renamed it to "mark user"
+        action = "user" if yum_bin == "dnf5" else "install"
+        out = _call_yum(["mark", action, *to_mark])
+        for target in to_mark:
+            if out["retcode"] == 0:
+                ret[target]["changes"] = {"old": "dependency", "new": "user"}
+                ret[target][
+                    "comment"
+                ] = f"Package {target} is now marked as user installed."
+            else:
+                ret[target]["result"] = False
+                ret[target][
+                    "comment"
+                ] = f"Unable to mark {target} as user installed: {out['stderr']}"
+    return ret
+
+
 def hold(
     name=None, pkgs=None, sources=None, normalize=True, **kwargs
 ):  # pylint: disable=W0613
