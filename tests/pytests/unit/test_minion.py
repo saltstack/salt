@@ -1514,15 +1514,12 @@ def test_target_bounds_worker_dns_retry(minion_opts):
     """
     data = {"jid": "20240101000000000000", "fun": "test.ping", "arg": []}
 
-    # Stub out the actual job execution and the tornado StackContext wrapping
-    # so the test exercises only the opts mutation in _target's preamble,
-    # without requiring a fully initialized minion (functions/ctx).
-    def fake_stack_context(*args, **kwargs):
-        return contextlib.nullcontext()
-
-    with patch.object(salt.minion.Minion, "_thread_return", MagicMock()), patch(
-        "salt.ext.tornado.stack_context.StackContext", fake_stack_context
-    ):
+    # Stub out the actual job execution so the test exercises only the
+    # ``opts`` mutation in ``_target``'s preamble, without requiring a fully
+    # initialized minion (functions/ctx). ``_target`` on this branch runs
+    # the real body under ``request_context`` directly (no tornado
+    # ``stack_context`` wrapper), so patching ``_thread_return`` is enough.
+    with patch.object(salt.minion.Minion, "_thread_return", MagicMock()):
         # Operator did not set retry_dns_count -> worker fails fast.
         unset_opts = copy.deepcopy(minion_opts)
         unset_opts["retry_dns_count"] = None
