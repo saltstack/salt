@@ -10,6 +10,7 @@ import os
 import random
 import re
 import socket
+import threading
 import time
 
 import salt.utils.decorators.path
@@ -2257,6 +2258,16 @@ def ip_networks6(interface=None, include_loopback=False, verbose=False):
     )
 
 
+# Reverse-DNS answers rarely change in the lifetime of a Salt daemon
+# and each lookup of an unresponsive address can cost the macOS
+# resolver timeout (~30s).  The master's grain refresh pattern calls
+# ``fqdns`` back-to-back during startup; caching the first result
+# avoids paying the timeout a second time.  See #62168.
+_FQDNS_CACHE_TTL = 300
+_fqdns_cache = {"ts": 0.0, "value": None}
+_fqdns_cache_lock = threading.Lock()
+
+
 def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
@@ -2274,6 +2285,16 @@ def fqdns():
     # Possible value for h_errno defined in netdb.h
     HOST_NOT_FOUND = 1
     NO_DATA = 4
+
+    # Short-circuit: return the cached answer if it's still fresh.  This
+    # is important on macOS where every repeat of the slow path pays the
+    # resolver timeout again.
+    with _fqdns_cache_lock:
+        if (
+            _fqdns_cache["value"] is not None
+            and (time.time() - _fqdns_cache["ts"]) < _FQDNS_CACHE_TTL
+        ):
+            return {"fqdns": list(_fqdns_cache["value"])}
 
     fqdns = set()
 
@@ -2294,6 +2315,40 @@ def fqdns():
         except Exception as err:  # pylint: disable=broad-except
             log.error("Failed to resolve address %s: %s", ip, err)
 
+    def _is_resolvable_address(addr):
+        """
+        Reverse DNS on link-local, site-local, or private addresses is
+        almost always a dead-end on a workstation or CI runner -- the
+        resolver has no zone that can answer, and each unresolvable
+        address costs one full resolver timeout (~30s on macOS).
+
+        macOS auto-assigns multiple IPv6 fec0::/10 and fe80::/10
+        addresses per interface, and virtualized hosts like
+        QEMU/UTM/VirtualBox hand out 10.0.2.x NAT addresses that the
+        guest resolver never has a PTR record for.  Even one such
+        address can block ``salt-master`` startup for the full
+        resolver timeout.  Skip them -- callers that need PTR for
+        private space can run ``network.fqdns`` from a context that
+        does have DNS for it (not grain refresh at daemon startup).
+
+        See issue #62168.
+        """
+        try:
+            ip = ipaddress.ip_address(addr)
+        except (ValueError, TypeError):
+            return True
+        if ip.is_link_local:
+            return False
+        # ``ipaddress`` reports ``is_site_local`` only for IPv6 fec0::/10
+        # (deprecated per RFC 3879 but macOS still hands them out).
+        if getattr(ip, "is_site_local", False):
+            return False
+        # ``is_private`` covers RFC1918 (10/8, 172.16/12, 192.168/16),
+        # ULA fc00::/7, and other non-globally-routable ranges.
+        if ip.is_private:
+            return False
+        return True
+
     start = time.time()
 
     addresses = salt.utils.network.ip_addrs(
@@ -2304,18 +2359,31 @@ def fqdns():
             include_loopback=False, interface_data=salt.utils.network._get_interfaces()
         )
     )
+    addresses = [a for a in addresses if _is_resolvable_address(a)]
 
     # Create a ThreadPool to process the underlying calls to
     # 'socket.gethostbyaddr' in parallel.  This avoid blocking the execution
     # when the "fqdn" is not defined for certains IP addresses, which was
     # causing that "socket.timeout" was reached multiple times sequentially,
     # blocking execution for several seconds.
+    #
+    # ``gethostbyaddr`` has no Python-level timeout and falls through to the
+    # OS resolver, which on macOS uses ~30s per unresponsive address.  Even
+    # with the link-local / site-local skip above, a single RFC1918 address
+    # without a reverse DNS entry can still cost one timeout.  Bound the
+    # entire call to a short deadline so grain refresh (invoked during
+    # ``salt-master`` startup) can't stall for minutes on hosts whose
+    # resolver doesn't answer for interface addresses.  See #62168.
+    fqdn_lookup_timeout = 5
+    pool = concurrent.futures.ThreadPoolExecutor(8)
     try:
-        with concurrent.futures.ThreadPoolExecutor(8) as pool:
-            future_lookups = {
-                pool.submit(_lookup_fqdn, address): address for address in addresses
-            }
-            for future in concurrent.futures.as_completed(future_lookups):
+        future_lookups = {
+            pool.submit(_lookup_fqdn, address): address for address in addresses
+        }
+        try:
+            for future in concurrent.futures.as_completed(
+                future_lookups, timeout=fqdn_lookup_timeout
+            ):
                 try:
                     resolved_fqdn = future.result()
                     if resolved_fqdn:
@@ -2323,12 +2391,29 @@ def fqdns():
                 except Exception as exc:  # pylint: disable=broad-except
                     address = future_lookups[future]
                     log.error("Failed to resolve address %s: %s", address, exc)
+        except concurrent.futures.TimeoutError:
+            stuck = [future_lookups[f] for f in future_lookups if not f.done()]
+            log.warning(
+                "network.fqdns: reverse-DNS lookup exceeded %ss; abandoning "
+                "%d address(es) still resolving: %s",
+                fqdn_lookup_timeout,
+                len(stuck),
+                sorted(stuck),
+            )
     except Exception as exc:  # pylint: disable=broad-except
         log.error(
             "Exception while creating a ThreadPoolExecutor for resolving FQDNs: %s", exc
         )
+    finally:
+        # The underlying ``getaddrinfo``/``gethostbyaddr`` calls can't be
+        # cancelled, so don't wait for stuck threads before returning.
+        pool.shutdown(wait=False, cancel_futures=True)
 
     elapsed = time.time() - start
     log.debug("Elapsed time getting FQDNs: %s seconds", elapsed)
 
-    return {"fqdns": sorted(fqdns)}
+    result = sorted(fqdns)
+    with _fqdns_cache_lock:
+        _fqdns_cache["value"] = result
+        _fqdns_cache["ts"] = time.time()
+    return {"fqdns": result}
