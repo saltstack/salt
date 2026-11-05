@@ -60,7 +60,8 @@ Cython < 3.4
 # CVE-2026-8994. protobuf 7 doesn't support python 3.9.
 protobuf < 7.0 ; python_version == "3.9"
 protobuf >= 7.34.1 ; python_version >= "3.10"
-# filelock 4.2.x requires Python 3.11+; 3.10 stays on the 4.0.x series.
+# filelock 4.x requires Python 3.11+ for 4.2; 3.10 stays below 4.0 to match
+# requirements/base.txt.
 filelock <= 3.19.1; python_version <= "3.9"
-filelock <= 4.1.0; python_version == "3.10"
+filelock < 4.0.0; python_version == "3.10"
 filelock >= 4.2.1; python_version >= "3.11"

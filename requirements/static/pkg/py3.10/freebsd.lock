@@ -60,16 +60,11 @@ distro==1.9.0
     #   -r requirements/static/pkg/freebsd.txt
 filelock==3.29.1 ; python_full_version < '3.11'
     # via
-    #   -r requirements/base.txt
-    #   python-discovery
-    #   virtualenv
-filelock==4.2.6 ; python_full_version >= '3.11'
-    # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
     #   python-discovery
     #   virtualenv
-filelock==4.2.4 ; python_full_version >= '3.11'
+filelock==4.2.6 ; python_full_version >= '3.11'
     # via
     #   -c requirements/constraints.txt
     #   -r requirements/base.txt
@@ -293,7 +288,6 @@ typing-extensions==4.16.0
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt
-    #   opentelemetry-exporter-http-transport
     #   requests
 virtualenv==21.15.2
     # via -r requirements/base.txt
