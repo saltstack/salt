@@ -12,7 +12,7 @@ idna==3.7
     # via
     #   -c requirements/static/ci/py3.12/tools.lock
     #   requests
-requests==2.31.0
+requests==2.34.2
     # via
     #   -c requirements/static/ci/py3.12/tools.lock
     #   virustotal3
