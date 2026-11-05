@@ -27,7 +27,7 @@ annotated-doc==0.0.5
     #   typer
 annotated-types==0.8.0
     # via pydantic
-ansible==14.5.0
+ansible==14.4.0
     # via -r requirements/static/ci/linux.txt
 ansible-core==2.21.5
     # via ansible
