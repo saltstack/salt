@@ -47,19 +47,15 @@ class KeyCLI:
         "print": "key_str",
     }
 
-    # Dispatch table for ``--master`` scope: map the KeyCLI-side
-    # command name onto the master-scope method on :class:`Key`.
-    # Only the commands that have a sensible master-scope analogue
-    # are listed; anything else (``print``, ``gen_keys``, ...) falls
-    # back to the default minion-scope mapping.
-    CLI_KEY_MASTER_MAP = {
-        "list": "list_master",
-        "list_all": "list_master",
-        "accept": "accept_master",
-        "reject": "reject_master",
-        "delete": "delete_master",
-        "finger": "finger_master",
-    }
+    # ``--master`` scope on salt-key routes through :class:`MasterKey`,
+    # which is a :class:`Key` subclass with the standard public API
+    # (``list_keys``, ``accept``, ``reject``, ``delete_key``,
+    # ``finger``) backed by the ``pki_dir/masters*/`` buckets.  No
+    # separate dispatch table needed; :meth:`_run_cmd` just swaps
+    # ``self.key`` for ``self.master_key`` when ``master_scope`` is
+    # set.  Commands that ``MasterKey`` does not implement
+    # (``gen_keys``, ``print``) fall back to the base-class method
+    # inherited from :class:`Key`.
 
     def __init__(self, opts):
         # If client auth is enabled, load client config and set role
@@ -91,9 +87,11 @@ class KeyCLI:
         # instantiate the key object for masterless mode
         if not opts.get("eauth") and not opts.get("client_auth"):
             self.key = get_key(opts)
+            self.master_key = MasterKey(opts)
             self.client_key = ClientKey(opts)
         else:
             self.key = Key
+            self.master_key = MasterKey
             self.client_key = ClientKey
 
         self.auth = {}
@@ -115,9 +113,14 @@ class KeyCLI:
         context-manager protocol.
         """
         if not self.opts.get("eauth"):
-            key = getattr(self, "key", None)
-            if key is not None and not isinstance(key, type):
-                key.destroy()
+            # Drop the event bus on every instantiated Key subclass so
+            # the EventPublisher socket is not left behind.  ``type``
+            # guard skips the no-eauth path where attrs hold the class
+            # (lazy construction in the eauth branch of ``__init__``).
+            for attr in ("key", "master_key", "client_key"):
+                obj = getattr(self, attr, None)
+                if obj is not None and not isinstance(obj, type):
+                    obj.destroy()
         client = getattr(self, "client", None)
         if client is not None:
             try:
@@ -272,20 +275,21 @@ class KeyCLI:
 
     def _run_cmd(self, cmd, args=None):
         if not self.opts.get("eauth") and not self.opts.get("client_auth"):
-            # Route to the right key kind:
+            # Route to the right Key subclass:
             #   - ``_client`` suffix     -> ClientKey  (upstream remote-CLI scope)
-            #   - ``master_scope`` flag  -> Key master-bucket methods
-            #                               (master-topology peer scope)
-            #   - default                -> Key minion-bucket methods
+            #   - ``master_scope`` flag  -> MasterKey  (master-topology peer scope)
+            #   - default                -> Key / MinionKey
+            # All three subclasses share the base ``Key`` method
+            # names (``list_keys``, ``accept``, ``reject``,
+            # ``delete_key``, ``finger``, ...) so a single mapping
+            # table suffices.
             if cmd.endswith("_client"):
                 base_cmd = cmd[:-7]  # Remove "_client"
                 mapped_cmd = self.CLI_KEY_MAP.get(base_cmd, base_cmd)
                 fun = getattr(self.client_key, mapped_cmd)
             elif self.opts.get("master_scope"):
-                mapped_cmd = self.CLI_KEY_MASTER_MAP.get(
-                    cmd, self.CLI_KEY_MAP.get(cmd, cmd)
-                )
-                fun = getattr(self.key, mapped_cmd)
+                mapped_cmd = self.CLI_KEY_MAP.get(cmd, cmd)
+                fun = getattr(self.master_key, mapped_cmd)
             else:
                 mapped_cmd = self.CLI_KEY_MAP.get(cmd, cmd)
                 fun = getattr(self.key, mapped_cmd)
@@ -1104,40 +1108,56 @@ class Key:
             event.destroy()
             self.__dict__.pop("event", None)
 
-    # ------------------------------------------------------------------
-    # Master-scope key management (--master scope on salt-key)
-    #
-    # Mirrors the minion-scoped helpers above but operates on the
-    # ``pki_dir/masters*/`` buckets used by the master-topology
-    # feature.  The accepted/pending/rejected/denied cluster peers
-    # live in ``pki_dir/{masters,masters_pre,masters_rejected,
-    # masters_denied}/<cluster_id>.pub``; each on-disk file is the
-    # peer master's ``master_identity.pub`` PEM bytes.
-    #
-    # Clustered callers (``opts["cluster_peers"]`` non-empty, which
-    # we proxy via the presence of an ``opts["raft_service"]`` hook)
-    # must propose the attach/detach to Raft FIRST and let the
-    # :class:`TopologyStateMachine` apply handler do the file-move
-    # atomically; if salt-key renamed the file first and then
-    # crashed before proposing, the file-system state would be
-    # ahead of the Raft log, violating the "every cluster peer sees
-    # the same state" invariant.  Solo masters (no raft_service)
-    # move the file directly.
-    # ------------------------------------------------------------------
+    def __enter__(self):
+        return self
 
-    MASTERS_ACC = "masters"
-    MASTERS_PEND = "masters_pre"
-    MASTERS_REJ = "masters_rejected"
-    MASTERS_DEN = "masters_denied"
+    def __exit__(self, *args):
+        self.destroy()
+
+
+class MasterKey(Key):
+    """
+    Manage peer-master keys on a master-topology cluster.
+
+    Mirrors the minion-scoped base :class:`Key` but operates on the
+    ``pki_dir/masters*/`` buckets used by the master-topology
+    feature.  The accepted/pending/rejected/denied cluster peers
+    live in ``pki_dir/{masters,masters_pre,masters_rejected,
+    masters_denied}/<cluster_id>.pub``; each on-disk file is the
+    peer master's ``master_identity.pub`` PEM bytes.
+
+    Clustered callers (``opts["cluster_peers"]`` non-empty, which
+    we proxy via the presence of an ``opts["raft_service"]`` hook)
+    must propose the attach/detach to Raft FIRST and let the
+    :class:`TopologyStateMachine` apply handler do the file-move
+    atomically; if salt-key renamed the file first and then crashed
+    before proposing, the file-system state would be ahead of the
+    Raft log, violating the "every cluster peer sees the same state"
+    invariant.  Solo masters (no raft_service) move the file
+    directly.
+
+    Public API aligned with the base :class:`Key` so :class:`KeyCLI`
+    can dispatch uniformly: :meth:`list_keys`, :meth:`accept`,
+    :meth:`reject`, :meth:`delete_key`, :meth:`finger`.  The
+    cluster-id-based signature overrides the glob-match signature
+    of the base class --- master keys are identified by exact
+    ``cluster_id``, not glob.
+    """
+
+    KIND = "master"
+    ACC = "masters"
+    PEND = "masters_pre"
+    REJ = "masters_rejected"
+    DEN = "masters_denied"
 
     _MASTER_BUCKETS = (
-        ("accepted", MASTERS_ACC),
-        ("pending", MASTERS_PEND),
-        ("rejected", MASTERS_REJ),
-        ("denied", MASTERS_DEN),
+        ("accepted", ACC),
+        ("pending", PEND),
+        ("rejected", REJ),
+        ("denied", DEN),
     )
 
-    def _master_cluster_id_valid(self, cluster_id):
+    def _validate_cluster_id(self, cluster_id):
         """
         Validate a ``cluster_id`` matches the topology ``CLUSTER_ID_RE``
         and is not one of the reserved MmapCache sentinel names.
@@ -1159,7 +1179,7 @@ class Key:
                 f"cluster_id {cluster_id!r} does not match {CLUSTER_ID_RE}"
             )
 
-    def _master_bucket_path(self, bucket):
+    def _bucket_path(self, bucket):
         """Return (and ensure) ``pki_dir/<bucket>/``."""
         path = os.path.join(self.opts.get("pki_dir", ""), bucket)
         try:
@@ -1168,12 +1188,12 @@ class Key:
             pass
         return path
 
-    def _list_master_bucket(self, bucket):
+    def _list_bucket(self, bucket):
         """
         Return the sorted set of ``.pub`` filenames in a masters bucket
         with the ``.pub`` suffix stripped.
         """
-        path = self._master_bucket_path(bucket)
+        path = self._bucket_path(bucket)
         if not os.path.isdir(path):
             return []
         names = []
@@ -1182,7 +1202,7 @@ class Key:
                 names.append(entry[: -len(".pub")])
         return sorted(names)
 
-    def list_master(self):
+    def list_keys(self):
         """
         Return the four cluster-namespace buckets under ``pki_dir/``.
 
@@ -1190,46 +1210,62 @@ class Key:
         (``.pub`` stripped) found under ``pki_dir/masters*/``.
         """
         return {
-            name: self._list_master_bucket(bucket)
-            for name, bucket in self._MASTER_BUCKETS
+            name: self._list_bucket(bucket) for name, bucket in self._MASTER_BUCKETS
         }
 
-    def _master_raft_service(self):
+    def list_status(self, match=None):
+        """
+        Alias so ``salt-key -L --master`` (which is routed via
+        CLI_KEY_MAP["list"] == "list_status") returns the full bucket
+        inventory.  ``match`` is ignored because master keys are
+        exact-matched by cluster_id, not filtered by status glob.
+        """
+        return self.list_keys()
+
+    def _raft_service(self):
         """
         Return the Raft service hook if we're on a clustered master,
         else ``None`` for solo-master code paths.
 
         A clustered master has a ``raft_service`` configured on opts
         (set up by :class:`TopologyLinkManager` on master start).
-        Solo masters leave it unset, and the master-scope Key methods
+        Solo masters leave it unset, and the master-scope key methods
         rename files directly.
         """
         return self.opts.get("raft_service")
 
-    def accept_master(self, cluster_id):
+    def accept(
+        self, match=None, match_dict=None, include_rejected=False, include_denied=False
+    ):
         """
-        Accept a pending cluster peer.
+        Accept a pending peer-master key by ``cluster_id``.
 
-        **Propose-first ordering on clustered masters.**  When a
-        Raft service hook is configured, we propose a
+        ``match`` is interpreted as an exact ``cluster_id``; glob is
+        not supported for master keys (cluster identities are unique
+        and operator-chosen).  ``match_dict``, ``include_rejected``,
+        and ``include_denied`` are accepted for signature parity
+        with :meth:`Key.accept` but are no-ops on this class.
+
+        Propose-first ordering on clustered masters: when a Raft
+        service hook is configured, we propose a
         ``MASTER_PEER_ATTACH`` entry carrying the peer's PEM bytes
         and rely on the :class:`TopologyStateMachine` apply handler
         to rename ``masters_pre/<id>.pub`` into ``masters/<id>.pub``
         atomically on every peer.  salt-key must NOT rename the
         file before proposing --- a crash between the rename and
         the propose would leave the file in ``masters/`` on this
-        host with no Raft commit, breaking cluster-peer
-        consistency.
+        host with no Raft commit, breaking cluster-peer consistency.
 
-        **Solo masters** (no raft_service) rename the file directly
-        from ``masters_pre/`` to ``masters/``.  Operator restarts
-        the publish daemon (or the daemon's PKI watcher picks up
-        the ``salt/key`` event this method fires) to reconcile.
+        Solo masters (no raft_service) rename the file directly from
+        ``masters_pre/`` to ``masters/``.  Operator restarts the
+        publish daemon (or the daemon's PKI watcher picks up the
+        ``salt/key`` event this method fires) to reconcile.
         """
-        self._master_cluster_id_valid(cluster_id)
+        cluster_id = match
+        self._validate_cluster_id(cluster_id)
 
-        pending_dir = self._master_bucket_path(self.MASTERS_PEND)
-        accepted_dir = self._master_bucket_path(self.MASTERS_ACC)
+        pending_dir = self._bucket_path(self.PEND)
+        accepted_dir = self._bucket_path(self.ACC)
         pending_path = os.path.join(pending_dir, f"{cluster_id}.pub")
         accepted_path = os.path.join(accepted_dir, f"{cluster_id}.pub")
 
@@ -1239,9 +1275,8 @@ class Key:
         with salt.utils.files.fopen(pending_path, "rb") as fh:
             pub_bytes = fh.read()
 
-        raft = self._master_raft_service()
+        raft = self._raft_service()
         if raft is not None and hasattr(raft, "propose_peer_attach"):
-            # Clustered: propose first; apply handler does the rename.
             import time as _time
 
             try:
@@ -1252,13 +1287,6 @@ class Key:
                     attached_at=_time.time(),
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                # Rolling-upgrade gate (RFC master-topology.md): the
-                # propose refused because a cluster peer still runs the
-                # pre-topology release.  Surface a clean operator-visible
-                # error and leave the pending key file in
-                # ``masters_pre/`` untouched --- the apply handler
-                # owns the rename, and the propose never reached the
-                # Raft log.
                 try:
                     from salt.cluster.consensus.service import (  # pylint: disable=import-outside-toplevel
                         MixedVersionClusterError,
@@ -1275,33 +1303,31 @@ class Key:
                     sys.exit(1)
                 raise
         else:
-            # Solo: rename directly.
             os.replace(pending_path, accepted_path)
 
-        # Fire a key event so the publish daemon's PKI watcher
-        # (or ``test_salt_key_master`` tests) can reconcile.
         self.event.fire_event(
             {"result": True, "act": "accept", "id": cluster_id, "scope": "master"},
             salt.utils.event.tagify(prefix="key"),
         )
         return {"accepted": [cluster_id]}
 
-    def reject_master(self, cluster_id):
+    def reject(
+        self, match=None, match_dict=None, include_accepted=False, include_denied=False
+    ):
         """
-        Reject a pending cluster peer.
+        Reject a pending peer-master key by ``cluster_id``.
 
         Rejection is a local operator decision --- it is NOT
-        replicated via Raft.  The file simply moves from
-        ``masters_pre/`` to ``masters_rejected/``.
+        replicated via Raft.  The file moves from ``masters_pre/``
+        to ``masters_rejected/``.  ``match_dict`` /
+        ``include_accepted`` / ``include_denied`` are accepted for
+        signature parity with :meth:`Key.reject` but are no-ops.
         """
-        self._master_cluster_id_valid(cluster_id)
+        cluster_id = match
+        self._validate_cluster_id(cluster_id)
 
-        pending_path = os.path.join(
-            self._master_bucket_path(self.MASTERS_PEND), f"{cluster_id}.pub"
-        )
-        rejected_path = os.path.join(
-            self._master_bucket_path(self.MASTERS_REJ), f"{cluster_id}.pub"
-        )
+        pending_path = os.path.join(self._bucket_path(self.PEND), f"{cluster_id}.pub")
+        rejected_path = os.path.join(self._bucket_path(self.REJ), f"{cluster_id}.pub")
         if not os.path.exists(pending_path):
             return {"rejected": []}
         os.replace(pending_path, rejected_path)
@@ -1311,25 +1337,34 @@ class Key:
         )
         return {"rejected": [cluster_id]}
 
-    def delete_master(self, cluster_id):
+    def delete_key(
+        self,
+        match=None,
+        match_dict=None,
+        preserve_minions=None,
+        revoke_auth=False,
+    ):
         """
-        Delete / revoke an accepted cluster peer.
+        Delete / revoke an accepted peer-master key by ``cluster_id``.
 
-        **Clustered masters** propose ``MASTER_PEER_DETACH``; the
-        apply handler removes (or moves to ``masters_denied/``)
-        the file.  As with ``accept_master``, salt-key does NOT
-        touch the file before proposing so a propose-then-crash
-        cannot leave a half-applied state.
+        Clustered masters propose ``MASTER_PEER_DETACH``; the apply
+        handler removes (or moves to ``masters_denied/``) the file.
+        As with :meth:`accept`, salt-key does NOT touch the file
+        before proposing so a propose-then-crash cannot leave a
+        half-applied state.
 
-        **Solo masters** delete the file directly.
+        Solo masters delete the file directly.
+
+        ``match_dict`` / ``preserve_minions`` / ``revoke_auth`` are
+        accepted for signature parity with :meth:`Key.delete_key`
+        but are no-ops on peer-master keys.
         """
-        self._master_cluster_id_valid(cluster_id)
+        cluster_id = match
+        self._validate_cluster_id(cluster_id)
 
-        accepted_path = os.path.join(
-            self._master_bucket_path(self.MASTERS_ACC), f"{cluster_id}.pub"
-        )
+        accepted_path = os.path.join(self._bucket_path(self.ACC), f"{cluster_id}.pub")
 
-        raft = self._master_raft_service()
+        raft = self._raft_service()
         if raft is not None and hasattr(raft, "propose_peer_detach"):
             try:
                 raft.propose_peer_detach(cluster_id=cluster_id, reason="revoked")
@@ -1359,30 +1394,25 @@ class Key:
         )
         return {"deleted": [cluster_id]}
 
-    def finger_master(self, cluster_id, hash_type=None):
+    def finger(self, match, hash_type=None):
         """
-        Return the fingerprint of a cluster peer's key.
+        Return the fingerprint of a peer-master key by ``cluster_id``.
 
         Searches the four ``masters*/`` buckets in priority order
         (accepted, pending, rejected, denied).  Returns the empty
         string if the peer has no key in any bucket, mirroring
         :func:`salt.utils.crypt.pem_finger` on a missing path.
         """
+        cluster_id = match
         if hash_type is None:
             hash_type = self.opts.get("hash_type", "sha256")
         for _, bucket in self._MASTER_BUCKETS:
-            path = os.path.join(self._master_bucket_path(bucket), f"{cluster_id}.pub")
+            path = os.path.join(self._bucket_path(bucket), f"{cluster_id}.pub")
             if os.path.exists(path):
                 with salt.utils.files.fopen(path, "rb") as fh:
                     pem = fh.read()
                 return salt.utils.crypt.pem_finger(key=pem, sum_type=hash_type)
         return ""
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self.destroy()
 
 
 class ClientKey(Key):

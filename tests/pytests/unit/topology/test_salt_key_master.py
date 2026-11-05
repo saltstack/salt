@@ -82,7 +82,7 @@ def key(tmp_path, pki_dir):
     sock = tmp_path / "sock"
     sock.mkdir()
     opts = _make_opts(pki_dir, sock, cache)
-    k = salt.key.Key(opts)
+    k = salt.key.MasterKey(opts)
     # Shadow the cached_property with a non-side-effecting stand-in so
     # ``fire_event`` / ``destroy`` work without a running salt-master.
     k.__dict__["event"] = _RecordingEvent()
@@ -108,7 +108,7 @@ def test_list_master_sorts_each_bucket(key, pki_dir):
     _write_pub(pki_dir / "masters_rejected" / "rej.pub")
     _write_pub(pki_dir / "masters_denied" / "den.pub")
 
-    ret = key.list_master()
+    ret = key.list_keys()
     assert ret == {
         "accepted": ["alpha", "zeta"],
         "pending": ["pending-a", "pending-b"],
@@ -123,7 +123,7 @@ def test_list_master_ignores_non_pub_files(key, pki_dir):
     (pki_dir / "masters" / "scratch.tmp").write_bytes(b"junk")
     (pki_dir / "masters" / "notes.txt").write_bytes(b"notes")
 
-    ret = key.list_master()
+    ret = key.list_keys()
     assert ret["accepted"] == ["real"]
 
 
@@ -136,7 +136,7 @@ def test_accept_master_solo_renames_file(key, pki_dir):
     pending = pki_dir / "masters_pre" / "east.pub"
     _write_pub(pending)
 
-    ret = key.accept_master("east")
+    ret = key.accept("east")
     accepted = pki_dir / "masters" / "east.pub"
     assert accepted.exists()
     assert not pending.exists()
@@ -145,7 +145,7 @@ def test_accept_master_solo_renames_file(key, pki_dir):
 
 def test_accept_master_solo_fires_event(key, pki_dir):
     _write_pub(pki_dir / "masters_pre" / "east.pub")
-    key.accept_master("east")
+    key.accept("east")
     assert key.event.fired
     data, tag = key.event.fired[-1]
     assert data["act"] == "accept"
@@ -155,7 +155,7 @@ def test_accept_master_solo_fires_event(key, pki_dir):
 
 
 def test_accept_master_solo_missing_pending_noop(key):
-    ret = key.accept_master("east")
+    ret = key.accept("east")
     assert ret == {"accepted": []}
 
 
@@ -168,7 +168,7 @@ def test_reject_master_solo_renames_file(key, pki_dir):
     pending = pki_dir / "masters_pre" / "east.pub"
     _write_pub(pending)
 
-    ret = key.reject_master("east")
+    ret = key.reject("east")
     rejected = pki_dir / "masters_rejected" / "east.pub"
     assert rejected.exists()
     assert not pending.exists()
@@ -176,7 +176,7 @@ def test_reject_master_solo_renames_file(key, pki_dir):
 
 
 def test_reject_master_missing_pending_noop(key):
-    ret = key.reject_master("east")
+    ret = key.reject("east")
     assert ret == {"rejected": []}
 
 
@@ -189,7 +189,7 @@ def test_delete_master_solo_removes_file(key, pki_dir):
     accepted = pki_dir / "masters" / "east.pub"
     _write_pub(accepted)
 
-    ret = key.delete_master("east")
+    ret = key.delete_key("east")
     assert not accepted.exists()
     assert ret == {"deleted": ["east"]}
 
@@ -200,7 +200,7 @@ def test_delete_master_solo_missing_still_returns_ok(key):
     reports success so the operator does not get spurious errors
     on cleanup.
     """
-    ret = key.delete_master("east")
+    ret = key.delete_key("east")
     assert ret == {"deleted": ["east"]}
 
 
@@ -213,7 +213,7 @@ def test_finger_master_computes_expected_sha256(key, pki_dir):
     _write_pub(pki_dir / "masters" / "east.pub")
     expected = salt.utils.crypt.pem_finger(key=FAKE_PUB, sum_type="sha256")
 
-    assert key.finger_master("east") == expected
+    assert key.finger("east") == expected
 
 
 def test_finger_master_honours_opts_hash_type(key, pki_dir):
@@ -224,11 +224,11 @@ def test_finger_master_honours_opts_hash_type(key, pki_dir):
     _write_pub(pki_dir / "masters" / "east.pub")
     key.opts["hash_type"] = "sha512"
     expected = salt.utils.crypt.pem_finger(key=FAKE_PUB, sum_type="sha512")
-    assert key.finger_master("east") == expected
+    assert key.finger("east") == expected
 
 
 def test_finger_master_missing_returns_empty_string(key):
-    assert key.finger_master("east") == ""
+    assert key.finger("east") == ""
 
 
 # ---------------------------------------------------------------------------
@@ -251,19 +251,19 @@ def test_finger_master_missing_returns_empty_string(key):
 )
 def test_accept_master_rejects_invalid_cluster_id(key, bad):
     with pytest.raises(ValueError):
-        key.accept_master(bad)
+        key.accept(bad)
 
 
 @pytest.mark.parametrize("bad", ["", "BAD", "__identity_pub__"])
 def test_reject_master_rejects_invalid_cluster_id(key, bad):
     with pytest.raises(ValueError):
-        key.reject_master(bad)
+        key.reject(bad)
 
 
 @pytest.mark.parametrize("bad", ["", "BAD", "__peer_index__"])
 def test_delete_master_rejects_invalid_cluster_id(key, bad):
     with pytest.raises(ValueError):
-        key.delete_master(bad)
+        key.delete_key(bad)
 
 
 # ---------------------------------------------------------------------------
@@ -377,48 +377,73 @@ def _make_keycli(master_scope, cmd, match="east", monkeypatch=None):
     import salt.wheel
 
     recorder = _DummyKey()
+    master_recorder = _DummyKey()
     monkeypatch.setattr(salt.wheel, "WheelClient", lambda *a, **kw: _DummyWheelClient())
     monkeypatch.setattr(salt.key, "get_key", lambda _opts: recorder)
+    monkeypatch.setattr(salt.key, "MasterKey", lambda *a, **kw: master_recorder)
     monkeypatch.setattr(salt.key, "ClientKey", lambda *a, **kw: _DummyKey())
     cli = salt.key.KeyCLI(opts)
     cli.key = recorder
+    cli.master_key = master_recorder
     return cli
 
 
-def test_master_scope_accept_dispatches_to_accept_master(monkeypatch):
+def test_master_scope_accept_dispatches_to_master_key_accept(monkeypatch):
+    """``--master accept east`` -> ``MasterKey.accept("east")``.
+
+    Post-unification, master-scope dispatches to the
+    :class:`MasterKey` subclass via ``cli.master_key`` using the
+    base-class public method name ``accept``, not the old
+    ``accept_master`` legacy name on ``cli.key``.
+    """
     cli = _make_keycli(
         master_scope=True, cmd="accept", match="east", monkeypatch=monkeypatch
     )
     cli._update_opts()
     cli._run_cmd("accept", args=["east"])
-    assert ("accept_master", "east") in cli.key.calls
+    assert ("accept", ("east",), {}) in cli.master_key.calls
+    assert not cli.key.calls, "master-scope must not touch the minion Key"
 
 
-def test_master_scope_delete_dispatches_to_delete_master(monkeypatch):
+def test_master_scope_delete_dispatches_to_master_key_delete_key(monkeypatch):
     cli = _make_keycli(
         master_scope=True, cmd="delete", match="east", monkeypatch=monkeypatch
     )
     cli._update_opts()
     cli._run_cmd("delete", args=["east"])
-    assert ("delete_master", "east") in cli.key.calls
+    # CLI_KEY_MAP maps "delete" -> "delete_key".
+    assert ("delete_key", ("east",), {}) in cli.master_key.calls
+    assert not cli.key.calls
 
 
-def test_master_scope_list_dispatches_to_list_master(monkeypatch):
+def test_master_scope_list_dispatches_to_master_key(monkeypatch):
     cli = _make_keycli(
         master_scope=True, cmd="list_all", match=True, monkeypatch=monkeypatch
     )
     cli._update_opts()
-    cli._run_cmd("list", args=[])
-    assert ("list_master",) in cli.key.calls
+    # ``args=None`` routes through ``_get_args_kwargs`` which fills
+    # positional args from opts, matching the real salt-key flow.
+    cli._run_cmd("list")
+    # CLI_KEY_MAP maps ``list`` -> ``list_status``.  MasterKey's
+    # ``list_status`` is an alias for ``list_keys`` (the four
+    # bucket inventory).  The important invariant here is that
+    # dispatch hits the MasterKey instance, not the minion Key.
+    names = [call[0] for call in cli.master_key.calls]
+    assert "list_status" in names, (
+        f"master-scope list should route to MasterKey.list_status, "
+        f"got {cli.master_key.calls!r}"
+    )
+    assert not cli.key.calls
 
 
-def test_master_scope_finger_dispatches_to_finger_master(monkeypatch):
+def test_master_scope_finger_dispatches_to_master_key_finger(monkeypatch):
     cli = _make_keycli(
         master_scope=True, cmd="finger", match="east", monkeypatch=monkeypatch
     )
     cli._update_opts()
     cli._run_cmd("finger", args=["east"])
-    assert ("finger_master", "east") in cli.key.calls
+    assert ("finger", ("east",), {}) in cli.master_key.calls
+    assert not cli.key.calls
 
 
 def test_default_scope_uses_minion_methods(monkeypatch):
@@ -429,19 +454,6 @@ def test_default_scope_uses_minion_methods(monkeypatch):
     )
     cli._update_opts()
     cli._run_cmd("accept", args=["east"])
-    # The default accept path goes through CLI_KEY_MAP ("accept"
-    # -> "accept"), so we expect our dummy's ``accept`` to be the
-    # one that got called, not ``accept_master``.
     names = [call[0] for call in cli.key.calls]
     assert "accept" in names
-    assert "accept_master" not in names
-
-
-def test_cli_key_master_map_covers_main_actions():
-    """Sanity: the master-scope map includes list/accept/reject/
-    delete/finger so ``--master`` works for all of them."""
-    for action in ("list", "accept", "reject", "delete", "finger"):
-        assert action in salt.key.KeyCLI.CLI_KEY_MASTER_MAP, (
-            f"CLI_KEY_MASTER_MAP missing {action!r}; --master {action} "
-            f"would silently fall back to the minion-scope method"
-        )
+    assert not cli.master_key.calls, "default scope must not touch MasterKey"
