@@ -1795,3 +1795,136 @@ def test_pub_server_channel_round_trip_pickle_preserves_getstate():
     assert round_trip["presence_events"] is False
     assert "opts" in round_trip
     assert "transport" in round_trip
+
+
+# ---------------------------------------------------------------------------
+# PR #70651: MasterPubServerChannel pickle hooks round-trip ``SMaster.secrets``
+# so the EventPublisher subprocess on Windows (``multiprocessing.spawn``)
+# inherits the parent's ``cluster_aes`` / ``aes`` entries.  Without these
+# hooks, the Windows EventPublisher starts with an empty class-attribute
+# ``SMaster.secrets``, and the topology inbound listener fails to open
+# with ``KeyError('cluster_aes')`` when its ``ReqServerChannel.post_fork``
+# evaluates ``self.aes_key``.  The topology ``topology_link_port`` then
+# has no bound REP socket and peer handshakes time out.
+# ---------------------------------------------------------------------------
+
+
+def test_master_pub_server_channel_getstate_captures_smaster_secrets():
+    """``MasterPubServerChannel.__getstate__`` must capture a snapshot
+    of ``SMaster.secrets`` under ``_secrets`` so the Windows spawned
+    EventPublisher can restore the class attribute."""
+    sentinel_secrets = {
+        "cluster_aes": {"secret": object()},
+        "aes": {"secret": object()},
+    }
+    saved = salt.master.SMaster.secrets
+    try:
+        salt.master.SMaster.secrets = sentinel_secrets
+        channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+        channel.opts = {"cluster_id": "east"}
+        channel.transport = MagicMock()
+
+        state = channel.__getstate__()
+    finally:
+        salt.master.SMaster.secrets = saved
+
+    assert state.get("_secrets") is sentinel_secrets, (
+        "MasterPubServerChannel.__getstate__ must round-trip "
+        "SMaster.secrets under '_secrets' so the EventPublisher "
+        "subprocess on Windows inherits ``cluster_aes``."
+    )
+    # Minimal pickle shape -- just opts + transport + the secrets
+    # snapshot.  ``_publish_daemon`` rebuilds ``io_loop``, ``master_key``,
+    # etc. from scratch in the child.
+    assert state["opts"]["cluster_id"] == "east"
+    assert state["transport"] is channel.transport
+
+
+def test_master_pub_server_channel_setstate_restores_smaster_secrets():
+    """``MasterPubServerChannel.__setstate__`` must restore
+    ``SMaster.secrets`` from the pickle so the EventPublisher child
+    process can look up ``cluster_aes`` without KeyError."""
+    sentinel_secrets = {"cluster_aes": {"secret": object()}}
+    saved = salt.master.SMaster.secrets
+    try:
+        salt.master.SMaster.secrets = {}
+        channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+        state = {
+            "opts": {"cluster_id": "east"},
+            "transport": MagicMock(),
+            "_secrets": sentinel_secrets,
+        }
+        channel.__setstate__(state)
+
+        assert salt.master.SMaster.secrets is sentinel_secrets, (
+            "MasterPubServerChannel.__setstate__ must install the "
+            "pickled ``_secrets`` dict as the class attribute so the "
+            "EventPublisher child can resolve cluster_aes."
+        )
+    finally:
+        salt.master.SMaster.secrets = saved
+
+
+def test_master_pub_server_channel_setstate_tolerates_missing_secrets_key():
+    """Older pickles (pre-#70651) do not carry ``_secrets``; the
+    restore path must not crash on the missing key so an in-flight
+    rolling upgrade across the Windows-spawn boundary degrades
+    gracefully (worst case: back to the old KeyError, not an
+    AttributeError before the daemon has a chance to log)."""
+    sentinel = {"aes": {"secret": object()}}
+    saved = salt.master.SMaster.secrets
+    try:
+        salt.master.SMaster.secrets = sentinel
+        channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+        channel.__setstate__(
+            {
+                "opts": {"cluster_id": "east"},
+                "transport": MagicMock(),
+            }
+        )
+
+        # No ``_secrets`` carried -> SMaster.secrets left untouched.
+        assert salt.master.SMaster.secrets is sentinel
+    finally:
+        salt.master.SMaster.secrets = saved
+
+
+def test_master_pub_server_channel_pickle_round_trip_restores_cluster_aes():
+    """End-to-end: pickle + unpickle round-trip of a
+    ``MasterPubServerChannel`` instance must leave
+    ``SMaster.secrets["cluster_aes"]`` reachable.  This is the exact
+    code path exercised by ``multiprocessing.spawn`` on Windows when
+    ``process_manager.add_process(self._publish_daemon, name=
+    "EventPublisher")`` forks the EventPublisher subprocess.
+    """
+    import pickle
+
+    # Plain picklable sentinel for the ``secret`` value.  The real
+    # value on a running master is a ``multiprocessing.Array`` whose
+    # cross-process semantics are provided by the spawn machinery
+    # itself; this test exercises the pickle-pair round-trip, which
+    # is independent of the shared-memory handle kind.
+    sentinel_aes = b"x" * 32
+    saved = salt.master.SMaster.secrets
+    try:
+        salt.master.SMaster.secrets = {"cluster_aes": {"secret": sentinel_aes}}
+        channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+        channel.opts = {"cluster_id": "east"}
+        # transport is replaced with None so the whole instance is
+        # pickleable end-to-end.
+        channel.transport = None
+        raw = pickle.dumps(channel)
+        # Clear SMaster.secrets to simulate the Windows-spawn child's
+        # fresh module import.
+        salt.master.SMaster.secrets = {}
+        _ = pickle.loads(raw)
+
+        assert "cluster_aes" in salt.master.SMaster.secrets, (
+            "After unpickling the channel, ``SMaster.secrets`` must "
+            "have the ``cluster_aes`` entry installed by "
+            "``__setstate__`` -- otherwise the EventPublisher's "
+            "topology inbound listener fails with KeyError."
+        )
+        assert salt.master.SMaster.secrets["cluster_aes"]["secret"] == sentinel_aes
+    finally:
+        salt.master.SMaster.secrets = saved

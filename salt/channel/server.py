@@ -3210,17 +3210,36 @@ class MasterPubServerChannel:
                 log.error("Unable to send aes key event")
 
     def __getstate__(self):
+        # Round-trip ``SMaster.secrets`` to the spawned EventPublisher so
+        # the child inherits ``cluster_aes`` / ``aes``.  Without this,
+        # Windows ``multiprocessing.spawn`` re-imports :mod:`salt.master`
+        # in the child with the empty-dict default and
+        # :meth:`ReqServerChannel.post_fork` (invoked from
+        # :func:`salt.topology.link_manager.start` ->
+        # ``_open_inbound_listener``) fails with ``KeyError('cluster_aes')``
+        # when it evaluates ``self.aes_key``.  The topology inbound REP
+        # socket then never binds and east<->west peer handshakes time
+        # out with "Message timed out", leaving ``C@peer`` compound
+        # publishes with no outbound route (nightly 41970401917).
+        import salt.master  # pylint: disable=import-outside-toplevel
+
         return {
             "opts": self.opts,
             "transport": self.transport,
+            "_secrets": salt.master.SMaster.secrets,
         }
 
     def __setstate__(self, state):
+        import salt.master  # pylint: disable=import-outside-toplevel
+
         self.opts = state["opts"]
         self.transport = state["transport"]
         self._discover_event = None
         self._raft_dispatcher = None
         self._raft_service = None
+        secrets = state.get("_secrets")
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
 
     def close(self):
         self.transport.close()
