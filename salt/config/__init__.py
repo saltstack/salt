@@ -288,6 +288,10 @@ VALID_OPTS = immutabletypes.freeze(
         "failhard": bool,
         # A flag to indicate that highstate runs should force refresh the modules prior to execution
         "autoload_dynamic_modules": bool,
+        # A flag to enable on-demand sync of dynamic modules (_modules, _states, etc.)
+        # when a function is requested but not found in the local cache, instead of
+        # requiring an explicit saltutil.sync_* call beforehand.
+        "sync_on_missing_function": bool,
         # Force the minion into a single environment when it fetches files from the master
         "saltenv": (type(None), str),
         # Prevent saltenv from being overridden on the command line
@@ -1240,6 +1244,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "random_startup_delay": 0,
         "failhard": False,
         "autoload_dynamic_modules": True,
+        "sync_on_missing_function": False,
         "saltenv": None,
         "lock_saltenv": False,
         "pillarenv": None,
