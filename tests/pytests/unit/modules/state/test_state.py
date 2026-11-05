@@ -1338,6 +1338,56 @@ def test__check_queue_preserves_args_without_pub_arg(tmp_path):
     assert payload["arg"] == [{"__kwarg__": True, "mods": "target"}]
 
 
+@pytest.mark.parametrize(
+    "func,expected_fun",
+    [
+        ("sls", "state.sls"),
+        ("highstate", "state.highstate"),
+    ],
+)
+def test__check_queue_sets_fun_without_pub_fun(tmp_path, func, expected_fun):
+    """
+    An in-process call with queue=True carries no __pub_fun, so the queued
+    payload must name the calling state function instead of None.
+    """
+    opts = {"cachedir": str(tmp_path), "state_queue": True}
+    with patch.dict(state.__opts__, opts), patch(
+        "salt.utils.state.state_queue_dir", return_value=str(tmp_path)
+    ), patch("salt.utils.state.acquire_queue_lock", MagicMock()), patch(
+        "salt.modules.state._prior_running_states", return_value=[{"jid": "1"}]
+    ), patch(
+        "salt.modules.state._disabled", return_value=[]
+    ):
+        if func == "sls":
+            ret = getattr(state, func)("target", queue=True)
+        else:
+            ret = getattr(state, func)(queue=True)
+    assert ret["queued"] is True
+    (queued,) = tmp_path.glob("queued_*.p")
+    with salt.utils.files.fopen(str(queued), "rb") as fp_:
+        payload = salt.payload.load(fp_)
+    assert payload["fun"] == expected_fun
+
+
+def test__check_queue_keeps_pub_fun(tmp_path):
+    """
+    A master-published job keeps the __pub_fun it was published with.
+    """
+    opts = {"cachedir": str(tmp_path), "state_queue": True}
+    with patch.dict(state.__opts__, opts), patch(
+        "salt.utils.state.state_queue_dir", return_value=str(tmp_path)
+    ), patch("salt.utils.state.acquire_queue_lock", MagicMock()), patch(
+        "salt.modules.state._prior_running_states", return_value=[{"jid": "1"}]
+    ), patch(
+        "salt.modules.state._disabled", return_value=[]
+    ):
+        state.apply_(queue=True, __pub_fun="state.highstate", __pub_jid="2")
+    (queued,) = tmp_path.glob("queued_*.p")
+    with salt.utils.files.fopen(str(queued), "rb") as fp_:
+        payload = salt.payload.load(fp_)
+    assert payload["fun"] == "state.highstate"
+
+
 class TestCheckPriorRunningStates:
     """
     Test the check_prior_running_states function race condition fixes.
