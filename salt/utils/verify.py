@@ -243,6 +243,8 @@ def verify_env(
         )
 
     # after confirming not running Windows
+    import pwd
+
     pwnam = _get_pwnam(user)
     uid = pwnam[2]
     gid = pwnam[3]
@@ -305,25 +307,42 @@ def verify_env(
         # is still secure because the private keys are still only readable
         # by the user running the master
         if isinstance(pki_dir, str):
-            if dir_ == pki_dir:
-                smode = stat.S_IMODE(mode.st_mode)
-                if smode != 448 and smode != 488:
-                    if os.access(dir_, os.W_OK):
-                        os.chmod(dir_, 448)
-                    else:
-                        log.critical(
-                            'Unable to securely set the permissions of "%s".', dir_
-                        )
+            is_pki_dir = dir_ == pki_dir
         else:
-            if dir_ in pki_dir:
-                smode = stat.S_IMODE(mode.st_mode)
-                if smode != 448 and smode != 488:
-                    if os.access(dir_, os.W_OK):
-                        os.chmod(dir_, 448)
-                    else:
-                        log.critical(
-                            'Unable to securely set the permissions of "%s".', dir_
-                        )
+            is_pki_dir = dir_ in pki_dir
+
+        if is_pki_dir:
+            smode = stat.S_IMODE(mode.st_mode)
+            if smode != 448 and smode != 488:
+                if os.access(dir_, os.W_OK):
+                    os.chmod(dir_, 448)
+                else:
+                    # We can't chmod it ourselves (we don't own it), which
+                    # typically means it was created by a different user in a
+                    # previous run (e.g. salt-master was accidentally started
+                    # as root, or run once by a different, unrelated user).
+                    # Surface that clearly instead of letting a confusing
+                    # OSError surface later, deep inside key generation.
+                    # https://github.com/saltstack/salt/issues/67062
+                    try:
+                        owner = pwd.getpwuid(mode.st_uid).pw_name
+                    except KeyError:
+                        owner = mode.st_uid
+                    raise OSError(
+                        errno.EACCES,
+                        'Unable to securely set the permissions of "{}". It is '
+                        'owned by "{}", but Salt is running as "{}" ({}). '
+                        "Remove the directory (if it's safe to do so) or chown "
+                        "it to the correct user and restart, e.g.: "
+                        "chown -R {}: {}".format(
+                            dir_,
+                            owner,
+                            user,
+                            os.getuid(),
+                            user,
+                            dir_,
+                        ),
+                    )
 
     if skip_extra is False:
         # Run the extra verification checks
