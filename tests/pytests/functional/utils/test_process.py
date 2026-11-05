@@ -122,6 +122,89 @@ def test_subprocess_list_fds():
     )
 
 
+def _sleep_target(seconds):
+    """Module-level target so the test works under spawn/forkserver too."""
+    import time as _time
+
+    _time.sleep(seconds)
+
+
+def _exit_immediately_target():
+    """Module-level target that returns immediately."""
+
+
+def test_subprocess_list_cleanup_does_not_block_on_live_processes():
+    """
+    Regression: cleanup() previously called proc.join(0.01) on every
+    entry including live ones, costing up to 10ms per live child inside
+    the minion's 200ms periodic cleanup callback. With N live children
+    this starved the ioloop. The current cleanup must skip live
+    processes entirely and return near-instantly regardless of N.
+    """
+    import multiprocessing
+
+    # Use a reasonably large N so the old 10ms-per-proc bound is
+    # clearly violated if the regression returns.
+    N = 50
+    sublist = salt.utils.process.SubprocessList()
+    procs = []
+    try:
+        for _ in range(N):
+            p = multiprocessing.Process(target=_sleep_target, args=(30,))
+            p.start()
+            sublist.add(p)
+            procs.append(p)
+
+        # All children are alive; cleanup should be a no-op reap pass
+        # that returns near-instantly.
+        start = time.monotonic()
+        sublist.cleanup()
+        elapsed = time.monotonic() - start
+
+        # Old code: up to N * 10ms = 500ms. Give CI generous headroom
+        # but still catch the regression.
+        assert elapsed < 0.2, (
+            f"cleanup() took {elapsed:.3f}s with {N} live children; "
+            "regression -- it must not block on live processes."
+        )
+        # Live children were NOT removed from the list.
+        assert sublist.count == N
+        assert len(sublist.processes) == N
+    finally:
+        for p in procs:
+            if p.is_alive():
+                p.terminate()
+        for p in procs:
+            p.join(timeout=5)
+
+
+def test_subprocess_list_cleanup_reaps_dead_processes():
+    """
+    Companion to ``test_subprocess_list_cleanup_does_not_block_on_live_processes``:
+    guard against the non-blocking fix accidentally skipping the reap of
+    an already-exited child. A process whose target has returned must be
+    removed from the SubprocessList on the next ``cleanup()`` call.
+    """
+    import multiprocessing
+
+    sublist = salt.utils.process.SubprocessList()
+    p = multiprocessing.Process(target=_exit_immediately_target)
+    p.start()
+    sublist.add(p)
+    assert sublist.count == 1
+
+    # Wait for the child to actually exit so is_alive() flips to False.
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline and p.is_alive():
+        time.sleep(0.01)
+    assert not p.is_alive(), "child did not exit within 5s"
+
+    sublist.cleanup()
+
+    assert sublist.count == 0
+    assert sublist.processes == []
+
+
 def test_process_preimports_multiprocessing_connection_68573(tmp_path):
     """
     Regression test for issue #68573.
