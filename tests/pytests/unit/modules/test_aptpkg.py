@@ -2172,6 +2172,43 @@ def test_hold():
     }
 
 
+def test_mark_manual():
+    """
+    aptpkg.mark_manual only touches installed, automatically installed packages
+    """
+    run_all = MagicMock(
+        side_effect=[
+            {"retcode": 0, "stdout": "jq\nlibonig5\n", "stderr": ""},
+            {"retcode": 0, "stdout": "", "stderr": ""},
+        ]
+    )
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": run_all}), patch.dict(
+        aptpkg.__opts__, {"test": False}
+    ):
+        ret = aptpkg.mark_manual(pkgs=["jq", "vim"])
+    assert run_all.call_args_list[1].args[0] == ["apt-mark", "manual", "jq"]
+    assert ret["jq"]["changes"] == {"old": "auto", "new": "manual"}
+    assert ret["jq"]["result"] is True
+    assert ret["vim"]["changes"] == {}
+    assert ret["vim"]["result"] is True
+
+
+def test_mark_manual_test_mode():
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": "jq\n", "stderr": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": run_all}), patch.dict(
+        aptpkg.__opts__, {"test": True}
+    ):
+        ret = aptpkg.mark_manual("jq")
+    assert run_all.call_count == 1
+    assert ret["jq"]["result"] is None
+    assert ret["jq"]["changes"] == {}
+
+
+def test_mark_manual_no_name_pkgs():
+    with pytest.raises(SaltInvocationError):
+        aptpkg.mark_manual()
+
+
 def test_hold_no_name_pkgs():
     """
     test aptpkg.hold when we do not pass in a name or list of pkgs

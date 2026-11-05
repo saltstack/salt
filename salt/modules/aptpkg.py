@@ -1260,6 +1260,78 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     return ret
 
 
+def mark_manual(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
+    """
+    .. versionadded:: 3008.0
+
+    Mark packages as manually installed, so that ``apt autoremove`` will not
+    remove them when the package that pulled them in as a dependency is
+    removed. Packages that are not installed or are already manually installed
+    are left alone.
+
+    name
+        The name of the package, e.g., 'jq'
+
+    pkgs
+        A list of packages to mark. Must be passed as a python list.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.mark_manual jq
+        salt '*' pkg.mark_manual pkgs='["jq", "libonig5"]'
+    """
+    if not name and not pkgs:
+        raise SaltInvocationError("One of name or pkgs must be specified.")
+
+    targets = []
+    if pkgs:
+        targets.extend(next(iter(x)) if isinstance(x, dict) else x for x in pkgs)
+    else:
+        targets.append(name)
+
+    out = __salt__["cmd.run_all"](
+        ["apt-mark", "showauto"], python_shell=False, output_loglevel="trace"
+    )
+    if out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to list automatically installed packages: {out['stderr']}"
+        )
+    auto = set(out["stdout"].splitlines())
+
+    ret = {}
+    to_mark = []
+    for target in targets:
+        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
+        if target not in auto:
+            ret[target][
+                "comment"
+            ] = f"Package {target} is not automatically installed, nothing to do."
+        elif __opts__.get("test"):
+            ret[target]["result"] = None
+            ret[target]["comment"] = f"Package {target} would be marked as manual."
+        else:
+            to_mark.append(target)
+
+    if to_mark:
+        out = __salt__["cmd.run_all"](
+            ["apt-mark", "manual", *to_mark],
+            python_shell=False,
+            output_loglevel="trace",
+        )
+        for target in to_mark:
+            if out["retcode"] == 0:
+                ret[target]["changes"] = {"old": "auto", "new": "manual"}
+                ret[target]["comment"] = f"Package {target} is now marked as manual."
+            else:
+                ret[target]["result"] = False
+                ret[target][
+                    "comment"
+                ] = f"Unable to mark {target} as manual: {out['stderr']}"
+    return ret
+
+
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
     .. versionadded:: 2014.7.0
