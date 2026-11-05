@@ -230,7 +230,7 @@ def list_users(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_users", "-q"],
+        [RABBITMQCTL, "list_users", "-q", "--no-table-headers"],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
@@ -258,7 +258,7 @@ def list_vhosts(runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_vhosts", "-q"],
+        [RABBITMQCTL, "list_vhosts", "-q", "--no-table-headers"],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
@@ -285,7 +285,7 @@ def list_upstreams(runas=None):
         runas = salt.utils.user.get_user()
     ret = {}
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_parameters", "-q"],
+        [RABBITMQCTL, "list_parameters", "-q", "--no-table-headers"],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
@@ -899,7 +899,7 @@ def list_queues(runas=None, *args):
     """
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
-    cmd = [RABBITMQCTL, "list_queues", "-q"]
+    cmd = [RABBITMQCTL, "list_queues", "-q", "--no-table-headers"]
     cmd.extend(args)
     res = __salt__["cmd.run_all"](
         cmd, reset_system_locale=False, runas=runas, python_shell=False
@@ -923,7 +923,7 @@ def list_queues_vhost(vhost, runas=None, *args):
     """
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
-    cmd = [RABBITMQCTL, "list_queues", "-q", "-p", vhost]
+    cmd = [RABBITMQCTL, "list_queues", "-q", "--no-table-headers", "-p", vhost]
     cmd.extend(args)
     res = __salt__["cmd.run_all"](
         cmd, reset_system_locale=False, runas=runas, python_shell=False
@@ -949,7 +949,7 @@ def list_policies(vhost="/", runas=None):
     if runas is None and not salt.utils.platform.is_windows():
         runas = salt.utils.user.get_user()
     res = __salt__["cmd.run_all"](
-        [RABBITMQCTL, "list_policies", "-q", "-p", vhost],
+        [RABBITMQCTL, "list_policies", "-q", "--no-table-headers", "-p", vhost],
         reset_system_locale=False,
         runas=runas,
         python_shell=False,
