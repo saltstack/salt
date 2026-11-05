@@ -510,15 +510,47 @@ class Key:
             io_loop=self.io_loop,
         )
 
+    def _bucket_path(self, bucket):
+        """
+        Return (and best-effort ensure) ``<pki_dir>/<bucket>/``.
+
+        Shared primitive used by subclasses that store keys on the
+        filesystem (base :class:`Key` minion scope,
+        :class:`MasterKey` peer-master scope).  :class:`ClientKey`
+        overrides storage to use a cache bank and does not call
+        this.
+        """
+        path = os.path.join(self.pki_dir, bucket)
+        try:
+            os.makedirs(path, exist_ok=True)
+        except OSError:  # pragma: no cover - best-effort
+            pass
+        return path
+
+    def _list_bucket(self, bucket):
+        """
+        Return the sorted set of ``.pub`` filenames in a bucket with
+        the ``.pub`` suffix stripped.
+
+        Shared primitive matching :meth:`_bucket_path`.
+        """
+        path = self._bucket_path(bucket)
+        if not os.path.isdir(path):
+            return []
+        names = []
+        for entry in os.listdir(path):
+            if entry.endswith(".pub"):
+                names.append(entry[: -len(".pub")])
+        return sorted(names)
+
     def _check_minions_directories(self):
         """
         Return the minion keys directory paths
         """
-        minions_accepted = os.path.join(self.pki_dir, self.ACC)
-        minions_pre = os.path.join(self.pki_dir, self.PEND)
-        minions_rejected = os.path.join(self.pki_dir, self.REJ)
-
-        minions_denied = os.path.join(self.pki_dir, self.DEN)
+        minions_accepted = self._bucket_path(self.ACC)
+        minions_pre = self._bucket_path(self.PEND)
+        minions_rejected = self._bucket_path(self.REJ)
+        minions_denied = self._bucket_path(self.DEN)
         return minions_accepted, minions_pre, minions_rejected, minions_denied
 
     def _get_key_attrs(self, keydir, keyname, keysize, user):
@@ -1179,28 +1211,10 @@ class MasterKey(Key):
                 f"cluster_id {cluster_id!r} does not match {CLUSTER_ID_RE}"
             )
 
-    def _bucket_path(self, bucket):
-        """Return (and ensure) ``pki_dir/<bucket>/``."""
-        path = os.path.join(self.opts.get("pki_dir", ""), bucket)
-        try:
-            os.makedirs(path, exist_ok=True)
-        except OSError:  # pragma: no cover - best-effort
-            pass
-        return path
-
-    def _list_bucket(self, bucket):
-        """
-        Return the sorted set of ``.pub`` filenames in a masters bucket
-        with the ``.pub`` suffix stripped.
-        """
-        path = self._bucket_path(bucket)
-        if not os.path.isdir(path):
-            return []
-        names = []
-        for entry in os.listdir(path):
-            if entry.endswith(".pub"):
-                names.append(entry[: -len(".pub")])
-        return sorted(names)
+    # ``_bucket_path`` and ``_list_bucket`` are inherited from
+    # :class:`Key`; MasterKey only overrides the bucket CONSTANTS
+    # (ACC/PEND/REJ/DEN point at ``masters*``) and the public
+    # methods below that operate per-cluster_id instead of per-glob.
 
     def list_keys(self):
         """
