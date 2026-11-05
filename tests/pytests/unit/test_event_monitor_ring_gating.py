@@ -445,3 +445,45 @@ def test_job_new_writes_when_route_cleared():
             {"__peer_id": "m2", "jid": "anything", "minions": ["x"]},
         )
     mock_store.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# salt/key branch: intentionally NOT gated by owns_for
+# ---------------------------------------------------------------------------
+
+
+def test_salt_key_event_applies_regardless_of_route():
+    """
+    The published ring documentation says ``keys/`` / ``denied_keys/``
+    minion-key material is intentionally broadcast across every
+    master — every master must hold the bytes to verify a minion's
+    signature on auth, so sharding key metadata would break
+    positional authentication.
+
+    The implementation makes this true by having the ``salt/key``
+    branch of :meth:`EventMonitor.handle_event` not call
+    :func:`ring_membership.owns_for` at all.  Pin that property: even
+    when the operator (or a bug) has routed a ``"keys"`` data type
+    to a ring this master isn't in, the handler must still apply
+    the key change.  A regression that adds an ``owns_for("keys",
+    ...)`` gate would trip this test.
+    """
+    # Build a ring that this master is NOT in and route "keys" to it.
+    ring_membership.rebuild("keys_ring", ["other-1", "other-2"])
+    ring_membership.set_route("keys", "keys_ring")
+
+    monitor = _make_monitor(_opts("m1"))
+    with patch.object(monitor, "_apply_peer_key_change") as apply_mock:
+        _fire(
+            monitor,
+            "salt/key",
+            {
+                "__peer_id": "m2",
+                "act": "accept",
+                "id": "minion-xyz",
+                "pub": b"-----BEGIN PUBLIC KEY-----\n...dummy...\n",
+            },
+        )
+    apply_mock.assert_called_once_with(
+        "accept", "minion-xyz", b"-----BEGIN PUBLIC KEY-----\n...dummy...\n"
+    )

@@ -156,6 +156,30 @@ class TestDeterminism:
         t2 = _token("node-x", 0)
         assert t1 == t2
 
+    def test_token_derivation_matches_documented_xxhash_format(self):
+        """
+        The published ring documentation (``doc/topics/performance/
+        cache_rings.rst``) pins the VNode-token formula as
+        ``xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())``.
+        A silent swap to a different hash or layout would change which
+        master owns which key on upgrade — pin the exact format so a
+        regression trips a test rather than silently rebalancing a
+        production cluster.
+        """
+        import xxhash
+
+        for node_id, replica in [
+            ("node-x", 0),
+            ("salt-master-1", 42),
+            ("", 7),
+            ("has spaces", 149),
+        ]:
+            expected = xxhash.xxh3_64_intdigest(f"{node_id}#vnode{replica}".encode())
+            assert _token(node_id, replica) == expected, (
+                f"_token({node_id!r}, {replica}) departed from the documented "
+                f"xxh3_64_intdigest('{node_id}#vnode{replica}') encoding"
+            )
+
     def test_key_hash_deterministic(self):
         assert _key_hash("abc") == _key_hash("abc")
         assert _key_hash(b"abc") == _key_hash(b"abc")
@@ -188,6 +212,39 @@ class TestVNodeDistribution:
         d = r.distribution()
         for n in nodes:
             assert d[n] >= DEFAULT_VNODES * 0.9, f"node {n} severely under-represented"
+
+    @pytest.mark.parametrize("num_nodes", [3, 5, 10])
+    def test_key_distribution_coefficient_of_variation_under_10_percent(
+        self, num_nodes
+    ):
+        """
+        The published ring documentation claims VNodes keep the
+        **key-distribution** coefficient of variation below 10 % for
+        typical cluster sizes.  A token-count balance (already tested
+        above) does not prove this because token spacing determines
+        key assignment, not token count.
+
+        Hash 10 000 keys with ``DEFAULT_VNODES`` and assert
+        ``stddev / mean`` of per-node key counts is below 0.10.  If
+        this trips, the ring is no longer giving the balance the
+        docs promise.
+        """
+        import statistics
+
+        nodes = [f"master-{i}" for i in range(num_nodes)]
+        r = HashRing(nodes=nodes)
+        counts = {n: 0 for n in nodes}
+        for i in range(10_000):
+            counts[r.get_owner(f"jid-{i}")] += 1
+        per_node = list(counts.values())
+        mean = statistics.mean(per_node)
+        stddev = statistics.pstdev(per_node)
+        cv = stddev / mean
+        assert cv < 0.10, (
+            f"with {num_nodes} nodes and DEFAULT_VNODES={DEFAULT_VNODES} the "
+            f"key-distribution coefficient of variation is {cv:.3f} "
+            f"(counts={per_node}); docs claim < 0.10"
+        )
 
     def test_all_keys_assigned(self):
         r = make_ring("a", "b", "c", vnodes=50)
