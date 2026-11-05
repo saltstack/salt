@@ -2254,6 +2254,7 @@ def fqdns():
 
     # Possible value for h_errno defined in netdb.h
     HOST_NOT_FOUND = 1
+    TRY_AGAIN = 2
     NO_DATA = 4
 
     fqdns = set()
@@ -2267,8 +2268,9 @@ def fqdns():
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
-            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
-                # No FQDN for this IP address, so we don't need to know this all the time.
+            if err.errno in (0, HOST_NOT_FOUND, TRY_AGAIN, NO_DATA):
+                # No FQDN for this IP address (or the resolver is temporarily
+                # unavailable), so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
                 log.error("Failed to resolve address %s: %s", ip, err)
