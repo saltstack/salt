@@ -136,6 +136,11 @@ class Master(
             os.path.join(self.config["pki_dir"], "minions_denied"),
             os.path.join(self.config["pki_dir"], "minions_autosign"),
             os.path.join(self.config["pki_dir"], "minions_rejected"),
+            os.path.join(self.config["pki_dir"], "clients"),
+            os.path.join(self.config["pki_dir"], "clients_pre"),
+            os.path.join(self.config["pki_dir"], "clients_denied"),
+            os.path.join(self.config["pki_dir"], "clients_autosign"),
+            os.path.join(self.config["pki_dir"], "clients_rejected"),
             self.config["cachedir"],
             os.path.join(self.config["cachedir"], "jobs"),
             os.path.join(self.config["cachedir"], "proc"),
@@ -159,6 +164,11 @@ class Master(
                     os.path.join(self.config["cluster_pki_dir"], "minions_denied"),
                     os.path.join(self.config["cluster_pki_dir"], "minions_autosign"),
                     os.path.join(self.config["cluster_pki_dir"], "minions_rejected"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_pre"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_denied"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_autosign"),
+                    os.path.join(self.config["cluster_pki_dir"], "clients_rejected"),
                 ]
             )
             pki_dir = [self.config["pki_dir"], self.config["cluster_pki_dir"]]
@@ -352,8 +362,34 @@ class Minion(
             try:
                 self._real_start()
             except SaltClientError as exc:
+                # The minion lost its master connection and tune_in()
+                # returned without ever going through shutdown(). Destroy
+                # the MinionManager's resources (event_publisher, event,
+                # minions) deterministically here -- both before retrying
+                # and before falling through to the final break/return --
+                # instead of leaving them for __del__'s GC-time safety net,
+                # which is what logs the "unclosed publish server"/
+                # "unclosed SyncWrapper"/"unclosed publisher client"
+                # warnings. See #70175.
+                if hasattr(self.minion, "destroy"):
+                    self.minion.destroy()
                 # Restart for multi_master failover when daemonized
                 if self.options.daemon:
+                    # self.minion's io_loop was already closed by
+                    # tune_in()'s own finally clause -- re-entering
+                    # tune_in() on this same, now-stale MinionManager
+                    # would immediately raise "RuntimeError: Event loop
+                    # is closed". Build a fresh MinionManager instead
+                    # (mirroring the narrow construction step from
+                    # prepare(), NOT self.prepare() itself, which would
+                    # re-daemonize/re-fork the already-running process).
+                    # Reassign self.minion as the very next statement
+                    # after destroy(), with nothing interposed, to keep
+                    # the SIGTERM race window (see MinionManager.stop())
+                    # as tight as possible. See #70178.
+                    import salt.minion
+
+                    self.minion = salt.minion.MinionManager(self.config)
                     continue
             break
 
@@ -434,8 +470,17 @@ class ProxyMinion(
 
     def _handle_signals(self, signum, sigframe):  # pylint: disable=unused-argument
         # escalate signal to the process manager processes
-        self.minion.stop(signum, super()._handle_signals)
-        super()._handle_signals(signum, sigframe)
+        if hasattr(self.minion, "stop"):
+            # ``stop`` only *schedules* ``stop_async`` on the io_loop and hands
+            # it the parent handler to run once the graceful shutdown is done.
+            # Calling the parent handler here as well exits the process
+            # immediately, so the io_loop never gets to run ``stop_async`` --
+            # Python reports it as "coroutine 'MinionManager.stop_async' was
+            # never awaited" -- and nothing is torn down or flushed.  This
+            # mirrors what ``Minion._handle_signals`` above already does.
+            self.minion.stop(signum, super()._handle_signals)
+        else:
+            super()._handle_signals(signum, sigframe)
 
     # pylint: disable=no-member
     def prepare(self):

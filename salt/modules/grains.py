@@ -19,11 +19,13 @@ from functools import reduce  # pylint: disable=redefined-builtin
 
 import yaml
 
+import salt.utils.atomicfile
 import salt.utils.compat
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
 import salt.utils.platform
+import salt.utils.stringutils
 import salt.utils.yaml
 from salt.defaults import DEFAULT_TARGET_DELIM
 from salt.exceptions import SaltException
@@ -280,8 +282,14 @@ def setvals(grains, destructive=False, refresh_pillar=True):
             grains[key] = val
             __grains__[key] = val
     try:
-        with salt.utils.files.fopen(gfn, "w+", encoding="utf-8") as fp_:
-            salt.utils.yaml.safe_dump(grains, fp_, default_flow_style=False)
+        # Write a temporary file and rename it over the grains file, so a
+        # process killed mid-write cannot leave a truncated (empty) file behind.
+        with salt.utils.atomicfile.atomic_open(gfn, "wb") as fp_:
+            fp_.write(
+                salt.utils.stringutils.to_bytes(
+                    salt.utils.yaml.safe_dump(grains, default_flow_style=False)
+                )
+            )
     except OSError:
         log.error("Unable to write to grains file at %s. Check permissions.", gfn)
     fn_ = os.path.join(__opts__["cachedir"], "module_refresh")

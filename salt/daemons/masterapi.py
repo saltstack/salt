@@ -41,7 +41,6 @@ import salt.utils.user
 import salt.utils.verify
 import salt.wheel
 from salt.defaults import DEFAULT_TARGET_DELIM
-from salt.pillar import git_pillar
 
 try:
     import pwd
@@ -86,13 +85,7 @@ def init_git_pillar(opts):
     for opts_dict in [x for x in opts.get("ext_pillar", [])]:
         if "git" in opts_dict:
             try:
-                pillar = salt.utils.gitfs.GitPillar(
-                    opts,
-                    opts_dict["git"],
-                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
-                    global_only=git_pillar.GLOBAL_ONLY,
-                )
+                pillar = salt.utils.gitfs.GitPillar(opts, opts_dict["git"])
                 ret.append(pillar)
             except salt.exceptions.FileserverConfigError:
                 if opts.get("git_pillar_verify_config", True):
@@ -309,6 +302,7 @@ def access_keys(opts):
             if user not in keys and salt.utils.stringutils.check_whitelist_blacklist(
                 user, whitelist=acl_users
             ):
+                keyfile = os.path.join(opts["cachedir"], f".{user}_key")
                 if os.path.exists(keyfile):
                     with salt.utils.files.fopen(keyfile, "r") as fp:
                         keys[user] = salt.utils.stringutils.to_unicode(fp.read())
@@ -1214,46 +1208,152 @@ class LocalFuncs:
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data
         self.mminion = salt.minion.MasterMinion(self.opts, states=False, rend=False)
+        # Make a wheel object
+        self.wheel_ = salt.wheel.Wheel(opts)
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(opts.get("client_acl", {}))
 
     def runner(self, load):
         """
         Send a master control function back to the runner system
         """
-        # All runner opts pass through eauth
-        auth_type, err_name, key = self._prep_auth_info(load)
+        # All runner opts pass through eauth.  ``want_stacked`` returns the
+        # secondary auth axis when the load carries both PKI (``key``) and
+        # eauth/token credentials and ``stacked_auth: true`` is enabled.
+        (  # pylint: disable=unbalanced-tuple-unpacking
+            auth_type,
+            err_name,
+            key,
+            stacked_possible,
+            secondary_auth_type,
+        ) = self._prep_auth_info(load, want_stacked=True)
 
-        # Authenticate
+        # Primary authentication (token / eauth / user depending on load)
         auth_check = self.loadauth.check_authentication(load, auth_type)
         error = auth_check.get("error")
-
         if error:
-            # Authentication error occurred: do not continue.
             return {"error": error}
 
-        # Authorize
-        runner_check = self.ckminions.runner_check(
-            auth_check.get("auth_list", []), load["fun"], load["kwarg"]
-        )
-        username = auth_check.get("username")
-        if not runner_check:
-            return {
-                "error": {
-                    "name": err_name,
-                    "message": (
-                        'Authentication failure of type "{}" occurred '
-                        "for user {}.".format(auth_type, username)
-                    ),
-                }
-            }
-        elif isinstance(runner_check, dict) and "error" in runner_check:
-            # A dictionary with an error name/message was handled by ckminions.runner_check
-            return runner_check
+        # Secondary authentication for stacked mode (always ``user`` key path)
+        secondary_auth_check = None
+        if stacked_possible and secondary_auth_type == "user":
+            secondary_auth_check = self.loadauth.check_authentication(
+                load, "user", key=self.key
+            )
 
-        # Authorized. Do the job!
+        username = auth_check.get("username")
+
+        # Detect client identity.  In stacked mode the PKI identity comes
+        # from the secondary user-key check; otherwise the primary
+        # auth_check already carries it on the user-only path.
+        is_client = False
+        client_identity = None
+        if secondary_auth_check is not None and not secondary_auth_check.get("error"):
+            client_identity = secondary_auth_check.get("username")
+            if client_identity:
+                try:
+                    key_cache = salt.cache.Cache(
+                        self.opts, driver=self.opts["keys.cache_driver"]
+                    )
+                    if key_cache.fetch("client_keys", client_identity):
+                        is_client = True
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        elif auth_type == "user" and username:
+            try:
+                key_cache = salt.cache.Cache(
+                    self.opts, driver=self.opts["keys.cache_driver"]
+                )
+                if key_cache.fetch("client_keys", username):
+                    is_client = True
+                    client_identity = username
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        # If this is a client, check client ACL
+        if is_client:
+            client_id = client_identity
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist:
+                if self.client_acl.client_is_blacklisted(
+                    client_id, load["fun"], "runner", client_acl_blacklist
+                ):
+                    return {
+                        "error": {
+                            "name": "ClientAuthorizationError",
+                            "message": (
+                                f'Client "{client_id}" is blacklisted from executing '
+                                f'runner function "{load["fun"]}".'
+                            ),
+                        }
+                    }
+
+            client_decision = self.client_acl.authorize_runner(client_id, load["fun"])
+
+            if stacked_possible and auth_type in ("token", "eauth"):
+                # Stacked mode: also require the eauth user's auth_list to
+                # allow this runner.
+                runner_check = self.ckminions.runner_check(
+                    auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+                )
+                if isinstance(runner_check, dict) and "error" in runner_check:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": runner_check["error"],
+                    }
+                elif runner_check:
+                    eauth_decision = {"allowed": True, "error": None}
+                else:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": {
+                            "name": err_name,
+                            "message": (
+                                'Authentication failure of type "{}" occurred '
+                                "for user {}.".format(auth_type, username)
+                            ),
+                        },
+                    }
+                allowed, err_payload = salt.acl.stacked_authorize(
+                    client_decision, eauth_decision
+                )
+                if not allowed:
+                    return {"error": err_payload}
+            else:
+                if not client_decision["allowed"]:
+                    return {"error": client_decision["error"]}
+        else:
+            # Regular user/eauth/token - use existing authorization
+            runner_check = self.ckminions.runner_check(
+                auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+            )
+            if not runner_check:
+                return {
+                    "error": {
+                        "name": err_name,
+                        "message": (
+                            'Authentication failure of type "{}" occurred '
+                            "for user {}.".format(auth_type, username)
+                        ),
+                    }
+                }
+            elif isinstance(runner_check, dict) and "error" in runner_check:
+                # A dictionary with an error name/message was handled by ckminions.runner_check
+                return runner_check
+
+        # Authorized. Do the job!  In stacked mode the human eauth user is
+        # recorded as the invoker; otherwise fall back to the identity we
+        # authenticated with.
+        invoker = (
+            username
+            if (stacked_possible and auth_type in ("token", "eauth") and username)
+            else (client_identity or username)
+        )
         try:
             fun = load.pop("fun")
             with salt.runner.RunnerClient(self.opts) as runner_client:
-                return runner_client.asynchronous(fun, load.get("kwarg", {}), username)
+                return runner_client.asynchronous(fun, load.get("kwarg", {}), invoker)
         except Exception as exc:  # pylint: disable=broad-except
             log.exception("Exception occurred while introspecting %s", fun)
             return {
@@ -1268,40 +1368,136 @@ class LocalFuncs:
         """
         Send a master control function back to the wheel system
         """
-        # All wheel ops pass through eauth
-        auth_type, err_name, key = self._prep_auth_info(load)
+        (  # pylint: disable=unbalanced-tuple-unpacking
+            auth_type,
+            err_name,
+            key,
+            stacked_possible,
+            secondary_auth_type,
+        ) = self._prep_auth_info(load, want_stacked=True)
 
-        # Authenticate
+        # Primary authentication
         auth_check = self.loadauth.check_authentication(
             load, auth_type, key=key, show_username=True
         )
         error = auth_check.get("error")
-
         if error:
-            # Authentication error occurred: do not continue.
             return {"error": error}
 
-        # Authorize
-        username = auth_check.get("username")
-        if auth_type != "user":
-            wheel_check = self.ckminions.wheel_check(
-                auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+        # Secondary authentication for stacked mode (always ``user`` key path)
+        secondary_auth_check = None
+        if stacked_possible and secondary_auth_type == "user":
+            secondary_auth_check = self.loadauth.check_authentication(
+                load, "user", key=self.key, show_username=True
             )
-            if not wheel_check:
-                return {
-                    "error": {
-                        "name": err_name,
-                        "message": (
-                            'Authentication failure of type "{}" occurred for '
-                            "user {}.".format(auth_type, username)
-                        ),
-                    }
-                }
-            elif isinstance(wheel_check, dict) and "error" in wheel_check:
-                # A dictionary with an error name/message was handled by ckminions.wheel_check
-                return wheel_check
 
-        # Authenticated. Do the job.
+        username = auth_check.get("username")
+
+        # Detect client identity (via PKI check -- primary on user-only
+        # path, secondary when stacked).
+        is_client = False
+        client_identity = None
+        if secondary_auth_check is not None and not secondary_auth_check.get("error"):
+            client_identity = secondary_auth_check.get("username")
+            if client_identity:
+                try:
+                    key_cache = salt.cache.Cache(
+                        self.opts, driver=self.opts["keys.cache_driver"]
+                    )
+                    if key_cache.fetch("client_keys", client_identity):
+                        is_client = True
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        elif auth_type == "user" and username:
+            try:
+                key_cache = salt.cache.Cache(
+                    self.opts, driver=self.opts["keys.cache_driver"]
+                )
+                if key_cache.fetch("client_keys", username):
+                    is_client = True
+                    client_identity = username
+            except Exception:  # pylint: disable=broad-except
+                pass
+
+        # If this is a client, check client ACL
+        if is_client:
+            client_id = client_identity
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist:
+                if self.client_acl.client_is_blacklisted(
+                    client_id, load["fun"], "wheel", client_acl_blacklist
+                ):
+                    return {
+                        "error": {
+                            "name": "ClientAuthorizationError",
+                            "message": (
+                                f'Client "{client_id}" is blacklisted from executing '
+                                f'wheel function "{load["fun"]}".'
+                            ),
+                        }
+                    }
+
+            client_decision = self.client_acl.authorize_wheel(client_id, load["fun"])
+
+            if stacked_possible and auth_type in ("token", "eauth"):
+                wheel_check = self.ckminions.wheel_check(
+                    auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+                )
+                if isinstance(wheel_check, dict) and "error" in wheel_check:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": wheel_check["error"],
+                    }
+                elif wheel_check:
+                    eauth_decision = {"allowed": True, "error": None}
+                else:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": {
+                            "name": err_name,
+                            "message": (
+                                'Authentication failure of type "{}" occurred for '
+                                "user {}.".format(auth_type, username)
+                            ),
+                        },
+                    }
+                allowed, err_payload = salt.acl.stacked_authorize(
+                    client_decision, eauth_decision
+                )
+                if not allowed:
+                    return {"error": err_payload}
+            else:
+                if not client_decision["allowed"]:
+                    return {"error": client_decision["error"]}
+        else:
+            # Regular user/eauth/token - use existing authorization
+            if auth_type != "user":
+                wheel_check = self.ckminions.wheel_check(
+                    auth_check.get("auth_list", []), load["fun"], load["kwarg"]
+                )
+                if not wheel_check:
+                    return {
+                        "error": {
+                            "name": err_name,
+                            "message": (
+                                'Authentication failure of type "{}" occurred for '
+                                "user {}.".format(auth_type, username)
+                            ),
+                        }
+                    }
+                elif isinstance(wheel_check, dict) and "error" in wheel_check:
+                    # A dictionary with an error name/message was handled by ckminions.wheel_check
+                    return wheel_check
+
+        # Authenticated. Do the job.  In stacked mode record the human
+        # eauth user as the invoker; otherwise fall back to the identity
+        # we authenticated with.
+        invoker = (
+            username
+            if (stacked_possible and auth_type in ("token", "eauth") and username)
+            else (client_identity or username)
+        )
         jid = salt.utils.jid.gen_jid(self.opts)
         fun = load.pop("fun")
         tag = salt.utils.event.tagify(jid, prefix="wheel")
@@ -1309,8 +1505,10 @@ class LocalFuncs:
             "fun": f"wheel.{fun}",
             "jid": jid,
             "tag": tag,
-            "user": username,
+            "user": invoker,
         }
+        if is_client and client_identity:
+            data["client_id"] = client_identity
         try:
             self.event.fire_event(data, salt.utils.event.tagify([jid, "new"], "wheel"))
             with salt.wheel.WheelClient(self.opts) as wheel_client:
@@ -1545,12 +1743,20 @@ class LocalFuncs:
 
         return {"ret": {"jid": load["jid"], "minions": minions}, "pub": pub_load}
 
-    def _prep_auth_info(self, load):
+    def _prep_auth_info(self, load, want_stacked=False):
+        """
+        Pick the primary auth_type for ``load``.  See the sibling in
+        :mod:`salt.master` for the semantics of ``want_stacked`` and the
+        extended 5-tuple it returns.
+        """
         key = None
-        if "token" in load:
+        has_user = "key" in load
+        has_token = "token" in load
+        has_eauth = "eauth" in load
+        if has_token:
             auth_type = "token"
             err_name = "TokenAuthenticationError"
-        elif "eauth" in load:
+        elif has_eauth:
             auth_type = "eauth"
             err_name = "EauthAuthenticationError"
         else:
@@ -1558,7 +1764,16 @@ class LocalFuncs:
             err_name = "UserAuthenticationError"
             key = self.key
 
-        return auth_type, err_name, key
+        if not want_stacked:
+            return auth_type, err_name, key
+
+        stacked_possible = False
+        secondary_auth_type = None
+        if self.opts.get("stacked_auth") and has_user and (has_token or has_eauth):
+            stacked_possible = True
+            secondary_auth_type = "user"
+
+        return auth_type, err_name, key, stacked_possible, secondary_auth_type
 
     def destroy(self):
         if self.event is not None:

@@ -243,9 +243,9 @@ the capabilities of the Salt Syndic. The available methods are as follows:
 run_function
 ~~~~~~~~~~~~
 
-Run a single salt function and condition the return down to match the
-behavior of the raw function call. This will run the command and only
-return the results from a single minion to verify.
+Run a single salt function on the minion behind the syndic, through the
+``salt`` CLI on the syndic master, and condition the return down to match
+the behavior of the raw function call.
 
 
 .. _integration-class-examples:
@@ -393,11 +393,21 @@ on a minion event bus.
 Syndic Example via SyndicCase
 -----------------------------
 
-Testing Salt's Syndic can be done via the SyndicCase test class:
+Testing Salt's Syndic can be done via the SyndicCase test class. The test
+suite doesn't start the syndic master or the syndic, so the test module starts
+them:
 
 .. code-block:: python
 
+    import pytest
+
     from tests.support.case import SyndicCase
+
+
+    @pytest.fixture(scope="module", autouse=True)
+    def salt_syndic(salt_syndic_master_factory, salt_syndic_factory):
+        with salt_syndic_master_factory.started(), salt_syndic_factory.started():
+            yield salt_syndic_factory
 
 
     class TestSyndic(SyndicCase):

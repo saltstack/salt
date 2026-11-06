@@ -13,3 +13,9 @@ scrape_configs:
   - job_name: 'salt-fds'
     static_configs:
       - targets: ['salt-master:8002']
+
+  # The master's own metrics when ``metrics.exporter: prometheus``.  The
+  # target is simply down when that exporter is not enabled.
+  - job_name: 'salt-metrics'
+    static_configs:
+      - targets: ['salt-master:9464']

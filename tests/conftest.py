@@ -1254,15 +1254,31 @@ def salt_syndic_master_factory(
 
 @pytest.fixture(scope="session")
 def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
-    config_defaults = {"master": None, "minion": None, "syndic": None}
-    with salt.utils.files.fopen(os.path.join(RUNTIME_VARS.CONF_DIR, "syndic")) as rfh:
-        opts = yaml.deserialize(rfh.read())
-
-        opts["hosts.file"] = os.path.join(RUNTIME_VARS.TMP, "hosts")
-        opts["aliases.file"] = os.path.join(RUNTIME_VARS.TMP, "aliases")
-        opts["transport"] = salt_syndic_master_factory.config["transport"]
-        config_defaults["syndic"] = opts
+    # The syndic subscribes to the master of masters on its own master's
+    # publish_port, so both masters need the same publish_port, and the
+    # syndic's master listens on another address. The syndic's config goes
+    # in its master's master.d, so the master picks these up too.
+    interface = "127.0.0.2"
+    publish_port = salt_syndic_master_factory.config["publish_port"]
+    config_defaults = {
+        "transport": salt_syndic_master_factory.config["transport"],
+        "interface": interface,
+        "publish_port": publish_port,
+    }
     config_overrides = {"log_level_logfile": "info"}
+    master_overrides = {
+        "fips_mode": FIPS_TESTRUN,
+        "publish_signing_algorithm": (
+            "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+        ),
+    }
+    minion_overrides = {
+        "master": interface,
+        "publish_port": publish_port,
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
     factory_kwargs = {}
     if salt_factories.system_service is False:
         factory_kwargs["extra_cli_arguments_after_first_start_failure"] = [
@@ -1273,8 +1289,14 @@ def salt_syndic_factory(salt_factories, salt_syndic_master_factory):
         "syndic",
         defaults=config_defaults,
         overrides=config_overrides,
+        master_overrides=master_overrides,
+        minion_overrides=minion_overrides,
         **factory_kwargs,
     )
+    # The syndic starts its own master and minion before it starts, but
+    # doesn't stop them when it's terminated.
+    factory.after_terminate(factory.minion.terminate)
+    factory.after_terminate(factory.master.terminate)
     return factory
 
 

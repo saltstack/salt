@@ -547,6 +547,61 @@ def test_run_batch_wait_delays_next_dispatch(batch):
     assert spin_sleeps[0] >= 1
 
 
+def test_run_waits_for_live_iterator_past_timeout_window(batch):
+    """
+    A synchronous batch must not free a slot merely because the master's
+    timeout window elapsed while the return iterator is still tracking the
+    job.
+
+    The ``None`` values model an iterator which has not received the job
+    return yet (including while ``saltutil.find_job`` reports it as running).
+    """
+    batch.opts = {
+        "batch": "1",
+        "timeout": 5,
+        "fun": "test.ping",
+        "arg": [],
+        "gather_job_timeout": 10,
+    }
+    batch.gather_minions = MagicMock(
+        return_value=[["m1", "m2"], [], []],
+    )
+
+    first_returned = False
+    dispatches = []
+
+    def _make_iter(minions, *args, **kwargs):
+        nonlocal first_returned
+        targets = list(minions)
+        dispatches.append((targets, first_returned))
+
+        def _ret_iter():
+            nonlocal first_returned
+            if targets == ["m1"]:
+                # Batch._poll_iterators consumes at most six empty polls per
+                # pass. Keep this iterator alive across two passes so the
+                # clock can advance beyond timeout + gather_job_timeout.
+                for _ in range(12):
+                    yield None
+                first_returned = True
+                yield {"m1": {"ret": True, "retcode": 0, "failed": False}}
+            else:
+                yield {"m2": {"ret": True, "retcode": 0, "failed": False}}
+
+        return _ret_iter()
+
+    batch.local.cmd_iter_no_block = MagicMock(side_effect=_make_iter)
+
+    # create_batch_state and the first dispatch occur at t=1. Subsequent
+    # progress checks are beyond the 15-second timeout window.
+    clock = iter([1.0, 1.0, 17.0])
+    with patch("salt.cli.batch.time.time", side_effect=lambda: next(clock, 17.0)):
+        ret = list(Batch.run(batch))
+
+    assert len(ret) == 2
+    assert dispatches == [(["m1"], False), (["m2"], True)]
+
+
 def test_run_does_not_write_to_master_cachedir(batch):
     """
     Regression test for issue #69418.

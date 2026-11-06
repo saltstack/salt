@@ -1,5 +1,7 @@
+import os
 import shlex
 import stat
+import time
 from textwrap import dedent
 
 import pytest
@@ -323,3 +325,64 @@ def test_script_pipe_spaces_runas(modules, pipe_script_with_space_runas, account
         password=account.password,
     )
     assert result["stdout"] == "1"
+
+
+@pytest.fixture
+def bg_marker_script(state_tree, tmp_path):
+    """
+    Script that writes a marker file (and its own path) for bg=True tests.
+    """
+    marker = tmp_path / "bg_marker.txt"
+    if salt.utils.platform.is_windows():
+        file_name = "bg_marker.bat"
+        # %~f0 is the full path to this bat file
+        contents = dedent(
+            f"""\
+            @echo off
+            echo bg-ok^|%~f0>"{marker}"
+            """
+        )
+    else:
+        file_name = "bg_marker.sh"
+        contents = dedent(
+            f"""\
+            #!/bin/sh
+            printf 'bg-ok|%s\\n' "$0" > "{marker}"
+            """
+        )
+    with pytest.helpers.temp_file(file_name, contents, state_tree) as script_path:
+        if not salt.utils.platform.is_windows():
+            script_path.chmod(0o755)
+        yield file_name, marker
+
+
+def _wait_for_marker(marker_path, timeout=30):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if marker_path.is_file() and marker_path.stat().st_size > 0:
+            return marker_path.read_text(encoding="utf-8").strip()
+        time.sleep(0.1)
+    raise AssertionError(f"Marker file not written within {timeout}s: {marker_path}")
+
+
+def _wait_until_gone(path, timeout=30):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not os.path.exists(path):
+            return
+        time.sleep(0.1)
+    raise AssertionError(f"Temp path still present after {timeout}s: {path}")
+
+
+def test_script_bg_writes_marker_and_cleans_temp(modules, bg_marker_script):
+    """
+    Regression for #69959 / #50273: cmd.script with bg=True must leave the
+    tempfile in place until the child runs, then clean it up.
+    """
+    file_name, marker = bg_marker_script
+    ret = modules.cmd.script(f"salt://{file_name}", bg=True)
+    assert isinstance(ret["pid"], int)
+    contents = _wait_for_marker(marker)
+    payload, script_path = contents.split("|", 1)
+    assert payload == "bg-ok"
+    _wait_until_gone(script_path)

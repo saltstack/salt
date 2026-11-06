@@ -105,6 +105,28 @@ def glob_match(match):
         return skey.glob_match(match)
 
 
+def _fail_on_no_match(matched, keydirs):
+    """
+    Give the calling wheel function a non-zero retcode -- and therefore
+    ``success=False`` instead of a silent success -- when ``matched`` names no
+    key the command can act on or that is already in its target state (#63477).
+
+    ``matched`` is a ``status -> key-names`` mapping (``glob_match``'s result
+    for a glob, or the caller-supplied ``match_dict``). ``keydirs`` is the set
+    of key states that count as success for the command: the states it moves
+    keys out of, plus the target state, so that re-asserting a key already in
+    its final state stays an idempotent success (important for ``saltmod.wheel``
+    orchestration). A non-existent minion, or a key that only exists in a state
+    the command will not touch (e.g. rejecting an accepted key without
+    ``include_accepted``), is reported as a failure rather than a silent
+    success.
+    """
+    if not isinstance(matched, dict) or not any(
+        matched.get(keydir) for keydir in keydirs
+    ):
+        __context__["retcode"] = 1
+
+
 def accept(match, include_rejected=False, include_denied=False):
     """
     Accept keys based on a glob match. Returns a dictionary.
@@ -126,6 +148,12 @@ def accept(match, include_rejected=False, include_denied=False):
         {'minions': ['minion1']}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.ACC]
+        if include_rejected:
+            keydirs.append(skey.REJ)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.accept(
             match, include_rejected=include_rejected, include_denied=include_denied
         )
@@ -166,6 +194,12 @@ def accept_dict(match, include_rejected=False, include_denied=False):
         {'minions': ['jerry', 'stuart', 'bob']}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.ACC]
+        if include_rejected:
+            keydirs.append(skey.REJ)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(match, keydirs)
         return skey.accept(
             match_dict=match,
             include_rejected=include_rejected,
@@ -186,6 +220,9 @@ def delete(match):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        # delete acts on a key in any state, so any matching key is actionable
+        keydirs = [skey.ACC, skey.PEND, skey.REJ, skey.DEN]
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.delete_key(match)
 
 
@@ -240,6 +277,8 @@ def delete_dict(match):
         ... ])
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.ACC, skey.PEND, skey.REJ, skey.DEN]
+        _fail_on_no_match(match, keydirs)
         return skey.delete_key(match_dict=match)
 
 
@@ -264,6 +303,12 @@ def reject(match, include_accepted=False, include_denied=False):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.REJ]
+        if include_accepted:
+            keydirs.append(skey.ACC)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(skey.glob_match(match), keydirs)
         return skey.reject(
             match, include_accepted=include_accepted, include_denied=include_denied
         )
@@ -301,6 +346,12 @@ def reject_dict(match, include_accepted=False, include_denied=False):
         {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
     """
     with salt.key.get_key(__opts__) as skey:
+        keydirs = [skey.PEND, skey.REJ]
+        if include_accepted:
+            keydirs.append(skey.ACC)
+        if include_denied:
+            keydirs.append(skey.DEN)
+        _fail_on_no_match(match, keydirs)
         return skey.reject(
             match_dict=match,
             include_accepted=include_accepted,
@@ -414,6 +465,10 @@ def gen(id_=None, keysize=2048):
         -----END RSA PRIVATE KEY-----'}
 
     """
+    # keysize may arrive as a string (for example from the salt-api /keys
+    # endpoint, where cherrypy form values are always strings). Coerce it and
+    # honor the documented 2048-bit minimum before generating the key pair.
+    keysize = max(2048, int(keysize))
     priv, pub = salt.crypt.gen_keys(keysize)
     return {"priv": priv, "pub": pub}
 
@@ -485,3 +540,315 @@ def gen_signature(priv, pub, signature_path, auto_create=False, keysize=None):
     """
     with salt.key.get_key(__opts__) as skey:
         return skey.gen_keys_signature(priv, pub, signature_path, auto_create, keysize)
+
+
+# Client key management functions for remote Salt CLI authentication
+
+
+def list_client(match):
+    """
+    List all the client keys under a named status. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The type of keys to list. The ``pre``, ``un``, and ``unaccepted``
+        options will list unaccepted/unsigned keys. ``acc`` or ``accepted`` will
+        list accepted/signed keys. ``rej`` or ``rejected`` will list rejected keys.
+        Finally, ``all`` will list all keys.
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.list_client', ['accepted'])
+        {'clients': ['client1', 'client2', 'client3']}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.list_status(match)
+
+
+def list_all_client():
+    """
+    List all the client keys. Returns a dictionary containing lists of the clients
+    in each salt-key category, including ``clients``, ``clients_rejected``,
+    ``clients_denied``, etc. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.list_all_client')
+        {'clients_rejected': [], 'clients_denied': [], 'clients_pre': [],
+        'clients': ['client1', 'client2', 'client3']}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.list_keys()
+
+
+def glob_match_client(match):
+    """
+    List all the client keys based on a glob match.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The glob pattern to match client keys against.
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.glob_match_client', ['web-*'])
+        {'clients': ['web-1', 'web-2']}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.glob_match(match)
+
+
+def accept_client(match, include_rejected=False, include_denied=False):
+    """
+    Accept client keys based on a glob match. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The glob match of keys to accept.
+
+    include_rejected
+        To include rejected keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.accept_client', ['client1'])
+        {'clients': ['client1']}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.accept(
+            match, include_rejected=include_rejected, include_denied=include_denied
+        )
+
+
+def accept_dict_client(match, include_rejected=False, include_denied=False):
+    """
+    Accept client keys based on a dict of keys. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The dictionary of keys to accept.
+
+    include_rejected
+        To include rejected keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    Example to move a list of keys from the ``clients_pre`` (pending) directory
+    to the ``clients`` (accepted) directory:
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.accept_dict_client',
+        {
+            'clients_pre': [
+                'admin1',
+                'admin2',
+                'operator1',
+            ],
+        })
+        {'clients': ['admin1', 'admin2', 'operator1']}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.accept(
+            match_dict=match,
+            include_rejected=include_rejected,
+            include_denied=include_denied,
+        )
+
+
+def delete_client(match):
+    """
+    Delete client keys based on a glob match. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The glob match of keys to delete.
+
+    .. code-block:: python
+
+        >>> wheel.cmd_async({'fun': 'key.delete_client', 'match': 'client1'})
+        {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.delete_key(match)
+
+
+def delete_dict_client(match):
+    """
+    Delete client keys based on a dict of keys. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The dictionary of keys to delete.
+
+    .. code-block:: python
+
+        >>> wheel.cmd_async({'fun': 'key.delete_dict_client',
+        'match': {
+            'clients': [
+                'admin1',
+                'admin2',
+                'operator1',
+            ],
+        }})
+        {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.delete_key(match_dict=match)
+
+
+def reject_client(match, include_accepted=False, include_denied=False):
+    """
+    Reject client keys based on a glob match. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The glob match of keys to reject.
+
+    include_accepted
+        To include accepted keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    .. code-block:: python
+
+        >>> wheel.cmd_async({'fun': 'key.reject_client', 'match': 'client1'})
+        {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.reject(
+            match, include_accepted=include_accepted, include_denied=include_denied
+        )
+
+
+def reject_dict_client(match, include_accepted=False, include_denied=False):
+    """
+    Reject client keys based on a dict of keys. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The dictionary of keys to reject.
+
+    include_accepted
+        To include accepted keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    include_denied
+        To include denied keys in the match along with pending keys, set this
+        to ``True``. Defaults to ``False``.
+
+    .. code-block:: python
+
+        >>> wheel.cmd_async({'fun': 'key.reject_dict_client',
+        'match': {
+            'clients': [
+                'untrusted1',
+                'untrusted2',
+            ],
+        }})
+        {'jid': '20160826201244808521', 'tag': 'salt/wheel/20160826201244808521'}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.reject(
+            match_dict=match,
+            include_accepted=include_accepted,
+            include_denied=include_denied,
+        )
+
+
+def key_str_client(match):
+    r"""
+    Return information about the client key. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The key to return information about.
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.key_str_client', ['client1'])
+        {'clients': {'client1': '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0B
+        ...
+        TWugEQpPt\niQIDAQAB\n-----END PUBLIC KEY-----'}}
+
+    .. versionadded:: 3009.0
+    """
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.key_str(match)
+
+
+def finger_client(match, hash_type=None):
+    """
+    Return the matching client key fingerprints. Returns a dictionary.
+
+    Client keys are used for remote Salt CLI authentication, separate from
+    minion keys.
+
+    match
+        The key for which to retrieve the fingerprint.
+
+    hash_type
+        The hash algorithm used to calculate the fingerprint
+
+    .. code-block:: python
+
+        >>> wheel.cmd('key.finger_client', ['client1'])
+        {'clients': {'client1': '5d:f6:79:43:5e:d4:42:3f:57:b8:45:a8:7e:a4:6e:ca'}}
+
+    .. versionadded:: 3009.0
+    """
+    if hash_type is None:
+        hash_type = __opts__["hash_type"]
+
+    with salt.key.ClientKey(__opts__) as ckey:
+        return ckey.finger(match, hash_type)

@@ -254,8 +254,11 @@ def set_probes(
     """
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "set_probes")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available("set_probes", napalm_device)
     return __salt__["net.load_template"](
-        "set_probes",
+        resolved,
         probes=probes,
         test=test,
         commit=commit,
@@ -310,8 +313,11 @@ def delete_probes(
     """
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "delete_probes")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available("delete_probes", napalm_device)
     return __salt__["net.load_template"](
-        "delete_probes",
+        resolved,
         probes=probes,
         test=test,
         commit=commit,
@@ -367,8 +373,13 @@ def schedule_probes(
     """
 
     # pylint: disable=undefined-variable
+    resolved = salt.utils.napalm.template_path(napalm_device, "schedule_probes")
+    if resolved is None:
+        return salt.utils.napalm.template_not_available(
+            "schedule_probes", napalm_device
+        )
     return __salt__["net.load_template"](
-        "schedule_probes",
+        resolved,
         probes=probes,
         test=test,
         commit=commit,

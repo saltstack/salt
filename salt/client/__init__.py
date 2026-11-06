@@ -32,6 +32,7 @@ import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
 import salt.utils.args
+import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
@@ -224,6 +225,7 @@ def get_local_client(
     io_loop=None,
     auto_reconnect=False,
     listen=False,
+    profile=None,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -251,8 +253,6 @@ def get_local_client(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
 
-    :param bool keep_loop: Do not destroy the event loop when closing the event
-                           subsriber.
 
     :param bool auto_reconnect: When True the event subscriber will reconnect
                                 automatically if a disconnect error is raised.
@@ -270,10 +270,64 @@ def get_local_client(
         # Late import to prevent circular import
         import salt.config
 
-        opts = salt.config.client_config(c_path)
+        opts = salt.config.client_config(c_path, profile=profile)
 
     # TODO: AIO core is separate from transport
     return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect,
+        listen=listen,
+    )
+
+
+def get_remote_client(
+    c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+    mopts=None,
+    skip_perm_errors=False,
+    io_loop=None,
+    auto_reconnect=False,
+    listen=False,
+    profile=None,
+):
+    """
+    Create a RemoteClient for remote CLI authentication.
+
+    The RemoteClient authenticates with the Salt master using AES encryption,
+    similar to how minions authenticate. Client keys are managed separately
+    from minion keys and must be manually accepted on the master.
+
+    :param str c_path: Path to the master config file
+    :param dict mopts: Master options dictionary (overrides config file)
+    :param bool skip_perm_errors: Skip permission errors when accessing files
+    :param IOLoop io_loop: Tornado IOLoop to use
+    :param bool auto_reconnect: Automatically reconnect on disconnect
+    :param bool listen: Start listening for events immediately
+    :param str profile: Connection profile to use from /etc/salt/client
+
+    :return: Configured RemoteClient instance
+    :rtype: RemoteClient
+
+    .. code-block:: python
+
+        client = salt.client.get_remote_client()
+        ret = client.cmd('*', 'test.ping')
+
+        # With profile
+        client = salt.client.get_remote_client(profile='prod')
+        ret = client.cmd('*', 'test.ping')
+    """
+    if mopts:
+        opts = mopts
+    else:
+        # Late import to prevent circular import
+        import salt.config
+
+        opts = salt.config.client_config(c_path, profile=profile)
+
+    # TODO: AIO core is separate from transport
+    return RemoteClient(
         mopts=opts,
         skip_perm_errors=skip_perm_errors,
         io_loop=io_loop,
@@ -552,13 +606,13 @@ class LocalClient:
             raise SaltClientError(
                 "The salt master could not be contacted. Is master running?"
             )
-        except AuthenticationError as err:
+        except AuthenticationError:  # pylint: disable=try-except-raise
             raise
-        except AuthorizationError as err:
+        except AuthorizationError:  # pylint: disable=try-except-raise
             raise
-        except Exception as general_exception:  # pylint: disable=broad-except
-            # Convert to generic client error and pass along message
-            raise SaltClientError(general_exception)
+        # except Exception as general_exception:  # pylint: disable=broad-except
+        #    # Convert to generic client error and pass along message
+        #    raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data, listen=listen)
 
@@ -2089,7 +2143,6 @@ class LocalClient:
             salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
-
         with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
@@ -2282,6 +2335,276 @@ class LocalClient:
 
     def __exit__(self, *args):
         self.destroy()
+
+
+class RemoteClient(LocalClient):
+    def __init__(
+        self,
+        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        mopts=None,
+        skip_perm_errors=False,
+        io_loop=None,
+        keep_loop=False,
+        auto_reconnect=False,
+        listen=False,
+    ):
+        # If mopts not provided, load from config file
+        if mopts is None:
+            mopts = salt.config.client_config(c_path)
+
+        # Update with client-specific settings
+        mopts.update(
+            id=mopts.get("id", "client"),  # Use configured ID or default to "client"
+            __role="client",
+            acceptance_wait_time=mopts.get("acceptance_wait_time", 30),
+            acceptance_wait_time_max=mopts.get("acceptance_wait_time_max", 30),
+            verify_master_pubkey_sign=False,
+            always_verify_signature=False,
+        )
+        super().__init__(
+            c_path, mopts, skip_perm_errors, io_loop, keep_loop, auto_reconnect, listen
+        )
+
+        # Replace IPC event system with network event subscriber
+        # This allows RemoteClient to work from truly remote machines
+        self._use_network_events = True
+        self._setup_network_events(listen)
+
+    def returns_for_job(self, jid):
+        """
+        Master-local job-cache check that LocalClient uses to verify a
+        published jid landed in the returner store.  On a truly remote
+        client we have no local access to the master's job cache, so
+        trust that the publish succeeded if we received a jid.
+        """
+        return [{"jid": jid}]
+
+    def _setup_network_events(self, listen):
+        """
+        Set up network-based event subscription for remote clients.
+
+        Replaces the IPC event system with an authenticated network
+        subscriber that works from remote machines.
+        """
+        from salt.utils import client_event
+
+        # Destroy the IPC event subscriber created by LocalClient
+        if self.event:
+            self.event.destroy()
+
+        # Create network event subscriber
+        self.event = client_event.ClientEventSubscriber(self.opts)
+
+        if listen:
+            self.event.connect()
+
+    def pub(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        jid="",
+        timeout=5,
+        listen=False,
+        **kwargs,
+    ):
+        """
+        Take the required arguments and publish the given command.
+        Arguments:
+            tgt:
+                The tgt is a regex or a glob used to match up the ids on
+                the minions. Salt works by always publishing every command
+                to all of the minions and then the minions determine if
+                the command is for them based on the tgt value.
+            fun:
+                The function name to be called on the remote host(s), this
+                must be a string in the format "<modulename>.<function name>"
+            arg:
+                The arg option needs to be a tuple of arguments to pass
+                to the calling function, if left blank
+        Returns:
+            jid:
+                A string, as returned by the publisher, which is the job
+                id, this will inform the client where to get the job results
+            minions:
+                A set, the targets that the tgt passed should match.
+        """
+        # RemoteClient does not depend on the master's IPC publisher socket
+        # (that check is appropriate for LocalClient on the master host).
+        # The connection to the master is via network transport below.
+
+        payload_kwargs = self._prep_pub(
+            tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
+        )
+
+        # Advertise the client identity in two places because
+        # ``ClearFuncs.publish`` reads auth/eauth material out of
+        # ``clear_load["kwargs"]`` (the nested dict) when calling
+        # :meth:`MWorker._prep_auth_info`, while runner/wheel/batch
+        # endpoints read it off the top of ``clear_load``.  Setting
+        # both lets a single ``_prep_auth_info`` implementation find
+        # ``client_id`` regardless of which dispatcher is live.
+        payload_kwargs["client_id"] = self.opts["id"]
+        payload_kwargs.setdefault("kwargs", {})
+        if isinstance(payload_kwargs["kwargs"], dict):
+            payload_kwargs["kwargs"]["client_id"] = self.opts["id"]
+        # ``LocalClient._prep_pub`` always injects ``key=self.key``.
+        # On a remote workstation ``self.key`` is ``""`` (the master's
+        # ``.root_key`` file isn't readable), and leaving that empty
+        # string in the payload makes :meth:`MWorker._prep_auth_info`
+        # treat it as a failed user-auth attempt instead of recognising
+        # the client's PKI identity.  Drop the empty value here so the
+        # master falls into the ``auth_type == "client"`` path.
+        if not payload_kwargs.get("key"):
+            payload_kwargs.pop("key", None)
+
+        # Use master address from config, not interface (for remote clients)
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
+        )
+        # AES channel: the ReqChannel does the standard PKI handshake
+        # (minion-style sign-in using ``pki_dir/client.pem``, auto-
+        # generated on first use and accepted on the master via the
+        # ``client_keys`` acceptance workflow) and encrypts the entire
+        # payload with the resulting session key.  Eauth credentials
+        # inside the inner load are therefore protected on the wire.
+        # The master's :meth:`salt.master.MWorker._handle_payload_inner`
+        # bridges AES-encrypted ``publish`` (and ``runner``/``wheel``/
+        # ``mk_token``/``get_token``) cmds whose authenticated sender id
+        # is a known client over to :meth:`ClearFuncs.publish`, so eauth
+        # authorization still runs there.
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri
+        ) as channel:
+            try:
+                # For network events, ensure we're connected.  Prefer
+                # token-auth when a Salt token is in the publish payload
+                # (eauth-only remote clients that have no client.pem to
+                # sign the PKI handshake with); fall back to PKI auth
+                # otherwise.  LocalClient._prep_pub nests kwargs under
+                # ``payload_kwargs["kwargs"]``, so check both locations.
+                if listen and self._use_network_events:
+                    if not self.event.authenticated:
+                        inner_kwargs = payload_kwargs.get("kwargs") or {}
+                        salt_token = payload_kwargs.get("token") or inner_kwargs.get(
+                            "token"
+                        )
+                        salt_eauth = payload_kwargs.get("eauth") or inner_kwargs.get(
+                            "eauth"
+                        )
+                        if salt_token:
+                            self.event.connect(salt_token=salt_token, eauth=salt_eauth)
+                        else:
+                            self.event.connect()
+                # For IPC events (shouldn't happen), use original logic
+                elif listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+
+                payload = channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError as err:
+                log.error(err)
+                raise SaltReqTimeoutError(
+                    "Salt request timed out. The master is not responding. You "
+                    "may need to run your command with `--async` in order to "
+                    "bypass the congested event bus. With `--async`, the CLI tool "
+                    "will print the job id (jid) and exit immediately without "
+                    "listening for responses. You can then use "
+                    "`salt-run jobs.lookup_jid` to look up the results of the job "
+                    "in the job cache later."
+                )
+
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    return payload
+                self.key = key
+                payload_kwargs["key"] = self.key
+                payload = channel.send(payload_kwargs)
+
+            error = payload.pop("error", None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get("name", "")
+                    err_msg = error.get("message", "")
+                    if err_name == "AuthenticationError":
+                        raise AuthenticationError(err_msg)
+                    elif err_name == "AuthorizationError":
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
+                return payload
+
+        result = {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+
+        # Subscribe to job events if using network events
+        if self._use_network_events and listen and "jid" in result:
+            self.event.subscribe_job(result["jid"])
+
+        return result
+
+    def __read_master_key(self):
+        """
+        Read in the rotating master authentication key
+
+        This method is not expected to be called for RemoteClient as it
+        uses client authentication keys instead of the master key.
+        """
+        raise RuntimeError(
+            "Unexpected method call: RemoteClient should not read master key"
+        )
+
+    def batch_adopt(self, batch_jid, state, **auth_kwargs):
+        """
+        Ask the master to adopt a batch state blob built on this client.
+
+        Routes to :meth:`salt.master.ClearFuncs.batch_adopt` via the
+        standard AES bridge used by publish/runner/wheel.  Enables
+        ``salt --batch --async`` from a workstation: the client runs
+        ``gather_minions`` and publishes the first sub-batch locally,
+        then hands the composed BatchState dict (with
+        ``driver="master"``) to the master so :class:`BatchManager`
+        can own cachedir writes and drive subsequent sub-batches.
+
+        :param str batch_jid:
+            The JID assigned to the batch run.
+
+        :param dict state:
+            A BatchState dict as returned by
+            :func:`salt.utils.batch_state.create_batch_state` with
+            ``driver="master"`` set.
+
+        :param auth_kwargs:
+            Eauth fields (``eauth``/``username``/``password`` or
+            ``token``) consumed by ``ClearFuncs._prep_auth_info`` on
+            the master.
+
+        :raises SaltClientError: if the master rejects the request.
+        """
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
+        )
+        load = {
+            "cmd": "batch_adopt",
+            "id": self.opts["id"],
+            "batch_jid": batch_jid,
+            "state": state,
+        }
+        load.update(auth_kwargs)
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri
+        ) as channel:
+            ret = channel.send(load)
+        if isinstance(ret, dict) and "error" in ret:
+            salt.utils.error.raise_error(**ret["error"])
+        return ret
 
 
 class FunctionWrapper(dict):

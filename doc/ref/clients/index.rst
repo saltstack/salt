@@ -125,3 +125,80 @@ SSHClient
 
 .. autoclass:: salt.client.ssh.client.SSHClient
     :members: cmd, cmd_iter
+
+.. _remote-clients:
+
+Remote clients
+==============
+
+The ``*Client`` classes above assume the Python process is running on the Salt
+master itself: they publish jobs through the master's local IPC sockets and
+read returns directly from the master's job cache and event bus. That model
+is not available from an operator workstation that only has a network path to
+the master.
+
+The remote client classes mirror the master-local clients, but each call
+travels over the same AES-authenticated ``ReqChannel`` that a minion uses to
+talk to the master. The workstation presents a PKI identity (its own key pair
+under the client ``pki_dir``) during the sign-in handshake, and then layers
+eauth / token credentials inside the encrypted payload so the master's
+``ClearFuncs`` endpoint can authorize the call. Minion job returns come back
+over an authenticated network event subscription instead of the master's
+local IPC event bus.
+
+These clients are selected automatically by the CLI entry points
+(``salt``, ``salt-run``, ``salt-key``) when the loaded config has
+``__role: client``. :func:`salt.config.client_config` is the loader for that
+config file -- it is read from ``/etc/salt/client`` by default, and its
+presence is what distinguishes a workstation install from a master install.
+Programmatic callers that want to force the remote variant can load the same
+config explicitly and pass it to the client constructor.
+
+For end-user documentation on configuring a workstation and running Salt
+commands against a remote master, see ``doc/topics/execution/remote_execution.rst``.
+
+RemoteClient
+------------
+
+Remote equivalent of :class:`~salt.client.LocalClient` used by the ``salt``
+command on an operator workstation. Publishes jobs through the master's
+authenticated ``ReqChannel`` instead of the master-local IPC publisher and
+subscribes to minion returns over the network event bus.
+
+.. autoclass:: salt.client.RemoteClient
+    :members: cmd, run_job, cmd_async, cmd_cli, cmd_subset, cmd_batch,
+        cmd_iter, cmd_iter_no_block
+
+RemoteRunnerClient
+------------------
+
+Remote equivalent of :class:`~salt.runner.RunnerClient` used by ``salt-run``
+on an operator workstation. Dispatches runner calls to the master's
+``ClearFuncs.runner`` endpoint and receives the result via the authenticated
+network event subscription.
+
+.. autoclass:: salt.runner.RemoteRunnerClient
+    :members: cmd, cmd_sync, master_call
+
+RemoteRunner
+------------
+
+CLI driver for remote ``salt-run``. Subclass of
+:class:`~salt.runner.RemoteRunnerClient` that mirrors
+:class:`~salt.runner.Runner` but routes every call through the remote
+dispatch path.
+
+.. autoclass:: salt.runner.RemoteRunner
+    :members: run
+
+RemoteWheelClient
+-----------------
+
+Remote equivalent of :class:`~salt.wheel.WheelClient` used by ``salt-key``
+and other wheel operations on an operator workstation. Sends wheel calls to
+the master's ``ClearFuncs.wheel`` endpoint; the master's wheel endpoint
+blocks server-side and returns the full ``{tag, data}`` response inline for
+synchronous calls.
+
+.. autoclass:: salt.wheel.RemoteWheelClient
+    :members: cmd, cmd_sync, cmd_async, master_call

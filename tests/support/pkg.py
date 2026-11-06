@@ -1373,6 +1373,16 @@ class SaltPkgInstall:
                 except subprocess.TimeoutExpired:
                     log.warning("launchctl timed out stopping %s", svc_name)
 
+            # The macOS pkg postinstall drops /etc/paths.d/salt, but that file
+            # is only honored by /usr/libexec/path_helper, which runs from
+            # /etc/profile in login shells. GitHub Actions step shells are
+            # non-login, so the pytest process inherits a PATH without
+            # /opt/salt and shutil.which('salt-master') returns None in
+            # saltfactories' get_salt_script_path fallback. install() already
+            # calls update_process_path() for this reason; install_previous()
+            # was missing the same call on this branch.
+            self.update_process_path()
+
     def uninstall(self):
         pkg = self.pkgs[0]
         if platform.is_windows() and self.file_ext:
