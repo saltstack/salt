@@ -320,6 +320,25 @@ def clear_lock(clear_func, role, remote=None, lock_type="update"):
     return clear_func(remote=remote, lock_type=lock_type)
 
 
+def _matches_prefix(path, prefix):
+    """
+    Return True if ``path`` matches ``prefix``.
+
+    A prefix ending in ``/`` is treated as a directory and only matches
+    entries beneath it (not siblings that merely share the leading characters,
+    e.g. ``a/b/c/`` must not match ``a/b/c_file``). Otherwise a plain string
+    prefix match is used, as before.
+    """
+    if not prefix:
+        return True
+    stripped = prefix.strip("/")
+    if not stripped:
+        return True
+    if prefix.endswith("/"):
+        return path.startswith(stripped + "/")
+    return path.startswith(stripped)
+
+
 class Fileserver:
     """
     Create a fileserver wrapper object that wraps the fileserver functions and
@@ -773,9 +792,7 @@ class Fileserver:
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
-        prefix = load.get("prefix", "").strip("/")
-        if prefix != "":
-            ret = [f for f in ret if f.startswith(prefix)]
+        ret = [f for f in ret if _matches_prefix(f, load.get("prefix", ""))]
         return sorted(ret)
 
     @ensure_unicode_args
@@ -798,9 +815,7 @@ class Fileserver:
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
-        prefix = load.get("prefix", "").strip("/")
-        if prefix != "":
-            ret = [f for f in ret if f.startswith(prefix)]
+        ret = [f for f in ret if _matches_prefix(f, load.get("prefix", ""))]
         return sorted(ret)
 
     @ensure_unicode_args
@@ -823,9 +838,7 @@ class Fileserver:
             if fstr in self.servers:
                 ret.update(self.servers[fstr](load))
         # some *fs do not handle prefix. Ensure it is filtered
-        prefix = load.get("prefix", "").strip("/")
-        if prefix != "":
-            ret = [f for f in ret if f.startswith(prefix)]
+        ret = [f for f in ret if _matches_prefix(f, load.get("prefix", ""))]
         return sorted(ret)
 
     @ensure_unicode_args
@@ -848,9 +861,9 @@ class Fileserver:
             if symlstr in self.servers:
                 ret = self.servers[symlstr](load)
         # some *fs do not handle prefix. Ensure it is filtered
-        prefix = load.get("prefix", "").strip("/")
-        if prefix != "":
-            ret = {x: y for x, y in ret.items() if x.startswith(prefix)}
+        ret = {
+            x: y for x, y in ret.items() if _matches_prefix(x, load.get("prefix", ""))
+        }
         return ret
 
 
