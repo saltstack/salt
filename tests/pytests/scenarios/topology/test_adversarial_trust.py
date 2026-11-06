@@ -880,10 +880,10 @@ def test_salt_key_master_accept_delete_concurrent_no_partial_state(tmp_path):
     pathlib.Path(opts["cachedir"]).mkdir(parents=True, exist_ok=True)
 
     try:
-        key = salt.key.Key(opts)
+        key = salt.key.MasterKey(opts)
     except Exception as exc:  # pylint: disable=broad-except
         pytest.skip(
-            f"salt.key.Key cannot be constructed in this environment: "
+            f"salt.key.MasterKey cannot be constructed in this environment: "
             f"{type(exc).__name__}: {exc}"
         )
 
@@ -894,14 +894,14 @@ def test_salt_key_master_accept_delete_concurrent_no_partial_state(tmp_path):
         def _accept():
             barrier.wait()
             try:
-                key.accept_master("east")
+                key.accept("east")
             except Exception as exc:  # pylint: disable=broad-except
                 errors.append(("accept", exc))
 
         def _delete():
             barrier.wait()
             try:
-                key.delete_master("east")
+                key.delete_key("east")
             except Exception as exc:  # pylint: disable=broad-except
                 errors.append(("delete", exc))
 
