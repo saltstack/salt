@@ -4657,3 +4657,33 @@ async def test_handle_payload_no_cap_allows_full_concurrency(master_opts):
     )
     assert results == ["ok"] * 8
     assert max_active == 8
+
+
+async def test_publish_batch_runs_batch_in_owned_task(publish_clear_funcs):
+    """
+    ``publish_batch`` must hand the batch's ``start()`` to the batch's own
+    task set so that closing the batch can cancel and drain it.
+    """
+    started = asyncio.Event()
+    release = asyncio.Event()
+    batch = MagicMock(batch_jid="1234")
+
+    async def start():
+        started.set()
+        await release.wait()
+
+    batch.start = start
+    batch._create_task = MagicMock(side_effect=asyncio.create_task)
+    with patch("salt.master.BatchAsync", return_value=batch) as batch_cls:
+        ret = await publish_clear_funcs.publish_batch(
+            {"tgt": "*", "fun": "test.ping"}, ["minion"], []
+        )
+    assert ret == {
+        "enc": "clear",
+        "load": {"jid": "1234", "minions": ["minion"], "missing": []},
+    }
+    batch_cls.assert_called_once()
+    batch._create_task.assert_called_once()
+    await asyncio.wait_for(started.wait(), 1)
+    release.set()
+    await asyncio.sleep(0)
