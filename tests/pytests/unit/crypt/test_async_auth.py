@@ -12,7 +12,7 @@ from tests.support.mock import AsyncMock, MagicMock, patch
 def auth(io_loop):
     instance = object.__new__(salt.crypt.AsyncAuth)
     instance.io_loop = salt.utils.asynchronous.aioloop(io_loop)
-    instance._authenticate_waiters = {}
+    instance._authentication_waiters = {}
     return instance
 
 
@@ -35,7 +35,7 @@ async def test_concurrent_callers_share_authentication(auth):
     assert await asyncio.gather(first, second) == [True, True]
     auth._authenticate.assert_awaited_once()
     assert auth.authenticated
-    assert auth._authenticate_waiters == {}
+    assert auth._authentication_waiters == {}
 
 
 async def test_cancel_one_waiter_keeps_peer_authentication(auth):
@@ -230,4 +230,4 @@ async def test_cancel_new_attempt_while_old_waiter_is_resuming(auth):
         assert new_cleaned.is_set()
         release_old.set()
         assert await old_waiter is True
-    assert auth._authenticate_waiters == {}
+    assert auth._authentication_waiters == {}
