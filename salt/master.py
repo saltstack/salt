@@ -2020,6 +2020,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.stat_clock = time.time()
 
         # Pool-specific attributes
+        # Stays None in legacy mode so the transport uses the socket zmq_device binds.
+        self._transport_pool_name = pool_name
         self.pool_name = pool_name or "default"
         self.pool_index = pool_index if pool_index is not None else 0
 
@@ -2092,7 +2094,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             req_channel.post_fork(
                 self._handle_payload,
                 io_loop=self.io_loop,
-                pool_name=self.pool_name,
+                pool_name=self._transport_pool_name,
                 pool_index=self.pool_index,
             )
 
