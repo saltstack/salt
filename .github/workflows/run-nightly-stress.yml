@@ -1,12 +1,10 @@
-name: Dispatch Branch Stress Test
+name: Run Nightly Stress Tests
 
 on:
-  workflow_call:
-    inputs:
-      branch:
-        description: Branch whose workflow and source code should run
-        required: true
-        type: string
+  workflow_dispatch: {}
+  schedule:
+    # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#onschedule
+    - cron: '0 2 * * *'  # Every day at 02:00 UTC
 
 permissions:
   contents: read
@@ -46,7 +44,7 @@ jobs:
           fi
 
   trigger-branch-nightly-stress-builds:
-    name: Trigger ${{ inputs.branch }} Stress Test
+    name: Trigger ${{ matrix.branch }} Stress Test
     # Repo-level opt-out, same variable nightly-stress-test.yml's own
     # master-branch run already checks (SKIP_NIGHTLY_STRESS_TEST) -- e.g.
     # saltstack/salt, where the stress test's runner cost belongs on the
@@ -56,6 +54,14 @@ jobs:
     needs:
       - workflow-requirements
     environment: workflow-restart
+    strategy:
+      fail-fast: false
+      matrix:
+        # Scheduled runs only fire from the default branch, so this workflow
+        # dispatches each branch's own nightly-stress-test.yml via --ref.
+        branch:
+          - master
+          - 3008.x
     steps:
 
       - name: Generate a token
@@ -65,9 +71,9 @@ jobs:
           app-id: ${{ vars.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
-      - name: Trigger ${{ inputs.branch }} branch
+      - name: Trigger ${{ matrix.branch }} branch
         env:
           GH_TOKEN: ${{ steps.generate-token.outputs.token }}
-          TARGET_BRANCH: ${{ inputs.branch }}
+          TARGET_BRANCH: ${{ matrix.branch }}
         run: |
           gh workflow run nightly-stress-test.yml --repo ${{ github.repository }} --ref "$TARGET_BRANCH"
