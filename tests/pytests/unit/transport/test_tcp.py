@@ -18,7 +18,7 @@ import salt.exceptions
 import salt.transport.frame
 import salt.transport.tcp
 import salt.utils.platform
-from tests.support.mock import AsyncMock, MagicMock, PropertyMock, patch
+from tests.support.mock import AsyncMock, MagicMock, PropertyMock, call, patch
 
 pytestmark = [
     pytest.mark.core_test,
@@ -254,6 +254,37 @@ def test_tcppubserverpublisher_connect_ipv6():
 
     io_loop.close()
     assert captured_family == [socket.AF_INET6]
+
+
+def test_tcppubserverpublisher_connect_does_not_set_reuseaddr():
+    """
+    The client socket used by _TCPPubServerPublisher must not set
+    SO_REUSEADDR; on Windows it makes connect() fail with WSAEOPNOTSUPP when
+    SO_REUSE_UNICASTPORT is in use (AutoReusePortRangeStartPort).
+    """
+    io_loop = tornado.ioloop.IOLoop()
+    publisher = salt.transport.tcp._TCPPubServerPublisher(
+        host="127.0.0.1", port=4511, path=None, io_loop=io_loop
+    )
+    sock = MagicMock()
+    publisher._connecting_future = tornado.concurrent.Future()
+
+    def fake_stream(*args, **kwargs):
+        raise OSError("test abort")
+
+    with patch("salt.transport.tcp.socket.socket", return_value=sock), patch(
+        "salt.transport.tcp.tornado.iostream.IOStream", fake_stream
+    ):
+        try:
+            io_loop.run_sync(publisher._connect, timeout=3)
+        except OSError:
+            pass
+
+    io_loop.close()
+    assert (
+        call(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        not in sock.setsockopt.mock_calls
+    )
 
 
 async def test_tcppubserverpublisher_close_during_connect_no_attribute_error_69187(

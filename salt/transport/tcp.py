@@ -2475,7 +2475,6 @@ class _TCPPubServerPublisher:
             if self.stream is None:
                 # with salt.utils.asynchronous.current_ioloop(self.io_loop):
                 sock = socket.socket(sock_type, socket.SOCK_STREAM)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 self.stream = tornado.iostream.IOStream(sock)
                 if self.max_write_buffer_size:
                     self.stream.max_write_buffer_size = self.max_write_buffer_size
