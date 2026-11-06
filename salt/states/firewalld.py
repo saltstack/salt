@@ -1147,7 +1147,6 @@ def ipset_present(name, ipset_type, family=None, options=None, entries=None):
             - family: inet
             - options:
                 timeout: 0
-                comment: "entry comment"
             - entries:
               - 1.1.1.1/32
               - 8.8.8.8/32
