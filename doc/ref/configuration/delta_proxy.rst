@@ -10,9 +10,8 @@
    :ref:`Salt resources <resources>` — a first-class targeting
    primitive that supersedes proxy minions and deltaproxy minions
    by hosting many "things being proxied for" inside one managing
-   minion. Resources are the intended long-term replacement for
-   deltaproxy; existing deltaproxy deployments are expected to
-   migrate to resources over the Argon release cycle.
+   minion. Resources are the intended long-term direction for
+   deltaproxy.
 
 ===================
 Delta proxy minions
