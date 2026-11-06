@@ -2,6 +2,18 @@
 
 .. _delta-proxy-intro:
 
+.. note::
+
+   Delta proxy minions remain supported in Salt 3008.x and will
+   continue to work as documented. For new deployments and for
+   existing deployments hitting scaling limits, consider
+   :ref:`Salt resources <resources>` — a first-class targeting
+   primitive that supersedes proxy minions and deltaproxy minions
+   by hosting many "things being proxied for" inside one managing
+   minion. Resources are the intended long-term replacement for
+   deltaproxy; existing deltaproxy deployments are expected to
+   migrate to resources over the Argon release cycle.
+
 ===================
 Delta proxy minions
 ===================
