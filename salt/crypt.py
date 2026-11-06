@@ -1221,19 +1221,26 @@ class AsyncAuth:
             else:
                 del self._authentication_waiters[future]
                 if not future.done():
-                    # Drain each attempt when its own last caller leaves. An older
-                    # completed attempt may still have callers resuming on this loop.
-                    if self._authenticate_future is future:
-                        del self._authenticate_future
-                    future.cancel()
-                    try:
-                        await future
-                    except asyncio.CancelledError:
-                        pass
-                    except Exception:  # pylint: disable=broad-except
-                        # Keep this caller's cancellation; do not replace it
-                        # with an error from the abandoned sign-in's cleanup.
-                        log.exception("Error cleaning up abandoned authentication")
+                    await self._abandon_authentication(future)
+
+    async def _abandon_authentication(self, future):
+        """
+        Cancel a sign-in that its last caller has left, and wait for it to
+        clean up.
+        """
+        # Drain each attempt when its own last caller leaves. An older
+        # completed attempt may still have callers resuming on this loop.
+        if self._authenticate_future is future:
+            del self._authenticate_future
+        future.cancel()
+        try:
+            await future
+        except asyncio.CancelledError:
+            pass
+        except Exception:  # pylint: disable=broad-except
+            # Keep this caller's cancellation; do not replace it
+            # with an error from the abandoned sign-in's cleanup.
+            log.exception("Error cleaning up abandoned authentication")
 
     async def _authenticate(self):
         """
