@@ -1253,16 +1253,18 @@ class SubprocessList:
         with self.lock:
             for proc in self.processes[:]:
                 try:
-                    proc.join(0.01)
+                    # is_alive() uses waitpid(WNOHANG) and never blocks.
+                    # join() without a timeout would block until the child
+                    # exits, so skip live children entirely -- a periodic
+                    # callback running every 200ms cannot afford to wait
+                    # on a live process.
+                    if proc.is_alive():
+                        continue
+                    proc.join()
                     if hasattr(proc, "exitcode"):
-                        # Only processes have exitcode and a close method, threads
-                        # do not.
-                        if proc.exitcode is None:
-                            continue
+                        # Only processes have exitcode and a close method,
+                        # threads do not.
                         proc.close()
-                    else:
-                        if proc.is_alive():
-                            continue
                 except (ValueError, OSError):
                     # Process may be closed or already cleaned up
                     pass
