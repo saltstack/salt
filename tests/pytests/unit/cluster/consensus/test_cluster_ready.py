@@ -272,7 +272,7 @@ class TestPoolRoutingChannelGate:
 
 
 # ---------------------------------------------------------------------------
-# RaftService readiness persistence across restarts (BUG-024 regression)
+# RaftService readiness persistence across restarts
 # ---------------------------------------------------------------------------
 
 
@@ -470,13 +470,13 @@ class TestRaftServiceReadinessSticky:
 
 
 # ---------------------------------------------------------------------------
-# BUG-025: persisted commit_index drives apply_entries on restart
+# Persisted commit_index drives apply_entries on restart
 # ---------------------------------------------------------------------------
 
 
 class TestCommitIndexPersistenceRestart:
     """
-    Verifies the BUG-025 invariant: with ``commit_index`` persisted to
+    Verifies the restart invariant: with ``commit_index`` persisted to
     ``state.p``, a ``RaftService`` restart drives ``apply_entries``
     through every registered state machine (``membership_sm``,
     ``ring_registry_sm``, ``routing_sm``, application SM) without
@@ -500,7 +500,7 @@ class TestCommitIndexPersistenceRestart:
         ``commit_index=0``.  On a fresh RaftService start — no peer
         AppendEntries — ``apply_entries`` must drive
         ``_on_membership_change`` and the ``on_ready`` gate must fire.
-        This is the proper fix the BUG-024 seeding worked around.
+        This is the proper fix the membership-seed path worked around.
         """
         from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
         from salt.cluster.consensus.service import RaftService
@@ -595,11 +595,12 @@ class TestCommitIndexPersistenceRestart:
 
     def test_restart_without_persisted_commit_index_falls_back_to_seed(self, tmp_path):
         """
-        Backward compat: an on-disk log containing a CONFIG entry but
-        NO persisted ``commit_index`` (pre-BUG-025 state file) still
-        opens the gate via the BUG-024 seed path.  This proves the
-        new persistence path is purely additive — upgrading does not
-        break a cluster whose state files predate the format change.
+        Backward compat: an on-disk log containing a CONFIG entry
+        but NO persisted ``commit_index`` (state file written before
+        the format change) still opens the gate via the
+        membership-seed path.  This proves the new persistence path
+        is purely additive — upgrading does not break a cluster
+        whose state files predate the format change.
         """
         from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
         from salt.cluster.consensus.service import RaftService
@@ -622,8 +623,8 @@ class TestCommitIndexPersistenceRestart:
                 type=LogEntryType.CONFIG,
             )
         )
-        # No save_state call — simulates a pre-BUG-025 state file
-        # that has no commit_index entry at all.
+        # No save_state call — simulates a state file written
+        # before commit_index persistence was added.
 
         on_ready = MagicMock()
         loop = asyncio.new_event_loop()
@@ -634,7 +635,7 @@ class TestCommitIndexPersistenceRestart:
             }
             svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
             # commit_index stays at -1 (no persisted value), but the
-            # BUG-024 seed populated membership_sm anyway.
+            # membership-seed path populated membership_sm anyway.
             assert svc._node.log.commit_index == -1
             assert my_addr in svc._node.membership_sm.current_voters()
         finally:

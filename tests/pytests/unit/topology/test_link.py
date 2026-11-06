@@ -438,7 +438,7 @@ def test_module_exports_channel_names():
 
 
 # ---------------------------------------------------------------------------
-# Send-fault teardown --- BUG-016 regression
+# Send-fault teardown regression
 # ---------------------------------------------------------------------------
 
 
@@ -471,7 +471,7 @@ class _WedgingReqChannel:
 
 
 def test_send_publish_timeout_tears_down_channel_and_marks_degraded():
-    """BUG-016: a ``SaltReqTimeoutError`` on an outbound publish MUST
+    """A ``SaltReqTimeoutError`` on an outbound publish MUST
 
     * close + null the ``_req_channel`` reference,
     * transition the link off CONNECTED (to DEGRADED), and
@@ -506,8 +506,9 @@ def test_degraded_link_rejects_follow_on_sends_without_timeout():
     """After a send fault, the next send MUST raise ``LinkUnavailable``
     immediately -- not time out again against the wedged socket.
 
-    This is the "fail loud, don't silent-timeout" half of the BUG-016
-    acceptance: callers (``_summary_emit_loop``, ``_transit_send``)
+    This is the "fail loud, don't silent-timeout" half of the
+    send-fault teardown contract: callers (``_summary_emit_loop``,
+    ``_transit_send``)
     get a prompt error back and the link is excluded from fan-out
     until the reconnector drives a fresh handshake.
     """
@@ -569,7 +570,7 @@ def test_rotate_session_clears_fault_timestamp_after_reconnect():
 
 
 def test_send_summary_timeout_also_tears_down_channel():
-    """BUG-016 regression for the summary emit path.  ``send_summary``
+    """Regression for the summary emit path.  ``send_summary``
     runs on a background loop (``_summary_emit_loop``); a wedge there
     is the first symptom operators see in the master log because the
     summary cadence is tighter than the ``C@`` publish cadence."""
@@ -623,7 +624,7 @@ def test_successful_send_records_last_send_success_at():
 
 
 # ---------------------------------------------------------------------------
-# BUG-022: handshake must carry the local master's identity public key
+# Handshake must carry the local master's identity public key
 # ---------------------------------------------------------------------------
 
 
@@ -644,7 +645,7 @@ class _CapturingReqChannel:
 
 
 def test_handshake_load_carries_identity_public_key(tmp_path):
-    """BUG-022: the outbound ``topology/_master_auth`` load MUST include
+    """The outbound ``topology/_master_auth`` load MUST include
     the sender's identity public-key bytes.
 
     The receiver's :func:`salt.topology.link_manager._handle_master_auth`
@@ -720,7 +721,7 @@ def test_handshake_load_solo_master_identity_falls_back_to_pki_dir(tmp_path):
 
 
 def test_connect_cluster_retry_wire_envelope_is_retriable():
-    """BUG-022: when the receiving master's Raft voter CONFIG has not
+    """When the receiving master's Raft voter CONFIG has not
     yet committed, ``ReqServerChannel.handle_message`` returns a bare
     ``{"enc": "clear", "load": {"ret": False, "cluster_retry": True}}``
     wire envelope that short-circuits the topology dispatch table.  The

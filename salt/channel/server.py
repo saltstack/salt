@@ -3527,7 +3527,8 @@ class MasterPubServerChannel:
             # above (line 3361) and the migration step inside
             # ``link_manager.start`` can propose immediately instead of
             # deferring.  ``promote_solo_to_clustered`` tolerates
-            # ``None`` with an INFO log — see BUG-029.
+            # ``None`` with an INFO log (committed-log replay converges
+            # the state machine from disk in that case).
             aio_loop.create_task(
                 link_manager.start(self.opts, self.io_loop, self._raft_service)
             )
@@ -4064,7 +4065,7 @@ class MasterPubServerChannel:
                 # append on a join from a statically-configured peer would
                 # grow the list with a duplicate entry.  Any downstream code
                 # that iterates ``opts["cluster_peers"]`` positionally (the
-                # pre-BUG-030 shape of ``build_peer_pushers``) would then
+                # earlier zip-based shape of ``build_peer_pushers``) would then
                 # mis-key the Raft dispatcher's pusher table and silently
                 # drop inbound ``cluster/raft/*`` replies for the tail
                 # peer.  ``_add_pusher`` already dedups the pusher list by
@@ -4266,7 +4267,7 @@ class MasterPubServerChannel:
                 )
                 # Dedup against the statically-configured peer list — see
                 # the matching guard in the join handler above for the
-                # BUG-030 rationale.
+                # pusher-table keying rationale.
                 if payload["peer_id"] not in self.cluster_peers:
                     self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(

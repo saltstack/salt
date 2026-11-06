@@ -256,7 +256,8 @@ def promote_solo_to_clustered(opts, raft_service):
                           but ``link_manager.start`` runs before that
                           fires).  In that case this call is a no-op
                           and the eventual :meth:`RaftService.__init__`
-                          ``apply_entries`` replay (BUG-025) converges
+                          ``apply_entries`` replay (driven by the
+                          persisted ``commit_index``) converges
                           the state machine from the on-disk log
                           suffix.  Logs the deferral at INFO so the
                           operator can tell this from a real skip.
@@ -282,7 +283,8 @@ def promote_solo_to_clustered(opts, raft_service):
         # every restart with an existing registry.  The migration is
         # NOT required for correctness on restart: the committed Raft
         # log on disk is replayed by :meth:`RaftService.__init__` via
-        # ``apply_entries`` (BUG-025) and the state machine converges
+        # ``apply_entries`` (driven by the persisted ``commit_index``)
+        # and the state machine converges
         # without us re-proposing.  Log INFO (not WARNING) and return.
         log.info(
             "migration.promote_solo_to_clustered: deferring %d pending "

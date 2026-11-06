@@ -202,7 +202,7 @@ def test_salt_storage_state_roundtrip(storage):
 
 def test_salt_storage_persists_commit_index(storage):
     """
-    ``save_state`` round-trips the Raft ``commit_index`` (BUG-025).
+    ``save_state`` round-trips the Raft ``commit_index``.
 
     Without durable ``commit_index`` a master restart cannot replay
     the committed suffix into its state machines when no peer is
@@ -245,10 +245,11 @@ def test_salt_storage_save_commit_index_merges_with_existing_state(storage):
 
 def test_salt_storage_commit_index_defaults_when_missing(storage):
     """
-    Pre-BUG-025 state files were written without a ``commit_index``
-    field.  ``load_state`` must surface ``-1`` as the default so a
-    newly upgraded master sees "no persisted commit" and falls back
-    to the BUG-024 seed / peer AppendEntries recovery paths.
+    State files written before ``commit_index`` persistence was
+    added lack the field entirely.  ``load_state`` must surface ``-1``
+    as the default so a newly upgraded master sees "no persisted
+    commit" and falls back to the membership-seed / peer
+    AppendEntries recovery paths.
     """
     storage.save_state(4, "voter-c")  # no commit_index passed
     loaded = storage.load_state()
@@ -259,7 +260,7 @@ def test_log_persists_commit_index_across_restart(storage):
     """
     End-to-end: a ``Log`` that commits through index N must restore
     that index on a fresh ``Log(storage=...)`` construction.  This
-    is the core BUG-025 invariant — without it ``apply_entries`` on
+    is the core restart invariant — without it ``apply_entries`` on
     startup replays nothing and the cluster-ready gate latches
     closed when no peer is reachable.
     """
@@ -277,7 +278,7 @@ def test_log_persists_commit_index_across_restart(storage):
 def test_log_init_handles_missing_commit_index_field(storage):
     """
     Backward compat: an on-disk state file without ``commit_index``
-    (pre-BUG-025) must load as ``-1`` so recovery is purely
+    (format predating the field) must load as ``-1`` so recovery is purely
     additive — no node upgrades into a broken state.
     """
     # Write a state record without commit_index (simulates pre-upgrade).
@@ -1834,8 +1835,8 @@ class TestRingConfigStateMachine:
         """
         A RING_CONFIG apply at an index <= the SM's last-applied index
         must not overwrite the authoritative ring policy.  Same
-        truncation/replay regression as BUG-028's
-        MembershipStateMachine fix; applied here to sibling SM state.
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to sibling SM state.
         """
         from salt.cluster.consensus.raft.log import RingConfigStateMachine
 
@@ -2254,8 +2255,9 @@ class TestRingRegistryStateMachine:
         """
         A RING_REGISTRY apply at an index <= the SM's last-applied
         index must not overwrite the authoritative registry.  Same
-        truncation/replay regression as BUG-028; applied here to
-        ring-registry state.  Round-trip via snapshot also covered.
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to ring-registry
+        state.  Round-trip via snapshot also covered.
         """
         sm = self._sm()
         sm.apply({"ring_id": "jobs", "founding_voters": ["m1", "m2"]}, index=5)
@@ -2370,8 +2372,9 @@ class TestRoutingStateMachine:
         """
         A ROUTE apply at an index <= the SM's last-applied index
         must not overwrite the authoritative routing table.  Same
-        truncation/replay regression as BUG-028; applied here to
-        routing-table state.  Round-trip via snapshot also covered.
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to routing-table
+        state.  Round-trip via snapshot also covered.
         """
         sm = self._sm()
         sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=5)

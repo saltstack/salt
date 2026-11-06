@@ -462,7 +462,7 @@ def test_needs_migration_false_after_promote(opts, sm):
 
 def test_promote_tolerates_none_raft_service(opts, sm, caplog):
     """
-    BUG-029 regression: ``promote_solo_to_clustered`` is called from
+    Regression: ``promote_solo_to_clustered`` is called from
     :func:`salt.topology.link_manager.start` at daemon boot, but the
     publish daemon's ``RaftService`` is created only after a
     ``cluster_join_timeout`` call_later fires (founder) or a
@@ -476,7 +476,7 @@ def test_promote_tolerates_none_raft_service(opts, sm, caplog):
     Post-fix: the function detects ``None``, logs INFO, and returns
     without touching ``propose`` --- the eventual ``apply_entries``
     replay in :meth:`RaftService.__init__` converges the state from
-    the committed on-disk log (BUG-025).
+    the committed on-disk log via the persisted ``commit_index``.
 
     Asserts:
       * no exception is raised;

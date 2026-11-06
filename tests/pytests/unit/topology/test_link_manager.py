@@ -499,7 +499,7 @@ def test_maybe_lazy_register_inbound_holds_lock_on_inbound_write(
 
 
 def test_dispatch_sum_deserializes_summary_before_ingest(monkeypatch):
-    """BUG-001/002/006 regression: ``_dispatch_sum`` must reconstitute
+    """Regression: ``_dispatch_sum`` must reconstitute
     the wire-form summary via :func:`summary_mod.deserialize` before
     passing to :meth:`TopologyRouter.ingest_summary`.  Prior to the
     fix, the raw dict was handed in and ``ingest_summary`` tripped
@@ -617,7 +617,7 @@ def test_dispatch_sum_swallows_deserialize_errors(monkeypatch, caplog):
 
 
 # ---------------------------------------------------------------------------
-# Reconnect sweep --- BUG-016 regression
+# Reconnect sweep regression
 # ---------------------------------------------------------------------------
 
 
@@ -641,14 +641,13 @@ class _ReconnectWitnessLink:
 
 
 def test_reconnect_loop_schedules_degraded_links(clean_state, monkeypatch):
-    """BUG-016: the periodic sweep MUST schedule ``_connect_and_register``
+    """The periodic sweep MUST schedule ``_connect_and_register``
     for every outbound link in DEGRADED or DISCONNECTED health, and MUST
     NOT touch CONNECTED or provisional-key links.
 
-    Guards the recovery path for the regression scenario on BUG-016:
-    a send fault tears down the REQ channel and marks the link
-    DEGRADED; without this sweep the link would stay wedged until
-    master restart.
+    Guards the recovery path: a send fault tears down the REQ channel
+    and marks the link DEGRADED; without this sweep the link would stay
+    wedged until master restart.
     """
     degraded = _ReconnectWitnessLink("east", LinkHealth.DEGRADED)
     disconnected = _ReconnectWitnessLink("south", LinkHealth.DISCONNECTED)
@@ -715,7 +714,7 @@ def test_reconnect_loop_schedules_degraded_links(clean_state, monkeypatch):
 def test_reconnect_loop_recovers_provisional_disconnected_links(
     clean_state, monkeypatch
 ):
-    """BUG-022: a link whose FIRST handshake left it in
+    """A link whose FIRST handshake left it in
     :data:`LinkHealth.DISCONNECTED` or
     :data:`LinkHealth.PENDING_ACCEPT` under a provisional
     ``__pending__:host:port`` key MUST be re-scheduled by the
@@ -795,7 +794,7 @@ def test_reconnect_loop_recovers_provisional_disconnected_links(
 
 
 # ---------------------------------------------------------------------------
-# BUG-019: forwarded publish must fire ``salt/job/<jid>/new``
+# Forwarded publish must fire ``salt/job/<jid>/new``
 # ---------------------------------------------------------------------------
 
 
@@ -903,7 +902,7 @@ def _expected_new_job_payload(load, matched):
 
 
 def test_publish_to_local_minions_fires_new_and_publish_events(monkeypatch):
-    """BUG-019 regression: forwarded publish must fire both
+    """Regression: forwarded publish must fire both
     ``salt/job/<jid>/new`` and ``salt/job/<jid>/publish`` on the local
     master event bus, in that order, BEFORE handing the load to
     ``chan.publish``.  Payload shape matches ``_prep_pub``'s
@@ -945,7 +944,7 @@ def test_publish_to_local_minions_fires_new_and_publish_events(monkeypatch):
 
 
 def test_publish_to_local_minions_fires_events_on_empty_match(monkeypatch):
-    """BUG-019 edge case: ``_prep_pub`` fires ``salt/job/<jid>/new``
+    """Edge case: ``_prep_pub`` fires ``salt/job/<jid>/new``
     unconditionally on the origin master (even for publishes with no
     local matches).  The forward path must match that behavior so
     reactors see consistent event flow on every receiving master.
@@ -1044,12 +1043,12 @@ def test_publish_to_local_minions_sync_fire_fallback(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# BUG-020: ``_verify_session`` must compare against the inbound record
+# ``_verify_session`` must compare against the inbound record
 # ---------------------------------------------------------------------------
 
 
 def test_verify_session_prefers_inbound_record_over_outbound(clean_state):
-    """BUG-020 regression: ``_verify_session`` must compare the
+    """Regression: ``_verify_session`` must compare the
     payload's ``session_generation`` against the server-side
     ``_INBOUND[origin]`` record, not the ``_LINKS[origin]`` outbound
     record.  The two counters are independent -- the inbound record
@@ -1087,7 +1086,7 @@ def test_verify_session_prefers_inbound_record_over_outbound(clean_state):
 
 
 def test_verify_session_rejects_without_inbound_record(clean_state):
-    """BUG-020 negative case: when there is no ``_INBOUND[origin]``
+    """Negative case: when there is no ``_INBOUND[origin]``
     record (sender's key is not accepted and lazy-register bailed),
     the frame must be rejected -- even when an outbound record
     happens to exist.  The outbound record alone is NOT proof the
@@ -1114,7 +1113,7 @@ def test_verify_session_rejects_without_inbound_record(clean_state):
 
 
 def test_verify_session_rejects_stale_inbound_gen(clean_state):
-    """BUG-020 regression: strict equality against the inbound
+    """Regression: strict equality against the inbound
     record is preserved.  A replayed frame with an older gen than
     the inbound-cached gen (which :func:`_maybe_lazy_register_inbound`
     only ever bumps forward) must still be rejected.
@@ -1147,12 +1146,12 @@ def test_verify_session_master_auth_bypass_preserved(clean_state):
 
 
 # ---------------------------------------------------------------------------
-# BUG-022: cluster_pki_dir must be consulted for topology peer keys
+# cluster_pki_dir must be consulted for topology peer keys
 # ---------------------------------------------------------------------------
 
 
 def test_masters_subdir_prefers_cluster_pki_dir_when_cluster_id_set(tmp_path):
-    """BUG-022 (ROOT CAUSE): on a clustered 3008.x master,
+    """Root-cause regression: on a clustered 3008.x master,
     :func:`_masters_subdir` MUST resolve ``masters``/``masters_pre``/etc
     against ``cluster_pki_dir``, NOT ``pki_dir``.
 
@@ -1194,7 +1193,7 @@ def test_masters_subdir_falls_back_to_pki_dir_for_solo_master(tmp_path):
 def test_handle_master_auth_accepts_key_in_cluster_pki_dir(
     opts, clean_state, monkeypatch, tmp_path
 ):
-    """BUG-022: when the receiver is clustered and the peer's key lives
+    """When the receiver is clustered and the peer's key lives
     at ``<cluster_pki_dir>/masters/<cluster_id>.pub``,
     :func:`_handle_master_auth` MUST return ``status=ok`` (not
     ``status=retry``) and populate ``_INBOUND[cluster_id]``.
@@ -1226,7 +1225,7 @@ def test_handle_master_auth_accepts_key_in_cluster_pki_dir(
 
 
 def test_inbound_listener_bypasses_cluster_ready_gate(opts, clean_state, monkeypatch):
-    """BUG-022: the inbound topology ``ReqServerChannel`` MUST be built
+    """The inbound topology ``ReqServerChannel`` MUST be built
     with ``cluster_peers=[]`` in its channel-opts so that
     :func:`salt.channel.server._cluster_is_ready` short-circuits True.
 
@@ -1278,7 +1277,7 @@ def test_inbound_listener_bypasses_cluster_ready_gate(opts, clean_state, monkeyp
 def test_handle_master_auth_writes_pending_to_cluster_pki_dir(
     opts, clean_state, monkeypatch, tmp_path
 ):
-    """BUG-022: when no accepted key exists, the receiver must write
+    """When no accepted key exists, the receiver must write
     the pending-key sentinel under ``<cluster_pki_dir>/masters_pre/``
     (NOT ``pki_dir/masters_pre/``) so all cluster replicas see the
     same pending state.

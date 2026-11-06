@@ -378,20 +378,20 @@ class TestGetRouterUnit:
 
 
 # ===========================================================================
-# on_publish success/failure path (regression for BUG-018)
+# on_publish success/failure path (observability regression)
 #
-# BUG-018 was filed on the premise that east was not forwarding at all,
-# because the forward-success path emitted no visible log entries.  The
-# diagnosis was wrong (routing worked), but the observability gap was
-# real.  These tests pin:
+# Earlier field reports claimed east was not forwarding at all, because
+# the forward-success path emitted no visible log entries.  The
+# underlying routing was fine, but the observability gap was real.
+# These tests pin:
 #
 # * on_publish for a bare-glob publish calls ``send_publish`` exactly
 #   once per peer link AND emits a DEBUG line carrying the jid, so
 #   future "did it forward?" questions have a greppable answer.
 # * On a per-link ``send_publish`` failure, ``_fire_event`` fires
 #   ``salt/topology/pub/failed/<peer>`` --- the viz backend subscribes
-#   to this tag, and silent dropping was the mis-shape that led
-#   operators to misdiagnose BUG-018 to begin with.
+#   to this tag, and silent dropping is what led operators to
+#   misdiagnose this as a routing failure to begin with.
 # ===========================================================================
 
 
@@ -410,7 +410,7 @@ class _CountingLink:
 
 
 class TestOnPublishForwardsBareGlob:
-    """Regression for BUG-018 (misdiagnosis) + observability pin."""
+    """Observability + bare-glob forward regression."""
 
     async def test_bare_glob_calls_send_publish_per_peer_with_debug_log(
         self, tmp_path, caplog, monkeypatch
@@ -513,7 +513,7 @@ class TestOnPublishFireEventOnLinkFailure:
 
 
 class TestLinkManagerWiresFireEvent:
-    """BUG-018 observability sibling: a running ``link_manager.start``
+    """Observability sibling: a running ``link_manager.start``
     MUST replace ``TopologyRouter._fire_event`` so pub-failed events
     reach the real event bus (viz backend subscribes).  Pre-fix, the
     comment at ``router.py:_fire_event`` claimed the hook was installed

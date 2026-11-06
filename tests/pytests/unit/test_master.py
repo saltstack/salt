@@ -654,10 +654,10 @@ def test_topology_forward_only_target_disabled_returns_false(master_opts):
 
 def test_topology_forward_only_target_bare_minion_glob_widens(master_opts):
     """
-    BUG-003: a bare minion-id glob (``east-sub-minion-1``) that
-    resolves to zero local minions must widen on a topology-enabled
-    master so :func:`salt.topology.router.on_publish` can flood-forward
-    the publish to peer clusters.
+    A bare minion-id glob (``east-sub-minion-1``) that resolves to
+    zero local minions must widen on a topology-enabled master so
+    :func:`salt.topology.router.on_publish` can flood-forward the
+    publish to peer clusters.
     """
     opts = _topology_opts(master_opts)
     clear_funcs = salt.master.ClearFuncs(opts, {})
@@ -4443,12 +4443,12 @@ async def test_clearfuncs_wheel_exception_fires_event_via_fire_event_async():
 
 
 # ---------------------------------------------------------------------------
-# _fire_event_on_running_loop --- BUG-007 regression
+# _fire_event_on_running_loop regression
 # ---------------------------------------------------------------------------
 
 
 async def test_fire_event_on_running_loop_uses_async_path_with_running_loop():
-    """BUG-007 regression: when invoked from a coroutine with a running
+    """Regression: when invoked from a coroutine with a running
     event loop, ``_fire_event_on_running_loop`` must schedule
     ``fire_event_async`` via ``loop.create_task`` -- NEVER the sync
     ``fire_event`` which goes through ``SyncWrapper._wrap`` and
@@ -5012,12 +5012,12 @@ async def test_publish_glob_empty_minions_forwards_under_topology(
     publish_clear_funcs,
 ):
     """
-    BUG-003: on a topology-enabled master, a bare glob target that
-    resolves to zero local minions must NOT short-circuit --- the
-    publish is widened so :func:`salt.topology.router.on_publish` can
-    forward it to peer clusters whose minion-id manifest the origin
-    cannot pre-enumerate.  ``east-sub-minion-1`` from topo-east is
-    the canonical repro of this bug.
+    On a topology-enabled master, a bare glob target that resolves to
+    zero local minions must NOT short-circuit --- the publish is
+    widened so :func:`salt.topology.router.on_publish` can forward it
+    to peer clusters whose minion-id manifest the origin cannot
+    pre-enumerate.  ``east-sub-minion-1`` targeting a minion attached
+    to a peer cluster is the canonical shape here.
     """
     publish_clear_funcs.opts["topology_enabled"] = True
     publish_clear_funcs.opts["_topology_cluster_id_cache"] = "east"

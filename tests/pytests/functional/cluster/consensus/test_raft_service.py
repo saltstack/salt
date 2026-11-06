@@ -24,9 +24,9 @@ from tests.pytests.functional.cluster.consensus.test_raft_learner import _elect
 # ---------------------------------------------------------------------------
 
 # Shared temporary directory for the test module so SaltStorage can write.
-# Each _make_opts call gets a fresh per-invocation subdir so pre-BUG-025
-# on-disk state from a previous test (log entries + persisted
-# commit_index) does not bleed into the next test's RaftService startup
+# Each _make_opts call gets a fresh per-invocation subdir so on-disk
+# state from a previous test (log entries + persisted commit_index)
+# does not bleed into the next test's RaftService startup
 # apply_entries replay.
 _TMPDIR = tempfile.mkdtemp(prefix="salt_raft_svc_test_")
 _OPTS_COUNTER = [0]
@@ -84,7 +84,7 @@ class TestBuildPeerPushers:
 
     def test_cluster_peers_duplicate_does_not_lose_pusher(self):
         """
-        BUG-030: ``self.cluster_peers.append`` on a join/discover from a
+        Duplicate-peer resilience: ``self.cluster_peers.append`` on a join/discover from a
         statically-configured peer could leave ``opts["cluster_peers"]``
         with a duplicate while ``self.pushers`` (dedup-ed by
         ``_add_pusher``) does not grow.  A ``zip``-based implementation
@@ -104,7 +104,7 @@ class TestBuildPeerPushers:
 
     def test_cluster_peers_host_port_form_still_keys_by_host(self):
         """
-        BUG-030 variant: ``cluster_peers`` entries may carry an explicit
+        Host:port keying variant: ``cluster_peers`` entries may carry an explicit
         ``host:port`` suffix (the ``peer.rsplit(":", 1)`` branch in
         ``_publish_daemon``), while the resulting pusher's
         ``pull_host`` is just ``host``.  Keying by ``pull_host``

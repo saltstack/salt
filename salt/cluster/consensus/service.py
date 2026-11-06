@@ -239,7 +239,7 @@ class RaftService:
 
         # Readiness is sticky across RaftService restarts.  The primary
         # recovery path is ``Log.__init__`` loading the persisted
-        # ``commit_index`` from ``state.p`` (BUG-025) and this call to
+        # ``commit_index`` from ``state.p`` and this call to
         # ``apply_entries`` driving every registered state machine —
         # membership, ring registry, routing, and the application SM —
         # through the on-disk committed suffix.  Every registration
@@ -262,8 +262,8 @@ class RaftService:
             )
             self._node.apply_entries()
 
-        # Defence-in-depth seed for state records written before BUG-025
-        # (which lacked a persisted ``commit_index``).  On a cleanly
+        # Defence-in-depth seed for state records written before
+        # ``commit_index`` persistence was added.  On a cleanly
         # upgraded node ``apply_entries`` above has already populated
         # ``membership_sm`` and the seed early-returns at the
         # ``current_voters()`` guard.  On a mixed-vintage state file
@@ -330,8 +330,8 @@ class RaftService:
         Populate ``membership_sm`` from the latest CONFIG entry on disk
         so ``reconcile_membership`` sees the restored voter view.
 
-        Defence-in-depth path kept for pre-BUG-025 state files that
-        lack a persisted ``commit_index``.  On a cleanly upgraded node
+        Defence-in-depth path kept for state files written before
+        ``commit_index`` persistence was added.  On a cleanly upgraded node
         ``Log.__init__`` restores ``commit_index`` from ``state.p`` and
         ``RaftService.__init__`` drives ``apply_entries`` directly —
         making this seed a no-op because the SM is already populated
@@ -352,13 +352,13 @@ class RaftService:
             return
         if self._node.membership_sm.current_voters():
             return
-        # Bound the seed by ``commit_index`` when it's persisted
-        # (BUG-025).  Applying an *uncommitted* CONFIG (an entry the
-        # leader wrote but never committed, e.g. after a late crash
-        # pre-commit) would pin ``_applied_config_index`` above
-        # ``commit_index`` and later suppress a legitimately-committed
-        # CONFIG at the same index arriving from a new leader.  A
-        # pre-BUG-025 state file reads ``commit_index = -1`` from
+        # Bound the seed by ``commit_index`` when it's persisted.
+        # Applying an *uncommitted* CONFIG (an entry the leader wrote
+        # but never committed, e.g. after a late crash pre-commit)
+        # would pin ``_applied_config_index`` above ``commit_index``
+        # and later suppress a legitimately-committed CONFIG at the
+        # same index arriving from a new leader.  A state file
+        # written before commit_index persistence reads ``-1`` from
         # ``load_state`` — in that case fall back to the historical
         # "latest on-disk CONFIG" behaviour, which is safe because a
         # cluster that was previously up had its CONFIG entries
@@ -1437,7 +1437,7 @@ def build_peer_pushers(opts, pushers_list):
     ``_publish_daemon``).  Using ``pull_host`` directly — rather than
     ``zip``-ing against ``opts["cluster_peers"]`` — is resilient to two
     classes of desync that silently broke the Raft dispatcher's pusher
-    table (BUG-030):
+    table:
 
     * ``self.pushers`` is deduplicated by ``_add_pusher``; join /
       discover handlers append to ``self.cluster_peers`` without a
@@ -1458,7 +1458,7 @@ def build_peer_pushers(opts, pushers_list):
     pusher-dict construction sites on the same keying strategy.
 
     :param opts:          Salt master opts (unused; kept for API
-                          compatibility with the pre-BUG-030 shape).
+                          compatibility with the earlier zip-based shape).
     :param pushers_list:  ``self.pushers`` from ``_publish_daemon``.
     :returns:             ``{peer_id: PublishServer}``
     """

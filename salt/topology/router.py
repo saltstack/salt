@@ -545,8 +545,8 @@ async def on_publish(load, io_loop):
     # the empty-links shape is a legitimate "no peers wired" signal
     # worth seeing at DEBUG when triaging why a publish didn't cross
     # clusters.  Avoids locking a brittle INFO/WARNING in the hot
-    # path (BUG-018 misdiagnosis was driven by zero visible success
-    # logs; this is the surgical fix).
+    # path (zero visible success logs makes it hard to tell "no peers
+    # wired" apart from a real routing failure).
     log.debug(
         "topology: on_publish jid=%s route_publish -> %d link(s) local_match=%s",
         jid,

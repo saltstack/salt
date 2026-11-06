@@ -241,8 +241,9 @@ class Log:
             # snapshot's ``last_included_index`` — the snapshot already
             # compacted every index up through there into every SM, so
             # commit_index / last_applied can never sit below it.
-            # Pre-BUG-025 state files without these fields read as -1
-            # (see SaltStorage.load_state).
+            # State files written before commit_index / last_applied
+            # persistence was added read as -1 here (see
+            # SaltStorage.load_state).
             if isinstance(state, dict):
                 persisted_commit = state.get("commit_index", -1)
                 if persisted_commit is None:

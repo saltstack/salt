@@ -284,7 +284,7 @@ def test_links_rejected_key_absent(enabled_opts, pki_dir, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# peers() surfaces health snapshot --- BUG-016 regression
+# peers() surfaces health snapshot regression
 # ---------------------------------------------------------------------------
 
 
@@ -305,15 +305,15 @@ def _write_health_snapshot(pki_dir, cluster_id, payload):
 def test_peers_surfaces_degraded_health_from_snapshot(
     enabled_opts, pki_dir, monkeypatch
 ):
-    """BUG-016: ``peers()`` MUST merge the publish daemon's sidecar
-    health snapshot so operators see ``attached-degraded`` rather than
-    the on-disk-key ``attached`` label when the outbound REQ channel
-    has been torn down.
+    """``peers()`` MUST merge the publish daemon's sidecar health
+    snapshot so operators see ``attached-degraded`` rather than the
+    on-disk-key ``attached`` label when the outbound REQ channel has
+    been torn down.
 
-    This is the "topology.peers is a liar" fix referenced in the bug
-    report: previously the runner returned ``attached`` for any peer
-    whose key was on disk, regardless of whether the sender was still
-    able to forward frames to that peer.
+    Without this merge the runner returns ``attached`` for any peer
+    whose key is on disk, regardless of whether the sender is still
+    able to forward frames to that peer — a "topology.peers is a liar"
+    shape that hides real degradation from operators.
     """
     _write_accepted(pki_dir, "west-sub-sub-1")
     _write_health_snapshot(

@@ -138,10 +138,10 @@ def _build_opts(pki_root, sock_dir, raft_service=None, cluster_id=None):
         opts["cluster_id"] = cluster_id
         # ``Key.__init__`` resolves ``self.pki_dir`` to
         # ``opts["cluster_pki_dir"]`` whenever ``cluster_id`` is set
-        # (BUG-022 honored this on-wire for the peer handshake).
-        # salt.config.master_config fills this in at startup in a
-        # real deployment; the test harness must set it explicitly
-        # or MasterKey writes land under ``""/masters*/``.
+        # (the peer-handshake path honors the same resolution on the
+        # wire).  salt.config.master_config fills this in at startup
+        # in a real deployment; the test harness must set it
+        # explicitly or MasterKey writes land under ``""/masters*/``.
         opts["cluster_pki_dir"] = opts["pki_dir"]
     return opts
 
