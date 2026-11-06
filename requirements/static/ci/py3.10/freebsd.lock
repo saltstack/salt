@@ -697,6 +697,10 @@ typing-extensions==4.16.0
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.10/freebsd.lock
+    #   -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/freebsd.lock
