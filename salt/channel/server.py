@@ -6,7 +6,6 @@ This includes server side transport, for the ReqServer and the Publisher
 
 import asyncio
 import collections
-import errno
 import hashlib
 import hmac
 import importlib
@@ -1939,44 +1938,89 @@ class MasterPubServerChannel:
             # ``master.py:1199`` to raise
             # ``SaltMasterError: Publish server did not start``.
             # Mirrors the same gate at ``_publish_daemon`` (line 3165).
-            port = opts["cluster_pool_port"]
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+            # Default primary bind_host is the master's advertised
+            # ``interface``; the Windows override below pins the
+            # event-bus TCP pair to ``_ipc_loopback`` so local
+            # ``get_master_event()`` clients find the listener.
             bind_host = opts.get("interface", "127.0.0.1")
 
-            # Windows has no Unix sockets, so ``tornado.netutil.bind_unix_socket``
-            # is not available on the Windows tornado wheel.  Null out the
-            # IPC paths on Windows so :class:`PublishServer.publisher`
-            # falls through to the TCP ``pub_host``/``pub_port`` branch
-            # instead of raising ``AttributeError`` on
-            # ``tornado.netutil.bind_unix_socket`` during startup.
+            # The primary ``MasterPubServerChannel.transport`` IS the
+            # master event bus.  On Linux clustered it binds the two
+            # Unix sockets ``master_event_pub.ipc`` /
+            # ``master_event_pull.ipc`` --- that pair is what
+            # ``get_master_event()`` / ``fire_event()`` /
+            # ``send_aes_key_event()`` / pytest_engine's start-event
+            # all talk to.
+            #
+            # Windows has no Unix sockets, so
+            # ``tornado.netutil.bind_unix_socket`` is unavailable.
+            # We null out the two IPC paths and let
+            # :meth:`PublishServer.publisher` fall through to its TCP
+            # ``pub_host``/``pub_port`` + ``pull_host``/``pull_port``
+            # branch.
+            #
+            # Historically this branch bound ``publish_port`` /
+            # ``cluster_pool_port`` --- but those are the
+            # *minion-facing publisher* and the *cluster peer pool*
+            # ports, not the event bus.  The regular
+            # ``PubServerChannel`` created at ``master.py:1262`` also
+            # binds ``publish_port``, so the two publishers raced the
+            # same TCP port; ZMQ bind() on the second one hung, the
+            # child's ``started`` event never fired, and
+            # ``Master.start()`` sat in ``chan.transport.started.wait(60)``
+            # until the factory killed it.  The ``pool_puller`` TCPPuller
+            # bound at ``_publish_daemon`` similarly already owns
+            # ``cluster_pool_port``, so the primary's pull socket
+            # racing it was the reason for the EADDRINUSE fallback
+            # to ``pull_port=0``.
+            #
+            # Fix: on Windows, bind the event-bus ports
+            # (``tcp_master_pub_port`` / ``tcp_master_pull_port``) which
+            # mirror the Linux Unix-socket role 1:1.  No port
+            # collision, event bus works, and
+            # ``send_aes_key_event()`` /
+            # pytest_engine's start-event complete immediately
+            # instead of timing out at 30s.
             if salt.utils.platform.is_windows():
                 pub_path = None
                 pull_path = None
+                event_pub_port = int(opts["tcp_master_pub_port"])
+                event_pull_port = int(opts["tcp_master_pull_port"])
+                # ``salt.utils.event.SaltEvent.connect_pull`` /
+                # ``connect_pub`` route through
+                # ``salt.transport.ipc_publish_client`` and
+                # ``ipc_publish_server``, both of which hard-code
+                # ``_ipc_loopback(opts)`` for their host
+                # (``salt/transport/base.py`` ``_ipc_loopback``)
+                # --- on Windows that is literally ``127.0.0.1``, with
+                # no consultation of ``opts["interface"]``.  If we
+                # bind the primary event bus on peer 2's
+                # ``interface=127.0.0.2``, every in-process
+                # ``get_master_event()`` client inside peer 2's own
+                # ``EventPublisher`` / ``MainProcess`` / engine
+                # subprocesses still connects to 127.0.0.1 and gets
+                # ``StreamClosedError``.  Pin the event-bus pair to
+                # the same loopback literal ``_ipc_loopback`` uses so
+                # the clients find the listener.
+                bind_host = "::1" if opts.get("ipv6", False) else "127.0.0.1"
+            else:
+                # Ignored by ``PublishServer.publisher`` when
+                # ``pub_path`` / ``pull_path`` are set, but harmless
+                # to carry.
+                event_pub_port = opts.get("publish_port", 4505)
+                event_pull_port = opts["cluster_pool_port"]
 
-            try:
-                transport = salt.transport.tcp.PublishServer(
-                    opts,
-                    pub_host=bind_host,
-                    pub_port=opts.get("publish_port", 4505),
-                    pub_path=pub_path,
-                    pull_host=bind_host,
-                    pull_port=port,
-                    pull_path=pull_path,
-                )
-            except OSError as exc:
-                if exc.errno == errno.EADDRINUSE:
-                    transport = salt.transport.tcp.PublishServer(
-                        opts,
-                        pub_host=bind_host,
-                        pub_port=opts.get("publish_port", 4505),
-                        pub_path=pub_path,
-                        pull_host=bind_host,
-                        pull_port=0,
-                        pull_path=pull_path,
-                    )
-                else:
-                    raise
+            transport = salt.transport.tcp.PublishServer(
+                opts,
+                pub_host=bind_host,
+                pub_port=event_pub_port,
+                pub_path=pub_path,
+                pull_host=bind_host,
+                pull_port=event_pull_port,
+                pull_path=pull_path,
+            )
         else:
             transport = salt.transport.ipc_publish_server("master", opts)
 
@@ -3234,12 +3278,29 @@ class MasterPubServerChannel:
 
         self.opts = state["opts"]
         self.transport = state["transport"]
-        self._discover_event = None
-        self._raft_dispatcher = None
-        self._raft_service = None
         secrets = state.get("_secrets")
         if secrets is not None:
             salt.master.SMaster.secrets = secrets
+        # Re-initialise the instance attributes that ``__init__``
+        # sets but that aren't carried through the pickle envelope
+        # (Windows ``multiprocessing.spawn`` re-creates the object
+        # via ``cls.__new__(cls)`` + ``__setstate__`` without
+        # calling ``__init__``).  Without these, the publish-daemon
+        # subprocess crashes on first inbound ``cluster/peer/discover``
+        # payload with AttributeError on ``_discover_candidates`` /
+        # ``master_key`` / ``peer_keys``.
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.peer_keys = {}
+        # Alias to ``opts["cluster_peers"]`` -- mirrors __init__ so
+        # appends to ``self.cluster_peers`` from the discover/join
+        # paths propagate to the same list that downstream readers
+        # (``handle_pool_publish`` etc.) index via ``self.opts``.
+        self.cluster_peers = self.opts["cluster_peers"]
+        self._discover_event = None
+        self._discover_token = None
+        self._discover_candidates = {}
+        self._raft_dispatcher = None
+        self._raft_service = None
 
     def close(self):
         self.transport.close()

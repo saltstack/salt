@@ -126,9 +126,60 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
             transport=transport,
         )
         started = []
-        for factory in factories:
-            _topology_exit_stack.enter_context(factory.started(start_timeout=240))
-            started.append(factory)
+        if len(factories) == 1:
+            # Solo masters have no quorum dependency; keep the
+            # original sequential path for the simpler trace.
+            _topology_exit_stack.enter_context(factories[0].started(start_timeout=240))
+            started.append(factories[0])
+        else:
+            # Multi-peer cluster: peers need each other online to
+            # commit the founding CONFIG (voters = {all peers}, so
+            # the first peer cannot bootstrap alone --- it needs
+            # majority quorum).  Each thread calls ``factory.start()``
+            # on its own factory and blocks until that one factory is
+            # ready; the shared ``ExitStack`` is only touched from the
+            # main thread AFTER the threads join (ExitStack is not
+            # documented as thread-safe).  On Linux the old sequential
+            # path happened to work by timing (start-event fires before
+            # Raft matters); on Windows the EventPublisher's
+            # aes-key-event send blocks for 30s when Raft can't form,
+            # long enough that the per-peer 240s start_timeout trips
+            # and the whole cluster-start times out.
+            import threading as _threading
+
+            errors = [None] * len(factories)
+
+            def _start_one(idx):
+                try:
+                    factories[idx].start(start_timeout=240)
+                except BaseException as exc:  # pylint: disable=broad-except
+                    errors[idx] = exc
+
+            threads = [
+                _threading.Thread(target=_start_one, args=(i,), daemon=True)
+                for i in range(len(factories))
+            ]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            for idx, exc in enumerate(errors):
+                if exc is not None:
+                    # Tear down any peers that DID come up before
+                    # re-raising, so the test's cleanup doesn't
+                    # inherit a stray process.
+                    for i, other_factory in enumerate(factories):
+                        if i != idx:
+                            try:
+                                other_factory.terminate()
+                            except Exception:  # pylint: disable=broad-except
+                                pass
+                    raise exc
+            # All three are up; now register teardown on the shared
+            # exit stack so fixture scope-exit terminates each one.
+            for factory in factories:
+                _topology_exit_stack.callback(factory.terminate)
+                started.append(factory)
         return TopologyCluster(
             cluster_id=cluster_id,
             masters=started,

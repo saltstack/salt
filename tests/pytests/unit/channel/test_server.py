@@ -1735,6 +1735,98 @@ def test_master_pub_server_channel_factory_takes_ipc_branch_without_cluster_id(
 
 
 # ---------------------------------------------------------------------------
+# MasterPubServerChannel.factory --- Windows clustered event-bus ports
+#
+# Historically the Windows clustered branch of ``factory`` bound the
+# primary transport's TCP pub/pull to ``publish_port`` /
+# ``cluster_pool_port`` because ``pub_path``/``pull_path`` were nulled
+# (no AF_UNIX on Windows).  Two port collisions followed:
+#
+# 1. ``publish_port`` is also bound by the regular ``PubServerChannel``
+#    the master spawns at ``salt/master.py:1262``; the second ZMQ
+#    ``pub_sock.bind()`` on the same TCP port hung indefinitely on
+#    Windows, so the publish daemon's ``started`` event never fired and
+#    ``Master.start()`` sat in ``chan.transport.started.wait(60)`` until
+#    ``salt-factories`` killed the master as timed-out.
+# 2. ``cluster_pool_port`` is the port the ``_publish_daemon``'s own
+#    ``pool_puller`` (TCPPuller for cluster-peer traffic) already owns.
+#    The primary's pull socket racing it is why the factory needed an
+#    ``errno.EADDRINUSE`` fallback to ``pull_port=0``.
+#
+# The fix is to bind the event-bus port pair (``tcp_master_pub_port`` /
+# ``tcp_master_pull_port``) on Windows --- the direct TCP equivalent of
+# the ``master_event_pub.ipc`` / ``master_event_pull.ipc`` role the
+# primary transport plays on Linux.  ``_ipc_loopback`` hard-codes
+# ``127.0.0.1`` for the matching client side (``ipc_publish_client`` and
+# ``ipc_publish_server`` in ``salt/transport/base.py``), so the bind host
+# must also be the loopback literal rather than ``opts["interface"]``
+# (which is peer 2's ``127.0.0.2`` in the test harness).
+# ---------------------------------------------------------------------------
+
+
+def test_master_pub_server_channel_factory_windows_binds_event_bus_ports(tmp_path):
+    """On Windows clustered, the primary transport MUST bind the
+    event-bus ports (``tcp_master_pub_port`` / ``tcp_master_pull_port``)
+    on ``127.0.0.1``, NOT ``publish_port`` / ``cluster_pool_port``.
+
+    Regression for the Windows 3-peer cluster hang:
+    ``test_single_cluster_multi_peer`` could not start more than one
+    peer because the second ZMQ ``pub_sock.bind(publish_port)`` hung on
+    the collision with the regular ``PubServerChannel``.  The primary
+    transport serves the master event bus (same role as
+    ``master_event_pub.ipc`` on Linux), which lives at
+    ``tcp_master_pub_port``/``tcp_master_pull_port``.
+    """
+    opts = _factory_test_opts(
+        tmp_path,
+        cluster_id="west",
+        cluster_peers=["127.0.0.2", "127.0.0.3"],
+        interface="127.0.0.2",
+        publish_port=63084,
+        cluster_pool_port=63085,
+        tcp_master_pub_port=63096,
+        tcp_master_pull_port=63097,
+    )
+    tcp_mock = MagicMock(name="tcp.PublishServer")
+
+    with patch("salt.transport.tcp.PublishServer", tcp_mock), patch(
+        "salt.utils.platform.is_windows", return_value=True
+    ), patch("salt.crypt.MasterKeys", MagicMock()):
+        server.MasterPubServerChannel.factory(opts)
+
+    assert tcp_mock.called, "tcp.PublishServer not instantiated on Windows clustered"
+    kwargs = tcp_mock.call_args.kwargs
+    # The event-bus ports, NOT the minion-facing publish_port or the
+    # cluster_pool_port.
+    assert kwargs["pub_port"] == 63096, (
+        f"Windows clustered primary bound pub_port={kwargs['pub_port']!r}; "
+        "expected tcp_master_pub_port=63096.  Binding publish_port here "
+        "collides with the regular PubServerChannel at master.py:1262 and "
+        "hangs the publish daemon."
+    )
+    assert kwargs["pull_port"] == 63097, (
+        f"Windows clustered primary bound pull_port={kwargs['pull_port']!r}; "
+        "expected tcp_master_pull_port=63097.  Binding cluster_pool_port "
+        "here collides with the pool_puller TCPPuller in _publish_daemon."
+    )
+    # Must bind on the loopback literal ``_ipc_loopback`` uses, not
+    # ``opts["interface"]`` -- otherwise in-process ``get_master_event()``
+    # clients connect to 127.0.0.1 and miss the listener bound on 127.0.0.2.
+    assert kwargs["pub_host"] == "127.0.0.1", (
+        f"Windows clustered primary pub_host={kwargs['pub_host']!r}; "
+        "expected 127.0.0.1 to match ``_ipc_loopback``."
+    )
+    assert kwargs["pull_host"] == "127.0.0.1", (
+        f"Windows clustered primary pull_host={kwargs['pull_host']!r}; "
+        "expected 127.0.0.1 to match ``_ipc_loopback``."
+    )
+    # IPC paths must be nulled (no AF_UNIX on Windows), forcing
+    # tcp.PublishServer.publisher() through its TCP branch.
+    assert kwargs["pub_path"] is None
+    assert kwargs["pull_path"] is None
+
+
+# ---------------------------------------------------------------------------
 # PubServerChannel pickle round-trip (Windows spawn regression)
 #
 # Windows ``multiprocessing`` uses ``spawn`` and pickles the channel
@@ -1843,18 +1935,25 @@ def test_master_pub_server_channel_getstate_captures_smaster_secrets():
 def test_master_pub_server_channel_setstate_restores_smaster_secrets():
     """``MasterPubServerChannel.__setstate__`` must restore
     ``SMaster.secrets`` from the pickle so the EventPublisher child
-    process can look up ``cluster_aes`` without KeyError."""
+    process can look up ``cluster_aes`` without KeyError.
+
+    ``MasterKeys`` is patched out because ``__setstate__`` also
+    reconstructs ``self.master_key`` for the Windows-spawn boundary
+    (see the Windows event-bus fix) and that requires a full master
+    config this unit test does not carry.
+    """
     sentinel_secrets = {"cluster_aes": {"secret": object()}}
     saved = salt.master.SMaster.secrets
     try:
         salt.master.SMaster.secrets = {}
         channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
         state = {
-            "opts": {"cluster_id": "east"},
+            "opts": {"cluster_id": "east", "cluster_peers": []},
             "transport": MagicMock(),
             "_secrets": sentinel_secrets,
         }
-        channel.__setstate__(state)
+        with patch("salt.crypt.MasterKeys", MagicMock()):
+            channel.__setstate__(state)
 
         assert salt.master.SMaster.secrets is sentinel_secrets, (
             "MasterPubServerChannel.__setstate__ must install the "
@@ -1876,12 +1975,13 @@ def test_master_pub_server_channel_setstate_tolerates_missing_secrets_key():
     try:
         salt.master.SMaster.secrets = sentinel
         channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
-        channel.__setstate__(
-            {
-                "opts": {"cluster_id": "east"},
-                "transport": MagicMock(),
-            }
-        )
+        with patch("salt.crypt.MasterKeys", MagicMock()):
+            channel.__setstate__(
+                {
+                    "opts": {"cluster_id": "east", "cluster_peers": []},
+                    "transport": MagicMock(),
+                }
+            )
 
         # No ``_secrets`` carried -> SMaster.secrets left untouched.
         assert salt.master.SMaster.secrets is sentinel
@@ -1909,7 +2009,7 @@ def test_master_pub_server_channel_pickle_round_trip_restores_cluster_aes():
     try:
         salt.master.SMaster.secrets = {"cluster_aes": {"secret": sentinel_aes}}
         channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
-        channel.opts = {"cluster_id": "east"}
+        channel.opts = {"cluster_id": "east", "cluster_peers": []}
         # transport is replaced with None so the whole instance is
         # pickleable end-to-end.
         channel.transport = None
@@ -1917,7 +2017,11 @@ def test_master_pub_server_channel_pickle_round_trip_restores_cluster_aes():
         # Clear SMaster.secrets to simulate the Windows-spawn child's
         # fresh module import.
         salt.master.SMaster.secrets = {}
-        _ = pickle.loads(raw)
+        # Patch ``MasterKeys`` since ``__setstate__`` also rebuilds
+        # ``self.master_key`` for the Windows-spawn boundary and that
+        # requires a full master config this test does not carry.
+        with patch("salt.crypt.MasterKeys", MagicMock()):
+            _ = pickle.loads(raw)
 
         assert "cluster_aes" in salt.master.SMaster.secrets, (
             "After unpickling the channel, ``SMaster.secrets`` must "

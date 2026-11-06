@@ -62,12 +62,46 @@ def _make_harness_identity(cluster_id):
 
 def _ensure_lo_alias(addr):
     """
-    On BSDs the loopback aliases above 127.0.0.1 aren't automatic.
+    Ensure ``addr`` (a 127.0.0.0/8 loopback alias) is bound so the
+    multi-peer cluster harness's per-peer addresses are reachable.
+
+    * Linux: kernel binds the whole 127.0.0.0/8 range automatically.
+      No-op.
+    * BSD / macOS: ``lo0`` only carries 127.0.0.1 by default; each
+      additional alias is a one-off ``ifconfig`` call.
+    * Windows: ``Loopback Pseudo-Interface 1`` only carries
+      127.0.0.1 by default.  Without the alias, 127.0.0.2+
+      connections fail with ``StreamClosedError`` and the Raft
+      peers never form a cluster.  Requires admin, which the
+      GitHub Actions Windows runner has by default.  Idempotent:
+      re-adding an existing alias is a no-op that netsh reports
+      as an error we swallow.
+
     Mirrors the pattern used in
     ``tests/pytests/integration/cluster/conftest.py``.
     """
     if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
         subprocess.check_output(["ifconfig", "lo0", "alias", addr, "up"])
+    elif salt.utils.platform.is_windows():
+        # netsh needs the interface name.  On the GitHub Actions
+        # Windows runners this is "Loopback Pseudo-Interface 1".
+        # We swallow non-zero exits because "The object already
+        # exists" is a normal re-run condition and the follow-up
+        # test code will surface any real connectivity problem.
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "add",
+                "address",
+                "Loopback Pseudo-Interface 1",
+                addr,
+                "255.0.0.0",
+            ],
+            check=False,
+            capture_output=True,
+        )
 
 
 class TopologyCluster:
@@ -649,6 +683,22 @@ def make_cluster(
         own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
         own_pki.mkdir(parents=True, exist_ok=True)
 
+        # Master IPC event bus ports (tcp_master_pub_port /
+        # tcp_master_pull_port / tcp_master_publish_pull /
+        # tcp_master_workers) default to 4512-4515 and MUST be
+        # distinct per peer: ``salt.transport.base._ipc_loopback``
+        # hardcodes ``127.0.0.1`` and ignores ``opts["interface"]``,
+        # so without unique ports every peer would try to bind the
+        # same four ports on 127.0.0.1 and masters 2..N would
+        # silently lose the bind (Windows: EADDRINUSE; the first
+        # peer's event bus services all three masters' clients,
+        # which means peer N's own pytest_engine never sees peer
+        # N's start event and the factory times out).
+        tcp_master_pub_port = ports.get_unused_localhost_port()
+        tcp_master_pull_port = ports.get_unused_localhost_port()
+        tcp_master_publish_pull = ports.get_unused_localhost_port()
+        tcp_master_workers = ports.get_unused_localhost_port()
+
         peers = [a for a in addrs if a != addr]
         overrides = {
             "open_mode": True,
@@ -664,6 +714,10 @@ def make_cluster(
             "ret_port": ret_port,
             "publish_port": pub_port,
             "cluster_pool_port": cluster_pool_port,
+            "tcp_master_pub_port": tcp_master_pub_port,
+            "tcp_master_pull_port": tcp_master_pull_port,
+            "tcp_master_publish_pull": tcp_master_publish_pull,
+            "tcp_master_workers": tcp_master_workers,
             "topology_enabled": True,
             "topology_link_port": link_port,
             "topology_peers": [],
