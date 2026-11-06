@@ -1131,7 +1131,7 @@ class AsyncAuth:
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         self.io_loop = io_loop
-        self._authenticate_waiters = {}
+        self._authentication_waiters = {}
         key = self.__key(self.opts)
         # TODO: if we already have creds for this key, lets just re-use
         if key in AsyncAuth.creds_map:
@@ -1185,17 +1185,17 @@ class AsyncAuth:
 
     def authenticate(self, callback=None):
         """Start authentication immediately and return an awaitable for this caller."""
-        return self.io_loop.create_task(self._authenticate_waiter(callback))
+        return self.io_loop.create_task(self._wait_for_authentication(callback))
 
-    async def _authenticate_waiter(self, callback=None):
+    async def _wait_for_authentication(self, callback=None):
         """Share the sign-in without sharing cancellation between its callers."""
         future = getattr(self, "_authenticate_future", None)
         if future is None or future.done():
             future = self.io_loop.create_task(self._authenticate())
             self._authenticate_future = future
 
-        self._authenticate_waiters[future] = (
-            self._authenticate_waiters.get(future, 0) + 1
+        self._authentication_waiters[future] = (
+            self._authentication_waiters.get(future, 0) + 1
         )
         try:
             # One cancelled request must not cancel authentication for its peers.
@@ -1204,11 +1204,11 @@ class AsyncAuth:
                 self.io_loop.call_soon(callback, result)
             return result
         finally:
-            remaining = self._authenticate_waiters[future] - 1
+            remaining = self._authentication_waiters[future] - 1
             if remaining:
-                self._authenticate_waiters[future] = remaining
+                self._authentication_waiters[future] = remaining
             else:
-                del self._authenticate_waiters[future]
+                del self._authentication_waiters[future]
                 if not future.done():
                     # Drain each attempt when its own last caller leaves. An older
                     # completed attempt may still have callers resuming on this loop.
