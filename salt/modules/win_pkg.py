@@ -1839,6 +1839,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     # Loop through each package
     changed = []
+    full_names = {}
     for pkg_name, options in pkg_params.items():
 
         # Load package information for the package
@@ -2160,6 +2161,7 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
             if not result["retcode"]:
                 ret[pkg_name] = {"install status": "success"}
                 changed.append(pkg_name)
+                full_names[pkg_name] = pkginfo[version_num].get("full_name")
             elif result["retcode"] == 3010:
                 # 3010 is ERROR_SUCCESS_REBOOT_REQUIRED
                 report_reboot_exit_codes = kwargs.pop("report_reboot_exit_codes", True)
@@ -2167,10 +2169,12 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
                     __salt__["system.set_reboot_required_witnessed"]()
                 ret[pkg_name] = {"install status": "success, reboot required"}
                 changed.append(pkg_name)
+                full_names[pkg_name] = pkginfo[version_num].get("full_name")
             elif result["retcode"] == 1641:
                 # 1641 is ERROR_SUCCESS_REBOOT_INITIATED
                 ret[pkg_name] = {"install status": "success, reboot initiated"}
                 changed.append(pkg_name)
+                full_names[pkg_name] = pkginfo[version_num].get("full_name")
             else:
                 log.error(
                     "Failed to install %s; retcode: %s; installer output: %s",
@@ -2189,6 +2193,22 @@ def install(name=None, refresh=False, pkgs=None, **kwargs):
 
     # Check for changes in the registry
     difference = salt.utils.data.compare_dicts(old, new)
+
+    # The installer reported success, but software is only associated with a
+    # winrepo package when the registry DisplayName matches ``full_name``
+    # exactly. If it doesn't, ``pkg.installed`` will report a failure
+    for pkg_name, full_name in full_names.items():
+        if pkg_name not in new:
+            log.warning(
+                "pkg.install: The installer for '%s' reported success, but no "
+                "installed software matching its winrepo 'full_name' ('%s') was "
+                "found. 'full_name' must exactly match the DisplayName in the "
+                "registry or 'pkg.installed' will report a failure. Newly "
+                "detected software: %s",
+                pkg_name,
+                full_name,
+                ", ".join(sorted(difference)) or "None",
+            )
 
     # Compare the software list before and after
     # Add the difference to ret
