@@ -2893,32 +2893,37 @@ def event(
         opts=__opts__,
         listen=True,
     ) as sevent:
-        while True:
-            ret = sevent.get_event(full=True, auto_reconnect=True)
-            if ret is None:
-                continue
+        try:
+            while True:
+                ret = sevent.get_event(full=True, auto_reconnect=True)
+                if ret is None:
+                    continue
 
-            if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
-                if not quiet:
-                    salt.utils.stringutils.print_cli(
-                        "{}\t{}".format(
-                            salt.utils.stringutils.to_str(ret["tag"]),
-                            salt.utils.json.dumps(
-                                salt.utils.data.decode(ret["data"], keep=True),
-                                sort_keys=pretty,
-                                indent=None if not pretty else 4,
-                                default=_json_safe,
-                            ),
+                if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
+                    if not quiet:
+                        salt.utils.stringutils.print_cli(
+                            "{}\t{}".format(
+                                salt.utils.stringutils.to_str(ret["tag"]),
+                                salt.utils.json.dumps(
+                                    salt.utils.data.decode(ret["data"], keep=True),
+                                    sort_keys=pretty,
+                                    indent=None if not pretty else 4,
+                                    default=_json_safe,
+                                ),
+                            )
                         )
-                    )
-                    sys.stdout.flush()
+                        sys.stdout.flush()
 
-                if count > 0:
-                    count -= 1
-                    log.debug("Remaining event matches: %s", count)
+                    if count > 0:
+                        count -= 1
+                        log.debug("Remaining event matches: %s", count)
 
-                if count == 0:
-                    break
-            else:
-                log.debug("Skipping event tag: %s", ret["tag"])
-                continue
+                    if count == 0:
+                        break
+                else:
+                    log.debug("Skipping event tag: %s", ret["tag"])
+                    continue
+        except (KeyboardInterrupt, SystemExit):
+            # Ctrl-c (the CLI signal handler raises SystemExit) is the normal
+            # way to stop watching the bus; leave quietly, without a traceback.
+            log.debug("Stopped watching the event bus")
