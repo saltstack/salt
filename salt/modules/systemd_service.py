@@ -387,9 +387,7 @@ def _untracked_custom_unit_found(name, root=None, **cmd_kwargs):
     """
     system = _root("/etc/systemd/system", root)
     unit_path = os.path.join(system, _canonical_unit_name(name))
-    return os.access(unit_path, os.R_OK) and not _check_available(
-        name, **cmd_kwargs
-    )
+    return os.access(unit_path, os.R_OK) and not _check_available(name, **cmd_kwargs)
 
 
 def _unit_file_changed(name, **cmd_kwargs):

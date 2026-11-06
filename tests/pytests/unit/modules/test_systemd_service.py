@@ -846,7 +846,9 @@ def test_status_output_loglevel_reaches_systemctl_status():
     retcode = MagicMock(return_value=0)
     with patch.dict(
         systemd.__salt__, {"cmd.run_all": run_all, "cmd.retcode": retcode}
-    ), patch.object(systemd, "_systemctl_cmd", return_value=["systemctl"]), patch.object(
+    ), patch.object(
+        systemd, "_systemctl_cmd", return_value=["systemctl"]
+    ), patch.object(
         systemd, "_untracked_custom_unit_found", return_value=False
     ):
         systemd.status("sshd", output_loglevel="quiet")
