@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -650,6 +651,129 @@ async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, 
     assert isinstance(auth._creds, dict)
     assert auth._creds["aes"] == aes
     assert auth._creds["session"] == session
+
+
+@pytest.fixture
+def async_auth(minion_root, io_loop):
+    """
+    An ``AsyncAuth`` with fresh keys and no cached credentials, plus the
+    credentials a successful sign-in would return.
+    """
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+    creds = {
+        "enc": "pub",
+        "aes": crypt.Crypticle.generate_key_string(),
+        "session": crypt.Crypticle.generate_key_string(),
+    }
+    try:
+        yield crypt.AsyncAuth(opts, io_loop), creds
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_cancelled_caller_does_not_wedge_auth(async_auth):
+    """
+    https://github.com/saltstack/salt/issues/70642
+
+    Callers share one sign-in.  While the master is unreachable a caller can
+    give up (a request timeout cancels it).  The sign-in keeps running, so
+    when the master comes back it finishes.  That must not leave the minion
+    unable to sign in again: ``authenticated`` must not raise and the next
+    caller must be able to authenticate.
+    """
+    auth, creds = async_auth
+    gate = asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        await gate.wait()
+        return creds
+
+    auth.sign_in = mock_sign_in
+
+    # A caller gives up while the master is unreachable.
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(auth.authenticate(), timeout=0.05)
+
+    # The master comes back and let the sign-in that was left running finish.
+    gate.set()
+    await asyncio.sleep(0.5)
+
+    try:
+        auth.authenticated  # pylint: disable=pointless-statement
+    except asyncio.CancelledError:
+        pytest.fail("authenticated raised CancelledError after a caller gave up")
+
+    # Whatever state the first attempt ended in, signing in again must work.
+    assert await asyncio.wait_for(auth.authenticate(), timeout=5) is True
+    assert auth.authenticated
+
+
+async def test_authenticate_cancelling_one_caller_keeps_sign_in_for_others(
+    async_auth,
+):
+    """
+    Cancelling one caller must not cancel the sign-in for the other callers
+    waiting on it.
+    """
+    auth, creds = async_auth
+    gate = asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        await gate.wait()
+        return creds
+
+    auth.sign_in = mock_sign_in
+
+    first = asyncio.ensure_future(auth.authenticate())
+    second = asyncio.ensure_future(auth.authenticate())
+    await asyncio.sleep(0)
+    first.cancel()
+    gate.set()
+
+    assert await asyncio.wait_for(second, timeout=5) is True
+    assert auth.authenticated
+
+
+async def test_authenticate_error_reaches_every_caller(async_auth):
+    """
+    A failed sign-in must raise in every caller waiting on it and leave the
+    auth object unauthenticated.
+    """
+    auth, _ = async_auth
+
+    async def mock_sign_in(*args, **kwargs):
+        return "bad enc algo"
+
+    auth.sign_in = mock_sign_in
+
+    results = await asyncio.gather(
+        auth.authenticate(), auth.authenticate(), return_exceptions=True
+    )
+
+    assert len(results) == 2
+    assert all(isinstance(r, salt.exceptions.SaltClientError) for r in results)
+    assert not auth.authenticated
 
 
 # --- PublicKey / PrivateKey caching regression tests --------------------------
