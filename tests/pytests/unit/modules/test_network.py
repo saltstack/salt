@@ -117,9 +117,7 @@ def test_fqdns_should_return_sorted_unique_domains(fake_ips):
 
 
 @pytest.mark.parametrize("h_errno", [0, 1, 2, 4])
-def test_fqdns_unresolvable_address_is_not_logged_as_error(
-    h_errno, fake_ips, caplog
-):
+def test_fqdns_unresolvable_address_is_not_logged_as_error(h_errno, fake_ips, caplog):
     """
     Reverse lookup failures such as TRY_AGAIN (errno 2) must not be logged at
     error level.
