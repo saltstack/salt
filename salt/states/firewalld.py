@@ -219,6 +219,61 @@ def present(
 ):
     """
     Ensure a zone has specific attributes. Alias to zone_present.
+
+    name
+        The zone to modify.
+
+    target: None
+        Set the target zone, zones target is one of: default, ACCEPT, DROP, REJECT.
+
+    default: None
+        Set this zone as the default zone if ``True``.
+
+    masquerade: None
+        Enable or disable masquerade for a zone. By default it will not change it.
+
+    block_icmp: None
+        List of ICMP types to block in the zone.
+
+    prune_block_icmp: False
+        If ``True``, remove all but the specified block_icmp from the zone.
+
+    ports: None
+        List of ports to add to the zone.
+
+    prune_ports: False
+        If ``True``, remove all but the specified ports from the zone.
+
+    port_fwd: None
+        List of port forwards to add to the zone.
+
+    prune_port_fwd: False
+        If ``True``, remove all but the specified port_fwd from the zone.
+
+    services: None
+        List of services to add to the zone.
+
+    prune_services: False
+        If ``True``, remove all but the specified services from the zone.
+        .. note:: Currently defaults to True for compatibility, but will be changed to False in a future release.
+
+    interfaces: None
+        List of interfaces to add to the zone.
+
+    prune_interfaces: False
+        If ``True``, remove all but the specified interfaces from the zone.
+
+    sources: None
+        List of sources to add to the zone.
+
+    prune_sources: False
+        If ``True``, remove all but the specified sources from the zone.
+
+    rich_rules: None
+        List of rich rules to add to the zone.
+
+    prune_rich_rules: False
+        If ``True``, remove all but the specified rich rules from the zone.
     """
     return zone_present(
         name,
@@ -246,6 +301,15 @@ def service(name, ports=None, protocols=None):
     """
     Ensure the service exists and encompasses the specified ports and
     protocols. Alias to service_present.
+
+    name
+        The service to modify.
+
+    ports: None
+        List of ports to add to the service.
+
+    protocols: None
+        List of protocols to add to the service.
     """
     return service_present(name, ports, protocols)
 
@@ -257,6 +321,13 @@ def service_absent(name):
     name
         The service to delete.
 
+    Example:
+
+    .. code-block:: yaml
+
+        remove_old_service:
+          firewalld.service_absent:
+            - name: saltmaster
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
@@ -438,6 +509,13 @@ def zone_absent(name):
     name
         The zone to delete.
 
+    Example:
+
+    .. code-block:: yaml
+
+        remove_old_zone:
+          firewalld.zone_absent:
+            - name: saltzone
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
@@ -1009,6 +1087,14 @@ def ipset_absent(name):
 
     name
         The ipset to delete.
+
+    Example:
+
+    .. code-block:: yaml
+
+        remove_old_ipset:
+          firewalld.ipset_absent:
+            - name: ipset_salt
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
@@ -1049,6 +1135,22 @@ def ipset_present(name, ipset_type, family=None, options=None, entries=None):
     entries: None
         Entries the ipset must contain; others are removed. If omitted,
         entries are not managed. Use ``[]`` for an empty ipset.
+
+    Example:
+
+    .. code-block:: yaml
+
+        ipset_salt:
+          firewalld.ipset_present:
+            - name: ipset_salt
+            - ipset_type: hash:net
+            - family: inet
+            - options:
+                timeout: 0
+                comment: "entry comment"
+            - entries:
+              - 1.1.1.1/32
+              - 8.8.8.8/32
     """
 
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}

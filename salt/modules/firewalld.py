@@ -431,6 +431,16 @@ def add_service_port(service, port, check_service=True):
 
     .. versionadded:: 2016.11.0
 
+    service
+        The name of the service.
+
+    port
+        The port to add, e.g. ``80/tcp``.
+
+    check_service
+        Check that the service exists first. Set to ``False`` to skip the
+        check. Default ``True``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -449,6 +459,16 @@ def remove_service_port(service, port, check_service=True):
     Remove a port from the specified service.
 
     .. versionadded:: 2016.11.0
+
+    service
+        The name of the service.
+
+    port
+        The port to remove, e.g. ``80/tcp``.
+
+    check_service
+        Check that the service exists first. Set to ``False`` to skip the
+        check. Default ``True``.
 
     CLI Example:
 
