@@ -136,6 +136,13 @@ def _build_opts(pki_root, sock_dir, raft_service=None, cluster_id=None):
         opts["raft_service"] = raft_service
     if cluster_id is not None:
         opts["cluster_id"] = cluster_id
+        # ``Key.__init__`` resolves ``self.pki_dir`` to
+        # ``opts["cluster_pki_dir"]`` whenever ``cluster_id`` is set
+        # (BUG-022 honored this on-wire for the peer handshake).
+        # salt.config.master_config fills this in at startup in a
+        # real deployment; the test harness must set it explicitly
+        # or MasterKey writes land under ``""/masters*/``.
+        opts["cluster_pki_dir"] = opts["pki_dir"]
     return opts
 
 
@@ -247,7 +254,7 @@ def _make_key(opts):
     writing into ``__dict__`` wins over the descriptor on subsequent
     reads.
     """
-    key = salt.key.Key(opts)
+    key = salt.key.MasterKey(opts)
     key.__dict__["event"] = _RecordingEvent()
     return key
 
@@ -269,7 +276,7 @@ def test_list_master_scrapes_masters_dirs(solo_opts, pki_root):
     _write_pub(pki_root / "masters_denied" / "den-one.pub", FAKE_PUB_WEST)
 
     with _make_key(solo_opts) as key:
-        ret = key.list_master()
+        ret = key.list_keys()
 
     assert ret == {
         "accepted": ["accepted-one"],
@@ -284,7 +291,7 @@ def test_list_master_empty_when_dirs_absent(solo_opts):
     Empty ``masters*/`` directories return the four empty buckets.
     """
     with _make_key(solo_opts) as key:
-        ret = key.list_master()
+        ret = key.list_keys()
     assert ret == {
         "accepted": [],
         "pending": [],
@@ -308,7 +315,7 @@ def test_accept_master_solo_moves_file_and_fires_event(solo_opts, pki_root):
     _write_pub(pending, FAKE_PUB_EAST)
 
     with _make_key(solo_opts) as key:
-        ret = key.accept_master("east")
+        ret = key.accept("east")
         fired = list(key.event.fired)
 
     accepted = pki_root / "masters" / "east.pub"
@@ -333,9 +340,9 @@ def test_accept_master_solo_rejects_invalid_cluster_id(solo_opts):
     """
     with _make_key(solo_opts) as key:
         with pytest.raises(ValueError):
-            key.accept_master("__identity_pub__")
+            key.accept("__identity_pub__")
         with pytest.raises(ValueError):
-            key.accept_master("UPPER")  # fails CLUSTER_ID_RE
+            key.accept("UPPER")  # fails CLUSTER_ID_RE
 
 
 def test_accept_master_solo_missing_pending_is_noop(solo_opts):
@@ -344,7 +351,7 @@ def test_accept_master_solo_missing_pending_is_noop(solo_opts):
     result rather than raising.
     """
     with _make_key(solo_opts) as key:
-        ret = key.accept_master("east")
+        ret = key.accept("east")
     assert ret == {"accepted": []}
 
 
@@ -367,7 +374,7 @@ def test_accept_master_clustered_proposes_before_touching_file(
     _write_pub(pending, FAKE_PUB_EAST)
 
     with _make_key(clustered_opts) as key:
-        key.accept_master("east")
+        key.accept("east")
 
     # Exactly one propose, of the attach type, carrying the pub bytes.
     assert len(raft_service.proposed) == 1
@@ -399,7 +406,7 @@ def test_accept_master_clustered_crash_before_apply_leaves_no_partial_state(
 
     with _make_key(clustered_opts) as key:
         with pytest.raises(RuntimeError, match="simulated apply crash"):
-            key.accept_master("east")
+            key.accept("east")
 
     # Partial-state invariant: pending still intact, nothing in masters/.
     assert pending.exists(), "pending key must remain if apply crashed"
@@ -427,7 +434,7 @@ def test_accept_master_clustered_apply_replay_is_idempotent(
     raft_service.crash_on = LogEntryType.MASTER_PEER_ATTACH
     with _make_key(clustered_opts) as key:
         with pytest.raises(RuntimeError):
-            key.accept_master("east")
+            key.accept("east")
 
     # Replay: Raft re-delivers the committed entry to apply().
     raft_service.crash_on = None
@@ -454,7 +461,7 @@ def test_reject_master_moves_pending_to_rejected(solo_opts, pki_root):
     _write_pub(pending, FAKE_PUB_EAST)
 
     with _make_key(solo_opts) as key:
-        ret = key.reject_master("east")
+        ret = key.reject("east")
 
     rejected = pki_root / "masters_rejected" / "east.pub"
     assert rejected.exists()
@@ -465,7 +472,7 @@ def test_reject_master_moves_pending_to_rejected(solo_opts, pki_root):
 
 def test_reject_master_missing_pending_is_noop(solo_opts):
     with _make_key(solo_opts) as key:
-        ret = key.reject_master("east")
+        ret = key.reject("east")
     assert ret == {"rejected": []}
 
 
@@ -479,7 +486,7 @@ def test_delete_master_solo_removes_file(solo_opts, pki_root):
     _write_pub(accepted, FAKE_PUB_EAST)
 
     with _make_key(solo_opts) as key:
-        ret = key.delete_master("east")
+        ret = key.delete_key("east")
 
     assert not accepted.exists()
     assert ret == {"deleted": ["east"]}
@@ -509,7 +516,7 @@ def test_delete_master_clustered_proposes_detach(
     )
 
     with _make_key(clustered_opts) as key:
-        key.delete_master("east")
+        key.delete_key("east")
 
     # Exactly one detach proposed.
     detaches = [cmd for kind, cmd in raft_service.proposed if kind == "detach"]
@@ -535,7 +542,7 @@ def test_delete_master_clustered_crash_before_apply_no_partial_state(
     raft_service.crash_on = LogEntryType.MASTER_PEER_DETACH
     with _make_key(clustered_opts) as key:
         with pytest.raises(RuntimeError, match="simulated apply crash"):
-            key.delete_master("east")
+            key.delete_key("east")
 
     assert accepted.exists(), "accepted file must survive apply crash"
     denied = pki_root / "masters_denied" / "east.pub"
@@ -559,7 +566,7 @@ def test_finger_master_returns_fingerprint_string(solo_opts, pki_root):
     expected = salt.utils.crypt.pem_finger(key=FAKE_PUB_EAST, sum_type="sha256")
 
     with _make_key(solo_opts) as key:
-        got = key.finger_master("east")
+        got = key.finger("east")
 
     assert got == expected
 
@@ -573,11 +580,11 @@ def test_finger_master_falls_back_through_buckets(solo_opts, pki_root):
     _write_pub(pki_root / "masters_pre" / "west.pub", FAKE_PUB_WEST)
 
     with _make_key(solo_opts) as key:
-        got = key.finger_master("west")
+        got = key.finger("west")
     assert got == expected
 
 
 def test_finger_master_missing_returns_empty_string(solo_opts):
     with _make_key(solo_opts) as key:
-        got = key.finger_master("east")
+        got = key.finger("east")
     assert got == ""
