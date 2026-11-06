@@ -474,3 +474,15 @@ def test_set_umask_nests_in_a_single_thread():
         with salt.utils.files.set_umask(0o022):
             pass
     assert salt.utils.files.get_umask() == orig
+
+
+async def test_await_lock_does_not_mask_body_exceptions(tmp_path):
+    """
+    Exceptions raised inside the ``async with`` body must propagate unchanged
+    and must not be reported as a FileLockError. The lock must be released.
+    """
+    lock_fn = str(tmp_path / "test.lock")
+    with pytest.raises(ValueError, match="boom"):
+        async with salt.utils.files.await_lock(lock_fn, lock_fn=lock_fn, timeout=1):
+            raise ValueError("boom")
+    assert not os.path.exists(lock_fn)
