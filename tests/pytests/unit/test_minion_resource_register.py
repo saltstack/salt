@@ -870,7 +870,9 @@ class TestMinionResourceRegisterCompletionEvent:
     def test_single_chunk_register_fires_complete_event(self, minion_opts):
         """
         The legacy single-chunk wire path still fires the completion
-        event so ``wait=True`` works even when there's no jid.
+        event so ``wait=True`` works. Single-chunk now carries a
+        minion-side jid too (persisted for cross-restart monotonicity,
+        even though it is omitted from the wire for back-compat).
         """
         m = _mk_minion(minion_opts, 5, resource_register_chunk_size=10)
         events = []
@@ -891,8 +893,10 @@ class TestMinionResourceRegisterCompletionEvent:
         assert payload["complete"] is True
         assert payload["chunks_sent"] == 1
         assert payload["chunks_total"] == 1
-        # Single-chunk legacy path has no minion-side jid.
-        assert payload["jid"] is None
+        # Single-chunk now generates + persists a minion-side jid so the
+        # cross-restart monotonicity guard activates for every register,
+        # not just multi-chunk ones.
+        assert isinstance(payload["jid"], str) and payload["jid"]
 
     def test_abort_mid_chunks_fires_complete_event_with_error(self, minion_opts):
         """

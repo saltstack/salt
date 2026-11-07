@@ -8,6 +8,7 @@ import threading
 import pytest
 
 import salt.utils.resource_registry as rr
+from tests.support.mock import patch
 
 # Production default mmap is ~256 MiB (2**21 slots × 128 B). Unit tests only
 # need a tiny table; keeping this small avoids multi‑GiB churn across many
@@ -104,10 +105,31 @@ def test_generate_register_jid_is_strictly_monotonic_in_process():
     Back-to-back calls in the same microsecond must produce strictly
     increasing jids. Protects the master sweep's strict-``<`` invariant
     against two registers racing within one tick.
+
+    The test pins ``_utc_now`` to a fixed datetime across all calls so the
+    regression gate actually detects a missing ``unique_jid=True`` — without
+    pinning, real-world microseconds advance between sequential Python
+    calls and the test passes even if ``gen_jid``'s monotonicity interlock
+    is disabled.
     """
-    jids = [rr.generate_register_jid({}) for _ in range(5)]
+    import datetime
+
+    import salt.utils.jid
+
+    frozen = datetime.datetime(
+        2026, 11, 7, 0, 0, 0, 123456, tzinfo=datetime.timezone.utc
+    )
+    # Reset the module-level interlock so prior tests in this process
+    # don't bias the comparison.
+    salt.utils.jid.LAST_JID_DATETIME = None
+    with patch.object(salt.utils.jid, "_utc_now", return_value=frozen):
+        jids = [rr.generate_register_jid({}) for _ in range(5)]
     for a, b in zip(jids, jids[1:]):
-        assert a < b, f"jids must be strictly monotonic; got {a} then {b}"
+        assert a < b, (
+            f"jids must be strictly monotonic under same-microsecond "
+            f"collision; got {a} then {b}. generate_register_jid must "
+            f"force unique_jid=True into gen_jid."
+        )
 
 
 def test_generate_register_jid_bumps_past_last_persisted():

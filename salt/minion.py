@@ -4798,15 +4798,19 @@ class Minion(MinionBase):
         # clock-rollback safety across minion restarts). Single-chunk
         # payloads skip chunking fields entirely; the master synthesises
         # its own jid with the same ``unique_jid=True`` guard.
-        if single:
-            jid = None
-        else:
-            last_persisted = salt.utils.resource_registry.read_last_register_jid(
-                self.opts
-            )
-            jid = salt.utils.resource_registry.generate_register_jid(
-                self.opts, last_persisted=last_persisted
-            )
+        # Generate the jid for every register attempt, chunked or not.
+        # Multi-chunk ships the jid on the wire so the master stamps
+        # every chunk's entries with it. Single-chunk payloads omit the
+        # chunking fields from the wire (byte-identical to pre-PR legacy
+        # format, so old masters stay compatible) but we still generate
+        # and persist the jid locally — ``write_last_register_jid`` below
+        # must fire on every successful register so the cross-restart
+        # monotonicity guard activates uniformly, not just for
+        # minions whose inventory happens to exceed ``chunk_size``.
+        last_persisted = salt.utils.resource_registry.read_last_register_jid(self.opts)
+        jid = salt.utils.resource_registry.generate_register_jid(
+            self.opts, last_persisted=last_persisted
+        )
 
         # Retain the grain map in memory only when the operator opted in.
         # Default False — the resolver re-renders per-call from
@@ -4925,14 +4929,14 @@ class Minion(MinionBase):
                     "" if total == 1 else "s",
                     list(resources.keys()),
                 )
-                # Persist the successful chunked-register jid so a future
-                # process incarnation starts from a jid > this one. Loss
-                # of the file on reboot falls back to the fresh
-                # ``gen_jid`` result, which is still monotonic within the
-                # new process; the cross-restart guard only activates
-                # against backward wall-clock movement.
-                if jid:
-                    salt.utils.resource_registry.write_last_register_jid(self.opts, jid)
+                # Persist the successful register jid so a future process
+                # incarnation starts from a jid > this one. Loss of the
+                # file on reboot falls back to the fresh ``gen_jid``
+                # result, which is still monotonic within the new
+                # process; the cross-restart guard only activates against
+                # backward wall-clock movement. Single-chunk registers
+                # persist too — the guard must activate uniformly.
+                salt.utils.resource_registry.write_last_register_jid(self.opts, jid)
         except Exception as err:  # pylint: disable=broad-except
             complete = False
             error = str(err)
