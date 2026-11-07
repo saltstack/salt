@@ -20,12 +20,38 @@ Configuration (via Pillar)::
           - dummy-01
           - dummy-02
           - dummy-03
+
+Scale-mode (in-memory state)
+----------------------------
+
+By default each per-resource state save/load round-trips through a cache
+file at ``<cachedir>/dummy-resource-<resource_id>.cache``.  This is what
+the original small-scale lifecycle tests rely on.
+
+For large-scale testing (benchmarks, chunked-register scale tests,
+repeated register runs) the per-resource filesystem I/O becomes the
+bottleneck — a 200K-resource register across five minions generates on
+the order of a million cache-file writes plus the associated log churn.
+
+The minion opt ``dummy_resource_persist_state`` (default ``True``)
+controls this behavior.  When set to ``False`` the module keeps state in
+a bounded, process-local ``OrderedDict`` (LRU eviction) and performs no
+filesystem I/O at all.  The size of that in-memory store is tunable via
+``dummy_resource_state_max_entries`` (default 100000).
+
+Tradeoff: in scale-mode there is **no persistence across minion
+restarts**, and once the store reaches its max-entries cap the oldest
+entries are evicted and will be re-initialized on next access.  That is
+acceptable for scale testing (where the state round-trip is not what is
+being measured) but is explicitly not what a correctness/lifecycle test
+wants — leave the opt at its default in those cases.
 """
 
 import copy
 import logging
 import os
 import pprint
+from collections import OrderedDict
 from contextlib import contextmanager
 
 import salt.utils.files
@@ -33,6 +59,36 @@ import salt.utils.msgpack
 import salt.utils.resources
 
 log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# In-memory state store (scale-mode)
+# ---------------------------------------------------------------------------
+#
+# When ``dummy_resource_persist_state`` is False the per-resource state dict
+# lives here instead of in a cache file.  OrderedDict + move_to_end gives us
+# cheap LRU semantics without pulling in a dependency.  The resource module
+# is invoked serially from a single minion process, so no locking is needed.
+
+_DEFAULT_MAX_ENTRIES = 100000
+_memory_state = OrderedDict()
+
+
+def _state_max_entries(opts):
+    try:
+        return int(opts.get("dummy_resource_state_max_entries", _DEFAULT_MAX_ENTRIES))
+    except (TypeError, ValueError):
+        return _DEFAULT_MAX_ENTRIES
+
+
+def _persist_state(opts):
+    """Return True when the default on-disk cache behavior is in effect."""
+    return bool(opts.get("dummy_resource_persist_state", True))
+
+
+def _memory_store_reset():
+    """Clear the module-level in-memory state store (test helper)."""
+    _memory_state.clear()
 
 
 def __virtual__():
@@ -73,15 +129,43 @@ def _initial_state(resource_id):
 
 
 def _save_state(opts, resource_id, details):
+    if not _persist_state(opts):
+        # In-memory scale-mode: store a deep copy so callers can't mutate the
+        # cache in place, and enforce LRU bounds.
+        max_entries = _state_max_entries(opts)
+        _memory_state[resource_id] = copy.deepcopy(details)
+        _memory_state.move_to_end(resource_id)
+        while len(_memory_state) > max_entries:
+            _memory_state.popitem(last=False)
+        log.debug(
+            "Dummy Resource Saved State(memory:%s):\n%s",
+            resource_id,
+            pprint.pformat(details),
+        )
+        return
     cachefile = os.path.join(opts["cachedir"], f"dummy-resource-{resource_id}.cache")
     with salt.utils.files.fopen(cachefile, "wb") as pck:
         pck.write(salt.utils.msgpack.packb(details, use_bin_type=True))
-    log.warning(
-        "Dummy Resource Saved State(%s):\n%s", cachefile, pprint.pformat(details)
-    )
+    log.debug("Dummy Resource Saved State(%s):\n%s", cachefile, pprint.pformat(details))
 
 
 def _load_state(opts, resource_id):
+    if not _persist_state(opts):
+        cached = _memory_state.get(resource_id)
+        if cached is None:
+            state = _initial_state(resource_id)
+            _save_state(opts, resource_id, state)
+        else:
+            # Touch for LRU, return a fresh copy so the caller's mutations
+            # don't retroactively edit the store.
+            _memory_state.move_to_end(resource_id)
+            state = copy.deepcopy(cached)
+        log.debug(
+            "Dummy Resource Loaded State(memory:%s):\n%s",
+            resource_id,
+            pprint.pformat(state),
+        )
+        return state
     cachefile = os.path.join(opts["cachedir"], f"dummy-resource-{resource_id}.cache")
     try:
         with salt.utils.files.fopen(cachefile, "rb") as pck:
@@ -93,9 +177,7 @@ def _load_state(opts, resource_id):
         log.exception("Failed to load state: %s", exc, exc_info=True)
         state = _initial_state(resource_id)
         _save_state(opts, resource_id, state)
-    log.warning(
-        "Dummy Resource Loaded State(%s):\n%s", cachefile, pprint.pformat(state)
-    )
+    log.debug("Dummy Resource Loaded State(%s):\n%s", cachefile, pprint.pformat(state))
     return state
 
 

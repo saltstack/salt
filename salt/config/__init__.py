@@ -543,6 +543,15 @@ VALID_OPTS = immutabletypes.freeze(
         "syndic_retries": int,
         # Top-level pillar key for per-type resource configuration (default: resources)
         "resource_pillar_key": str,
+        # When True (default), the salt.resources.dummy test fixture round-trips
+        # per-resource state through a cache file on disk.  Set to False for
+        # large-scale testing (benchmarks, chunked-register scale tests) to
+        # keep state in a bounded in-memory LRU store instead.
+        "dummy_resource_persist_state": bool,
+        # Maximum number of resource_id entries retained by the dummy resource
+        # module's in-memory store when ``dummy_resource_persist_state`` is
+        # False.  Oldest entries are evicted on overflow (LRU).
+        "dummy_resource_state_max_entries": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1421,6 +1430,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
         "resource_pillar_key": "resources",
+        "dummy_resource_persist_state": True,
+        "dummy_resource_state_max_entries": 100000,
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
