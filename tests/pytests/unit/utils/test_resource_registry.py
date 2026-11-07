@@ -8,6 +8,7 @@ import threading
 import pytest
 
 import salt.utils.resource_registry as rr
+from tests.support.mock import patch
 
 # Production default mmap is ~256 MiB (2**21 slots × 128 B). Unit tests only
 # need a tiny table; keeping this small avoids multi‑GiB churn across many
@@ -69,9 +70,22 @@ def test_resource_index_srn_key():
 
 
 def test_encode_decode_by_id_roundtrip():
+    # Legacy call (no jid) decodes with ``jid=None`` — the chunked-register
+    # sweep tolerates this and skips entries it didn't stamp.
     blob = rr._encode_by_id_value("vcenter-1", "vcf_host")
     out = rr._decode_by_id_value(blob)
-    assert out == {"minion": "vcenter-1", "type": "vcf_host"}
+    assert out == {"minion": "vcenter-1", "type": "vcf_host", "jid": None}
+
+
+def test_encode_decode_by_id_roundtrip_with_jid():
+    # Stamped call round-trips the jid.
+    blob = rr._encode_by_id_value("vcenter-1", "vcf_host", jid="20260101000000000001")
+    out = rr._decode_by_id_value(blob)
+    assert out == {
+        "minion": "vcenter-1",
+        "type": "vcf_host",
+        "jid": "20260101000000000001",
+    }
 
 
 def test_decode_by_id_handles_garbage():
@@ -79,6 +93,87 @@ def test_decode_by_id_handles_garbage():
     assert rr._decode_by_id_value(True) is None
     assert rr._decode_by_id_value("not-json") is None
     assert rr._decode_by_id_value("[1,2]") is None
+
+
+# ---------------------------------------------------------------------------
+# generate_register_jid monotonicity (BLOCKING-1, BLOCKING-2)
+# ---------------------------------------------------------------------------
+
+
+def test_generate_register_jid_is_strictly_monotonic_in_process():
+    """
+    Back-to-back calls in the same microsecond must produce strictly
+    increasing jids. Protects the master sweep's strict-``<`` invariant
+    against two registers racing within one tick.
+
+    The test pins ``_utc_now`` to a fixed datetime across all calls so the
+    regression gate actually detects a missing ``unique_jid=True`` — without
+    pinning, real-world microseconds advance between sequential Python
+    calls and the test passes even if ``gen_jid``'s monotonicity interlock
+    is disabled.
+    """
+    import datetime
+
+    import salt.utils.jid
+
+    frozen = datetime.datetime(
+        2026, 11, 7, 0, 0, 0, 123456, tzinfo=datetime.timezone.utc
+    )
+    # Reset the module-level interlock so prior tests in this process
+    # don't bias the comparison.
+    salt.utils.jid.LAST_JID_DATETIME = None
+    with patch.object(salt.utils.jid, "_utc_now", return_value=frozen):
+        jids = [rr.generate_register_jid({}) for _ in range(5)]
+    for a, b in zip(jids, jids[1:]):
+        assert a < b, (
+            f"jids must be strictly monotonic under same-microsecond "
+            f"collision; got {a} then {b}. generate_register_jid must "
+            f"force unique_jid=True into gen_jid."
+        )
+
+
+def test_generate_register_jid_bumps_past_last_persisted():
+    """
+    When a prior-process jid persists on disk at (or after) the wall
+    clock's current microsecond — e.g. NTP step backward or restore
+    from a container snapshot — the returned jid must still be
+    lexicographically greater than the persisted value.
+    """
+    # Construct a last-persisted jid far in the future.
+    future = "99990101000000000000_1"
+    out = rr.generate_register_jid({}, last_persisted=future)
+    assert out > future, (
+        f"generate_register_jid must bump past last_persisted; "
+        f"got {out} <= {future}"
+    )
+
+
+def test_generate_register_jid_ignores_malformed_last_persisted():
+    """
+    Garbage persisted content must not block the register — fall back
+    to the fresh jid and log a warning.
+    """
+    out = rr.generate_register_jid({}, last_persisted="not-a-jid")
+    assert out  # some non-empty string
+    assert "_" in out  # unique_jid format
+
+
+def test_last_register_jid_roundtrip(tmp_path):
+    """
+    Write-then-read of the persisted last register jid round-trips.
+    Missing file returns ``None``.
+    """
+    opts = {"cachedir": str(tmp_path)}
+    assert rr.read_last_register_jid(opts) is None
+    jid = "20260101000000000001_1234"
+    assert rr.write_last_register_jid(opts, jid) is True
+    assert rr.read_last_register_jid(opts) == jid
+
+
+def test_last_register_jid_handles_missing_cachedir():
+    """No cachedir configured = no-op, no exception."""
+    assert rr.read_last_register_jid({}) is None
+    assert rr.write_last_register_jid({}, "x") is False
 
 
 # ---------------------------------------------------------------------------

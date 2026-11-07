@@ -543,6 +543,20 @@ VALID_OPTS = immutabletypes.freeze(
         "syndic_retries": int,
         # Top-level pillar key for per-type resource configuration (default: resources)
         "resource_pillar_key": str,
+        # Keep the per-resource grain dicts resident on the minion after
+        # registration so target-time grain matches don't re-render. Default
+        # False: the cache is dropped after the master is updated and the
+        # grain-match path re-renders on demand, bounded by target size.
+        "resource_grains_cache_in_memory": bool,
+        # Chunk size (number of composite ``<type>:<id>`` resources) per
+        # ``_register_resources`` RPC. Resources beyond this cap are shipped
+        # as a sequence of chunks carrying a shared register token so the
+        # master reassembles them atomically. 0 or negative disables chunking.
+        "resource_register_chunk_size": int,
+        # Per-chunk retry count if a ``_register_resources`` chunk times out
+        # or fails. The whole registration aborts after this many failures
+        # on any single chunk.
+        "resource_register_chunk_retries": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1421,6 +1435,9 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
         "resource_pillar_key": "resources",
+        "resource_grains_cache_in_memory": False,
+        "resource_register_chunk_size": 16000,
+        "resource_register_chunk_retries": 3,
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",

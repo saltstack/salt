@@ -2886,58 +2886,67 @@ class AESFuncs(TransportMethods):
         whether the caller should fire the cache-refresh event on the master
         event bus. Firing the event here would call the synchronous
         ``event.fire_event`` and defeat the async migration.
+
+        Chunking semantics: every chunk is a pure idempotent upsert into
+        the primary registry, stamping each entry with the register's
+        Salt jid (``_register_jid`` on the load, or a jid generated
+        server-side for legacy unchunked loads). When ``_chunk_is_last``
+        is True (or the load is unchunked), the handler also runs
+        :func:`sweep_resource_index_stale` and the ``resource_grains``
+        bank flush for this minion — tombstoning entries whose stored
+        jid is strictly older than the current one. Strict ``<``
+        preserves entries written by any newer concurrent register.
         """
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
             return {}, False, None
-        # The mmap resource registry is independent of minion pillar/grains disk
-        # cache (:conf_master:`minion_data_cache`). Registration must always run
-        # when minions report inventory; otherwise bare-id / T@ targeting breaks
-        # silently while still returning success to the minion.
-        n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+        chunk_resources = load.get("resources") or {}
+        chunk_grains = load.get("resource_grains") or {}
+        # ``_register_jid`` present = chunked register from a new minion.
+        # Absent = legacy single-RPC load; generate a jid server-side and
+        # treat as a terminal chunk so the sweep runs inline (matches the
+        # pre-chunking full-replace semantics).
+        chunked = "_register_jid" in load
+        jid = load.get("_register_jid")
+        if not chunked:
+            # Legacy unchunked load — synthesise a jid with
+            # ``unique_jid=True`` so two concurrent legacy registers
+            # from the same master worker don't race on identical
+            # microsecond timestamps.
+            jid = salt.utils.resource_registry.generate_register_jid(self.opts)
+        # Final chunk flag — on ``_chunk_is_last=True`` we additionally
+        # sweep this minion's older-jid entries. Unchunked loads are
+        # treated as a single terminal chunk.
+        is_last = not chunked or bool(load.get("_chunk_is_last", False))
+
+        # Upsert the chunk's resources into the primary registry.
+        # ``upsert_minion_chunk`` is pure insert-or-replace with the jid
+        # stamped in each entry; no scan of other entries, no delete.
+        n_put = salt.utils.minions.upsert_resource_index_chunk(
+            self.opts, load["id"], chunk_resources, jid
         )
         log.debug(
-            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
+            "Registered resource chunk for minion '%s': %s (put=%d, jid=%s, "
+            "chunk_seq=%s, is_last=%s, chunked=%s)",
             load["id"],
-            list(load["resources"].keys()),
+            list(chunk_resources.keys()),
             n_put,
-            n_del,
+            jid,
+            load.get("_chunk_seq"),
+            is_last,
+            chunked,
         )
+
+        # Persist this chunk's per-resource grains into the
+        # ``resource_grains`` cache bank. A per-chunk flush here would
+        # delete grains belonging to other chunks of the same
+        # registration, so the stale-flush walk is deferred to the
+        # terminal-chunk branch below.
         fire_event = False
-        # Persist per-resource grains in the ``resource_grains`` cache bank
-        # so ``salt -G '<key>:<value>' …`` can match resources alongside
-        # minions. Stale entries (resource removed from this minion since
-        # last registration) are flushed first so a shrinking inventory
-        # doesn't leave ghost entries.
         if self.opts.get("minion_data_cache", False):
-            resource_grains = load.get("resource_grains") or {}
             try:
                 cache = self.masterapi.cache
-                current_srns = set(resource_grains.keys())
-                # Walk existing entries and drop ones tied to this minion
-                # that aren't in the new payload. Owner identification piggy
-                # backs on the registry: each SRN is owned by exactly one
-                # minion at a time.
-                for srn in list(
-                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
-                ):
-                    rtype, _, rid = srn.partition(":")
-                    if not rid:
-                        continue
-                    if srn in current_srns:
-                        continue
-                    owners = self.ckminions.registry.get_managing_minions_for_srn(
-                        rtype, rid
-                    )
-                    if load["id"] in owners or not owners:
-                        try:
-                            cache.flush(
-                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
-                            )
-                        except Exception as exc:  # pylint: disable=broad-except
-                            log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
+                for srn, gdict in chunk_grains.items():
                     if isinstance(gdict, dict):
                         cache.store(
                             salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
@@ -2950,12 +2959,77 @@ class AESFuncs(TransportMethods):
                     load["id"],
                     exc,
                 )
-            # Signal the caller to fire the cache-refresh event on the
-            # async event bus. ``_pillar`` fires the analogous event when
-            # ordinary minion grains are refreshed in the cache.
-            if self.opts.get("minion_data_cache_events") is True:
-                fire_event = True
+
+        if is_last:
+            # Terminal chunk (or unchunked load): sweep this minion's
+            # entries whose stored jid is strictly older than ``jid``.
+            # Safe to run multiple times with the same jid — idempotent.
+            # Safe under concurrent newer registrations — strict ``<``
+            # preserves entries at jids greater than ours.
+            try:
+                n_del = salt.utils.minions.sweep_resource_index_stale(
+                    self.opts, load["id"], jid
+                )
+                log.debug(
+                    "Swept stale resource entries for minion '%s' "
+                    "(jid=%s, deleted=%d)",
+                    load["id"],
+                    jid,
+                    n_del,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to sweep stale resource entries for minion '%s': %s",
+                    load["id"],
+                    exc,
+                )
+            if self.opts.get("minion_data_cache", False):
+                try:
+                    self._sweep_resource_grains_bank_for_minion(load["id"])
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to flush stale resource_grains for minion '%s': %s",
+                        load["id"],
+                        exc,
+                    )
+                if self.opts.get("minion_data_cache_events") is True:
+                    fire_event = True
         return True, fire_event, load["id"] if fire_event else None
+
+    def _sweep_resource_grains_bank_for_minion(self, minion_id):
+        """
+        Delete ``resource_grains`` bank entries owned by ``minion_id``
+        whose SRNs are no longer in the primary registry under this
+        minion.
+
+        Called on the terminal-chunk branch of ``_register_resources``
+        AFTER the primary registry has been swept — so the registry
+        reflects this minion's current resource set, and any grain-bank
+        entry whose SRN isn't in that set is stale. Owner-check still
+        skips SRNs whose current registry owner is a different minion
+        (a resource that migrated).
+        """
+        cache = self.masterapi.cache
+        current = self.ckminions.registry.get_resources_for_minion(minion_id)
+        current_srns = {
+            salt.utils.resource_registry.resource_index_srn_key(rt, rid)
+            for rt, rids in (current or {}).items()
+            for rid in rids or ()
+        }
+        for srn in list(
+            cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
+        ):
+            rtype, _, rid = srn.partition(":")
+            if not rid:
+                continue
+            if srn in current_srns:
+                continue
+            owners = self.ckminions.registry.get_managing_minions_for_srn(rtype, rid)
+            if minion_id in owners or not owners:
+                try:
+                    cache.flush(salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.debug("resource_grains flush %s failed: %s", srn, exc)
 
     async def _register_resources(self, load):
         """
@@ -3655,44 +3729,44 @@ class AESFuncs(TransportMethods):
         return self.masterapi._mine_flush(load, skip_verify=True)
 
     def _sync_register_resources(self, load):
-        """Sync-shim body of ``_register_resources`` (pre-PR verbatim)."""
+        """
+        Sync-shim body of ``_register_resources`` — same idempotent
+        chunk-upsert + terminal-chunk sweep as the async handler.
+        """
         load = self._AESFuncs__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
-        n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+        chunk_resources = load.get("resources") or {}
+        chunk_grains = load.get("resource_grains") or {}
+        chunked = "_register_jid" in load
+        jid = load.get("_register_jid")
+        if not chunked:
+            # Legacy unchunked load — synthesise a jid with
+            # ``unique_jid=True`` so two concurrent legacy registers
+            # from the same master worker don't race on identical
+            # microsecond timestamps.
+            jid = salt.utils.resource_registry.generate_register_jid(self.opts)
+        is_last = not chunked or bool(load.get("_chunk_is_last", False))
+
+        n_put = salt.utils.minions.upsert_resource_index_chunk(
+            self.opts, load["id"], chunk_resources, jid
         )
         log.debug(
-            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
+            "Registered resource chunk for minion '%s': %s (put=%d, jid=%s, "
+            "chunk_seq=%s, is_last=%s, chunked=%s)",
             load["id"],
-            list(load["resources"].keys()),
+            list(chunk_resources.keys()),
             n_put,
-            n_del,
+            jid,
+            load.get("_chunk_seq"),
+            is_last,
+            chunked,
         )
+
         if self.opts.get("minion_data_cache", False):
-            resource_grains = load.get("resource_grains") or {}
             try:
                 cache = self.masterapi.cache
-                current_srns = set(resource_grains.keys())
-                for srn in list(
-                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
-                ):
-                    rtype, _, rid = srn.partition(":")
-                    if not rid:
-                        continue
-                    if srn in current_srns:
-                        continue
-                    owners = self.ckminions.registry.get_managing_minions_for_srn(
-                        rtype, rid
-                    )
-                    if load["id"] in owners or not owners:
-                        try:
-                            cache.flush(
-                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
-                            )
-                        except Exception as exc:  # pylint: disable=broad-except
-                            log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
+                for srn, gdict in chunk_grains.items():
                     if isinstance(gdict, dict):
                         cache.store(
                             salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
@@ -3705,11 +3779,39 @@ class AESFuncs(TransportMethods):
                     load["id"],
                     exc,
                 )
-            if self.opts.get("minion_data_cache_events") is True:
-                self.event.fire_event(
-                    {"Resource cache refresh": load["id"]},
-                    tagify(load["id"], "refresh", "resource"),
+
+        if is_last:
+            try:
+                n_del = salt.utils.minions.sweep_resource_index_stale(
+                    self.opts, load["id"], jid
                 )
+                log.debug(
+                    "Swept stale resource entries for minion '%s' "
+                    "(jid=%s, deleted=%d)",
+                    load["id"],
+                    jid,
+                    n_del,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.warning(
+                    "Failed to sweep stale resource entries for minion '%s': %s",
+                    load["id"],
+                    exc,
+                )
+            if self.opts.get("minion_data_cache", False):
+                try:
+                    self._sweep_resource_grains_bank_for_minion(load["id"])
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Failed to flush stale resource_grains for minion '%s': %s",
+                        load["id"],
+                        exc,
+                    )
+                if self.opts.get("minion_data_cache_events") is True:
+                    self.event.fire_event(
+                        {"Resource cache refresh": load["id"]},
+                        tagify(load["id"], "refresh", "resource"),
+                    )
         return True
 
     def _sync_file_recv(self, load):

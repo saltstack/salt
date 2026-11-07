@@ -424,7 +424,7 @@ def refresh_grains(**kwargs):
     return True
 
 
-def refresh_resources():
+def refresh_resources(wait=False, timeout=30):
     """
     Signal the minion to re-discover its managed resources from current pillar
     data and re-register them with the master.
@@ -434,13 +434,39 @@ def refresh_resources():
     ``opts["pillar"]``) and then re-registering the result with the master's
     ``minion_resources`` cache.
 
+    :param wait:    Block until the minion fires
+                    :data:`salt.defaults.events.MINION_RESOURCE_REFRESH_COMPLETE`.
+                    Defaults to ``False``.
+    :type wait:     bool, optional
+    :param timeout: Maximum seconds to wait when ``wait=True``. Defaults to 30.
+    :type timeout:  int, optional
+    :return:        ``True`` when the ``resource_refresh`` event was fired
+                    successfully.
+
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' saltutil.refresh_resources
+        salt '*' saltutil.refresh_resources wait=True timeout=60
     """
     try:
+        if wait:
+            with salt.utils.event.get_event(
+                "minion", opts=__opts__, listen=True
+            ) as eventer:
+                ret = __salt__["event.fire"]({}, "resource_refresh")
+                log.trace("refresh_resources waiting for resource refresh to complete")
+                event_ret = eventer.get_event(
+                    tag=salt.defaults.events.MINION_RESOURCE_REFRESH_COMPLETE,
+                    wait=timeout,
+                )
+                if not event_ret or event_ret.get("complete") is False:
+                    log.warning(
+                        "Resource refresh did not complete within timeout %s",
+                        timeout,
+                    )
+            return ret
         return __salt__["event.fire"]({}, "resource_refresh")
     except KeyError:
         return False

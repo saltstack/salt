@@ -364,17 +364,18 @@ def _build_resource_index(by_minion):
     }
 
 
-def update_resource_index(opts, minion_id, resources):
+def update_resource_index(opts, minion_id, resources, jid=None):
     """
     Register or update the full set of resources managed by ``minion_id``.
 
     Thin wrapper around :meth:`ResourceRegistry.register_minion` that wires
     the per-process singleton. Called by the master's ``_register_resources``
-    handler.
+    handler for unchunked / legacy loads.
 
     :param dict opts: Salt opts (needs ``cachedir``).
     :param str minion_id: The reporting minion.
     :param dict resources: ``{resource_type: [resource_id, ...]}``.
+    :param str jid: Optional register jid to stamp into the entries.
     :returns: ``(n_put, n_deleted)`` for logging.
     """
     try:
@@ -388,7 +389,7 @@ def update_resource_index(opts, minion_id, resources):
         )
         return (0, 0)
     try:
-        return registry.register_minion(minion_id, resources or {})
+        return registry.register_minion(minion_id, resources or {}, jid=jid)
     except Exception:  # pylint: disable=broad-except
         log.error(
             "Failed to register resources for minion '%s'",
@@ -396,6 +397,70 @@ def update_resource_index(opts, minion_id, resources):
             exc_info=True,
         )
         return (0, 0)
+
+
+def upsert_resource_index_chunk(opts, minion_id, resources, jid):
+    """
+    Idempotent per-chunk upsert for one minion's chunked registration.
+
+    Thin wrapper around :meth:`ResourceRegistry.upsert_minion_chunk`. No
+    scan of existing entries, no delete. Entries from prior registrations
+    for this minion persist until the matching job-return signal arrives
+    and :func:`sweep_resource_index_stale` runs.
+
+    :returns: ``n_put`` for logging. ``0`` on failure.
+    """
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while upserting chunk for %s; "
+            "resource targeting for this minion will be unavailable.",
+            minion_id,
+            exc_info=True,
+        )
+        return 0
+    try:
+        return registry.upsert_minion_chunk(minion_id, resources or {}, jid)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to upsert resource chunk for minion '%s'",
+            minion_id,
+            exc_info=True,
+        )
+        return 0
+
+
+def sweep_resource_index_stale(opts, minion_id, current_jid):
+    """
+    Delete entries owned by ``minion_id`` whose stored register jid is
+    older than ``current_jid``.
+
+    Thin wrapper around :meth:`ResourceRegistry.sweep_minion_stale_jids`.
+    Fired by the master's ``_return`` handler when a minion signals
+    completion of a chunked register via ``fun=resource.register``.
+
+    :returns: ``n_deleted`` for logging. ``0`` on failure.
+    """
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while sweeping stale "
+            "jids for %s; prior-registration entries may persist.",
+            minion_id,
+            exc_info=True,
+        )
+        return 0
+    try:
+        return registry.sweep_minion_stale_jids(minion_id, current_jid)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to sweep stale resource jids for minion '%s'",
+            minion_id,
+            exc_info=True,
+        )
+        return 0
 
 
 class CkMinions:
