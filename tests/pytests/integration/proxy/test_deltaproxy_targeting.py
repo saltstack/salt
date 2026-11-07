@@ -16,12 +16,13 @@ pytestmark = [
 ]
 
 
-def configure_filtering(factory, enabled):
+def configure_filtering(factory, enabled, **overrides):
     """Reload a factory with the requested on-disk publication setting."""
     config = salt.utils.yaml.safe_load(
         Path(factory.config_file).read_text(encoding="utf-8")
     )
     config.update(conf_file=factory.config_file, zmq_filtering=enabled)
+    config.update(overrides)
     factory.config = freeze(factory.write_config(config))
     return factory
 
@@ -32,8 +33,12 @@ def configure_filtering(factory, enabled):
     ids=["zmq_filtering=False", "zmq_filtering=True"],
 )
 def salt_master_factory(request, salt_master_factory):
-    """Exercise both ZeroMQ publication modes using the shared factories."""
-    return configure_filtering(salt_master_factory, request.param)
+    """Exercise both publication settings using supported transport features."""
+    overrides = {}
+    if salt_master_factory.config["transport"] == "ws":
+        # WebSocket RequestServer does not implement worker-pool forwarding.
+        overrides["worker_pools_enabled"] = False
+    return configure_filtering(salt_master_factory, request.param, **overrides)
 
 
 @pytest.fixture(scope="session")
