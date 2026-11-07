@@ -3774,6 +3774,18 @@ class MasterPubServerChannel:
                         )
 
                 for pusher in self.pushers:
+                    # Don't send join-notify to the joiner itself; it
+                    # will receive the authoritative ``cluster_aes`` via
+                    # the join-reply below.  Sending at this point would
+                    # be encrypted with the ``cluster_aes`` the joiner
+                    # has not yet installed, producing a cosmetic but
+                    # noisy ``AuthenticationError`` in the joiner's log
+                    # ~80ms before the join-reply arrives.  The joiner
+                    # is added to ``self.pushers`` a few lines above
+                    # specifically so later broadcasts reach it; this
+                    # single-event skip is the narrowest fix.
+                    if pusher.pull_host == payload["peer_id"]:
+                        continue
                     # XXX Send new peer id and public key to other nodes
                     # XXX This needs to be able to be validated by receiveing peers
                     # XXX Send other nodes pub (and aes?) keys to new node
