@@ -447,6 +447,7 @@ async def test_publish_payload_buffer_full_with_topic_list(io_loop, tmp_path):
             self.stream = _FakeStream(mode=mode)
             self.address = f"fake-{id_}"
             self.id_ = id_
+            self.deltaproxy = False
             self._closed = False
 
         def close(self):
