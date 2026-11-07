@@ -16,12 +16,13 @@ pytestmark = [
 ]
 
 
-def configure_filtering(factory, enabled):
+def configure_filtering(factory, enabled, **overrides):
     """Reload a factory with the requested on-disk publication setting."""
     config = salt.utils.yaml.safe_load(
         Path(factory.config_file).read_text(encoding="utf-8")
     )
     config.update(conf_file=factory.config_file, zmq_filtering=enabled)
+    config.update(overrides)
     factory.config = freeze(factory.write_config(config))
     return factory
 
@@ -39,8 +40,17 @@ def salt_master_factory(request, salt_master_factory):
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_delta_proxy_factory, salt_master_factory):
     """Use matching publication framing on the master and controller."""
+    # These tests need only built-in modules. Keep file synchronization local
+    # while fetching pillar from the real master, so a separate SyncWrapper
+    # startup bug cannot prevent the publication tests from reaching readiness.
+    local_files = Path(salt_delta_proxy_factory.config["root_dir"]) / "local-files"
+    local_files.mkdir(exist_ok=True)
     return configure_filtering(
-        salt_delta_proxy_factory, salt_master_factory.config["zmq_filtering"]
+        salt_delta_proxy_factory,
+        salt_master_factory.config["zmq_filtering"],
+        file_client="local",
+        use_master_when_local=True,
+        file_roots={"base": [str(local_files)]},
     )
 
 
@@ -73,7 +83,8 @@ def test_child_publication(salt_delta_proxy, salt_cli, tmp_path, target_type):
 
     ret = salt_cli.run(*arguments, "test.ping", minion_tgt=target)
     assert ret.returncode == 0
-    assert ret.data is True
+    data = ret.data if isinstance(ret.data, dict) else {child_id: ret.data}
+    assert data == {child_id: True}
 
 
 def test_multiple_children(salt_delta_proxy, salt_cli):

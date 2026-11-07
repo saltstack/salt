@@ -41,7 +41,7 @@ def test_child_subscriptions(client):
             call(zmq.SUBSCRIBE, topic(child))
             in client._socket.setsockopt.call_args_list
         )
-        payload = {"enc": "aes", "load": b"encrypted-job"}
+        payload = {"enc": "aes", "load": "encrypted-job"}
         assert (
             client._decode_messages([topic(child), salt.payload.dumps(payload)])
             == payload
@@ -81,3 +81,15 @@ async def test_receive_timeout_does_not_consume(client, timeout):
     client.poller.poll = MagicMock(return_value=[])
     assert await client.recv(timeout=timeout) is None
     client._socket.recv_multipart.assert_not_awaited()
+
+
+def test_monitor_stop_handles_zmq_errors():
+    socket = MagicMock()
+    socket.disable_monitor.side_effect = zmq.ZMQError(zmq.ENOTSOCK)
+    socket.get_monitor_socket.return_value.close.side_effect = zmq.ZMQError(
+        zmq.ENOTSOCK
+    )
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(socket)
+    monitor.stop()
+    assert monitor._socket is None
+    assert monitor._monitor_socket is None

@@ -39,7 +39,7 @@ async def test_child_subscriptions(minion_opts, io_loop):
                 if subscription[0] == 1:
                     expected.discard(subscription[1:])
 
-            payload = {"enc": "aes", "load": b"encrypted-job"}
+            payload = {"enc": "aes", "load": "encrypted-job"}
             for topic in [b"broadcast", *topics.values()]:
                 await publisher.send_multipart([topic, salt.payload.dumps(payload)])
                 messages = await client.recv(timeout=5)
