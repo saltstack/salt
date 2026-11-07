@@ -156,6 +156,110 @@ class TestSaltPeer:
 
         _run(_body())  # must not raise
 
+    def test_peer_unreachable_logs_debug_not_error(self, caplog):
+        """
+        Regression for the cluster-shutdown ERROR flood: when a Raft peer
+        is unreachable (ConnectionError/StreamClosedError/OSError from the
+        heartbeat tick firing against a going-away master), ``_send``
+        logs at DEBUG rather than ``log.exception`` -- otherwise the
+        leader dumps dozens of tracebacks per second during
+        ``docker compose down``.
+        """
+        import logging as _logging
+
+        pusher = _make_pusher()
+        pusher.publish = AsyncMock(side_effect=ConnectionRefusedError("peer gone"))
+        peer = SaltPeer("remote", pusher, "local")
+
+        caplog.set_level(_logging.DEBUG, logger="salt.cluster.consensus.peer")
+
+        async def _body():
+            peer.append_entries(None, "local", 1, 0, -1, 0)
+            await asyncio.sleep(0)
+
+        _run(_body())
+
+        # No ERROR-level records for the unreachable-peer path.
+        error_records = [
+            r
+            for r in caplog.records
+            if r.name == "salt.cluster.consensus.peer" and r.levelno >= _logging.ERROR
+        ]
+        assert error_records == [], (
+            "SaltPeer should not log ERROR for expected unreachable-peer "
+            f"exceptions; got: {[r.getMessage() for r in error_records]}"
+        )
+        debug_records = [
+            r
+            for r in caplog.records
+            if r.name == "salt.cluster.consensus.peer"
+            and r.levelno == _logging.DEBUG
+            and "unreachable" in r.getMessage()
+        ]
+        assert debug_records, "Expected one DEBUG log for unreachable peer"
+
+    def test_unexpected_send_error_still_logs_exception(self, caplog):
+        """
+        Non-connection exceptions (programming errors, msgpack bugs, ...)
+        must still surface as ERROR so they aren't silently swallowed.
+        """
+        import logging as _logging
+
+        pusher = _make_pusher()
+        pusher.publish = AsyncMock(side_effect=ValueError("bogus payload"))
+        peer = SaltPeer("remote", pusher, "local")
+
+        caplog.set_level(_logging.DEBUG, logger="salt.cluster.consensus.peer")
+
+        async def _body():
+            peer.append_entries(None, "local", 1, 0, -1, 0)
+            await asyncio.sleep(0)
+
+        _run(_body())
+
+        error_records = [
+            r
+            for r in caplog.records
+            if r.name == "salt.cluster.consensus.peer" and r.levelno >= _logging.ERROR
+        ]
+        assert error_records, "Unexpected exceptions must still log at ERROR"
+
+    def test_publish_invalidates_cached_client_on_failure(self):
+        """
+        Regression: ``_publish`` caches a ``_TCPPubServerPublisher`` on the
+        pusher; once the cached stream is broken (peer went away) every
+        subsequent send would reraise against the same dead stream and the
+        heartbeat loop would never recover.  On failure the cached client
+        must be dropped so the next send reconnects.
+        """
+
+        class FakeClient:
+            def __init__(self):
+                self.closed = False
+
+            async def send(self, raw):
+                raise ConnectionResetError("stream closed")
+
+            def close(self):
+                self.closed = True
+
+        pusher = MagicMock()
+        # Flag _publish's module-check as a real salt.transport pusher.
+        type(pusher).__module__ = "salt.transport.tcp"
+        client = FakeClient()
+        pusher._consensus_async_client = client
+
+        async def _body():
+            with pytest.raises(ConnectionResetError):
+                await peer_module._publish(pusher, b"payload")
+
+        _run(_body())
+
+        assert client.closed, "Dead client must be closed"
+        assert not hasattr(pusher, "_consensus_async_client") or (
+            getattr(pusher, "_consensus_async_client", None) is not client
+        ), "Dead client must be removed from the pusher cache"
+
 
 # ---------------------------------------------------------------------------
 # RaftDispatcher
