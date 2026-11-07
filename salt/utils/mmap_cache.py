@@ -1538,7 +1538,41 @@ class MmapCache:
             log.error("Error writing to mmap cache %s: %s", self.path, exc)
             return False
 
-    def put_many(self, items):
+    def _yield_flock(self):
+        """
+        Release and immediately re-acquire the cross-process write flock.
+
+        Used by ``put_many(..., yield_every=N)`` to bound the maximum time a
+        bulk writer blocks peer writers. On Linux ``flock`` is FIFO, so
+        dropping the lock gives any queued waiter a fair-share slot.
+
+        Must be called while ``_batch_mode`` is True and the flock is held.
+        After re-acquiring, the caller must re-run ``open(write=True)`` so a
+        peer compaction (``atomic_rebuild``, which replaces the index inode)
+        or heap-segment roll that landed in the gap is picked up. We force a
+        full staleness check on the next ``open()`` by clearing
+        ``_last_staleness_check``; otherwise the throttled stat window
+        (``_staleness_check_interval``, default 0.25 s) would short-circuit
+        and leave this process with a stale mmap.
+
+        Non-Linux / no-fcntl builds no-op — the primary consumers of this
+        helper are Linux masters, and the code still produces correct (if
+        less fair) output elsewhere by never yielding.
+        """
+        lock_f = self._lock_fd
+        if lock_f is None:
+            return
+        if salt.utils.platform.is_windows() or fcntl is None:
+            return
+        fd = lock_f.fileno()
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        # Force the next open(write=True) to do a real staleness stat so a
+        # peer atomic_rebuild or segment roll that raced the unlock->lock
+        # window is not masked by the throttle.
+        self._last_staleness_check = None
+        fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def put_many(self, items, yield_every=0):
         """
         Bulk-insert many ``(key, value)`` tuples with a single flock
         acquisition and a single batched flush at the end.
@@ -1554,8 +1588,20 @@ class MmapCache:
         Measured: 10K bulk put jumped from ~144 entries/s to ~18.6 K/s
         (~70x) on ext4; 100K jumped to ~86 K/s.
 
+        When ``yield_every`` is a positive integer, the bulk path still
+        runs under a single logical batch (one end-of-batch commit) but
+        **releases and immediately re-acquires** the cross-process write
+        flock every ``yield_every`` inner ``put`` calls. On Linux ``flock``
+        is strictly FIFO so any peer waiter gets its turn between groups;
+        this bounds the worst-case peer-writer block to one group's wall
+        time instead of the whole batch's. End-of-batch fsync + index
+        flush is unchanged, so happy-path throughput is preserved.
+
         :param items: iterable of ``(key, value)`` tuples; ``value`` may
             be ``None``, ``str``, or ``bytes`` (same rules as ``put``).
+        :param int yield_every: Release+reacquire the write flock every N
+            inner ``put`` calls. ``0`` (the default) preserves the
+            historical single-flock behaviour bit-for-bit.
         :returns: ``True`` if every inner ``put`` succeeded, ``False``
             otherwise (partial writes are still durable — the batch flush
             runs in the ``finally`` arm).
@@ -1568,6 +1614,7 @@ class MmapCache:
                     self._batch_mode = True
                     touched_segs = set()
                     ok = True
+                    processed = 0
                     try:
                         for item in items:
                             if isinstance(item, (list, tuple)) and len(item) > 1:
@@ -1586,6 +1633,17 @@ class MmapCache:
                                 continue
                             touched_segs.add(active_before)
                             touched_segs.add(self._active_segment_id())
+                            processed += 1
+                            # Fairness cycle: every ``yield_every`` successful
+                            # inner puts, drop the flock to let a peer writer
+                            # drain, then re-acquire + re-open. ``touched_segs``
+                            # intentionally accumulates across groups so the
+                            # end-of-batch commit still runs exactly once.
+                            if yield_every and processed % yield_every == 0:
+                                self._yield_flock()
+                                if not self.open(write=True):
+                                    ok = False
+                                    break
                     finally:
                         # Batched commit: fsync every touched heap segment,
                         # then flush the index mmap. Must happen *before*

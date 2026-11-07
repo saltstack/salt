@@ -461,3 +461,218 @@ def test_atomic_rebuild_resets_header(cache_path):
     assert deleted == 0
     assert hwm >= 1
     c.close()
+
+
+# ---------------------------------------------------------------------------
+# put_many yielding (A' sub-chunk flock cycling)
+# ---------------------------------------------------------------------------
+
+
+# Enough slots for up to ~20K keys at a comfortable (~40%) load factor;
+# slot_size large enough for the longer keys used in these tests.
+_YIELD_SIZE = 65536
+_YIELD_SLOT = 96
+_YIELD_KEY = 48
+
+
+def _mk_items(n, prefix="yk"):
+    return [(f"{prefix}-{i:05d}", f"v-{i:05d}") for i in range(n)]
+
+
+def test_put_many_yield_every_zero_matches_today_behavior(tmp_path):
+    """yield_every=0 must preserve the historical single-flock semantics
+    bit-for-bit: all keys present with expected values, no spurious state
+    changes."""
+    p = str(tmp_path / "yz.idx")
+    c = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+    items = _mk_items(2048)
+    assert c.put_many(items, yield_every=0) is True
+    # Default call (no kwarg) must behave identically.
+    c2 = MmapCache(
+        str(tmp_path / "yz2.idx"),
+        size=_YIELD_SIZE,
+        slot_size=_YIELD_SLOT,
+        key_size=_YIELD_KEY,
+    )
+    assert c2.put_many(items) is True
+    for k, v in items:
+        assert c.get(k) == v
+        assert c2.get(k) == v
+    c.close()
+    c2.close()
+
+
+def test_put_many_yielding_preserves_values(tmp_path):
+    """put_many with yield_every > 0 must still land every entry correctly.
+
+    10K entries across 40 yield groups at yield_every=256.
+    """
+    p = str(tmp_path / "ypv.idx")
+    c = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+    items = _mk_items(10000)
+    assert c.put_many(items, yield_every=256) is True
+    for k, v in items:
+        assert c.get(k) == v, f"missing/corrupt entry for {k}"
+    c.close()
+
+
+def test_put_many_yielding_releases_flock_between_groups(tmp_path):
+    """While a long put_many(..., yield_every=N) is running in a thread,
+    an in-process attempt to acquire the write flock non-blockingly must
+    succeed at least once mid-batch. That can only happen if the writer
+    releases the flock between groups.
+
+    This is the behavioural signal that the yield actually happens; without
+    the yield, a 20K-entry batch holds LOCK_EX for the duration.
+    """
+    import fcntl
+    import threading
+
+    import salt.utils.files
+
+    p = str(tmp_path / "yr.idx")
+    c = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+    items = _mk_items(20000)
+
+    probe_hits = []
+    stop = threading.Event()
+
+    # Open a *separate* fd to the same lock file so we don't collide with
+    # the writer's persistent lock fd (flock is per-open-file-description).
+    lock_path = c._lock_path
+    # The lock file is created on first _lock_fd_open; make sure it exists.
+    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    with salt.utils.files.fopen(lock_path, "a"):
+        pass
+
+    def probe():
+        with salt.utils.files.fopen(lock_path, "w") as f:
+            fd = f.fileno()
+            while not stop.is_set():
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except OSError:
+                    # Writer holds the lock — try again.
+                    time.sleep(0.001)
+                    continue
+                probe_hits.append(time.monotonic())
+                fcntl.flock(fd, fcntl.LOCK_UN)
+                # Sleep briefly so the writer can reacquire and make
+                # forward progress.
+                time.sleep(0.002)
+
+    t = threading.Thread(target=probe, daemon=True)
+    t.start()
+    try:
+        assert c.put_many(items, yield_every=128) is True
+    finally:
+        stop.set()
+        t.join(timeout=5)
+
+    # At least one mid-batch acquisition happened. In practice with 20K
+    # entries and yield_every=128 there are ~156 yield points so the
+    # probe has many chances; we just need one to prove the lock was
+    # observable as free.
+    assert probe_hits, "probe never caught the writer releasing the flock"
+    c.close()
+
+
+def test_put_many_yielding_atomic_rebuild_interleave(tmp_path, caplog):
+    """A concurrent compact() running mid-put_many(yield_every=N) must
+    land either before or after the batch cleanly; all submitted keys
+    must be findable afterwards and no CRC errors logged."""
+    import threading
+
+    p = str(tmp_path / "yc.idx")
+    c = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+    # Pre-seed so compact has something to rebuild.
+    seed = _mk_items(100, prefix="seed")
+    for k, v in seed:
+        assert c.put(k, v) is True
+
+    items = _mk_items(5000, prefix="y")
+
+    errors = []
+
+    def rebuild_soon():
+        # Let put_many spin up a few groups first.
+        time.sleep(0.02)
+        try:
+            # ``atomic_rebuild`` takes a full snapshot and swaps inodes.
+            snap = c.list_items()
+            c.atomic_rebuild(snap)
+        except Exception as exc:  # pylint: disable=broad-except
+            errors.append(exc)
+
+    t = threading.Thread(target=rebuild_soon)
+    with caplog.at_level("ERROR", logger="salt.utils.mmap_cache"):
+        t.start()
+        ok = c.put_many(items, yield_every=256)
+        t.join(timeout=10)
+
+    assert not errors, errors
+    assert ok is True
+    # All seed and all freshly-written keys must be readable.
+    for k, v in seed:
+        assert c.get(k) == v
+    for k, v in items:
+        assert c.get(k) == v, f"missing entry {k} after compact interleave"
+    # No CRC/heap corruption logs.
+    crc_errs = [rec.message for rec in caplog.records if "crc" in rec.message.lower()]
+    assert not crc_errs, crc_errs
+    c.close()
+
+
+def test_put_many_yielding_crash_mid_batch(tmp_path, monkeypatch):
+    """Simulate a crash between yield groups by raising inside _yield_flock.
+
+    After the crash, reopening the cache must converge: every entry that
+    is present must be readable with valid data (no torn slots / no CRC
+    failures). Entries that did not make it durable are simply missing —
+    that is the accepted weakening the design doc calls out.
+    """
+    p = str(tmp_path / "yx.idx")
+    c = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+
+    items = _mk_items(3000, prefix="x")
+
+    yield_count = {"n": 0}
+    real_yield = MmapCache._yield_flock
+
+    def bomb(self):
+        yield_count["n"] += 1
+        if yield_count["n"] >= 3:
+            raise RuntimeError("simulated mid-batch crash")
+        real_yield(self)
+
+    monkeypatch.setattr(MmapCache, "_yield_flock", bomb)
+
+    # put_many does not suppress non-OSError — this will raise.
+    raised = False
+    try:
+        c.put_many(items, yield_every=256)
+    except RuntimeError as exc:
+        assert "simulated mid-batch crash" in str(exc)
+        raised = True
+    assert raised, "monkeypatched _yield_flock should have raised"
+    c.close()
+
+    # Reopen — _roster_recover runs on open(write=True) via _maybe_recover_roster.
+    c2 = MmapCache(p, size=_YIELD_SIZE, slot_size=_YIELD_SLOT, key_size=_YIELD_KEY)
+    assert c2.open(write=True) is True
+
+    # Every entry that comes back must have a valid, non-corrupt value.
+    # Entries that were lost mid-batch are allowed to be absent, but
+    # none may be torn.
+    expected = dict(items)
+    for k, v in items:
+        got = c2.get(k)
+        if got is not None:
+            assert got == v, f"torn/corrupt value for {k}: {got!r} != {v!r}"
+    # Write a fresh entry to prove the cache is still usable post-crash.
+    assert c2.put("post-crash", "ok") is True
+    assert c2.get("post-crash") == "ok"
+    c2.close()
+    # Reference to silence lint about the `expected` dict being unused in
+    # the None branch.
+    assert "x-00000" in expected

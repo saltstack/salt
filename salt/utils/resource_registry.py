@@ -254,16 +254,23 @@ class _ResourceIndexStore:
         path,
         capacity=DEFAULT_PRIMARY_CAPACITY,
         slot_size=DEFAULT_SLOT_SIZE,
+        put_many_yield=0,
     ):
         """
         :param str path: Absolute path for the primary mmap file.
         :param int capacity: Slot count (must be a power of two for best
             distribution given the Adler-32 probing).
         :param int slot_size: Per-slot byte width including the status byte.
+        :param int put_many_yield: Forwarded to
+            :meth:`salt.utils.mmap_cache.MmapCache.put_many` as its
+            ``yield_every`` argument. ``0`` preserves the historical
+            single-flock behaviour; a positive value bounds the maximum
+            time this writer blocks peer writers to one group.
         """
         self._path = path
         self._capacity = capacity
         self._slot_size = slot_size
+        self._put_many_yield = int(put_many_yield) if put_many_yield else 0
 
         self._primary = salt.utils.mmap_cache.MmapCache(
             path,
@@ -410,7 +417,14 @@ class _ResourceIndexStore:
                 (srn_key, _encode_by_id_value(minion_id, rtype))
                 for srn_key, minion_id, rtype in entries
             ]
-            ok = bool(bulk(kv))
+            # Forward the configured yield-every to the mmap bulk path so
+            # peer writers on the same cache file get fair-share flock
+            # slots between groups. See ``MmapCache.put_many``.
+            yield_every = getattr(self, "_put_many_yield", 0)
+            if yield_every:
+                ok = bool(bulk(kv, yield_every=yield_every))
+            else:
+                ok = bool(bulk(kv))
             if ok:
                 self._invalidate_version_cache()
                 self._touch_primary_mtime()
@@ -664,6 +678,7 @@ class ResourceRegistry:
                 "resource_index_primary_capacity", DEFAULT_PRIMARY_CAPACITY
             ),
             slot_size=opts.get("resource_index_primary_slot_size", DEFAULT_SLOT_SIZE),
+            put_many_yield=opts.get("resource_registry_put_many_yield", 1024),
         )
         # ``salt.cache`` is the bank abstraction used for the topology blob
         # (``resources`` bank) plus ``grains``/``pillar``. The registry

@@ -543,6 +543,12 @@ VALID_OPTS = immutabletypes.freeze(
         "syndic_retries": int,
         # Top-level pillar key for per-type resource configuration (default: resources)
         "resource_pillar_key": str,
+        # Master-side only. Every N inner ``put`` calls inside a resource-
+        # registry ``put_many`` batch, release and immediately re-acquire
+        # the cross-process write flock. Bounds the maximum time a bulk
+        # registry write blocks peer writers to roughly one group's
+        # wall-time. 0 preserves the pre-A' single-flock behaviour.
+        "resource_registry_put_many_yield": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1983,6 +1989,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        "resource_registry_put_many_yield": 1024,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
