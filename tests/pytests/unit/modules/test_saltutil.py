@@ -242,6 +242,36 @@ def test_refresh_matchers():
     assert ret is False
 
 
+def test_refresh_resources_fires_event():
+    """Plain (no-wait) call fires the ``resource_refresh`` event."""
+    fake_fire = MagicMock(return_value=True)
+    with patch.dict(saltutil.__salt__, {"event.fire": fake_fire}):
+        ret = saltutil.refresh_resources()
+        fake_fire.assert_called_once_with({}, "resource_refresh")
+    assert ret is True
+
+
+def test_refresh_resources_wait_subscribes_to_complete_event():
+    """
+    ``wait=True`` subscribes to :data:`MINION_RESOURCE_REFRESH_COMPLETE`
+    before firing ``resource_refresh`` and blocks on ``get_event`` up to
+    ``timeout`` seconds.
+    """
+    fake_eventer = MagicMock()
+    fake_eventer.__enter__ = MagicMock(return_value=fake_eventer)
+    fake_eventer.__exit__ = MagicMock(return_value=False)
+    fake_eventer.get_event.return_value = {"complete": True}
+    with patch("salt.utils.event.get_event", return_value=fake_eventer), patch.dict(
+        saltutil.__salt__, {"event.fire": MagicMock(return_value=True)}
+    ):
+        ret = saltutil.refresh_resources(wait=True, timeout=5)
+    assert ret is True
+    fake_eventer.get_event.assert_called_once()
+    _, kwargs = fake_eventer.get_event.call_args
+    assert kwargs["tag"] == "/salt/minion/minion_resource_refresh_complete"
+    assert kwargs["wait"] == 5
+
+
 @pytest.mark.skip_on_windows
 def test_refresh_modules_async_false():
     # XXX: This test adds coverage but what is it really testing? Seems we'd be

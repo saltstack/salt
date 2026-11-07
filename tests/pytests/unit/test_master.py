@@ -376,6 +376,9 @@ def test_aes_funcs_black(master_opts):
         "_file_recv_write",
         # Sync helper for ``_syndic_return``'s ``run_in_executor`` offload.
         "_write_syndic_cache_marker",
+        # Chunked-register grain-bank flush helper invoked on the
+        # terminal chunk (sweep runs inline in the register handler).
+        "_sweep_resource_grains_bank_for_minion",
         # LTS-default sync shim installer + shim bodies (``master_async_mworker`` opt-in).
         "_install_sync_handlers",
         "_sync_pillar",
@@ -1590,10 +1593,21 @@ async def test_register_resources_updates_resource_index_when_minion_data_cache_
     try:
         load = {"id": "minion-2", "resources": {"dummy": ["m2-dummy2"]}}
         with patch(
-            "salt.utils.minions.update_resource_index", return_value=(1, 0)
-        ) as ur:
+            "salt.utils.minions.upsert_resource_index_chunk", return_value=1
+        ) as upsert, patch(
+            "salt.utils.minions.sweep_resource_index_stale", return_value=0
+        ) as sweep:
             await aes_funcs._register_resources(load)
-        ur.assert_called_once_with(opts, "minion-2", {"dummy": ["m2-dummy2"]})
+        # Unchunked legacy load: one upsert + one inline sweep with a
+        # server-generated jid.
+        assert upsert.call_count == 1
+        args = upsert.call_args[0]
+        assert args[0] is opts
+        assert args[1] == "minion-2"
+        assert args[2] == {"dummy": ["m2-dummy2"]}
+        # The jid is a Salt jid string (20+ chars).
+        assert isinstance(args[3], str) and len(args[3]) >= 14
+        assert sweep.call_count == 1
     finally:
         aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
@@ -1824,141 +1838,70 @@ async def test_register_resources_fires_minion_data_cache_event(master_opts, tmp
         salt.utils.resource_registry.reset_registry()
 
 
-async def test_register_resources_assembles_chunks_out_of_order(master_opts, tmp_path):
+async def test_register_resources_chunks_write_immediately(master_opts, tmp_path):
     """
-    Chunked registration arriving out-of-order on the master is staged under
-    the shared ``_register_token`` and committed atomically on
-    ``_chunk_is_last=True``. Writes to the registry happen only once, when
-    the final chunk arrives, carrying the full accumulated payload.
+    Each chunk upserts to the registry immediately — no master-side
+    staging dict. Mid-stream (non-terminal chunks) every chunk's entries
+    are visible. The sweep only fires on ``_chunk_is_last=True``.
     """
     import salt.utils.resource_registry
 
     aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
-    # Clear per-process staging state so this test doesn't inherit chunks
-    # from another test.
-    salt.master._register_chunk_stage.clear()
     try:
-        token = "tok-out-of-order"
-        # Chunks arrive 0, 2, 1 — the master must still reassemble them
-        # correctly and only write on the chunk marked ``is_last``.
+        jid = "99990101000000000700"
         chunks = [
             {
-                "id": "minion-ooo",
+                "id": "minion-stream",
                 "resources": {"dummy": ["c0-a", "c0-b"]},
                 "resource_grains": {
                     "dummy:c0-a": {"k": "v0a"},
                     "dummy:c0-b": {"k": "v0b"},
                 },
-                "_register_token": token,
+                "_register_jid": jid,
                 "_chunk_seq": 0,
-                "_chunk_total": 3,
+                "_chunk_total": 2,
                 "_chunk_is_last": False,
             },
             {
-                "id": "minion-ooo",
-                "resources": {"dummy": ["c2-a"]},
-                "resource_grains": {"dummy:c2-a": {"k": "v2a"}},
-                "_register_token": token,
-                "_chunk_seq": 2,
-                "_chunk_total": 3,
+                "id": "minion-stream",
+                "resources": {"dummy": ["c1-a"]},
+                "resource_grains": {"dummy:c1-a": {"k": "v1a"}},
+                "_register_jid": jid,
+                "_chunk_seq": 1,
+                "_chunk_total": 2,
                 "_chunk_is_last": True,
             },
-            {
-                "id": "minion-ooo",
-                "resources": {"dummy": ["c1-a", "c1-b"]},
-                "resource_grains": {
-                    "dummy:c1-a": {"k": "v1a"},
-                    "dummy:c1-b": {"k": "v1b"},
-                },
-                "_register_token": token,
-                "_chunk_seq": 1,
-                "_chunk_total": 3,
-                "_chunk_is_last": False,
-            },
         ]
-        # Send chunks 0 and 2 first. Chunk 2 is marked is_last — its arrival
-        # before chunk 1 commits whatever is staged + its own payload. Then
-        # chunk 1 arrives late (think: retransmit after a transient drop);
-        # no staged state remains so it commits on its own as if it were
-        # an unchunked payload. In the common path a chunk ordering problem
-        # across the wire is resolved by the caller's retry logic; this
-        # test proves we don't silently drop data when ordering is weird.
-        #
-        # First: send chunk 0 (staged).
         await aes_funcs._register_resources(chunks[0])
         cache = aes_funcs.masterapi.cache
-        # Nothing committed yet — no grain entries visible.
-        assert sorted(cache.list("resource_grains") or []) == []
-        # Chunk 2 arrives (marked is_last) — commits chunk 0 + chunk 2.
-        await aes_funcs._register_resources(chunks[1])
-        committed = sorted(cache.list("resource_grains") or [])
-        assert committed == ["dummy:c0-a", "dummy:c0-b", "dummy:c2-a"]
-    finally:
-        aes_funcs.destroy()
-        salt.master._register_chunk_stage.clear()
-        salt.utils.resource_registry.reset_registry()
-
-
-async def test_register_resources_assembles_all_chunks_in_order(master_opts, tmp_path):
-    """
-    The nominal path: three chunks arrive in order (0, 1, 2) sharing a
-    token. The registry sees all resources after the final chunk, never
-    partial state.
-    """
-    import salt.utils.resource_registry
-
-    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
-    salt.master._register_chunk_stage.clear()
-    try:
-        token = "tok-in-order"
-        for seq, pair in enumerate([("a0", "a1"), ("b0", "b1"), ("c0", "c1")]):
-            load = {
-                "id": "minion-io",
-                "resources": {"dummy": list(pair)},
-                "resource_grains": {
-                    f"dummy:{pair[0]}": {"k": f"{seq}-0"},
-                    f"dummy:{pair[1]}": {"k": f"{seq}-1"},
-                },
-                "_register_token": token,
-                "_chunk_seq": seq,
-                "_chunk_total": 3,
-                "_chunk_is_last": seq == 2,
-            }
-            await aes_funcs._register_resources(load)
-            cache = aes_funcs.masterapi.cache
-            if seq < 2:
-                assert sorted(cache.list("resource_grains") or []) == []
-        cache = aes_funcs.masterapi.cache
-        committed = sorted(cache.list("resource_grains") or [])
-        assert committed == [
-            "dummy:a0",
-            "dummy:a1",
-            "dummy:b0",
-            "dummy:b1",
-            "dummy:c0",
-            "dummy:c1",
+        # Chunk 0's entries land immediately — no staging deferral.
+        assert sorted(cache.list("resource_grains") or []) == [
+            "dummy:c0-a",
+            "dummy:c0-b",
         ]
+        await aes_funcs._register_resources(chunks[1])
+        after_both = sorted(cache.list("resource_grains") or [])
+        assert after_both == ["dummy:c0-a", "dummy:c0-b", "dummy:c1-a"]
     finally:
         aes_funcs.destroy()
-        salt.master._register_chunk_stage.clear()
         salt.utils.resource_registry.reset_registry()
 
 
-async def test_register_resources_clears_stale_entries_only_on_last_chunk(
+async def test_register_resources_stale_entries_swept_on_last_chunk(
     master_opts, tmp_path
 ):
     """
-    Pre-existing registry entries that aren't in the new payload must
-    survive intermediate chunks and be flushed only when the final chunk
-    arrives — otherwise a mid-registration read would see a half-emptied
-    registry.
+    Pre-existing registry entries for a minion are preserved across
+    intermediate chunks (``_chunk_is_last=False``) and only swept when
+    the terminal chunk (``_chunk_is_last=True``) arrives. Mid-stream the
+    union of old + new is visible — a transient "too-many-matches"
+    state, which is correct for targeting (better than a torn registry).
     """
     import salt.utils.resource_registry
 
     aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
-    salt.master._register_chunk_stage.clear()
     try:
-        # Seed registry with 4 prior entries for this minion.
+        # Seed with a prior unchunked register (sweeps inline).
         seed = {
             "id": "minion-stale",
             "resources": {"dummy": ["old-1", "old-2", "old-3", "old-4"]},
@@ -1973,13 +1916,13 @@ async def test_register_resources_clears_stale_entries_only_on_last_chunk(
         cache = aes_funcs.masterapi.cache
         assert len(cache.list("resource_grains") or []) == 4
 
-        # New registration: only 2 entries, delivered in 2 chunks.
-        token = "tok-stale-check"
+        # New chunked registration: 2 entries in 2 chunks, newer jid.
+        jid = "99990101000000000800"
         chunk0 = {
             "id": "minion-stale",
             "resources": {"dummy": ["new-1"]},
             "resource_grains": {"dummy:new-1": {"k": "n1"}},
-            "_register_token": token,
+            "_register_jid": jid,
             "_chunk_seq": 0,
             "_chunk_total": 2,
             "_chunk_is_last": False,
@@ -1988,56 +1931,267 @@ async def test_register_resources_clears_stale_entries_only_on_last_chunk(
             "id": "minion-stale",
             "resources": {"dummy": ["new-2"]},
             "resource_grains": {"dummy:new-2": {"k": "n2"}},
-            "_register_token": token,
+            "_register_jid": jid,
             "_chunk_seq": 1,
             "_chunk_total": 2,
             "_chunk_is_last": True,
         }
         await aes_funcs._register_resources(chunk0)
-        # After chunk 0 the 4 old entries must STILL be present — stale
-        # flushing must not run until the final chunk arrives, otherwise a
-        # concurrent read sees a torn registry.
         after_chunk0 = sorted(cache.list("resource_grains") or [])
-        assert (
-            "dummy:old-1" in after_chunk0
-        ), "stale entries must not be flushed until the final chunk arrives"
-        assert "dummy:old-2" in after_chunk0
-        assert "dummy:old-3" in after_chunk0
-        assert "dummy:old-4" in after_chunk0
+        # Old entries STILL present — sweep deferred to the terminal chunk.
+        for s in ("dummy:old-1", "dummy:old-2", "dummy:old-3", "dummy:old-4"):
+            assert s in after_chunk0
+        assert "dummy:new-1" in after_chunk0
+        # Terminal chunk arrives: sweep fires for this jid.
         await aes_funcs._register_resources(chunk1)
-        # After chunk 1 (is_last) the old entries are gone, only the new
-        # 2 remain.
-        after_chunk1 = sorted(cache.list("resource_grains") or [])
-        assert after_chunk1 == ["dummy:new-1", "dummy:new-2"]
+        after_last = sorted(cache.list("resource_grains") or [])
+        assert after_last == ["dummy:new-1", "dummy:new-2"]
     finally:
         aes_funcs.destroy()
-        salt.master._register_chunk_stage.clear()
         salt.utils.resource_registry.reset_registry()
 
 
 async def test_register_resources_unchunked_load_preserved(master_opts, tmp_path):
     """
-    A load with no ``_register_token`` must be processed exactly as before
-    (unchunked), so old minions still work against a new master.
+    A load with no ``_register_jid`` must be processed exactly as before
+    (unchunked: upsert + inline sweep), so old minions still work
+    against a new master. Second unchunked load must fully replace the
+    first — matches pre-chunking semantics.
     """
     import salt.utils.resource_registry
 
     aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
-    salt.master._register_chunk_stage.clear()
     try:
-        load = {
+        load_1 = {
             "id": "minion-legacy",
-            "resources": {"dummy": ["l-1"]},
-            "resource_grains": {"dummy:l-1": {"k": "legacy"}},
+            "resources": {"dummy": ["l-1", "l-2"]},
+            "resource_grains": {
+                "dummy:l-1": {"k": "legacy1"},
+                "dummy:l-2": {"k": "legacy2"},
+            },
         }
-        await aes_funcs._register_resources(load)
+        await aes_funcs._register_resources(load_1)
         cache = aes_funcs.masterapi.cache
-        assert sorted(cache.list("resource_grains") or []) == ["dummy:l-1"]
-        # Staging store must be empty — unchunked loads never stage.
-        assert salt.master._register_chunk_stage.pending_count() == 0
+        assert sorted(cache.list("resource_grains") or []) == [
+            "dummy:l-1",
+            "dummy:l-2",
+        ]
+        # Second unchunked load with a different set — full-replace via
+        # the master-synthesised unique_jid + inline sweep.
+        load_2 = {
+            "id": "minion-legacy",
+            "resources": {"dummy": ["l-3"]},
+            "resource_grains": {"dummy:l-3": {"k": "legacy3"}},
+        }
+        await aes_funcs._register_resources(load_2)
+        assert sorted(cache.list("resource_grains") or []) == ["dummy:l-3"]
     finally:
         aes_funcs.destroy()
-        salt.master._register_chunk_stage.clear()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_terminal_chunk_sweep_preserves_newer_concurrent_registration(
+    master_opts, tmp_path
+):
+    """
+    If a newer register's chunks arrive mid-stream while an older
+    register's terminal chunk is being processed, the older sweep must
+    NOT delete the newer register's entries. Strict ``<`` on jid
+    comparison guarantees this.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        jid_a = "99990101000000000900"
+        jid_b = "99990101000000001000"
+        # Register A's single chunk (terminal).
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["a1"]},
+                "resource_grains": {"dummy:a1": {"k": "a"}},
+                "_register_jid": jid_a,
+                "_chunk_seq": 0,
+                "_chunk_total": 1,
+                "_chunk_is_last": False,
+            }
+        )
+        # Newer register B's chunk interleaves (non-terminal).
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["b1"]},
+                "resource_grains": {"dummy:b1": {"k": "b"}},
+                "_register_jid": jid_b,
+                "_chunk_seq": 0,
+                "_chunk_total": 2,
+                "_chunk_is_last": False,
+            }
+        )
+        # A's terminal chunk (retransmit) fires the sweep for jid_a.
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["a1"]},
+                "resource_grains": {"dummy:a1": {"k": "a"}},
+                "_register_jid": jid_a,
+                "_chunk_seq": 0,
+                "_chunk_total": 1,
+                "_chunk_is_last": True,
+            }
+        )
+        registry = salt.utils.resource_registry.get_registry(opts)
+        remaining = registry.get_resources_for_minion("m")
+        assert sorted(remaining["dummy"]) == [
+            "a1",
+            "b1",
+        ], f"A's sweep must not delete B's entries; got {remaining}"
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_grain_bank_flush_runs_after_primary_sweep(master_opts, tmp_path):
+    """
+    BLOCKING-3: the grain-bank flush on the terminal chunk must run
+    AFTER ``sweep_minion_stale_jids`` has tombstoned older-jid entries
+    in the primary. If the flush ran first (while the primary still
+    advertises the old SRNs as owned), ``get_managing_minions_for_srn``
+    would report this minion as the owner for SRNs the sweep is about
+    to delete, so the flush would spare their grain-bank entries and
+    leave them as orphans.
+
+    Setup: register {a,b,c} at jid=old, then {a} at jid=new as the
+    terminal chunk. After the handler returns, the grain bank must
+    contain only ``dummy:a`` — b and c grains must have been flushed.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        jid_old = "99990101000000001100"
+        jid_new = "99990101000000001200"
+        # Register at jid_old — single-chunk chunked (terminal).
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["a", "b", "c"]},
+                "resource_grains": {
+                    "dummy:a": {"k": "a"},
+                    "dummy:b": {"k": "b"},
+                    "dummy:c": {"k": "c"},
+                },
+                "_register_jid": jid_old,
+                "_chunk_seq": 0,
+                "_chunk_total": 1,
+                "_chunk_is_last": True,
+            }
+        )
+        cache = aes_funcs.masterapi.cache
+        assert sorted(cache.list("resource_grains") or []) == [
+            "dummy:a",
+            "dummy:b",
+            "dummy:c",
+        ]
+        # Register at jid_new — terminal chunk with only {a}.
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["a"]},
+                "resource_grains": {"dummy:a": {"k": "a"}},
+                "_register_jid": jid_new,
+                "_chunk_seq": 0,
+                "_chunk_total": 1,
+                "_chunk_is_last": True,
+            }
+        )
+        # Grain bank must no longer have b or c — the sweep ran first,
+        # then the flush walked the (post-sweep) registry ownership.
+        after = sorted(cache.list("resource_grains") or [])
+        assert after == [
+            "dummy:a"
+        ], f"grain-bank flush must drop b and c after primary sweep; got {after}"
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_sweep_strict_lt_preserves_concurrent_upsert_during_delete(
+    master_opts, tmp_path
+):
+    """
+    Interleave a chunk-upsert at a newer jid during the terminal
+    chunk's sweep ``delete_many`` call. Strict ``<`` on the sweep
+    predicate must still protect the newer upsert: its entries carry
+    jid > sweep_jid so they are not candidates for deletion.
+
+    The injection uses a ``patch`` on
+    ``_ResourceIndexStore.delete_many`` that performs the newer upsert
+    before delegating to the real implementation.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        jid_sweep = "99990101000000001300"
+        jid_newer = "99990101000000001400"
+        # Prime: old entry at an even earlier jid that the sweep WILL delete.
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["victim"]},
+                "resource_grains": {"dummy:victim": {"k": "v"}},
+                "_register_jid": "99990101000000001200",
+                "_chunk_seq": 0,
+                "_chunk_total": 1,
+                "_chunk_is_last": True,
+            }
+        )
+        # Register at jid_sweep as 2-chunk, 1st non-terminal.
+        await aes_funcs._register_resources(
+            {
+                "id": "m",
+                "resources": {"dummy": ["sweeper"]},
+                "resource_grains": {"dummy:sweeper": {"k": "s"}},
+                "_register_jid": jid_sweep,
+                "_chunk_seq": 0,
+                "_chunk_total": 2,
+                "_chunk_is_last": False,
+            }
+        )
+        registry = salt.utils.resource_registry.get_registry(opts)
+        real_delete_many = registry._store.delete_many
+
+        def injecting_delete_many(keys):
+            # Perform a newer concurrent upsert BEFORE the delete lands.
+            registry.upsert_minion_chunk("m", {"dummy": ["newer"]}, jid_newer)
+            return real_delete_many(keys)
+
+        with patch.object(
+            registry._store, "delete_many", side_effect=injecting_delete_many
+        ):
+            await aes_funcs._register_resources(
+                {
+                    "id": "m",
+                    "resources": {"dummy": ["sweeper"]},
+                    "resource_grains": {"dummy:sweeper": {"k": "s"}},
+                    "_register_jid": jid_sweep,
+                    "_chunk_seq": 1,
+                    "_chunk_total": 2,
+                    "_chunk_is_last": True,
+                }
+            )
+        remaining = registry.get_resources_for_minion("m")
+        # victim deleted (jid_old < jid_sweep). sweeper preserved.
+        # newer preserved — its jid > jid_sweep, strict ``<`` spares it.
+        assert "victim" not in remaining["dummy"]
+        assert "sweeper" in remaining["dummy"]
+        assert (
+            "newer" in remaining["dummy"]
+        ), "interleaved newer upsert must survive the sweep"
+    finally:
+        aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
 
 

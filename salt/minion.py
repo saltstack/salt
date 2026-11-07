@@ -61,6 +61,7 @@ import salt.utils.minions
 import salt.utils.network
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.resource_registry
 import salt.utils.resource_warnings
 import salt.utils.resources
 import salt.utils.schedule
@@ -4589,9 +4590,8 @@ class Minion(MinionBase):
         chunk so the master's per-chunk flush/store logic sees them together.
 
         The last chunk also carries any ``resource_grains`` SRNs that don't map
-        to any currently-managed resource (defensive: the master drops stale
-        entries only on ``_chunk_is_last=True``, so orphan grain keys must
-        reach it in that final chunk).
+        to any currently-managed resource (defensive: orphan grain keys must
+        ride with a chunk so the master's ``resource_grains`` bank sees them).
 
         .. note::
 
@@ -4630,8 +4630,8 @@ class Minion(MinionBase):
                     chunk_grains[srn] = resource_grains[srn]
             chunks.append((chunk_resources, chunk_grains))
         # Orphan grain SRNs that don't map to a currently-managed resource
-        # ride along with the final chunk so the master's stale-entry flush
-        # (``_chunk_is_last=True``) sees them.
+        # ride along with the final chunk so the master's ``resource_grains``
+        # bank sees them in the chunk-store path.
         assigned = {f"{rt}:{ri}" for rt, ri in pairs}
         orphans = {k: v for k, v in resource_grains.items() if k not in assigned}
         if orphans:
@@ -4662,7 +4662,7 @@ class Minion(MinionBase):
         :returns: ``list[chunk_resources_dict]`` — same shape as the input,
             just split by resource-ID count across types. Always non-empty
             (an empty inventory still produces a single empty chunk so the
-            master's stale-entry flush fires on ``_chunk_is_last=True``).
+            master's stale-entry sweep fires for the empty-register case).
         :rtype: list[dict]
         """
         resources = resources or {}
@@ -4698,17 +4698,31 @@ class Minion(MinionBase):
         :conf_minion:`resource_register_chunk_size` (default 16 000,
         chosen to target roughly 2 MiB per msgpack-encoded chunk assuming
         ~4 small-string grains per resource), the payload is split into
-        chunks sharing a per-registration ``uuid4`` token. Each chunk carries ``_chunk_seq`` / ``_chunk_total`` /
-        ``_chunk_is_last`` metadata; the master stages chunks keyed by
-        ``(minion_id, token)`` and applies them atomically on the chunk
-        marked ``_chunk_is_last=True``. Per-chunk timeout is the ordinary
-        return-retry timer (not the full-registration budget), so a single
-        chunk's transient failure doesn't invalidate the completed chunks
-        already on the master side. For inventories that fit in one chunk,
-        the chunking fields are omitted from the load so an unchunked load
-        is indistinguishable from the pre-chunking wire format — older
+        chunks sharing a per-registration Salt ``jid`` (from
+        :func:`salt.utils.jid.gen_jid`). Each chunk carries
+        ``_register_jid`` + ``_chunk_seq`` + ``_chunk_total`` +
+        ``_chunk_is_last``; the master upserts every chunk directly into
+        the registry stamped with the jid, and on ``_chunk_is_last=True``
+        additionally sweeps entries whose stored jid is older —
+        tombstoning anything left by a prior registration. Per-chunk
+        timeout is the ordinary return-retry timer (not the full
+        registration budget), so a single chunk's transient failure
+        doesn't invalidate the completed chunks already on the master
+        side. For inventories that fit in one chunk, the chunking fields
+        are omitted from the load so an unchunked load is
+        indistinguishable from the pre-chunking wire format — older
         masters stay compatible with newer minions when the inventory is
-        small.
+        small, and the master generates a jid server-side and sweeps
+        inline for that path.
+
+        **Completion signal.** After the chunk loop finishes (success,
+        partial-progress abort, or hard exception), the minion fires
+        :data:`salt.defaults.events.MINION_RESOURCE_REFRESH_COMPLETE` on
+        the local minion event bus carrying
+        ``{"complete": bool, "jid": str, "chunks_sent": int,
+        "chunks_total": int, "error": str?}``. CLI callers using
+        ``saltutil.refresh_resources(wait=True)`` subscribe to this
+        event to block on completion.
 
         **In-memory grain cache.** The ``resource_grains`` dict is held on
         the minion only when :conf_minion:`resource_grains_cache_in_memory`
@@ -4741,7 +4755,10 @@ class Minion(MinionBase):
 
         An empty resource dict is sent deliberately when the minion has no
         resources — this clears any stale entries left by a previous
-        registration (e.g. after a resource type is removed from the pillar).
+        registration (e.g. after a resource type is removed from the
+        pillar). The single-chunk legacy wire path on the master sweeps
+        inline after the upsert, so no trailing ``_return`` is required
+        for the empty-clearing case.
         """
         resources = self.opts.get("resources", {})
         if resources and not getattr(self, "resource_funcs", None):
@@ -4769,11 +4786,27 @@ class Minion(MinionBase):
         chunk_size = self.opts.get("resource_register_chunk_size", 16000)
         id_chunks = self._plan_register_id_chunks(resources, chunk_size)
         retries = max(0, int(self.opts.get("resource_register_chunk_retries", 3)))
-        import uuid as _uuid  # noqa: PLC0415
 
         total = len(id_chunks)
         single = total == 1
-        token = None if single else _uuid.uuid4().hex
+        # Chunked registrations share one Salt jid across all chunk RPCs.
+        # The master stamps every upserted entry with the jid and runs a
+        # strict-less-than sweep on the terminal chunk. Monotonicity is
+        # essential — ``generate_register_jid`` forces ``unique_jid=True``
+        # (in-process monotonicity via ``LAST_JID_DATETIME``) and bumps
+        # past any jid persisted by a prior process incarnation (wall-
+        # clock-rollback safety across minion restarts). Single-chunk
+        # payloads skip chunking fields entirely; the master synthesises
+        # its own jid with the same ``unique_jid=True`` guard.
+        if single:
+            jid = None
+        else:
+            last_persisted = salt.utils.resource_registry.read_last_register_jid(
+                self.opts
+            )
+            jid = salt.utils.resource_registry.generate_register_jid(
+                self.opts, last_persisted=last_persisted
+            )
 
         # Retain the grain map in memory only when the operator opted in.
         # Default False — the resolver re-renders per-call from
@@ -4793,6 +4826,15 @@ class Minion(MinionBase):
             full_grains = None
             self._resource_grains_cache = None
 
+        # Completion-event state tracked across the chunk loop so the
+        # ``finally`` block can fire ``MINION_RESOURCE_REFRESH_COMPLETE``
+        # with accurate success / partial-progress info for CLI callers
+        # of ``saltutil.refresh_resources(wait=True)``.
+        complete = True
+        error = None
+        chunks_sent = 0
+        break_loop = False
+
         try:
             for seq, chunk_resources in enumerate(id_chunks):
                 if retain_cache:
@@ -4811,9 +4853,9 @@ class Minion(MinionBase):
                     }
                 elif not chunk_resources:
                     # Empty-pillar sentinel chunk: no SRNs to render. Still
-                    # sent so the master's stale-entry flush
-                    # (``_chunk_is_last=True``) fires after a resource type
-                    # is removed from the pillar.
+                    # sent so the master's inline stale-entry sweep fires
+                    # (single-chunk legacy wire path) after a resource
+                    # type is removed from the pillar.
                     chunk_grains = {}
                 else:
                     # Render just this chunk's SRNs. ``chunk_grains`` drops
@@ -4839,7 +4881,7 @@ class Minion(MinionBase):
                     # so the wire format is byte-identical to the pre-PR
                     # load. This keeps old masters compatible with new
                     # minions whose inventory fits in one chunk.
-                    load["_register_token"] = token
+                    load["_register_jid"] = jid
                     load["_chunk_seq"] = seq
                     load["_chunk_total"] = total
                     load["_chunk_is_last"] = seq == total - 1
@@ -4849,9 +4891,12 @@ class Minion(MinionBase):
                         await self._send_req_async_main(
                             load, timeout=self._return_retry_timer()
                         )
+                        chunks_sent += 1
                         break
                     except Exception as err:  # pylint: disable=broad-except
                         if attempt >= retries:
+                            complete = False
+                            error = f"register chunk {seq + 1}/{total}: {err}"
                             log.warning(
                                 "Unable to register resources with master "
                                 "(chunk %s/%s): %s",
@@ -4859,7 +4904,8 @@ class Minion(MinionBase):
                                 total,
                                 err,
                             )
-                            return
+                            break_loop = True
+                            break
                         attempt += 1
                         log.debug(
                             "Retrying resource register chunk %s/%s "
@@ -4870,14 +4916,53 @@ class Minion(MinionBase):
                             retries,
                             err,
                         )
-            log.debug(
-                "Registered resources with master (%s chunk%s): %s",
-                total,
-                "" if total == 1 else "s",
-                list(resources.keys()),
-            )
+                if break_loop:
+                    break
+            if complete:
+                log.debug(
+                    "Registered resources with master (%s chunk%s): %s",
+                    total,
+                    "" if total == 1 else "s",
+                    list(resources.keys()),
+                )
+                # Persist the successful chunked-register jid so a future
+                # process incarnation starts from a jid > this one. Loss
+                # of the file on reboot falls back to the fresh
+                # ``gen_jid`` result, which is still monotonic within the
+                # new process; the cross-restart guard only activates
+                # against backward wall-clock movement.
+                if jid:
+                    salt.utils.resource_registry.write_last_register_jid(self.opts, jid)
         except Exception as err:  # pylint: disable=broad-except
+            complete = False
+            error = str(err)
             log.warning("Unable to register resources with master: %s", err)
+        finally:
+            # Fire a local-bus completion event regardless of success so
+            # CLI callers using ``saltutil.refresh_resources(wait=True)``
+            # don't hang indefinitely. Mirrors ``pillar_refresh``'s
+            # :data:`MINION_PILLAR_REFRESH_COMPLETE` contract.
+            try:
+                evt_payload = {
+                    "complete": complete,
+                    "jid": jid,
+                    "chunks_sent": chunks_sent,
+                    "chunks_total": total,
+                }
+                if error:
+                    evt_payload["error"] = error
+                with salt.utils.event.get_event(
+                    "minion", opts=self.opts, listen=False
+                ) as evt:
+                    evt.fire_event(
+                        evt_payload,
+                        salt.defaults.events.MINION_RESOURCE_REFRESH_COMPLETE,
+                    )
+            except Exception as exc:  # pylint: disable=broad-except
+                log.debug(
+                    "Failed to fire MINION_RESOURCE_REFRESH_COMPLETE event: %s",
+                    exc,
+                )
 
     def module_refresh(self, force_refresh=False, notify=False):
         """
@@ -5041,12 +5126,11 @@ class Minion(MinionBase):
                     # Proxy-scoped so a regular minion pays no extra rebuild.
                     self.module_refresh(force_refresh)
 
-                # Re-discover resources now that pillar has changed.  Must
-                # happen *after* opts["pillar"] is updated so that
-                # _discover_resources sees the new resource declarations (or
-                # their absence when a type is removed from the pillar).
-                self.opts["resources"] = self._discover_resources()
-                await self._register_resources_with_master()
+                # Resource re-registration is intentionally NOT triggered
+                # here. ``pillar_refresh`` refreshes pillar; nothing more.
+                # Operators who need the resource registry to reflect a
+                # pillar change run ``saltutil.refresh_resources``
+                # explicitly (unix-style: one command, one job).
             finally:
                 # See ``_post_master_init`` for why aclose is preferred
                 # over sync destroy on ioloop-owning callers.

@@ -2,22 +2,23 @@
 Deeper unit coverage for minion-side resource register chunking and the
 opt-in grain-cache retention. Complements ``test_minion_resources.py``
 (which already covers the baseline chunked-send + cache-retention cases)
-by exercising edge cases, static-helper correctness, master-side staging
-TTL/LRU, and concurrent-registration isolation.
+by exercising edge cases, static-helper correctness, and
+concurrent-registration isolation.
 
 The target code lives on PR ``dwoz/fix/minion-register-scale``
 (saltstack/salt#70720): see ``Minion._plan_register_chunks``,
-``Minion._register_resources_with_master``, and
-``salt.master._RegisterChunkStage`` + ``_register_chunk_apply``.
+``Minion._register_resources_with_master``, and the master-side
+per-chunk upsert + ``_return``-triggered sweep in
+``salt.utils.resource_registry.ResourceRegistry``.
 """
 
 import asyncio
-import threading
-import time
 
 import salt.loader.context
 import salt.master
 import salt.minion
+import salt.utils.resource_registry
+from tests.support.mock import MagicMock
 from tests.support.mock import patch as mock_patch
 
 # ---------------------------------------------------------------------------
@@ -118,7 +119,7 @@ class TestPlanRegisterChunks:
         """
         Grain entries whose SRN doesn't map to any currently-managed
         resource must be delivered on the final chunk so the master's
-        stale-flush path (gated on ``_chunk_is_last=True``) sees them.
+        ``resource_grains`` bank sees them in the chunk-store path.
         Defensive case: ``resource_grains`` is built from a live loader
         that may report keys slightly out of sync with the pillar.
         """
@@ -172,9 +173,9 @@ class TestRegisterResourcesEdgeCases:
     def test_empty_pillar_sends_single_unchunked_clearing_load(self, minion_opts):
         """
         An empty pillar still fires exactly one RPC so the master's
-        stale-entry flush runs. Wire format must be unchunked (no
-        ``_register_token`` / ``_chunk_*`` fields) so the empty-clear
-        path is zero-coupling for old masters.
+        inline stale-entry sweep (legacy single-chunk path) runs. Wire
+        format must be unchunked (no ``_register_jid`` / ``_chunk_*``
+        fields) so the empty-clear path is zero-coupling for old masters.
         """
         minion_opts["resources"] = {}
         minion_opts["multiprocessing"] = False
@@ -194,55 +195,50 @@ class TestRegisterResourcesEdgeCases:
         load = delivered[0]
         assert load["resources"] == {}
         assert load["resource_grains"] == {}
-        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+        for key in (
+            "_register_jid",
+            "_chunk_seq",
+            "_chunk_total",
+            "_chunk_is_last",
+        ):
             assert (
                 key not in load
             ), f"{key} must be omitted on empty-pillar single-chunk payloads"
 
-    def test_concurrent_registrations_use_distinct_tokens(self, minion_opts):
+    def test_concurrent_registrations_use_distinct_jids(self, minion_opts):
         """
         Two overlapping ``_register_resources_with_master`` coroutines
-        running on the same Minion instance must produce distinct tokens.
-        A shared token would let the master conflate chunks across
-        registrations — e.g. cancel chunk 1 of call A because chunk 0 of
-        call B arrived under the same key.
+        running on the same Minion instance must produce distinct jids.
+        A shared jid would make the master's terminal-chunk sweep
+        delete either call's partial writes when the other call's
+        terminal chunk arrives.
         """
         m = _mk_minion(minion_opts, 25, resource_register_chunk_size=10)
-        # A gate the capturer flips once per call so we can interleave
-        # two in-flight registrations under one event loop.
-        send_order = []
-        tokens_per_call = {"a": set(), "b": set()}
+        jids_per_call = {"a": set(), "b": set()}
         current = {"name": "a"}
 
         async def capture(load, timeout=None):
-            # Record which call this is for by reading the sentinel map.
-            tokens_per_call[current["name"]].add(load.get("_register_token"))
-            send_order.append((current["name"], load["_chunk_seq"]))
-            # Brief yield to let the paired task progress.
+            jids_per_call[current["name"]].add(load.get("_register_jid"))
             await asyncio.sleep(0)
 
         async def run_both():
             with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
-                # Each call owns a distinct 'name' so we can group tokens.
+
                 async def _call(name):
                     current["name"] = name
                     await m._register_resources_with_master()
 
-                # Serialise the two calls through the loop so each gets
-                # its own token-generation pass; concurrent event-loop
-                # scheduling here would still reach the same assertion
-                # (distinct tokens per call) but be flaky on 'current'.
                 await _call("a")
                 await _call("b")
 
         asyncio.run(run_both())
-        tokens_a = tokens_per_call["a"] - {None}
-        tokens_b = tokens_per_call["b"] - {None}
-        assert len(tokens_a) == 1, f"call 'a' must share one token; got {tokens_a}"
-        assert len(tokens_b) == 1
-        assert tokens_a.isdisjoint(
-            tokens_b
-        ), "two registrations on the same minion must use distinct tokens"
+        jids_a = jids_per_call["a"] - {None}
+        jids_b = jids_per_call["b"] - {None}
+        assert len(jids_a) == 1, f"call 'a' must share one jid; got {jids_a}"
+        assert len(jids_b) == 1
+        assert jids_a.isdisjoint(
+            jids_b
+        ), "two registrations on the same minion must use distinct jids"
 
     def test_resolve_opt_in_cache_populated_once_then_reused(self, minion_opts):
         """
@@ -331,11 +327,20 @@ class TestRegisterResourcesEdgeCases:
         with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
             asyncio.run(m._register_resources_with_master())
         assert len(delivered) == 1
-        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+        for key in (
+            "_register_jid",
+            "_chunk_seq",
+            "_chunk_total",
+            "_chunk_is_last",
+        ):
             assert key not in delivered[0]
 
     def test_register_two_chunks_at_boundary_plus_one(self, minion_opts):
-        """``chunk_size + 1`` resources -> exactly 2 chunks."""
+        """
+        ``chunk_size + 1`` resources -> exactly 2 chunks sharing one jid;
+        the final chunk carries ``_chunk_is_last=True`` to signal the
+        master to run the stale-entry sweep.
+        """
         m = _mk_minion(minion_opts, 11, resource_register_chunk_size=10)
         delivered = []
 
@@ -348,6 +353,8 @@ class TestRegisterResourcesEdgeCases:
         assert [d["_chunk_seq"] for d in delivered] == [0, 1]
         assert [d["_chunk_total"] for d in delivered] == [2, 2]
         assert [d["_chunk_is_last"] for d in delivered] == [False, True]
+        jids = {d["_register_jid"] for d in delivered}
+        assert len(jids) == 1, "all chunks must share one jid"
 
 
 # ---------------------------------------------------------------------------
@@ -511,9 +518,9 @@ class TestRegisterPerChunkGrainRender:
     def test_empty_resources_still_sends_one_chunk(self, minion_opts):
         """
         An empty pillar still sends exactly one RPC so the master's
-        stale-entry flush (``_chunk_is_last=True`` path) runs. Wire
-        format must be unchunked (no chunking fields) so old masters
-        stay compatible. Matches the behaviour of
+        inline stale-entry sweep (legacy single-chunk wire path) runs.
+        Wire format must be unchunked (no chunking fields) so old
+        masters stay compatible. Matches the behaviour of
         :class:`TestRegisterResourcesEdgeCases` but also asserts the
         per-chunk render path didn't inject stray calls into the
         empty-load codepath.
@@ -560,7 +567,7 @@ class TestRegisterPerChunkGrainRender:
         load = delivered[0]
         assert load["resources"] == {}
         assert load["resource_grains"] == {}
-        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+        for key in ("_register_jid", "_chunk_seq"):
             assert (
                 key not in load
             ), f"{key} must be omitted on single-chunk empty-clearing payload"
@@ -645,218 +652,323 @@ class TestRegisterPerChunkGrainRender:
 
 
 # ---------------------------------------------------------------------------
-# Master-side ``_RegisterChunkStage`` + ``_register_chunk_apply``
+# Master-side chunk-upsert + ``_return``-triggered sweep
 # ---------------------------------------------------------------------------
 
 
-class TestMasterRegisterChunkStage:
+class TestMasterRegisterChunkUpsert:
     """
-    Direct coverage of the master staging store the chunked RPC lands in.
-    Separate from ``test_master.py`` which exercises the end-to-end
-    ``AESFuncs._register_resources`` path; here we pin the invariants of
-    the staging data structure itself so a refactor (e.g. swapping to
-    ``threading.RLock`` or an LRU cache lib) that still passes the e2e
-    tests can't silently drop entries.
+    Direct coverage of the registry primitives the chunked-register
+    handler uses: :meth:`ResourceRegistry.upsert_minion_chunk` and
+    :meth:`ResourceRegistry.sweep_minion_stale_jids`.
+
+    These replace the old ``_RegisterChunkStage`` + ``_register_chunk_apply``
+    coverage. The new design has no master-side staging dict — each chunk
+    writes directly to the primary index, and a trailing ``_return`` RPC
+    (``fun="resource.register"``) triggers the stale-jid sweep. Entries
+    from prior registrations are preserved mid-stream and only collapsed
+    on return.
     """
 
-    def _make_stage(self, maxsize=None, ttl=None):
-        kwargs = {}
-        if maxsize is not None:
-            kwargs["maxsize"] = maxsize
-        if ttl is not None:
-            kwargs["ttl"] = ttl
-        return salt.master._RegisterChunkStage(**kwargs)
+    @staticmethod
+    def _registry(tmp_path):
+        """Build a fresh :class:`ResourceRegistry` rooted at ``tmp_path``."""
+        opts = {"cachedir": str(tmp_path)}
+        salt.utils.resource_registry.reset_registry()
+        return salt.utils.resource_registry.get_registry(opts)
 
-    def test_record_and_finalise_simple_roundtrip(self):
-        stage = self._make_stage()
-        stage.record("m1", "t1", {"dummy": ["a"]}, {"dummy:a": {"k": 1}})
-        resources, grains = stage.finalise(
-            "m1", "t1", {"dummy": ["b"]}, {"dummy:b": {"k": 2}}
-        )
-        assert sorted(resources["dummy"]) == ["a", "b"]
-        assert grains == {"dummy:a": {"k": 1}, "dummy:b": {"k": 2}}
-        # Finalise must drop the entry so a fresh registration can use the
-        # same token without inheriting stale state (protects against a
-        # rogue minion that reuses a token).
-        assert stage.pending_count() == 0
+    def test_upsert_streams_each_chunk_to_registry(self, tmp_path):
+        """
+        Each ``upsert_minion_chunk`` call writes immediately — no
+        staging, no accumulation. After three chunks the registry
+        contains the union of all three chunks' SRNs, stamped with the
+        shared jid.
+        """
+        registry = self._registry(tmp_path)
+        jid = "20260101000000000001"
+        for seq, rids in enumerate((["a1", "a2"], ["b1"], ["c1", "c2"])):
+            n_put = registry.upsert_minion_chunk("m", {"dummy": rids}, jid)
+            assert n_put == len(rids)
+        # Every rid from every chunk must be present.
+        by_minion = registry.get_resources_for_minion("m")
+        assert sorted(by_minion["dummy"]) == ["a1", "a2", "b1", "c1", "c2"]
+        # And every entry must carry the jid in its value.
+        srn_jids = registry._store.srn_jids_by_minion("m")
+        for srn, stored in srn_jids.items():
+            assert stored == jid, f"entry {srn} must carry jid {jid}; got {stored!r}"
 
-    def test_finalise_without_prior_chunks_is_passthrough(self):
+    def test_upsert_is_idempotent(self, tmp_path):
         """
-        If no non-final chunks were recorded first (e.g. a single-chunk
-        registration that happens to carry a token), finalise returns the
-        final-chunk payload verbatim. Ensures single-chunk-with-token
-        payloads still commit.
+        Replaying a chunk (same minion, same jid, same SRNs) leaves the
+        registry unchanged — the master can safely tolerate chunk
+        retries without duplicating or deleting entries.
         """
-        stage = self._make_stage()
-        resources, grains = stage.finalise(
-            "m1", "t-solo", {"dummy": ["x"]}, {"dummy:x": {"k": 9}}
-        )
-        assert resources == {"dummy": ["x"]}
-        assert grains == {"dummy:x": {"k": 9}}
+        registry = self._registry(tmp_path)
+        jid = "20260101000000000002"
+        registry.upsert_minion_chunk("m", {"dummy": ["a1", "a2"]}, jid)
+        by_minion_1 = registry.get_resources_for_minion("m")
+        registry.upsert_minion_chunk("m", {"dummy": ["a1", "a2"]}, jid)
+        by_minion_2 = registry.get_resources_for_minion("m")
+        assert by_minion_1 == by_minion_2
+        assert sorted(by_minion_2["dummy"]) == ["a1", "a2"]
 
-    def test_concurrent_minions_isolated_by_minion_id(self):
+    def test_sweep_removes_only_older_jids(self, tmp_path):
         """
-        Two minions each mid-registration with distinct tokens: each gets
-        its own staged state and finalise for one doesn't bleed into the
-        other.
+        After a newer register writes entries stamped with jid=B > jid=A,
+        the sweep for jid=B tombstones the A-stamped entries and preserves
+        the B-stamped ones. Idempotent: running the sweep twice is a no-op.
         """
-        stage = self._make_stage()
-        stage.record("m-A", "tA", {"dummy": ["a1"]}, {"dummy:a1": {"m": "A"}})
-        stage.record("m-B", "tB", {"dummy": ["b1"]}, {"dummy:b1": {"m": "B"}})
-        stage.record("m-A", "tA", {"dummy": ["a2"]}, {"dummy:a2": {"m": "A"}})
-        assert stage.pending_count() == 2
-        r_a, g_a = stage.finalise(
-            "m-A", "tA", {"dummy": ["a3"]}, {"dummy:a3": {"m": "A"}}
-        )
-        assert sorted(r_a["dummy"]) == ["a1", "a2", "a3"]
-        # No B entries leak into A's commit.
-        for srn in g_a:
-            assert g_a[srn]["m"] == "A"
-        # B's entry still present until finalised.
-        assert stage.pending_count() == 1
-        r_b, g_b = stage.finalise(
-            "m-B", "tB", {"dummy": ["b2"]}, {"dummy:b2": {"m": "B"}}
-        )
-        assert sorted(r_b["dummy"]) == ["b1", "b2"]
-        for srn in g_b:
-            assert g_b[srn]["m"] == "B"
-        assert stage.pending_count() == 0
+        registry = self._registry(tmp_path)
+        jid_a = "20260101000000000010"
+        jid_b = "20260101000000000020"
+        # Register A — entries a1, a2 stamped jid_a.
+        registry.upsert_minion_chunk("m", {"dummy": ["a1", "a2"]}, jid_a)
+        # Register B begins — overwrites a1 (same SRN) with jid_b, adds b1.
+        registry.upsert_minion_chunk("m", {"dummy": ["a1", "b1"]}, jid_b)
+        # Pre-sweep: all three entries present.
+        pre = registry.get_resources_for_minion("m")
+        assert sorted(pre["dummy"]) == ["a1", "a2", "b1"]
+        n_del = registry.sweep_minion_stale_jids("m", jid_b)
+        # a2 (jid_a < jid_b) tombstoned; a1 (now jid_b after overwrite)
+        # and b1 preserved.
+        assert n_del == 1
+        post = registry.get_resources_for_minion("m")
+        assert sorted(post["dummy"]) == ["a1", "b1"]
+        # Idempotent: a second sweep is a no-op.
+        assert registry.sweep_minion_stale_jids("m", jid_b) == 0
 
-    def test_same_minion_distinct_tokens_do_not_conflate(self):
+    def test_sweep_preserves_newer_concurrent_register(self, tmp_path):
         """
-        One minion issuing two overlapping registrations with distinct
-        tokens must have each kept separate. Regression against a bug
-        where staging keyed only on ``minion_id`` conflated concurrent
-        registrations.
+        If register B is still in flight when register A's return
+        arrives, A's sweep must NOT delete B's entries (B has jid > A).
+        Strict ``<`` on the jid comparison is the safety net.
         """
-        stage = self._make_stage()
-        stage.record("m", "tA", {"dummy": ["a1"]}, {})
-        stage.record("m", "tB", {"dummy": ["b1"]}, {})
-        assert stage.pending_count() == 2
-        rA, _ = stage.finalise("m", "tA", {"dummy": ["a2"]}, {})
-        assert sorted(rA["dummy"]) == ["a1", "a2"]
-        rB, _ = stage.finalise("m", "tB", {"dummy": ["b2"]}, {})
-        assert sorted(rB["dummy"]) == ["b1", "b2"]
+        registry = self._registry(tmp_path)
+        jid_a = "20260101000000000030"
+        jid_b = "20260101000000000040"
+        # A writes a1.
+        registry.upsert_minion_chunk("m", {"dummy": ["a1"]}, jid_a)
+        # B writes b1 (concurrent, newer).
+        registry.upsert_minion_chunk("m", {"dummy": ["b1"]}, jid_b)
+        # A's return arrives — sweep for jid_a.
+        n_del = registry.sweep_minion_stale_jids("m", jid_a)
+        # A's own entries are at jid_a, which is NOT strictly less than
+        # jid_a; B's entries are at jid_b > jid_a. So nothing is deleted.
+        assert n_del == 0
+        remaining = registry.get_resources_for_minion("m")
+        assert sorted(remaining["dummy"]) == ["a1", "b1"]
 
-    def test_ttl_evicts_abandoned_registration(self):
+    def test_sweep_skips_legacy_entries_without_jid(self, tmp_path):
         """
-        A registration whose final chunk never arrives is evicted after
-        ``ttl`` seconds so the staging store doesn't grow unbounded when
-        minions die mid-stream.
+        Entries written before the schema-3 ``j`` field exists decode
+        with ``jid=None`` and must never be deleted by the sweep — we
+        can't know if they predate or follow the current register.
         """
-        stage = self._make_stage(ttl=0.05)
-        stage.record("m", "t", {"dummy": ["x"]}, {})
-        assert stage.pending_count() == 1
-        time.sleep(0.15)
-        # Trigger lazy eviction with any staging-touching call.
-        stage.record("m-other", "t-other", {"dummy": ["y"]}, {})
-        assert ("m", "t") not in getattr(stage, "_entries", {})
-        # The new entry is still present.
-        assert stage.pending_count() == 1
+        registry = self._registry(tmp_path)
+        # Write a legacy entry (no jid) by going through the lower-level
+        # store ``put`` with ``jid=None``.
+        registry._store.put("dummy:legacy-1", "m", "dummy", jid=None)
+        # Stamped entry at some jid.
+        registry.upsert_minion_chunk("m", {"dummy": ["new-1"]}, "20260101000000000100")
+        # Sweep at a jid newer than the stamped one — would delete it if
+        # strict ``<`` held. The legacy entry (no jid) is skipped.
+        assert registry.sweep_minion_stale_jids("m", "20260101000000000200") == 1
+        remaining = registry.get_resources_for_minion("m")
+        # Legacy entry preserved; new-1 (jid < sweep jid) deleted.
+        assert "legacy-1" in remaining["dummy"]
+        assert "new-1" not in remaining["dummy"]
 
-    def test_lru_evicts_oldest_when_maxsize_exceeded(self):
+    def test_upsert_then_sweep_matches_legacy_register_semantics(self, tmp_path):
         """
-        When the entry cap is exceeded, the oldest insertion is dropped.
-        Bounds the staging store under a hostile / buggy minion fleet
-        producing many partial registrations.
+        An upsert followed by an immediate sweep equals the pre-PR
+        ``register_minion`` replacement semantics: entries not in the
+        new payload are gone, entries in the new payload are present.
         """
-        stage = self._make_stage(maxsize=3, ttl=3600)
-        stage.record("m1", "t1", {"dummy": ["a"]}, {})
-        stage.record("m2", "t2", {"dummy": ["b"]}, {})
-        stage.record("m3", "t3", {"dummy": ["c"]}, {})
-        assert stage.pending_count() == 3
-        stage.record("m4", "t4", {"dummy": ["d"]}, {})
-        # m1 (oldest) must be evicted.
-        assert ("m1", "t1") not in getattr(stage, "_entries", {})
-        assert stage.pending_count() == 3
+        registry = self._registry(tmp_path)
+        jid_a = "20260101000000000300"
+        jid_b = "20260101000000000400"
+        registry.upsert_minion_chunk("m", {"dummy": ["old-1", "old-2"]}, jid_a)
+        # Sweep for jid_a cleans up nothing yet (no older entries).
+        registry.sweep_minion_stale_jids("m", jid_a)
+        # New registration replaces the set.
+        registry.upsert_minion_chunk("m", {"dummy": ["new-1"]}, jid_b)
+        registry.sweep_minion_stale_jids("m", jid_b)
+        remaining = registry.get_resources_for_minion("m")
+        assert remaining["dummy"] == ["new-1"]
 
-    def test_register_chunk_apply_unchunked_passthrough(self):
+    def test_register_minion_stamps_jid(self, tmp_path):
         """
-        ``_register_chunk_apply`` returns the (resources, grains) tuple
-        directly for loads with no ``_register_token`` — i.e. legacy /
-        single-chunk-no-token wire format is unchanged.
+        The legacy :meth:`register_minion` entry point stamps every
+        entry with a generated jid so a subsequent chunked register's
+        sweep can still identify them as stale.
         """
-        stage = self._make_stage()
-        load = {
-            "id": "m",
-            "resources": {"dummy": ["x"]},
-            "resource_grains": {"dummy:x": {"k": 1}},
-        }
-        result = salt.master._register_chunk_apply(load, stage)
-        assert result == ({"dummy": ["x"]}, {"dummy:x": {"k": 1}})
-        assert stage.pending_count() == 0
+        registry = self._registry(tmp_path)
+        registry.register_minion("m", {"dummy": ["a1"]})
+        srn_jids = registry._store.srn_jids_by_minion("m")
+        assert srn_jids
+        for srn, stored in srn_jids.items():
+            assert (
+                stored is not None
+            ), f"legacy register must stamp a jid; got None for {srn}"
 
-    def test_register_chunk_apply_non_final_returns_none(self):
-        """Non-final chunk returns ``None`` so caller doesn't commit."""
-        stage = self._make_stage()
-        load = {
-            "id": "m",
-            "resources": {"dummy": ["x"]},
-            "resource_grains": {"dummy:x": {"k": 1}},
-            "_register_token": "tok",
-            "_chunk_seq": 0,
-            "_chunk_total": 2,
-            "_chunk_is_last": False,
-        }
-        assert salt.master._register_chunk_apply(load, stage) is None
-        assert stage.pending_count() == 1
 
-    def test_register_chunk_apply_final_merges_and_returns(self):
-        """Final chunk returns the full merged payload."""
-        stage = self._make_stage()
-        chunk0 = {
-            "id": "m",
-            "resources": {"dummy": ["a"]},
-            "resource_grains": {"dummy:a": {"k": 1}},
-            "_register_token": "tok",
-            "_chunk_seq": 0,
-            "_chunk_total": 2,
-            "_chunk_is_last": False,
-        }
-        chunk1 = {
-            "id": "m",
-            "resources": {"dummy": ["b"]},
-            "resource_grains": {"dummy:b": {"k": 2}},
-            "_register_token": "tok",
-            "_chunk_seq": 1,
-            "_chunk_total": 2,
-            "_chunk_is_last": True,
-        }
-        assert salt.master._register_chunk_apply(chunk0, stage) is None
-        resources, grains = salt.master._register_chunk_apply(chunk1, stage)
-        assert sorted(resources["dummy"]) == ["a", "b"]
-        assert grains == {"dummy:a": {"k": 1}, "dummy:b": {"k": 2}}
-        assert stage.pending_count() == 0
+class TestMinionResourceRegisterCompletionEvent:
+    """
+    The minion fires :data:`salt.defaults.events.MINION_RESOURCE_REFRESH_COMPLETE`
+    on the local bus at the end of ``_register_resources_with_master``,
+    success or failure. CLI callers using
+    ``saltutil.refresh_resources(wait=True)`` block on this event.
+    """
 
-    def test_stage_is_thread_safe_against_concurrent_record(self):
+    @staticmethod
+    def _fake_event_bus(capture):
+        """Return a context manager mimicking ``salt.utils.event.get_event``."""
+
+        class _FakeEvent:
+            def fire_event(self, payload, tag):
+                capture.append((tag, payload))
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def _factory(*args, **kwargs):
+            return _FakeEvent()
+
+        return _factory
+
+    def test_chunked_register_fires_complete_event_on_success(self, minion_opts):
         """
-        Hammer ``record`` from several threads to catch a regression
-        where the LRU bookkeeping drops the internal lock. Deterministic
-        assertion: every key put in is retrievable.
+        On success the completion event payload reports
+        ``complete=True`` + accurate ``chunks_sent`` / ``chunks_total``
+        and no ``error`` field.
         """
-        stage = self._make_stage(maxsize=10000, ttl=60)
-        n_threads = 8
-        per_thread = 200
-        errors = []
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        events = []
 
-        def worker(tid):
-            try:
-                for i in range(per_thread):
-                    stage.record(
-                        f"m-{tid}",
-                        f"tok-{tid}-{i}",
-                        {"dummy": [f"r-{tid}-{i}"]},
-                        {f"dummy:r-{tid}-{i}": {"tid": tid, "i": i}},
-                    )
-            except Exception as exc:  # pylint: disable=broad-except
-                errors.append(exc)
+        async def capture(load, timeout=None):
+            pass
 
-        threads = [
-            threading.Thread(target=worker, args=(tid,)) for tid in range(n_threads)
+        factory = self._fake_event_bus(events)
+        with mock_patch.object(
+            m, "_send_req_async_main", side_effect=capture
+        ), mock_patch("salt.utils.event.get_event", side_effect=factory):
+            asyncio.run(m._register_resources_with_master())
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
         ]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-        assert not errors, errors
-        assert stage.pending_count() == n_threads * per_thread
+        assert len(refresh_events) == 1
+        tag, payload = refresh_events[0]
+        assert payload["complete"] is True
+        assert payload["chunks_sent"] == 3
+        assert payload["chunks_total"] == 3
+        assert payload["jid"] is not None
+        assert "error" not in payload
+
+    def test_single_chunk_register_fires_complete_event(self, minion_opts):
+        """
+        The legacy single-chunk wire path still fires the completion
+        event so ``wait=True`` works even when there's no jid.
+        """
+        m = _mk_minion(minion_opts, 5, resource_register_chunk_size=10)
+        events = []
+
+        async def capture(load, timeout=None):
+            pass
+
+        factory = self._fake_event_bus(events)
+        with mock_patch.object(
+            m, "_send_req_async_main", side_effect=capture
+        ), mock_patch("salt.utils.event.get_event", side_effect=factory):
+            asyncio.run(m._register_resources_with_master())
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
+        ]
+        assert len(refresh_events) == 1
+        _, payload = refresh_events[0]
+        assert payload["complete"] is True
+        assert payload["chunks_sent"] == 1
+        assert payload["chunks_total"] == 1
+        # Single-chunk legacy path has no minion-side jid.
+        assert payload["jid"] is None
+
+    def test_abort_mid_chunks_fires_complete_event_with_error(self, minion_opts):
+        """
+        Partial-progress abort (retry budget exhausted mid-stream)
+        still fires the completion event, with ``complete=False``,
+        ``chunks_sent < chunks_total``, and an ``error`` string.
+        """
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        m.opts["resource_register_chunk_retries"] = 0
+        events = []
+
+        async def flaky(load, timeout=None):
+            if load.get("_chunk_seq") == 1:
+                raise RuntimeError("simulated chunk-1 failure")
+
+        factory = self._fake_event_bus(events)
+        with mock_patch.object(
+            m, "_send_req_async_main", side_effect=flaky
+        ), mock_patch("salt.utils.event.get_event", side_effect=factory):
+            asyncio.run(m._register_resources_with_master())
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
+        ]
+        assert len(refresh_events) == 1
+        _, payload = refresh_events[0]
+        assert payload["complete"] is False
+        assert payload["chunks_sent"] == 1
+        assert payload["chunks_total"] == 3
+        assert "error" in payload
+        assert "chunk 2/3" in payload["error"]
+
+
+class TestPillarRefreshDoesNotTouchResources:
+    """
+    ``Minion.pillar_refresh`` must refresh pillar only — resource
+    rediscovery and master register are decoupled. Operators who need
+    the resource registry refreshed explicitly run
+    ``saltutil.refresh_resources``.
+    """
+
+    def test_pillar_refresh_does_not_call_register_resources(self, minion_opts):
+        """
+        Patch ``_discover_resources`` and ``_register_resources_with_master``
+        to loud mocks and assert ``pillar_refresh`` doesn't call them.
+        """
+        m = _mk_minion(minion_opts, 5, resource_register_chunk_size=10)
+        # ``pillar_refresh`` body touches a lot of infra we don't need to
+        # fully exercise; stub what it calls so the body is traversable.
+        m.matchers_refresh = MagicMock()
+        m.beacons_refresh = MagicMock()
+        discover = MagicMock()
+        register = MagicMock()
+        with mock_patch.object(
+            m, "_discover_resources", side_effect=discover
+        ), mock_patch.object(
+            m, "_register_resources_with_master", side_effect=register
+        ), mock_patch(
+            "salt.pillar.get_async_pillar"
+        ) as get_pillar:
+            fake = MagicMock()
+
+            async def _compile_pillar():
+                return {"ok": True}
+
+            fake.compile_pillar = _compile_pillar
+
+            async def _aclose():
+                pass
+
+            fake.aclose = _aclose
+            get_pillar.return_value = fake
+            try:
+                asyncio.run(m.pillar_refresh())
+            except Exception:  # pylint: disable=broad-except
+                # Any deeper infra failure is irrelevant — we only care
+                # that the two resource-side callables were not invoked.
+                pass
+        discover.assert_not_called()
+        register.assert_not_called()

@@ -86,6 +86,8 @@ import threading
 import time
 
 import salt.cache
+import salt.utils.files
+import salt.utils.jid
 import salt.utils.mmap_cache
 
 log = logging.getLogger(__name__)
@@ -139,7 +141,11 @@ DEFAULT_COMPACT_TOMBSTONE_RATIO = 0.2  # deleted / occupied
 DEFAULT_COMPACT_MIN_INTERVAL = 30.0
 
 #: Persisted schema version for the in-cache fallback dict (legacy path).
-RESOURCE_INDEX_SCHEMA_VERSION = 2
+#:
+#: Bumped to 3 when :func:`_encode_by_id_value` learned the optional
+#: ``"j"`` (register jid) field used by the chunked-register sweep. Entries
+#: without a jid are tolerated and never touched by the sweep.
+RESOURCE_INDEX_SCHEMA_VERSION = 3
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +174,134 @@ def parse_srn(expression):
     return {"type": rtype or None, "id": rid or None}
 
 
+#: Filename (relative to the minion's cache dir) that persists the last
+#: register jid across minion restarts, keeping jid monotonicity even when
+#: the process ``LAST_JID_DATETIME`` global resets. See
+#: :func:`generate_register_jid`.
+LAST_REGISTER_JID_FILENAME = ".last_register_jid"
+
+
+def generate_register_jid(opts, *, last_persisted=None):
+    """
+    Return a jid for a resource-register call that is strictly greater
+    than any prior jid this process has emitted AND any jid persisted on
+    disk from an earlier process incarnation.
+
+    Monotonicity matters: the master's stale-entry sweep uses strict
+    lexicographic ``<`` on the stored jid. If two registers in the same
+    microsecond produced identical jids, the second's sweep would leave
+    the first's partial writes as survivors. If a minion restart (or
+    NTP step backward, or container-snapshot restore) rolled the wall
+    clock, a fresh ``gen_jid`` could be smaller than entries written
+    before the restart — sweep would delete nothing.
+
+    This helper:
+
+    * forces ``unique_jid=True`` so :func:`salt.utils.jid.gen_jid`
+      invokes its in-process ``LAST_JID_DATETIME`` monotonicity guard
+      (and appends ``_<pid>`` for inter-process disambiguation);
+    * if ``last_persisted`` is a jid string greater than the generated
+      one, bumps the result by one microsecond past ``last_persisted``.
+      The caller is responsible for persisting the returned jid to disk
+      so a subsequent process invocation can read it back.
+
+    :param dict opts: Salt opts; only used to inherit any user-set
+        ``unique_jid`` toggle (we always set it True).
+    :param str last_persisted: Jid string previously persisted by this
+        minion, or ``None`` if the cache file is missing / unreadable.
+    :rtype: str
+    """
+    import datetime  # noqa: PLC0415 — local import avoids widening module header
+
+    jid_opts = dict(opts) if opts else {}
+    jid_opts["unique_jid"] = True
+    new_jid = salt.utils.jid.gen_jid(jid_opts)
+    if last_persisted and last_persisted >= new_jid:
+        # Parse the 20-char timestamp prefix, add one microsecond,
+        # reformat. ``salt.utils.jid.gen_jid`` accepts input that is
+        # not strictly our prior ``LAST_JID_DATETIME``, so we drive the
+        # monotonicity ourselves here.
+        ts_str = last_persisted[:20]
+        try:
+            last_dt = datetime.datetime.strptime(ts_str, "%Y%m%d%H%M%S%f").replace(
+                tzinfo=datetime.timezone.utc
+            )
+        except ValueError:
+            # Malformed persisted jid — don't block the register, just
+            # log and use the fresh jid.
+            log.warning(
+                "resource_registry: ignoring malformed persisted last register "
+                "jid %r; proceeding with fresh jid %s",
+                last_persisted,
+                new_jid,
+            )
+            return new_jid
+        bumped = last_dt + datetime.timedelta(microseconds=1)
+        new_jid = f"{bumped:%Y%m%d%H%M%S%f}_{os.getpid()}"
+    return new_jid
+
+
+def _register_jid_cache_path(opts):
+    """
+    Return the filesystem path where the minion persists the last
+    register jid. ``None`` when the minion has no cachedir configured.
+    """
+    cachedir = opts.get("cachedir") if opts else None
+    if not cachedir:
+        return None
+    return os.path.join(cachedir, LAST_REGISTER_JID_FILENAME)
+
+
+def read_last_register_jid(opts):
+    """
+    Read the persisted last register jid from
+    ``<cachedir>/.last_register_jid``. Returns ``None`` when the file is
+    missing, empty, or unreadable.
+
+    :rtype: str or None
+    """
+    path = _register_jid_cache_path(opts)
+    if not path:
+        return None
+    try:
+        with salt.utils.files.fopen(path, encoding="utf-8") as fh:
+            value = fh.read().strip()
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        log.debug("resource_registry: read_last_register_jid %s: %s", path, exc)
+        return None
+    return value or None
+
+
+def write_last_register_jid(opts, jid):
+    """
+    Atomically persist ``jid`` as the minion's last-emitted register
+    jid to ``<cachedir>/.last_register_jid``.
+
+    Uses a temp-file-and-rename dance so a crashed write never leaves a
+    truncated jid file. Errors are logged at debug: monotonicity
+    across restarts is best-effort, not a correctness invariant for the
+    current session.
+    """
+    path = _register_jid_cache_path(opts)
+    if not path or not jid:
+        return False
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with salt.utils.files.fopen(tmp, "w", encoding="utf-8") as fh:
+            fh.write(jid)
+        os.replace(tmp, path)
+        return True
+    except OSError as exc:
+        log.debug("resource_registry: write_last_register_jid %s failed: %s", path, exc)
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        return False
+
+
 def resource_index_srn_key(resource_type, resource_id):
     """
     Canonical composite key (``"<type>:<id>"``) for the primary ``by_id`` index.
@@ -182,24 +316,35 @@ def resource_index_srn_key(resource_type, resource_id):
     return f"{resource_type}:{resource_id}"
 
 
-def _encode_by_id_value(minion_id, resource_type):
+def _encode_by_id_value(minion_id, resource_type, jid=None):
     """
     Encode a primary-index value. Kept compact so ``key + \\0 + value``
     fits within ``DEFAULT_SLOT_SIZE - 1``.
 
-    Layout today: JSON ``{"m": minion_id, "t": resource_type}``. Short keys
-    ``m`` / ``t`` reduce payload size and leave headroom for future fields.
+    Layout: JSON ``{"m": minion_id, "t": resource_type, "j": jid?}``. Short
+    keys reduce payload size. The ``"j"`` (register jid) field is the
+    20-char Salt jid of the registration this entry was last written by;
+    the master's :meth:`ResourceRegistry.sweep_minion_stale_jids` uses it
+    to delete entries left by prior registrations without racing concurrent
+    newer registrations. Omitted (``None``) for legacy entries written
+    before schema 3 — those are treated as "unknown jid" and never deleted
+    by the sweep.
     """
-    return json.dumps({"m": minion_id, "t": resource_type}, separators=(",", ":"))
+    doc = {"m": minion_id, "t": resource_type}
+    if jid is not None:
+        doc["j"] = jid
+    return json.dumps(doc, separators=(",", ":"))
 
 
 def _decode_by_id_value(raw):
     """
-    Decode a primary-index value into ``{"minion": <id>, "type": <type>}``.
+    Decode a primary-index value into
+    ``{"minion": <id>, "type": <type>, "jid": <jid>|None}``.
 
     Accepts the value returned by :class:`~salt.utils.mmap_cache.MmapCache`
     (``str`` for kv entries, ``True`` for set-member entries, or ``None``).
-    Returns ``None`` for malformed or empty values.
+    Returns ``None`` for malformed or empty values. Entries written before
+    the ``"j"`` (jid) field existed decode with ``jid=None``.
     """
     if raw is None or raw is True:
         return None
@@ -212,7 +357,11 @@ def _decode_by_id_value(raw):
         return None
     if not isinstance(doc, dict):
         return None
-    return {"minion": doc.get("m"), "type": doc.get("t")}
+    return {
+        "minion": doc.get("m"),
+        "type": doc.get("t"),
+        "jid": doc.get("j"),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -279,6 +428,12 @@ class _ResourceIndexStore:
         self._derived_version = None
         self._by_type: dict = {}  # {rtype: [rid, ...]}
         self._by_minion: dict = {}  # {minion_id: {rtype: [rid, ...]}}
+        # Parallel index of {minion_id: {srn: jid}} built on the same scan
+        # as :attr:`_by_minion`. Used by
+        # :meth:`ResourceRegistry.sweep_minion_stale_jids` to find entries
+        # whose stored jid is older than the current register's jid without
+        # issuing an O(entries) sequence of ``_primary.get`` lookups.
+        self._by_minion_jid: dict = {}
 
         # Throttled staleness check: remember the last time we stat()ed the
         # file and the version we saw, so hot read paths don't syscall per
@@ -314,7 +469,7 @@ class _ResourceIndexStore:
         raw = self._primary.get(srn_key, default=None)
         return _decode_by_id_value(raw)
 
-    def put(self, srn_key, minion_id, resource_type):
+    def put(self, srn_key, minion_id, resource_type, jid=None):
         """
         Insert or update a single primary entry. O(1) amortised.
 
@@ -330,9 +485,13 @@ class _ResourceIndexStore:
         throttled stat cache so the next :meth:`_current_version` call
         always returns a fresh tuple.
 
+        :param str jid: Optional register jid to stamp into the entry.
+            Used by the chunked-register sweep to distinguish entries
+            written by the current register from entries left by prior
+            registers.
         :returns: ``True`` on success.
         """
-        blob = _encode_by_id_value(minion_id, resource_type)
+        blob = _encode_by_id_value(minion_id, resource_type, jid=jid)
         ok = self._primary.put(srn_key, blob)
         if ok:
             self._invalidate_version_cache()
@@ -389,10 +548,16 @@ class _ResourceIndexStore:
 
     def put_many(self, entries):
         """
-        Insert many ``(srn_key, minion_id, resource_type)`` tuples.
+        Insert many entries into the primary index.
 
-        Used by :meth:`ResourceRegistry.register_minion` after it has diff'd
-        the incoming resource set against the previous one for this minion.
+        Each entry is either a 3-tuple ``(srn_key, minion_id, resource_type)``
+        (legacy; no jid stamped) or a 4-tuple
+        ``(srn_key, minion_id, resource_type, jid)`` (stamps the jid into
+        the heap value). Both shapes may be mixed within one call.
+
+        Used by :meth:`ResourceRegistry.register_minion` /
+        :meth:`ResourceRegistry.upsert_minion_chunk` after batching the
+        incoming resources for one minion.
 
         When the underlying primary exposes a ``put_many`` (``MmapCache``
         does), route the whole batch through it so the flock is acquired
@@ -404,11 +569,18 @@ class _ResourceIndexStore:
         if not entries:
             return True
 
+        def _unpack(entry):
+            if len(entry) == 3:
+                srn_key, minion_id, rtype = entry
+                return srn_key, minion_id, rtype, None
+            srn_key, minion_id, rtype, jid = entry
+            return srn_key, minion_id, rtype, jid
+
         bulk = getattr(self._primary, "put_many", None)
         if callable(bulk):
             kv = [
-                (srn_key, _encode_by_id_value(minion_id, rtype))
-                for srn_key, minion_id, rtype in entries
+                (srn_key, _encode_by_id_value(minion_id, rtype, jid=jid))
+                for srn_key, minion_id, rtype, jid in (_unpack(e) for e in entries)
             ]
             ok = bool(bulk(kv))
             if ok:
@@ -417,8 +589,9 @@ class _ResourceIndexStore:
             return ok
 
         ok = True
-        for srn_key, minion_id, rtype in entries:
-            if not self.put(srn_key, minion_id, rtype):
+        for entry in entries:
+            srn_key, minion_id, rtype, jid = _unpack(entry)
+            if not self.put(srn_key, minion_id, rtype, jid=jid):
                 ok = False
         return ok
 
@@ -500,6 +673,19 @@ class _ResourceIndexStore:
             rt: list(rids) for rt, rids in self._by_minion.get(minion_id, {}).items()
         }
 
+    def srn_jids_by_minion(self, minion_id):
+        """
+        Return ``{srn_key: jid_or_none}`` for every entry owned by ``minion_id``.
+
+        Built from the same derived scan as :meth:`resources_by_minion`,
+        so a single scan feeds both reads. Returned dict is a shallow copy
+        so callers can safely mutate it.
+
+        :rtype: dict[str, str or None]
+        """
+        self._ensure_derived_fresh()
+        return dict(self._by_minion_jid.get(minion_id, ()))
+
     def all_minions_by_type(self, resource_type):
         """
         Return the set of minion IDs managing at least one resource of
@@ -580,6 +766,7 @@ class _ResourceIndexStore:
         t0 = time.perf_counter()
         by_type: dict = {}
         by_minion: dict = {}
+        by_minion_jid: dict = {}
 
         # list_items() tolerates a missing file (returns []); perfect for
         # first use before any writes have happened.
@@ -599,9 +786,14 @@ class _ResourceIndexStore:
                 continue
             by_type.setdefault(rtype, []).append(rid)
             by_minion.setdefault(mid, {}).setdefault(rtype, []).append(rid)
+            # Record the entry's stamped jid (or None for legacy entries
+            # written before schema 3). The sweep walks this dict rather
+            # than re-reading the mmap for each of a minion's entries.
+            by_minion_jid.setdefault(mid, {})[srn_key] = decoded.get("jid")
 
         self._by_type = by_type
         self._by_minion = by_minion
+        self._by_minion_jid = by_minion_jid
         self._derived_version = version
         elapsed = time.perf_counter() - t0
         if elapsed > DERIVED_REBUILD_BUDGET_SECONDS:
@@ -839,17 +1031,28 @@ class ResourceRegistry:
     # Write interface — used by AESFuncs._register_resources and refresh
     # ------------------------------------------------------------------
 
-    def register_minion(self, minion_id, resources):
+    def register_minion(self, minion_id, resources, jid=None):
         """
         Register the full set of resources managed by ``minion_id``,
         replacing any prior set. Per-minion delta is computed internally so
         only changed SRN keys are written to the primary.
 
+        Equivalent to :meth:`upsert_minion_chunk` followed by
+        :meth:`sweep_minion_stale_jids` in one call. Used by legacy
+        (non-chunked) code paths — the chunked register path calls
+        ``upsert_minion_chunk`` per chunk and fires the sweep once when the
+        job-return signal arrives, so partial write state can't be
+        destructively cleared mid-stream.
+
         :param str minion_id: The reporting minion.
         :param dict resources: ``{resource_type: [resource_id, ...]}``
             representing the minion's current resource inventory.
+        :param str jid: Optional register jid to stamp into the entries.
+            Defaults to a fresh jid generated from ``self._opts``.
         :returns: ``(n_put, n_deleted)``.
         """
+        if jid is None:
+            jid = generate_register_jid(self._opts)
         previous = self._store.resources_by_minion(minion_id)
 
         new_keys = set()
@@ -858,7 +1061,7 @@ class ResourceRegistry:
             for rid in rids or ():
                 srn = resource_index_srn_key(rtype, rid)
                 new_keys.add(srn)
-                to_put.append((srn, minion_id, rtype))
+                to_put.append((srn, minion_id, rtype, jid))
 
         to_delete = []
         for rtype, rids in previous.items():
@@ -879,6 +1082,78 @@ class ResourceRegistry:
         self.maybe_compact()
 
         return len(to_put), len(to_delete)
+
+    def upsert_minion_chunk(self, minion_id, resources, jid):
+        """
+        Insert one chunk of a chunked registration into the primary index,
+        stamping every entry with ``jid``.
+
+        Pure upsert — no scan of existing entries, no sweep. Safe to call
+        in any order, concurrently with other chunks of the same or a
+        different registration, and safe to replay (idempotent: same
+        chunk twice = same effect).
+
+        The stale-entry sweep is deferred to the job return handler
+        (:meth:`sweep_minion_stale_jids`); until that fires, entries from
+        a prior registration coexist with entries from the in-flight
+        registration. ``CkMinions`` reads the union — a transient
+        "too-many-matches" state, not a "too-few-matches" state — which
+        is the correct tradeoff for register flows.
+
+        :param str minion_id: The reporting minion.
+        :param dict resources: ``{resource_type: [resource_id, ...]}`` for
+            this chunk only.
+        :param str jid: The 20-char Salt jid identifying this registration.
+        :returns: ``n_put`` for logging.
+        """
+        if not resources:
+            return 0
+        to_put = []
+        for rtype, rids in resources.items():
+            for rid in rids or ():
+                srn = resource_index_srn_key(rtype, rid)
+                to_put.append((srn, minion_id, rtype, jid))
+        if not to_put:
+            return 0
+        self._store.put_many(to_put)
+        return len(to_put)
+
+    def sweep_minion_stale_jids(self, minion_id, current_jid):
+        """
+        Tombstone every primary entry owned by ``minion_id`` whose stored
+        jid is older than ``current_jid``.
+
+        Called once per registration, after the minion signals completion
+        via the ``resource.register`` job-return RPC. "Older" uses strict
+        lexicographic ``<`` on the fixed-width jid string, which matches
+        chronological order for :func:`salt.utils.jid.gen_jid` output.
+
+        Entries stamped with ``jid >= current_jid`` are left in place —
+        this preserves concurrent newer registrations whose return
+        happens to arrive before this one's.
+
+        Entries with ``jid is None`` (schema <3 legacy writes) are left in
+        place — a subsequent register will overwrite them with a stamped
+        value, and we don't want to delete data we didn't write.
+
+        Idempotent: running the sweep twice with the same ``current_jid``
+        is a no-op on the second call.
+
+        :param str minion_id: The reporting minion.
+        :param str current_jid: The jid that just completed.
+        :returns: Number of entries tombstoned.
+        """
+        if not current_jid:
+            return 0
+        jids_by_srn = self._store.srn_jids_by_minion(minion_id)
+        to_delete = [
+            srn
+            for srn, stored in jids_by_srn.items()
+            if stored is not None and stored < current_jid
+        ]
+        if to_delete:
+            self._store.delete_many(to_delete)
+        return len(to_delete)
 
     def unregister_minion(self, minion_id):
         """
@@ -1030,8 +1305,14 @@ class _NullResourceRegistry:
     def get_resources_for_minion(self, minion_id):
         return {}
 
-    def register_minion(self, minion_id, resources):
+    def register_minion(self, minion_id, resources, jid=None):
         return (0, 0)
+
+    def upsert_minion_chunk(self, minion_id, resources, jid):
+        return 0
+
+    def sweep_minion_stale_jids(self, minion_id, current_jid):
+        return 0
 
     def stats(self):
         return {

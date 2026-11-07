@@ -10,3 +10,4 @@ as this may result in circular imports.
 # Constants for events on the minion bus
 MINION_PILLAR_REFRESH_COMPLETE = "/salt/minion/minion_pillar_refresh_complete"
 MINION_MOD_REFRESH_COMPLETE = "/salt/minion/minion_mod_refresh_complete"
+MINION_RESOURCE_REFRESH_COMPLETE = "/salt/minion/minion_resource_refresh_complete"

@@ -1911,14 +1911,20 @@ class TestRegisterRPCChunking:
         load = delivered[0]
         # None of the chunking fields may appear — a new minion against an
         # old master must send a byte-identical pre-chunking load.
-        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+        for key in (
+            "_register_jid",
+            "_chunk_seq",
+            "_chunk_total",
+            "_chunk_is_last",
+        ):
             assert key not in load, f"{key} must be omitted on single-chunk payloads"
         assert len(load["resources"]["dummy"]) == 50
 
     def test_large_pillar_sends_multiple_chunks(self, minion_opts):
         """
         An inventory 2.5x the chunk size produces three chunks sharing a
-        single token. ``_chunk_is_last`` is True only on the final chunk.
+        single jid. ``_chunk_is_last`` is True only on the final chunk —
+        that's the master's trigger to sweep stale-jid entries.
         """
         m = self._minion_with(minion_opts, 25, chunk_size=10)
         delivered = []
@@ -1931,8 +1937,8 @@ class TestRegisterRPCChunking:
         with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
             asyncio.run(m._register_resources_with_master())
         assert len(delivered) == 3
-        tokens = {d["_register_token"] for d in delivered}
-        assert len(tokens) == 1, "all chunks must share one register token"
+        jids = {d["_register_jid"] for d in delivered}
+        assert len(jids) == 1, "all chunks must share one register jid"
         assert [d["_chunk_seq"] for d in delivered] == [0, 1, 2]
         assert [d["_chunk_total"] for d in delivered] == [3, 3, 3]
         assert [d["_chunk_is_last"] for d in delivered] == [False, False, True]
@@ -1945,7 +1951,7 @@ class TestRegisterRPCChunking:
 
     def test_chunk_timeout_retries_that_chunk_only(self, minion_opts):
         """
-        If sending chunk 1 fails, the minion retries chunk 1 (same token,
+        If sending chunk 1 fails, the minion retries chunk 1 (same jid,
         same seq) WITHOUT re-sending chunks 0 or 2.
         """
         m = self._minion_with(minion_opts, 25, chunk_size=10)
@@ -1969,9 +1975,11 @@ class TestRegisterRPCChunking:
         seqs = [d["_chunk_seq"] for d in delivered]
         # The retry must be for seq=1, not a restart of seq=0.
         assert seqs == [0, 1, 1, 2]
-        # The token is stable across the retry.
-        tokens = {d["_register_token"] for d in delivered}
-        assert len(tokens) == 1
+        # The jid is stable across the retry.
+        jids = {d["_register_jid"] for d in delivered}
+        assert len(jids) == 1
+        # Only the last-seq chunk is terminal.
+        assert [d["_chunk_is_last"] for d in delivered] == [False, False, False, True]
 
     def test_chunk_persistent_failure_aborts_registration(self, minion_opts):
         """
