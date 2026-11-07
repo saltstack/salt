@@ -145,6 +145,16 @@ class BaseStorage:
         """Persist currentTerm and votedFor (§5.2)."""
         raise NotImplementedError
 
+    def save_commit_index(self, commit_index, last_applied=None):
+        """
+        Persist the highest log entry known to be committed (§5.3),
+        plus (optionally) the highest index already fed to a state
+        machine.  Optional for backends that do not need durable
+        commit_index — without it the ``Log.commit`` call falls back
+        to in-memory only and restart recovery depends on receiving a
+        fresh ``AppendEntries`` from the leader.
+        """
+
     def load_state(self):
         """Load persisted state. Returns dict with 'term' and 'voted_for'."""
         raise NotImplementedError
@@ -203,6 +213,33 @@ class Log:
                 self.restore_state_machines_from_data(snapshot["data"])
             state = self.storage.load_state()
             self._term = state.get("term", 0) if isinstance(state, dict) else state[0]
+            # Restore the highest previously committed index and the
+            # highest index already fed to a state machine so
+            # ``apply_entries`` can replay just the gap between them
+            # into every registered state machine before any peer
+            # AppendEntries arrives.  Clamp both against the current
+            # snapshot's ``last_included_index`` — the snapshot already
+            # compacted every index up through there into every SM, so
+            # commit_index / last_applied can never sit below it.
+            # Older state files without these fields read as -1
+            # (see SaltStorage.load_state).
+            if isinstance(state, dict):
+                persisted_commit = state.get("commit_index", -1)
+                if persisted_commit is None:
+                    persisted_commit = -1
+                persisted_applied = state.get("last_applied", -1)
+                if persisted_applied is None:
+                    persisted_applied = -1
+                self.commit_index = max(
+                    self.commit_index,
+                    self.last_included_index,
+                    persisted_commit,
+                )
+                self.last_applied = max(
+                    self.last_applied,
+                    self.last_included_index,
+                    persisted_applied,
+                )
 
         self._update_cached_index()
 
@@ -461,7 +498,38 @@ class Log:
         return payload
 
     def commit(self, index):
-        self.commit_index = max(getattr(self, "commit_index", -1), index)
+        """
+        Advance the highest committed index and persist it.
+
+        ``commit_index`` is monotonic — a stale incoming ``index`` below
+        the current value is ignored.  When a storage backend is wired
+        up, the new value is written through its ``save_commit_index``
+        (optional method) so a subsequent restart replays committed
+        entries into every state machine without needing a peer
+        AppendEntries.  Storage is only touched when the value actually
+        advances, so the hot path stays idempotent.
+        """
+        new_commit = max(getattr(self, "commit_index", -1), index)
+        if new_commit == self.commit_index:
+            return
+        self.commit_index = new_commit
+        if self.storage is not None:
+            save = getattr(self.storage, "save_commit_index", None)
+            if save is not None:
+                try:
+                    save(new_commit)
+                except Exception as exc:  # pylint: disable=broad-except
+                    # Durability is best-effort at this layer: a failed
+                    # write means the next restart falls back to peer
+                    # AppendEntries for recovery, which is still
+                    # correct — just less eager.  Log and continue so a
+                    # transient cache hiccup doesn't halt the Raft
+                    # thread.
+                    log.warning(
+                        "Log.commit: save_commit_index(%s) failed: %s",
+                        new_commit,
+                        exc,
+                    )
 
     def clear(self):
         """Discard all log entries."""
