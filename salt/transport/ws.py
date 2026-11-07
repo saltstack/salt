@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import socket
 import time
+from enum import Enum
 
 import aiohttp
 import aiohttp.web
@@ -14,15 +15,25 @@ import salt.transport.base
 import salt.transport.frame
 import salt.utils.asynchronous
 import salt.utils.resource_warnings
+from salt.exceptions import SaltClientError, SaltReqTimeoutError
 from salt.transport.tcp import (
     USE_LOAD_BALANCER,
+    ClosingError,
     LoadBalancerServer,
     _get_bind_addr,
     _get_socket,
     _set_tcp_keepalive,
 )
+from salt.utils.asynchronous import cancel_tasks
 
 log = logging.getLogger(__name__)
+
+
+class _RequestOperation(Enum):
+    """The fixed I/O operations supported by a WebSocket request client."""
+
+    CONNECT = "connect"
+    SEND = "send"
 
 
 class PublishClient(salt.transport.base.PublishClient):
@@ -661,69 +672,129 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
 
 
 class RequestClient(salt.transport.base.RequestClient):
+    """Reuse one WebSocket and serialize its client-owned I/O operations."""
 
     ttype = "ws"
 
     def __init__(self, opts, io_loop):  # pylint: disable=W0231
         self.opts = opts
-        self.sending = False
         self.ws = None
         self.session = None
         self.io_loop = salt.utils.asynchronous.aioloop(io_loop)
         self._closing = False
         self._closed = False
+        self.close_task = None
+        self._operation_tasks = set()
+        self._send_lock = asyncio.Lock()
         self.ssl = self.opts.get("ssl", None)
         self._creator_pid = os.getpid()
 
     async def connect(self):  # pylint: disable=invalid-overridden-method
+        if self._closing:
+            raise ClosingError("Request client is closed")
+        if self.ws is not None and not self.ws.closed:
+            return self.ws
+        return await self._start_operation(_RequestOperation.CONNECT)
+
+    async def _connect(self):
+        if self.ws is not None and not self.ws.closed:
+            return self.ws
+        await self._close_connection()
         ctx = None
         if self.ssl is not None:
             ctx = salt.transport.base.ssl_context(self.ssl, server_side=False)
-
         master_uri = self.opts.get("master_uri", "")
         if master_uri.startswith("ipc://"):
-            socket_path = master_uri[6:]
-            connector = aiohttp.UnixConnector(path=socket_path)
+            connector = aiohttp.UnixConnector(path=master_uri[6:])
             self.session = aiohttp.ClientSession(connector=connector)
-            URL = "http://localhost/ws"
+            url = "http://localhost/ws"
         else:
             self.session = aiohttp.ClientSession()
-            URL = self.get_master_uri(self.opts)
-
-        log.debug("Connect to %s %s", URL, ctx)
-        self.ws = await self.session.ws_connect(URL, ssl=ctx)
+            url = self.get_master_uri(self.opts)
+        self.ws = await self.session.ws_connect(
+            url, ssl=ctx if ctx is not None else True
+        )
+        if self._closing:
+            raise ClosingError("Request client is closed")
+        return self.ws
 
     async def send(self, load, timeout=60):
-        if self.sending or self._closing:
-            await asyncio.sleep(0.03)
-        self.sending = True
         try:
-            await self.connect()
-            message = salt.payload.dumps(load)
-            await self.ws.send_bytes(message)
-            async for msg in self.ws:
-                if msg.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
-                    break
-                data = salt.payload.loads(msg.data)
-                break
-            return data
+            return await asyncio.wait_for(
+                self._start_operation(_RequestOperation.SEND, load), timeout
+            )
+        except asyncio.TimeoutError as exc:
+            raise SaltReqTimeoutError("WebSocket request timed out") from exc
+
+    # TODO (#70367): type these helpers together with _connect, _send and salt.payload.
+    # CONNECT returns aiohttp.ClientWebSocketResponse; SEND returns a decoded payload
+    # (scalars, nested containers or Salt extension values). Preserve that distinction
+    # when defining the payload and return types.
+    def _start_operation(self, operation, load=None):
+        """Own the I/O task so shutdown never cancels the caller's entire task."""
+        if not isinstance(operation, _RequestOperation):
+            raise TypeError("Expected a WebSocket request operation")
+        if self._closing:
+            raise ClosingError("Request client is closed")
+        task = self.io_loop.create_task(self._run_operation(operation, load))
+        self._operation_tasks.add(task)
+        task.add_done_callback(self._operation_tasks.discard)
+        return task
+
+    async def _run_operation(self, operation, load=None):
+        # One connection has no request IDs: keep each exchange indivisible.
+        async with self._send_lock:
+            if self._closing:
+                raise ClosingError("Request client is closed")
+            try:
+                if operation is _RequestOperation.CONNECT:
+                    return await self._connect()
+                if operation is _RequestOperation.SEND:
+                    return await self._send(load)
+                raise TypeError("Unknown WebSocket request operation")
+            except BaseException:
+                # A cancelled or failed exchange cannot leave a late reply for
+                # the next caller. Discard the connection before releasing the lock.
+                await self._close_connection(abort=True)
+                raise
+
+    async def _send(self, load):
+        ws = await self._connect()
+        await ws.send_bytes(salt.payload.dumps(load))
+        response = await ws.receive()
+        if response.type != aiohttp.WSMsgType.BINARY:
+            raise SaltClientError("WebSocket closed or returned a non-binary reply")
+        return salt.payload.loads(response.data)
+
+    async def _close_connection(self, abort=False):
+        ws, session = self.ws, self.session
+        self.ws = self.session = None
+        try:
+            # Failed requests cannot wait for a peer's WebSocket close handshake.
+            if abort and session is not None:
+                await session.close()
+            if ws is not None:
+                await ws.close()
         finally:
-            self.sending = False
+            if session is not None and not session.closed:
+                await session.close()
+
+    async def close_async(self):
+        self.close()
+        await asyncio.shield(self.close_task)
 
     async def _close(self):
-        if self.ws is not None:
-            await self.ws.close()
-            self.ws = None
-        if self.session is not None:
-            await self.session.close()
-            self.session = None
+        await cancel_tasks(*self._operation_tasks)
+        self._operation_tasks.clear()
+        await self._close_connection()
         self._closed = True
 
     def close(self):
+        """Request shutdown from a synchronous transport callback."""
         if self._closing:
             return
         self._closing = True
-        self.close_task = asyncio.create_task(self._close())
+        self.close_task = self.io_loop.create_task(self._close())
 
     def get_master_uri(self, opts):
         if "master_uri" in opts:
