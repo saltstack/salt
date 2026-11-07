@@ -35,7 +35,6 @@ import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.user
-import salt.utils.win_functions
 import salt.utils.xdg
 import salt.utils.yaml
 import salt.version as version
@@ -972,8 +971,17 @@ class DaemonMixIn(metaclass=MixInMeta):
                     # overwrite the PIDfile on the next start.
                     log_error = False
                     if salt.utils.platform.is_windows():
-                        user = salt.utils.win_functions.get_current_user()
-                        if salt.utils.win_functions.is_admin(user):
+                        # Aliased import: ``import salt.utils.win_functions``
+                        # here would bind ``salt`` as a function-local name
+                        # for the entire method (Python scoping rule),
+                        # turning the earlier ``salt.utils.platform...``
+                        # reference into an UnboundLocalError.
+                        from salt.utils import (  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+                            win_functions as _win_functions,
+                        )
+
+                        user = _win_functions.get_current_user()
+                        if _win_functions.is_admin(user):
                             log_error = True
                     else:
                         if not os.getuid():
@@ -1035,11 +1043,19 @@ class DaemonMixIn(metaclass=MixInMeta):
                 ):
                     return True
             else:
-                # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid
+                # We have no os.getppid() on Windows. Use salt.utils.win_functions.get_parent_pid.
+                # Aliased import: see the note on the other Windows branch
+                # above -- a bare ``import salt.utils.win_functions`` here
+                # shadows ``salt`` at method scope and triggers
+                # ``UnboundLocalError`` on the earlier ``salt.utils...`` refs.
+                from salt.utils import (  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+                    win_functions as _win_functions,
+                )
+
                 if (
                     self.check_pidfile()
                     and self.is_daemonized(pid)
-                    and salt.utils.win_functions.get_parent_pid() != pid
+                    and _win_functions.get_parent_pid() != pid
                 ):
                     return True
         return False
