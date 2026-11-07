@@ -2005,3 +2005,55 @@ class TestRegisterRPCChunking:
             "once a chunk's retry budget is exhausted the rest of the "
             f"registration must abort; got seqs {seqs}"
         )
+
+    def test_chunk_send_uses_dedicated_chunk_timeout(self, minion_opts):
+        """
+        The per-chunk send timeout is sourced from
+        ``resource_register_chunk_timeout``, not from ``_return_retry_timer``.
+        A master-side sync commit of a large chunk can exceed the 5-10s
+        return-ack window, so the chunk timer must be independent.
+        """
+        m = self._minion_with(minion_opts, 25, chunk_size=10)
+        m.opts["resource_register_chunk_timeout"] = 90
+        seen_timeouts = []
+
+        async def capture(load, timeout=None):
+            seen_timeouts.append(timeout)
+
+        import asyncio
+
+        # ``_return_retry_timer`` must NOT be consulted for the chunk send.
+        with mock_patch.object(
+            m,
+            "_return_retry_timer",
+            side_effect=AssertionError("chunk send must not use return_retry_timer"),
+        ), mock_patch.object(m, "_send_req_async_main", side_effect=capture):
+            asyncio.run(m._register_resources_with_master())
+        assert seen_timeouts == [90, 90, 90], (
+            "every chunk send must use resource_register_chunk_timeout; "
+            f"got {seen_timeouts}"
+        )
+
+    def test_chunk_timeout_default_is_60s(self, minion_opts):
+        """
+        With no explicit ``resource_register_chunk_timeout`` set, the chunk
+        send uses the 60s default — large enough that a master-side sync
+        commit of a full chunk completes without racing the send timer.
+        """
+        m = self._minion_with(minion_opts, 25, chunk_size=10)
+        # Strip any value the fixture-chain may have injected.
+        m.opts.pop("resource_register_chunk_timeout", None)
+        seen_timeouts = []
+
+        async def capture(load, timeout=None):
+            seen_timeouts.append(timeout)
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
+            asyncio.run(m._register_resources_with_master())
+        assert seen_timeouts == [
+            60,
+            60,
+            60,
+        ], f"default chunk timeout must be 60s; got {seen_timeouts}"

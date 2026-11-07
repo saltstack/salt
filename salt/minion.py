@@ -4786,6 +4786,15 @@ class Minion(MinionBase):
         chunk_size = self.opts.get("resource_register_chunk_size", 16000)
         id_chunks = self._plan_register_id_chunks(resources, chunk_size)
         retries = max(0, int(self.opts.get("resource_register_chunk_retries", 3)))
+        # Each chunk's wait covers a master-side sync commit of
+        # ``chunk_size`` rows into the mmap registry; a 16000-row commit
+        # observed ~10-13s on an arm64 CI runner, which exceeds the
+        # 5-10s ``return_retry_timer`` window. Use an independent, longer
+        # cap so retries don't double-commit a chunk that is still
+        # applying on the master.
+        chunk_timeout = max(
+            1, int(self.opts.get("resource_register_chunk_timeout", 60))
+        )
 
         total = len(id_chunks)
         single = total == 1
@@ -4892,9 +4901,7 @@ class Minion(MinionBase):
                 attempt = 0
                 while True:
                     try:
-                        await self._send_req_async_main(
-                            load, timeout=self._return_retry_timer()
-                        )
+                        await self._send_req_async_main(load, timeout=chunk_timeout)
                         chunks_sent += 1
                         break
                     except Exception as err:  # pylint: disable=broad-except

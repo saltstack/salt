@@ -557,6 +557,11 @@ VALID_OPTS = immutabletypes.freeze(
         # or fails. The whole registration aborts after this many failures
         # on any single chunk.
         "resource_register_chunk_retries": int,
+        # Per-chunk send timeout for ``_register_resources`` in seconds.
+        # Sized for a master-side sync commit of ``resource_register_chunk_size``
+        # entries into the mmap registry, not the usual return-payload ack,
+        # so the chunk-send timer is independent of ``return_retry_timer``.
+        "resource_register_chunk_timeout": int,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -1438,6 +1443,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "resource_grains_cache_in_memory": False,
         "resource_register_chunk_size": 16000,
         "resource_register_chunk_retries": 3,
+        "resource_register_chunk_timeout": 60,
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
