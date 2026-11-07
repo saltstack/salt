@@ -450,6 +450,79 @@ class TestRaftDispatcher:
         _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
         # no exception; reply dropped with warning
 
+    def test_reply_peer_unreachable_logs_debug_not_error(self, caplog):
+        """
+        Regression for the cluster-shutdown ERROR flood: when a replying
+        pusher is backed by a going-away peer, ``_reply`` demotes the
+        expected unreachable-peer exceptions (ConnectionError / OSError /
+        StreamClosedError) to DEBUG rather than ``log.exception``.
+        Mirrors the SaltPeer._send behaviour added in #70733.
+        """
+        import logging as _logging
+
+        nodes, _ = self._make_cluster()
+        node = nodes[0]
+        pusher = _make_pusher()
+        pusher.publish = AsyncMock(side_effect=ConnectionRefusedError("peer gone"))
+        dispatcher = self._dispatcher(node, {"2": pusher})
+
+        caplog.set_level(_logging.DEBUG, logger="salt.cluster.consensus.peer")
+
+        payload = {
+            "callback_node": "2",
+            "candidate_id": "2",
+            "term": 1,
+            "last_log_term": 0,
+            "last_log_index": -1,
+        }
+        _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
+
+        error_records = [
+            r
+            for r in caplog.records
+            if r.name == "salt.cluster.consensus.peer" and r.levelno >= _logging.ERROR
+        ]
+        assert error_records == [], (
+            "RaftDispatcher._reply must not log ERROR for expected "
+            f"unreachable-peer; got: {[r.getMessage() for r in error_records]}"
+        )
+        assert [
+            r
+            for r in caplog.records
+            if r.levelno == _logging.DEBUG and "unreachable" in r.getMessage()
+        ], "Expected one DEBUG log for unreachable peer on reply"
+
+    def test_reply_unexpected_error_still_logs_exception(self, caplog):
+        """
+        Non-connection exceptions on the reply path must still surface
+        at ERROR so programming errors aren't silently swallowed.
+        """
+        import logging as _logging
+
+        nodes, _ = self._make_cluster()
+        node = nodes[0]
+        pusher = _make_pusher()
+        pusher.publish = AsyncMock(side_effect=ValueError("bogus payload"))
+        dispatcher = self._dispatcher(node, {"2": pusher})
+
+        caplog.set_level(_logging.DEBUG, logger="salt.cluster.consensus.peer")
+
+        payload = {
+            "callback_node": "2",
+            "candidate_id": "2",
+            "term": 1,
+            "last_log_term": 0,
+            "last_log_index": -1,
+        }
+        _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
+
+        error_records = [
+            r
+            for r in caplog.records
+            if r.name == "salt.cluster.consensus.peer" and r.levelno >= _logging.ERROR
+        ]
+        assert error_records, "Unexpected exceptions must still log at ERROR"
+
     def test_dispatch_none_node_drops_message(self):
         dispatcher = RaftDispatcher(None, "1", {})
         _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", {}))
