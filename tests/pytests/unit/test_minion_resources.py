@@ -1489,20 +1489,24 @@ class TestResourceGrainsCacheRetention:
         """
         With the cache cleared and opt-in off, the grain-match branch of
         ``_resolve_resource_targets`` must call
-        :meth:`_collect_resource_grains_for` passing the set of currently
-        managed composite SRN keys. This proves the renderer is bounded by
-        the managed-resource set and never the full pillar when the operator
-        opts out of in-memory retention.
+        :meth:`_collect_resource_grains_for` with a **singleton** SRN set
+        for each managed resource — one render at a time, discarded
+        after the match check. This proves the renderer is bounded to
+        a single per-resource grain dict transiently and never allocates
+        the full managed-resource grain map when the operator opts out
+        of in-memory retention.
         """
         minion_with_resources._resource_grains_cache = None
         minion_with_resources.opts["resource_grains_cache_in_memory"] = False
         captured = []
 
         def fake_collect_for(srns):
-            captured.append(list(srns))
-            return {
-                "dummy:dummy-01": {"env": "prod"},
-            }
+            srns_list = list(srns)
+            captured.append(srns_list)
+            # Mimic the real renderer: return only entries for the
+            # requested SRNs that have grains.
+            all_grains = {"dummy:dummy-01": {"env": "prod"}}
+            return {k: v for k, v in all_grains.items() if k in set(srns_list)}
 
         with mock_patch.object(
             minion_with_resources,
@@ -1518,15 +1522,20 @@ class TestResourceGrainsCacheRetention:
             )
         assert targets == [{"id": "dummy-01", "type": "dummy"}]
         assert captured, "the per-id renderer must have been called"
-        # The resolver passes the full managed-resource SRN set; the key
-        # invariant is that the call used an explicit SRN set, NOT None
-        # (which would mean "render the entire pillar unbounded").
-        assert all(
-            isinstance(s, (list, tuple, set, frozenset)) or srns_is_none_sentinel(s)
-            for s in captured
+        # Every call must be a singleton — the streaming contract.
+        # A call with more than one SRN means the resolver is back to
+        # allocating the full grain map per call, defeating the
+        # opt-out default.
+        sizes = {len(s) for s in captured}
+        assert sizes == {1}, (
+            "default-mode grain-target resolve must render one SRN at a "
+            f"time; got batch sizes {sizes}"
         )
-        # The resolver passed the 5 managed SRNs from the fixture.
-        assert set(captured[0]) == {
+        # The union of every singleton call equals the managed-resource
+        # SRN set — proof that the resolver DID walk every managed
+        # resource, it just didn't hold them all simultaneously.
+        all_seen = {s[0] for s in captured if len(s) == 1}
+        assert all_seen == {
             "dummy:dummy-01",
             "dummy:dummy-02",
             "dummy:dummy-03",
@@ -1538,6 +1547,322 @@ class TestResourceGrainsCacheRetention:
 def srns_is_none_sentinel(value):
     """Allow either an explicit None or an iterable bounded by managed ids."""
     return value is None
+
+
+# ---------------------------------------------------------------------------
+# Resolve streaming contract — the follow-up refactor
+# ---------------------------------------------------------------------------
+
+
+def _make_streaming_minion(minion_opts, n_resources):
+    """
+    Build a Minion carrying ``n_resources`` ``dummy`` resources with a
+    grains() callable that returns a 1 KiB dict per resource. Rendering
+    all at once would be ``n_resources`` KiB resident; the streaming
+    contract keeps peak transient allocation bounded to O(1 KiB).
+    """
+    minion_opts["resources"] = {"dummy": [f"res-{i}" for i in range(n_resources)]}
+    minion_opts["multiprocessing"] = False
+    with mock_patch("salt.minion.Minion.gen_modules"), mock_patch(
+        "salt.minion.Minion.connect_master"
+    ):
+        m = salt.minion.Minion(minion_opts, load_grains=False)
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        # Pad the dict to ~1 KiB so the aggregate cost of holding the
+        # full map is measurable; the streaming contract keeps us well
+        # below this.
+        return {
+            "env": "prod",
+            "resource_id": target["id"],
+            "pad": "x" * 1024,
+        }
+
+    m.resource_funcs = {"dummy.grains": grains_fn}
+    return m
+
+
+class TestResolveStreamingContract:
+    """
+    ``_resolve_resource_targets`` must render one per-resource grain
+    dict at a time in default (opt-out) mode so a minion managing
+    hundreds of thousands of resources does not allocate the full map
+    on every ``salt -G ...`` call.
+
+    These tests are the regression guard for the follow-up refactor to
+    the primary PR (``dwoz/fix/minion-register-scale``): the primary PR
+    moved the grain cache behind an opt-in flag, but the resolver still
+    allocated the full map transiently on each call. The streaming
+    refactor renders one SRN at a time so peak transient allocation is
+    bounded to O(1) in inventory size.
+    """
+
+    def test_grain_target_resolve_default_mode_is_memory_bounded(self, minion_opts):
+        """
+        Regression: ``_resolve_resource_targets`` for ``tgt_type=grain``
+        MUST render grains one resource at a time in default (opt-out)
+        mode. A batch of >1 means the resolve path is back to allocating
+        the full grain map per call, defeating the opt-out default and
+        re-introducing the ~40-80 MB per-call transient spike at 200K
+        resources.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=200)
+        minion.opts["resource_grains_cache_in_memory"] = False
+        minion._resource_grains_cache = None
+
+        original = minion._collect_resource_grains_for
+        sizes_seen = []
+
+        def wrapper(srns):
+            srns_list = list(srns) if srns is not None else None
+            sizes_seen.append(len(srns_list) if srns_list is not None else -1)
+            return original(srns_list)
+
+        minion._collect_resource_grains_for = wrapper
+        load = {"fun": "test.ping", "tgt": "env:prod", "tgt_type": "grain"}
+        targets = minion._resolve_resource_targets(load)
+
+        assert sizes_seen, "render should have been called at least once"
+        assert max(sizes_seen) == 1, (
+            f"default-mode grain-target resolve rendered grains in batch "
+            f"sizes {set(sizes_seen)}; expected only singleton (1-element) "
+            f"calls. A larger batch means the resolve path is still "
+            f"allocating the full grain map per call, defeating the "
+            f"opt-out default."
+        )
+        # And the resolve DID walk every resource — streaming, not
+        # skipping.
+        assert len(sizes_seen) == 200
+        # Grains match env:prod so every resource ends up in the
+        # target list.
+        assert len(targets) == 200
+        # The cache stays empty: opt-out mode must NOT persist anything.
+        assert minion._resource_grains_cache is None
+
+    def test_grain_target_resolve_opt_in_uses_cache_only(self, minion_opts):
+        """
+        Opt-in mode (``resource_grains_cache_in_memory: True``) must
+        keep the full-map-cached fast path: ``_collect_resource_grains_for``
+        is called at most ONCE (to opportunistically warm the cache on
+        first resolve); subsequent resolves hit the populated cache and
+        issue zero renders.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=50)
+        minion.opts["resource_grains_cache_in_memory"] = True
+        minion._resource_grains_cache = None
+
+        original = minion._collect_resource_grains_for
+        call_count = {"n": 0}
+
+        def wrapper(srns):
+            call_count["n"] += 1
+            return original(list(srns) if srns is not None else None)
+
+        minion._collect_resource_grains_for = wrapper
+        load = {"fun": "test.ping", "tgt": "env:prod", "tgt_type": "grain"}
+
+        # First resolve warms the cache.
+        targets = minion._resolve_resource_targets(load)
+        assert len(targets) == 50
+        assert minion._resource_grains_cache is not None
+        assert len(minion._resource_grains_cache) == 50
+        first_call_count = call_count["n"]
+        assert first_call_count == 1, (
+            "opt-in mode should warm the cache with a single render call, "
+            f"not stream — got {first_call_count} renders"
+        )
+
+        # Second resolve must hit the populated cache: zero additional
+        # renders. This is the point of the opt-in flag.
+        targets = minion._resolve_resource_targets(load)
+        assert len(targets) == 50
+        assert call_count["n"] == first_call_count, (
+            "opt-in mode must hit the populated cache on subsequent "
+            f"resolves (expected {first_call_count} total renders, "
+            f"got {call_count['n']})"
+        )
+
+    def test_compound_target_resolve_default_mode_is_memory_bounded(self, minion_opts):
+        """
+        Regression: ``_resolve_resource_targets`` for ``tgt_type=compound``
+        MUST render grains one resource at a time in default (opt-out)
+        mode. The pre-refactor compound path called the resolver with
+        the full managed SRN set AND then built an N-wide ``all_srns``
+        copy on top of the result — a 2x peak transient hit on 200K
+        resources. The streaming path should render one grain dict at
+        a time and keep peak transient bounded.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=200)
+        minion.opts["resource_grains_cache_in_memory"] = False
+        minion._resource_grains_cache = None
+
+        original = minion._collect_resource_grains_for
+        sizes_seen = []
+
+        def wrapper(srns):
+            srns_list = list(srns) if srns is not None else None
+            sizes_seen.append(len(srns_list) if srns_list is not None else -1)
+            return original(srns_list)
+
+        minion._collect_resource_grains_for = wrapper
+        load = {
+            "fun": "test.ping",
+            "tgt": "G@env:prod",
+            "tgt_type": "compound",
+        }
+        targets = minion._resolve_resource_targets(load)
+
+        assert sizes_seen, "render should have been called at least once"
+        assert max(sizes_seen) == 1, (
+            f"default-mode compound-target resolve rendered grains in "
+            f"batch sizes {set(sizes_seen)}; expected only singleton "
+            f"(1-element) calls. A larger batch means the compound "
+            f"path is still allocating the full grain map per call."
+        )
+        # Every managed resource was walked.
+        assert len(sizes_seen) == 200
+        # G@env:prod matches every resource.
+        assert len(targets) == 200
+        # The cache stays empty in opt-out mode.
+        assert minion._resource_grains_cache is None
+
+    def test_compound_target_resolve_opt_in_uses_cache_only(self, minion_opts):
+        """
+        Opt-in mode must keep the compound path hitting the populated
+        cache after the first warm — zero additional renders.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=50)
+        minion.opts["resource_grains_cache_in_memory"] = True
+        minion._resource_grains_cache = None
+
+        original = minion._collect_resource_grains_for
+        call_count = {"n": 0}
+
+        def wrapper(srns):
+            call_count["n"] += 1
+            return original(list(srns) if srns is not None else None)
+
+        minion._collect_resource_grains_for = wrapper
+        load = {
+            "fun": "test.ping",
+            "tgt": "G@env:prod",
+            "tgt_type": "compound",
+        }
+
+        # First resolve warms.
+        targets = minion._resolve_resource_targets(load)
+        assert len(targets) == 50
+        warm_count = call_count["n"]
+        assert warm_count == 1
+
+        # Second resolve: no new renders.
+        targets = minion._resolve_resource_targets(load)
+        assert len(targets) == 50
+        assert call_count["n"] == warm_count, (
+            "opt-in compound resolve must hit the populated cache "
+            f"(expected {warm_count} total renders, got {call_count['n']})"
+        )
+
+    def test_compound_target_T_only_bypasses_grain_render_in_opt_in(self, minion_opts):
+        """
+        In opt-in mode, a compound expression that references only
+        resource type / id (``T@...``) still needs the per-resource walk
+        but does NOT trigger an extra render path — the cache is simply
+        consulted per SRN. First resolve warms with one bulk render;
+        subsequent resolves issue zero renders.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=20)
+        minion.opts["resource_grains_cache_in_memory"] = True
+        minion._resource_grains_cache = None
+
+        original = minion._collect_resource_grains_for
+        call_count = {"n": 0}
+
+        def wrapper(srns):
+            call_count["n"] += 1
+            return original(list(srns) if srns is not None else None)
+
+        minion._collect_resource_grains_for = wrapper
+        load = {
+            "fun": "test.ping",
+            "tgt": "T@dummy",
+            "tgt_type": "compound",
+        }
+
+        targets = minion._resolve_resource_targets(load)
+        assert len(targets) == 20
+        # One warm-up render on first resolve; T@ terms don't need the
+        # grain dict but the cache is still populated as a side effect
+        # (consistent with the pre-refactor behaviour where the grain
+        # map was always materialised at resolve time in opt-in mode).
+        warm_count = call_count["n"]
+        assert warm_count <= 1
+
+    def test_compound_target_T_only_works_without_grains_fn(self, minion_opts):
+        """
+        A compound ``T@type`` must still match resources whose
+        connection module exposes no ``grains`` callable: the walk is
+        driven by the resource inventory, not the grain cache.
+        """
+        minion = _make_streaming_minion(minion_opts, n_resources=5)
+        minion.opts["resource_grains_cache_in_memory"] = False
+        minion._resource_grains_cache = None
+        # Strip the grains callable; T@ should still work.
+        minion.resource_funcs = {}
+
+        load = {
+            "fun": "test.ping",
+            "tgt": "T@dummy",
+            "tgt_type": "compound",
+        }
+        targets = minion._resolve_resource_targets(load)
+        ids = {t["id"] for t in targets}
+        assert ids == {f"res-{i}" for i in range(5)}
+
+    def test_iter_resource_grains_for_match_cache_populated_yields_from_cache(
+        self, minion_with_resources
+    ):
+        """
+        With the cache populated, ``_iter_resource_grains_for_match``
+        must yield from it without invoking ``_collect_resource_grains_for``.
+        A cached entry is authoritative; a missing-from-cache SRN in
+        opt-in mode is treated as "no grains for this resource" and
+        silently skipped — same semantics as a resource type whose
+        connection module exposes no ``grains`` callable.
+        """
+        minion_with_resources._resource_grains_cache = {
+            "dummy:dummy-01": {"k": "v"},
+            # dummy-02 / dummy-03 / ssh resources deliberately missing.
+        }
+        called = []
+
+        def fake_collect_for(srns):
+            called.append(list(srns) if srns is not None else None)
+            return {}
+
+        with mock_patch.object(
+            minion_with_resources,
+            "_collect_resource_grains_for",
+            side_effect=fake_collect_for,
+        ):
+            pairs = list(
+                minion_with_resources._iter_resource_grains_for_match(
+                    [
+                        "dummy:dummy-01",
+                        "dummy:dummy-02",
+                        "ssh:node1",
+                    ]
+                )
+            )
+        # Only the cached SRN was yielded.
+        assert pairs == [("dummy:dummy-01", {"k": "v"})]
+        # The renderer was NOT called — the populated cache is
+        # authoritative.
+        assert called == [], (
+            "populated cache must be authoritative — "
+            f"_collect_resource_grains_for was called with {called}"
+        )
 
 
 # ---------------------------------------------------------------------------

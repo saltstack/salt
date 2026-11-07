@@ -6196,6 +6196,61 @@ class Minion(MinionBase):
             return rg
         return self._collect_resource_grains_for(srns)
 
+    def _iter_resource_grains_for_match(self, srns):
+        """
+        Yield ``(srn, gdict)`` pairs for each requested SRN, honouring
+        :conf_minion:`resource_grains_cache_in_memory`.
+
+        * Cache populated -> yield from it (``O(1)`` per SRN, no new
+          allocation per call). SRNs missing from the cache are skipped
+          with no fallback render: a cached ``_resource_grains_cache`` is
+          authoritative, and a missing-from-cache entry in opt-in mode is
+          semantically identical to a resource whose connection module
+          exposes no ``grains`` callable. This matches the behaviour of
+          the pre-streaming resolver which also only looped the cache's
+          own keys.
+        * Cache ``None`` and opt-in retention is on -> render the full
+          set once via :meth:`_get_resource_grains_for_resolve` (which
+          persists it on the instance) and yield from that map. Once
+          populated, every subsequent resolve call takes the cache-hit
+          path above. This preserves the pre-PR behaviour where the
+          first resolve after process start opportunistically fills the
+          cache if the operator asked for retention.
+        * Cache ``None`` and opt-in retention is off (the default) ->
+          render each SRN's grain dict on demand via
+          :meth:`_collect_resource_grains_for` with a singleton set,
+          yield it, and move on. The caller can discard immediately;
+          peak transient allocation is bounded to ONE per-resource grain
+          dict at a time instead of the full ``O(N)`` map built by
+          :meth:`_get_resource_grains_for_resolve`.
+
+        This is the streaming contract that lets
+        :meth:`_resolve_resource_targets` evaluate grain-based target
+        expressions on a minion managing hundreds of thousands of
+        resources without allocating the full per-resource grain map
+        on every :samp:`salt -G ...` call.
+
+        :param srns: Iterable of ``"<type>:<id>"`` composite keys.
+        :rtype: Iterator[tuple[str, dict]]
+        """
+        rg = getattr(self, "_resource_grains_cache", None)
+        if rg is None and self.opts.get("resource_grains_cache_in_memory", False):
+            # Opt-in path: opportunistically fill the cache once; from
+            # here on we land in the cache-populated branch on every
+            # call.
+            rg = self._get_resource_grains_for_resolve(list(srns))
+        if rg is not None:
+            for srn in srns:
+                gdict = rg.get(srn)
+                if gdict is not None:
+                    yield srn, gdict
+            return
+        for srn in srns:
+            one = self._collect_resource_grains_for((srn,))
+            gdict = one.get(srn)
+            if gdict is not None:
+                yield srn, gdict
+
     def _resolve_resource_targets(self, load):
         """
         Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
@@ -6236,21 +6291,37 @@ class Minion(MinionBase):
             # value of every term; ``and`` / ``or`` / ``not`` / parens are
             # evaluated using Python's boolean operators after rendering
             # each term to ``True``/``False``.
-            rg = self._get_resource_grains_for_resolve(
-                [f"{rt}:{ri}" for rt, rids in resources.items() for ri in rids or ()]
-            )
-            # Include every managed resource even if it has no grain entry
-            # — so plain ``T@type`` / ``T@type:id`` compounds still match
-            # for resources whose connection module exposes no ``grains``.
-            all_srns = dict(rg)
+            #
+            # The walk is driven by the resource inventory (not the grain
+            # cache) so that plain ``T@type`` / ``T@type:id`` compounds
+            # still match resources whose connection module exposes no
+            # ``grains``. Per-resource grain dicts are fetched one at a
+            # time: the populated cache (opt-in or opportunistically
+            # warmed) is used O(1) per SRN; otherwise
+            # :meth:`_collect_resource_grains_for` is called with a
+            # singleton SRN set so peak transient allocation is bounded
+            # to ONE grain dict, independent of inventory size.
+            rg = getattr(self, "_resource_grains_cache", None)
+            if rg is None and self.opts.get("resource_grains_cache_in_memory", False):
+                # Opt-in path: opportunistically warm the cache once,
+                # same as :meth:`_iter_resource_grains_for_match`.
+                rg = self._get_resource_grains_for_resolve(
+                    [
+                        f"{rt}:{ri}"
+                        for rt, rids in resources.items()
+                        for ri in rids or ()
+                    ]
+                )
+            targets = []
             for rtype, rids in (resources or {}).items():
                 for rid in rids or ():
-                    all_srns.setdefault(f"{rtype}:{rid}", {})
-            targets = []
-            for srn, gdict in all_srns.items():
-                if self._resource_matches_compound(tgt, srn, gdict, resources):
-                    rtype, _, rid = srn.partition(":")
-                    if rid:
+                    srn = f"{rtype}:{rid}"
+                    if rg is not None:
+                        gdict = rg.get(srn) or {}
+                    else:
+                        one = self._collect_resource_grains_for((srn,))
+                        gdict = one.get(srn) or {}
+                    if self._resource_matches_compound(tgt, srn, gdict, resources):
                         targets.append({"id": rid, "type": rtype})
             return targets
 
@@ -6271,13 +6342,15 @@ class Minion(MinionBase):
             # Match each managed resource's per-resource grains against
             # ``tgt`` (a ``key:value`` expression). Uses the cache if the
             # operator opted in to in-memory retention via
-            # ``resource_grains_cache_in_memory``; otherwise re-renders on
-            # demand, bounded by the current managed resource set.
-            rg = self._get_resource_grains_for_resolve(
-                [f"{rt}:{ri}" for rt, rids in resources.items() for ri in rids or ()]
-            )
+            # ``resource_grains_cache_in_memory``; otherwise re-renders
+            # one resource at a time via :meth:`_iter_resource_grains_for_match`
+            # so peak transient allocation is bounded by a single
+            # per-resource grain dict, not the full managed-resource map.
+            all_srns = [
+                f"{rt}:{ri}" for rt, rids in resources.items() for ri in rids or ()
+            ]
             targets = []
-            for srn, gdict in rg.items():
+            for srn, gdict in self._iter_resource_grains_for_match(all_srns):
                 if salt.utils.data.subdict_match(
                     gdict,
                     tgt,
@@ -7272,6 +7345,7 @@ for _attr in (
     "_collect_resource_grains",
     "_collect_resource_grains_for",
     "_get_resource_grains_for_resolve",
+    "_iter_resource_grains_for_match",
 ):
     setattr(MinionBase, _attr, getattr(Minion, _attr))
 del _attr
