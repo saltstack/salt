@@ -34,6 +34,11 @@ N reachable endpoints; the link picks one as the active
 endpoint and fails over to another if the primary becomes
 unreachable.  Failover doesn't require re-authentication ---
 the session AES is pinned to the identity, not the endpoint.
+
+``peer_cluster_id`` is a peer master's external identity.  Solo
+masters and clustered masters are indistinguishable at this
+boundary; the ``cluster_id`` suffix is the opts-key name, not a
+statement that the peer is clustered.
 """
 
 import asyncio
@@ -264,6 +269,12 @@ class PeerMasterLink:
     def peer_cluster_id(self):
         """
         The peer's ``cluster_id``.
+
+        ``cluster_id`` identifies the peer master from the outside.
+        Solo masters and clustered masters are indistinguishable at
+        this boundary — the field is named ``cluster_id`` because
+        that's the opts key, but semantically it is just the peer
+        master's identity.
 
         ``None`` until the first successful handshake.  Available
         afterward even if the link later goes DISCONNECTED, since

@@ -23,6 +23,14 @@ The resting state consulted here is:
 
 Any of these may be absent on a fresh master; absence is treated
 as empty rather than as an error.
+
+Terminology note
+----------------
+``cluster_id`` fields in this runner's output name a peer master's
+external identity.  Solo masters and clustered masters show up
+the same way in ``topology.peers`` output; the ``cluster_id``
+column is the opts-key name of the identity, not a claim that
+the peer runs as a multi-master cluster.
 """
 
 import logging

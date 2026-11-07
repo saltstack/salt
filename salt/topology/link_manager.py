@@ -5,7 +5,8 @@ Owns two concerns:
 
 * Outbound registry: a module-level dict of
   :class:`salt.topology.link.PeerMasterLink` instances keyed
-  by peer ``cluster_id``.
+  by peer ``cluster_id`` (the peer master's external identity;
+  solo and clustered peers key the same way).
 * Inbound listener: a :class:`salt.channel.server.ReqServerChannel`
   (reused as a library primitive, not extended) opened on
   ``topology_link_port`` with a topology-specific payload
@@ -42,13 +43,16 @@ log = logging.getLogger(__name__)
 
 
 # Module-level registry of outbound links (we initiated the TCP).
-# Key is peer ``cluster_id`` after handshake.  Before handshake the
-# link is tracked by a provisional key derived from the seed
+# Key is peer ``cluster_id`` after handshake --- i.e. the peer
+# master's external identity; the same key shape is used whether
+# the peer is a solo master or a clustered one.  Before handshake
+# the link is tracked by a provisional key derived from the seed
 # :class:`salt.config.topology.PeerRef`.
 _LINKS = {}
 
 # Module-level registry of inbound links (peer initiated to us).
-# Key is peer ``cluster_id`` after handshake.
+# Key is peer ``cluster_id`` after handshake --- the peer master's
+# external identity (same shape for solo and clustered peers).
 _INBOUND = {}
 
 # Timeout for outbound ``topology/pub`` / ``topology/ret`` sends.

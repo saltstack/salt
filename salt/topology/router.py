@@ -43,6 +43,15 @@ When a return arrives at an MWorker and the breadcrumb says
 daemon runs one event subscriber per outbound peer link so a
 slow link does not block aggregation on the others --- see
 ``_handle_topology_return_event`` on this router.
+
+Terminology note
+----------------
+Fields and tags named ``cluster_id`` / ``origin_cluster_id`` /
+``peer_cluster_id`` in this module name a peer master's external
+identity.  Solo masters and clustered masters are
+indistinguishable at the routing boundary; the ``cluster_id``
+suffix tracks the opts-key name used to declare that identity,
+not a claim that the peer is clustered.
 """
 
 import asyncio

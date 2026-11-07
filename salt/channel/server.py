@@ -80,10 +80,14 @@ def _cluster_is_ready(opts):
     """
     Return ``True`` if this master may serve minion/CLI requests.
 
-    For non-cluster masters this is always ``True``.  For 3008.x
-    master-cluster members it returns ``True`` only after the Raft
-    ``MembershipStateMachine`` has committed a CONFIG entry listing
-    this node as a voter and
+    The "cluster" in the name reflects *where* this gate matters
+    (3008.x master clusters); the gate is invoked on every master.
+    Solo and topology-only masters always pass through — they are
+    not in a Raft quorum and have nothing to wait on.
+
+    For 3008.x master-cluster members this returns ``True`` only
+    after the Raft ``MembershipStateMachine`` has committed a
+    CONFIG entry listing this node as a voter and
     ``SMaster.secrets["cluster_ready"]["event"]`` has been set.
 
     A topology-only master sets ``cluster_id`` but no
@@ -525,6 +529,11 @@ class ReqServerChannel:
                 return ret
 
             # Block non-_auth requests until this node is a committed Raft voter.
+            # The ``cluster_retry`` sentinel on the wire means "this master
+            # isn't ready to serve yet" — the sender retries.  Solo masters
+            # never hit this branch (``_cluster_is_ready`` short-circuits true),
+            # so the sentinel in practice only fires from clustered masters,
+            # but the client-side handling does not need to distinguish.
             if not _cluster_is_ready(self.opts):
                 log.debug(
                     "Cluster not ready yet — deferring request from %s",
