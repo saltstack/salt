@@ -10,7 +10,7 @@ config -- topology adds an authenticated master-to-master link on a
 separate port (default `4521`) and routes publishes and returns across
 it.
 
-## A two-cluster peered topology
+## A two-master peered topology
 
 ```
         +-----------+        peer link        +-----------+
@@ -50,7 +50,7 @@ east. East's returner stores them alongside the local returns, and the
    over the same link.
 6. East stores the returns and the CLI prints them.
 
-Transit hops (three or more clusters chained) follow the same pattern:
+Transit hops (three or more peer masters chained) follow the same pattern:
 each hop writes a breadcrumb at publish time and uses it to send the
 return back out the inbound link.
 
@@ -162,7 +162,7 @@ between the two hosts.
 
 Publish doesn't reach peer minions. Confirm both masters show the
 link as `connected` in `salt-run topology.links`. If the destination
-cluster is more than one hop away, confirm a periodic
+master is more than one hop away, confirm a periodic
 `topology/sum` summary has propagated -- a warning like
 `route_publish flooding --- no known route` means gossip hasn't
 reached the originator yet. Returns that never arrive usually mean

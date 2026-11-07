@@ -43,6 +43,20 @@ single-site deployment. For that, use master-cluster.
 
 ## Vocabulary
 
+### Terminology: `cluster_id` is a master's external identity
+
+The opt is named `cluster_id` because it was introduced for the
+3007.x master-cluster feature, but at the topology boundary it
+is simply "this master's identity in the topology graph." Solo
+masters set it to their identity; clustered masters set it to the
+shared cluster identity. A peer master doesn't care which it is —
+a cluster_id names a master. These docs and the topology code use
+"cluster" and "peer cluster" when referring to another master's
+identity; read those as "the master identified by this
+`cluster_id`."
+
+### Peer roles
+
 The topology code and these docs use three role names for a
 master-to-master relationship. **Only one of them is implemented
 today.**
