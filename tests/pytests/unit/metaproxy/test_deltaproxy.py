@@ -53,8 +53,12 @@ def fake_main_utils():
 
 @pytest.mark.parametrize("parallel_startup", [False, True])
 @pytest.mark.parametrize("failed_ids", [[], ["minion1"], ["minion1", "minion2"]])
+@pytest.mark.parametrize(
+    "transport,filtering",
+    [("tcp", False), ("tcp", True), ("zeromq", False), ("zeromq", True)],
+)
 def test_post_master_init_logs_subproxy_failures(
-    parallel_startup, failed_ids, caplog, monkeypatch, tmp_path
+    parallel_startup, failed_ids, transport, filtering, caplog, monkeypatch, tmp_path
 ):
     """Failures are visible at WARNING level while healthy sub-proxies start."""
     ids = ["minion1", "minion2"]
@@ -65,8 +69,10 @@ def test_post_master_init_logs_subproxy_failures(
         "saltenv": "base",
         "cachedir": str(tmp_path),
         "mine_enabled": False,
-        "transport": "tcp",
+        "transport": transport,
+        "zmq_filtering": filtering,
         "master": "master",
+        "master_alive_interval": 0,
         "proxy_keep_alive": False,
     }
     if parallel_startup:
@@ -117,6 +123,11 @@ def test_post_master_init_logs_subproxy_failures(
         if minion_id not in failed_ids
     }
     assert attach_channel.call_count == len(ids) - len(failed_ids)
+    subscriptions = control.pub_channel.transport.add_subscriptions
+    if transport == "zeromq" and filtering:
+        subscriptions.assert_called_once_with(list(control.deltaproxy_objs))
+    else:
+        subscriptions.assert_not_called()
     expected_messages = [
         f"An exception occured during initialization for {minion_id}, "
         "skipping: proxy initialization failed"
