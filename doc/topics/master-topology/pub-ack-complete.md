@@ -88,13 +88,36 @@ after it has matched the target against its local roster and
   originator can distinguish "didn't match" from "peer unreachable."
 - Fired from `_dispatch_pub` on the receiving side, right after
   `router.forward_publish` returns its `(links, local_match)` tuple
-  and *before* `_publish_to_local_minions` dispatches. This way an
-  ack is guaranteed to precede any return from the acked peer, which
-  lets the originator maintain the invariant that `expected_set`
-  grows before `returned_set`.
-- Transit peers also ack: a peer master forwarded to by its parent
-  will send `pub-ack` upstream for its own matched set. The originator
-  gets one ack per peer in the flood, not just leaf peers.
+  and *before* `_publish_to_local_minions` dispatches. The scheduling
+  pattern is `asyncio.ensure_future(_send_pub_ack_fire_and_forget(...))`
+  immediately followed by `await asyncio.sleep(0)`
+  (see `salt/topology/link_manager.py` ~L1450-1459); the yield lets
+  the ack coroutine run its first synchronous step — health-gate,
+  envelope build, and the `AsyncReqChannel.send` kickoff that hands
+  the frame to the transport — before the awaited
+  `_publish_to_local_minions` begins its local IPC fan-out. The real
+  guarantee is therefore: the ack *begins* its wire send before the
+  local publish fan-out begins; on-wire delivery ordering from that
+  point is still best-effort. In practice this is enough for the
+  originator to maintain the invariant that `expected_set` grows
+  before `returned_set`, because the local minions still have to
+  execute the job and round-trip a return through the peer master
+  after the fan-out starts. This is a fragile monotonic invariant:
+  a future refactor that drops the `await asyncio.sleep(0)` (or
+  replaces `ensure_future` with a construct that doesn't enter the
+  coroutine body before the next await) would silently break the
+  ordering without failing any functional test. It is pinned by
+  `test_pub_ack_scheduled_before_local_publish_await`.
+- Transit peers also ack under flood: when the originator publishes
+  with no explicit destination (`destinations is None`), every peer in
+  the flood tree sends a `pub-ack` upstream for its own matched set,
+  not just leaf peers. Under scoped routing (e.g. `C@` targeting
+  specific clusters, so `destinations` is a non-empty set), a pure-
+  transit peer that is not itself in the destination set has
+  `local_match=False` and skips the ack path at
+  `salt/topology/link_manager.py` ~L1415 — only destination peers ack.
+  The originator therefore receives one ack per flood participant OR
+  one ack per destination participant, respectively.
 
 ### `topology/pub-complete`
 
@@ -124,13 +147,24 @@ fired. One frame per peer per jid.
 
 **Semantics**:
 
-- `set(returned) ⊕ set(missed) == set(matched_minion_ids)` from the
-  prior `pub-ack` for that jid. Enforced at originator; a peer that
-  violates this gets a WARNING log + ack-set is trusted (fail-open).
-- `cancelled` is True only if the peer received a `topology/jid-cancel`
-  (deferred to Tier 2) or saw its parent peer master disappear
-  mid-job. For a clean local-timeout the peer sets
-  `cancelled: False` and populates `missed`.
+- `missed` is constructed by the emitter as `expected - returned`
+  (`salt/topology/link_manager.py:2231`), so under correct
+  implementations `set(returned) ⊕ set(missed) ==
+  set(matched_minion_ids)` from the prior `pub-ack` for that jid.
+  The originator does NOT re-verify this against the prior `pub-ack`
+  — the invariant is emitter-enforced; a misbehaving peer could send
+  disjoint `missed` and the originator would surface it as-is
+  (fail-open).
+- `cancelled` is reserved for future use. In Phase 1.5, the emitter
+  (`salt/topology/link_manager.py:_emit_pub_complete_once`) hard-codes
+  `cancelled=False` and `cancel_reason=None` — no in-tree code sets it
+  to True. Two eventual triggers are planned:
+
+  - `topology/jid-cancel` frame received (deferred to Tier 2).
+  - Parent peer master disappeared mid-job (not yet implemented).
+
+  For clean local-timeout, the peer always sets `cancelled: False` and
+  populates `missed` with the un-returned minions.
 - `pub-complete` carries no return payloads — those still flow as
   `topology/ret` with the per-minion return load. `pub-complete` is
   the metadata frame; `topology/ret` is the data frame.

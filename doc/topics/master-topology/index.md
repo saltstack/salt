@@ -116,7 +116,7 @@ flip `topology_enabled`.
 | `topology_breadcrumb_cache_key_size` | `64` | Key-slot byte width in the breadcrumb MmapCache. |
 | `topology_registry_cache_size` | `10_000` | Peer-registry MmapCache capacity (entries). |
 | `topology_registry_cache_key_size` | `64` | Key-slot byte width in the registry MmapCache. |
-| `auto_accept_masters` | *(absent)* | Mirrors `auto_accept` but for peer-master identity keys. **Not yet honored by the inbound dispatcher** — accept peers manually. |
+| `auto_accept_masters` | `False` | Mirrors `auto_accept` but for peer-master identity keys. **Not yet honored by the inbound dispatcher** — accept peers manually. |
 
 Two additional handshake knobs are read with `.get()` defaults in
 `salt/topology/link.py` but **are not declared in the master config
@@ -202,6 +202,13 @@ Peer identity keys land in sibling directories of `<pki_dir>`:
 | `<pki_dir>/masters_pre/<cluster_id>.pub` | Seen in a handshake but not yet accepted. The peer stays in `PENDING_ACCEPT`. |
 | `<pki_dir>/masters/<cluster_id>.pub` | Accepted. Handshake can complete. |
 | `<pki_dir>/masters_rejected/<cluster_id>.pub` | Explicitly rejected. Handshake responds `rejected`. |
+
+On a clustered master (both `cluster_id` and `cluster_pki_dir` set in
+opts), the four directories live under `<cluster_pki_dir>` instead of
+`<pki_dir>` so every Raft replica sees the same accept state keyed by
+peer `cluster_id`. Solo masters use `<pki_dir>`. Both `salt-key
+--master` and the inbound handshake resolve the root the same way via
+`salt.topology.link_manager._masters_subdir`.
 
 This mirrors the minion `minions_pre` / `minions` / `minions_rejected`
 layout one-to-one.
@@ -320,8 +327,8 @@ same link.
 
 When `forward_publish` accepts a publish, it writes an entry to the
 breadcrumbs MmapCache at
-`<pki_dir>/master/topology_breadcrumbs.mmap*`. Key is
-`<cluster_id>:<jid>`; value is `{"link_cluster_id": <inbound peer>,
+`<pki_dir>/master/topology_breadcrumbs.mmap*`. Key is the raw
+publish `<jid>`; value is `{"link_cluster_id": <inbound peer>,
 "expiry_at": <ts>}` where `expiry_at` is
 `now + min(publish.timeout + topology_breadcrumb_grace,
 topology_breadcrumb_max_age)`. Expired entries are swept by a
@@ -444,12 +451,24 @@ of known gaps surfaced by the four- and six-cluster shapes.
 
 ## Troubleshooting
 
-### Link stuck in `pending_accept`
+### Link stuck pre-handshake
 
-Shows up in `salt-run topology.links` as `health: pending_accept`
-and in logs as periodic retry lines. The far side has not accepted
-this master's identity key — its `masters_pre/<this_cluster_id>.pub`
-is populated but it has not been promoted to `masters/`.
+`salt-run topology.links` does not surface an explicit
+`pending_accept` health -- the runner's on-disk path only emits
+`connected` (summary gossip has been ingested) or `attached`
+(identity key is in `masters/` but no summary yet). A peer whose
+far side has not yet accepted this master's identity key will
+therefore show up in one of two ways:
+
+- As `attached` with `last_summary_at: null` -- this master has
+  accepted the peer's key, but the peer has not reciprocated, so
+  no summaries are flowing back and the registry stays empty.
+- Absent from both `topology.links` and `topology.peers` -- the
+  peer's identity key is still sitting in `masters_pre/` on this
+  side and has not been promoted to `masters/` yet.
+
+The authoritative source for pending acceptance is `salt-key` on
+each side:
 
 - On the peer, run `salt-key -L --master` to see pending peers.
 - `salt-key -a <this_cluster_id> --master` to accept.

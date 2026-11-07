@@ -152,10 +152,15 @@ split.
 
 ## Troubleshooting
 
-Handshake stuck in `pending`. `salt-run topology.links` shows
-`health: pending_accept`. The peer has your master-identity key in
-its `masters_pre/` directory but hasn't promoted it. On the peer, run
-`salt-key -L --master` to see pending peers and
+Handshake stuck in `pending`. `salt-run topology.links` is not the
+authoritative source here -- it only reports `connected` or
+`attached` from on-disk state, never `pending_accept`. A peer stuck
+pre-handshake will either appear as `attached` with
+`last_summary_at: null` (its identity key is in `masters/` but no
+summary gossip has been ingested), or be absent entirely from both
+`topology.links` and `topology.peers` if its key is still sitting in
+`masters_pre/`. The authoritative signal is `salt-key -L --master`
+on the peer: it lists pending peers under the unaccepted bucket. Run
 `salt-key -a <your_cluster_id> --master` to accept. If the key never
 reaches the peer at all, check that `topology_link_port` is open
 between the two hosts.
