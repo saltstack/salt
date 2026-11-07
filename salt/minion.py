@@ -4948,6 +4948,30 @@ class Minion(MinionBase):
             complete = False
             error = str(err)
             log.warning("Unable to register resources with master: %s", err)
+        except asyncio.CancelledError:
+            # ``asyncio.CancelledError`` is a ``BaseException`` subclass on
+            # Python 3.8+ so neither the inner retry's ``except Exception``
+            # nor the outer ``except Exception`` catches it. Without this
+            # branch the coroutine unwinds silently through both blocks
+            # and the ``finally`` below fires
+            # ``MINION_RESOURCE_REFRESH_COMPLETE`` with the stale
+            # ``complete=True`` / ``chunks_sent=0`` values set at
+            # coroutine entry — misleading operators (and
+            # ``saltutil.refresh_resources(wait=True)`` callers) into
+            # thinking the register succeeded. The task itself completes
+            # in a cancelled state and is reaped silently by
+            # ``_background_tasks.discard``. Record the ground truth and
+            # re-raise so the caller observes the cancellation and the
+            # Task's final state reflects it.
+            complete = False
+            error = f"register coroutine cancelled after {chunks_sent}/{total} chunks"
+            log.warning(
+                "Resource register cancelled mid-flight after %s/%s chunks; "
+                "next master handshake will retrigger register.",
+                chunks_sent,
+                total,
+            )
+            raise
         finally:
             # Fire a local-bus completion event regardless of success so
             # CLI callers using ``saltutil.refresh_resources(wait=True)``

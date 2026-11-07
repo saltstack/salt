@@ -929,6 +929,221 @@ class TestMinionResourceRegisterCompletionEvent:
         assert "chunk 2/3" in payload["error"]
 
 
+class TestMinionResourceRegisterCancelled:
+    """
+    ``asyncio.CancelledError`` is a ``BaseException`` subclass on Python
+    3.8+. If the register coroutine is cancelled mid-flight (e.g. the
+    minion reconnect path tears down ``req_channel`` while a background
+    register from startup is still awaiting
+    ``_send_req_async_main``), the broad ``except Exception`` blocks
+    around the chunk loop do NOT catch the cancellation. Without a
+    dedicated ``except asyncio.CancelledError`` branch the coroutine
+    unwinds silently and the ``finally`` block fires
+    ``MINION_RESOURCE_REFRESH_COMPLETE`` with the stale
+    ``complete=True`` / ``chunks_sent=0`` values from coroutine entry —
+    misleading operators into thinking the register succeeded.
+    """
+
+    @staticmethod
+    def _fake_event_bus(capture):
+        """Return a context manager mimicking ``salt.utils.event.get_event``."""
+
+        class _FakeEvent:
+            def fire_event(self, payload, tag):
+                capture.append((tag, payload))
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        def _factory(*args, **kwargs):
+            return _FakeEvent()
+
+        return _factory
+
+    def test_register_cancelled_fires_completion_event_with_complete_false(
+        self, minion_opts
+    ):
+        """
+        When the register Task is cancelled mid-``_send_req_async_main``,
+        the ``finally`` block must still fire exactly one
+        ``MINION_RESOURCE_REFRESH_COMPLETE`` event, and its payload must
+        reflect ground truth: ``complete=False``, ``chunks_sent <
+        chunks_total``, and a populated ``error`` field. The task
+        itself must complete with ``CancelledError`` (re-raised).
+        """
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        events = []
+
+        send_entered = asyncio.Event()
+
+        async def hang(load, timeout=None):
+            send_entered.set()
+            # Park forever so the outer task can cancel us mid-await.
+            await asyncio.Event().wait()
+
+        factory = self._fake_event_bus(events)
+
+        async def _driver():
+            task = asyncio.ensure_future(m._register_resources_with_master())
+            # Wait until the coroutine is parked inside the send mock
+            # before cancelling, so the cancellation lands mid-flight
+            # rather than before the chunk loop starts.
+            await send_entered.wait()
+            task.cancel()
+            cancelled = False
+            try:
+                await task
+            except asyncio.CancelledError:
+                cancelled = True
+            return cancelled
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=hang), mock_patch(
+            "salt.utils.event.get_event", side_effect=factory
+        ):
+            cancelled = asyncio.run(_driver())
+
+        # The ``raise`` in the ``except asyncio.CancelledError`` branch
+        # ensures the Task's final state reflects cancellation.
+        assert cancelled is True
+
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
+        ]
+        assert len(refresh_events) == 1, (
+            "finally block must fire exactly one completion event even "
+            "when the coroutine is cancelled mid-flight"
+        )
+        _, payload = refresh_events[0]
+        assert payload["complete"] is False
+        assert payload["chunks_sent"] < payload["chunks_total"]
+        assert payload["chunks_sent"] == 0
+        assert payload["chunks_total"] == 3
+        assert "error" in payload
+        assert "cancelled" in payload["error"]
+
+    def test_register_cancelled_logs_warning(self, minion_opts, caplog):
+        """
+        The ``except asyncio.CancelledError`` branch must emit a
+        ``log.warning`` naming the mid-flight cancellation so operators
+        auditing minion logs can see why the register didn't complete.
+        """
+        import logging as _logging
+
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        events = []
+
+        send_entered = asyncio.Event()
+
+        async def hang(load, timeout=None):
+            send_entered.set()
+            await asyncio.Event().wait()
+
+        factory = self._fake_event_bus(events)
+
+        async def _driver():
+            task = asyncio.ensure_future(m._register_resources_with_master())
+            await send_entered.wait()
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        with caplog.at_level(_logging.WARNING, logger="salt.minion"), mock_patch.object(
+            m, "_send_req_async_main", side_effect=hang
+        ), mock_patch("salt.utils.event.get_event", side_effect=factory):
+            asyncio.run(_driver())
+
+        assert any(
+            "cancelled mid-flight" in rec.getMessage() for rec in caplog.records
+        ), (
+            "expected a WARNING log entry naming the mid-flight register "
+            "cancellation; got: "
+            + "; ".join(rec.getMessage() for rec in caplog.records)
+        )
+
+    def test_register_normal_exception_still_caught(self, minion_opts):
+        """
+        The new ``except asyncio.CancelledError`` branch must NOT shadow
+        the existing ``except Exception`` path — a plain ``RuntimeError``
+        from the chunk send still exhausts retries, logs the
+        ``"Unable to register"`` warning, and fires the completion
+        event with ``complete=False`` + ``error`` (regression gate).
+        """
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        m.opts["resource_register_chunk_retries"] = 0
+        events = []
+
+        async def boom(load, timeout=None):
+            if load.get("_chunk_seq") == 0:
+                raise RuntimeError("simulated send failure")
+
+        factory = self._fake_event_bus(events)
+        with mock_patch.object(m, "_send_req_async_main", side_effect=boom), mock_patch(
+            "salt.utils.event.get_event", side_effect=factory
+        ):
+            # No cancel — a bare ``asyncio.run`` must complete without
+            # raising, proving the ``except Exception`` branch still
+            # swallows non-cancel failures.
+            asyncio.run(m._register_resources_with_master())
+
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
+        ]
+        assert len(refresh_events) == 1
+        _, payload = refresh_events[0]
+        assert payload["complete"] is False
+        assert "error" in payload
+        assert payload["chunks_sent"] == 0
+
+    def test_register_cancelled_before_first_send_still_fires_event(self, minion_opts):
+        """
+        Edge case: if the Task is cancelled before the chunk loop has
+        made any send progress, the ``finally`` block must still fire
+        exactly one completion event with ``chunks_sent=0``,
+        ``complete=False``, and an ``error`` naming the cancellation.
+        """
+        m = _mk_minion(minion_opts, 30, resource_register_chunk_size=10)
+        events = []
+
+        send_entered = asyncio.Event()
+
+        async def hang(load, timeout=None):
+            send_entered.set()
+            await asyncio.Event().wait()
+
+        factory = self._fake_event_bus(events)
+
+        async def _driver():
+            task = asyncio.ensure_future(m._register_resources_with_master())
+            # Cancel as soon as possible — yield only enough for the
+            # coroutine to start, not enough to send a chunk.
+            await send_entered.wait()
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=hang), mock_patch(
+            "salt.utils.event.get_event", side_effect=factory
+        ):
+            asyncio.run(_driver())
+
+        refresh_events = [
+            e for e in events if e[0] == "/salt/minion/minion_resource_refresh_complete"
+        ]
+        assert len(refresh_events) == 1
+        _, payload = refresh_events[0]
+        assert payload["complete"] is False
+        assert payload["chunks_sent"] == 0
+        assert payload["chunks_total"] >= 1
+        assert "error" in payload
+
+
 class TestPillarRefreshDoesNotTouchResources:
     """
     ``Minion.pillar_refresh`` must refresh pillar only — resource
