@@ -18,8 +18,19 @@ import pytest
 
 import salt.config
 
-REPO_ROOT = pathlib.Path(salt.config.__file__).resolve().parents[2]
+# Resolve ``conf/master`` from the test file's own location rather than
+# from ``salt.config.__file__`` -- the latter points at ``site-packages``
+# in the onedir CI environment, which does not ship ``conf/master``.
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[4]
 CONF_MASTER = REPO_ROOT / "conf" / "master"
+
+# If running in an environment where the source tree is not available
+# (e.g. a wheel install), skip the whole module gracefully.
+if not CONF_MASTER.is_file():
+    pytest.skip(
+        f"conf/master not found at {CONF_MASTER}; source tree unavailable",
+        allow_module_level=True,
+    )
 
 # Section header that starts the Master Cluster Settings block.  The block
 # ends at either the next ``#####`` section header or EOF.
