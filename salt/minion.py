@@ -6502,11 +6502,34 @@ class SyndicManager(MinionBase):
                 break
             except SaltClientError as exc:
                 failed = True
-                log.error(
-                    "Error while bringing up syndic for multi-syndic. Is the "
-                    "master at %s responding?",
-                    opts["master"],
-                )
+                # ``SaltClientError`` re-raised from ``compile_pillar`` after a
+                # ``cluster_retry`` deferral wraps the original
+                # ``AuthenticationError`` whose message carries the
+                # cluster-not-ready sentinel (see
+                # ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).  Suppress
+                # the noisy ERROR for that transient cluster-not-ready case —
+                # the syndic connect loop retries on its own.  Any other
+                # ``SaltClientError`` keeps the existing ERROR path.  Mirrors
+                # the demotion applied in ``MinionManager._connect_minion``.
+                cause = exc.__cause__
+                if (
+                    cause is not None
+                    and salt.channel.client._is_cluster_not_ready_message(
+                        getattr(cause, "message", None)
+                    )
+                ):
+                    log.info(
+                        "Syndic master %s is still catching up (cluster "
+                        "not ready); retrying in %ss",
+                        opts["master"],
+                        auth_wait,
+                    )
+                else:
+                    log.error(
+                        "Error while bringing up syndic for multi-syndic. Is the "
+                        "master at %s responding?",
+                        opts["master"],
+                    )
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait
