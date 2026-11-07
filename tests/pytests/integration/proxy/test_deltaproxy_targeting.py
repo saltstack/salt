@@ -16,13 +16,12 @@ pytestmark = [
 ]
 
 
-def configure_filtering(factory, enabled, **overrides):
+def configure_filtering(factory, enabled):
     """Reload a factory with the requested on-disk publication setting."""
     config = salt.utils.yaml.safe_load(
         Path(factory.config_file).read_text(encoding="utf-8")
     )
     config.update(conf_file=factory.config_file, zmq_filtering=enabled)
-    config.update(overrides)
     factory.config = freeze(factory.write_config(config))
     return factory
 
@@ -40,17 +39,9 @@ def salt_master_factory(request, salt_master_factory):
 @pytest.fixture(scope="session")
 def salt_delta_proxy_factory(salt_delta_proxy_factory, salt_master_factory):
     """Use matching publication framing on the master and controller."""
-    # These tests need only built-in modules. Keep file synchronization local
-    # while fetching pillar from the real master, so a separate SyncWrapper
-    # startup bug cannot prevent the publication tests from reaching readiness.
-    local_files = Path(salt_delta_proxy_factory.config["root_dir"]) / "local-files"
-    local_files.mkdir(exist_ok=True)
     return configure_filtering(
         salt_delta_proxy_factory,
         salt_master_factory.config["zmq_filtering"],
-        file_client="local",
-        use_master_when_local=True,
-        file_roots={"base": [str(local_files)]},
     )
 
 
