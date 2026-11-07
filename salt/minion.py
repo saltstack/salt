@@ -6498,7 +6498,9 @@ class SyndicManager(MinionBase):
         # if its connected, mark it dead
         if self._syndics[master].done():
             syndic = self._syndics[master].result()  # pylint: disable=no-member
-            self._syndics[master] = syndic.reconnect()
+            # reconnect() is a coroutine; schedule it so callers can use the
+            # stored value like a Future (done()/exception()/result()).
+            self._syndics[master] = self.io_loop.create_task(syndic.reconnect())
         else:
             # TODO: debug?
             log.info(
@@ -6572,11 +6574,26 @@ class SyndicManager(MinionBase):
                     continue
                 else:
                     self.tries = collections.defaultdict(int)
-            # XXX This does not make sense
+            # _return_pub_multi(sync=True) blocks and returns the reply (or ""
+            # on timeout), not a Future. Wrap the outcome in a completed Future
+            # so the retry handling above can inspect it on the next call.
             future = asyncio.Future()
-            future = getattr(syndic_future.result(), func)(
-                values, "_syndic_return", timeout=self._return_retry_timer(), sync=True
-            )
+            try:
+                ret = getattr(syndic_future.result(), func)(
+                    values,
+                    "_syndic_return",
+                    timeout=self._return_retry_timer(),
+                    sync=True,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                future.set_exception(exc)
+            else:
+                if isinstance(ret, str) and not ret:
+                    future.set_exception(
+                        SaltReqTimeoutError(f"Timed out returning data to {master}")
+                    )
+                else:
+                    future.set_result(ret)
             self.pub_futures[master] = (future, values)
             return True
         # Loop done and didn't exit: wasn't sent, try again later
