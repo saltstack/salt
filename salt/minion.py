@@ -302,7 +302,10 @@ def resolve_dns(opts, fallback=True):
 
     if "master_ip" in ret and "master_ip" in opts:
         if ret["master_ip"] != opts["master_ip"]:
-            log.warning(
+            # DNS-driven master IP updates are the intended behavior of
+            # ``master_alive_interval``; log as INFO rather than WARNING
+            # so operators are not alerted on normal failover activity.
+            log.info(
                 "Master ip address changed from %s to %s",
                 opts["master_ip"],
                 ret["master_ip"],
@@ -1243,7 +1246,10 @@ class MinionBase:
                 # If failover is set, minion have to failover on DNS errors instead of retry DNS resolve.
                 # See issue 21082 for details
                 if opts["retry_dns"] and opts["master_type"] == "failover":
-                    log.critical(
+                    # Auto-correcting a config knob is informational, not a
+                    # critical failure; operators scanning for CRITICAL lines
+                    # should not be paged for a helpful default fix-up.
+                    log.info(
                         "'master_type' set to 'failover' but 'retry_dns' is not 0."
                         " Setting 'retry_dns' to 0 to failover to the next master on"
                         " DNS errors."
