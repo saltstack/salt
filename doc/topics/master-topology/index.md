@@ -46,14 +46,16 @@ single-site deployment. For that, use master-cluster.
 ### Terminology: `cluster_id` is a master's external identity
 
 The opt is named `cluster_id` because it was introduced for the
-3007.x master-cluster feature, but at the topology boundary it
-is simply "this master's identity in the topology graph." Solo
-masters set it to their identity; clustered masters set it to the
-shared cluster identity. A peer master doesn't care which it is —
-a cluster_id names a master. These docs and the topology code use
-"cluster" and "peer cluster" when referring to another master's
-identity; read those as "the master identified by this
-`cluster_id`."
+master-cluster feature (added as an opt in 3007.0 for the original
+shared-filesystem master cluster; still the identity field after
+3008.0 moved master clusters to Raft-replicated state, no shared FS
+required). At the topology boundary it is simply "this master's
+identity in the topology graph." Solo masters set it to their
+identity; clustered masters set it to the shared cluster identity.
+A peer master doesn't care which it is — a cluster_id names a
+master. These docs and the topology code use "cluster" and "peer
+cluster" when referring to another master's identity; read those
+as "the master identified by this `cluster_id`."
 
 ### Peer roles
 
@@ -100,7 +102,7 @@ flip `topology_enabled`.
 | Opt | Default | Meaning |
 | --- | --- | --- |
 | `topology_enabled` | `False` | Master-switch. Nothing in `salt.topology` imports until this is `True`. |
-| `cluster_id` | *(unset)* | This master's identity in the topology graph. Short, lowercase, matches `[a-z0-9][a-z0-9_-]*`. Shared with the 3008.x master cluster feature — a Raft cluster shows up to topology as one node named by this `cluster_id`. Required when `topology_enabled` is `True`. |
+| `cluster_id` | *(unset)* | This master's identity in the topology graph. Short, lowercase, matches `[a-z0-9][a-z0-9_-]*`. Shared with the master-cluster feature (introduced 3007.0 with a shared-filesystem backing; 3008.0 moved it to Raft) — a Raft cluster shows up to topology as one node named by this `cluster_id`. Required when `topology_enabled` is `True`. |
 | `topology_peers` | `[]` | List of `{host, port, finger}` mappings naming direct peer masters. See the example below for the entry shape. |
 | `topology_event_subscriptions` | *(unset)* | Glob tag patterns forwarded from this master to each peer. Unset = use the default (`salt/job/*/ret/*` and `salt/job/*/new`). |
 | `topology_link_port` | `4521` | TCP port where this master binds the inbound topology REP socket. |
