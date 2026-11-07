@@ -22,11 +22,11 @@ certifi==2026.10.23
     # via
     #   -r requirements/base.txt
     #   requests
-cffi==2.0.0
+cffi==2.1.1
     # via
     #   -r requirements/base.txt
     #   cryptography
-charset-normalizer==3.5.1
+charset-normalizer==3.5.2
     # via
     #   -r requirements/base.txt
     #   requests
@@ -36,9 +36,9 @@ cheroot==11.1.2
     #   cherrypy
 cherrypy==18.10.0
     # via -r requirements/base.txt
-croniter==6.2.2
+croniter==6.2.4
     # via -r requirements/base.txt
-cryptography==50.0.1
+cryptography==50.0.2
     # via
     #   -r requirements/base.txt
     #   pyopenssl
@@ -58,11 +58,11 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
-idna==3.18
+idna==3.20
     # via
     #   -r requirements/base.txt
     #   requests
@@ -75,13 +75,13 @@ jaraco-context==6.1.2
     # via
     #   -r requirements/base.txt
     #   jaraco-text
-jaraco-functools==4.5.0
+jaraco-functools==4.6.0
     # via
     #   -r requirements/base.txt
     #   cheroot
     #   jaraco-text
     #   tempora
-jaraco-text==4.2.0
+jaraco-text==4.3.0
     # via
     #   -r requirements/base.txt
     #   jaraco-collections
@@ -95,7 +95,7 @@ markdown-it-py==3.0.0
     # via
     #   -c requirements/constraints.txt
     #   rich
-markupsafe==3.0.3
+markupsafe==3.0.4
     # via
     #   -r requirements/base.txt
     #   jinja2
@@ -110,7 +110,7 @@ more-itertools==11.1.0
     #   jaraco-text
 msgpack==1.2.4
     # via -r requirements/base.txt
-multidict==6.7.1
+multidict==7.1.0
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -166,13 +166,13 @@ protobuf==7.36.2
     #   opentelemetry-proto
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via -r requirements/base.txt
-pycparser==3.0
+pycparser==3.11
     # via
     #   -r requirements/base.txt
     #   cffi
-pycryptodomex==3.23.0
+pycryptodomex==3.24.2
     # via
     #   -r requirements/base.txt
     #   -r requirements/crypto.txt
@@ -180,19 +180,19 @@ pygments==2.20.0
     # via rich
 pyopenssl==26.4.0
     # via -r requirements/base.txt
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0
     # via
     #   -r requirements/base.txt
     #   croniter
 python-discovery==1.6.1
     # via virtualenv
-python-gnupg==0.5.6
+python-gnupg==0.5.7
     # via -r requirements/base.txt
 pytz==2024.1
     # via tempora
 pyyaml==6.0.3
     # via -r requirements/base.txt
-pyzmq==27.1.0
+pyzmq==27.3.0
     # via -r requirements/zeromq.txt
 requests==2.34.2
     # via
@@ -202,7 +202,7 @@ requests==2.34.2
     #   opentelemetry-exporter-otlp-proto-http
 rich==15.0.0
     # via typer
-setproctitle==1.3.7
+setproctitle==1.3.8
     # via -r requirements/base.txt
 setuptools==84.0.0
     # via
@@ -222,7 +222,7 @@ timelib==0.3.0
     #   -r requirements/static/pkg/darwin.txt
 tornado==6.5.10
     # via -r requirements/base.txt
-truststore==0.10.4
+truststore==0.10.5
     # via -r requirements/base.txt
 typer==0.26.7
     # via typer-slim
@@ -240,19 +240,21 @@ typing-extensions==4.16.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
+tzdata==2026.6
+    # via python-dateutil
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via -r requirements/base.txt
-xxhash==3.7.0
+xxhash==4.0.2
     # via -r requirements/base.txt
 yarl==1.25.1
     # via aiohttp
 zc-lockfile==3.0.post1
     # via cherrypy
-zipp==4.1.0
+zipp==4.1.2
     # via
     #   -r requirements/base.txt
     #   importlib-metadata
