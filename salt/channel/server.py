@@ -1659,6 +1659,7 @@ class PubServerChannel:
         if not verified:
             return
         subscriber.id_ = load["id"]
+        subscriber.deltaproxy = load.get("deltaproxy") is True
         self._add_client_present(subscriber)
 
     def remove_presence_callback(self, subscriber):

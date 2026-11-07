@@ -805,7 +805,15 @@ async def test_presence_removed_on_stream_closed():
 
 @pytest.mark.parametrize(
     "topics",
-    [["child-one"], ["child-one", "child-two"], ["controller", "child-one"]],
+    [
+        ["child-one"],
+        ["child-one", "child-two"],
+        ["controller", "child-one"],
+        ["other"],
+        ["child-one", "other", "child-two"],
+        None,
+        [],
+    ],
 )
 async def test_publish_child_topics_to_deltaproxy(master_opts, io_loop, topics):
     """A shared DeltaProxy subscriber receives each publication once (#70711)."""
@@ -815,12 +823,16 @@ async def test_publish_child_topics_to_deltaproxy(master_opts, io_loop, topics):
     controller.deltaproxy = True
     other = salt.transport.tcp.Subscriber(MagicMock(), "other")
     other.id_ = "other"
-    other.deltaproxy = False
     server.clients = {controller, other}
     try:
         with patch.object(server, "_submit_write", return_value=True) as write:
             await server.publish_payload(b"job", topics, raw_payload=b"framed-job")
-        write.assert_called_once_with(controller, b"framed-job", [])
+        expected = [controller]
+        if not topics or "other" in topics:
+            expected.append(other)
+        assert write.call_count == len(expected)
+        for client in expected:
+            write.assert_any_call(client, b"framed-job", [])
     finally:
         server.close()
 
