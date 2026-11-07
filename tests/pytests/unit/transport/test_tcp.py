@@ -803,6 +803,28 @@ async def test_presence_removed_on_stream_closed():
             server.remove_presence_callback.assert_called_with(client)
 
 
+@pytest.mark.parametrize(
+    "topics",
+    [["child-one"], ["child-one", "child-two"], ["controller", "child-one"]],
+)
+async def test_publish_child_topics_to_deltaproxy(master_opts, io_loop, topics):
+    """A shared DeltaProxy subscriber receives each publication once (#70711)."""
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    controller = salt.transport.tcp.Subscriber(MagicMock(), "controller")
+    controller.id_ = "controller"
+    controller.deltaproxy = True
+    other = salt.transport.tcp.Subscriber(MagicMock(), "other")
+    other.id_ = "other"
+    other.deltaproxy = False
+    server.clients = {controller, other}
+    try:
+        with patch.object(server, "_submit_write", return_value=True) as write:
+            await server.publish_payload(b"job", topics, raw_payload=b"framed-job")
+        write.assert_called_once_with(controller, b"framed-job", [])
+    finally:
+        server.close()
+
+
 async def test_tcp_pub_client_decode_dict(minion_opts, io_loop, tmp_path):
     dmsg = {"meh": "bah"}
     with salt.transport.tcp.TCPPubClient(minion_opts, io_loop, path=tmp_path) as client:
