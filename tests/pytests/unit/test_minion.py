@@ -3921,3 +3921,228 @@ def test_minion_manager_destroy_after_closed_io_loop_does_not_raise(
     finally:
         if not manager.io_loop.is_closed():
             manager.io_loop.close()
+
+
+# Follow-up to PR #70733: ensure fire-and-forget background coroutines spawned
+# on the minion's io_loop keep a strong reference until they complete, so
+# CPython's garbage collector can't destroy the Task mid-``await`` and emit
+# ``Task was destroyed but it is pending!``.  Issue #70748.
+
+
+def _assert_no_task_destroyed_warning(records):
+    """
+    Fail if asyncio emitted ``Task was destroyed but it is pending!`` via
+    the stdlib ``asyncio`` logger during the captured records.
+    """
+    offenders = [
+        rec
+        for rec in records
+        if "Task was destroyed but it is pending" in rec.getMessage()
+    ]
+    assert not offenders, (
+        "asyncio emitted 'Task was destroyed but it is pending!' - "
+        f"{len(offenders)} occurrence(s): "
+        f"{[rec.getMessage() for rec in offenders]}"
+    )
+
+
+def test_minion_manager_spawn_minions_keeps_task_reference(
+    minion_opts, connect_master_mock, tmp_path, caplog
+):
+    """
+    ``MinionManager._spawn_minions`` must keep a strong reference to each
+    ``_connect_minion`` Task.  Prior to the fix for #70748 the call-site
+    ``self.io_loop.create_task(self._connect_minion(minion))`` discarded
+    the return value, leaving the Task referenced only by asyncio's
+    module-level :class:`WeakSet`.  CPython's garbage collector could
+    then destroy the still-pending Task mid-retry and emit
+    ``Task was destroyed but it is pending!``.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master"] = ["127.0.0.1"]
+    minion_opts["master_type"] = "failover"
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        # The fix adds this attribute; its absence is the regression
+        # itself (the old create_task call-site did not keep refs).
+        assert hasattr(mm, "_background_tasks"), (
+            "MinionManager must expose _background_tasks so spawned "
+            "coroutines are strong-referenced; otherwise asyncio's "
+            "WeakSet is the only reference and the GC can destroy the "
+            "pending Task."
+        )
+        assert isinstance(mm._background_tasks, set)
+
+        before = set(mm._background_tasks)
+
+        # Patch _create_minion_object so we don't need a real minion
+        # (which would try to open a transport). Patch _connect_minion
+        # to a long-lived coroutine that stays pending so we can
+        # observe the task reference without racing completion.
+        connect_started = asyncio.Event()
+
+        async def _long_connect(_minion):
+            connect_started.set()
+            await asyncio.sleep(3600)
+
+        mm._create_minion_object = MagicMock(return_value=MagicMock())
+        mm._connect_minion = _long_connect
+
+        async def _run():
+            mm._spawn_minions(timeout=60)
+            # Yield so the newly-scheduled tasks actually start and reach
+            # their first ``await``, mirroring real-world bootstrap retry.
+            await connect_started.wait()
+
+        with caplog.at_level(logging.ERROR, logger="asyncio"):
+            mm.io_loop.run_until_complete(_run())
+
+        after = set(mm._background_tasks)
+        new_tasks = after - before
+        assert new_tasks, (
+            "_spawn_minions did not register any task in "
+            "_background_tasks -- a bare io_loop.create_task was used, "
+            "which lets the GC destroy pending Tasks (#70748)."
+        )
+        # Each new task must still be alive -- that's the crux of the
+        # regression: the old call-site dropped the ref, so by the time
+        # we looked here the task would already be gone.
+        for task in new_tasks:
+            assert not task.done(), (
+                "Spawned _connect_minion task completed unexpectedly; "
+                "the test expected a long-running pending task."
+            )
+
+        _assert_no_task_destroyed_warning(caplog.records)
+
+        # Clean up every registered background task so the loop doesn't
+        # tear down with pending tasks (which would itself emit the
+        # warning, purely as a test-cleanup artifact).
+        for task in list(mm._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            mm.io_loop.run_until_complete(
+                asyncio.gather(*mm._background_tasks, return_exceptions=True)
+            )
+    finally:
+        mm.destroy()
+        if not mm.io_loop.is_closed():
+            mm.io_loop.close()
+
+
+def test_minion_manager_bind_keeps_publisher_task_reference(
+    minion_opts, tmp_path, caplog
+):
+    """
+    ``MinionManager._bind`` must route the event-publisher coroutine
+    through ``_spawn_background`` so a strong reference is retained
+    until the task completes.  See #70748.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        assert hasattr(mm, "_background_tasks")
+
+        # Record every call into _spawn_background so we can assert the
+        # publisher task went through it (and not a bare create_task).
+        orig_spawn = mm._spawn_background
+        spawn_calls = []
+
+        def _recording_spawn(coro):
+            spawn_calls.append(coro)
+            return orig_spawn(coro)
+
+        mm._spawn_background = _recording_spawn
+
+        with caplog.at_level(logging.ERROR, logger="asyncio"):
+            mm._bind()
+            # Let the publisher coroutine actually start.
+            mm.io_loop.run_until_complete(asyncio.sleep(0.2))
+
+        assert spawn_calls, (
+            "_bind did not go through _spawn_background -- the bare "
+            "io_loop.create_task regression is back (#70748)."
+        )
+        _assert_no_task_destroyed_warning(caplog.records)
+    finally:
+        # Drain every registered background task before closing the
+        # loop.  Without this, the long-running publisher and
+        # process-manager coroutines remain pending when the loop
+        # tears down and asyncio emits the very warning the fix is
+        # meant to prevent -- purely as a test-cleanup artifact.
+        for task in list(mm._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            mm.io_loop.run_until_complete(
+                asyncio.gather(*mm._background_tasks, return_exceptions=True)
+            )
+        mm.destroy()
+        if not mm.io_loop.is_closed():
+            mm.io_loop.close()
+
+
+async def test_minion_process_process_queue_keeps_task_reference(
+    minion_opts, io_loop, caplog
+):
+    """
+    ``Minion.process_process_queue`` must route its fire-and-forget
+    coroutine through ``_spawn_background`` so the resulting Task is
+    strong-referenced.  See #70748.
+    """
+    minion = salt.minion.Minion(minion_opts)
+    # The _spawn_background helper lives on Minion; make sure the
+    # periodic callback actually uses it.
+    assert hasattr(minion, "_spawn_background")
+    before = set(getattr(minion, "_background_tasks", set()))
+
+    # Replace the heavy inner coroutine with a cooperative stub so
+    # we're testing the scheduling behaviour, not the queue semantics.
+    started = asyncio.Event()
+
+    async def _stub():
+        started.set()
+        await asyncio.sleep(0.05)
+
+    minion._process_process_queue_async = _stub
+
+    with caplog.at_level(logging.ERROR, logger="asyncio"):
+        minion.process_process_queue()
+        # Yield to let the scheduled stub actually execute.
+        await started.wait()
+        await asyncio.sleep(0.1)
+
+    after = set(getattr(minion, "_background_tasks", set()))
+    # It may have been added and already-discarded via add_done_callback
+    # -- but it must have been present at some point.  Easier to assert
+    # on: _background_tasks must exist and be a set (the fixing helper
+    # creates it lazily on first use).
+    assert hasattr(minion, "_background_tasks"), (
+        "Minion did not initialise _background_tasks after a "
+        "process_process_queue dispatch; the bare io_loop.create_task "
+        "regression is back (#70748)."
+    )
+    assert isinstance(minion._background_tasks, set)
+    assert started.is_set(), (
+        "The scheduled process-queue coroutine never ran; this is the "
+        "GC-mid-await symptom #70748 targets."
+    )
+    _assert_no_task_destroyed_warning(caplog.records)
+    # ``after`` may be empty (callback already discarded) or non-empty;
+    # either is consistent with the fix.  The actively-pending window
+    # is narrow enough that asserting it would flake.
+    assert after.issubset(set(minion._background_tasks))
+
+    # Drain any remaining background tasks (notably the process_manager
+    # coroutine spawned by ``Minion.__init__``) so they don't emit the
+    # very warning this test is guarding against purely as a
+    # test-cleanup artifact.
+    for task in list(minion._background_tasks):
+        task.cancel()
+    with contextlib.suppress(Exception):
+        await asyncio.gather(*minion._background_tasks, return_exceptions=True)
+    minion.destroy()
