@@ -1333,6 +1333,7 @@ class MmapCache:
         read_len = length + _CRC_SIZE if self.verify_checksums else length
 
         raw = None
+        mm = None
         if seg_id < len(self._seg_mms):
             mm = self._seg_mms[seg_id][0]
             if mm is not None:
@@ -1341,7 +1342,17 @@ class MmapCache:
                 except (ValueError, OSError):
                     raw = None
 
-        if raw is None:
+        # A short mmap slice means another process grew the heap on disk
+        # after we mmap'd it: Python's ``mmap[start:end]`` silently clamps
+        # to the mmap's size and returns fewer bytes than requested.  The
+        # bytes exist on disk — they're just not visible through our
+        # stale view.  Mark the segment stale so the NEXT read re-mmaps
+        # at the current size, and fall back to fopen+read for THIS call
+        # so stat() sees the on-disk size and gives us the real record.
+        short_mmap_slice = mm is not None and raw is not None and len(raw) < read_len
+        if raw is None or short_mmap_slice:
+            if short_mmap_slice and seg_id < len(self._seg_mm_stale):
+                self._seg_mm_stale[seg_id] = True
             seg_path = self._segment_path(seg_id)
             try:
                 with salt.utils.files.fopen(seg_path, "rb") as f:
