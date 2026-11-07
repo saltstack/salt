@@ -19,4 +19,5 @@ returner modules
     postgres_local_cache
     rawfile_json
     salt_cache
+    sqlalchemy
     syslog_return
