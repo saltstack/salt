@@ -347,6 +347,82 @@ class TestMultiProcess:
         assert res[0] == "ok", res
         assert res[1] == 2 * n_keys, (res[1], 2 * n_keys)
 
+    def test_read_after_cross_process_append_has_no_stale_mmap(self, tmp_path, caplog):
+        """
+        Regression: another process's heap-append can grow the heap past
+        the size our per-segment mmap was created at. Python's
+        ``mmap[start:end]`` slicing silently clamps to the mmap's size
+        and returns fewer bytes than requested, so the fast-path mmap
+        read used to return a short slice; the fallback ``fopen+read``
+        branch was only entered on ``raw is None`` and never fired. The
+        result was a flood of false ``is truncated`` warnings even
+        though the bytes exist on disk.
+
+        After the fix, a short mmap slice triggers the fopen fallback
+        (which stat()s the file and sees the current on-disk size), the
+        per-segment mmap is marked stale so the NEXT read re-mmaps at
+        the new size, and no ``is truncated`` warning is emitted.
+        """
+        idx_path = str(tmp_path / "stale_mmap.idx")
+
+        # Seed a single record so the heap exists at a small size.
+        seed = MmapCache(idx_path, size=512, slot_size=128, key_size=48)
+        assert seed.put("seed", "seed-value")
+        seed.close()
+
+        # Re-open as the reader with a long staleness check interval so
+        # ``open(write=False)`` reuses the cached mmaps (and therefore
+        # the stale heap mmap size) across repeated ``get()`` calls.
+        reader = MmapCache(
+            idx_path,
+            size=512,
+            slot_size=128,
+            key_size=48,
+            staleness_check_interval=60.0,
+        )
+        # Prime: this triggers ``open()`` -> ``_open_all_seg_mmaps()``,
+        # mmaping the heap at its current (small) size.
+        assert reader.get("seed") == "seed-value"
+
+        # Separate process writes many records, growing the heap well
+        # past the reader's mmap'd size.
+        q = multiprocessing.Queue()
+        writer = multiprocessing.Process(target=_worker_put, args=(idx_path, 7, 200, q))
+        writer.start()
+        writer.join(timeout=60)
+        assert not writer.is_alive()
+        result = q.get(timeout=5)
+        assert result[0] == "ok", result
+        assert result[2] == 200, result
+
+        # The reader's ``get()`` of one of the writer's keys must now
+        # succeed without emitting a spurious ``is truncated`` warning.
+        with caplog.at_level(logging.WARNING, logger="salt.utils.mmap_cache"):
+            # Target keys written near the end of the batch, i.e. well
+            # past the reader's original mmap'd size.
+            target_keys = [f"w7k{i}" for i in (50, 100, 150, 199)]
+            values = {k: reader.get(k) for k in target_keys}
+
+        reader.close()
+
+        missing = {k: v for k, v in values.items() if v is None}
+        assert not missing, (
+            f"Reader returned None for {list(missing)} after a "
+            "cross-process heap append; the fopen fallback did not fire."
+        )
+        for k, v in values.items():
+            # ``w7k50`` -> ``val-7-50``
+            idx = k[len("w7k") :]
+            assert v == f"val-7-{idx}", (k, v)
+
+        truncated = [r for r in caplog.records if "is truncated" in r.getMessage()]
+        assert not truncated, (
+            f"Reader logged {len(truncated)} spurious 'is truncated' "
+            "warnings on a read after a cross-process heap append; "
+            "the mmap short-slice must fall back to fopen silently. "
+            f"Messages: {[r.getMessage() for r in truncated]}"
+        )
+
     def test_reader_sees_only_committed_batches(self, tmp_path):
         """A concurrent reader looping over seeded keys must never observe a
         count below the seed total while a put_many of different keys runs."""
