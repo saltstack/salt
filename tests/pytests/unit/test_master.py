@@ -1650,6 +1650,50 @@ async def test_register_resources_persists_resource_grains_to_cache(
         salt.utils.resource_registry.reset_registry()
 
 
+async def test_register_resources_batches_grains_through_store_many(
+    master_opts, tmp_path
+):
+    """
+    Per-chunk resource-grain persistence must go through
+    ``cache.store_many`` in a single call so the MWorker thread doesn't
+    block in a serial ``cache.store`` loop (the scale bug that triggered
+    minion ``return_retry_timer``-driven reconnect-drops-reply retry
+    cascades).
+
+    This asserts the master's call site reaches the facade's batch API; the
+    driver-level fast path (``mmap_cache.store_many`` -> ``put_many``) is
+    covered in ``tests/pytests/unit/cache/test_mmap_cache.py``.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    try:
+        load = {
+            "id": "minion-batch",
+            "resources": {"dummy": ["d1", "d2", "d3"]},
+            "resource_grains": {
+                "dummy:d1": {"k": 1},
+                "dummy:d2": {"k": 2},
+                "dummy:d3": {"k": 3},
+            },
+        }
+        cache = aes_funcs.masterapi.cache
+        with patch(
+            "salt.utils.minions.update_resource_index", return_value=(3, 0)
+        ), patch.object(cache, "store_many", wraps=cache.store_many) as spy_store_many:
+            await aes_funcs._register_resources(load)
+        # Exactly one batched dispatch for all SRNs in the chunk.
+        spy_store_many.assert_called_once()
+        args, _ = spy_store_many.call_args
+        assert args[0] == "resource_grains"
+        assert sorted(dict(args[1]).keys()) == ["dummy:d1", "dummy:d2", "dummy:d3"]
+        # Round-trip check: entries are readable after the batch.
+        assert cache.fetch("resource_grains", "dummy:d2") == {"k": 2}
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
 async def test_register_resources_flushes_dropped_resource_grain_entry(
     master_opts, tmp_path
 ):

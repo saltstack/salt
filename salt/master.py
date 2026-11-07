@@ -2937,13 +2937,24 @@ class AESFuncs(TransportMethods):
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
+                # Bulk-insert the per-SRN grain dicts in a single call so
+                # the MWorker thread doesn't monopolise the asyncio
+                # executor for the length of a loop over ~N SRNs
+                # (observed: 50 s/chunk on a cold master vs. the minion
+                # ``return_retry_timer`` default of 5–20 s, which blows up
+                # into a reconnect-drops-reply retry cascade). ``put_many``
+                # takes a single flock and batches fsync + msync across
+                # the whole batch.
+                items = [
+                    (srn, gdict)
+                    for srn, gdict in resource_grains.items()
+                    if isinstance(gdict, dict)
+                ]
+                if items:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        items,
+                    )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "Failed to persist resource_grains for minion '%s': %s",
@@ -3692,13 +3703,18 @@ class AESFuncs(TransportMethods):
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
+                # Bulk-insert per-SRN grain dicts (see
+                # ``__register_resources_sync`` for rationale).
+                items = [
+                    (srn, gdict)
+                    for srn, gdict in resource_grains.items()
+                    if isinstance(gdict, dict)
+                ]
+                if items:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        items,
+                    )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "Failed to persist resource_grains for minion '%s': %s",

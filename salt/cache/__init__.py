@@ -169,6 +169,63 @@ class Cache:
             else:
                 return self.modules[fun](bank, key, data, **self.kwargs)
 
+    def store_many(self, bank, items, expires=None):
+        """
+        Bulk-store an iterable of ``(key, data)`` pairs under *bank*.
+
+        When the active driver exposes a ``store_many`` function (e.g.
+        :mod:`salt.cache.mmap_cache`) the batch is handed off in a single
+        call, which is substantially cheaper than a per-item loop for
+        drivers with per-call overhead (flock, fsync, msync). Drivers
+        without a batch implementation transparently fall back to per-item
+        :meth:`store` calls.
+
+        :param bank:
+            Cache bank name (same semantics as :meth:`store`).
+
+        :param items:
+            Iterable of ``(key, data)`` pairs, or a mapping (``items()`` is
+            used in that case).
+
+        :param expires:
+            Optional per-batch expiry in seconds (same semantics as
+            :meth:`store`). Applied uniformly to every entry.
+
+        :raises SaltCacheError:
+            Raised if the driver reports a failure. For the native
+            ``store_many`` path the batch is atomic from the serializer's
+            point of view (one msgpack failure aborts the batch before any
+            write); the fallback per-item path aborts on the first failing
+            entry and leaves earlier entries durable.
+        """
+        if isinstance(items, dict):
+            items = list(items.items())
+        else:
+            items = list(items)
+
+        fun = f"{self.driver}.store_many"
+        if fun in self.modules:
+            try:
+                return self.modules[fun](bank, items, expires=expires, **self.kwargs)
+            except TypeError:
+                # Driver doesn't accept expires=; wrap each value with the
+                # same ``{"data", "_expires"}`` envelope ``store`` uses.
+                if expires:
+                    expires_at = (
+                        datetime.datetime.now().astimezone()
+                        + datetime.timedelta(seconds=expires)
+                    )
+                    expires_at = int(expires_at.timestamp())
+                    wrapped = [
+                        (k, {"data": v, "_expires": expires_at}) for k, v in items
+                    ]
+                    return self.modules[fun](bank, wrapped, **self.kwargs)
+                return self.modules[fun](bank, items, **self.kwargs)
+
+        # Fallback: per-item store so non-batch drivers still work.
+        for key, data in items:
+            self.store(bank, key, data, expires=expires)
+
     def fetch(self, bank, key):
         """
         Fetch data using the specified module
@@ -493,6 +550,32 @@ class MemCache(Cache):
                 if len(storage) >= self.max:
                     storage.popitem(last=False)
             storage[(bank, key)] = [time.time(), expires, data]
+
+    def store_many(self, bank, items, expires=None):
+        if isinstance(items, dict):
+            items = list(items.items())
+        else:
+            items = list(items)
+        storage = self.storage
+        # Evict shadow entries before the write so a reader that beats us
+        # back to the lock doesn't observe stale memory records for keys
+        # this batch is about to rewrite.
+        with MemCache._lock:
+            for key, _ in items:
+                storage.pop((bank, key), None)
+        # Delegate the actual write to Cache.store_many so drivers with a
+        # native batch path (mmap_cache) are still used; otherwise it falls
+        # back to per-item store.
+        super().store_many(bank, items, expires=expires)
+        now = time.time()
+        with MemCache._lock:
+            for key, data in items:
+                if len(storage) >= self.max:
+                    if self.cleanup:
+                        MemCache.__cleanup(self.expire)
+                    if len(storage) >= self.max:
+                        storage.popitem(last=False)
+                storage[(bank, key)] = [now, expires, data]
 
     def flush(self, bank, key=None):
         storage = self.storage

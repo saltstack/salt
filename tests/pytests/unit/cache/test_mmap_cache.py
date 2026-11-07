@@ -7,10 +7,12 @@ mmap_cache can be treated as a drop-in replacement for localfs.
 
 import time
 
+import msgpack
 import pytest
 
 import salt.cache.mmap_cache as mmap_cache
-from tests.support.mock import patch
+from salt.exceptions import SaltCacheError
+from tests.support.mock import MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -99,6 +101,95 @@ def test_store_fetch_bytes(cachedir):
     data = {"raw": b"\xfe\x99\x00\xff"}
     mmap_cache.store("bank", "key", data, cachedir=cachedir)
     assert mmap_cache.fetch("bank", "key", cachedir=cachedir) == data
+
+
+# ---------------------------------------------------------------------------
+# store_many
+# ---------------------------------------------------------------------------
+
+
+def test_store_many_batches_through_put_many(cachedir):
+    """
+    ``store_many`` must hand off to ``MmapCache.put_many`` as a single bulk
+    call. Covers the scale-blocking path of the master's
+    ``_register_resources`` chunk handler where per-item ``store`` loops
+    monopolised the executor thread.
+    """
+    items = [("srn-1", {"a": 1}), ("srn-2", {"b": 2}), ("srn-3", {"c": [3, 4]})]
+
+    # Build the cache first, then swap put_many for a spy so we can assert
+    # the dispatch count without blocking the inner ``put`` calls
+    # ``put_many`` invokes under batch mode.
+    cache_obj = mmap_cache._get_cache("bank", cachedir)
+    cache_obj.put_many = MagicMock(wraps=cache_obj.put_many)
+
+    mmap_cache.store_many("bank", items, cachedir=cachedir)
+
+    cache_obj.put_many.assert_called_once()
+    (sent,), _ = cache_obj.put_many.call_args
+    sent_list = list(sent)
+    assert len(sent_list) == 3
+    # Values must be msgpack-packed in the same encoding ``store`` uses.
+    expected_first = ("srn-1", msgpack.packb({"a": 1}, use_bin_type=True))
+    assert sent_list[0] == expected_first
+
+
+def test_store_many_round_trips_via_fetch(cachedir):
+    """store_many → fetch must be byte-identical to a per-item store loop."""
+    items = {"a": {"x": 1}, "b": {"y": "two"}, "c": [1, "2", 3.0]}
+    mmap_cache.store_many("bank", items, cachedir=cachedir)
+    for key, data in items.items():
+        assert mmap_cache.fetch("bank", key, cachedir=cachedir) == data
+
+
+def test_store_many_accepts_dict_input(cachedir):
+    mmap_cache.store_many("bank", {"k1": {"v": 1}, "k2": {"v": 2}}, cachedir=cachedir)
+    assert mmap_cache.fetch("bank", "k1", cachedir=cachedir) == {"v": 1}
+    assert mmap_cache.fetch("bank", "k2", cachedir=cachedir) == {"v": 2}
+
+
+def test_store_many_empty_iterable_is_noop(cachedir):
+    # Must not raise and must not materialise the bank's cache object.
+    mmap_cache.store_many("bank", [], cachedir=cachedir)
+    assert mmap_cache._caches == {}
+
+
+def test_store_many_serialisation_failure_aborts_before_write(cachedir):
+    """
+    One un-msgpackable value in the batch aborts cleanly with
+    ``SaltCacheError`` *before* ``put_many`` is dispatched.
+    """
+
+    class Unpackable:
+        pass
+
+    items = [("good", {"ok": 1}), ("bad", Unpackable()), ("other", {"ok": 2})]
+
+    # Build the cache first so _get_cache succeeds inside store_many, then
+    # swap put_many for a spy to prove the dispatch never happens.
+    real_cache = mmap_cache._get_cache("bank", cachedir)
+    put_many_spy = MagicMock()
+    real_cache.put_many = put_many_spy
+
+    with pytest.raises(SaltCacheError):
+        mmap_cache.store_many("bank", items, cachedir=cachedir)
+
+    put_many_spy.assert_not_called()
+
+
+def test_store_many_matches_store_byte_for_byte(cachedir):
+    """
+    Values written via ``store_many`` must be readable byte-identically to
+    values written via the per-item ``store`` path, and vice versa.
+    """
+    data = {"nested": {"a": [1, 2, 3], "b": "x"}}
+
+    mmap_cache.store("ref", "k", data, cachedir=cachedir)
+    mmap_cache.store_many("bulk", [("k", data)], cachedir=cachedir)
+
+    assert mmap_cache.fetch("ref", "k", cachedir=cachedir) == mmap_cache.fetch(
+        "bulk", "k", cachedir=cachedir
+    )
 
 
 # ---------------------------------------------------------------------------
