@@ -552,6 +552,11 @@ class AsyncPubChannel:
         try:
             if not self.auth.authenticated:
                 await self.auth.authenticate()
+            # Mirror the master-reported publish_port into opts so that
+            # out-of-band consumers (notably the scheduler job that calls
+            # ``status.master``) can learn the port the minion is actually
+            # connected on. The underscore prefix signals runtime-written.
+            self.opts["_auth_publish_port"] = self.auth.creds["publish_port"]
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4506)) != 4506:
                 publish_port = self.opts.get("publish_port")
