@@ -4593,6 +4593,13 @@ class Minion(MinionBase):
         entries only on ``_chunk_is_last=True``, so orphan grain keys must
         reach it in that final chunk).
 
+        .. note::
+
+            Kept for back-compat test coverage; the live register path uses
+            :meth:`_plan_register_id_chunks` + per-chunk grain rendering so
+            peak transient allocation is bounded by ``chunk_size`` rather than
+            the full managed-resource grain map.
+
         :param dict resources: ``{resource_type: [resource_id, ...]}``.
         :param dict resource_grains: ``{"<type>:<id>": {grain: value, ...}}``.
         :param int chunk_size: Max resources (not grains) per chunk. Values
@@ -4631,6 +4638,49 @@ class Minion(MinionBase):
             chunks[-1][1].update(orphans)
         return chunks
 
+    @staticmethod
+    def _plan_register_id_chunks(resources, chunk_size):
+        """
+        Split a resource inventory into chunks each carrying at most
+        ``chunk_size`` composite ``<type>:<id>`` resources — without any
+        grain data.
+
+        This is :meth:`_plan_register_chunks` minus the grain-splitting half.
+        It lets :meth:`_register_resources_with_master` plan the wire-level
+        chunking against the resource inventory alone, then render grains
+        per chunk (dropping each per-chunk dict at the end of its iteration)
+        so peak transient allocation is bounded by ``chunk_size`` instead of
+        the full managed-resource grain map. For a 200K-resource minion this
+        caps the resident grain allocation at ``O(chunk_size)`` — a few MB at
+        ``chunk_size=10000`` — instead of the 40-80 MB that an upfront
+        :meth:`_collect_resource_grains` call would hold resident for the
+        entire send loop.
+
+        :param dict resources: ``{resource_type: [resource_id, ...]}``.
+        :param int chunk_size: Max resources per chunk. Values <= 0 produce
+            a single chunk with the full inventory.
+        :returns: ``list[chunk_resources_dict]`` — same shape as the input,
+            just split by resource-ID count across types. Always non-empty
+            (an empty inventory still produces a single empty chunk so the
+            master's stale-entry flush fires on ``_chunk_is_last=True``).
+        :rtype: list[dict]
+        """
+        resources = resources or {}
+        pairs = []
+        for rtype, rids in resources.items():
+            for rid in rids or ():
+                pairs.append((rtype, rid))
+        if chunk_size is None or chunk_size <= 0 or len(pairs) <= chunk_size:
+            return [resources]
+        chunks = []
+        for start in range(0, len(pairs), chunk_size):
+            slice_pairs = pairs[start : start + chunk_size]
+            chunk_resources = {}
+            for rtype, rid in slice_pairs:
+                chunk_resources.setdefault(rtype, []).append(rid)
+            chunks.append(chunk_resources)
+        return chunks
+
     async def _register_resources_with_master(self):
         """
         Send this minion's resource list to the master for registry population.
@@ -4645,9 +4695,10 @@ class Minion(MinionBase):
         ``salt -G`` grain-based targeting of resources.
 
         **Chunking.** For resource inventories larger than
-        :conf_minion:`resource_register_chunk_size` (default 10 000), the
-        payload is split into chunks sharing a per-registration ``uuid4``
-        token. Each chunk carries ``_chunk_seq`` / ``_chunk_total`` /
+        :conf_minion:`resource_register_chunk_size` (default 16 000,
+        chosen to target roughly 2 MiB per msgpack-encoded chunk assuming
+        ~4 small-string grains per resource), the payload is split into
+        chunks sharing a per-registration ``uuid4`` token. Each chunk carries ``_chunk_seq`` / ``_chunk_total`` /
         ``_chunk_is_last`` metadata; the master stages chunks keyed by
         ``(minion_id, token)`` and applies them atomically on the chunk
         marked ``_chunk_is_last=True``. Per-chunk timeout is the ordinary
@@ -4669,7 +4720,10 @@ class Minion(MinionBase):
         bounded by target size via :meth:`_collect_resource_grains_for`.
 
         **Freshness model.** The ``resource_grains`` snapshot is taken at
-        the moment of this call by :meth:`_collect_resource_grains`. A
+        the moment of this call — per chunk via
+        :meth:`_collect_resource_grains_for` in default mode, or once up
+        front via :meth:`_collect_resource_grains` when
+        :conf_minion:`resource_grains_cache_in_memory` is True. A
         per-resource ``<type>.grains_refresh()`` invocation that mutates
         the underlying state does **not** automatically propagate to the
         master — the master's view is refreshed only when this method runs
@@ -4712,24 +4766,67 @@ class Minion(MinionBase):
                     "Failed to gen_modules before resource grain collection: %s",
                     exc,
                 )
-        resource_grains = self._collect_resource_grains() if resources else {}
-        # Retain the grain map in memory only when the operator opted in.
-        # Default False — the resolver re-renders from
-        # :meth:`_collect_resource_grains_for` on demand.
-        if self.opts.get("resource_grains_cache_in_memory", False):
-            self._resource_grains_cache = resource_grains
-        else:
-            self._resource_grains_cache = None
-        chunk_size = self.opts.get("resource_register_chunk_size", 10000)
-        chunks = self._plan_register_chunks(resources, resource_grains, chunk_size)
+        chunk_size = self.opts.get("resource_register_chunk_size", 16000)
+        id_chunks = self._plan_register_id_chunks(resources, chunk_size)
         retries = max(0, int(self.opts.get("resource_register_chunk_retries", 3)))
         import uuid as _uuid  # noqa: PLC0415
 
-        total = len(chunks)
+        total = len(id_chunks)
         single = total == 1
         token = None if single else _uuid.uuid4().hex
+
+        # Retain the grain map in memory only when the operator opted in.
+        # Default False — the resolver re-renders per-call from
+        # :meth:`_collect_resource_grains_for` on demand. In opt-in mode we
+        # build the full map once so :meth:`_resolve_resource_targets` has
+        # it to project chunk slices from (and so that the retention cache
+        # is populated after this call, as documented). In default mode we
+        # render each chunk's grains inside the send loop so the dict drops
+        # at the end of its iteration — peak transient allocation is
+        # bounded by ``chunk_size`` rather than the full managed-resource
+        # grain map.
+        retain_cache = self.opts.get("resource_grains_cache_in_memory", False)
+        if retain_cache:
+            full_grains = self._collect_resource_grains() if resources else {}
+            self._resource_grains_cache = full_grains
+        else:
+            full_grains = None
+            self._resource_grains_cache = None
+
         try:
-            for seq, (chunk_resources, chunk_grains) in enumerate(chunks):
+            for seq, chunk_resources in enumerate(id_chunks):
+                if retain_cache:
+                    # Already paid for the full render; project this chunk's
+                    # slice from the cache. Pure dict access — no renderer
+                    # invocations.
+                    chunk_srns = [
+                        f"{rt}:{ri}"
+                        for rt, rids in chunk_resources.items()
+                        for ri in rids or ()
+                    ]
+                    chunk_grains = {
+                        srn: full_grains[srn]
+                        for srn in chunk_srns
+                        if srn in full_grains
+                    }
+                elif not chunk_resources:
+                    # Empty-pillar sentinel chunk: no SRNs to render. Still
+                    # sent so the master's stale-entry flush
+                    # (``_chunk_is_last=True``) fires after a resource type
+                    # is removed from the pillar.
+                    chunk_grains = {}
+                else:
+                    # Render just this chunk's SRNs. ``chunk_grains`` drops
+                    # at the end of this iteration, bounding peak transient
+                    # allocation to ``O(chunk_size)`` instead of
+                    # ``O(all resources)``.
+                    chunk_srns = [
+                        f"{rt}:{ri}"
+                        for rt, rids in chunk_resources.items()
+                        for ri in rids or ()
+                    ]
+                    chunk_grains = self._collect_resource_grains_for(chunk_srns)
+
                 load = {
                     "cmd": "_register_resources",
                     "id": self.opts["id"],

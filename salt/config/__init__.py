@@ -1436,7 +1436,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_tries": 3,
         "resource_pillar_key": "resources",
         "resource_grains_cache_in_memory": False,
-        "resource_register_chunk_size": 10000,
+        "resource_register_chunk_size": 16000,
         "resource_register_chunk_retries": 3,
         "syndic_retries": 3,
         "random_reauth_delay": 10,

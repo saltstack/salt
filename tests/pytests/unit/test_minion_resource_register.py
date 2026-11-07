@@ -351,6 +351,300 @@ class TestRegisterResourcesEdgeCases:
 
 
 # ---------------------------------------------------------------------------
+# Per-chunk grain rendering — bounds minion peak transient allocation
+# ---------------------------------------------------------------------------
+
+
+class TestRegisterPerChunkGrainRender:
+    """
+    ``_register_resources_with_master`` must render each chunk's grain
+    dict inside the send loop (default mode) so peak transient allocation
+    is bounded by ``resource_register_chunk_size`` instead of the full
+    managed-resource grain map.
+
+    Regression guard: live retest at 200K resources showed minion RSS at
+    267 MB (baseline 72 MB) when the grain map was rendered upfront and
+    held for the full chunk-send loop. These tests pin the fix: render
+    per chunk, drop the dict at end of iteration, keep opt-in retention
+    behaviour unchanged.
+    """
+
+    def test_grains_rendered_per_chunk_not_upfront(self, minion_opts):
+        """
+        25K-resource pillar with ``chunk_size=10000`` → 3 chunks.
+        ``_collect_resource_grains_for`` must be called exactly 3 times
+        (once per chunk), each call's SRN list must be <= chunk_size, and
+        ``_collect_resource_grains`` (the unbounded "render everything"
+        entry point) must NOT be called in default mode.
+        """
+        m = _mk_minion(minion_opts, 25000, resource_register_chunk_size=10000)
+        m.opts["resource_grains_cache_in_memory"] = False
+
+        per_chunk_sizes = []
+        orig_for = m._collect_resource_grains_for
+
+        def counting_for(srns):
+            srns_list = list(srns) if srns is not None else None
+            per_chunk_sizes.append(len(srns_list) if srns_list is not None else -1)
+            return orig_for(srns_list)
+
+        unbounded_called = {"n": 0}
+
+        def should_not_run():
+            unbounded_called["n"] += 1
+            return orig_for(None)
+
+        async def noop(load, timeout=None):
+            return None
+
+        with mock_patch.object(
+            m, "_collect_resource_grains_for", side_effect=counting_for
+        ), mock_patch.object(
+            m, "_collect_resource_grains", side_effect=should_not_run
+        ), mock_patch.object(
+            m, "_send_req_async_main", side_effect=noop
+        ):
+            asyncio.run(m._register_resources_with_master())
+
+        assert len(per_chunk_sizes) == 3, (
+            f"expected 3 per-chunk render calls (one per chunk); got "
+            f"{len(per_chunk_sizes)}: {per_chunk_sizes}"
+        )
+        assert max(per_chunk_sizes) <= 10000, (
+            f"per-chunk render saw a batch larger than chunk_size=10000: "
+            f"{per_chunk_sizes}"
+        )
+        assert sum(per_chunk_sizes) == 25000, (
+            f"union of per-chunk SRN lists must cover every managed resource "
+            f"exactly once; got total {sum(per_chunk_sizes)} (expected 25000)"
+        )
+        assert unbounded_called["n"] == 0, (
+            "default-mode register must not call the unbounded "
+            "_collect_resource_grains() entry point — that re-introduces the "
+            "upfront full-grain-map allocation this fix removes"
+        )
+
+    def test_opt_in_mode_renders_full_map_once_and_projects_per_chunk(
+        self, minion_opts
+    ):
+        """
+        With ``resource_grains_cache_in_memory: True``, operator asked for
+        retention. We render the full grain map ONCE (so the cache is
+        populated) and project per-chunk slices from it via pure dict
+        access — no per-chunk ``_collect_resource_grains_for`` calls in
+        the send loop.
+        """
+        m = _mk_minion(
+            minion_opts,
+            25000,
+            resource_register_chunk_size=10000,
+            resource_grains_cache_in_memory=True,
+        )
+
+        n_full = {"n": 0}
+        # ``_collect_resource_grains`` is a thin wrapper that calls
+        # ``_collect_resource_grains_for(None)`` — distinguish by the
+        # ``srns`` arg: ``None`` means "render everything" (the full
+        # render); a list means a per-chunk call.
+        for_calls = []
+        orig_full = m._collect_resource_grains
+        orig_for = m._collect_resource_grains_for
+
+        def counting_full():
+            n_full["n"] += 1
+            return orig_full()
+
+        def counting_for(srns):
+            for_calls.append(None if srns is None else list(srns))
+            return orig_for(srns)
+
+        async def noop(load, timeout=None):
+            return None
+
+        with mock_patch.object(
+            m, "_collect_resource_grains", side_effect=counting_full
+        ), mock_patch.object(
+            m, "_collect_resource_grains_for", side_effect=counting_for
+        ), mock_patch.object(
+            m, "_send_req_async_main", side_effect=noop
+        ):
+            asyncio.run(m._register_resources_with_master())
+
+        assert n_full["n"] == 1, (
+            f"opt-in retention must render the full grain map exactly once; "
+            f"got {n_full['n']} calls"
+        )
+        bounded_for_calls = [c for c in for_calls if c is not None]
+        assert bounded_for_calls == [], (
+            f"opt-in retention projects chunks from the cached full map "
+            f"via dict access, not by re-invoking the per-chunk renderer; "
+            f"got {len(bounded_for_calls)} per-chunk calls with lengths "
+            f"{[len(c) for c in bounded_for_calls]}"
+        )
+        assert m._resource_grains_cache is not None
+        assert len(m._resource_grains_cache) == 25000, (
+            f"opt-in cache must contain every managed resource after "
+            f"register; got {len(m._resource_grains_cache)}"
+        )
+
+    def test_default_mode_does_not_populate_cache(self, minion_opts):
+        """
+        Default mode (opt-out) must NOT leave ``_resource_grains_cache``
+        populated after register — the whole point of the per-chunk
+        render is that no full-map dict is held between calls.
+        """
+        m = _mk_minion(minion_opts, 2500, resource_register_chunk_size=1000)
+        m.opts["resource_grains_cache_in_memory"] = False
+
+        async def noop(load, timeout=None):
+            return None
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=noop):
+            asyncio.run(m._register_resources_with_master())
+
+        assert m._resource_grains_cache is None, (
+            "default mode must not populate _resource_grains_cache; a "
+            "populated cache here means the fix silently retained the "
+            "full grain map after register"
+        )
+
+    def test_empty_resources_still_sends_one_chunk(self, minion_opts):
+        """
+        An empty pillar still sends exactly one RPC so the master's
+        stale-entry flush (``_chunk_is_last=True`` path) runs. Wire
+        format must be unchunked (no chunking fields) so old masters
+        stay compatible. Matches the behaviour of
+        :class:`TestRegisterResourcesEdgeCases` but also asserts the
+        per-chunk render path didn't inject stray calls into the
+        empty-load codepath.
+        """
+        minion_opts["resources"] = {}
+        minion_opts["multiprocessing"] = False
+        with mock_patch("salt.minion.Minion.gen_modules"), mock_patch(
+            "salt.minion.Minion.connect_master"
+        ):
+            m = salt.minion.Minion(minion_opts, load_grains=False)
+        m.tok = b"tok"
+        _install_grains_fn(m)
+
+        delivered = []
+        n_for = {"n": 0}
+        n_full = {"n": 0}
+        orig_for = m._collect_resource_grains_for
+        orig_full = m._collect_resource_grains
+
+        async def capture(load, timeout=None):
+            delivered.append(load)
+
+        def counting_for(srns):
+            n_for["n"] += 1
+            return orig_for(srns)
+
+        def counting_full():
+            n_full["n"] += 1
+            return orig_full()
+
+        with mock_patch.object(
+            m, "_send_req_async_main", side_effect=capture
+        ), mock_patch.object(
+            m, "_collect_resource_grains_for", side_effect=counting_for
+        ), mock_patch.object(
+            m, "_collect_resource_grains", side_effect=counting_full
+        ):
+            asyncio.run(m._register_resources_with_master())
+
+        assert len(delivered) == 1, (
+            f"empty pillar must still send exactly one clearing RPC; got "
+            f"{len(delivered)}"
+        )
+        load = delivered[0]
+        assert load["resources"] == {}
+        assert load["resource_grains"] == {}
+        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+            assert (
+                key not in load
+            ), f"{key} must be omitted on single-chunk empty-clearing payload"
+        assert n_for["n"] == 0, (
+            "empty pillar must not drive the per-chunk renderer — nothing "
+            f"to render; got {n_for['n']} calls"
+        )
+        assert n_full["n"] == 0, (
+            "empty pillar in default mode must not drive the full renderer "
+            f"either; got {n_full['n']} calls"
+        )
+
+    def test_chunk_render_failure_logs_and_aborts(self, minion_opts):
+        """
+        If per-chunk rendering raises mid-stream, the enclosing
+        ``_register_resources_with_master`` try/except logs and the rest
+        of the registration aborts. Earlier chunks already on the wire
+        remain staged on the master (pre-existing partial-registration
+        behaviour; not this fix's concern).
+        """
+        m = _mk_minion(minion_opts, 25, resource_register_chunk_size=10)
+        m.opts["resource_grains_cache_in_memory"] = False
+
+        delivered = []
+        orig_for = m._collect_resource_grains_for
+        call_idx = {"n": 0}
+
+        def flaky(srns):
+            call_idx["n"] += 1
+            if call_idx["n"] == 2:
+                raise RuntimeError("simulated render failure on chunk 2")
+            return orig_for(srns)
+
+        async def capture(load, timeout=None):
+            delivered.append(load)
+
+        with mock_patch.object(
+            m, "_collect_resource_grains_for", side_effect=flaky
+        ), mock_patch.object(m, "_send_req_async_main", side_effect=capture):
+            asyncio.run(m._register_resources_with_master())
+
+        # Chunk 0 sent successfully (render call 1 succeeded).
+        # Chunk 1's render raised — nothing was queued, nothing sent for
+        # chunk 1 or chunk 2.
+        seqs = [d.get("_chunk_seq") for d in delivered]
+        assert seqs == [0], (
+            f"a render failure mid-stream must abort the loop after the "
+            f"last successfully sent chunk; got seqs {seqs}"
+        )
+
+    def test_peak_srn_count_per_render_bounded_at_chunk_size(self, minion_opts):
+        """
+        Hard invariant: no single ``_collect_resource_grains_for`` call
+        inside a register may see more SRNs than ``chunk_size``. This is
+        the memory-ceiling contract — whatever the chunking shape, peak
+        transient allocation stays O(chunk_size).
+        """
+        m = _mk_minion(minion_opts, 25000, resource_register_chunk_size=10000)
+        m.opts["resource_grains_cache_in_memory"] = False
+
+        peak = {"n": 0}
+        orig_for = m._collect_resource_grains_for
+
+        def peek(srns):
+            n = len(list(srns)) if srns is not None else -1
+            if n > peak["n"]:
+                peak["n"] = n
+            return orig_for(srns)
+
+        async def noop(load, timeout=None):
+            return None
+
+        with mock_patch.object(
+            m, "_collect_resource_grains_for", side_effect=peek
+        ), mock_patch.object(m, "_send_req_async_main", side_effect=noop):
+            asyncio.run(m._register_resources_with_master())
+
+        assert 0 < peak["n"] <= 10000, (
+            f"peak per-call SRN count must be in (0, chunk_size=10000]; "
+            f"got {peak['n']}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Master-side ``_RegisterChunkStage`` + ``_register_chunk_apply``
 # ---------------------------------------------------------------------------
 
