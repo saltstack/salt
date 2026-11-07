@@ -376,7 +376,9 @@ def test_pub_raises_clean_error_on_cluster_retry(local_client):
 
     with patch.object(
         salt.client.LocalClient, "_prep_pub", return_value={"cmd": "publish"}
-    ), patch("salt.channel.client.ReqChannel.factory", return_value=channel_cm), patch.object(
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", return_value=channel_cm
+    ), patch.object(
         local_client.event, "connect_pub", return_value=True
     ):
         with pytest.raises(SaltClientError, match="cluster consensus still forming"):
