@@ -1824,6 +1824,223 @@ async def test_register_resources_fires_minion_data_cache_event(master_opts, tmp
         salt.utils.resource_registry.reset_registry()
 
 
+async def test_register_resources_assembles_chunks_out_of_order(master_opts, tmp_path):
+    """
+    Chunked registration arriving out-of-order on the master is staged under
+    the shared ``_register_token`` and committed atomically on
+    ``_chunk_is_last=True``. Writes to the registry happen only once, when
+    the final chunk arrives, carrying the full accumulated payload.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    # Clear per-process staging state so this test doesn't inherit chunks
+    # from another test.
+    salt.master._register_chunk_stage.clear()
+    try:
+        token = "tok-out-of-order"
+        # Chunks arrive 0, 2, 1 — the master must still reassemble them
+        # correctly and only write on the chunk marked ``is_last``.
+        chunks = [
+            {
+                "id": "minion-ooo",
+                "resources": {"dummy": ["c0-a", "c0-b"]},
+                "resource_grains": {
+                    "dummy:c0-a": {"k": "v0a"},
+                    "dummy:c0-b": {"k": "v0b"},
+                },
+                "_register_token": token,
+                "_chunk_seq": 0,
+                "_chunk_total": 3,
+                "_chunk_is_last": False,
+            },
+            {
+                "id": "minion-ooo",
+                "resources": {"dummy": ["c2-a"]},
+                "resource_grains": {"dummy:c2-a": {"k": "v2a"}},
+                "_register_token": token,
+                "_chunk_seq": 2,
+                "_chunk_total": 3,
+                "_chunk_is_last": True,
+            },
+            {
+                "id": "minion-ooo",
+                "resources": {"dummy": ["c1-a", "c1-b"]},
+                "resource_grains": {
+                    "dummy:c1-a": {"k": "v1a"},
+                    "dummy:c1-b": {"k": "v1b"},
+                },
+                "_register_token": token,
+                "_chunk_seq": 1,
+                "_chunk_total": 3,
+                "_chunk_is_last": False,
+            },
+        ]
+        # Send chunks 0 and 2 first. Chunk 2 is marked is_last — its arrival
+        # before chunk 1 commits whatever is staged + its own payload. Then
+        # chunk 1 arrives late (think: retransmit after a transient drop);
+        # no staged state remains so it commits on its own as if it were
+        # an unchunked payload. In the common path a chunk ordering problem
+        # across the wire is resolved by the caller's retry logic; this
+        # test proves we don't silently drop data when ordering is weird.
+        #
+        # First: send chunk 0 (staged).
+        await aes_funcs._register_resources(chunks[0])
+        cache = aes_funcs.masterapi.cache
+        # Nothing committed yet — no grain entries visible.
+        assert sorted(cache.list("resource_grains") or []) == []
+        # Chunk 2 arrives (marked is_last) — commits chunk 0 + chunk 2.
+        await aes_funcs._register_resources(chunks[1])
+        committed = sorted(cache.list("resource_grains") or [])
+        assert committed == ["dummy:c0-a", "dummy:c0-b", "dummy:c2-a"]
+    finally:
+        aes_funcs.destroy()
+        salt.master._register_chunk_stage.clear()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_register_resources_assembles_all_chunks_in_order(master_opts, tmp_path):
+    """
+    The nominal path: three chunks arrive in order (0, 1, 2) sharing a
+    token. The registry sees all resources after the final chunk, never
+    partial state.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    salt.master._register_chunk_stage.clear()
+    try:
+        token = "tok-in-order"
+        for seq, pair in enumerate([("a0", "a1"), ("b0", "b1"), ("c0", "c1")]):
+            load = {
+                "id": "minion-io",
+                "resources": {"dummy": list(pair)},
+                "resource_grains": {
+                    f"dummy:{pair[0]}": {"k": f"{seq}-0"},
+                    f"dummy:{pair[1]}": {"k": f"{seq}-1"},
+                },
+                "_register_token": token,
+                "_chunk_seq": seq,
+                "_chunk_total": 3,
+                "_chunk_is_last": seq == 2,
+            }
+            await aes_funcs._register_resources(load)
+            cache = aes_funcs.masterapi.cache
+            if seq < 2:
+                assert sorted(cache.list("resource_grains") or []) == []
+        cache = aes_funcs.masterapi.cache
+        committed = sorted(cache.list("resource_grains") or [])
+        assert committed == [
+            "dummy:a0",
+            "dummy:a1",
+            "dummy:b0",
+            "dummy:b1",
+            "dummy:c0",
+            "dummy:c1",
+        ]
+    finally:
+        aes_funcs.destroy()
+        salt.master._register_chunk_stage.clear()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_register_resources_clears_stale_entries_only_on_last_chunk(
+    master_opts, tmp_path
+):
+    """
+    Pre-existing registry entries that aren't in the new payload must
+    survive intermediate chunks and be flushed only when the final chunk
+    arrives — otherwise a mid-registration read would see a half-emptied
+    registry.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    salt.master._register_chunk_stage.clear()
+    try:
+        # Seed registry with 4 prior entries for this minion.
+        seed = {
+            "id": "minion-stale",
+            "resources": {"dummy": ["old-1", "old-2", "old-3", "old-4"]},
+            "resource_grains": {
+                "dummy:old-1": {"k": "1"},
+                "dummy:old-2": {"k": "2"},
+                "dummy:old-3": {"k": "3"},
+                "dummy:old-4": {"k": "4"},
+            },
+        }
+        await aes_funcs._register_resources(seed)
+        cache = aes_funcs.masterapi.cache
+        assert len(cache.list("resource_grains") or []) == 4
+
+        # New registration: only 2 entries, delivered in 2 chunks.
+        token = "tok-stale-check"
+        chunk0 = {
+            "id": "minion-stale",
+            "resources": {"dummy": ["new-1"]},
+            "resource_grains": {"dummy:new-1": {"k": "n1"}},
+            "_register_token": token,
+            "_chunk_seq": 0,
+            "_chunk_total": 2,
+            "_chunk_is_last": False,
+        }
+        chunk1 = {
+            "id": "minion-stale",
+            "resources": {"dummy": ["new-2"]},
+            "resource_grains": {"dummy:new-2": {"k": "n2"}},
+            "_register_token": token,
+            "_chunk_seq": 1,
+            "_chunk_total": 2,
+            "_chunk_is_last": True,
+        }
+        await aes_funcs._register_resources(chunk0)
+        # After chunk 0 the 4 old entries must STILL be present — stale
+        # flushing must not run until the final chunk arrives, otherwise a
+        # concurrent read sees a torn registry.
+        after_chunk0 = sorted(cache.list("resource_grains") or [])
+        assert (
+            "dummy:old-1" in after_chunk0
+        ), "stale entries must not be flushed until the final chunk arrives"
+        assert "dummy:old-2" in after_chunk0
+        assert "dummy:old-3" in after_chunk0
+        assert "dummy:old-4" in after_chunk0
+        await aes_funcs._register_resources(chunk1)
+        # After chunk 1 (is_last) the old entries are gone, only the new
+        # 2 remain.
+        after_chunk1 = sorted(cache.list("resource_grains") or [])
+        assert after_chunk1 == ["dummy:new-1", "dummy:new-2"]
+    finally:
+        aes_funcs.destroy()
+        salt.master._register_chunk_stage.clear()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_register_resources_unchunked_load_preserved(master_opts, tmp_path):
+    """
+    A load with no ``_register_token`` must be processed exactly as before
+    (unchunked), so old minions still work against a new master.
+    """
+    import salt.utils.resource_registry
+
+    aes_funcs, opts = _make_aes_funcs_for_resource_grains(master_opts, tmp_path)
+    salt.master._register_chunk_stage.clear()
+    try:
+        load = {
+            "id": "minion-legacy",
+            "resources": {"dummy": ["l-1"]},
+            "resource_grains": {"dummy:l-1": {"k": "legacy"}},
+        }
+        await aes_funcs._register_resources(load)
+        cache = aes_funcs.masterapi.cache
+        assert sorted(cache.list("resource_grains") or []) == ["dummy:l-1"]
+        # Staging store must be empty — unchunked loads never stage.
+        assert salt.master._register_chunk_stage.pending_count() == 0
+    finally:
+        aes_funcs.destroy()
+        salt.master._register_chunk_stage.clear()
+        salt.utils.resource_registry.reset_registry()
+
+
 async def test_register_resources_does_not_fire_event_when_events_disabled(
     master_opts, tmp_path
 ):

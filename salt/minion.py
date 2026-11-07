@@ -4520,15 +4520,44 @@ class Minion(MinionBase):
 
         :rtype: dict[str, dict]
         """
+        return self._collect_resource_grains_for(None)
+
+    def _collect_resource_grains_for(self, srns):
+        """
+        Like :meth:`_collect_resource_grains` but bounded to the composite
+        SRN keys in ``srns`` (an iterable of ``"<type>:<id>"`` strings). This
+        is the per-target renderer used by :meth:`_resolve_resource_targets`
+        when :conf_minion:`resource_grains_cache_in_memory` is disabled (the
+        default) — the cache isn't held across calls, so re-rendering must
+        be bounded by the target set instead of the full pillar.
+
+        ``srns is None`` means "all managed resources" and is the
+        back-compat path used by :meth:`_collect_resource_grains` for
+        registration. Entries in ``srns`` that aren't currently managed are
+        silently ignored.
+
+        :param srns: Iterable of ``"<type>:<id>"`` composite keys, or
+            ``None`` for the full managed set.
+        :rtype: dict[str, dict]
+        """
         import salt.loader.context as _loader_ctx  # noqa: PLC0415
 
         resource_grains = {}
         resources = self.opts.get("resources", {})
+        if srns is not None:
+            wanted = set(srns)
+            if not wanted:
+                return resource_grains
+        else:
+            wanted = None
         for rtype, rids in (resources or {}).items():
             grains_fn = f"{rtype}.grains"
             if grains_fn not in getattr(self, "resource_funcs", {}):
                 continue
             for rid in rids or ():
+                srn = f"{rtype}:{rid}"
+                if wanted is not None and srn not in wanted:
+                    continue
                 target = {"id": rid, "type": rtype}
                 tok = _loader_ctx.resource_ctxvar.set(target)
                 try:
@@ -4544,8 +4573,63 @@ class Minion(MinionBase):
                 finally:
                     _loader_ctx.resource_ctxvar.reset(tok)
                 if isinstance(gdict, dict):
-                    resource_grains[f"{rtype}:{rid}"] = gdict
+                    resource_grains[srn] = gdict
         return resource_grains
+
+    @staticmethod
+    def _plan_register_chunks(resources, resource_grains, chunk_size):
+        """
+        Split a ``(resources, resource_grains)`` payload into chunks each
+        carrying at most ``chunk_size`` composite ``<type>:<id>`` resources.
+
+        Chunking is driven by the resource inventory, not by ``resource_grains``
+        — a resource whose type has no ``<type>.grains`` connection module is
+        still part of registration, so counting grains alone would under-chunk
+        the payload. Grain entries follow their owning resource into the same
+        chunk so the master's per-chunk flush/store logic sees them together.
+
+        The last chunk also carries any ``resource_grains`` SRNs that don't map
+        to any currently-managed resource (defensive: the master drops stale
+        entries only on ``_chunk_is_last=True``, so orphan grain keys must
+        reach it in that final chunk).
+
+        :param dict resources: ``{resource_type: [resource_id, ...]}``.
+        :param dict resource_grains: ``{"<type>:<id>": {grain: value, ...}}``.
+        :param int chunk_size: Max resources (not grains) per chunk. Values
+            <= 0 produce a single chunk with the full payload.
+        :returns: ``list[(chunk_resources_dict, chunk_grains_dict)]``, always
+            non-empty (at least one chunk, even for empty input — the empty
+            chunk clears stale entries on the master).
+        :rtype: list[tuple[dict, dict]]
+        """
+        resources = resources or {}
+        resource_grains = resource_grains or {}
+        # Flatten to a deterministic ordered list of (rtype, rid) pairs.
+        pairs = []
+        for rtype, rids in resources.items():
+            for rid in rids or ():
+                pairs.append((rtype, rid))
+        if chunk_size is None or chunk_size <= 0 or len(pairs) <= chunk_size:
+            return [(resources, resource_grains)]
+        chunks = []
+        for start in range(0, len(pairs), chunk_size):
+            slice_pairs = pairs[start : start + chunk_size]
+            chunk_resources = {}
+            chunk_grains = {}
+            for rtype, rid in slice_pairs:
+                chunk_resources.setdefault(rtype, []).append(rid)
+                srn = f"{rtype}:{rid}"
+                if srn in resource_grains:
+                    chunk_grains[srn] = resource_grains[srn]
+            chunks.append((chunk_resources, chunk_grains))
+        # Orphan grain SRNs that don't map to a currently-managed resource
+        # ride along with the final chunk so the master's stale-entry flush
+        # (``_chunk_is_last=True``) sees them.
+        assigned = {f"{rt}:{ri}" for rt, ri in pairs}
+        orphans = {k: v for k, v in resource_grains.items() if k not in assigned}
+        if orphans:
+            chunks[-1][1].update(orphans)
+        return chunks
 
     async def _register_resources_with_master(self):
         """
@@ -4559,6 +4643,30 @@ class Minion(MinionBase):
         Also ships a per-resource ``resource_grains`` mapping so the master
         can populate its ``resource_grains`` cache bank for ``-G`` /
         ``salt -G`` grain-based targeting of resources.
+
+        **Chunking.** For resource inventories larger than
+        :conf_minion:`resource_register_chunk_size` (default 10 000), the
+        payload is split into chunks sharing a per-registration ``uuid4``
+        token. Each chunk carries ``_chunk_seq`` / ``_chunk_total`` /
+        ``_chunk_is_last`` metadata; the master stages chunks keyed by
+        ``(minion_id, token)`` and applies them atomically on the chunk
+        marked ``_chunk_is_last=True``. Per-chunk timeout is the ordinary
+        return-retry timer (not the full-registration budget), so a single
+        chunk's transient failure doesn't invalidate the completed chunks
+        already on the master side. For inventories that fit in one chunk,
+        the chunking fields are omitted from the load so an unchunked load
+        is indistinguishable from the pre-chunking wire format — older
+        masters stay compatible with newer minions when the inventory is
+        small.
+
+        **In-memory grain cache.** The ``resource_grains`` dict is held on
+        the minion only when :conf_minion:`resource_grains_cache_in_memory`
+        is True (operators whose grain-target workload is hot enough that
+        they'd rather pay the RAM than pay per-target render cost). The
+        default is False so a 200K-resource minion doesn't carry 40-80 MB
+        of resident grain dicts for a target path many deployments never
+        hit; :meth:`_resolve_resource_targets` re-renders on demand,
+        bounded by target size via :meth:`_collect_resource_grains_for`.
 
         **Freshness model.** The ``resource_grains`` snapshot is taken at
         the moment of this call by :meth:`_collect_resource_grains`. A
@@ -4605,23 +4713,72 @@ class Minion(MinionBase):
                     exc,
                 )
         resource_grains = self._collect_resource_grains() if resources else {}
-        # Cache locally so :meth:`_resolve_resource_targets` can resolve
-        # ``tgt_type == "grain"`` without re-rendering.
-        self._resource_grains_cache = resource_grains
+        # Retain the grain map in memory only when the operator opted in.
+        # Default False — the resolver re-renders from
+        # :meth:`_collect_resource_grains_for` on demand.
+        if self.opts.get("resource_grains_cache_in_memory", False):
+            self._resource_grains_cache = resource_grains
+        else:
+            self._resource_grains_cache = None
+        chunk_size = self.opts.get("resource_register_chunk_size", 10000)
+        chunks = self._plan_register_chunks(resources, resource_grains, chunk_size)
+        retries = max(0, int(self.opts.get("resource_register_chunk_retries", 3)))
+        import uuid as _uuid  # noqa: PLC0415
+
+        total = len(chunks)
+        single = total == 1
+        token = None if single else _uuid.uuid4().hex
         try:
-            # Build the load inside the guard as well: this method is
-            # best-effort, so a problem assembling the request should be
-            # reported the same way a failure to send it is, rather than
-            # escaping into pillar_refresh and aborting the rest of it.
-            load = {
-                "cmd": "_register_resources",
-                "id": self.opts["id"],
-                "resources": resources,
-                "resource_grains": resource_grains,
-                "tok": self.tok,
-            }
-            await self._send_req_async_main(load, timeout=self._return_retry_timer())
-            log.debug("Registered resources with master: %s", list(resources.keys()))
+            for seq, (chunk_resources, chunk_grains) in enumerate(chunks):
+                load = {
+                    "cmd": "_register_resources",
+                    "id": self.opts["id"],
+                    "resources": chunk_resources,
+                    "resource_grains": chunk_grains,
+                    "tok": self.tok,
+                }
+                if not single:
+                    # Omit chunking fields entirely on single-chunk payloads
+                    # so the wire format is byte-identical to the pre-PR
+                    # load. This keeps old masters compatible with new
+                    # minions whose inventory fits in one chunk.
+                    load["_register_token"] = token
+                    load["_chunk_seq"] = seq
+                    load["_chunk_total"] = total
+                    load["_chunk_is_last"] = seq == total - 1
+                attempt = 0
+                while True:
+                    try:
+                        await self._send_req_async_main(
+                            load, timeout=self._return_retry_timer()
+                        )
+                        break
+                    except Exception as err:  # pylint: disable=broad-except
+                        if attempt >= retries:
+                            log.warning(
+                                "Unable to register resources with master "
+                                "(chunk %s/%s): %s",
+                                seq + 1,
+                                total,
+                                err,
+                            )
+                            return
+                        attempt += 1
+                        log.debug(
+                            "Retrying resource register chunk %s/%s "
+                            "(attempt %s/%s): %s",
+                            seq + 1,
+                            total,
+                            attempt,
+                            retries,
+                            err,
+                        )
+            log.debug(
+                "Registered resources with master (%s chunk%s): %s",
+                total,
+                "" if total == 1 else "s",
+                list(resources.keys()),
+            )
         except Exception as err:  # pylint: disable=broad-except
             log.warning("Unable to register resources with master: %s", err)
 
@@ -6010,6 +6167,35 @@ class Minion(MinionBase):
         except Exception:  # pylint: disable=broad-except
             return False
 
+    def _get_resource_grains_for_resolve(self, srns):
+        """
+        Return per-resource grain dicts for ``srns`` for use by
+        :meth:`_resolve_resource_targets`, honouring
+        :conf_minion:`resource_grains_cache_in_memory`.
+
+        * Cache populated (opt-in retention or a prior resolve filled it on
+          demand) -> returned verbatim.
+        * Cache ``None`` and opt-in retention is on -> populate once from
+          :meth:`_collect_resource_grains_for` and remember it.
+        * Cache ``None`` and opt-in retention is off (default) -> render
+          the per-call set via :meth:`_collect_resource_grains_for`
+          WITHOUT persisting it, so target-time render cost is paid per
+          call but the minion carries no resident grain dicts between
+          calls.
+
+        :param srns: Iterable of composite SRN keys.
+        :rtype: dict[str, dict]
+        """
+        rg = getattr(self, "_resource_grains_cache", None)
+        if rg is not None:
+            return rg
+        in_memory = self.opts.get("resource_grains_cache_in_memory", False)
+        if in_memory:
+            rg = self._collect_resource_grains_for(srns)
+            self._resource_grains_cache = rg
+            return rg
+        return self._collect_resource_grains_for(srns)
+
     def _resolve_resource_targets(self, load):
         """
         Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
@@ -6050,10 +6236,9 @@ class Minion(MinionBase):
             # value of every term; ``and`` / ``or`` / ``not`` / parens are
             # evaluated using Python's boolean operators after rendering
             # each term to ``True``/``False``.
-            rg = getattr(self, "_resource_grains_cache", None)
-            if rg is None:
-                rg = self._collect_resource_grains()
-                self._resource_grains_cache = rg
+            rg = self._get_resource_grains_for_resolve(
+                [f"{rt}:{ri}" for rt, rids in resources.items() for ri in rids or ()]
+            )
             # Include every managed resource even if it has no grain entry
             # — so plain ``T@type`` / ``T@type:id`` compounds still match
             # for resources whose connection module exposes no ``grains``.
@@ -6084,13 +6269,13 @@ class Minion(MinionBase):
 
         if tgt_type in ("grain", "grain_pcre"):
             # Match each managed resource's per-resource grains against
-            # ``tgt`` (a ``key:value`` expression). Uses the cache populated
-            # by :meth:`_register_resources_with_master`; refreshes on miss
-            # so a never-registered minion still resolves its own targets.
-            rg = getattr(self, "_resource_grains_cache", None)
-            if rg is None:
-                rg = self._collect_resource_grains()
-                self._resource_grains_cache = rg
+            # ``tgt`` (a ``key:value`` expression). Uses the cache if the
+            # operator opted in to in-memory retention via
+            # ``resource_grains_cache_in_memory``; otherwise re-renders on
+            # demand, bounded by the current managed resource set.
+            rg = self._get_resource_grains_for_resolve(
+                [f"{rt}:{ri}" for rt, rids in resources.items() for ri in rids or ()]
+            )
             targets = []
             for srn, gdict in rg.items():
                 if salt.utils.data.subdict_match(
@@ -7085,6 +7270,8 @@ for _attr in (
     "_resolve_resource_targets",
     "_is_pure_resource_target",
     "_collect_resource_grains",
+    "_collect_resource_grains_for",
+    "_get_resource_grains_for_resolve",
 ):
     setattr(MinionBase, _attr, getattr(Minion, _attr))
 del _attr

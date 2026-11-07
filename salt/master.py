@@ -2405,6 +2405,168 @@ class TransportMethods:
             log.error("Requested method not exposed: %s", name)
 
 
+#: Default cap for the number of in-flight chunked resource registrations
+#: staged per MWorker instance. Each entry buffers the accumulated
+#: ``resources`` + ``resource_grains`` dicts for one ``(minion_id, token)``
+#: pair; the LRU evicts the oldest entry when the cap is exceeded.
+_REGISTER_CHUNK_STAGE_MAX_ENTRIES = 1024
+
+#: Default TTL in seconds for a staged chunked registration. A partial
+#: registration whose final chunk never arrives is evicted after this many
+#: seconds to prevent the staging store from growing unbounded when a
+#: minion dies mid-registration.
+_REGISTER_CHUNK_STAGE_TTL = 300.0
+
+
+class _RegisterChunkStage:
+    """
+    Bounded per-worker staging store for chunked ``_register_resources``
+    payloads.
+
+    Chunked registration splits a minion's full inventory across multiple
+    RPCs that share a per-registration token. Each chunk is staged under
+    ``(minion_id, token)`` until the one marked ``_chunk_is_last=True``
+    arrives, at which point the merged payload is handed to the registry
+    write path and the entry is dropped.
+
+    Bounds:
+
+    * Entry count capped at :data:`_REGISTER_CHUNK_STAGE_MAX_ENTRIES`
+      (``maxsize``); oldest insertion wins eviction (``OrderedDict.popitem(last=False)``).
+    * Per-entry TTL of :data:`_REGISTER_CHUNK_STAGE_TTL` seconds
+      (``ttl``); stale entries are evicted lazily on access.
+
+    Thread-safe via an internal lock — multiple master workers do NOT
+    share this store (each MWorker process has its own), but the async
+    handler runs the sync body on a thread executor, so concurrent chunk
+    arrivals for different tokens within one worker must not stomp each
+    other.
+    """
+
+    def __init__(
+        self, maxsize=_REGISTER_CHUNK_STAGE_MAX_ENTRIES, ttl=_REGISTER_CHUNK_STAGE_TTL
+    ):
+        self._entries = OrderedDict()
+        self._lock = threading.Lock()
+        self._maxsize = maxsize
+        self._ttl = ttl
+
+    def _evict_stale(self, now):
+        """Drop entries older than ``ttl`` seconds. Caller holds the lock."""
+        if self._ttl <= 0:
+            return
+        cutoff = now - self._ttl
+        stale = [k for k, v in self._entries.items() if v["ts"] < cutoff]
+        for k in stale:
+            self._entries.pop(k, None)
+
+    def record(self, minion_id, token, chunk_resources, chunk_grains):
+        """
+        Merge one chunk into the staging entry for ``(minion_id, token)``
+        and return the accumulated ``(resources, resource_grains)`` so far.
+
+        Called for every chunk EXCEPT the final one (the caller handles
+        the last chunk via :meth:`finalise` which drops the entry).
+        """
+        key = (minion_id, token)
+        now = time.monotonic()
+        with self._lock:
+            self._evict_stale(now)
+            entry = self._entries.pop(key, None)
+            if entry is None:
+                entry = {"resources": {}, "resource_grains": {}, "ts": now}
+            # Merge this chunk's resources and grains into the entry.
+            for rtype, rids in (chunk_resources or {}).items():
+                existing = entry["resources"].setdefault(rtype, [])
+                existing.extend(rids or ())
+            entry["resource_grains"].update(chunk_grains or {})
+            entry["ts"] = now
+            # Re-insert so ordering reflects most-recent write (LRU-by-write).
+            self._entries[key] = entry
+            # Enforce cap after insert — never drops the entry we just wrote.
+            while len(self._entries) > self._maxsize:
+                oldest = next(iter(self._entries))
+                if oldest == key:
+                    break
+                self._entries.popitem(last=False)
+            return dict(entry["resources"]), dict(entry["resource_grains"])
+
+    def finalise(self, minion_id, token, chunk_resources, chunk_grains):
+        """
+        Merge the final chunk into any staged state and return the full
+        accumulated ``(resources, resource_grains)`` payload, dropping the
+        staging entry. If no prior chunks were staged (e.g. the minion
+        sent only one chunk and still marked ``is_last=True``), returns the
+        final chunk verbatim.
+        """
+        key = (minion_id, token)
+        now = time.monotonic()
+        with self._lock:
+            self._evict_stale(now)
+            entry = self._entries.pop(key, None)
+        if entry is None:
+            # Single-chunk registration that happened to carry a token.
+            return dict(chunk_resources or {}), dict(chunk_grains or {})
+        # Final chunk's payload merges into the staged state.
+        for rtype, rids in (chunk_resources or {}).items():
+            existing = entry["resources"].setdefault(rtype, [])
+            existing.extend(rids or ())
+        entry["resource_grains"].update(chunk_grains or {})
+        return dict(entry["resources"]), dict(entry["resource_grains"])
+
+    def pending_count(self):
+        """Return the number of staged (incomplete) registrations."""
+        with self._lock:
+            return len(self._entries)
+
+    def clear(self):
+        """Drop all staged entries. For tests."""
+        with self._lock:
+            self._entries.clear()
+
+
+#: Module-level staging singleton shared by both the async
+#: ``_register_resources`` handler and its sync shim. One per MWorker
+#: process is the right scope — chunked registrations must land on the
+#: same master (haproxy with sticky session or a single-master
+#: deployment); the registry file is shared across workers via mmap but
+#: the per-token accumulator is not.
+_register_chunk_stage = _RegisterChunkStage()
+
+
+def _register_chunk_apply(load, stage):
+    """
+    Accumulate chunked ``_register_resources`` loads into ``stage`` and
+    return either ``None`` (chunk staged, caller should ACK and return
+    early) or ``(resources, resource_grains)`` to write to the registry.
+
+    The caller is responsible for:
+
+    * calling :meth:`AESFuncs.__verify_load` BEFORE this function;
+    * invoking :meth:`salt.utils.minions.update_resource_index` /
+      the cache writes with the returned ``(resources, resource_grains)``.
+
+    Loads without any chunking metadata (i.e. a legacy single-RPC
+    registration) return ``(load["resources"], load["resource_grains"])``
+    directly so the pre-chunking wire format keeps working.
+
+    :returns: ``None`` if the chunk was staged (not yet complete), or
+        the complete ``(resources, resource_grains)`` tuple when the
+        final chunk arrives (or when the load is unchunked).
+    """
+    token = load.get("_register_token")
+    if not token:
+        # Unchunked (legacy) registration — pass through.
+        return load.get("resources") or {}, load.get("resource_grains") or {}
+    is_last = bool(load.get("_chunk_is_last", False))
+    chunk_resources = load.get("resources") or {}
+    chunk_grains = load.get("resource_grains") or {}
+    if is_last:
+        return stage.finalise(load["id"], token, chunk_resources, chunk_grains)
+    stage.record(load["id"], token, chunk_resources, chunk_grains)
+    return None
+
+
 # TODO: rename? No longer tied to "AES", just "encrypted" or "private" requests
 # pylint: disable=method-hidden
 # ``_install_sync_handlers`` (LTS opt-out for ``master_async_mworker``)
@@ -2890,17 +3052,25 @@ class AESFuncs(TransportMethods):
         load = self.__verify_load(load, ("id", "resources"))
         if load is False:
             return {}, False, None
+        # Chunked registration: stage non-final chunks and only commit when
+        # the final chunk arrives. Loads without the ``_register_token``
+        # field fall through unchanged and preserve pre-chunking behaviour.
+        applied = _register_chunk_apply(load, _register_chunk_stage)
+        if applied is None:
+            # Chunk staged; nothing to commit yet.
+            return True, False, None
+        full_resources, full_grains = applied
         # The mmap resource registry is independent of minion pillar/grains disk
         # cache (:conf_master:`minion_data_cache`). Registration must always run
         # when minions report inventory; otherwise bare-id / T@ targeting breaks
         # silently while still returning success to the minion.
         n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+            self.opts, load["id"], full_resources
         )
         log.debug(
             "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
             load["id"],
-            list(load["resources"].keys()),
+            list(full_resources.keys()),
             n_put,
             n_del,
         )
@@ -2911,7 +3081,7 @@ class AESFuncs(TransportMethods):
         # last registration) are flushed first so a shrinking inventory
         # doesn't leave ghost entries.
         if self.opts.get("minion_data_cache", False):
-            resource_grains = load.get("resource_grains") or {}
+            resource_grains = full_grains
             try:
                 cache = self.masterapi.cache
                 current_srns = set(resource_grains.keys())
@@ -3659,18 +3829,25 @@ class AESFuncs(TransportMethods):
         load = self._AESFuncs__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
+        # Chunked registration: stage non-final chunks and only commit when
+        # the final chunk arrives. Loads without the ``_register_token``
+        # field fall through unchanged and preserve pre-chunking behaviour.
+        applied = _register_chunk_apply(load, _register_chunk_stage)
+        if applied is None:
+            return True
+        full_resources, full_grains = applied
         n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+            self.opts, load["id"], full_resources
         )
         log.debug(
             "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
             load["id"],
-            list(load["resources"].keys()),
+            list(full_resources.keys()),
             n_put,
             n_del,
         )
         if self.opts.get("minion_data_cache", False):
-            resource_grains = load.get("resource_grains") or {}
+            resource_grains = full_grains
             try:
                 cache = self.masterapi.cache
                 current_srns = set(resource_grains.keys())

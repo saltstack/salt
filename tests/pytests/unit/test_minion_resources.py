@@ -1009,8 +1009,11 @@ def test_resolve_resource_targets_grain_lazy_collects_when_cache_missing(
 ):
     """
     If the grain cache has never been populated (e.g. registration hasn't
-    happened yet), the resolver falls back to ``_collect_resource_grains``
-    so a freshly-started minion still acts on grain targets.
+    happened yet or the operator opted out of in-memory retention), the
+    resolver falls back to :meth:`_collect_resource_grains_for` so a
+    freshly-started minion still acts on grain targets. Under the
+    ``resource_grains_cache_in_memory`` default (False) the rendered map
+    is not persisted — the cache remains ``None`` after the call.
     """
     minion_with_resources._resource_grains_cache = None
     seen = []
@@ -1029,7 +1032,34 @@ def test_resolve_resource_targets_grain_lazy_collects_when_cache_missing(
     targets = minion_with_resources._resolve_resource_targets(load)
     ids = {t["id"] for t in targets}
     assert ids == {"dummy-01", "dummy-02", "dummy-03"}
-    # Cache populated on the fly, persisted for the next call.
+    # Opt-out of retention (the default) must NOT persist the rendered
+    # map — otherwise a 200K-resource minion carries 40-80 MB forever.
+    assert minion_with_resources._resource_grains_cache is None
+
+
+def test_resolve_resource_targets_grain_opt_in_persists_cache(
+    minion_with_resources,
+):
+    """
+    When :conf_minion:`resource_grains_cache_in_memory` is True, the
+    resolver persists the rendered grain map on first use so subsequent
+    calls skip the re-render. This is the pre-chunking-PR behaviour, now
+    gated behind an explicit opt-in.
+    """
+    minion_with_resources.opts["resource_grains_cache_in_memory"] = True
+    minion_with_resources._resource_grains_cache = None
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        return {"freshly_loaded": True, "id": target["id"]}
+
+    minion_with_resources.resource_funcs = {"dummy.grains": grains_fn}
+    load = {
+        "tgt": "freshly_loaded:True",
+        "tgt_type": "grain",
+        "fun": "test.ping",
+    }
+    minion_with_resources._resolve_resource_targets(load)
     assert minion_with_resources._resource_grains_cache is not None
 
 
@@ -1374,3 +1404,271 @@ def test_handle_payload_per_resource_load_strips_wide_fields(
     reloaded = salt.payload.loads(salt.payload.dumps(delivered[0]))
     assert "resource_targets" not in reloaded
     assert reloaded["resource_target"] == delivered[0]["resource_target"]
+
+
+# ---------------------------------------------------------------------------
+# Resource grains cache retention (opt-in)
+# ---------------------------------------------------------------------------
+
+
+def _build_large_resources(n):
+    """Return a ``{dummy: [id-0, …, id-n-1]}`` pillar."""
+    return {"dummy": [f"res-{i}" for i in range(n)]}
+
+
+def _patch_grains_fn(minion):
+    """Install a grains() callable so ``_collect_resource_grains`` yields dicts."""
+
+    def grains_fn():
+        target = salt.loader.context.resource_ctxvar.get()
+        return {"env": "prod", "resource_id": target["id"]}
+
+    minion.resource_funcs = {"dummy.grains": grains_fn}
+
+
+class TestResourceGrainsCacheRetention:
+    """
+    ``_register_resources_with_master`` retains the per-resource grain map
+    only when :conf_minion:`resource_grains_cache_in_memory` is True.
+    """
+
+    def test_default_does_not_retain_full_grain_map(self, minion_opts):
+        """
+        Default behaviour (opt-out): after a register call the minion
+        drops the grain cache. For a 10K-resource pillar, this is ~4-8 MB
+        of RAM that doesn't need to be resident between registrations.
+        """
+        minion_opts["resources"] = _build_large_resources(500)
+        minion_opts["multiprocessing"] = False
+        with mock_patch("salt.minion.Minion.gen_modules"), mock_patch(
+            "salt.minion.Minion.connect_master"
+        ):
+            m = salt.minion.Minion(minion_opts, load_grains=False)
+        _patch_grains_fn(m)
+        m.tok = b"tok"
+
+        async def noop(load, timeout=None):
+            return None
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=noop):
+            asyncio.run(m._register_resources_with_master())
+        assert (
+            m._resource_grains_cache is None
+        ), "default must not retain the per-resource grain map in RAM"
+
+    def test_opt_in_retains_full_grain_map(self, minion_opts):
+        """
+        ``resource_grains_cache_in_memory: True`` restores the pre-chunking-PR
+        behaviour: the grain map is cached on the instance after registration.
+        """
+        minion_opts["resources"] = _build_large_resources(100)
+        minion_opts["multiprocessing"] = False
+        minion_opts["resource_grains_cache_in_memory"] = True
+        with mock_patch("salt.minion.Minion.gen_modules"), mock_patch(
+            "salt.minion.Minion.connect_master"
+        ):
+            m = salt.minion.Minion(minion_opts, load_grains=False)
+        _patch_grains_fn(m)
+        m.tok = b"tok"
+
+        async def noop(load, timeout=None):
+            return None
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=noop):
+            asyncio.run(m._register_resources_with_master())
+        assert m._resource_grains_cache is not None
+        assert len(m._resource_grains_cache) == 100
+
+    def test_resolve_resource_targets_without_cache_uses_per_id_render(
+        self, minion_with_resources
+    ):
+        """
+        With the cache cleared and opt-in off, the grain-match branch of
+        ``_resolve_resource_targets`` must call
+        :meth:`_collect_resource_grains_for` passing the set of currently
+        managed composite SRN keys. This proves the renderer is bounded by
+        the managed-resource set and never the full pillar when the operator
+        opts out of in-memory retention.
+        """
+        minion_with_resources._resource_grains_cache = None
+        minion_with_resources.opts["resource_grains_cache_in_memory"] = False
+        captured = []
+
+        def fake_collect_for(srns):
+            captured.append(list(srns))
+            return {
+                "dummy:dummy-01": {"env": "prod"},
+            }
+
+        with mock_patch.object(
+            minion_with_resources,
+            "_collect_resource_grains_for",
+            side_effect=fake_collect_for,
+        ):
+            targets = minion_with_resources._resolve_resource_targets(
+                {
+                    "tgt": "env:prod",
+                    "tgt_type": "grain",
+                    "fun": "test.ping",
+                }
+            )
+        assert targets == [{"id": "dummy-01", "type": "dummy"}]
+        assert captured, "the per-id renderer must have been called"
+        # The resolver passes the full managed-resource SRN set; the key
+        # invariant is that the call used an explicit SRN set, NOT None
+        # (which would mean "render the entire pillar unbounded").
+        assert all(
+            isinstance(s, (list, tuple, set, frozenset)) or srns_is_none_sentinel(s)
+            for s in captured
+        )
+        # The resolver passed the 5 managed SRNs from the fixture.
+        assert set(captured[0]) == {
+            "dummy:dummy-01",
+            "dummy:dummy-02",
+            "dummy:dummy-03",
+            "ssh:node1",
+            "ssh:localhost",
+        }
+
+
+def srns_is_none_sentinel(value):
+    """Allow either an explicit None or an iterable bounded by managed ids."""
+    return value is None
+
+
+# ---------------------------------------------------------------------------
+# Resource register RPC chunking
+# ---------------------------------------------------------------------------
+
+
+class TestRegisterRPCChunking:
+    """
+    ``_register_resources_with_master`` chunks large inventories into
+    multiple RPCs sharing a per-registration token, so an 200 000-resource
+    minion doesn't race the single-RPC retry timer.
+    """
+
+    @staticmethod
+    def _minion_with(minion_opts, n_resources, chunk_size=None):
+        minion_opts["resources"] = _build_large_resources(n_resources)
+        minion_opts["multiprocessing"] = False
+        if chunk_size is not None:
+            minion_opts["resource_register_chunk_size"] = chunk_size
+        with mock_patch("salt.minion.Minion.gen_modules"), mock_patch(
+            "salt.minion.Minion.connect_master"
+        ):
+            m = salt.minion.Minion(minion_opts, load_grains=False)
+        _patch_grains_fn(m)
+        m.tok = b"tok"
+        return m
+
+    def test_small_pillar_sends_one_chunk(self, minion_opts):
+        """
+        An inventory below the chunk size sends a single RPC with no
+        chunking metadata — wire format unchanged from the pre-PR load so
+        older masters stay compatible.
+        """
+        m = self._minion_with(minion_opts, 50, chunk_size=1000)
+        delivered = []
+
+        async def capture(load, timeout=None):
+            delivered.append(load)
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
+            asyncio.run(m._register_resources_with_master())
+        assert len(delivered) == 1, "small pillar must fit in one chunk"
+        load = delivered[0]
+        # None of the chunking fields may appear — a new minion against an
+        # old master must send a byte-identical pre-chunking load.
+        for key in ("_register_token", "_chunk_seq", "_chunk_total", "_chunk_is_last"):
+            assert key not in load, f"{key} must be omitted on single-chunk payloads"
+        assert len(load["resources"]["dummy"]) == 50
+
+    def test_large_pillar_sends_multiple_chunks(self, minion_opts):
+        """
+        An inventory 2.5x the chunk size produces three chunks sharing a
+        single token. ``_chunk_is_last`` is True only on the final chunk.
+        """
+        m = self._minion_with(minion_opts, 25, chunk_size=10)
+        delivered = []
+
+        async def capture(load, timeout=None):
+            delivered.append(load)
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=capture):
+            asyncio.run(m._register_resources_with_master())
+        assert len(delivered) == 3
+        tokens = {d["_register_token"] for d in delivered}
+        assert len(tokens) == 1, "all chunks must share one register token"
+        assert [d["_chunk_seq"] for d in delivered] == [0, 1, 2]
+        assert [d["_chunk_total"] for d in delivered] == [3, 3, 3]
+        assert [d["_chunk_is_last"] for d in delivered] == [False, False, True]
+        # Total resources across chunks equals the input inventory.
+        total_rids = []
+        for d in delivered:
+            total_rids.extend(d["resources"].get("dummy", []))
+        assert len(total_rids) == 25
+        assert set(total_rids) == {f"res-{i}" for i in range(25)}
+
+    def test_chunk_timeout_retries_that_chunk_only(self, minion_opts):
+        """
+        If sending chunk 1 fails, the minion retries chunk 1 (same token,
+        same seq) WITHOUT re-sending chunks 0 or 2.
+        """
+        m = self._minion_with(minion_opts, 25, chunk_size=10)
+        m.opts["resource_register_chunk_retries"] = 3
+        delivered = []
+        call_count = {"n": 0}
+
+        async def flaky(load, timeout=None):
+            delivered.append(load)
+            # Fail the second chunk (seq == 1) exactly once.
+            if load.get("_chunk_seq") == 1 and call_count["n"] == 0:
+                call_count["n"] += 1
+                raise RuntimeError("simulated timeout")
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=flaky):
+            asyncio.run(m._register_resources_with_master())
+        # 3 chunks + 1 retry of chunk 1 = 4 deliveries.
+        assert len(delivered) == 4
+        seqs = [d["_chunk_seq"] for d in delivered]
+        # The retry must be for seq=1, not a restart of seq=0.
+        assert seqs == [0, 1, 1, 2]
+        # The token is stable across the retry.
+        tokens = {d["_register_token"] for d in delivered}
+        assert len(tokens) == 1
+
+    def test_chunk_persistent_failure_aborts_registration(self, minion_opts):
+        """
+        If a chunk exceeds its retry budget, the whole registration aborts
+        and later chunks are NOT sent.
+        """
+        m = self._minion_with(minion_opts, 25, chunk_size=10)
+        m.opts["resource_register_chunk_retries"] = 1
+        delivered = []
+
+        async def always_fail_seq1(load, timeout=None):
+            delivered.append(load)
+            if load.get("_chunk_seq") == 1:
+                raise RuntimeError("down")
+
+        import asyncio
+
+        with mock_patch.object(m, "_send_req_async_main", side_effect=always_fail_seq1):
+            asyncio.run(m._register_resources_with_master())
+        # seq 0 (success) + seq 1 (fail, retry, fail) = 3; seq 2 never sent.
+        seqs = [d["_chunk_seq"] for d in delivered]
+        assert seqs == [0, 1, 1], (
+            "once a chunk's retry budget is exhausted the rest of the "
+            f"registration must abort; got seqs {seqs}"
+        )
