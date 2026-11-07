@@ -356,6 +356,80 @@ class TestMembershipStateMachine:
         assert "m2" in r
         assert "version=2" in r
 
+    def test_stale_config_apply_does_not_regress_voters(self):
+        """
+        A CONFIG apply at an index <= the SM's last-applied CONFIG index
+        must not overwrite the authoritative voter/learner view.
+
+        This guards against log truncation (leader stomps a divergent
+        follower tail) or a recovery replay re-delivering an older
+        CONFIG after a newer one has already applied.  Pre-fix the SM
+        silently regressed to the older view; ``Node._applied_config_index``
+        only gated the ``on_change`` callback, not the SM's own state.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        received = []
+        sm = MembershipStateMachine(
+            on_change=lambda v, l: received.append((list(v), list(l)))
+        )
+        # Apply newer CONFIG first.
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Stale CONFIG at a lower index must be ignored --- voters MUST
+        # still be {A, B, C}, membership_version MUST still be 5, and
+        # the on_change callback MUST NOT fire a second time.
+        sm.apply({"voters": ["A"], "learners": []}, index=3)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.current_learners() == []
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Equal-index apply is also a no-op (same entry re-delivered
+        # via truncation + re-replication).
+        sm.apply({"voters": ["X"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # A strictly-newer CONFIG still wins (regression guard for the
+        # existing increasing-index path).
+        sm.apply({"voters": ["A", "B"], "learners": ["D"]}, index=6)
+        assert sm.current_voters() == ["A", "B"]
+        assert sm.current_learners() == ["D"]
+        assert sm.membership_version == 6
+        assert received == [
+            (["A", "B", "C"], []),
+            (["A", "B"], ["D"]),
+        ]
+
+    def test_stale_config_skip_survives_snapshot_roundtrip(self):
+        """
+        ``_membership_version`` already round-trips through
+        get_snapshot / restore_snapshot as the ``version`` field, so
+        a restored SM must reject stale CONFIG entries just like a
+        hot SM does.  Regression guard for the round-trip of the
+        short-circuit gate introduced for the CONFIG-downgrade fix.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=7)
+        snap = sm.get_snapshot()
+        assert snap["version"] == 7
+
+        restored = MembershipStateMachine()
+        restored.restore_snapshot(snap)
+        assert restored.membership_version == 7
+
+        # Stale CONFIG at index < 7 must be ignored on the restored SM.
+        restored.apply({"voters": ["X"], "learners": []}, index=4)
+        assert restored.current_voters() == ["A", "B", "C"]
+        assert restored.membership_version == 7
+
 
 # ---------------------------------------------------------------------------
 # Coverage gaps: LogEntryCommitStatus.set, LogEntry paths, Log edge cases,
@@ -1611,6 +1685,59 @@ class TestRingConfigStateMachine:
         assert sm.members == "self"
         assert sm.replicas == 1
 
+    def test_stale_ring_config_apply_does_not_regress_policy(self):
+        """
+        A RING_CONFIG apply at an index <= the SM's last-applied index
+        must not overwrite the authoritative ring policy.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG fix; applied here to sibling SM state.
+        """
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        received = []
+        sm = RingConfigStateMachine(on_change=lambda m, r: received.append((m, r)))
+        sm.apply({"members": "voters", "replicas": 3}, index=5)
+        assert sm.members == "voters"
+        assert sm.replicas == 3
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Stale apply at a lower index must be ignored.
+        sm.apply({"members": "self", "replicas": 1}, index=3)
+        assert sm.members == "voters"
+        assert sm.replicas == 3
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"members": "self", "replicas": 1}, index=5)
+        assert sm.members == "voters"
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Strictly-newer still wins.
+        sm.apply({"replicas": 5}, index=6)
+        assert sm.replicas == 5
+        assert sm.config_version == 6
+
+    def test_stale_ring_config_skip_survives_snapshot_roundtrip(self):
+        """``_version`` round-trips through snapshot; restored SM must
+        still reject stale RING_CONFIG entries."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"members": "voters", "replicas": 2}, index=7)
+        snap = sm.get_snapshot()
+
+        restored = RingConfigStateMachine()
+        restored.restore_snapshot(snap)
+        assert restored.config_version == 7
+
+        restored.apply({"members": "self", "replicas": 1}, index=4)
+        assert restored.members == "voters"
+        assert restored.replicas == 2
+        assert restored.config_version == 7
+
 
 class TestNodeAppliesRingConfigEntry:
     """
@@ -1978,6 +2105,39 @@ class TestRingRegistryStateMachine:
         assert restored.active_rings() == ["jobs"]
         assert restored.registry_version == 1
 
+    def test_stale_registry_apply_does_not_regress(self):
+        """
+        A RING_REGISTRY apply at an index <= the SM's last-applied
+        index must not overwrite the authoritative registry.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG fix; applied here to ring-registry state.
+        Round-trip via snapshot also covered.
+        """
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1", "m2"]}, index=5)
+        assert sm.registry_version == 5
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+
+        # Stale apply at lower index must be ignored --- registry
+        # must still reflect the newer entry.
+        sm.apply({"ring_id": "jobs", "founding_voters": ["stale"]}, index=3)
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert sm.registry_version == 5
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"ring_id": "jobs", "founding_voters": ["equal"]}, index=5)
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert sm.registry_version == 5
+
+        # Round-trip the gate through snapshot.
+        snap = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(snap)
+        assert restored.registry_version == 5
+        restored.apply({"ring_id": "jobs", "founding_voters": ["still-stale"]}, index=4)
+        assert restored.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert restored.registry_version == 5
+
 
 # ---------------------------------------------------------------------------
 # RoutingStateMachine — cluster-log data-type -> ring routing (multi-ring)
@@ -2061,6 +2221,38 @@ class TestRoutingStateMachine:
         restored = self._sm()
         restored.restore_snapshot(raw)
         assert restored.get("jobs") == "jobs_ring"
+
+    def test_stale_route_apply_does_not_regress(self):
+        """
+        A ROUTE apply at an index <= the SM's last-applied index
+        must not overwrite the authoritative routing table.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG fix; applied here to routing-table state.
+        Round-trip via snapshot also covered.
+        """
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=5)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Stale apply at a lower index must be ignored.
+        sm.apply({"data_type": "jobs", "ring_id": None}, index=3)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"data_type": "jobs", "ring_id": None}, index=5)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Round-trip through snapshot.
+        snap = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(snap)
+        assert restored.routing_version == 5
+        restored.apply({"data_type": "jobs", "ring_id": None}, index=4)
+        assert restored.get("jobs") == "jobs_ring"
+        assert restored.routing_version == 5
 
 
 # ---------------------------------------------------------------------------
