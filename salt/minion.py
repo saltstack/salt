@@ -1981,14 +1981,40 @@ class MinionManager(MinionBase):
                 break
             except SaltClientError as exc:
                 minion.destroy()
+                # ``destroy()`` flips ``_running`` to ``False``; without
+                # resetting it the next (successful) ``tune_in(start=False)``
+                # call would fall into the "scheduled to stop" branch in
+                # ``_pre_tune`` and return without binding this master.
+                minion._running = None
                 failed = True
-                log.error(
-                    "Error while bringing up minion for multi-master. Is "
-                    "master at %s responding? The error message was %s",
-                    minion.opts["master"],
-                    exc,
-                    exc_info=True,
-                )
+                # ``SaltClientError`` re-raised from the pillar channel after
+                # a ``cluster_retry`` deferral wraps the original
+                # ``AuthenticationError`` whose message carries the sentinel
+                # suffix (see ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).
+                # Suppress the noisy ERROR + traceback for that transient
+                # cluster-not-ready case — the loop retries on its own.  Any
+                # other ``SaltClientError`` keeps the existing ERROR path.
+                cause = exc.__cause__
+                if (
+                    cause is not None
+                    and salt.channel.client._is_cluster_not_ready_message(
+                        getattr(cause, "message", None)
+                    )
+                ):
+                    log.info(
+                        "Master %s is still catching up (cluster not "
+                        "ready); retrying in %ss",
+                        minion.opts["master"],
+                        auth_wait,
+                    )
+                else:
+                    log.error(
+                        "Error while bringing up minion for multi-master. Is "
+                        "master at %s responding? The error message was %s",
+                        minion.opts["master"],
+                        exc,
+                        exc_info=True,
+                    )
                 last = time.time()
                 if auth_wait < self.max_auth_wait:
                     auth_wait += self.auth_wait

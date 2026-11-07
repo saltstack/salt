@@ -3159,6 +3159,167 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     assert minion.connect_master.calls == 2
 
 
+async def test_connect_master_cluster_not_ready_is_quiet(
+    minion_opts, connect_master_mock, caplog
+):
+    """
+    Regression test for the cluster-bootstrap log-noise issue (#70727).
+
+    When a clustered master defers the initial pillar fetch with the
+    ``cluster_retry`` sentinel, the minion's multi-master connect loop must:
+
+    1. Log a single ``INFO`` retry notice instead of a full ``log.error``
+       with traceback for "Error while bringing up minion for multi-master".
+    2. Reset ``_running`` after ``destroy()`` so the subsequent successful
+       ``tune_in(start=False)`` does not trip the "scheduled to stop" branch
+       in ``_pre_tune``.
+    """
+    import salt.crypt
+    from salt.channel.client import CLUSTER_NOT_READY_SUFFIX
+
+    minion_opts["acceptance_wait_time"] = 0
+
+    # Build a SaltClientError whose ``__cause__`` carries the cluster-not-ready
+    # sentinel message exactly as ``AsyncPillar.compile_pillar`` re-raises it.
+    auth_exc = salt.crypt.AuthenticationError(
+        "Master did not return a session key for pillar request"
+        + CLUSTER_NOT_READY_SUFFIX
+    )
+    chained = SaltClientError("Exception getting pillar.")
+    chained.__cause__ = auth_exc
+
+    class _RaiseCausedSaltClientError:
+        calls = 0
+
+        async def __call__(self, *args, **kwargs):
+            _RaiseCausedSaltClientError.calls += 1
+            if _RaiseCausedSaltClientError.calls == 1:
+                raise chained
+            return True
+
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    minion.connect_master = _RaiseCausedSaltClientError()
+
+    # ``_pre_tune`` would otherwise log "scheduled to stop" when _running
+    # stays ``False``.  Record the state the retry loop leaves ``_running``
+    # in when the retry-and-recover path runs.
+    seen_running_values = []
+    original_tune_in = minion.tune_in
+
+    def _capture_tune_in(*args, **kwargs):
+        seen_running_values.append(minion._running)
+        # Short-circuit the real tune_in so the test does not set up IPC.
+        return None
+
+    minion.tune_in = _capture_tune_in
+    minion.destroy = MagicMock(wraps=minion.destroy)
+
+    with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+        await mm._connect_minion(minion)
+
+    # destroy() ran exactly once on the failed first attempt.
+    minion.destroy.assert_called_once()
+    # Two calls to connect_master: the first raised, the second succeeded.
+    assert minion.connect_master.calls == 2
+
+    # Fix 1: the retry loop logged at INFO (not ERROR) with a short retry
+    # message, and did not emit the alarming "Error while bringing up minion
+    # for multi-master" ERROR + traceback.
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up minion for multi-master" in r.getMessage()
+    ]
+    assert error_records == [], (
+        "cluster-not-ready retry should not log the bringing-up-minion ERROR; "
+        f"got {[r.getMessage() for r in error_records]}"
+    )
+    info_records = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.INFO
+        and "is still catching up (cluster not ready)" in r.getMessage()
+    ]
+    assert len(info_records) == 1, (
+        "cluster-not-ready retry should log exactly one INFO notice; "
+        f"got {[r.getMessage() for r in info_records]}"
+    )
+
+    # Fix 2: _running was reset after destroy() so the subsequent
+    # tune_in(start=False) did not land in _pre_tune's "scheduled to stop"
+    # branch.  ``_pre_tune`` treats both ``None`` and ``True`` as "fine, run
+    # tune_in"; only ``False`` means "we already called destroy()".
+    assert seen_running_values == [None], (
+        "_running must be reset to None after destroy() so the successful "
+        f"retry can actually bind; got {seen_running_values}"
+    )
+    scheduled_to_stop = [
+        r for r in caplog.records if "scheduled to stop" in r.getMessage()
+    ]
+    assert scheduled_to_stop == [], (
+        "retry-and-recover must not trip the 'scheduled to stop' ERROR; "
+        f"got {[r.getMessage() for r in scheduled_to_stop]}"
+    )
+
+
+async def test_connect_master_non_cluster_salt_client_error_still_logs_error(
+    minion_opts, connect_master_mock, caplog
+):
+    """
+    Non-cluster ``SaltClientError`` on the connect loop must keep the
+    existing ERROR + traceback path — the quieting is scoped strictly to the
+    cluster-not-ready sentinel.
+    """
+    minion_opts["acceptance_wait_time"] = 0
+
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = SaltClientError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock(wraps=minion.destroy)
+    minion.tune_in = MagicMock()
+
+    with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+        await mm._connect_minion(minion)
+
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up minion for multi-master" in r.getMessage()
+    ]
+    assert len(error_records) == 1
+
+
+def test_cluster_not_ready_suffix_detector_round_trip():
+    """
+    Lock in the sentinel contract between
+    ``AsyncReqChannel.crypted_transfer_decode_dictentry`` (raiser) and the
+    detectors used by the pillar and minion modules (quiet-logging consumers).
+    """
+    from salt.channel.client import (
+        CLUSTER_NOT_READY_SUFFIX,
+        _is_cluster_not_ready_message,
+    )
+
+    # The exact message string raised by the channel.
+    msg = (
+        "Master did not return a session key for pillar request"
+        + CLUSTER_NOT_READY_SUFFIX
+    )
+    assert _is_cluster_not_ready_message(msg) is True
+
+    # Ordinary auth failures do not match — they stay at ERROR.
+    assert _is_cluster_not_ready_message("Key verification failed.") is False
+    assert _is_cluster_not_ready_message("Pillar nonce verification failed.") is False
+
+    # Non-string inputs never match (defensive against ``exc.message is None``).
+    assert _is_cluster_not_ready_message(None) is False
+    assert _is_cluster_not_ready_message(b"cluster not ready") is False
+
+
 async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     """
     Ensure MinionManager's stop method works correctly and calls the
