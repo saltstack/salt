@@ -283,6 +283,55 @@ def test_links_rejected_key_absent(enabled_opts, pki_dir, monkeypatch):
     assert out == []
 
 
+def test_links_pre_handshake_key_not_pending_accept(enabled_opts, pki_dir, monkeypatch):
+    """Pin the subprocess-path state set for a pre-handshake peer.
+
+    A peer whose key is only in ``masters_pre/`` (not yet accepted into
+    ``masters/``) MUST NOT surface in ``links()`` as a synthetic
+    ``pending_accept`` health.  The valid subprocess-path states are
+    ``{"connected", "attached"}`` (or the peer is absent); the
+    doc-string previously mentioned ``pending_accept`` but the runner
+    has never emitted that label.
+
+    Guards against a docs-vs-code drift where a future change might
+    "helpfully" invent a ``pending_accept`` row to match the stale doc.
+    """
+    import pathlib
+
+    pre = pathlib.Path(pki_dir) / "masters_pre"
+    pre.mkdir(parents=True, exist_ok=True)
+    (pre / "pending-peer.pub").write_bytes(b"-----BEGIN FAKE-----\n")
+    monkeypatch.setattr(topology_runner, "__opts__", enabled_opts, raising=False)
+    monkeypatch.setattr(topology_runner, "_open_registry_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_open_breadcrumbs_reader", lambda opts: None)
+    monkeypatch.setattr(topology_runner, "_registry_peer_ids", lambda reader: [])
+    monkeypatch.setattr(topology_runner, "_breadcrumbs_count", lambda bread: 0)
+    monkeypatch.setattr(topology_runner, "_live_link_by_cluster", lambda cid: None)
+
+    out = topology_runner.links()
+
+    allowed = {"connected", "attached"}
+    for entry in out:
+        assert entry["health"] != "pending_accept", (
+            f"links() must not emit synthetic 'pending_accept' health "
+            f"(got entry {entry!r})"
+        )
+        assert entry["health"] in allowed, (
+            f"subprocess-path links() health must be one of {allowed}; "
+            f"got {entry['health']!r}"
+        )
+
+    by_id = {entry["peer_cluster_id"]: entry for entry in out}
+    # Current contract: masters_pre/ peers are absent from links() (no
+    # accepted key, no registry entry).  If a future change promotes
+    # them to a visible row, it must be ``attached``, never
+    # ``pending_accept``.
+    if "pending-peer" in by_id:
+        assert by_id["pending-peer"]["health"] == "attached"
+    else:
+        assert "pending-peer" not in by_id
+
+
 # ---------------------------------------------------------------------------
 # peers() surfaces health snapshot regression
 # ---------------------------------------------------------------------------
