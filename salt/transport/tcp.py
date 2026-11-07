@@ -737,8 +737,14 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             except OSError as exc:
                 if exc.errno != 9:
                     raise
-                log.exception(
-                    "RequestServer close generated an exception: %s", str(exc)
+                # EBADF -- the underlying fd has already been closed under
+                # us (fork-safety teardown, SIGTERM racing close, inherited
+                # fd closed in a child, etc.).  This is an expected
+                # shutdown-time signature, not an operator-actionable
+                # error.
+                log.debug(
+                    "RequestServer close: fd already closed (%s)",
+                    exc,
                 )
             self.req_server = None
 
@@ -1271,7 +1277,16 @@ class MessageClient:
                 else:
                     raise SaltClientError
             except Exception as e:  # pylint: disable=broad-except
-                log.error("Exception parsing response", exc_info=True)
+                # When the client is tearing down (close() already called),
+                # parse errors are an expected consequence of the peer
+                # dropping the connection mid-frame.  Demote to DEBUG
+                # instead of leaving an ERROR traceback in the shutdown log.
+                if self._closing or self._closed:
+                    log.debug(
+                        "Exception parsing response during shutdown", exc_info=True
+                    )
+                else:
+                    log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
                     future.set_exception(e)
                 self.send_future_map = {}
@@ -3121,7 +3136,16 @@ class RequestClient(salt.transport.base.RequestClient):
                 else:
                     raise SaltClientError
             except Exception as e:  # pylint: disable=broad-except
-                log.error("Exception parsing response", exc_info=True)
+                # When the client is tearing down (close() already called),
+                # parse errors are an expected consequence of the peer
+                # dropping the connection mid-frame.  Demote to DEBUG
+                # instead of leaving an ERROR traceback in the shutdown log.
+                if self._closing or self._closed:
+                    log.debug(
+                        "Exception parsing response during shutdown", exc_info=True
+                    )
+                else:
+                    log.error("Exception parsing response", exc_info=True)
                 for future in self.send_future_map.values():
                     future.set_exception(e)
                 self.send_future_map = {}

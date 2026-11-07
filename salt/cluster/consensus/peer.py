@@ -373,6 +373,12 @@ class RaftDispatcher:
         )
         try:
             await _publish(pusher, raw)
+        except _PEER_UNREACHABLE_EXCEPTIONS as exc:
+            # Peer is down / going away during cluster shutdown.  Every
+            # inbound RPC that arrives after the peer's stream has been
+            # torn down tries to reply here, so logging each failure as
+            # ERROR floods the log.  Mirrors ``SaltPeer._send``.
+            log.debug("RaftDispatcher: %s reply to %s unreachable: %s", tag, dst, exc)
         except Exception:  # pylint: disable=broad-except
             log.exception("RaftDispatcher: failed to send %s reply to %s", tag, dst)
 

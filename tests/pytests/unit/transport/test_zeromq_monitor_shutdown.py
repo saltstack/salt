@@ -90,3 +90,98 @@ async def test_stop_suppresses_pending_consume_task_warning():
     # the rest of the test suite.
     await asyncio.sleep(0)
     assert task.cancelled() or task.done()
+
+
+# ---------------------------------------------------------------------------
+# ZmqMonitor.consume ZMQError-at-shutdown level demotion
+# ---------------------------------------------------------------------------
+
+
+class _RaisingMonitorSocket:
+    """Monitor socket that raises a given ZMQError from ``poll()``."""
+
+    def __init__(self, errno_):
+        import zmq  # pylint: disable=import-outside-toplevel
+
+        self._exc = zmq.error.ZMQError(errno_, "fake")
+
+    async def poll(self):
+        raise self._exc
+
+    async def recv_multipart(self):  # pragma: no cover
+        raise AssertionError("poll always raises first")
+
+    def close(self, *_, **__):
+        pass
+
+
+class _SocketWith:
+    def __init__(self, monitor):
+        self._monitor = monitor
+        self.disabled = False
+
+    def get_monitor_socket(self):
+        return self._monitor
+
+    def disable_monitor(self):
+        self.disabled = True
+
+
+@pytest.mark.core_test
+async def test_consume_demotes_shutdown_zmq_errors_to_debug(caplog):
+    """
+    ``ZeroMQSocketMonitor.consume`` must demote the expected
+    shutdown-time ``ZMQError`` codes (``ENOTSOCK``, ``ETERM``,
+    ``EINTR``) to DEBUG so cluster SIGTERM does not flood logs with
+    ERROR lines for sockets/contexts torn down under us.
+    """
+    import logging as _logging
+
+    import zmq  # pylint: disable=import-outside-toplevel
+
+    for errno_ in (zmq.ENOTSOCK, zmq.ETERM, zmq.error.EINTR):
+        caplog.clear()
+        caplog.set_level(_logging.DEBUG, logger="salt.transport.zeromq")
+
+        socket = _SocketWith(_RaisingMonitorSocket(errno_))
+        monitor = salt.transport.zeromq.ZeroMQSocketMonitor(socket)
+        monitor.start_io_loop(asyncio.get_running_loop())
+        # Let consume() run, hit the ZMQError, log at DEBUG, break.
+        await asyncio.sleep(0.05)
+        monitor.stop()
+
+        errors = [
+            r
+            for r in caplog.records
+            if r.name == "salt.transport.zeromq" and r.levelno >= _logging.ERROR
+        ]
+        assert errors == [], (
+            f"consume() must not log ERROR on errno={errno_}; "
+            f"got: {[r.getMessage() for r in errors]}"
+        )
+
+
+@pytest.mark.core_test
+async def test_consume_still_errors_on_unexpected_zmq_error(caplog):
+    """
+    Non-shutdown ZMQ errors (EFAULT, EMTHREAD, ...) must still log at
+    ERROR so real transport bugs aren't silently buried.
+    """
+    import logging as _logging
+
+    import zmq  # pylint: disable=import-outside-toplevel
+
+    caplog.set_level(_logging.DEBUG, logger="salt.transport.zeromq")
+
+    socket = _SocketWith(_RaisingMonitorSocket(zmq.EFAULT))
+    monitor = salt.transport.zeromq.ZeroMQSocketMonitor(socket)
+    monitor.start_io_loop(asyncio.get_running_loop())
+    await asyncio.sleep(0.05)
+    monitor.stop()
+
+    errors = [
+        r
+        for r in caplog.records
+        if r.name == "salt.transport.zeromq" and r.levelno >= _logging.ERROR
+    ]
+    assert errors, "Unexpected ZMQ errors must still log at ERROR"
