@@ -27,7 +27,7 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing("dockerd"),
     pytest.mark.skipif(
         not etcd3_cache.HAS_ETCD,
-        reason="etcd3-py is not installed",
+        reason="etcd3gw is not installed",
     ),
 ]
 

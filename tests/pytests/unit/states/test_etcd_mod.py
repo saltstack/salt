@@ -12,12 +12,13 @@
 import pytest
 
 import salt.states.etcd_mod as etcd_state
-from tests.support.mock import MagicMock, patch
+from salt.exceptions import CommandExecutionError
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {etcd_state: {}}
+    return {etcd_state: {"__opts__": {"test": False}}}
 
 
 def test_set():
@@ -54,9 +55,9 @@ def test_set():
         }
         assert etcd_state.set_("new_key", "new value", profile="test") == expected
 
-        # Test setting the same value to a key
+        # Test setting the same value to a key does not write it again
+        set_mock.reset_mock()
         get_mock.return_value = "value"
-        set_mock.return_value = "value"
         expected = {
             "name": "key",
             "comment": "Key contains correct value",
@@ -64,6 +65,43 @@ def test_set():
             "changes": {},
         }
         assert etcd_state.set_("key", "value", profile="test") == expected
+        set_mock.assert_not_called()
+
+        # A new key can be created without a profile
+        get_mock.return_value = None
+        assert etcd_state.set_("new_key", "new value")["result"] is True
+
+
+def test_set_test_mode():
+    get_mock = MagicMock(return_value=None)
+    set_mock = MagicMock()
+    dunder_salt = {"etcd.get": get_mock, "etcd.set": set_mock}
+    with patch.dict(etcd_state.__salt__, dunder_salt), patch.dict(
+        etcd_state.__opts__, {"test": True}
+    ):
+        assert etcd_state.set_("key", "value", profile="test") == {
+            "name": "key",
+            "comment": "Key would be created",
+            "result": None,
+            "changes": {"key": "value"},
+        }
+        get_mock.return_value = "old"
+        assert etcd_state.set_("key", "value")["comment"] == "Key would be updated"
+        set_mock.assert_not_called()
+
+
+def test_set_error():
+    get_mock = MagicMock(side_effect=CommandExecutionError("etcd3: cannot read key"))
+    set_mock = MagicMock()
+    dunder_salt = {"etcd.get": get_mock, "etcd.set": set_mock}
+    with patch.dict(etcd_state.__salt__, dunder_salt):
+        assert etcd_state.set_("key", "value", profile="test") == {
+            "name": "key",
+            "comment": "etcd3: cannot read key",
+            "result": False,
+            "changes": {},
+        }
+        set_mock.assert_not_called()
 
 
 def test_wait_set():
@@ -81,37 +119,15 @@ def test_wait_set():
 
 def test_directory():
     """
-    Test the etcd_mod.directory state function
+    etcd v3 has no directories, so the directory state always fails.
     """
-    get_mock = MagicMock()
     set_mock = MagicMock()
-    dunder_salt = {
-        "etcd.get": get_mock,
-        "etcd.set": set_mock,
-    }
-
-    with patch.dict(etcd_state.__salt__, dunder_salt):
-        # Test new directory creation
-        get_mock.return_value = None
-        set_mock.return_value = "new_dir"
-        expected = {
-            "name": "new_dir",
-            "comment": "New directory created",
-            "result": True,
-            "changes": {"new_dir": "Created"},
-        }
-        assert etcd_state.directory("new_dir", profile="test") == expected
-
-        # Test creating an existing directory
-        get_mock.return_value = "new_dir"
-        set_mock.return_value = "new_dir"
-        expected = {
-            "name": "new_dir",
-            "comment": "Directory exists",
-            "result": True,
-            "changes": {},
-        }
-        assert etcd_state.directory("new_dir", profile="test") == expected
+    with patch.dict(etcd_state.__salt__, {"etcd.set": set_mock}):
+        ret = etcd_state.directory("new_dir", profile="test")
+    assert ret["result"] is False
+    assert ret["changes"] == {}
+    assert "no directories" in ret["comment"]
+    set_mock.assert_not_called()
 
 
 def test_rm():
@@ -137,19 +153,9 @@ def test_rm():
         }
         assert etcd_state.rm("key", profile="test") == expected
 
-        # Test failing to remove an existing key
+        # The key was gone by the time it was removed
         get_mock.return_value = "value"
         rm_mock.return_value = False
-        expected = {
-            "name": "key",
-            "comment": "Unable to remove key",
-            "result": True,
-            "changes": {},
-        }
-        assert etcd_state.rm("key", profile="test") == expected
-
-        # Test removing a nonexistent key
-        get_mock.return_value = False
         expected = {
             "name": "key",
             "comment": "Key does not exist",
@@ -157,6 +163,51 @@ def test_rm():
             "changes": {},
         }
         assert etcd_state.rm("key", profile="test") == expected
+
+        # recurse is used for both the lookup and the removal
+        get_mock.reset_mock()
+        rm_mock.reset_mock()
+        get_mock.return_value = {"child": "value"}
+        rm_mock.return_value = True
+        etcd_state.rm("key", recurse=True, profile="test")
+        get_mock.assert_called_once_with("key", recurse=True, profile="test")
+        rm_mock.assert_called_once_with("key", recurse=True, profile="test")
+
+        # An etcd error fails the state
+        rm_mock.side_effect = CommandExecutionError("etcd3: cannot delete key")
+        assert etcd_state.rm("key", profile="test") == {
+            "name": "key",
+            "comment": "etcd3: cannot delete key",
+            "result": False,
+            "changes": {},
+        }
+
+        # Test removing a nonexistent key
+        rm_mock.side_effect = None
+        get_mock.return_value = None
+        expected = {
+            "name": "key",
+            "comment": "Key does not exist",
+            "result": True,
+            "changes": {},
+        }
+        assert etcd_state.rm("key", profile="test") == expected
+
+
+def test_rm_test_mode():
+    get_mock = MagicMock(return_value="value")
+    rm_mock = MagicMock()
+    dunder_salt = {"etcd.get": get_mock, "etcd.rm": rm_mock}
+    with patch.dict(etcd_state.__salt__, dunder_salt), patch.dict(
+        etcd_state.__opts__, {"test": True}
+    ):
+        assert etcd_state.rm("key", profile="test") == {
+            "name": "key",
+            "comment": "Key would be removed",
+            "result": None,
+            "changes": {"key": "Deleted"},
+        }
+    rm_mock.assert_not_called()
 
 
 def test_wait_rm():
@@ -215,6 +266,20 @@ def test_mod_watch():
         }
         assert etcd_state.mod_watch("key", sfun="wait_rm", profile={}) == expected
         assert etcd_state.mod_watch("key", sfun="wait_rm_key", profile={}) == expected
+
+        # recurse and connection overrides reach the removal
+        rm_mock.reset_mock()
+        etcd_state.mod_watch(
+            "key",
+            sfun="wait_rm",
+            recurse=True,
+            profile="test",
+            host="etcd.example",
+            __reqs__={},
+        )
+        assert rm_mock.call_args == call(
+            "key", recurse=True, profile="test", host="etcd.example"
+        )
 
         # Test watch with bad sfun
         kwargs = {"sfun": "bad_sfun"}

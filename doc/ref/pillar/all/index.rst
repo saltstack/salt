@@ -12,6 +12,7 @@ pillar modules
 
     cmd_json
     cmd_yaml
+    etcd_pillar
     extra_minion_data_in_pillar
     file_tree
     git_pillar

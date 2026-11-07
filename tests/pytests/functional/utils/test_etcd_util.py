@@ -405,6 +405,14 @@ def test_rm_and_delete(subtests, etcd_client, prefix, func):
         assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) == updated["dir1"]
         assert etcd_client.get(f"{prefix}/rm/dir1/rm-1") == "value-1"
 
+    with subtests.test("removing a directory should not remove its siblings"):
+        etcd_client.set(f"{prefix}/rm/dir1-sibling", "keep")
+        etcd_client.set(f"{prefix}/rm/dir10", "keep")
+        assert func(f"{prefix}/rm/dir1", recurse=True)
+        assert etcd_client.get(f"{prefix}/rm/dir1", recurse=True) is None
+        assert etcd_client.get(f"{prefix}/rm/dir1-sibling") == "keep"
+        assert etcd_client.get(f"{prefix}/rm/dir10") == "keep"
+
 
 def test_tree(subtests, etcd_client, prefix):
     """
