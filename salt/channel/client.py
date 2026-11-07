@@ -47,13 +47,26 @@ def _cluster_retry(data):
 # of emitting alarming ``[ERROR]`` logs.
 CLUSTER_NOT_READY_SUFFIX = " (cluster not ready)"
 
+# Exact message used by the generic ``_crypted_transfer`` path when its
+# internal retry-until-deadline loop expires with the master still replying
+# with ``cluster_retry``.  Older than ``CLUSTER_NOT_READY_SUFFIX`` and kept
+# verbatim so existing log / test consumers keep matching; detected here so
+# non-pillar callers get the same quiet-retry treatment as the pillar path.
+CLUSTER_NOT_READY_DEADLINE_MESSAGE = "master cluster is not ready"
+
 
 def _is_cluster_not_ready_message(message):
     """
     Return ``True`` when ``message`` was produced by a clustered master's
-    deferred-retry sentinel (see :data:`CLUSTER_NOT_READY_SUFFIX`).
+    deferred-retry sentinel (see :data:`CLUSTER_NOT_READY_SUFFIX` and
+    :data:`CLUSTER_NOT_READY_DEADLINE_MESSAGE`).
     """
-    return isinstance(message, str) and message.endswith(CLUSTER_NOT_READY_SUFFIX)
+    if not isinstance(message, str):
+        return False
+    return (
+        message.endswith(CLUSTER_NOT_READY_SUFFIX)
+        or message == CLUSTER_NOT_READY_DEADLINE_MESSAGE
+    )
 
 
 REQUEST_CHANNEL_TIMEOUT = 60
@@ -373,7 +386,9 @@ class AsyncReqChannel:
                     break
                 # If master is not ready, try retrying until the deadline is reached.
                 if time.monotonic() >= deadline:
-                    raise salt.crypt.AuthenticationError("master cluster is not ready")
+                    raise salt.crypt.AuthenticationError(
+                        CLUSTER_NOT_READY_DEADLINE_MESSAGE
+                    )
                 log.debug("Master cluster is not ready yet, retrying request")
                 await tornado.gen.sleep(self.opts.get("acceptance_wait_time", 10))
         return ret
