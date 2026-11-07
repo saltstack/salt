@@ -53,9 +53,9 @@ Cache file layout
 * ``<pki_dir>/master/topology_breadcrumbs.mmap.roster`` --- live-slot roster
 * ``<pki_dir>/master/topology_breadcrumbs.mmap.lock``   --- flock target
 
-Keys: ``<cluster_id>:<jid>`` (the topology-prefixed jid used
-everywhere in topology-forwarded traffic).  Fits in the default
-``key_size=64`` for any reasonable cluster_id length.
+Keys: the bare publish ``<jid>`` (as taken from the publish
+``load["jid"]``; router and MWorker both look up by this same
+raw jid).  Fits well within the default ``key_size=64``.
 
 Values: msgpack dict ``{"link_cluster_id": str, "expiry_at":
 float}``.  ``link_cluster_id`` names the peer the publish arrived
@@ -235,7 +235,8 @@ def put(cache, jid, inbound_link_cluster_id, publish_timeout, opts):
     Record a breadcrumb for ``jid``.
 
     :param cache: Writer handle from :func:`open_writer`.
-    :param jid: Topology-prefixed jid (``<cluster_id>:<jid>``).
+    :param jid: Bare publish jid (as taken from ``load["jid"]``);
+        stored and looked up verbatim, with no cluster_id prefix.
     :param inbound_link_cluster_id: The peer cluster_id this
         publish arrived from --- where returns route back.
     :param publish_timeout: Caller's declared timeout; combined
