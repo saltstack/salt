@@ -1754,6 +1754,17 @@ class ZeroMQSocketMonitor:
         self._monitor_task = None
         if task is not None and not task.done():
             task.cancel()
+            # ``stop()`` is a sync call -- we can't ``await`` the cancellation
+            # here, so the task may still be in the "cancelling" state when
+            # the loop tears down on SIGTERM and asyncio prints
+            # ``Task was destroyed but it is pending!`` for ``consume()``.
+            # Suppress that GC warning: the task is cancelled, the underlying
+            # monitor socket is closed below, and the coroutine's next await
+            # will raise ``CancelledError`` and exit cleanly.
+            try:
+                task._log_destroy_pending = False
+            except AttributeError:
+                pass
         try:
             self._socket.disable_monitor()
         except zmq.Error:
