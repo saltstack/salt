@@ -1457,13 +1457,24 @@ class PubServer(tornado.tcpserver.TCPServer):
         if self._closing:
             return
         self._closing = True
+        cancelled_tasks = []
         for _, task in self._writers.values():
             try:
                 task.cancel()
             except RuntimeError:
                 # See #70178.
                 pass
+            else:
+                cancelled_tasks.append(task)
         self._writers.clear()
+        # ``close()`` is sync but the drain tasks live on ``self.io_loop``.
+        # Without driving the loop just enough to deliver the cancellation,
+        # the tasks stay in the "cancelling" state and asyncio prints
+        # ``Task was destroyed but it is pending!`` for ``_drain_loop`` on
+        # SIGTERM teardown.  ``_drain_cancelled_tasks`` either runs the loop
+        # to drain them synchronously (when called from outside the loop) or
+        # suppresses the GC warning (when called from inside the loop).
+        _drain_cancelled_tasks(self.io_loop, cancelled_tasks)
         for client in list(self.clients):
             client.close()
         self.clients.clear()
