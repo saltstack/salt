@@ -40,6 +40,22 @@ def _cluster_retry(data):
     )
 
 
+# Sentinel suffix appended to the ``AuthenticationError`` message raised when a
+# clustered master defers a request with the ``cluster_retry`` flag.  Callers
+# upstream of the channel use this to recognize a transient cluster-bringup
+# race (vs. a real authentication failure) so they can retry quietly instead
+# of emitting alarming ``[ERROR]`` logs.
+CLUSTER_NOT_READY_SUFFIX = " (cluster not ready)"
+
+
+def _is_cluster_not_ready_message(message):
+    """
+    Return ``True`` when ``message`` was produced by a clustered master's
+    deferred-retry sentinel (see :data:`CLUSTER_NOT_READY_SUFFIX`).
+    """
+    return isinstance(message, str) and message.endswith(CLUSTER_NOT_READY_SUFFIX)
+
+
 REQUEST_CHANNEL_TIMEOUT = 60
 REQUEST_CHANNEL_TRIES = 3
 
@@ -268,7 +284,7 @@ class AsyncReqChannel:
             # otherwise blow up at ``ret["key"]`` below.
             raise salt.crypt.AuthenticationError(
                 "Master did not return a session key for pillar request"
-                + (" (cluster not ready)" if _cluster_retry(ret) else "")
+                + (CLUSTER_NOT_READY_SUFFIX if _cluster_retry(ret) else "")
             )
         aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
