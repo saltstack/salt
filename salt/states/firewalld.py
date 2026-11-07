@@ -274,6 +274,19 @@ def present(
 
     prune_rich_rules: False
         If ``True``, remove all but the specified rich rules from the zone.
+
+    Example:
+
+    .. code-block:: yaml
+
+        public:
+          firewalld.present:
+            - name: public
+            - default: False
+            - masquerade: True
+            - ports:
+              - 22/tcp
+              - 25/tcp
     """
     return zone_present(
         name,
@@ -302,6 +315,8 @@ def service(name, ports=None, protocols=None):
     Ensure the service exists and encompasses the specified ports and
     protocols. Alias to service_present.
 
+    .. versionadded:: 2016.11.0
+
     name
         The service to modify.
 
@@ -310,6 +325,19 @@ def service(name, ports=None, protocols=None):
 
     protocols: None
         List of protocols to add to the service.
+
+    Example:
+
+    .. code-block:: yaml
+
+        saltmaster:
+          firewalld.service:
+            - name: saltmaster
+            - ports:
+              - 4505/tcp
+              - 4506/tcp
+            - protocols:
+              - igmp
     """
     return service_present(name, ports, protocols)
 
@@ -362,6 +390,19 @@ def service_present(name, ports=None, protocols=None):
 
     protocols: None
         List of protocols to add to the service.
+
+    Example:
+
+    .. code-block:: yaml
+
+        saltmaster:
+          firewalld.service_present:
+            - name: saltmaster
+            - ports:
+              - 4505/tcp
+              - 4506/tcp
+            - protocols:
+              - igmp
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
@@ -616,6 +657,19 @@ def zone_present(
 
     prune_rich_rules: False
         If ``True``, remove all but the specified rich rules from the zone.
+
+    Example:
+
+    .. code-block:: yaml
+
+        public:
+          firewalld.zone_present:
+            - name: public
+            - default: False
+            - masquerade: True
+            - ports:
+              - 22/tcp
+              - 25/tcp
     """
     ret = {"name": name, "result": False, "changes": {}, "comment": ""}
 
