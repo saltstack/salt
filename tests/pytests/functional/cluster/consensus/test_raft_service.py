@@ -47,7 +47,7 @@ def _make_opts(node_id, peers):
 
 
 def _make_pushers(peer_ids):
-    return {pid: FakePusher() for pid in peer_ids}
+    return {pid: FakePusher(pull_host=pid) for pid in peer_ids}
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +58,8 @@ def _make_pushers(peer_ids):
 class TestBuildPeerPushers:
     def test_pairs_peers_with_pushers_in_order(self):
         opts = _make_opts("m1", ["m2", "m3"])
-        p2, p3 = FakePusher(), FakePusher()
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
         result = build_peer_pushers(opts, [p2, p3])
         assert result == {"m2": p2, "m3": p3}
 
@@ -68,8 +69,43 @@ class TestBuildPeerPushers:
 
     def test_single_peer(self):
         opts = _make_opts("m1", ["m2"])
-        p = FakePusher()
+        p = FakePusher(pull_host="m2")
         assert build_peer_pushers(opts, [p]) == {"m2": p}
+
+    def test_cluster_peers_duplicate_does_not_lose_pusher(self):
+        """
+        BUG-030: ``self.cluster_peers.append`` on a join/discover from a
+        statically-configured peer could leave ``opts["cluster_peers"]``
+        with a duplicate while ``self.pushers`` (dedup-ed by
+        ``_add_pusher``) does not grow.  A ``zip``-based implementation
+        truncated to the shorter pushers list and left the tail peer
+        unkeyed in the pusher table, so inbound Raft RPCs from it hit
+        "no pusher for <peer>, dropping <tag> reply".
+        """
+        # opts list drifted with a duplicate — pushers list is clean.
+        opts = _make_opts("m1", ["m2", "m2", "m3"])
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
+        result = build_peer_pushers(opts, [p2, p3])
+        # Both peers must be reachable; "m3" must NOT be missing.
+        assert set(result) == {"m2", "m3"}
+        assert result["m2"] is p2
+        assert result["m3"] is p3
+
+    def test_cluster_peers_host_port_form_still_keys_by_host(self):
+        """
+        BUG-030 variant: ``cluster_peers`` entries may carry an explicit
+        ``host:port`` suffix (the ``peer.rsplit(":", 1)`` branch in
+        ``_publish_daemon``), while the resulting pusher's
+        ``pull_host`` is just ``host``.  Keying by ``pull_host``
+        guarantees the dispatcher looks the pusher up under the same
+        bare node-id that peers put in their ``callback_node`` field.
+        """
+        opts = _make_opts("m1", ["m2:4520", "m3:4520"])
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
+        result = build_peer_pushers(opts, [p2, p3])
+        assert result == {"m2": p2, "m3": p3}
 
 
 # ---------------------------------------------------------------------------

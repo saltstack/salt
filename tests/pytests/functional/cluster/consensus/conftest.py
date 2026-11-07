@@ -24,10 +24,16 @@ class FakePusher:
     """
     Captures every ``publish(raw)`` call and can replay those bytes
     directly into the destination dispatcher — simulating the TCP hop.
+
+    Exposes ``pull_host`` so ``build_peer_pushers`` (which keys by
+    ``pusher.pull_host`` to tolerate ``opts["cluster_peers"]`` drift)
+    can treat a FakePusher the same way it treats a real
+    ``PublishServer``.
     """
 
-    def __init__(self):
+    def __init__(self, pull_host=None):
         self.sent = collections.deque()
+        self.pull_host = pull_host
 
     async def publish(self, raw):
         self.sent.append(raw)
@@ -50,8 +56,9 @@ class ClusterNode:
         self.scheduler = ManualTimeoutScheduler()
         self.node = Node(node_id)
         self.node.register_schedule_timeout(self.scheduler.schedule)
-        # one outbound pusher per peer
-        self.pushers_out = {pid: FakePusher() for pid in peer_ids}
+        # one outbound pusher per peer; pull_host matches the peer id so
+        # production code paths that key by ``pusher.pull_host`` work.
+        self.pushers_out = {pid: FakePusher(pull_host=pid) for pid in peer_ids}
         # dispatcher reads inbound RPCs and sends replies via pushers_out
         self.dispatcher = RaftDispatcher(self.node, node_id, self.pushers_out)
 
