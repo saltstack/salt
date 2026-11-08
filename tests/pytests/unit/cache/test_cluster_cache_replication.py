@@ -491,3 +491,131 @@ def test_cluster_cache_routing_config_defaults():
         f"Operator-supplied grains=ring must survive the merge; got "
         f"{routing2.get('grains')!r}"
     )
+
+
+def test_cluster_cache_routing_defaults_include_none_entries():
+    """
+    Invariant: the merged routing dict MUST include the ``"none"``
+    opt-outs for ``cluster/consensus`` and ``cluster/state_sync``.  These
+    are the Raft-log and state-sync banks whose contents already
+    replicate via a dedicated transport; fanning them out through the
+    cache facade would overwrite each master's authoritative copy.
+
+    Additionally, operator-supplied ``"none"`` entries must survive the
+    merge intact (not be coerced away or rewritten).
+    """
+    import salt.config
+
+    # 1) With no operator overrides, the defaults must inject "none"
+    #    for the internal cluster banks.
+    routing = salt.config.get_cluster_cache_routing({})
+    assert routing.get("cluster/consensus") == "none", (
+        "Built-in default cluster/consensus=none must be present; got "
+        f"{routing.get('cluster/consensus')!r}"
+    )
+    assert routing.get("cluster/state_sync") == "none", (
+        "Built-in default cluster/state_sync=none must be present; got "
+        f"{routing.get('cluster/state_sync')!r}"
+    )
+
+    # 2) Operator-supplied "none" entry must survive the merge.
+    opts = {"cluster_cache_routing": {"custom_bank": "none"}}
+    routing = salt.config.get_cluster_cache_routing(opts)
+    assert routing.get("custom_bank") == "none", (
+        f"Operator-supplied custom_bank=none must survive the merge; "
+        f"got {routing.get('custom_bank')!r}"
+    )
+    # Built-in defaults must still be present alongside the operator entry.
+    assert routing.get("cluster/consensus") == "none"
+    assert routing.get("jobs") == "ring"
+
+
+# ---------------------------------------------------------------------------
+# Longest-prefix bank routing (compound-bank support + opt-out)
+# ---------------------------------------------------------------------------
+
+
+def test_cluster_consensus_banks_skipped(cluster_opts):
+    """
+    Regression for cluster-bootstrap replication loop: Raft-persistence
+    writes to ``cluster/consensus/<node>/cluster`` and
+    ``cluster/consensus/<node>/cluster/log`` MUST NOT fan out through
+    the cache facade.  If they did, peer masters would overwrite each
+    other's Raft logs on every heartbeat and the cluster would never
+    stabilise.
+
+    This test exercises the longest-prefix match: the exact bank name
+    is not in ``_CLUSTER_CACHE_ROUTING_DEFAULTS``, only the
+    ``cluster/consensus`` prefix is.
+    """
+    cache, _driver = _build_cache_with_mocked_driver(cluster_opts)
+    fanout = MagicMock(name="fanout")
+    delegate = MagicMock(name="delegate")
+    with _patch_cluster_fanout(fanout), _patch_delegate_fanout(delegate):
+        cache.store("cluster/consensus/nodeA/cluster", "term", {"term": 3})
+        cache.store("cluster/consensus/nodeA/cluster/log", "17", {"index": 17})
+        cache.store("cluster/state_sync/session-abc", "chunk-0", b"opaque")
+
+    assert fanout.call_count == 0, (
+        f"cluster/consensus and cluster/state_sync writes must NOT "
+        f"replicate; got {fanout.call_count} fanout events"
+    )
+    assert delegate.call_count == 0, (
+        f"cluster/consensus and cluster/state_sync writes must NOT "
+        f"ring-delegate; got {delegate.call_count} delegate events"
+    )
+
+
+def test_jobs_compound_bank_ring_routed(cluster_opts):
+    """
+    Regression for the exact-match-vs-compound-bank latent bug: the
+    built-in ``{"jobs": "ring"}`` default used to miss compound banks
+    (``jobs/loads``, ``jobs/returns/<jid>``, ...) because the lookup
+    was ``routing.get(bank, "replicate")``.  Longest-prefix match
+    fixes this: ``jobs/loads`` resolves to ``"ring"``.
+    """
+    cache, _driver = _build_cache_with_mocked_driver(cluster_opts)
+    fanout = MagicMock(name="fanout")
+    delegate = MagicMock(name="delegate")
+    with _patch_cluster_fanout(fanout), _patch_delegate_fanout(delegate):
+        cache.store("jobs/loads", "jid123", {"jid": "jid123"})
+        cache.store("jobs/returns/jid123", "minion-1", {"ret": "ok"})
+
+    # Two stores, both ring-routed, zero broadcast.
+    assert fanout.call_count == 0, (
+        f"Compound jobs/* banks must ring-route (not broadcast); got "
+        f"{fanout.call_count} fanout events"
+    )
+    assert delegate.call_count == 2, (
+        f"Both jobs/* stores must fire the ring delegate; got "
+        f"{delegate.call_count} delegate events"
+    )
+
+
+def test_resolve_bank_routing_helper():
+    """
+    Direct unit coverage for the longest-prefix matcher so future
+    changes to the dispatch path don't silently regress the lookup.
+    """
+    from salt.cache import _resolve_bank_routing
+
+    routing = {
+        "jobs": "ring",
+        "cluster/consensus": "none",
+        "cluster/state_sync": "none",
+    }
+    # Exact match.
+    assert _resolve_bank_routing(routing, "jobs") == "ring"
+    # Single-segment prefix.
+    assert _resolve_bank_routing(routing, "jobs/loads") == "ring"
+    assert _resolve_bank_routing(routing, "jobs/returns/jid-9") == "ring"
+    # Multi-segment prefix.
+    assert _resolve_bank_routing(routing, "cluster/consensus/nodeA/cluster") == "none"
+    assert (
+        _resolve_bank_routing(routing, "cluster/consensus/nodeA/cluster/log") == "none"
+    )
+    assert _resolve_bank_routing(routing, "cluster/state_sync/session-1") == "none"
+    # No prefix match falls through to "replicate".
+    assert _resolve_bank_routing(routing, "grains") == "replicate"
+    assert _resolve_bank_routing(routing, "cluster/other/thing") == "replicate"
+    assert _resolve_bank_routing({}, "anything/at/all") == "replicate"

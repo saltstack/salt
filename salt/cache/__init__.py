@@ -40,6 +40,37 @@ def _is_already_replicated():
     return getattr(_REPLICATION_STATE, "already_replicated", False)
 
 
+def _resolve_bank_routing(routing, bank):
+    """
+    Longest-prefix-match lookup of a bank name against the routing map.
+
+    Replication routing is keyed by top-level bank name (``jobs``,
+    ``cluster/consensus``, ...) but cache writes land on compound
+    sub-banks (``jobs/loads``, ``cluster/consensus/<node>/cluster/log``).
+    A plain ``routing.get(bank, default)`` therefore misses the common
+    case; this helper resolves by:
+
+    1. Exact-match the full bank name.
+    2. Strip one ``/``-delimited segment at a time and retry.
+    3. If no prefix matches, return ``"replicate"`` (the historical default).
+
+    :param routing: Dict of ``{bank_prefix: "ring"|"replicate"|"none"}``,
+                    as returned by ``salt.config.get_cluster_cache_routing``.
+    :param bank:    Full bank name for the pending write.
+    :returns:       Resolved mode string.
+    """
+    if bank in routing:
+        return routing[bank]
+    parts = bank.split("/")
+    # Drop one trailing segment per iteration: a/b/c -> a/b -> a.
+    while len(parts) > 1:
+        parts.pop()
+        prefix = "/".join(parts)
+        if prefix in routing:
+            return routing[prefix]
+    return "replicate"
+
+
 def factory(opts, **kwargs):
     """
     Creates and returns the cache class.
@@ -287,7 +318,13 @@ class Cache:
         )
 
         routing = get_cluster_cache_routing(opts)
-        mode = routing.get(bank, "replicate")
+        mode = _resolve_bank_routing(routing, bank)
+        if mode == "none":
+            # Explicit opt-out: bank is replicated by a dedicated
+            # transport (Raft for cluster/consensus, state-sync for
+            # cluster/state_sync).  Fan-out here would overwrite the
+            # authoritative copy on peers.
+            return
         if mode == "ring":
             self._fire_ring_delegate(bank, key, data, expires)
         elif mode == "replicate":

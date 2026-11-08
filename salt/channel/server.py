@@ -4072,9 +4072,22 @@ class MasterPubServerChannel:
             elif tag.startswith("cluster/peer/discover-reply"):
                 payload = salt.payload.loads(data["payload"])
 
-                if not cluster_pub_matches_fingerprint(
-                    self.opts, payload["cluster_pub"]
-                ):
+                received_cluster_pub = payload.get("cluster_pub")
+                if not received_cluster_pub:
+                    # The peer hasn't installed its cluster.pub yet --
+                    # it hit the discover branch before its own join-reply
+                    # from the founder landed.  Ignore; a future discover
+                    # round will pick up the key.  See Team Alpha
+                    # diagnosis report ``cache-replicate-alpha-diagnosis.md``.
+                    log.debug(
+                        "cluster/peer/discover-reply from %s arrived "
+                        "without cluster_pub (peer has not installed "
+                        "cluster.pub yet); ignoring",
+                        payload.get("peer_id"),
+                    )
+                    return
+
+                if not cluster_pub_matches_fingerprint(self.opts, received_cluster_pub):
                     log.warning(
                         "cluster_pub fingerprint mismatch in discover-reply "
                         "from %s; rejecting",
@@ -4082,7 +4095,7 @@ class MasterPubServerChannel:
                     )
                     return
 
-                cluster_pub = salt.crypt.PublicKeyString(payload["cluster_pub"])
+                cluster_pub = salt.crypt.PublicKeyString(received_cluster_pub)
                 if not cluster_pub.verify(
                     data["payload"],
                     data["sig"],
@@ -4173,6 +4186,20 @@ class MasterPubServerChannel:
                     log.warning("Invalid signature of cluster discover payload")
                     return
                 log.info("Cluster discovery from %s", payload["peer_id"])
+                cluster_pub_pem = self.cluster_public_key()
+                if not cluster_pub_pem:
+                    # We don't have cluster.pub on disk yet (our own
+                    # join-reply from the founder hasn't landed).  Don't
+                    # ship a discover-reply with cluster_pub=None -- the
+                    # peer's handler used to crash on that; even with the
+                    # guard it would just reject us.  Retry on the next
+                    # discover round.
+                    log.debug(
+                        "Deferring discover-reply to %s: cluster.pub "
+                        "not yet installed locally",
+                        payload.get("peer_id"),
+                    )
+                    return
                 token = self.gen_token()
                 # Store this peer as a candidate.
                 # XXX Add timestamp so we can clean up old candidates
@@ -4183,7 +4210,7 @@ class MasterPubServerChannel:
                         "token": token,
                         "peer_id": self.opts["id"],
                         "pub": self.public_key(),
-                        "cluster_pub": self.cluster_public_key(),
+                        "cluster_pub": cluster_pub_pem,
                     }
                 )
                 key = salt.crypt.PrivateKeyString(self.cluster_key())

@@ -241,12 +241,18 @@ VALID_OPTS = immutabletypes.freeze(
         # other's writes on disk / in mmap.
         "cluster_cache_replication": (bool, type(None)),
         # Per-bank routing mode for cache writes on a clustered master.
-        # The value is a dict ``{bank_name: "ring" | "replicate"}``.
-        # Banks that aren't listed default to ``"replicate"`` (N-of-N
-        # fan-out to every peer).  ``"ring"`` delegates the write to
-        # the HashRing owner (today's ``cluster/peer/delegate-write``
-        # path -- 1-of-N).  A default-merged entry
-        # ``{"jobs": "ring"}`` preserves today's job-return behaviour.
+        # The value is a dict ``{bank_name: "ring" | "replicate" |
+        # "none"}``.  Banks (or bank prefixes -- longest-prefix match
+        # on ``/``) that aren't listed default to ``"replicate"``
+        # (N-of-N fan-out to every peer).  ``"ring"`` delegates the
+        # write to the HashRing owner (today's
+        # ``cluster/peer/delegate-write`` path -- 1-of-N).  ``"none"``
+        # skips replication entirely and is used for banks that own
+        # their own replication transport (Raft log, state-sync
+        # chunks).  The default-merged entries ``{"jobs": "ring",
+        # "cluster/consensus": "none", "cluster/state_sync": "none"}``
+        # preserve today's job-return behaviour and keep Raft/state-sync
+        # out of the cache-facade fan-out.
         "cluster_cache_routing": dict,
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
@@ -4490,7 +4496,25 @@ def master_config(
 #: default to ``"replicate"`` at the call site.  ``"jobs"`` is pinned to
 #: ``"ring"`` so today's single-owner job-return behaviour is preserved
 #: on upgrade (backward compat).
-_CLUSTER_CACHE_ROUTING_DEFAULTS = {"jobs": "ring"}
+#:
+#: The lookup uses longest-prefix match on the ``/``-delimited bank name
+#: (``salt/cache/__init__.py:_resolve_bank_routing``), so these keys
+#: match any compound bank below them -- e.g. ``jobs`` catches
+#: ``jobs/loads``, ``jobs/returns/<jid>``, and ``cluster/consensus``
+#: catches both ``cluster/consensus/<node>/cluster`` and
+#: ``cluster/consensus/<node>/cluster/log`` which Raft writes to.
+#:
+#: ``"none"`` means "skip replication entirely" -- used for banks whose
+#: contents are already replicated by a dedicated transport (Raft log
+#: for ``cluster/consensus``, state-sync chunking for
+#: ``cluster/state_sync``) and MUST NOT be fanned out via the cache
+#: facade, since the peer's handler would overwrite its own authoritative
+#: copy with another master's state.
+_CLUSTER_CACHE_ROUTING_DEFAULTS = {
+    "jobs": "ring",
+    "cluster/consensus": "none",
+    "cluster/state_sync": "none",
+}
 
 
 def get_cluster_cache_routing(opts):
@@ -4498,15 +4522,19 @@ def get_cluster_cache_routing(opts):
     Return the effective per-bank cache routing for this master.
 
     Merges operator-supplied ``opts["cluster_cache_routing"]`` with the
-    built-in defaults.  Operator entries win; the built-in ``"jobs":
-    "ring"`` is injected only when the operator has not supplied an
-    entry for it.
+    built-in defaults.  Operator entries win; built-in entries from
+    ``_CLUSTER_CACHE_ROUTING_DEFAULTS`` (``jobs``, ``cluster/consensus``,
+    ``cluster/state_sync``) are injected only when the operator has not
+    supplied an entry for the same key.  ``"none"`` entries must survive
+    the merge since they are the opt-out marker for banks that own their
+    own replication transport.
 
-    Banks absent from the result default to ``"replicate"`` at the
-    read site (``salt/cache/__init__.py:Cache.store``).
+    Banks absent from the result default to ``"replicate"`` at the read
+    site (``salt/cache/__init__.py:_resolve_bank_routing`` -- longest-
+    prefix match).
 
     :param opts: Master opts dict.
-    :returns:    Dict of ``{bank_name: "ring"|"replicate"}``.
+    :returns:    Dict of ``{bank_prefix: "ring"|"replicate"|"none"}``.
     """
     merged = dict(opts.get("cluster_cache_routing") or {})
     for _bank, _mode in _CLUSTER_CACHE_ROUTING_DEFAULTS.items():
