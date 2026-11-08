@@ -96,6 +96,15 @@ log = logging.getLogger(__name__)
 
 RESOURCE_BANK = "resources"
 
+#: Logical data_type name used by the cluster routing table to ring-shard
+#: resource-registry writes.  Not a ``salt.cache.Cache`` bank -- the
+#: resource registry bypasses that facade -- this name is only the key
+#: operators pass to ``salt-run cluster.ring_create`` /
+#: ``cluster.route_set`` to turn on 1-of-N routing for the register fan-out.
+#: Consulted by :func:`salt.cache._cluster_replicator.fire_resource_register_write`
+#: via :func:`salt.cluster.ring_membership.get_ring`.
+RESOURCE_INDEX_RING_NAME = "resource_index"
+
 #: Cache bank holding per-resource grain dicts indexed by composite SRN
 #: ``"<type>:<id>"``. Populated by the master's ``_register_resources``
 #: handler from the load shipped by

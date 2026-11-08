@@ -2246,6 +2246,160 @@ class MasterPubServerChannel:
                     pusher.pull_host,
                 )
 
+    async def publish_resource_register_write(
+        self,
+        minion_id,
+        resources,
+        originating_master,
+        target_master=None,
+    ):
+        """
+        Dispatch a resource-registry register across the cluster.
+
+        Originator side of resource-registry replication -- wraps the
+        minion-id + resources payload in a cluster_aes-encrypted
+        ``cluster/peer/delegate-resource-register-write`` event.
+
+        Two modes:
+
+        * *target_master* ``None`` (broadcast).  Pushes the event to
+          every peer's pool channel -- today's N-of-N semantics.
+        * *target_master* set to a peer ``pull_host``.  Pushes to
+          exactly that peer.  Used by the ``resource_index`` ring
+          routing path in :func:`fire_resource_register_write` so
+          each peer receives only the SRNs it owns.
+
+        The ``originating_master`` field lets the peer drop the echoed
+        event if the bus bounced it back to us.  Parallel to
+        :meth:`publish_cache_write` but for the mmap-backed registry
+        that bypasses the :class:`salt.cache.Cache` facade.
+        """
+        try:
+            crypticle = salt.crypt.Crypticle(
+                self.opts,
+                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("resource-replicate: cluster_aes unavailable")
+            return
+        payload = {
+            "minion_id": minion_id,
+            "resources": resources,
+            "originating_master": originating_master,
+        }
+        event = salt.utils.event.SaltEvent.pack(
+            salt.utils.event.tagify(
+                "delegate-resource-register-write", "peer", "cluster"
+            ),
+            crypticle.dumps(payload),
+        )
+        if target_master is None:
+            targets = list(self.pushers)
+        else:
+            targets = [p for p in self.pushers if p.pull_host == target_master]
+            if not targets:
+                log.warning(
+                    "resource-replicate: no pusher for target_master %s; "
+                    "dropping targeted register for minion %s "
+                    "(known peers: %s)",
+                    target_master,
+                    minion_id,
+                    [p.pull_host for p in self.pushers],
+                )
+                return
+        for pusher in targets:
+            try:
+                await pusher.publish(event)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "resource-replicate: failed to send register for %s to %s",
+                    minion_id,
+                    pusher.pull_host,
+                )
+
+    def _handle_delegate_resource_register_write(self, payload):
+        """
+        Peer-side handler for ``cluster/peer/delegate-resource-register-write``.
+
+        Thin wrapper over
+        :func:`salt.cache._cluster_replicator._handle_delegate_resource_register_write`;
+        the free-function form is testable without instantiating this
+        channel class and is the single source of truth for the
+        peer-apply logic.
+        """
+        import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+
+        return salt.cache._cluster_replicator._handle_delegate_resource_register_write(
+            self.opts, payload
+        )
+
+    async def _run_delegate_resource_register_write(self, payload):
+        """
+        Dispatch a local ``cluster/runner/delegate_resource_register_write``
+        event.
+
+        The master's ``__register_resources_sync`` fires this event
+        from the MWorker (which has no ring state because it forked
+        before any ring was created).  This method runs inside the
+        publish daemon process where ``ring_membership`` is populated,
+        so it's the single place that decides between broadcast and
+        ring-routed fan-out and applies the local-shard write
+        accordingly.
+
+        Three modes:
+
+        * **Standalone / shared-FS**: MWorker already wrote locally
+          and would never fire this event -- not reached.
+        * **Broadcast (no ``resource_index`` ring)**: write the full
+          set locally, fan the event to every peer with the full set.
+        * **Ring-routed**: partition by owner.  Apply the self-owned
+          share locally, fire one targeted event per remote owner
+          carrying only that owner's SRNs.
+        """
+        minion_id = payload.get("minion_id")
+        resources = payload.get("resources") or {}
+        originating_master = payload.get("originating_master")
+        import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+        import salt.utils.minions  # pylint: disable=import-outside-toplevel
+
+        local_bucket, peer_buckets, ring_active = (
+            salt.cache._cluster_replicator.partition_resources_for_dispatch(
+                self.opts, resources
+            )
+        )
+        if local_bucket:
+            try:
+                salt.utils.minions.update_resource_index(
+                    self.opts, minion_id, local_bucket
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "resource-replicate: local %s-mode write failed for %s",
+                    "ring" if ring_active else "broadcast",
+                    minion_id,
+                )
+        if not ring_active:
+            # Broadcast: one event, every peer, full set.
+            await self.publish_resource_register_write(
+                minion_id, resources, originating_master
+            )
+            return
+        # Ring-routed: one event per remote owner, carrying only its SRNs.
+        log.debug(
+            "resource-replicate: ring dispatch for minion=%s local_shard=%d "
+            "peer_shards=%s",
+            minion_id,
+            sum(len(v) for v in local_bucket.values()),
+            {k: sum(len(v) for v in r.values()) for k, r in peer_buckets.items()},
+        )
+        for owner, owner_resources in peer_buckets.items():
+            await self.publish_resource_register_write(
+                minion_id,
+                owner_resources,
+                originating_master,
+                target_master=owner,
+            )
+
     def _handle_delegate_cache_write(self, payload):
         """
         Peer-side handler for ``cluster/peer/delegate-cache-write``.
@@ -3887,6 +4041,27 @@ class MasterPubServerChannel:
                 loop = asyncio.get_event_loop()
                 loop.run_in_executor(None, self._handle_delegate_cache_write, payload)
                 return
+            if tag.startswith("cluster/peer/delegate-resource-register-write"):
+                # Cross-master resource-registry replication arrival:
+                # another master's ``__register_resources_sync`` fanned
+                # out a register.  Decrypt (cluster_aes) and apply the
+                # register locally; the free-function handler drops
+                # events whose ``originating_master`` equals our own
+                # ``opts["id"]`` so bus echo cannot loop.
+                try:
+                    crypticle = salt.crypt.Crypticle(
+                        self.opts,
+                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
+                    )
+                    payload = crypticle.loads(data)
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Failed to decrypt delegate-resource-register-write")
+                    return
+                loop = asyncio.get_event_loop()
+                loop.run_in_executor(
+                    None, self._handle_delegate_resource_register_write, payload
+                )
+                return
             if tag.startswith("cluster/peer/shed-request"):
                 # Operator-driven shed fan-out from a peer that ran
                 # ``cluster.shed_unowned_all``.  Decrypt the payload
@@ -4741,6 +4916,17 @@ class MasterPubServerChannel:
             # N-of-N replicate (encrypted peer-publish) and 1-of-N
             # ring delegation based on the payload's ``write_kind``.
             asyncio.create_task(self._run_delegate_cache_write(_decode_data()))
+            return
+        if tag == "cluster/runner/delegate_resource_register_write":
+            # Cross-master resource-registry replication: the
+            # master's ``__register_resources_sync`` fired this event
+            # after writing to the mmap-backed registry.  The payload
+            # carries ``{minion_id, resources, originating_master}``
+            # and is fanned out N-of-N to every peer master via an
+            # encrypted ``cluster/peer/delegate-resource-register-write``.
+            asyncio.create_task(
+                self._run_delegate_resource_register_write(_decode_data())
+            )
             return
         if tag in (
             "cluster/runner/ring_create",

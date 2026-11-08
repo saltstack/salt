@@ -208,6 +208,173 @@ def fire_delegate_cache_write_many(opts, bank, items, expires=None):
     fire_peer_cache_write_many(opts, bank, items, expires=expires, write_kind="ring")
 
 
+def _partition_resources_by_ring(ring, resources):
+    """
+    Split a ``{resource_type: [resource_id, ...]}`` dict by ring owner.
+
+    Returns ``{owner_node_id: {resource_type: [resource_id, ...]}}``.
+    The ring is consulted per-SRN (``"<type>:<id>"``) via
+    :meth:`HashRing.get_owner`; SRNs whose owner cannot be resolved
+    (empty ring) are returned under the ``None`` key so the caller
+    can fall back to broadcast for them.
+    """
+    import salt.utils.resource_registry  # pylint: disable=import-outside-toplevel
+
+    buckets = {}
+    for rtype, rids in (resources or {}).items():
+        for rid in rids or ():
+            srn = salt.utils.resource_registry.resource_index_srn_key(rtype, rid)
+            owner = ring.get_owner(srn)
+            per_owner = buckets.setdefault(owner, {})
+            per_owner.setdefault(rtype, []).append(rid)
+    return buckets
+
+
+def fire_resource_register_write(opts, minion_id, resources):
+    """
+    Fire a resource-registry write event for the publish daemon to
+    intercept and dispatch.
+
+    The MWorker handling ``_register_resources`` runs this to hand the
+    register off to the publish daemon.  The daemon
+    (:meth:`salt.channel.server.MasterPubServerChannel._run_delegate_resource_register_write`)
+    is the single place that owns the ring-vs-broadcast decision, the
+    local-shard mmap write, and the targeted-vs-fan-out peer publish
+    -- because the ``resource_index`` ring state only lives in the
+    daemon process (its per-ring Raft groups aren't visible across the
+    MWorker fork boundary).
+
+    :param opts:      Master opts dict (must contain ``id``).
+    :param minion_id: The reporting minion.
+    :param resources: ``{resource_type: [resource_id, ...]}`` -- the
+                      exact dict that was passed to the local
+                      ``update_resource_index`` call.
+    """
+    payload = {
+        "minion_id": minion_id,
+        "resources": resources,
+        "originating_master": opts.get("id"),
+    }
+    _fire_payload(
+        opts,
+        payload,
+        tag="cluster/runner/delegate_resource_register_write",
+    )
+
+
+def _get_resource_index_ring():
+    """
+    Return the local ``resource_index`` HashRing, or ``None`` if the
+    cluster module isn't importable (standalone test fixtures).
+    """
+    try:
+        import salt.cluster.ring_membership  # pylint: disable=import-outside-toplevel
+        import salt.utils.resource_registry  # pylint: disable=import-outside-toplevel
+    except Exception:  # pylint: disable=broad-except
+        return None
+    try:
+        return salt.cluster.ring_membership.get_ring(
+            salt.utils.resource_registry.RESOURCE_INDEX_RING_NAME
+        )
+    except Exception:  # pylint: disable=broad-except
+        return None
+
+
+def partition_resources_for_dispatch(opts, resources):
+    """
+    Split ``resources`` into ``(local_bucket, peer_buckets, ring_active)``
+    for the publish-daemon dispatcher.
+
+    Used by
+    :meth:`salt.channel.server.MasterPubServerChannel._run_delegate_resource_register_write`
+    inside the publish daemon process where the ``resource_index``
+    ring is populated.  When the ring is empty, returns the full
+    ``resources`` as the "broadcast everyone" bucket and no peer
+    buckets.  When populated, splits by :meth:`HashRing.get_owner`.
+
+    :param opts: Master opts dict.
+    :param resources: ``{resource_type: [resource_id, ...]}``.
+    :returns: ``(local_bucket, peer_buckets, ring_active)`` where
+              ``peer_buckets`` is ``{owner_node_id: resources_dict}``
+              for each remote owner, and ``ring_active`` is a
+              ``bool`` indicating ring routing is in effect.
+    """
+    import salt.cluster  # pylint: disable=import-outside-toplevel
+
+    ring = _get_resource_index_ring()
+    if ring is None or not ring.nodes():
+        return resources, {}, False
+    self_node = salt.cluster.node_id(opts) if opts.get("id") else None
+    buckets = _partition_resources_by_ring(ring, resources)
+    local = dict(buckets.get(self_node, {}))
+    # SRNs whose owner didn't resolve land locally so they're not lost
+    # to a fencepost in the ring state.
+    for rtype, rids in buckets.get(None, {}).items():
+        local.setdefault(rtype, []).extend(rids)
+    peers = {
+        owner: owner_resources
+        for owner, owner_resources in buckets.items()
+        if owner is not None and owner != self_node
+    }
+    return local, peers, True
+
+
+def _handle_delegate_resource_register_write(opts, payload):
+    """
+    Apply a peer-originated resource-registry write locally.
+
+    Peer-side counterpart to :func:`fire_resource_register_write`.
+    Same loop-safety shape as :func:`_handle_delegate_cache_write`:
+
+    1. Drop the event if ``originating_master`` equals this master's
+       ``opts["id"]`` -- bus bounce-back must not become a write.
+    2. Apply via :func:`salt.utils.minions.update_resource_index` so
+       the local write lands through the same code path as a
+       minion-originated register.  No ``_already_replicated`` flag
+       is needed because that function is a direct call to the
+       ``MmapCache``-backed ``ResourceRegistry.register_minion`` and
+       does not emit any further replication events.
+
+    Idempotency: ``register_minion`` replaces the full set of
+    resources for that minion, so a duplicate delivery converges to
+    the same state (and the per-minion delta it computes means no
+    spurious puts/deletes land either).
+
+    :param opts:    Master opts dict (must contain ``id``).
+    :param payload: Decoded event payload with keys
+                    ``originating_master``, ``minion_id``, ``resources``.
+    :returns:       ``True`` if the register was applied, ``False``
+                    if dropped (loop-guard or malformed payload).
+    """
+    if payload.get("originating_master") == opts.get("id"):
+        return False
+    minion_id = payload.get("minion_id")
+    if not minion_id:
+        log.warning(
+            "resource-replicate: incoming event missing minion_id; dropping %r",
+            payload,
+        )
+        return False
+    resources = payload.get("resources")
+    if resources is None:
+        log.warning(
+            "resource-replicate: incoming event missing resources; dropping %r",
+            payload,
+        )
+        return False
+    try:
+        import salt.utils.minions  # pylint: disable=import-outside-toplevel
+
+        salt.utils.minions.update_resource_index(opts, minion_id, resources)
+        return True
+    except Exception:  # pylint: disable=broad-except
+        log.exception(
+            "resource-replicate: failed to apply replicated register for %s",
+            minion_id,
+        )
+        return False
+
+
 def _handle_delegate_cache_write(opts, payload):
     """
     Apply a peer-originated cache write locally.

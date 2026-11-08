@@ -2894,16 +2894,64 @@ class AESFuncs(TransportMethods):
         # cache (:conf_master:`minion_data_cache`). Registration must always run
         # when minions report inventory; otherwise bare-id / T@ targeting breaks
         # silently while still returning success to the minion.
-        n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+        #
+        # Two cross-master register paths depending on ring configuration:
+        #
+        # * Standalone or broadcast (no ``resource_index`` ring configured):
+        #   write the full set locally here, fire a single broadcast
+        #   replication event; every peer applies the full set on arrival.
+        #
+        # * Ring-routed (operator ran ``salt-run cluster.ring_create
+        #   resource_index`` + ``cluster.route_set resource_index ring``):
+        #   the ring state only lives in the publish-daemon process (its
+        #   per-ring Raft groups aren't visible across the MWorker fork
+        #   boundary -- see ``salt/cluster/ring_membership.py`` module
+        #   docstring).  To avoid a double-write of peer-owned SRNs,
+        #   skip the local MWorker write entirely when the cluster is
+        #   healthy and defer both the local-owner shard write and the
+        #   peer fan-out to ``_run_delegate_resource_register_write``
+        #   in the publish daemon, which has ring access.
+        opts = self.opts or {}
+        cluster_mode = bool(
+            opts.get("cluster_id")
+            and opts.get("cluster_isolated_filesystem")
+            and opts.get("cluster_cache_replication") is not False
         )
-        log.debug(
-            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
-            load["id"],
-            list(load["resources"].keys()),
-            n_put,
-            n_del,
-        )
+        if not cluster_mode:
+            n_put, n_del = salt.utils.minions.update_resource_index(
+                self.opts, load["id"], load["resources"]
+            )
+            log.debug(
+                "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
+                load["id"],
+                list(load["resources"].keys()),
+                n_put,
+                n_del,
+            )
+        else:
+            log.debug(
+                "resource-registry: deferring local + peer register for "
+                "minion '%s' to publish-daemon via replication event",
+                load["id"],
+            )
+        # Cross-master replication: fire a cluster-runner event the publish
+        # daemon intercepts.  ``_run_delegate_resource_register_write``
+        # consults ``ring_membership.get_ring("resource_index")`` and
+        # either partitions by owner (ring-routed) or fans to every peer
+        # (broadcast fallback).  In cluster mode the daemon also owns
+        # the local-shard write so the MWorker here doesn't double-write.
+        if cluster_mode:
+            try:
+                from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+                    fire_resource_register_write,
+                )
+
+                fire_resource_register_write(opts, load["id"], load["resources"])
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "resource-replicate: failed to fan out register for %s",
+                    load["id"],
+                )
         fire_event = False
         # Persist per-resource grains in the ``resource_grains`` cache bank
         # so ``salt -G '<key>:<value>' …`` can match resources alongside
