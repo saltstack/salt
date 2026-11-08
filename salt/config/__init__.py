@@ -186,7 +186,7 @@ VALID_OPTS = immutabletypes.freeze(
         # total cap across the pool is
         # ``master_mworker_max_inflight * worker_threads``.  Coroutines
         # blocked on the semaphore create natural TCP / ZMQ backpressure
-        # — no error return, no dropped requests.
+        # -- no error return, no dropped requests.
         "master_mworker_max_inflight": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
@@ -230,9 +230,27 @@ VALID_OPTS = immutabletypes.freeze(
         # and can be sync'd as opaque blobs) and joining masters request a
         # bulk state-sync from an existing peer before becoming Raft voters.
         "cluster_isolated_filesystem": bool,
+        # Master switch for cross-master cache replication at the
+        # ``salt.cache.Cache`` facade.  When True (the default when
+        # ``cluster_id`` is set and ``cluster_isolated_filesystem`` is True)
+        # every ``cache.store()`` and ``cache.store_many()`` call fans
+        # out the write to every peer master in the cluster so each
+        # peer's local cachedir converges on the same state.  Peers
+        # with a shared filesystem (``cluster_isolated_filesystem:
+        # False``) don't need the fan-out -- they already see each
+        # other's writes on disk / in mmap.
+        "cluster_cache_replication": (bool, type(None)),
+        # Per-bank routing mode for cache writes on a clustered master.
+        # The value is a dict ``{bank_name: "ring" | "replicate"}``.
+        # Banks that aren't listed default to ``"replicate"`` (N-of-N
+        # fan-out to every peer).  ``"ring"`` delegates the write to
+        # the HashRing owner (today's ``cluster/peer/delegate-write``
+        # path -- 1-of-N).  A default-merged entry
+        # ``{"jobs": "ring"}`` preserves today's job-return behaviour.
+        "cluster_cache_routing": dict,
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
-        # compaction — fine for small clusters but unbounded growth at
+        # compaction -- fine for small clusters but unbounded growth at
         # scale.  Setting to a positive integer triggers
         # ``Log.snapshot()`` whenever the log reaches the threshold;
         # the snapshot envelope (``raft.snapshot.v1``) carries every
@@ -245,7 +263,7 @@ VALID_OPTS = immutabletypes.freeze(
         # late joiners that arrive after the cap is hit stay as
         # non-voting learners indefinitely.  Learners still receive
         # log replication and cluster events, so they remain useful
-        # for handling minion traffic — they just don't count toward
+        # for handling minion traffic -- they just don't count toward
         # election or commit quorum.
         "cluster_max_voters": (type(None), int),
         # Auto-replacement of failed voters (Ongaro thesis §6.4 single-server
@@ -1976,6 +1994,21 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pub_fingerprint": None,
         "cluster_secret": None,
         "cluster_isolated_filesystem": False,
+        # ``cluster_cache_replication`` default is resolved in
+        # ``apply_master_config`` because it depends on whether
+        # ``cluster_id`` is configured and whether the deployment is
+        # using an isolated per-master filesystem.  Keep the raw
+        # default here as False (non-clustered masters).
+        # ``None`` is the "unset" sentinel.  ``apply_master_config``
+        # resolves it to True when ``cluster_id`` AND
+        # ``cluster_isolated_filesystem`` are set, else False.
+        # Operators can force True/False explicitly in the master
+        # config.
+        "cluster_cache_replication": None,
+        # Per-bank routing dict; ``"jobs": "ring"`` default is merged
+        # in ``apply_master_config`` so operator overrides can still
+        # expand or override it.  See ``cluster_cache_replication``.
+        "cluster_cache_routing": {},
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
         "cluster_voter_health_check_interval": 1.0,
@@ -4452,6 +4485,35 @@ def master_config(
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
 
+#: Built-in per-bank cache routing defaults.  Operator-supplied entries
+#: in ``cluster_cache_routing`` win over these; banks absent from both
+#: default to ``"replicate"`` at the call site.  ``"jobs"`` is pinned to
+#: ``"ring"`` so today's single-owner job-return behaviour is preserved
+#: on upgrade (backward compat).
+_CLUSTER_CACHE_ROUTING_DEFAULTS = {"jobs": "ring"}
+
+
+def get_cluster_cache_routing(opts):
+    """
+    Return the effective per-bank cache routing for this master.
+
+    Merges operator-supplied ``opts["cluster_cache_routing"]`` with the
+    built-in defaults.  Operator entries win; the built-in ``"jobs":
+    "ring"`` is injected only when the operator has not supplied an
+    entry for it.
+
+    Banks absent from the result default to ``"replicate"`` at the
+    read site (``salt/cache/__init__.py:Cache.store``).
+
+    :param opts: Master opts dict.
+    :returns:    Dict of ``{bank_name: "ring"|"replicate"}``.
+    """
+    merged = dict(opts.get("cluster_cache_routing") or {})
+    for _bank, _mode in _CLUSTER_CACHE_ROUTING_DEFAULTS.items():
+        merged.setdefault(_bank, _mode)
+    return merged
+
+
 def apply_master_config(overrides=None, defaults=None):
     """
     Returns master configurations dict.
@@ -4608,6 +4670,23 @@ def apply_master_config(overrides=None, defaults=None):
         if opts.get("cluster_pki_dir", None):
             log.warning("Cluster pki dir defined without a cluster_id, ignoring.")
             opts["cluster_pki_dir"] = None
+
+    # Resolve cache-replication defaults.  The raw DEFAULT_MASTER_OPTS
+    # value is False (non-clustered masters never fan out); flip the
+    # default to True on clustered masters running with an isolated
+    # per-member filesystem, since that's where peers can't see each
+    # other's writes through the cachedir.  Operators can still force
+    # False explicitly in the master config.
+    if (
+        "cluster_cache_replication" not in opts
+        or opts["cluster_cache_replication"] is None
+    ):
+        opts["cluster_cache_replication"] = bool(
+            opts.get("cluster_id") and opts.get("cluster_isolated_filesystem")
+        )
+    # Merge the default per-bank routing map via the public resolver so
+    # the merge rule has a single source of truth.
+    opts["cluster_cache_routing"] = get_cluster_cache_routing(opts)
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!

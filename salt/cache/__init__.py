@@ -19,6 +19,27 @@ from salt.utils.decorators import cached_property
 log = logging.getLogger(__name__)
 
 
+# Thread-local re-entrancy guard for cross-master cache replication.
+# ``Cache.store`` / ``Cache.store_many`` consult this flag before
+# emitting a ``cluster/runner/delegate_cache_write`` event: a peer-side
+# handler (see ``salt/channel/server.py:_handle_delegate_cache_write``)
+# applies incoming replication writes by calling ``cache.store`` again
+# with the flag set, which must NOT re-broadcast or we'd build an
+# infinite fan-out loop across the cluster.  The ``originating_master``
+# check in the peer-side handler is the primary loop-safety guard; this
+# thread-local is the second line of defense.
+_REPLICATION_STATE = threading.local()
+
+
+def _set_already_replicated(flag):
+    """Mark the current thread as applying a peer-originated write."""
+    _REPLICATION_STATE.already_replicated = bool(flag)
+
+
+def _is_already_replicated():
+    return getattr(_REPLICATION_STATE, "already_replicated", False)
+
+
 def factory(opts, **kwargs):
     """
     Creates and returns the cache class.
@@ -76,6 +97,11 @@ class Cache:
 
     @cached_property
     def modules(self):
+        # Honor a pre-populated ``_modules`` dict so tests and
+        # non-loader-driven callers can inject a mock driver without
+        # touching the cached_property machinery.
+        if self._modules is not None:
+            return self._modules
         return salt.loader.cache(self.opts)
 
     @cached_property
@@ -129,7 +155,7 @@ class Cache:
 
         return data
 
-    def store(self, bank, key, data, expires=None):
+    def store(self, bank, key, data, expires=None, _already_replicated=False):
         """
         Store data using the specified module
 
@@ -149,13 +175,21 @@ class Cache:
         :param expires:
             how many seconds from now the data should be considered stale.
 
+        :param _already_replicated:
+            Internal flag used by the cluster-cache replication facade.
+            When True the local write proceeds but no cross-master
+            fan-out is performed.  The peer-side handler passes this
+            when applying an incoming replication event so the same
+            write doesn't bounce back to every peer again.  Not part
+            of the public API.
+
          :raises SaltCacheError:
             Raises an exception if cache driver detected an error accessing data
             in the cache backend (auth, permissions, etc).
         """
         fun = f"{self.driver}.store"
         try:
-            return self.modules[fun](bank, key, data, expires=expires, **self.kwargs)
+            result = self.modules[fun](bank, key, data, expires=expires, **self.kwargs)
         except TypeError:
             # if the backing store doesnt natively support expiry, we handle it as a fallback
             if expires:
@@ -163,11 +197,130 @@ class Cache:
                     seconds=expires
                 )
                 expires_at = int(expires_at.timestamp())
-                return self.modules[fun](
+                result = self.modules[fun](
                     bank, key, {"data": data, "_expires": expires_at}, **self.kwargs
                 )
             else:
-                return self.modules[fun](bank, key, data, **self.kwargs)
+                result = self.modules[fun](bank, key, data, **self.kwargs)
+        # Cross-master replication fan-out at the facade.  Guarded so
+        # non-clustered masters and shared-FS clusters pay no overhead.
+        # The peer-side re-dispatch arrives with
+        # ``_already_replicated=True`` and skips this block, breaking
+        # the loop (combined with the ``originating_master`` check in
+        # the handler).
+        if not _already_replicated and not _is_already_replicated():
+            self._maybe_replicate_write(bank, key, data, expires)
+        return result
+
+    def store_many(self, bank, items, expires=None, _already_replicated=False):
+        """
+        Store multiple ``(key, data)`` pairs in a single bank.
+
+        A thin wrapper over :meth:`store` that applies the same
+        cross-master replication semantics.  The default
+        implementation loops; drivers that expose a bulk store
+        primitive can still accelerate the per-key hot path via the
+        underlying driver module (the facade intentionally keeps the
+        fan-out per-key so replication-ordering stays well-defined).
+
+        :param bank: The bank name.
+        :param items: Iterable of ``(key, data)`` tuples.
+        :param expires: Optional seconds-from-now expiry applied to
+            every stored entry.
+        :param _already_replicated: Internal flag; see :meth:`store`.
+        """
+        # Suppress replication during the inner per-key stores and
+        # emit a single batched replication event after the local
+        # writes land.  This keeps the wire-cost proportional to
+        # batch count rather than batch size.
+        if isinstance(items, dict):
+            pairs = list(items.items())
+        else:
+            pairs = list(items)
+        token_prev = _is_already_replicated()
+        _set_already_replicated(True)
+        try:
+            for key, data in pairs:
+                self.store(bank, key, data, expires=expires, _already_replicated=True)
+        finally:
+            _set_already_replicated(token_prev)
+        if not _already_replicated and not token_prev:
+            self._maybe_replicate_write_many(bank, pairs, expires)
+
+    def _maybe_replicate_write(self, bank, key, data, expires):
+        """
+        Fan a local cache write out to cluster peers.
+
+        Consults ``cluster_cache_replication`` (master switch) and
+        ``cluster_cache_routing[bank]`` (per-bank routing) to decide
+        between three outcomes:
+
+        - **replicate**: emit ``cluster/runner/delegate_cache_write``
+          (handled by ``MasterPubServerChannel.publish_payload`` ->
+          ``publish_cache_write`` -> every peer).  N-of-N fan-out.
+        - **ring**: delegate to the existing HashRing owner via the
+          ``cluster/runner/delegate_write`` event (1-of-N).  Kept
+          for backward compatibility of the ``jobs`` bank.
+        - **skip**: non-clustered master, shared-FS mode, or an
+          unrecognised routing mode -- the local write stands alone.
+
+        TODO: partial-peer failures are non-destructive today (the
+        originating master's local write already succeeded); catch-up
+        of a dropped peer is the state-sync expert's lane.  See
+        ``agents/scratch/cache-replicate-primary.md``.
+        """
+        opts = self.opts or {}
+        if not opts.get("cluster_id"):
+            return
+        # Isolated-FS is the only mode where peers can't see each
+        # other's local-store writes; shared-FS clusters are a no-op.
+        if not opts.get("cluster_isolated_filesystem"):
+            return
+        # Default-on when the cluster+isolated-FS preconditions are
+        # met; operators can force False.  Mirrors the resolution in
+        # ``apply_master_config`` for callers that build opts without
+        # going through the config loader.
+        if opts.get("cluster_cache_replication") is False:
+            return
+        from salt.config import (
+            get_cluster_cache_routing,  # pylint: disable=import-outside-toplevel
+        )
+
+        routing = get_cluster_cache_routing(opts)
+        mode = routing.get(bank, "replicate")
+        if mode == "ring":
+            self._fire_ring_delegate(bank, key, data, expires)
+        elif mode == "replicate":
+            self._fire_replicate(bank, key, data, expires)
+        else:
+            log.warning(
+                "cluster-cache-replication: unknown routing %r for bank %r; "
+                "treating as 'replicate'",
+                mode,
+                bank,
+            )
+            self._fire_replicate(bank, key, data, expires)
+
+    def _maybe_replicate_write_many(self, bank, pairs, expires):
+        """Batched replication: one event per key, same gate as single store."""
+        for key, data in pairs:
+            self._maybe_replicate_write(bank, key, data, expires)
+
+    def _fire_replicate(self, bank, key, data, expires):
+        """Fan this write out to every peer master (see replicator module)."""
+        from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+            fire_peer_cache_write,
+        )
+
+        fire_peer_cache_write(self.opts, bank, key, data, expires)
+
+    def _fire_ring_delegate(self, bank, key, data, expires):
+        """Route this write to the HashRing owner (see replicator module)."""
+        from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+            fire_delegate_cache_write,
+        )
+
+        fire_delegate_cache_write(self.opts, bank, key, data, expires)
 
     def fetch(self, bank, key):
         """
@@ -479,13 +632,18 @@ class MemCache(Cache):
             storage[(bank, key)] = [now, self.expire, data]
         return data
 
-    def store(self, bank, key, data, expires=None):
+    def store(self, bank, key, data, expires=None, _already_replicated=False):
         storage = self.storage
         with MemCache._lock:
             storage.pop((bank, key), None)
         # ``super().store`` calls the driver (disk / db); keep it off the
         # lock so concurrent stores don't serialise on returner I/O.
-        super().store(bank, key, data, expires=expires)
+        # Only forward the replication flag when it's set to True so
+        # legacy mock-based tests keep seeing the original call shape.
+        if _already_replicated:
+            super().store(bank, key, data, expires=expires, _already_replicated=True)
+        else:
+            super().store(bank, key, data, expires=expires)
         with MemCache._lock:
             if len(storage) >= self.max:
                 if self.cleanup:
