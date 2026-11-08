@@ -19,6 +19,13 @@ Scenario
   - A learner node: gate opens as soon as promotion CONFIG commits.
   - Gate stays closed on a node that is never added to the voter set.
   - The ready event survives once set: subsequent membership changes keep it set.
+
+Restart
+  - A cluster that bootstrapped once and committed the founding CONFIG must
+    reach ``cluster_ready`` again on restart, without re-proposing it.
+    Raft §5.4.2 forbids committing a prior-term entry by replication count
+    alone, so the new leader must append a current-term barrier entry to
+    unblock commit of the restored founding CONFIG.
 """
 
 import asyncio
@@ -461,3 +468,184 @@ class TestLearnerReadinessScenario:
             assert fired == ["m1"], "on_ready must fire exactly once"
         finally:
             loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Scenario: restart with persisted state
+# ---------------------------------------------------------------------------
+
+
+class TestClusterReadyOnRestart:
+    """
+    Regression tests for the restart-with-persisted-state bootstrap bug.
+
+    Repro in the field: three cluster masters bootstrap cleanly on a
+    fresh cachedir, then are stopped and restarted with the same
+    ``cache/consensus`` / ``cache/raft`` state on disk.  On restart the
+    Raft log is loaded from storage (founding CONFIG at index 0, term
+    N), but ``commit_index`` is not persisted so it comes back at -1
+    and ``MembershipStateMachine`` is empty.  A new leader is elected
+    in term N+1 but — per Raft §5.4.2 — cannot commit the index-0
+    CONFIG by replication count alone because its term is less than
+    the leader's current term.  Nothing new is proposed in steady
+    state so ``commit_index`` stays at -1 forever, ``_on_ready`` never
+    fires, and ``_cluster_is_ready`` returns ``False`` indefinitely.
+
+    The fix: ``Node.become_leader`` appends a NOOP barrier in the new
+    leader's term when the log carries uncommitted prior-term entries.
+    Replicating + committing the NOOP transitively commits every prior
+    entry, including the restored founding CONFIG, which the
+    ``MembershipStateMachine`` then applies, firing ``on_change`` /
+    ``_on_ready`` on every node whose id is in the voter set.
+    """
+
+    def test_cluster_ready_fires_on_restart_from_persisted_log(self, tmp_path):
+        """
+        Bootstrap → stop → restart with the same cachedir.  Within
+        a bounded number of ticks, every founding node fires
+        ``on_ready`` again; ``commit_index`` advances past the
+        founding CONFIG; ``MembershipStateMachine`` applies the
+        restored voter set.
+        """
+        cachedir = str(tmp_path)
+        node_ids = ["m1", "m2", "m3"]
+
+        # Phase 1: fresh bootstrap.
+        cluster, fired = _make_cluster_with_ready_tracking(node_ids, cachedir)
+
+        async def _bootstrap():
+            await cluster.elect()
+            for _ in range(30):
+                cluster.tick()
+                await cluster.deliver(rounds=8)
+
+        _run(_bootstrap())
+
+        # All three ready after fresh bootstrap — baseline.
+        assert set(fired) == set(node_ids), (
+            f"Pre-restart baseline: on_ready must fire on every "
+            f"founding node; fired={fired}"
+        )
+        # Founding CONFIG committed at index 0, SM populated.
+        for nid, svc in cluster.services.items():
+            assert svc._node.log.commit_index >= 0
+            assert set(svc._node.membership_sm.current_voters()) == set(node_ids)
+
+        # Phase 2: restart — rebuild ServiceCluster against the same
+        # cachedir.  Nothing about the on-disk state is touched.
+        cluster2, fired2 = _make_cluster_with_ready_tracking(node_ids, cachedir)
+
+        # Immediately post-construction, each node has loaded the log
+        # from storage but ``commit_index`` is not persisted so it
+        # resets to -1 and the membership SM is empty.
+        for nid, svc in cluster2.services.items():
+            assert len(svc._node.log.entries) >= 1
+            assert svc._node.log.commit_index == -1
+            assert svc._node.membership_sm.current_voters() == []
+
+        # Pre-restart: no readiness signals have fired yet.
+        assert fired2 == [], (
+            f"on_ready must not fire during RaftService construction; "
+            f"fired2={fired2}"
+        )
+
+        # Phase 3: drive election + heartbeats.  A bounded loop
+        # mirrors the real-world "within ~10s" expectation from the
+        # field repro.
+        async def _restart():
+            await cluster2.elect()
+            for _ in range(60):
+                cluster2.tick()
+                await cluster2.deliver(rounds=8)
+
+        _run(_restart())
+
+        # With the fix: every founding node fires on_ready; commit
+        # index advances past the founding CONFIG; SM applies the
+        # restored voter set.  Without the fix: fired2 stays empty.
+        assert set(fired2) == set(node_ids), (
+            f"RESTART REGRESSION: on_ready must fire on every "
+            f"founding node after restart from persisted state; "
+            f"fired={fired2}"
+        )
+        for nid, svc in cluster2.services.items():
+            assert svc._node.log.commit_index >= 0, (
+                f"{nid!r}: commit_index must advance past founding CONFIG "
+                f"after restart (got {svc._node.log.commit_index})"
+            )
+            assert set(svc._node.membership_sm.current_voters()) == set(node_ids), (
+                f"{nid!r}: MembershipStateMachine must reapply restored "
+                f"voter set (got {svc._node.membership_sm.current_voters()})"
+            )
+
+    def test_signal_cluster_ready_idempotent(self, tmp_path):
+        """
+        ``_signal_cluster_ready`` must be safe to call multiple times.
+        A re-fire of ``on_ready`` after restart (should any exist)
+        must leave the event set and not raise.
+        """
+        import salt.master
+        from salt.channel.server import MasterPubServerChannel
+
+        event = multiprocessing.Event()
+        orig_secrets = salt.master.SMaster.secrets.copy()
+        try:
+            salt.master.SMaster.secrets["cluster_ready"] = {"event": event}
+            ch = MasterPubServerChannel.__new__(MasterPubServerChannel)
+            ch.opts = {}
+
+            ch._signal_cluster_ready()
+            assert event.is_set()
+
+            # Second invocation must also succeed and keep the event set.
+            ch._signal_cluster_ready()
+            assert event.is_set()
+        finally:
+            salt.master.SMaster.secrets.clear()
+            salt.master.SMaster.secrets.update(orig_secrets)
+
+    def test_noop_barrier_appended_on_become_leader_with_prior_term_log(self, tmp_path):
+        """
+        Direct unit of the fix: on a Node whose log already carries
+        entries from a prior term (simulating restart), ``become_leader``
+        appends a NOOP barrier in the new term.  On a fresh Node with an
+        empty log, ``become_leader`` must NOT append a NOOP (that would
+        shift the founding CONFIG and break ``_maybe_commit_founding_config``).
+        """
+        from salt.cluster.consensus.raft.log import LogEntryType
+        from salt.cluster.consensus.raft.node import Node
+        from salt.cluster.consensus.raft.scheduler import ManualTimeoutScheduler
+
+        scheduler = ManualTimeoutScheduler()
+
+        # Case A: empty log — no NOOP should be appended.  With zero
+        # peers, ``become_candidate`` fast-paths to ``become_leader``
+        # (nothing to elect), so we only need the candidate transition
+        # to exercise ``become_leader``.
+        empty_node = Node("n1", peers=[])
+        empty_node.register_schedule_timeout(scheduler.schedule)
+        empty_node.become_follower()
+        empty_node.become_candidate()
+        assert str(empty_node.state) == "leader"
+        assert len(empty_node.log.entries) == 0, (
+            "NOOP barrier must NOT be appended when log is empty — the "
+            "founding CONFIG path keys on log.index < 0 and would be "
+            "permanently suppressed."
+        )
+
+        # Case B: log has a prior-term CONFIG — NOOP barrier required.
+        restart_node = Node("n2", peers=[])
+        restart_node.register_schedule_timeout(scheduler.schedule)
+        restart_node.log.append(
+            1,
+            {"voters": ["n2", "n3", "n4"], "learners": []},
+            entry_type=LogEntryType.CONFIG,
+        )
+        restart_node.term = 2  # simulate post-restart (same term as log)
+        restart_node.become_follower()
+        restart_node.become_candidate()  # bumps to term 3, fast-paths to leader
+        assert str(restart_node.state) == "leader"
+        # Log must now carry [CONFIG@term1, NOOP@term3].
+        assert len(restart_node.log.entries) == 2
+        assert restart_node.log.entries[-1].type == LogEntryType.NOOP
+        assert restart_node.log.entries[-1].term == restart_node.term
