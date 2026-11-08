@@ -460,3 +460,67 @@ def test_disabled_replication_no_peer_write(
         f"cluster_cache_replication=False must suppress fan-out; "
         f"master_2 unexpectedly observed {got!r} for {sentinel_key!r}"
     )
+
+
+def test_rejoining_master_catches_up(
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+    cluster_master_4_isolated,
+):
+    """
+    Invariant: a master that joins the cluster after writes have
+    already landed on peers must receive the pre-join contents of
+    every replicate-mode bank via the join-time state-sync catch-up
+    (``bank_sync:<bank>`` channels), not only live deltas.
+
+    The first three isolated masters form the cluster; a seeded
+    write on master_1 fans out to master_2 and master_3 via the
+    normal replication path.  When master_4 joins late, its
+    local cache must observe the seeded key within the state-sync
+    receive window.
+    """
+    masters_pre = [
+        cluster_master_1_isolated,
+        cluster_master_2_isolated,
+        cluster_master_3_isolated,
+    ]
+    sentinel_key = "rejoin-catchup-sentinel"
+    sentinel_val = {"written_by": "master_1", "stage": "pre-join"}
+
+    _store_on_master(cluster_master_1_isolated, "grains", sentinel_key, sentinel_val)
+
+    # The seed write replicates to the other two running masters
+    # via the live replication path; assert that so the test
+    # isolates the join-time catch-up from the live path.
+    for m in masters_pre:
+        got = _wait_for_fetch(
+            m,
+            "grains",
+            sentinel_key,
+            predicate=lambda v: v == sentinel_val,
+            timeout=30,
+        )
+        assert got == sentinel_val, (
+            f"pre-join seed did not replicate to running peer "
+            f"{m.config['interface']!r}; got {got!r}"
+        )
+
+    # master_4 was brought up by the fixture; by the time the
+    # fixture yields it has completed the join handshake and the
+    # state-sync stream (including the new bank_sync:grains channel)
+    # should have deposited the seed.  Give the catch-up a generous
+    # window and assert.
+    got = _wait_for_fetch(
+        cluster_master_4_isolated,
+        "grains",
+        sentinel_key,
+        predicate=lambda v: v == sentinel_val,
+        timeout=60,
+    )
+    assert got == sentinel_val, (
+        f"late-joining master_4 did not receive the pre-join 'grains' "
+        f"entry via state-sync catch-up; got {got!r}. The "
+        f"bank_sync:grains channel is the only path that could have "
+        f"carried this key."
+    )

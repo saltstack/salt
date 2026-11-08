@@ -2255,12 +2255,107 @@ class MasterPubServerChannel:
         the free-function form is testable without instantiating this
         channel class and is the single source of truth for the
         peer-apply logic.
+
+        Barrier: when a state-sync session is in flight and still
+        shipping a catch-up snapshot for the same top-level bank
+        this delta belongs to, queue the delta and apply it after
+        the matching ``bank_sync:<bank>`` channel eofs.  Without this
+        barrier a late stale-snapshot chunk can overwrite a fresh
+        live delta ("stale wins" ordering).
         """
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
 
+        bank = None
+        if isinstance(payload, dict):
+            bank = payload.get("bank")
+        if bank and self._cache_bank_barrier_active(bank):
+            self._queue_cache_bank_delta(bank, payload)
+            return None
         return salt.cache._cluster_replicator._handle_delegate_cache_write(
             self.opts, payload
         )
+
+    def _cache_bank_barrier_active(self, bank):
+        """
+        Return True if any registered state-sync session is still
+        catching up the top-level bank *bank* belongs to.
+
+        Uses longest-prefix match on the barrier's bank name so a
+        compound delta bank (``grains/<minion>``) matches a top-level
+        barrier bank (``grains``).
+        """
+        barriers = getattr(self, "_cache_bank_barriers", None) or {}
+        if not barriers:
+            return False
+        for banks in barriers.values():
+            for pending in banks:
+                if bank == pending or bank.startswith(pending + "/"):
+                    return True
+        return False
+
+    def _queue_cache_bank_delta(self, bank, payload):
+        """
+        Queue a live ``delegate-cache-write`` payload behind the
+        matching pending bank's catch-up stream.
+        """
+        barriers = getattr(self, "_cache_bank_barriers", None) or {}
+        for banks in barriers.values():
+            for pending, queue in banks.items():
+                if bank == pending or bank.startswith(pending + "/"):
+                    queue.append(payload)
+                    return
+
+    def _release_cache_bank_barrier(self, session_id, bank):
+        """
+        Drain the queued live writes for *bank* on *session_id* and
+        drop the bank from the session's barrier set.
+
+        Called from :meth:`_apply_state_sync_chunk` when a
+        ``bank_sync:<bank>`` channel reports eof.  Applied via the
+        same free-function handler the live path uses so the
+        ``originating_master`` guard and ``_already_replicated``
+        flag flow through identically.
+        """
+        import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+
+        barriers = getattr(self, "_cache_bank_barriers", None) or {}
+        session_banks = barriers.get(session_id)
+        if not session_banks:
+            return
+        queue = session_banks.pop(bank, None) or []
+        if not session_banks:
+            barriers.pop(session_id, None)
+        for queued_payload in queue:
+            try:
+                salt.cache._cluster_replicator._handle_delegate_cache_write(
+                    self.opts, queued_payload
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "state-sync barrier: failed to replay queued "
+                    "delegate-cache-write for %s",
+                    bank,
+                )
+        if queue:
+            log.info(
+                "state-sync %s/%s barrier released; drained %d queued writes",
+                session_id,
+                bank,
+                len(queue),
+            )
+
+    def _drain_cache_bank_barrier(self, session_id):
+        """
+        Drain every bank's queued writes for *session_id* (used when
+        on_complete fires via the watchdog rather than eof-of-all-
+        channels).  Keeps the barrier a bounded-latency hold.
+        """
+        barriers = getattr(self, "_cache_bank_barriers", None) or {}
+        session_banks = barriers.get(session_id)
+        if not session_banks:
+            return
+        for bank in list(session_banks.keys()):
+            self._release_cache_bank_barrier(session_id, bank)
 
     async def _run_delegate_cache_write(self, payload):
         """
@@ -2801,21 +2896,30 @@ class MasterPubServerChannel:
             peer_id,
         )
 
-    async def _send_state_sync_chunks(self, session_id, peer_id):
+    async def _send_state_sync_chunks(self, session_id, peer_id, cache_banks=None):
         """
         Stream the four state-sync channels (keys, denied_keys,
-        file_roots, pillar_roots) to a freshly joined peer.
+        file_roots, pillar_roots) to a freshly joined peer, plus any
+        replicate-mode cache banks named in *cache_banks* (join-time
+        catch-up for peers that joined after writes already landed).
 
         Each channel runs to completion independently and emits at least
         one chunk (an empty chunk with ``eof=True`` if the channel has
         no data).  All chunks are encrypted with the cluster session AES
         key -- the joiner has it from the join-reply we just sent.
+
+        :param cache_banks: Optional iterable of top-level bank names.
+            Each bank is streamed as a ``bank_sync:<bank>`` channel;
+            the joiner's ``_begin_state_sync_session`` has already
+            registered them on the per-session state machine.
         """
         from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
             DENIED_CHANNEL,
             FILE_ROOTS_CHANNEL,
             KEYS_CHANNEL,
             PILLAR_ROOTS_CHANNEL,
+            bank_sync_channel,
+            iter_cache_bank_chunks,
             iter_keys_chunks,
             iter_root_chunks,
         )
@@ -2867,10 +2971,12 @@ class MasterPubServerChannel:
                 peer_id,
             )
 
-        # Run the four channels concurrently -- each finishes when it
-        # finishes, and a slow file_roots stream does not block keys.
+        # Run the four core channels concurrently -- each finishes when
+        # it finishes, and a slow file_roots stream does not block keys.
+        # Replicate-mode cache banks race alongside as extra
+        # ``bank_sync:<bank>`` channels.
         try:
-            await asyncio.gather(
+            tasks = [
                 send_channel(KEYS_CHANNEL, iter_keys_chunks(self.opts, KEYS_CHANNEL)),
                 send_channel(
                     DENIED_CHANNEL, iter_keys_chunks(self.opts, DENIED_CHANNEL)
@@ -2883,7 +2989,15 @@ class MasterPubServerChannel:
                     PILLAR_ROOTS_CHANNEL,
                     iter_root_chunks(self.opts.get("pillar_roots")),
                 ),
-            )
+            ]
+            for bank in cache_banks or []:
+                tasks.append(
+                    send_channel(
+                        bank_sync_channel(bank),
+                        iter_cache_bank_chunks(self.opts, bank),
+                    )
+                )
+            await asyncio.gather(*tasks)
         except Exception:  # pylint: disable=broad-except
             log.exception("state-sync session %s aborted unexpectedly", session_id)
         finally:
@@ -2904,7 +3018,9 @@ class MasterPubServerChannel:
             KEYS_CHANNEL,
             PILLAR_ROOTS_CHANNEL,
             bank_from_channel,
+            bank_from_sync_channel,
             install_bank_chunk,
+            install_bank_sync_chunk,
             install_keys_chunk,
             install_root_chunk,
         )
@@ -2937,21 +3053,29 @@ class MasterPubServerChannel:
             elif channel == PILLAR_ROOTS_CHANNEL:
                 installed = install_root_chunk(self.opts.get("pillar_roots"), items)
             else:
-                # ``bank:<bank_name>`` channels carry arbitrary cache
-                # entries -- used by ``cluster.collect_from_peers``
-                # for caches outside the four join-time channels.
-                bank = bank_from_channel(channel)
-                if bank:
-                    installed = install_bank_chunk(self.opts, bank, items)
+                # ``bank_sync:<bank>`` channels are the join-time
+                # catch-up stream -- apply with
+                # ``_already_replicated=True`` so the receiver does
+                # NOT re-broadcast.  ``bank:<bank>`` channels are
+                # operator-triggered collects (plain store).
+                sync_bank = bank_from_sync_channel(channel)
+                if sync_bank:
+                    installed = install_bank_sync_chunk(self.opts, sync_bank, items)
+                    if eof:
+                        self._release_cache_bank_barrier(session_id, sync_bank)
                 else:
-                    log.warning(
-                        "state-sync chunk for unknown channel %r "
-                        "(session=%s seq=%s)",
-                        channel,
-                        session_id,
-                        seq,
-                    )
-                    return
+                    bank = bank_from_channel(channel)
+                    if bank:
+                        installed = install_bank_chunk(self.opts, bank, items)
+                    else:
+                        log.warning(
+                            "state-sync chunk for unknown channel %r "
+                            "(session=%s seq=%s)",
+                            channel,
+                            session_id,
+                            seq,
+                        )
+                        return
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "state-sync %s/%s seq=%s install failed",
@@ -2975,24 +3099,40 @@ class MasterPubServerChannel:
             self._record_collect_chunk(channel, installed, eof)
         session.record_chunk(channel, seq, eof, installed)
 
-    def _begin_state_sync_session(self, session_id, known_peers, discover_event):
+    def _begin_state_sync_session(
+        self, session_id, known_peers, discover_event, cache_banks=None
+    ):
         """
         Register a state-sync session and arm its watchdog timer.
 
         Called from the join-reply handler once we know the responder is
         running with ``cluster_isolated_filesystem=True`` and intends to
-        push the four chunked channels at us.  The session's
-        ``on_complete`` callback fires
-        :meth:`_start_raft_as_learner` exactly once, either when all four
+        push the chunked channels at us.  The session's
+        ``on_complete`` callback fires :meth:`_start_raft_as_learner`
+        exactly once, either when all core AND cache-bank catch-up
         channels report eof or when the deadline expires.
+
+        :param cache_banks: Optional iterable of top-level bank names
+            the responder named in the join-reply.  Each bank gets a
+            ``bank_sync:<bank>`` channel registered on the session and
+            added to the per-session barrier set so live
+            ``delegate-cache-write`` deltas for those banks are
+            queued until the matching catch-up channel eofs.
         """
         from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+            ALL_CHANNELS,
             DEFAULT_RECEIVE_TIMEOUT,
             StateSyncSession,
+            bank_sync_channel,
         )
 
         if not hasattr(self, "_state_sync_sessions"):
             self._state_sync_sessions = {}
+        if not hasattr(self, "_cache_bank_barriers"):
+            # Per-session {bank: [queued_payload, ...]} mapping used
+            # by ``_handle_delegate_cache_write`` to queue live writes
+            # until the matching ``bank_sync:<bank>`` channel eofs.
+            self._cache_bank_barriers = {}
 
         if session_id in self._state_sync_sessions:
             log.warning(
@@ -3000,6 +3140,9 @@ class MasterPubServerChannel:
                 session_id,
             )
             return
+
+        banks = list(cache_banks or [])
+        channels = list(ALL_CHANNELS) + [bank_sync_channel(b) for b in banks]
 
         completed_holder = {"done": False}
 
@@ -3022,14 +3165,19 @@ class MasterPubServerChannel:
                     handle.cancel()
                 except Exception:  # pylint: disable=broad-except
                     pass
+            # Drain any still-queued barriered writes (deadline-forced
+            # completion may leave queued items behind).
+            self._drain_cache_bank_barrier(session_id)
             # Drop the session from the registry -- keep memory bounded.
             self._state_sync_sessions.pop(session_id, None)
 
-        session = StateSyncSession(session_id, _on_complete)
+        session = StateSyncSession(session_id, _on_complete, channels=channels)
         # Stash the watchdog handle on the session so on_complete can
         # cancel it; created below.
         session.watchdog_handle = None
         self._state_sync_sessions[session_id] = session
+        if banks:
+            self._cache_bank_barriers[session_id] = {bank: [] for bank in banks}
 
         try:
             loop = asyncio.get_event_loop()
@@ -3995,9 +4143,13 @@ class MasterPubServerChannel:
                 # (or the per-session deadline elapses).
                 known_peers = {p: inner["peers"][p] for p in inner.get("peers", {})}
                 state_sync_session = inner.get("state_sync_session")
+                state_sync_cache_banks = inner.get("state_sync_cache_banks") or []
                 if state_sync_session and self.opts.get("cluster_isolated_filesystem"):
                     self._begin_state_sync_session(
-                        state_sync_session, known_peers, event
+                        state_sync_session,
+                        known_peers,
+                        event,
+                        cache_banks=state_sync_cache_banks,
                     )
                 else:
                     # Either the responder isn't running with isolated-FS
@@ -4213,13 +4365,36 @@ class MasterPubServerChannel:
                 # a Raft learner; per-channel chunking lets each stream
                 # progress independently and isolates failures.
                 state_sync_session_id = None
+                state_sync_cache_banks = []
                 if self.opts.get("cluster_isolated_filesystem"):
                     from salt.cluster.state_sync import (  # pylint: disable=import-outside-toplevel
+                        enumerate_replicate_banks,
                         new_session_id,
                     )
 
                     state_sync_session_id = new_session_id()
                     inner_payload["state_sync_session"] = state_sync_session_id
+                    # Catch-up list: every replicate-mode bank this
+                    # responder currently holds.  The joiner uses this
+                    # to pre-register the extra ``bank_sync:<bank>``
+                    # channels on its StateSyncSession AND to gate
+                    # live ``delegate-cache-write`` arrivals behind
+                    # the catch-up stream for the same bank (barrier
+                    # ordering).
+                    if self.opts.get("cluster_state_sync_cache_banks"):
+                        try:
+                            state_sync_cache_banks = enumerate_replicate_banks(
+                                self.opts
+                            )
+                        except Exception:  # pylint: disable=broad-except
+                            log.exception(
+                                "state-sync: enumerate_replicate_banks failed; "
+                                "shipping join-reply without cache-bank catch-up"
+                            )
+                            state_sync_cache_banks = []
+                    inner_payload["state_sync_cache_banks"] = list(
+                        state_sync_cache_banks
+                    )
                 tosign = salt.payload.package(inner_payload)
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     tosign, algorithm=self.opts["publish_signing_algorithm"]
@@ -4239,7 +4414,9 @@ class MasterPubServerChannel:
                 if state_sync_session_id is not None:
                     asyncio.get_event_loop().create_task(
                         self._send_state_sync_chunks(
-                            state_sync_session_id, payload["peer_id"]
+                            state_sync_session_id,
+                            payload["peer_id"],
+                            cache_banks=state_sync_cache_banks,
                         )
                     )
             elif tag.startswith("cluster/peer/discover-reply"):

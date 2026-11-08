@@ -262,6 +262,16 @@ VALID_OPTS = immutabletypes.freeze(
         # grain-shaped records and keeps catch-up latency bounded when
         # a peer is behind.
         "cluster_cache_replicate_batch_size": int,
+        # Join-time catch-up for replicate-mode cache banks.  When True
+        # (the default when ``cluster_cache_replication`` is True) a
+        # newly-joining master receives every replicate-mode bank's
+        # current contents as chunked state-sync-chunk events before
+        # it applies live delegate-cache-write deltas, so writes that
+        # landed before the join aren't stale on the new peer.
+        # Operators can set this False to accept eventual-consistency
+        # catch-up through natural write churn.  ``None`` is the
+        # "unset" sentinel resolved in ``apply_master_config``.
+        "cluster_state_sync_cache_banks": (bool, type(None)),
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
         # compaction -- fine for small clusters but unbounded growth at
@@ -2036,6 +2046,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         # expand or override it.  See ``cluster_cache_replication``.
         "cluster_cache_routing": {},
         "cluster_cache_replicate_batch_size": 1024,
+        # Join-time cache-bank catch-up default -- resolved in
+        # ``apply_master_config`` to match ``cluster_cache_replication``.
+        "cluster_state_sync_cache_banks": None,
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
         "cluster_voter_health_check_interval": 1.0,
@@ -4734,6 +4747,16 @@ def apply_master_config(overrides=None, defaults=None):
     ):
         opts["cluster_cache_replication"] = bool(
             opts.get("cluster_id") and opts.get("cluster_isolated_filesystem")
+        )
+    # Join-time cache-bank catch-up follows the same master-switch --
+    # enabled when replication is on, operator can force False to
+    # opt out of the join-time bandwidth.
+    if (
+        "cluster_state_sync_cache_banks" not in opts
+        or opts["cluster_state_sync_cache_banks"] is None
+    ):
+        opts["cluster_state_sync_cache_banks"] = bool(
+            opts.get("cluster_cache_replication")
         )
     # Merge the default per-bank routing map via the public resolver so
     # the merge rule has a single source of truth.
