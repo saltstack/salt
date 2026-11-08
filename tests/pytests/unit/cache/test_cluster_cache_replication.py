@@ -214,12 +214,11 @@ def test_cache_store_fans_out_to_peers_by_default(cluster_opts, fanout_recorder)
 
 def test_cache_store_many_fans_out(cluster_opts, fanout_recorder):
     """
-    Invariant: ``cache.store_many(bank, items)`` must fan out the
-    whole batch to every peer master (one batched event per peer, or
-    N-1 individual events per item per peer — either is spec-conformant;
-    the assertion counts total write-visibility).
-
-    Fails today: ``Cache.store_many`` does not exist yet.
+    Invariant: ``cache.store_many(bank, items)`` must emit exactly
+    ONE batched replication event carrying every ``(key, data)``
+    pair.  The per-item seam (``fire_peer_cache_write``) is NOT
+    called by the batched path; the batched seam
+    (``fire_peer_cache_write_many``) carries the whole batch.
     """
     cache, _driver = _build_cache_with_mocked_driver(cluster_opts)
     items = {
@@ -227,17 +226,112 @@ def test_cache_store_many_fans_out(cluster_opts, fanout_recorder):
         "minion-b": {"env": "staging"},
         "minion-c": {"env": "dev"},
     }
-    with _patch_cluster_fanout(fanout_recorder):
-        # ``store_many`` is spec-level API; absence today is the
-        # failure signal.
+    batch_recorder = MagicMock(name="batch_recorder")
+    with _patch_cluster_fanout(fanout_recorder), patch(
+        "salt.cache._cluster_replicator.fire_peer_cache_write_many",
+        batch_recorder,
+        create=False,
+    ):
         cache.store_many("grains", items)
 
-    # A conformant implementation sends at minimum one event per peer
-    # (batched) and at most one per item per peer (unbatched).
-    # 2 peers, 3 items => 2 .. 6 events.
-    assert 2 <= fanout_recorder.call_count <= 6, (
-        f"Expected 2..6 peer events for store_many (2 peers x 3 items), "
+    # Batched implementation: zero per-item events, exactly one
+    # batched event carrying all 3 pairs.
+    assert fanout_recorder.call_count == 0, (
+        f"Batched store_many must not call per-item fire_peer_cache_write; "
         f"got {fanout_recorder.call_count}"
+    )
+    assert batch_recorder.call_count == 1, (
+        f"Batched store_many must emit exactly 1 batched event; got "
+        f"{batch_recorder.call_count}"
+    )
+    # The batched call carries (opts, bank, pairs_list, expires=...).
+    args, kwargs = batch_recorder.call_args
+    # bank is positional.
+    assert "grains" in args, f"bank missing from batched call: {args}"
+    # Locate the pairs iterable in args or kwargs.
+    pairs = None
+    for candidate in list(args) + list(kwargs.values()):
+        if (
+            isinstance(candidate, (list, tuple))
+            and candidate
+            and all(
+                isinstance(entry, (tuple, list)) and len(entry) == 2
+                for entry in candidate
+            )
+        ):
+            pairs = list(candidate)
+            break
+    assert pairs is not None, f"pairs list missing from batched call: {args}, {kwargs}"
+    assert len(pairs) == 3, f"batched event must carry all 3 items; got {len(pairs)}"
+    keys = {entry[0] for entry in pairs}
+    assert keys == {"minion-a", "minion-b", "minion-c"}
+
+
+def test_cache_store_many_splits_into_subbatches(cluster_opts):
+    """
+    Invariant: batches larger than
+    ``cluster_cache_replicate_batch_size`` (default 1024) are split
+    into ceil(N / batch_size) sub-batches, each emitted as one
+    event.  2000 items at the default -> exactly 2 events.
+    """
+    cache, _driver = _build_cache_with_mocked_driver(cluster_opts)
+    items = [(f"minion-{i:04d}", {"i": i}) for i in range(2000)]
+    batch_recorder = MagicMock(name="batch_recorder")
+    with patch(
+        "salt.cache._cluster_replicator.fire_peer_cache_write_many",
+        batch_recorder,
+        create=False,
+    ):
+        cache.store_many("grains", items)
+
+    # ceil(2000 / 1024) = 2
+    assert batch_recorder.call_count == 2, (
+        f"2000 items at default batch_size=1024 must emit 2 batched events; "
+        f"got {batch_recorder.call_count}"
+    )
+    total = 0
+    for call in batch_recorder.call_args_list:
+        args, kwargs = call
+        for candidate in list(args) + list(kwargs.values()):
+            if (
+                isinstance(candidate, (list, tuple))
+                and candidate
+                and all(
+                    isinstance(entry, (tuple, list)) and len(entry) == 2
+                    for entry in candidate
+                )
+            ):
+                total += len(candidate)
+                break
+    assert total == 2000, f"Sub-batches must cover every item; got {total} total"
+
+
+def test_fire_event_reuses_handle_across_stores(cluster_opts):
+    """
+    Invariant: the replicator caches its MasterEvent handle so 10
+    sequential ``cache.store()`` calls construct exactly ONE
+    underlying event handle (not 10).  Protects the hot-path from
+    re-open overhead.
+    """
+    import salt.cache._cluster_replicator as replicator
+
+    # Reset the module-level handle cache so previous tests don't
+    # mask the construction count.
+    with replicator._EVENT_HANDLE_LOCK:
+        replicator._EVENT_HANDLE_CACHE.clear()
+
+    cache, _driver = _build_cache_with_mocked_driver(cluster_opts)
+    get_event_mock = MagicMock(
+        name="get_event",
+        return_value=MagicMock(name="master_event_handle"),
+    )
+    with patch("salt.utils.event.get_event", get_event_mock):
+        for i in range(10):
+            cache.store("grains", f"minion-{i}", {"i": i})
+
+    assert get_event_mock.call_count == 1, (
+        f"MasterEvent handle must be constructed once and reused across "
+        f"10 cache.store calls; got {get_event_mock.call_count} constructions"
     )
 
 

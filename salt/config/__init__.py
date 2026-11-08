@@ -254,6 +254,14 @@ VALID_OPTS = immutabletypes.freeze(
         # preserve today's job-return behaviour and keep Raft/state-sync
         # out of the cache-facade fan-out.
         "cluster_cache_routing": dict,
+        # Maximum number of ``(key, data)`` pairs packed into a single
+        # ``cluster/runner/delegate_cache_write`` event for
+        # ``cache.store_many`` batched replication.  Larger batches
+        # amortise the per-event cost but bloat the msgpack payload;
+        # 1024 fits comfortably under typical bus payload budgets for
+        # grain-shaped records and keeps catch-up latency bounded when
+        # a peer is behind.
+        "cluster_cache_replicate_batch_size": int,
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
         # compaction -- fine for small clusters but unbounded growth at
@@ -2027,6 +2035,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         # in ``apply_master_config`` so operator overrides can still
         # expand or override it.  See ``cluster_cache_replication``.
         "cluster_cache_routing": {},
+        "cluster_cache_replicate_batch_size": 1024,
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
         "cluster_voter_health_check_interval": 1.0,

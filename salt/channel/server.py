@@ -2174,7 +2174,15 @@ class MasterPubServerChannel:
                 payload.get("ring_id"),
             )
 
-    async def publish_cache_write(self, bank, key, data, expires, originating_master):
+    async def publish_cache_write(
+        self,
+        bank,
+        key,
+        data,
+        expires,
+        originating_master,
+        batch_items=None,
+    ):
         """
         Fan a cache write out to every cluster peer.
 
@@ -2185,6 +2193,13 @@ class MasterPubServerChannel:
         write locally via :meth:`_handle_delegate_cache_write`.  The
         ``originating_master`` field lets the peer drop the echoed
         event if the bus bounced it back to us.
+
+        When ``batch_items`` is a list of ``[key, data]`` pairs the
+        event carries a batched payload (``batch: True``,
+        ``items: batch_items``).  The receiver's
+        :func:`_handle_delegate_cache_write` applies every pair under
+        the same loop-guard flag.  ``key``/``data`` are ignored on
+        the batched path.
 
         This is parallel to the existing publish logic for
         ``cluster/peer/delegate-write`` (ring-routed, single owner) but
@@ -2198,13 +2213,24 @@ class MasterPubServerChannel:
         except Exception:  # pylint: disable=broad-except
             log.exception("cache-replicate: cluster_aes unavailable")
             return
-        payload = {
-            "bank": bank,
-            "key": key,
-            "data": data,
-            "expires": expires,
-            "originating_master": originating_master,
-        }
+        if batch_items is not None:
+            payload = {
+                "bank": bank,
+                "batch": True,
+                "items": batch_items,
+                "expires": expires,
+                "originating_master": originating_master,
+            }
+            label = f"batch[{len(batch_items)}]"
+        else:
+            payload = {
+                "bank": bank,
+                "key": key,
+                "data": data,
+                "expires": expires,
+                "originating_master": originating_master,
+            }
+            label = str(key)
         event = salt.utils.event.SaltEvent.pack(
             salt.utils.event.tagify("delegate-cache-write", "peer", "cluster"),
             crypticle.dumps(payload),
@@ -2216,7 +2242,7 @@ class MasterPubServerChannel:
                 log.exception(
                     "cache-replicate: failed to send %s/%s to %s",
                     bank,
-                    key,
+                    label,
                     pusher.pull_host,
                 )
 
@@ -2251,6 +2277,7 @@ class MasterPubServerChannel:
         Unknown kinds are logged and dropped.
         """
         write_kind = payload.get("write_kind", "replicate")
+        batched = bool(payload.get("batch"))
         if write_kind == "replicate":
             await self.publish_cache_write(
                 payload.get("bank"),
@@ -2258,6 +2285,7 @@ class MasterPubServerChannel:
                 payload.get("data"),
                 payload.get("expires"),
                 payload.get("originating_master"),
+                batch_items=payload.get("items") if batched else None,
             )
         elif write_kind == "ring":
             # Translate into the existing ring-delegate payload
@@ -2298,6 +2326,7 @@ class MasterPubServerChannel:
                 payload.get("data"),
                 payload.get("expires"),
                 payload.get("originating_master"),
+                batch_items=payload.get("items") if batched else None,
             )
         else:
             log.warning("cache-replicate: unknown write_kind %r; dropping", write_kind)

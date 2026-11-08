@@ -339,9 +339,57 @@ class Cache:
             self._fire_replicate(bank, key, data, expires)
 
     def _maybe_replicate_write_many(self, bank, pairs, expires):
-        """Batched replication: one event per key, same gate as single store."""
-        for key, data in pairs:
-            self._maybe_replicate_write(bank, key, data, expires)
+        """
+        Batched replication: emit ONE event carrying the whole list
+        (split into sub-batches of ``cluster_cache_replicate_batch_size``
+        if the batch exceeds that threshold).
+
+        The cluster + isolated-FS + routing gate is evaluated once
+        for the whole batch: all items share ``bank`` so routing is
+        uniform.  This cuts per-write event overhead on hot bulk
+        paths (e.g. ``resource_grains`` convergence).
+        """
+        if not pairs:
+            return
+        opts = self.opts or {}
+        if not opts.get("cluster_id"):
+            return
+        if not opts.get("cluster_isolated_filesystem"):
+            return
+        if opts.get("cluster_cache_replication") is False:
+            return
+        from salt.config import (
+            get_cluster_cache_routing,  # pylint: disable=import-outside-toplevel
+        )
+
+        routing = get_cluster_cache_routing(opts)
+        mode = _resolve_bank_routing(routing, bank)
+        if mode == "none":
+            return
+        if mode not in ("replicate", "ring"):
+            log.warning(
+                "cluster-cache-replication: unknown routing %r for bank %r; "
+                "treating as 'replicate'",
+                mode,
+                bank,
+            )
+            mode = "replicate"
+        batch_size = int(opts.get("cluster_cache_replicate_batch_size", 1024) or 1024)
+        if batch_size <= 0:
+            batch_size = 1024
+        from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+            fire_delegate_cache_write_many,
+            fire_peer_cache_write_many,
+        )
+
+        fire = (
+            fire_peer_cache_write_many
+            if mode == "replicate"
+            else fire_delegate_cache_write_many
+        )
+        for start in range(0, len(pairs), batch_size):
+            chunk = pairs[start : start + batch_size]
+            fire(self.opts, bank, chunk, expires=expires)
 
     def _fire_replicate(self, bank, key, data, expires):
         """Fan this write out to every peer master (see replicator module)."""
