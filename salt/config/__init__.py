@@ -288,6 +288,18 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_min_voters": int,
         "cluster_demote_cooldown": float,
         "cluster_auto_replace_voters": bool,
+        # Periodic retry controls for ``cluster/peer/discover``.  The initial
+        # fire-and-forget discover event in ``salt.master.Master.start`` can
+        # be lost silently if the peer's pool-puller is not yet bound on
+        # port ``cluster_pool_port`` when the event is forwarded.  A non-
+        # founder joining the cluster installs a ``PeriodicCallback`` in
+        # ``MasterPubServerChannel._schedule_discover_retry`` that re-sends
+        # discover every ``cluster_join_discover_retry_interval`` seconds
+        # for peers whose AES key has not yet arrived; the retry cancels
+        # itself as soon as every peer has replied or after
+        # ``cluster_join_discover_retry_timeout`` seconds have elapsed.
+        "cluster_join_discover_retry_interval": (int, float),
+        "cluster_join_discover_retry_timeout": (int, float),
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -2022,6 +2034,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        "cluster_join_discover_retry_interval": 2,
+        "cluster_join_discover_retry_timeout": 60,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

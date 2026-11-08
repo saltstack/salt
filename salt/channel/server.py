@@ -1852,6 +1852,22 @@ class MasterPubServerChannel:
         self._discover_event = None
         self._discover_token = None
         self._discover_candidates = {}
+        # Set of peer ids we have received a ``cluster/peer/discover-reply``
+        # from.  Populated in the discover-reply branch of
+        # ``handle_pool_publish`` and consumed by
+        # ``_pending_discover_peers`` so the periodic retry stops once each
+        # peer has confirmed the discover handshake.  Falling back to
+        # ``peer_keys`` would be unsafe here -- the AES-key broadcast
+        # (``send_aes_key_event``) populates ``peer_keys`` independently
+        # of the discover protocol, so a retry keyed on ``peer_keys``
+        # cancels before any ``discover-reply`` has actually landed.
+        self._discover_replies = set()
+        # Tornado ``PeriodicCallback`` driving ``_schedule_discover_retry``
+        # when this master is a non-founder joining an existing cluster.
+        # None when inactive -- set in ``_publish_daemon`` and cleared
+        # once every peer has replied to the discover or the retry
+        # deadline expires.
+        self._discover_retry_pc = None
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
 
@@ -3109,7 +3125,7 @@ class MasterPubServerChannel:
         except OSError as exc:
             log.warning("Could not write cluster join sentinel %s: %s", sentinel, exc)
 
-    def discover_peers(self):
+    def discover_peers(self, peers=None):
         """
         Send a ``cluster/peer/discover`` event to each configured peer.
 
@@ -3118,6 +3134,14 @@ class MasterPubServerChannel:
         Existing peers will reply with ``cluster/peer/discover-reply``, which
         triggers the full join handshake and eventually ``cluster/peer/join-reply``
         received by ``handle_pool_publish``.
+
+        :param peers: Optional iterable of peer ids to send discover to. When
+                      ``None`` (the default) every entry in
+                      ``self.cluster_peers`` is contacted.  The retry path in
+                      :meth:`_schedule_discover_retry` passes the subset of
+                      peers for which no reply has been seen yet, so we do
+                      not re-spam peers that have already completed the
+                      handshake.
         """
         path = self.master_key.master_pub_path
         with salt.utils.files.fopen(path, "r") as fp:
@@ -3125,7 +3149,9 @@ class MasterPubServerChannel:
 
         self._discover_token = self.gen_token()
 
-        for peer in self.cluster_peers:
+        target_peers = list(self.cluster_peers if peers is None else peers)
+
+        for peer in target_peers:
             log.info("Sending cluster discover to peer %s", peer)
             tosign = salt.payload.package(
                 {
@@ -3150,6 +3176,115 @@ class MasterPubServerChannel:
                 )
                 if not success:
                     log.error("Unable to send cluster discover event to %s", peer)
+
+    def _pending_discover_peers(self):
+        """
+        Return the list of configured cluster peers that have not yet
+        answered this master's ``cluster/peer/discover`` with a signed
+        ``cluster/peer/discover-reply``.
+
+        Used by :meth:`_schedule_discover_retry` to drive a periodic
+        re-send of ``cluster/peer/discover`` for peers that missed the
+        initial fire-and-forget attempt.  The cancellation set
+        (``self._discover_replies``) is populated only after the
+        discover-reply branch has verified the signature and cluster-pub
+        fingerprint, so a peer that is merely reachable (``peer_keys``
+        populated by the independent AES-key broadcast) does not count
+        as done.
+        """
+        pending = []
+        replies = getattr(self, "_discover_replies", set()) or set()
+        for peer in self.cluster_peers:
+            # ``cluster_peers`` entries may carry an optional ``:port``
+            # suffix; the peer-id used in the discover-reply handler is
+            # the bare host (``payload["peer_id"]``).  Match on either
+            # form so operators who list peers as ``host:port`` still
+            # see a correct pending set.
+            host = peer.rsplit(":", 1)[0] if ":" in peer else peer
+            if host not in replies and peer not in replies:
+                pending.append(peer)
+        return pending
+
+    def _schedule_discover_retry(self):
+        """
+        Install a periodic retry of :meth:`discover_peers` for peers that
+        did not reply to the initial one-shot attempt from
+        ``salt.master.Master.start``.
+
+        The initial ``discover_peers()`` call is fire-and-forget: if the
+        peer's pool-puller TCP listener is not yet bound when the discover
+        event is forwarded, the push raises ``StreamClosedError`` and the
+        event is silently lost.  Without a retry the joining master waits
+        forever on ``_discover_event`` and the whole cluster bootstrap
+        stalls.
+
+        The retry cancels itself when either (a) every peer in
+        ``self.cluster_peers`` has registered its AES key (i.e. the
+        handshake completed), or (b) ``cluster_join_discover_retry_timeout``
+        seconds have elapsed.  The retry interval is controlled by
+        ``cluster_join_discover_retry_interval`` (default 2 s) and the
+        timeout defaults to 60 s.
+
+        Called from ``_publish_daemon`` in the non-founder branch where
+        the tornado io_loop is running.  Safe to call more than once; a
+        previously-scheduled retry is cancelled first.
+        """
+        if getattr(self, "_discover_retry_pc", None) is not None:
+            try:
+                self._discover_retry_pc.stop()
+            except Exception:  # pylint: disable=broad-except
+                pass
+            self._discover_retry_pc = None
+
+        interval_s = float(self.opts.get("cluster_join_discover_retry_interval", 2))
+        timeout_s = float(self.opts.get("cluster_join_discover_retry_timeout", 60))
+        if interval_s <= 0 or timeout_s <= 0:
+            return
+        if not self.cluster_peers:
+            return
+
+        deadline = self.io_loop.time() + timeout_s
+        interval_ms = max(1, int(interval_s * 1000))
+
+        def _retry():
+            try:
+                pending = self._pending_discover_peers()
+                if not pending:
+                    log.info("Cluster discover complete -- stopping periodic retry")
+                    pc = self._discover_retry_pc
+                    self._discover_retry_pc = None
+                    if pc is not None:
+                        try:
+                            pc.stop()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                    return
+                if self.io_loop.time() >= deadline:
+                    log.warning(
+                        "cluster_join_discover_retry_timeout (%ss) exhausted "
+                        "with pending peers %r; giving up on discover retry",
+                        timeout_s,
+                        pending,
+                    )
+                    pc = self._discover_retry_pc
+                    self._discover_retry_pc = None
+                    if pc is not None:
+                        try:
+                            pc.stop()
+                        except Exception:  # pylint: disable=broad-except
+                            pass
+                    return
+                log.info(
+                    "Retrying cluster/peer/discover for pending peers %r",
+                    pending,
+                )
+                self.discover_peers(peers=pending)
+            except Exception:  # pylint: disable=broad-except
+                log.exception("Error in cluster discover retry callback")
+
+        pc = tornado.ioloop.PeriodicCallback(_retry, interval_ms)
+        self._discover_retry_pc = pc
+        pc.start()
 
     def send_aes_key_event(self):
         log.debug("Sending AES key event")
@@ -3358,6 +3493,15 @@ class MasterPubServerChannel:
                         "New node joining cluster %r -- waiting for join-reply to start Raft as learner",
                         self.opts["cluster_id"],
                     )
+                    # The initial fire-and-forget ``discover_peers`` in
+                    # ``salt.master.Master.start`` can be lost silently if
+                    # the peer's pool-puller TCP listener is not yet bound
+                    # when the discover event is forwarded.  Install a
+                    # periodic retry that re-sends discover to peers whose
+                    # AES key has not yet arrived.  See
+                    # ``_schedule_discover_retry`` for the cancellation
+                    # conditions.
+                    self._schedule_discover_retry()
         # run forever
         try:
             self.io_loop.start()
@@ -4112,6 +4256,13 @@ class MasterPubServerChannel:
                 #    return
 
                 log.info("Cluster discover reply from %s", payload["peer_id"])
+                # Record the peer as having answered the discover so the
+                # periodic retry in ``_schedule_discover_retry`` stops
+                # re-sending to it.  See ``_pending_discover_peers`` for
+                # the matching cancellation check.
+                if not hasattr(self, "_discover_replies"):
+                    self._discover_replies = set()
+                self._discover_replies.add(payload["peer_id"])
                 key = salt.crypt.PublicKeyString(payload["pub"])
                 self._discover_token = self.gen_token()
                 tosign = salt.payload.package(
