@@ -2467,7 +2467,7 @@ def mod_data(fsclient, target=None):
             # The global archive already includes saltexts from gen_thin.
             kwargs = {"load_extensions": target is not None}
             if target is not None:
-                kwargs["entry_point_opts"] = opts
+                kwargs["provider_opts"] = opts
             if ref == "wrapper":
                 kwargs["tag"] = "wrapper"
                 kwargs["base_path"] = str(salt.loader.SALT_BASE_PATH / "client" / "ssh")

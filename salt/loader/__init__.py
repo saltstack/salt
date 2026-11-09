@@ -142,7 +142,7 @@ def _module_dirs(
     ext_type_dirs=None,
     base_path=None,
     load_extensions=True,
-    entry_point_opts=None,
+    provider_opts=None,
 ):
     if tag is None:
         tag = ext_type
@@ -204,10 +204,10 @@ def _module_dirs(
                         # SSH builds an extension archive for each roster target.
                         # Pass that target's options to providers which accept
                         # them, while retaining support for zero-argument hooks.
-                        if entry_point_opts is not None and _accepts_loader_opts(
+                        if provider_opts is not None and _accepts_loader_opts(
                             loaded_entry_point
                         ):
-                            loaded_entry_point_value = loaded_entry_point(entry_point_opts)
+                            loaded_entry_point_value = loaded_entry_point(provider_opts)
                         else:
                             loaded_entry_point_value = loaded_entry_point()
                     if ctx.exception_caught:
