@@ -51,7 +51,9 @@ def set_option(file_name, sections=None, separator="=", encoding=None, no_spaces
             A dictionary representing the sections to be edited in the ini file.
             The keys are the section names and the values are a dictionary
             containing the options. If the ini file does not contain sections
-            the keys and values represent the options. The default is ``None``.
+            the keys and values represent the options. If an option is
+            duplicated within the same scope, the last value will be used.
+            The default is ``None``.
 
         separator (str):
             The character used to separate keys and values. Standard ini files
@@ -104,7 +106,8 @@ def set_option(file_name, sections=None, separator="=", encoding=None, no_spaces
         file_name, separator=separator, encoding=encoding, no_spaces=no_spaces
     )
     changes = inifile.update(sections)
-    inifile.flush()
+    if changes:
+        inifile.flush()
     return changes
 
 
@@ -223,7 +226,8 @@ def remove_option(file_name, section, option, separator="=", encoding=None):
         value = inifile.get(section, {}).pop(option, None)
     else:
         value = inifile.pop(option, None)
-    inifile.flush()
+    if value:
+        inifile.flush()
     return value
 
 
@@ -453,6 +457,12 @@ class _Section(OrderedDict):
             if opt_match:
                 curr_indent, name, self.sep, value = opt_match.groups()
                 curr_indent = curr_indent.replace("\t", "    ")
+                if name in self:
+                    log.warning(
+                        "Option '%s' was already set. Its value is overridden with: %s",
+                        name,
+                        value,
+                    )
                 self.update({name: value})
                 continue
             # Anything remaining is a mystery.

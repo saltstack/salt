@@ -38,8 +38,9 @@ def options_present(
 
         sections (dict):
             A dictionary of sections and key/value pairs that will be used to
-            update the ini file. Other sections and key/value pairs in the ini
-            file will be untouched unless ``strict: True`` is passed.
+            update the ini file. If a key is duplicated within the same scope,
+            the last value will be used. Other sections and key/value pairs in
+            the ini file will be untouched unless ``strict: True`` is passed.
 
         separator (str):
             The character used to separate keys and values. Standard ini files
