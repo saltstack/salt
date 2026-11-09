@@ -118,6 +118,15 @@ def static_loader(
     return ret
 
 
+def _accepts_loader_opts(provider):
+    """Whether an entry-point callable accepts a positional options mapping."""
+    try:
+        inspect.signature(provider).bind({})
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
 def _module_dirs(
     opts,
     ext_type,
@@ -127,6 +136,7 @@ def _module_dirs(
     ext_type_dirs=None,
     base_path=None,
     load_extensions=True,
+    entry_point_opts=None,
 ):
     if tag is None:
         tag = ext_type
@@ -185,7 +195,15 @@ def _module_dirs(
                     #   1: It returns a list; This is an old style entry entry_point
                     #   2: It returns a dictionary; This is a new style entry point
                     with catch_entry_points_exception(entry_point) as ctx:
-                        loaded_entry_point_value = loaded_entry_point()
+                        # SSH builds an extension archive for each roster target.
+                        # Pass that target's options to providers which accept
+                        # them, while retaining support for zero-argument hooks.
+                        if entry_point_opts is not None and _accepts_loader_opts(
+                            loaded_entry_point
+                        ):
+                            loaded_entry_point_value = loaded_entry_point(entry_point_opts)
+                        else:
+                            loaded_entry_point_value = loaded_entry_point()
                     if ctx.exception_caught:
                         continue
 

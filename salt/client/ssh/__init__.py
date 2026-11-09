@@ -7,6 +7,7 @@ import copy
 import datetime
 import getpass
 import hashlib
+import io
 import logging
 import multiprocessing
 import os
@@ -110,6 +111,11 @@ def _ssh_cli_process_exit_code(retcode):
     if retcode in preserved:
         return retcode
     return salt.defaults.exitcodes.EX_AGGREGATE
+
+
+def _target_mod_data(fsclient, target):
+    """Build an extension archive using this roster target's loader options."""
+    return mod_data(fsclient, target=target)
 
 
 # METHODOLOGY:
@@ -721,11 +727,15 @@ class SSH(MultiprocessingStateMixin):
         Run the routine in a "Thread", put a dict on the queue
         """
         opts = copy.deepcopy(opts)
+        # A target-aware provider (for example a package activator) must be
+        # consulted after roster expansion.  self.mods was built once for the
+        # entire SSH invocation and cannot represent different target sets.
+        mods = _target_mod_data(self.fsclient, host)
         single = Single(
             opts,
             opts["argv"],
             host,
-            mods=self.mods,
+            mods=mods,
             fsclient=self.fsclient,
             thin=self.thin,
             mine=mine,
@@ -2173,7 +2183,7 @@ ARGS = {arguments}\n'''.format(
         # This ensures that any dynamically-added modules (like test fixtures)
         # are included and the version hash is up-to-date
         log.debug("Regenerating extension modules tarball before command execution")
-        self.mods = mod_data(self.fsclient)
+        self.mods = _target_mod_data(self.fsclient, self.id)
 
         # Deploy the fresh tarball to the remote system
         log.debug("Deploying extension modules tarball to remote system")
@@ -2277,7 +2287,7 @@ ARGS = {arguments}\n'''.format(
                 # Regenerate extension modules tarball with fresh fileserver scan
                 # This ensures dynamically-added modules are included
                 log.info("ext_mods requested - regenerating extension modules tarball")
-                self.mods = mod_data(self.fsclient)
+                self.mods = _target_mod_data(self.fsclient, self.id)
                 self.deploy_ext()
                 stdout, stderr, retcode = self.shim_cmd(cmd_str)
                 if not re.search(RSTR_RE, stdout) or not re.search(RSTR_RE, stderr):
@@ -2432,9 +2442,9 @@ def salt_refs(data):
     return ret
 
 
-def mod_data(fsclient):
+def mod_data(fsclient, target=None):
     """
-    Generate the module arguments for the shim data
+    Generate the module arguments for the shim data.
     """
     sync_refs = [
         "modules",
@@ -2447,19 +2457,25 @@ def mod_data(fsclient):
         "tops",
     ]
     ret = {}
+    opts = fsclient.opts.copy()
+    if target is not None:
+        opts["id"] = target
+        opts["ssh_target"] = target
 
-    # Get module directories from global loader (includes entry-points, extension_modules, etc.)
-    opts = fsclient.opts
+    # Reuse salt.loader entry points with the roster target's options.
     for ref in sync_refs:
         try:
-            # Use salt.loader._module_dirs but skip entry-points (saltexts handled by gen_thin)
-            # This still discovers extension_modules from config and module_dirs from CLI
-            kwargs = {"load_extensions": False}
+            # The global archive already includes saltexts from gen_thin.
+            kwargs = {"load_extensions": target is not None}
+            if target is not None:
+                kwargs["entry_point_opts"] = opts
             if ref == "wrapper":
                 kwargs["tag"] = "wrapper"
                 kwargs["base_path"] = str(salt.loader.SALT_BASE_PATH / "client" / "ssh")
             else:
                 kwargs["tag"] = ref.rstrip("s")
+            if ref == "utils":
+                kwargs["ext_type_dirs"] = "utils_dirs"
             module_dirs = salt.loader._module_dirs(opts, ref, **kwargs)
 
             for mod_dir in module_dirs:
@@ -2567,10 +2583,12 @@ def mod_data(fsclient):
         os.makedirs(cache_dir)
 
     tfp = tarfile.open(ext_tar_path, "w:gz")
-    verfile = os.path.join(fsclient.opts["cachedir"], "ext_mods.ver")
-    with salt.utils.files.fopen(verfile, "w+") as fp_:
-        fp_.write(ver)
-    tfp.add(verfile, "ext_version")
+    # The archive is target-specific.  A shared ext_mods.ver file would race
+    # when different targets are prepared in parallel.
+    version_data = ver.encode("ascii")
+    version_info = tarfile.TarInfo("ext_version")
+    version_info.size = len(version_data)
+    tfp.addfile(version_info, io.BytesIO(version_data))
     for ref in ret:
         for fn_ in ret[ref]:
             tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
