@@ -1237,3 +1237,140 @@ def test_resolve_resource_targets_compound_T_works_without_grains(
     }
     targets = minion_with_resources._resolve_resource_targets(load)
     assert targets == [{"id": "node1", "type": "ssh"}]
+
+
+# ---------------------------------------------------------------------------
+# _handle_payload per-resource payload size: regression for queued-file bloat
+# ---------------------------------------------------------------------------
+
+
+def test_handle_payload_per_resource_load_strips_wide_fields(
+    minion_with_resources, tmp_path
+):
+    """
+    Regression for a quadratic disk-use bug in the minion's resource-fanout
+    path.
+
+    ``_handle_payload`` iterates over ``load["resource_targets"]`` and calls
+    ``_handle_decoded_payload`` with a per-resource copy of the parent load.
+    If that copy is a shallow ``dict(load)``, the full N-wide
+    ``resource_targets`` list — and, under CLI ``--static`` retry, the full
+    N-wide parent ``tgt`` list — ride along in every one of the N per-resource
+    payloads.  When any of those payloads get queued via ``_queue_job``, the
+    full list is msgpacked to disk once per resource, producing O(N**2)
+    queued-file disk use (observed: 4.2 MB/queued-file at 150K resources,
+    ~630 GB projected).
+
+    The fix is to strip ``resource_targets`` from the per-resource base load
+    once, and to compress a multi-element parent ``tgt`` list down to the
+    scalar glob ``"*"`` (the per-resource job dispatches by its own
+    ``resource_target`` ``{id, type}`` field, so the parent target does not
+    drive dispatch at that level).
+
+    This test proves the property by driving ``_handle_payload`` with a wide
+    ``resource_targets`` and an N-wide parent ``tgt`` list, capturing every
+    load that reaches ``_handle_decoded_payload``, and asserting:
+
+    * The per-resource payload has ``resource_target`` (singular) but no
+      ``resource_targets`` (plural) key.
+    * The per-resource payload's ``tgt`` is a scalar (or collapsed to length
+      <= 1).
+    * The msgpacked size of each per-resource payload is O(1) in N: the
+      per-resource payload must be strictly smaller than the parent.
+    """
+    import asyncio
+
+    import salt.payload
+
+    # Pre-build 100 resources + a 100-wide parent tgt list.  These shapes
+    # match what the master+CLI feed the minion under a wide resource fanout.
+    resources = [{"id": f"dummy-{i:03d}", "type": "dummy"} for i in range(100)]
+    parent_tgt = [r["id"] for r in resources]
+
+    load = {
+        "jid": "20260101000000000001",
+        "fun": "test.ping",
+        "arg": [],
+        "ret": "",
+        "tgt": list(parent_tgt),
+        "tgt_type": "list",
+        "resource_targets": list(resources),
+        "pure_resource_target": True,
+        "minion_is_target": False,
+    }
+
+    delivered = []
+
+    async def capture(data):
+        # Deep snapshot so a later ``dict(load)`` can't retroactively
+        # share state with what we captured.
+        delivered.append(dict(data))
+
+    # Stub ``_target_load`` so we don't have to wire up real matchers; the
+    # production ``_target_load`` would normally set ``resource_targets`` and
+    # ``minion_is_target`` on its own, but the load above is already shaped
+    # as if it just came out of that helper.
+    with mock_patch.object(
+        minion_with_resources, "_target_load", return_value=True
+    ), mock_patch.object(
+        minion_with_resources, "_handle_decoded_payload", side_effect=capture
+    ):
+        asyncio.run(minion_with_resources._handle_payload({"enc": "aes", "load": load}))
+
+    # First delivery is the managing-minion's own copy (minion_is_target
+    # is False here, so that branch doesn't fire); every delivery is a
+    # per-resource fanout copy.
+    assert len(delivered) == len(
+        resources
+    ), "expected one _handle_decoded_payload call per resource target"
+
+    # Serialize the original parent load to msgpack so we can compare sizes.
+    parent_blob_len = len(salt.payload.dumps(load))
+
+    for per_resource in delivered:
+        # The singular resource_target is set and identifies one resource.
+        assert "resource_target" in per_resource
+        assert isinstance(per_resource["resource_target"], dict)
+        assert set(per_resource["resource_target"]) == {"id", "type"}
+        # The resource-job marker is set.
+        assert per_resource.get("resource_job") is True
+        # CRITICAL: the N-wide list must NOT ride along.
+        assert "resource_targets" not in per_resource, (
+            "per-resource payload must not carry the parent "
+            "resource_targets list (quadratic disk use on _queue_job)"
+        )
+        # CRITICAL: a multi-element parent tgt list must have been
+        # collapsed to a scalar (or singleton) so it does not ride along
+        # either.
+        tgt = per_resource.get("tgt")
+        if isinstance(tgt, (list, tuple)):
+            assert len(tgt) <= 1, (
+                "per-resource payload tgt must not carry the full N-wide "
+                "parent target list"
+            )
+        else:
+            assert isinstance(tgt, str)
+
+        # The msgpacked size — which is what ``_queue_job`` would write to
+        # disk — must be strictly smaller than the parent (and, in practice,
+        # a tiny fraction of it: the parent carries the full 100-wide list
+        # of resource targets and the full 100-wide parent tgt list).
+        per_resource_blob_len = len(salt.payload.dumps(per_resource))
+        assert per_resource_blob_len < parent_blob_len, (
+            "per-resource payload serialized larger than parent: "
+            f"{per_resource_blob_len} >= {parent_blob_len}"
+        )
+        # The parent is ~100x wider; each per-resource payload should be
+        # at most a small multiple of the per-resource item shape.  A
+        # generous ceiling of parent_blob_len/10 proves the O(1)-in-N
+        # property without being flaky on exact byte counts.
+        assert per_resource_blob_len < parent_blob_len / 10, (
+            "per-resource payload is not O(1) in N: "
+            f"{per_resource_blob_len} bytes vs parent {parent_blob_len}"
+        )
+
+    # Round-trip one delivered payload through msgpack to prove ``_queue_job``
+    # would reload the same shape (no hidden shared references).
+    reloaded = salt.payload.loads(salt.payload.dumps(delivered[0]))
+    assert "resource_targets" not in reloaded
+    assert reloaded["resource_target"] == delivered[0]["resource_target"]

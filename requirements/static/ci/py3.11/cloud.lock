@@ -499,8 +499,9 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -c requirements/static/pkg/py3.11/linux.lock
     #   googleapis-common-protos

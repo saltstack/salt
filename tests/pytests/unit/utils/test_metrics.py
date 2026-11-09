@@ -474,3 +474,32 @@ def test_forked_children_get_distinct_instance_ids():
         p.join(timeout=10)
     host = socket.gethostname()
     assert sorted(results) == [f"{host}/{n}" for n in names]
+
+
+def test_otlp_http_exporter_gets_requests_session(monkeypatch):
+    """
+    Without a ``requests.Session`` opentelemetry >= 1.45 uses a urllib3
+    transport that ignores HTTP(S)_PROXY, so the session must be passed.
+    """
+    import requests
+
+    metrics._load_otel()
+    created = {}
+
+    def _fake_exporter(**kwargs):
+        created.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(metrics._otel, "OTLPMetricExporterHTTP", _fake_exporter)
+    monkeypatch.setattr(
+        metrics._otel, "PeriodicExportingMetricReader", lambda *a, **k: object()
+    )
+    metrics._build_readers(
+        {
+            "enabled": True,
+            "exporter": "otlp-http",
+            "endpoint": "http://collector:4318/v1/metrics",
+        }
+    )
+    assert isinstance(created["session"], requests.Session)
+    assert created["endpoint"] == "http://collector:4318/v1/metrics"

@@ -5345,6 +5345,14 @@ information.
       - 'salt/minion/*/start':
         - salt://reactor/startup_tasks.sls
 
+Alternatively, ``reactor`` can be set to the path of a YAML file containing the
+same list of event-to-reactor mappings. The file is read each time an event is
+processed, so mappings can be changed without restarting the master.
+
+.. code-block:: yaml
+
+    reactor: /etc/salt/master.d/reactor.yaml
+
 .. conf_master:: reactor_refresh_interval
 
 ``reactor_refresh_interval``

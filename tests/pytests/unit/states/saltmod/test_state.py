@@ -1090,3 +1090,19 @@ def test_roster():
         )
     assert "roster" in cmd_mock.call_args.kwargs
     assert cmd_mock.call_args.kwargs["roster"] == "my_roster"
+
+
+def test_roster_file():
+    """
+    Test saltmod state passes roster_file to saltutil.cmd
+    """
+    cmd_mock = MagicMock()
+    with patch.dict(saltmod.__salt__, {"saltutil.cmd": cmd_mock}):
+        saltmod.state(
+            "state.sls",
+            tgt="*",
+            ssh=True,
+            highstate=True,
+            roster_file="/tmp/my_roster",
+        )
+    assert cmd_mock.call_args.kwargs["roster_file"] == "/tmp/my_roster"

@@ -159,6 +159,7 @@ propcache==0.3.2
     #   yarl
 protobuf==6.33.6
     # via
+    #   -c requirements/constraints.txt
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==5.9.8

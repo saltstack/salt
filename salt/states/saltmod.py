@@ -229,6 +229,10 @@ def state(
     roster
         In the event of using salt-ssh, a roster system can be set
 
+    roster_file
+        In the event of using salt-ssh, the path to a roster file to use
+        instead of the default roster file
+
     expect_minions
         An optional boolean for failing if some minions do not respond
 
@@ -327,6 +331,8 @@ def state(
     cmd_kw["ssh"] = ssh
     if "roster" in kwargs:
         cmd_kw["roster"] = kwargs["roster"]
+    if "roster_file" in kwargs:
+        cmd_kw["roster_file"] = kwargs["roster_file"]
     cmd_kw["expect_minions"] = expect_minions
     if highstate:
         fun = "state.highstate"
@@ -577,6 +583,10 @@ def function(
 
         .. versionadded:: 3005
 
+    roster_file
+        In the event of using salt-ssh, the path to a roster file to use
+        instead of the default roster file
+
     batch
         Execute the command :ref:`in batches <targeting-batch>`. E.g.: ``10%``.
 
@@ -609,6 +619,8 @@ def function(
     cmd_kw["ssh"] = ssh
     if "roster" in kwargs:
         cmd_kw["roster"] = kwargs["roster"]
+    if "roster_file" in kwargs:
+        cmd_kw["roster_file"] = kwargs["roster_file"]
     cmd_kw["expect_minions"] = expect_minions
     cmd_kw["_cmd_meta"] = True
 
