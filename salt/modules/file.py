@@ -2124,6 +2124,7 @@ def line(
     backup=False,
     quiet=False,
     indent=True,
+    dry_run=False,
 ):
     # pylint: disable=W1401
     """
@@ -2231,6 +2232,12 @@ def line(
     indent
         Keep indentation with the previous line. This option is not considered when
         the ``delete`` mode is specified. Default is ``True``
+
+    dry_run
+        If ``True``, do not write any changes (or create a backup); only work
+        out and return what would change. Default is ``False``
+
+        .. versionadded:: 3008.0
 
     CLI Example:
 
@@ -2437,7 +2444,7 @@ def line(
         != hashlib.sha256(salt.utils.stringutils.to_bytes("".join(body))).hexdigest()
     )
 
-    if backup and changed and __opts__["test"] is False:
+    if backup and changed and not dry_run and __opts__["test"] is False:
         try:
             temp_file = _mkstemp_copy(path=path, preserve_inode=True)
             shutil.move(
@@ -2460,7 +2467,7 @@ def line(
             with salt.utils.files.fopen(path, "r") as fp_:
                 path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
             changes_diff = __utils__["stringutils.get_diff"](path_content, body)
-        if __opts__["test"] is False:
+        if not dry_run and __opts__["test"] is False:
             fh_ = None
             try:
                 # Make sure we match the file mode from salt.utils.files.fopen
