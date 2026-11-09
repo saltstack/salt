@@ -701,6 +701,53 @@ class ResourceRegistry:
         )
         self._last_compact_check = 0.0
 
+        # ------------------------------------------------------------------
+        # Chunked register accumulator (used by chunked register RPC)
+        # ------------------------------------------------------------------
+        #
+        # The minion-side register loop ships resource inventory in
+        # per-type chunks (see
+        # :meth:`salt.minion.Minion._register_resources_with_master`).
+        # Each non-final chunk must additively ``put`` its SRNs with NO
+        # delete pass -- a mid-stream delete-diff against a previous full
+        # inventory would prune already-persisted earlier chunks of the
+        # same registration window.  Deletes only run on the terminal
+        # (``chunk_final=True``) chunk, computed against the union of
+        # every SRN seen during the window for that ``(minion_id, rtype)``
+        # pair.
+        #
+        # ``self._pending_registers`` is per-minion state keyed by
+        # ``minion_id`` holding the cumulative SRN set for the current
+        # in-progress registration window.  The entry is cleared when the
+        # final chunk commits.  Each chunk is tagged with a scope --
+        # either ``"__all__"`` (legacy single-shot register that replaces
+        # every type at once) or ``"<rtype>"`` (chunked per-type register)
+        # -- so the terminal delete only prunes within the types the
+        # minion is actually re-registering.  A minion that re-registers
+        # only ``dummy`` must not wipe its previously-registered ``ssh``
+        # entries.
+        #
+        # Per-scope layout (new): the window state for each scope is a
+        # ``dict`` with keys:
+        #
+        # * ``keys`` -- cumulative set of SRNs seen in this window.
+        # * ``seen_indexes`` -- set of ``chunk_index`` values observed.
+        # * ``final_pending`` -- ``None`` if no final chunk has arrived
+        #   yet, else the ``chunk_index`` of the final chunk (the maximum
+        #   index of the window).  A non-``None`` value means an
+        #   out-of-order ``chunk_final=True`` landed before the full
+        #   ``0..final_pending`` sequence was in; the prune is deferred
+        #   until the missing indices fill in.
+        #
+        # ``_pending_registers_lock`` guards both the map structure and
+        # the per-scope mutations (``put_many``, prune) so concurrent
+        # peer-side apply threads cannot interleave a prune pass against
+        # a partially-populated window.  Peer-side arrival ordering is
+        # not FIFO (``run_in_executor(None, ...)`` uses the default
+        # thread pool) so this lock is correctness, not performance.
+        self._pending_registers = {}
+        self._pending_registers_lock = threading.Lock()
+
     def close(self):
         """
         Close the backing mmap so temp dirs can be removed and FDs are not
@@ -885,6 +932,160 @@ class ResourceRegistry:
         # Opportunistic compaction on the write path. Time-throttled so
         # the O(num_slots) ``get_stats`` call doesn't run more than once
         # per :data:`DEFAULT_COMPACT_MIN_INTERVAL` seconds.
+        self.maybe_compact()
+
+        return len(to_put), len(to_delete)
+
+    def register_minion_chunk(
+        self, minion_id, resources, chunk_final, chunk_scope=None, chunk_index=None
+    ):
+        """
+        Chunk-aware register: additively ``put`` the entries in ``resources``
+        and only prune stale SRNs on the terminal chunk of a registration
+        window.
+
+        Multiple calls with ``chunk_final=False`` accumulate SRNs in
+        ``self._pending_registers[minion_id]`` without computing any
+        delete-diff.  A single call with ``chunk_final=True`` commits the
+        remaining SRNs and then runs the prune pass against the union of
+        every SRN seen in the window.
+
+        ``chunk_scope`` selects which of the previously-registered SRNs
+        the terminal chunk is allowed to delete:
+
+        * ``None`` or ``"__all__"`` -- legacy single-shot semantics; the
+          final chunk prunes against ALL previous SRNs for this minion
+          (equivalent to :meth:`register_minion`).
+        * ``<rtype>`` -- scoped per-type register; the final chunk prunes
+          only previously-registered SRNs of ``rtype``.  This preserves
+          the invariant that re-registering one type's inventory does
+          not wipe the minion's resources of other types.
+
+        ``chunk_index`` is used to detect and buffer out-of-order chunk
+        arrivals on peer masters (where the publish-daemon dispatches
+        each ``cluster/peer/delegate-resource-register-write`` event
+        into the default thread pool via ``run_in_executor`` -- the
+        executor gives no FIFO guarantee).  If a ``chunk_final=True``
+        arrives with gaps in the ``0..chunk_index`` sequence, the prune
+        is deferred until the missing indices land.  Legacy callers
+        that omit ``chunk_index`` get pre-chunk semantics (prune on
+        every ``chunk_final=True``, no gap check).
+
+        :param str minion_id: The reporting minion.
+        :param dict resources: ``{resource_type: [resource_id, ...]}`` --
+            the slice carried by this chunk.  May be empty for a
+            type-less terminal chunk that only exists to trigger prune.
+        :param bool chunk_final: True iff this chunk ends a registration
+            window.  Only the terminal chunk runs the delete pass.
+        :param str chunk_scope: see above.
+        :param int chunk_index: Monotonically-increasing index assigned
+            by the minion-side sender (0-based within the window).
+            ``None`` disables the gap check (used by legacy single-shot
+            callers).
+        :returns: ``(n_put, n_deleted)`` for logging.  ``n_deleted`` is
+            always zero on non-final chunks AND on terminal chunks whose
+            prune was deferred because of a missing earlier index.
+        """
+        scope = chunk_scope or "__all__"
+        # Materialize this chunk's SRN set and ``put_many`` payload.
+        new_keys = set()
+        to_put = []
+        for rtype, rids in (resources or {}).items():
+            for rid in rids or ():
+                srn = resource_index_srn_key(rtype, rid)
+                new_keys.add(srn)
+                to_put.append((srn, minion_id, rtype))
+        # The mmap write is itself fsync'd and independent per SRN, so
+        # it can safely run outside the lock (duplicate ``put_many`` is
+        # idempotent).  But accumulating into ``_pending_registers`` and
+        # computing the prune MUST be under the lock -- a concurrent
+        # peer-apply thread for the same ``(minion_id, scope)`` could
+        # otherwise observe a half-populated ``keys`` set and wipe
+        # valid SRNs.
+        if to_put:
+            self._store.put_many(to_put)
+
+        with self._pending_registers_lock:
+            pending = self._pending_registers.setdefault(minion_id, {})
+            scope_state = pending.setdefault(
+                scope,
+                {"keys": set(), "seen_indexes": set(), "final_pending": None},
+            )
+            scope_state["keys"].update(new_keys)
+            if chunk_index is not None:
+                scope_state["seen_indexes"].add(chunk_index)
+
+            # If a final chunk has already arrived out-of-order and this
+            # chunk fills a gap, re-check readiness so the deferred
+            # prune can fire now.  Otherwise honor the caller's
+            # ``chunk_final`` flag.
+            final_index = scope_state["final_pending"]
+            if chunk_final and chunk_index is not None:
+                # New terminal arrival: record its index, pick the max
+                # if a prior terminal already landed (defensive -- the
+                # minion-side sender only ships one terminal per window).
+                final_index = (
+                    chunk_index
+                    if final_index is None
+                    else max(final_index, chunk_index)
+                )
+                scope_state["final_pending"] = final_index
+            elif chunk_final and chunk_index is None:
+                # Legacy single-shot path -- no index-based gap check.
+                # Treat as "ready to prune" below.
+                scope_state["final_pending"] = -1
+                final_index = -1
+
+            # Determine whether the terminal chunk is ready to prune.
+            # Ready iff a final has arrived (``final_pending`` not
+            # ``None``) AND either the legacy sentinel (``-1``) applies,
+            # OR every index 0..final_index has been observed.
+            ready_to_prune = False
+            if final_index is not None:
+                if final_index == -1:
+                    ready_to_prune = True
+                else:
+                    expected = set(range(final_index + 1))
+                    ready_to_prune = expected.issubset(scope_state["seen_indexes"])
+
+            if not ready_to_prune:
+                if chunk_final:
+                    log.debug(
+                        "register_minion_chunk: deferring terminal prune for "
+                        "minion=%s scope=%s final_index=%s seen_indexes=%s "
+                        "(out-of-order chunk arrival)",
+                        minion_id,
+                        scope,
+                        final_index,
+                        sorted(scope_state["seen_indexes"]),
+                    )
+                return len(to_put), 0
+
+            # Ready to prune: snapshot the committed SRN set and clear
+            # the per-scope entry (and the minion entry if it's now
+            # empty) before releasing the lock.  The ``delete_many``
+            # call below runs outside the lock so it doesn't hold up
+            # concurrent registrations for other minions.
+            committed = scope_state["keys"]
+            del pending[scope]
+            if not pending:
+                self._pending_registers.pop(minion_id, None)
+
+        # Prune stale SRNs within the window's scope.
+        previous = self._store.resources_by_minion(minion_id)
+        to_delete = []
+        for rtype, rids in previous.items():
+            if scope != "__all__" and rtype != scope:
+                continue
+            for rid in rids:
+                srn = resource_index_srn_key(rtype, rid)
+                if srn not in committed:
+                    to_delete.append(srn)
+        if to_delete:
+            self._store.delete_many(to_delete)
+
+        # Opportunistic compaction on the write path -- same policy as
+        # :meth:`register_minion`.
         self.maybe_compact()
 
         return len(to_put), len(to_delete)

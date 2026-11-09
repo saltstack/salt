@@ -100,7 +100,7 @@ def test_register_resources_sync_fires_replication_event(cluster_opts, tmp_path)
     load = {"id": "minion-a", "resources": {"bigip_vip": ["vip-1"]}}
 
     with patch(
-        "salt.utils.minions.update_resource_index", return_value=(1, 0)
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
     ) as upd_mock, patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
@@ -113,7 +113,14 @@ def test_register_resources_sync_fires_replication_event(cluster_opts, tmp_path)
         "Clustered MWorker must defer local write to the publish daemon; "
         f"got {upd_mock.call_count} direct writes"
     )
-    fire_mock.assert_called_once_with(cluster_opts, "minion-a", load["resources"])
+    fire_mock.assert_called_once_with(
+        cluster_opts,
+        "minion-a",
+        load["resources"],
+        chunk_final=True,
+        chunk_scope="__all__",
+        chunk_index=None,
+    )
 
 
 def test_register_resources_sync_standalone_writes_locally(tmp_path):
@@ -139,13 +146,20 @@ def test_register_resources_sync_standalone_writes_locally(tmp_path):
     load = {"id": "minion-a", "resources": {"bigip_vip": ["vip-1"]}}
 
     with patch(
-        "salt.utils.minions.update_resource_index", return_value=(1, 0)
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
     ) as upd_mock, patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         aes._AESFuncs__register_resources_sync(load)  # noqa: SLF001
 
-    upd_mock.assert_called_once_with(opts, "minion-a", load["resources"])
+    upd_mock.assert_called_once_with(
+        opts,
+        "minion-a",
+        load["resources"],
+        True,
+        chunk_scope="__all__",
+        chunk_index=None,
+    )
     assert fire_mock.call_count == 0
 
 
@@ -163,13 +177,20 @@ def test_register_resources_sync_no_fire_on_shared_fs(shared_fs_opts):
     load = {"id": "minion-a", "resources": {"bigip_vip": ["vip-1"]}}
 
     with patch(
-        "salt.utils.minions.update_resource_index", return_value=(1, 0)
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
     ) as upd_mock, patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         aes._AESFuncs__register_resources_sync(load)  # noqa: SLF001
 
-    upd_mock.assert_called_once_with(shared_fs_opts, "minion-a", load["resources"])
+    upd_mock.assert_called_once_with(
+        shared_fs_opts,
+        "minion-a",
+        load["resources"],
+        True,
+        chunk_scope="__all__",
+        chunk_index=None,
+    )
     assert fire_mock.call_count == 0, (
         "Shared-FS cluster must not fan-out resource-register writes; "
         f"got {fire_mock.call_count} events"
@@ -190,7 +211,9 @@ def test_register_resources_sync_no_fire_when_replication_disabled(
     aes._AESFuncs__verify_load = lambda load, keys: load  # noqa: SLF001
     load = {"id": "minion-a", "resources": {"bigip_vip": ["vip-1"]}}
 
-    with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)), patch(
+    with patch(
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+    ), patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         aes._AESFuncs__register_resources_sync(load)  # noqa: SLF001
@@ -217,7 +240,9 @@ def test_register_resources_sync_no_fire_on_standalone(tmp_path):
     aes._AESFuncs__verify_load = lambda load, keys: load  # noqa: SLF001
     load = {"id": "minion-a", "resources": {"bigip_vip": ["vip-1"]}}
 
-    with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)), patch(
+    with patch(
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+    ), patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         aes._AESFuncs__register_resources_sync(load)  # noqa: SLF001
@@ -243,7 +268,7 @@ def test_handle_delegate_resource_register_write_loop_guard(cluster_opts):
         "originating_master": cluster_opts["id"],  # == self
     }
     upd_mock = MagicMock()
-    with patch("salt.utils.minions.update_resource_index", upd_mock):
+    with patch("salt.utils.minions.update_resource_index_chunk", upd_mock):
         result = replicator._handle_delegate_resource_register_write(
             cluster_opts, payload
         )
@@ -266,12 +291,19 @@ def test_handle_delegate_resource_register_write_applies_locally(cluster_opts):
         "originating_master": "master-2",
     }
     upd_mock = MagicMock(return_value=(2, 0))
-    with patch("salt.utils.minions.update_resource_index", upd_mock):
+    with patch("salt.utils.minions.update_resource_index_chunk", upd_mock):
         result = replicator._handle_delegate_resource_register_write(
             cluster_opts, payload
         )
     assert result is True
-    upd_mock.assert_called_once_with(cluster_opts, "minion-a", payload["resources"])
+    upd_mock.assert_called_once_with(
+        cluster_opts,
+        "minion-a",
+        payload["resources"],
+        True,
+        chunk_scope="__all__",
+        chunk_index=None,
+    )
 
 
 def test_handle_delegate_resource_register_write_missing_fields(cluster_opts):
@@ -280,7 +312,7 @@ def test_handle_delegate_resource_register_write_missing_fields(cluster_opts):
     ``resources``) are dropped rather than crashing the receiver.
     """
     upd_mock = MagicMock()
-    with patch("salt.utils.minions.update_resource_index", upd_mock):
+    with patch("salt.utils.minions.update_resource_index_chunk", upd_mock):
         # Missing minion_id
         assert (
             replicator._handle_delegate_resource_register_write(
@@ -371,9 +403,7 @@ def test_partition_for_dispatch_ring_active(ring_cluster_opts, populated_ring):
         owner: sorted(r.get("dummy", [])) for owner, r in peers.items()
     }
     expected_peer_rids = {
-        owner: sorted(rids)
-        for owner, rids in expected.items()
-        if owner != self_node
+        owner: sorted(rids) for owner, rids in expected.items() if owner != self_node
     }
     assert peer_rids_by_owner == expected_peer_rids
 
@@ -395,9 +425,9 @@ def test_partition_for_dispatch_partition_disjoint(ring_cluster_opts, populated_
         seen.add(rid)
     for owner, owner_resources in peers.items():
         for rid in owner_resources.get("dummy", []):
-            assert rid not in seen, (
-                f"SRN {rid} appeared in a prior bucket and in peer {owner}"
-            )
+            assert (
+                rid not in seen
+            ), f"SRN {rid} appeared in a prior bucket and in peer {owner}"
             seen.add(rid)
     # Every input SRN landed in exactly one bucket.
     assert seen == set(resources["dummy"])
@@ -470,17 +500,143 @@ def test_register_resources_sync_cluster_mode_defers_to_daemon(
     load = {"id": "minion-a", "resources": resources}
 
     with patch(
-        "salt.utils.minions.update_resource_index", return_value=(0, 0)
+        "salt.utils.minions.update_resource_index_chunk", return_value=(0, 0)
     ) as upd_mock, patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         ret, _, _ = aes._AESFuncs__register_resources_sync(load)  # noqa: SLF001
 
     assert ret is True
-    assert upd_mock.call_count == 0, (
-        "Clustered MWorker must defer the local write to the publish daemon"
+    assert (
+        upd_mock.call_count == 0
+    ), "Clustered MWorker must defer the local write to the publish daemon"
+    fire_mock.assert_called_once_with(
+        ring_cluster_opts,
+        "minion-a",
+        resources,
+        chunk_final=True,
+        chunk_scope="__all__",
+        chunk_index=None,
     )
-    fire_mock.assert_called_once_with(ring_cluster_opts, "minion-a", resources)
+
+
+def test_handle_delegate_resource_register_write_propagates_chunk_index(
+    cluster_opts,
+):
+    """
+    Invariant: the peer-side handler must forward ``chunk_index`` from
+    the payload into ``update_resource_index_chunk`` so the
+    registry's out-of-order gap check can detect missing earlier chunks.
+    Without this plumbing, the registry would see ``chunk_index=None``
+    on every arrival and fall back to legacy "prune-every-final"
+    semantics -- the pre-fix behavior.
+    """
+    payload = {
+        "minion_id": "minion-a",
+        "resources": {"dummy": ["d0"]},
+        "originating_master": "master-2",
+        "chunk_final": True,
+        "chunk_scope": "dummy",
+        "chunk_index": 3,
+    }
+    upd_mock = MagicMock(return_value=(1, 0))
+    with patch("salt.utils.minions.update_resource_index_chunk", upd_mock):
+        replicator._handle_delegate_resource_register_write(cluster_opts, payload)
+    upd_mock.assert_called_once_with(
+        cluster_opts,
+        "minion-a",
+        {"dummy": ["d0"]},
+        True,
+        chunk_scope="dummy",
+        chunk_index=3,
+    )
+
+
+def test_handle_delegate_resource_register_write_out_of_order_no_srn_loss(
+    cluster_opts, tmp_path
+):
+    """
+    End-to-end peer-side test for the Phase-3 reviewer finding #14
+    (chunk-reordering race).  Feed four chunks for the same minion +
+    scope in reverse order to the peer-side handler through multiple
+    threads; the final result must retain every SRN.
+
+    Pre-fix (no lock / no gap check):
+    - The terminal chunk (chunk_index=3, chunk_final=True) could race
+      ahead of earlier chunks, run the prune pass against a
+      1-SRN-wide pending window, and wipe the registry.
+    - Concurrent ``_pending_registers`` mutation could drop SRNs via
+      lost-update on the plain dict.
+
+    Post-fix:
+    - The peer apply is serialized per ``(minion_id, chunk_scope)`` by
+      the ``_get_peer_apply_lock`` dict.
+    - The ``register_minion_chunk`` gap check defers the terminal
+      prune until every ``chunk_index`` in ``0..final_index`` has
+      arrived, closing the ordering hole the executor lacks.
+    """
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = dict(cluster_opts)
+    opts["cachedir"] = str(tmp_path)
+    opts["resource_index_primary_capacity"] = 4096
+    opts["resource_index_primary_slot_size"] = 128
+    opts["id"] = "master-1"
+
+    def payload_for(idx, rid, is_final):
+        return {
+            "minion_id": "mx",
+            "resources": {"dummy": [rid]},
+            "originating_master": "master-2",
+            "chunk_final": is_final,
+            "chunk_scope": "dummy",
+            "chunk_index": idx,
+        }
+
+    # Deliver the final chunk FIRST (worst-case race ordering), then
+    # chunks 2, 1, 0 in that order via separate threads.
+    all_payloads = [
+        payload_for(3, "d3", True),
+        payload_for(2, "d2", False),
+        payload_for(1, "d1", False),
+        payload_for(0, "d0", False),
+    ]
+
+    import threading
+
+    errs = []
+    err_lock = threading.Lock()
+
+    def deliver(p):
+        try:
+            replicator._handle_delegate_resource_register_write(opts, p)
+        except Exception as exc:  # pylint: disable=broad-except
+            with err_lock:
+                errs.append(exc)
+
+    # The first delivery (the final chunk) is single-threaded to make
+    # the ordering deterministic for the pre-fix regression.  The
+    # remaining three go in parallel to exercise the per-scope apply
+    # lock.
+    deliver(all_payloads[0])
+    threads = [threading.Thread(target=deliver, args=(p,)) for p in all_payloads[1:]]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not errs, f"peer-side apply raised: {errs}"
+
+    registry = salt.utils.resource_registry.get_registry(opts)
+    try:
+        resources = registry.get_resources_for_minion("mx")
+        got = sorted(resources.get("dummy", []))
+        assert got == ["d0", "d1", "d2", "d3"], (
+            "Out-of-order peer-side chunk delivery dropped SRNs; "
+            f"expected [d0..d3], got {got}"
+        )
+    finally:
+        salt.utils.resource_registry.reset_registry()
 
 
 def test_handle_delegate_resource_register_write_no_re_broadcast(cluster_opts):
@@ -501,7 +657,9 @@ def test_handle_delegate_resource_register_write_no_re_broadcast(cluster_opts):
         "resources": {"bigip_vip": ["vip-1"]},
         "originating_master": "master-2",
     }
-    with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)), patch(
+    with patch(
+        "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+    ), patch(
         "salt.cache._cluster_replicator.fire_resource_register_write"
     ) as fire_mock:
         replicator._handle_delegate_resource_register_write(cluster_opts, payload)

@@ -398,6 +398,68 @@ def update_resource_index(opts, minion_id, resources):
         return (0, 0)
 
 
+def update_resource_index_chunk(
+    opts, minion_id, resources, chunk_final, chunk_scope=None, chunk_index=None
+):
+    """
+    Chunk-aware wrapper around
+    :meth:`ResourceRegistry.register_minion_chunk`.
+
+    Non-final chunks ``put_many`` their SRNs with no delete pass; only the
+    terminal chunk prunes stale entries against the window's cumulative
+    SRN set.  This is the correctness fix for multi-chunk registers --
+    without it, each chunk's receipt would diff against the previous
+    chunk's just-written entries and prune them, leaving only the last
+    chunk persisted.
+
+    :param dict opts: Salt opts (needs ``cachedir``).
+    :param str minion_id: The reporting minion.
+    :param dict resources: ``{resource_type: [resource_id, ...]}`` -- this
+        chunk's slice.
+    :param bool chunk_final: True on the terminal chunk of a register
+        window (triggers the stale-SRN prune).
+    :param str chunk_scope: Which type(s) this register window covers.
+        ``None`` or ``"__all__"`` means the window replaces the minion's
+        full inventory (legacy single-shot).  A type name scopes the
+        prune to that type only.
+    :param int chunk_index: Monotonically-increasing index assigned by
+        the minion-side sender (0-based within the window).  Used by
+        the registry to detect and defer out-of-order terminal prunes
+        on peer masters.  ``None`` keeps pre-chunk semantics for legacy
+        callers.
+    :returns: ``(n_put, n_deleted)`` for logging.  ``n_deleted`` is
+        always zero on non-final chunks and on terminal chunks whose
+        prune was deferred by a chunk-index gap.
+    """
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while registering %s; "
+            "resource targeting for this minion will be unavailable.",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
+    try:
+        return registry.register_minion_chunk(
+            minion_id,
+            resources or {},
+            chunk_final,
+            chunk_scope,
+            chunk_index=chunk_index,
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to register resource chunk for minion '%s' (scope=%s final=%s)",
+            minion_id,
+            chunk_scope,
+            chunk_final,
+            exc_info=True,
+        )
+        return (0, 0)
+
+
 class CkMinions:
     """
     Used to check what minions should respond from a target

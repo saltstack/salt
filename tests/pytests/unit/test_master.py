@@ -1590,10 +1590,142 @@ async def test_register_resources_updates_resource_index_when_minion_data_cache_
     try:
         load = {"id": "minion-2", "resources": {"dummy": ["m2-dummy2"]}}
         with patch(
-            "salt.utils.minions.update_resource_index", return_value=(1, 0)
+            "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
         ) as ur:
             await aes_funcs._register_resources(load)
-        ur.assert_called_once_with(opts, "minion-2", {"dummy": ["m2-dummy2"]})
+        ur.assert_called_once_with(
+            opts,
+            "minion-2",
+            {"dummy": ["m2-dummy2"]},
+            True,
+            chunk_scope="__all__",
+            chunk_index=None,
+        )
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_register_resources_multi_chunk_persists_all_chunks(
+    master_opts, tmp_path
+):
+    """
+    Regression: 3-chunk register per-type (chunks 1+2 non-final, chunk 3
+    final) must persist ALL chunks' SRNs on the master.  The pre-fix
+    bug prune-cascaded chunks 1 & 2 at chunk 2 & 3's receipt because
+    every chunk's receipt was running the diff-against-previous
+    delete pass against the registry's just-written chunk-N-1 state.
+
+    This drives the master-side chunk-aggregation gate end-to-end:
+    AESFuncs._register_resources -> update_resource_index_chunk ->
+    ResourceRegistry.register_minion_chunk.
+    """
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = False
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        chunks = [
+            {"resources": {"dummy": ["d1", "d2"]}, "chunk_final": False},
+            {"resources": {"dummy": ["d3", "d4"]}, "chunk_final": False},
+            {"resources": {"dummy": ["d5"]}, "chunk_final": True},
+        ]
+        for idx, chunk in enumerate(chunks):
+            load = {
+                "id": "minion-X",
+                "resources": chunk["resources"],
+                "chunk_rtype": "dummy",
+                "chunk_index": idx,
+                "chunk_final": chunk["chunk_final"],
+            }
+            await aes_funcs._register_resources(load)
+
+        # ALL 5 SRNs must be present after chunk 3.
+        registry = salt.utils.resource_registry.get_registry(opts)
+        got = sorted(registry.get_resources_for_minion("minion-X").get("dummy", []))
+        assert got == ["d1", "d2", "d3", "d4", "d5"], (
+            f"multi-chunk register persisted {len(got)} entries; expected 5. "
+            "Mid-stream prune cascade is back."
+        )
+    finally:
+        aes_funcs.destroy()
+        salt.utils.resource_registry.reset_registry()
+
+
+async def test_register_resources_chunk_final_triggers_stale_prune(
+    master_opts, tmp_path
+):
+    """
+    Terminal chunk prunes SRNs no longer in the window.  Non-terminal
+    chunks must NOT prune.
+    """
+    import salt.utils.resource_registry
+
+    salt.utils.resource_registry.reset_registry()
+    opts = master_opts.copy()
+    opts["cachedir"] = str(tmp_path)
+    opts["minion_data_cache"] = False
+    opts.setdefault("resource_index_primary_capacity", 4096)
+    opts.setdefault("resource_index_primary_slot_size", 128)
+
+    aes_funcs = salt.master.AESFuncs(opts)
+    try:
+        # Prime the registry with 3 SRNs via a single terminal chunk.
+        await aes_funcs._register_resources(
+            {
+                "id": "minion-Y",
+                "resources": {"dummy": ["old1", "old2", "old3"]},
+                "chunk_rtype": "dummy",
+                "chunk_index": 0,
+                "chunk_final": True,
+            }
+        )
+        registry = salt.utils.resource_registry.get_registry(opts)
+        assert sorted(
+            registry.get_resources_for_minion("minion-Y").get("dummy", [])
+        ) == ["old1", "old2", "old3"]
+
+        # Re-register with a 2-chunk window ending in a single new SRN.
+        await aes_funcs._register_resources(
+            {
+                "id": "minion-Y",
+                "resources": {"dummy": ["new1"]},
+                "chunk_rtype": "dummy",
+                "chunk_index": 0,
+                "chunk_final": False,
+            }
+        )
+        # Non-terminal chunk did NOT prune: old1-3 still present.
+        mid = sorted(registry.get_resources_for_minion("minion-Y").get("dummy", []))
+        assert set(mid) >= {
+            "old1",
+            "old2",
+            "old3",
+            "new1",
+        }, f"non-terminal chunk pruned: {mid}"
+
+        await aes_funcs._register_resources(
+            {
+                "id": "minion-Y",
+                "resources": {"dummy": ["new2"]},
+                "chunk_rtype": "dummy",
+                "chunk_index": 1,
+                "chunk_final": True,
+            }
+        )
+        # Terminal chunk now prunes everything not in the window
+        # (old1/2/3) and keeps new1/new2.
+        final = sorted(registry.get_resources_for_minion("minion-Y").get("dummy", []))
+        assert final == [
+            "new1",
+            "new2",
+        ], f"terminal chunk did not prune stale SRNs: {final}"
     finally:
         aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
@@ -1632,7 +1764,9 @@ async def test_register_resources_persists_resource_grains_to_cache(
                 "dummy:m2-d2": {"k": "v2", "resource_id": "m2-d2"},
             },
         }
-        with patch("salt.utils.minions.update_resource_index", return_value=(2, 0)):
+        with patch(
+            "salt.utils.minions.update_resource_index_chunk", return_value=(2, 0)
+        ):
             await aes_funcs._register_resources(load)
         cache = aes_funcs.masterapi.cache
         stored_keys = sorted(cache.list("resource_grains") or [])
@@ -1809,7 +1943,9 @@ async def test_register_resources_fires_minion_data_cache_event(master_opts, tmp
             "resources": {"dummy": ["m2-d1"]},
             "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
         }
-        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+        with patch(
+            "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+        ):
             await aes_funcs._register_resources(load)
         # ``_pillar`` fires ``minion/refresh/<id>`` for grain refreshes (see
         # the analogous ``tagify(load["id"], "refresh", "minion")`` call);
@@ -1847,7 +1983,9 @@ async def test_register_resources_does_not_fire_event_when_events_disabled(
             "resources": {"dummy": ["m2-d1"]},
             "resource_grains": {"dummy:m2-d1": {"k": "v1"}},
         }
-        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+        with patch(
+            "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+        ):
             await aes_funcs._register_resources(load)
         aes_funcs.event.fire_event.assert_not_called()
         aes_funcs.event.fire_event_async.assert_not_called()
@@ -3645,7 +3783,7 @@ async def test_register_resources_offloads_sync_body_to_executor(master_opts, tm
         load = {"id": "minion-x", "resources": {"dummy": ["r1"]}}
         loop = asyncio.get_running_loop()
         with patch(
-            "salt.utils.minions.update_resource_index", return_value=(1, 0)
+            "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
         ), patch.object(loop, "run_in_executor", wraps=loop.run_in_executor) as rie:
             ret = await aes._register_resources(load)
         assert ret is True
@@ -3690,7 +3828,9 @@ async def test_register_resources_uses_fire_event_async_not_sync(master_opts, tm
             "resources": {"dummy": ["r1"]},
             "resource_grains": {"dummy:r1": {"k": "v"}},
         }
-        with patch("salt.utils.minions.update_resource_index", return_value=(1, 0)):
+        with patch(
+            "salt.utils.minions.update_resource_index_chunk", return_value=(1, 0)
+        ):
             await aes._register_resources(load)
         aes.event.fire_event_async.assert_called_once_with(
             {"Resource cache refresh": "minion-x"},

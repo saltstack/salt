@@ -2,24 +2,29 @@
 Dummy resource module for testing the Salt resource subsystem.
 
 This module implements the ``dummy`` resource type.  It is the resource
-analogue of ``salt.proxy.dummy`` — a self-contained, file-backed
-implementation that exercises the full resource lifecycle without requiring
-any real managed devices.
+analogue of ``salt.proxy.dummy`` -- a self-contained, file-backed
+implementation that exercises the full resource lifecycle without
+requiring any real managed devices.
 
-Unlike a proxy module, a resource module is loaded **once per resource type
-per minion**.  A single instance of this module handles all ``dummy``
-resources managed by the minion.  The current resource context is conveyed
-via the ``__resource__`` dunder rather than as a function parameter, keeping
-the interface consistent with all other Salt module systems.
+Unlike a proxy module, a resource module is loaded **once per resource
+type per minion**.  A single instance of this module handles all
+``dummy`` resources managed by the minion.  The current resource context
+is conveyed via the ``__resource__`` dunder rather than as a function
+parameter, keeping the interface consistent with all other Salt module
+systems.
 
-Configuration (via Pillar)::
+Configuration (minion opts, e.g. ``/etc/salt/minion`` or a
+``minion.d/*.conf`` drop-in)::
 
-    resources:
-      dummy:
-        resource_ids:
-          - dummy-01
-          - dummy-02
-          - dummy-03
+    resource_types:
+      - dummy
+    dummy_resource_count: 200000
+
+``dummy_resource_count`` controls how many synthetic resources the
+minion manages.  IDs are generated programmatically as
+``dummy-0000001 .. dummy-NNNNNNN`` -- never materialized into
+``opts`` or ``pillar``.  ``discover()`` is a generator so the register
+loop can stream chunks without ever holding the full ID list in memory.
 """
 
 import copy
@@ -30,9 +35,23 @@ from contextlib import contextmanager
 
 import salt.utils.files
 import salt.utils.msgpack
-import salt.utils.resources
 
 log = logging.getLogger(__name__)
+
+
+def _dummy_resource_count(opts):
+    """Return the configured ``dummy_resource_count`` as a non-negative int.
+
+    Missing / invalid values yield ``0`` (minion manages no dummy
+    resources).  Negative values are clamped to ``0``.
+    """
+    raw = opts.get("dummy_resource_count", 0)
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        log.warning("dummy_resource_count must be an int; got %r -- treating as 0", raw)
+        return 0
+    return max(count, 0)
 
 
 def __virtual__():
@@ -119,24 +138,18 @@ def init(opts):
     """
     Initialize the dummy resource type for this minion.
 
-    Called once when the resource type is loaded, before any per-resource
-    operations are performed.  Reads the resource type configuration from the
-    ``dummy`` entry under the pillar subtree selected by ``resource_pillar_key``
-    (see :func:`salt.utils.resources.pillar_resources_tree`) and sets up shared type-level
-    state in ``__context__["dummy_resource"]``.
-
-    :param dict opts: The Salt opts dict.
+    Called once when the resource type is loaded, before any
+    per-resource operations are performed.  The count of managed dummy
+    resources is read from the ``dummy_resource_count`` minion opt; the
+    ID list itself is never materialized here -- callers that need to
+    iterate IDs use :func:`discover` which streams them on demand.
     """
-    resource_ids = (
-        salt.utils.resources.pillar_resources_tree(opts)
-        .get("dummy", {})
-        .get("resource_ids", [])
-    )
+    count = _dummy_resource_count(opts)
     __context__["dummy_resource"] = {
         "initialized": True,
-        "resource_ids": resource_ids,
+        "resource_count": count,
     }
-    log.debug("dummy resource init() called, managing: %s", resource_ids)
+    log.debug("dummy resource init() called, managing %d resource(s)", count)
 
 
 def initialized():
@@ -154,27 +167,21 @@ def initialized():
 
 def discover(opts):
     """
-    Return the list of resource IDs of type ``dummy`` that this minion
-    manages.
+    Yield bare resource IDs of type ``dummy`` that this minion manages.
 
-    Called by ``saltutil.refresh_resources`` to populate the master's
-    Resource Registry.  For the dummy module the list of IDs is read from
-    ``resource_ids`` under the ``dummy`` type in the configured resource pillar
-    subtree.
-
-    Returns a list of bare resource IDs (not full SRNs) — e.g.
-    ``["dummy-01", "dummy-02"]``.
+    This is a **generator**: IDs are produced one at a time so the
+    minion's chunked register loop can ship fixed-size chunks without
+    the full inventory ever being resident.  The count is driven by
+    the ``dummy_resource_count`` minion opt; IDs follow the pattern
+    ``dummy-NNNNNNN`` (zero-padded to 7 digits).
 
     :param dict opts: The Salt opts dict.
-    :rtype: list[str]
+    :rtype: Iterator[str]
     """
-    resource_ids = (
-        salt.utils.resources.pillar_resources_tree(opts)
-        .get("dummy", {})
-        .get("resource_ids", [])
-    )
-    log.debug("dummy resource discover() returning: %s", resource_ids)
-    return resource_ids
+    count = _dummy_resource_count(opts)
+    log.debug("dummy resource discover() streaming %d id(s)", count)
+    for i in range(1, count + 1):
+        yield f"dummy-{i:07d}"
 
 
 def grains():

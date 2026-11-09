@@ -963,10 +963,13 @@ class MinionBase:
             finally:
                 pillar.destroy()
 
-        # Populate opts["resources"] from pillar now that pillar is available.
-        # Must happen before the resource loader loop below so that per-type
-        # execution module loaders are created for the correct set of types.
-        self.opts["resources"] = self._discover_resources()
+        # Resource inventory is NOT materialized into ``opts["resources"]``
+        # anymore -- the full ID list is streamed from ``discover()``
+        # inside :meth:`_register_resources_with_master` and consumed in
+        # chunks.  The configured type list (from the ``resource_types``
+        # minion opt) drives per-type loader construction and ``init()``
+        # dispatch below.
+        enabled_types = salt.utils.resources.enabled_resource_types(self.opts)
 
         self.utils = salt.loader.utils(self.opts, context=context)
         functions = salt.loader.minion_mods(
@@ -1001,7 +1004,7 @@ class MinionBase:
         # assignment is atomic in CPython, so the old loaders remain visible
         # until the new complete set is ready.
         _new_resource_loaders = {}
-        for resource_type in self.opts.get("resources", {}):
+        for resource_type in enabled_types:
             rtype_base = (
                 f"{self.opts.get('loaded_base_name', 'salt.loaded.int')}"
                 f".resource.{resource_type}"
@@ -1019,7 +1022,7 @@ class MinionBase:
         # Call init() on each resource type so that __context__ is populated
         # before any per-resource operations (grains, ping, etc.) are dispatched.
         # Mirrors how proxy.init() is called during proxy-minion startup.
-        for resource_type in self.opts.get("resources", {}):
+        for resource_type in enabled_types:
             init_fn = f"{resource_type}.init"
             if init_fn in self.resource_funcs:
                 try:
@@ -1073,62 +1076,52 @@ class MinionBase:
         # modules and return None instead.
         self.gen_modules(initial_load=initial_load, context=context)
 
-    def _discover_resources(self):
+    def _iter_resource_ids(self, resource_type):
         """
-        Build ``opts["resources"]`` by calling each resource type's
-        ``discover(opts)`` function.
+        Yield bare resource IDs for ``resource_type`` by invoking that
+        type's ``discover(opts)`` function.
 
-        Resource types are read from the pillar subtree at
-        ``opts["pillar"][opts["resource_pillar_key"]]`` (default key
-        ``"resources"``, configurable via minion option ``resource_pillar_key``).
-        A temporary resource loader is used to call each type's
-        ``discover(opts)``; the return value is a dict of
-        ``{resource_type: [resource_id, ...]}``.
+        The returned iterable is consumed once per call: the register
+        loop uses this to stream fixed-size chunks (see
+        :meth:`_register_resources_with_master`); job-dispatch
+        resolvers call it per-dispatch and iterate briefly.  The full
+        ID list is never kept resident -- Salt's minion-memory-ceiling
+        invariant is enforced structurally by never calling ``list()``
+        on this iterator from framework code.
 
-        If the merged pillar contains no key by that name, that is treated the
-        same as an empty mapping: no pillar-declared resource types, so
-        discovery returns an empty dict (no stale IDs left in
-        ``opts["resources"]``).
-
-        If the pillar *does* contain that key (even if its value is empty /
-        all entries removed), that is an authoritative declaration and the
-        result reflects only what the pillar says (via ``discover()`` per
-        type).
-
-        Called from :meth:`gen_modules` after pillar is compiled and before
-        the per-type execution-module loaders are created.
+        A type whose loader has no ``<type>.discover`` entry, or whose
+        ``discover()`` raises, yields nothing (with a logged warning).
         """
-        pillar_resources = salt.utils.resources.pillar_resources_tree(self.opts)
-
-        # A minimal resource loader is sufficient here — discover() only reads
-        # from the opts dict passed to it and does not need other dunders.
-        discovery_loader = salt.loader.resource(self.opts)
-        discovered = {}
-        for resource_type in pillar_resources:
-            discover_fn = f"{resource_type}.discover"
-            if discover_fn not in discovery_loader:
-                log.warning(
-                    "No resource module found for type '%s'; skipping discovery.",
-                    resource_type,
-                )
-                continue
+        funcs = getattr(self, "resource_funcs", None)
+        if not funcs:
             try:
-                ids = discovery_loader[discover_fn](self.opts)
-                if ids:
-                    discovered[resource_type] = list(ids)
-                    log.debug(
-                        "Discovered %d resource(s) of type '%s': %s",
-                        len(ids),
-                        resource_type,
-                        ids,
-                    )
+                funcs = salt.loader.resource(self.opts)
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "Resource discovery failed for type '%s': %s",
+                    "Resource loader unavailable for type '%s': %s",
                     resource_type,
                     exc,
                 )
-        return discovered
+                return
+        discover_fn = f"{resource_type}.discover"
+        if discover_fn not in funcs:
+            log.warning(
+                "No resource module found for type '%s'; skipping discovery.",
+                resource_type,
+            )
+            return
+        try:
+            ids = funcs[discover_fn](self.opts)
+        except Exception as exc:  # pylint: disable=broad-except
+            log.warning(
+                "Resource discovery failed for type '%s': %s",
+                resource_type,
+                exc,
+            )
+            return
+        if ids is None:
+            return
+        yield from ids
 
     @staticmethod
     def process_schedule(minion, loop_interval):
@@ -2538,11 +2531,9 @@ class Minion(MinionBase):
             # the pyzmq Context.__del__ wedge that sync ``destroy``
             # can leave behind (see PR-70316 trace).
             await async_pillar.aclose()
-            # _setup_core uses _load_modules only — unlike gen_modules it does not
-            # run _discover_resources().  tune_in schedules _register_resources_with_master
-            # right after connect; without this, the master registry gets {} until an
-            # async pillar refresh completes (easy to miss with saltutil.sync_all).
-            self.opts["resources"] = self._discover_resources()
+            # Resource types are configured via ``resource_types`` opt and
+            # materialized lazily by the register loop; no eager discovery
+            # happens here (see :meth:`_register_resources_with_master`).
 
         if not self.ready:
             self._setup_core()
@@ -2555,7 +2546,9 @@ class Minion(MinionBase):
                 self.function_errors,
                 self.executors,
             ) = self._load_modules()
-            self.opts["resources"] = self._discover_resources()
+            # Resource types are opt-driven and unchanged by a pillar
+            # refresh; the chunked register path re-streams IDs when
+            # ``resource_refresh`` fires.
             if hasattr(self, "schedule"):
                 self.schedule.functions = self.functions
                 self.schedule.returners = self.returners
@@ -4634,26 +4627,36 @@ class Minion(MinionBase):
             include_startup_grains=include_grains,
         )
 
-    def _collect_resource_grains(self):
+    def _collect_resource_grains(self, resources=None):
         """
-        Render per-resource grain dicts for every resource this minion manages.
+        Render per-resource grain dicts for the given resource set.
 
-        For each ``(resource_type, resource_id)`` pair, sets the per-call
-        :data:`salt.loader.context.resource_ctxvar` and invokes
-        ``resource_funcs[f"{type}.grains"]()``. Returns a mapping keyed by
-        composite SRN ``"<type>:<id>"`` -> grain dict, suitable for shipping
-        to the master in :meth:`_register_resources_with_master`.
+        ``resources`` is a mapping ``{resource_type: [resource_id, ...]}``
+        -- normally one type's chunk at a time, supplied by
+        :meth:`_register_resources_with_master`.  When called without
+        arguments the method streams every enabled type by iterating
+        each type's ``discover()`` in turn; it is up to the caller to
+        bound the working set (target resolution calls per-type).
 
-        Resource types without a ``grains`` callable are skipped silently.
-        Per-resource grain failures are logged and skipped; a single broken
-        resource never blocks registration of the others.
+        Returns a mapping keyed by composite SRN ``"<type>:<id>"`` ->
+        grain dict, suitable for shipping to the master.  Resource types
+        without a ``grains`` callable are skipped silently; per-resource
+        grain failures are logged and skipped so a single broken
+        resource never blocks the siblings.
 
         :rtype: dict[str, dict]
         """
         import salt.loader.context as _loader_ctx  # noqa: PLC0415
 
+        if resources is None:
+            # Streaming form: iterate each enabled type's discover() so the
+            # caller never has to pre-build an inventory dict.  Used by the
+            # target-resolution grain cache fallback.
+            resources = {}
+            for rtype in salt.utils.resources.enabled_resource_types(self.opts):
+                resources[rtype] = list(self._iter_resource_ids(rtype))
+
         resource_grains = {}
-        resources = self.opts.get("resources", {})
         for rtype, rids in (resources or {}).items():
             grains_fn = f"{rtype}.grains"
             if grains_fn not in getattr(self, "resource_funcs", {}):
@@ -4679,81 +4682,137 @@ class Minion(MinionBase):
 
     async def _register_resources_with_master(self):
         """
-        Send this minion's resource list to the master for registry population.
+        Register this minion's resources with the master.
 
-        Called on startup (and reconnect) so that the master's
-        ``minion_resources`` cache bank is up-to-date.  This allows
-        :class:`salt.utils.minions.CkMinions` to include resource IDs when
-        expanding glob / non-compound targets (e.g. ``salt '*' test.ping``).
+        Resource IDs are streamed per-type from each enabled resource
+        module's ``discover(opts)`` generator -- the minion never holds
+        the full inventory in an ``opts["resources"]`` mapping.  For
+        each enabled type, IDs are drained from the generator into a
+        chunk of size :conf_minion:`resource_register_chunk_size`
+        (default 10000) and shipped to the master; the chunk is then
+        dropped so the memory footprint for a 200K-resource type stays
+        bounded by ``chunk_size * per-SRN-cost`` rather than
+        ``total * per-SRN-cost`` (see memory-ceiling invariant).
 
-        Also ships a per-resource ``resource_grains`` mapping so the master
-        can populate its ``resource_grains`` cache bank for ``-G`` /
-        ``salt -G`` grain-based targeting of resources.
+        Per-resource grains are rendered per-chunk inside
+        :meth:`_send_register_chunk` and shipped with that chunk's
+        SRNs.  Grain dicts are NOT accumulated across chunks on the
+        minion -- the chunk's grains are referenced only by the
+        outgoing RPC load and are dropped when the chunk completes.
+        This enforces the memory-ceiling invariant: a 200K-resource
+        register holds at most ``chunk_size`` grain dicts resident at
+        any instant instead of all 200K.
 
-        **Freshness model.** The ``resource_grains`` snapshot is taken at
-        the moment of this call by :meth:`_collect_resource_grains`. A
-        per-resource ``<type>.grains_refresh()`` invocation that mutates
-        the underlying state does **not** automatically propagate to the
-        master — the master's view is refreshed only when this method runs
-        again. The triggers that re-run it are:
+        The master's ``resource_grains`` bank sees a fresh snapshot
+        every time this method runs; the triggers are:
 
         * minion start / reconnect (``tune_in``);
-        * the ``resource_refresh`` event on the minion event bus (see
-          ``manage_event_iter``); and
-        * a successful ``saltutil.refresh_pillar`` / ``module_refresh``
-          (because :meth:`_post_master_init` re-discovers resources).
+        * the ``resource_refresh`` event on the minion event bus;
+        * a successful ``saltutil.refresh_pillar`` / ``module_refresh``.
 
-        Operators who need the master to see fresh resource grains after
-        an out-of-band state change should fire ``resource_refresh`` or
-        run ``salt-call saltutil.refresh_pillar``.
-
-        An empty resource dict is sent deliberately when the minion has no
-        resources — this clears any stale entries left by a previous
-        registration (e.g. after a resource type is removed from the pillar).
+        A final chunk with ``chunk_final=True`` is sent per type (and a
+        type=None chunk when the minion manages no types at all) so the
+        master-side registry can prune stale entries left by a previous
+        registration.
         """
-        resources = self.opts.get("resources", {})
-        if resources and not getattr(self, "resource_funcs", None):
-            # ``resource_funcs`` is the loader for ``salt/resource/<type>.py``
-            # connection modules. Unlike ``functions``/``returners`` (built
-            # by :meth:`_setup_core` during :meth:`_post_master_init`), the
-            # resource loaders are normally materialised lazily on the
-            # **first job dispatch** by :meth:`_thread_return.gen_modules`.
-            # Resource registration runs **before** any job has been
-            # dispatched, so without this eager call ``resource_funcs`` is
-            # an empty :class:`LazyLoader` and
-            # :meth:`_collect_resource_grains` finds no ``<type>.grains``
-            # callables to invoke — the master ends up with an empty
-            # ``resource_grains`` bank and ``salt -G ...`` silently fails
-            # to match resources. The cost is paid once per registration;
-            # subsequent calls hit the populated loader and skip this
-            # branch.
+        enabled_types = salt.utils.resources.enabled_resource_types(self.opts)
+        chunk_size = max(int(self.opts.get("resource_register_chunk_size", 10000)), 1)
+
+        if enabled_types and not getattr(self, "resource_funcs", None):
+            # Resource loaders are normally built lazily on first job
+            # dispatch; registration runs earlier, so eagerly rebuild
+            # modules here or the discover + grains callables are
+            # missing from ``resource_funcs``.
             try:
                 self.gen_modules()
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
-                    "Failed to gen_modules before resource grain collection: %s",
+                    "Failed to gen_modules before resource registration: %s",
                     exc,
                 )
-        resource_grains = self._collect_resource_grains() if resources else {}
-        # Cache locally so :meth:`_resolve_resource_targets` can resolve
-        # ``tgt_type == "grain"`` without re-rendering.
-        self._resource_grains_cache = resource_grains
+
+        sent_any = False
+        for rtype in enabled_types:
+            chunk_ids = []
+            chunk_index = 0
+            for rid in self._iter_resource_ids(rtype):
+                chunk_ids.append(rid)
+                if len(chunk_ids) >= chunk_size:
+                    # Ship the full chunk, then drop it so the per-
+                    # chunk grain dict rendered inside
+                    # ``_send_register_chunk`` can be GC-ed before the
+                    # next chunk is accumulated.  No cross-chunk
+                    # grain-cache accumulation.
+                    await self._send_register_chunk(
+                        rtype, chunk_ids, chunk_index, final=False
+                    )
+                    chunk_ids = []
+                    chunk_index += 1
+            # Final chunk per type (possibly empty).  Always sent so the
+            # master can prune stale SRNs.
+            await self._send_register_chunk(rtype, chunk_ids, chunk_index, final=True)
+            sent_any = True
+            # Drop the final chunk reference so the per-type peak is
+            # released before iterating the next type.
+            del chunk_ids
+
+        if not sent_any:
+            # No enabled types -- still send a final empty chunk so the
+            # master clears any stale state from a previous config.
+            await self._send_register_chunk(None, [], 0, final=True)
+
+        # Explicitly clear any stale ``_resource_grains_cache`` left
+        # by a prior (pre-refactor) register.  We deliberately do NOT
+        # populate it here -- holding the full inventory's grain dict
+        # on the minion violates the memory-ceiling invariant.
+        # :meth:`_resolve_resource_targets` renders grains on-demand
+        # per-type when a job is dispatched (bounded by one type's
+        # chunk).
+        self._resource_grains_cache = None
+
+    async def _send_register_chunk(self, rtype, ids, index, final):
+        """
+        Ship one chunk of the register payload to the master.
+
+        A chunked RPC per ``(rtype, index)`` carries only the IDs in
+        that chunk plus the grains for them.  Chunk sequencing is
+        communicated via the ``chunk_rtype``/``chunk_index``/
+        ``chunk_final`` fields; a master that ignores these fields
+        simply applies each chunk as a standalone registration -- for
+        a multi-chunk type the per-chunk writes are additive against
+        the mmap registry.  ``chunk_final=True`` is the signal for
+        stale-entry pruning for ``rtype``.
+        """
+        resources = {rtype: list(ids)} if rtype else {}
+        resource_grains = (
+            self._collect_resource_grains({rtype: ids}) if rtype and ids else {}
+        )
+        load = {
+            "cmd": "_register_resources",
+            "id": self.opts["id"],
+            "resources": resources,
+            "resource_grains": resource_grains,
+            "chunk_rtype": rtype,
+            "chunk_index": index,
+            "chunk_final": final,
+            "tok": self.tok,
+        }
         try:
-            # Build the load inside the guard as well: this method is
-            # best-effort, so a problem assembling the request should be
-            # reported the same way a failure to send it is, rather than
-            # escaping into pillar_refresh and aborting the rest of it.
-            load = {
-                "cmd": "_register_resources",
-                "id": self.opts["id"],
-                "resources": resources,
-                "resource_grains": resource_grains,
-                "tok": self.tok,
-            }
             await self._send_req_async_main(load, timeout=self._return_retry_timer())
-            log.debug("Registered resources with master: %s", list(resources.keys()))
+            log.debug(
+                "Registered resource chunk type=%s index=%d final=%s count=%d",
+                rtype,
+                index,
+                final,
+                len(resources.get(rtype, []) if rtype else []),
+            )
         except Exception as err:  # pylint: disable=broad-except
-            log.warning("Unable to register resources with master: %s", err)
+            log.warning(
+                "Unable to register resource chunk (type=%s index=%d): %s",
+                rtype,
+                index,
+                err,
+            )
 
     def module_refresh(self, force_refresh=False, notify=False):
         """
@@ -4917,11 +4976,11 @@ class Minion(MinionBase):
                     # Proxy-scoped so a regular minion pays no extra rebuild.
                     self.module_refresh(force_refresh)
 
-                # Re-discover resources now that pillar has changed.  Must
-                # happen *after* opts["pillar"] is updated so that
-                # _discover_resources sees the new resource declarations (or
-                # their absence when a type is removed from the pillar).
-                self.opts["resources"] = self._discover_resources()
+                # Re-register resources with the master.  Inventory lives
+                # in minion opts (``resource_types`` + per-type keys), not
+                # in pillar -- a pillar refresh does not change the ID
+                # set, but we still re-stream so transient loader state
+                # (e.g. newly synced resource modules) is picked up.
                 await self._register_resources_with_master()
             finally:
                 # See ``_post_master_init`` for why aclose is preferred
@@ -5223,7 +5282,6 @@ class Minion(MinionBase):
         elif tag.startswith("matchers_refresh"):
             _minion.matchers_refresh()
         elif tag.startswith("resource_refresh"):
-            _minion.opts["resources"] = _minion._discover_resources()
             _minion._spawn_background(_minion._register_resources_with_master())
         elif tag.startswith("manage_schedule"):
             _minion.manage_schedule(tag, data)
@@ -6037,10 +6095,13 @@ class Minion(MinionBase):
             and tgt != self.opts.get("id")
             and not any(c in tgt for c in ("*", "?", "["))
         ):
-            resources = self.opts.get("resources", {})
-            for rids in resources.values():
-                if tgt in rids:
-                    return True
+            # Scan each enabled type's discover() stream for a bare-id
+            # match.  Early-exit on hit keeps this bounded in the common
+            # case; the generator is torn down as soon as we return.
+            for rtype in salt.utils.resources.enabled_resource_types(self.opts):
+                for rid in self._iter_resource_ids(rtype):
+                    if tgt == rid:
+                        return True
         return False
 
     # Functions that are internal Salt plumbing and should never be dispatched
@@ -6197,29 +6258,35 @@ class Minion(MinionBase):
 
     def _resolve_resource_targets(self, load):
         """
-        Return the list of per-resource dicts ``{"id": ..., "type": ...}`` that
-        the target expression matches against ``opts["resources"]``.
+        Return the list of per-resource dicts ``{"id": ..., "type": ...}``
+        that the target expression matches against the resources this
+        minion manages.
 
-        For wildcard glob targets (e.g. ``salt '*'``), returns all managed
-        resources so that the command also runs against resources.
-        For compound T@ targets, returns only the matched resources.
-        For list targets, returns resources whose bare id appears in the list.
-        For an exact glob with no wildcards, returns a single resource if ``tgt``
-        is a bare id managed by this minion (``salt <resource-id>``).
-        For specific-name glob targets that are not resource ids (e.g.
-        ``salt 'minion'``), grain, pillar, or compound expressions with no T@
-        terms, returns an empty list — the operator is targeting the minion
-        itself, not its resources.
-        Internal/plumbing functions (see ``_NO_RESOURCE_FUNS``) are never
-        dispatched to resources.
+        Resource IDs are streamed per enabled type via
+        :meth:`_iter_resource_ids` -- no inventory dict is materialized
+        in ``self.opts``.  The resulting target list is bounded by the
+        matched-resource count, not by the total inventory.
+
+        For wildcard glob targets (e.g. ``salt '*'``), returns all
+        managed resources so that the command also runs against
+        resources.  For compound T@ targets, returns only the matched
+        resources.  For list targets, returns resources whose bare id
+        appears in the list.  For an exact glob with no wildcards,
+        returns a single resource if ``tgt`` is a bare id managed by
+        this minion (``salt <resource-id>``).  For specific-name glob
+        targets that are not resource ids (e.g. ``salt 'minion'``),
+        grain, pillar, or compound expressions with no T@ terms, returns
+        an empty list -- the operator is targeting the minion itself,
+        not its resources.  Internal/plumbing functions (see
+        ``_NO_RESOURCE_FUNS``) are never dispatched to resources.
         """
-        resources = self.opts.get("resources", {})
-        if not resources:
+        enabled_types = salt.utils.resources.enabled_resource_types(self.opts)
+        if not enabled_types:
             return []
 
         fun = load.get("fun")
-        # Multi-fun jobs (``fun`` is a list) bypass resource dispatch — the
-        # multifun execution path doesn't fold per-resource returns.
+        # Multi-fun jobs (``fun`` is a list) bypass resource dispatch --
+        # the multifun execution path doesn't fold per-resource returns.
         if not isinstance(fun, str):
             return []
         if fun in self._NO_RESOURCE_FUNS:
@@ -6229,29 +6296,26 @@ class Minion(MinionBase):
         tgt_type = load.get("tgt_type", "glob")
 
         if tgt_type == "compound":
-            # Per-resource boolean evaluation of the compound expression.
-            # Each resource is treated as an independent target whose
-            # identity (``type``, ``id``) and grain dict drive the truth
-            # value of every term; ``and`` / ``or`` / ``not`` / parens are
-            # evaluated using Python's boolean operators after rendering
-            # each term to ``True``/``False``.
-            rg = getattr(self, "_resource_grains_cache", None)
-            if rg is None:
-                rg = self._collect_resource_grains()
-                self._resource_grains_cache = rg
-            # Include every managed resource even if it has no grain entry
-            # — so plain ``T@type`` / ``T@type:id`` compounds still match
-            # for resources whose connection module exposes no ``grains``.
-            all_srns = dict(rg)
-            for rtype, rids in (resources or {}).items():
-                for rid in rids or ():
-                    all_srns.setdefault(f"{rtype}:{rid}", {})
+            # Compound terms reference per-resource grains + identity.
+            # Stream per-type so the peak resident set is bounded by a
+            # single type's chunk -- NOT by the full inventory.  Grain
+            # dicts for a type are rendered once per dispatch and
+            # dropped after the per-type scan, so a compound match
+            # against 200K resources never holds all 200K grain dicts
+            # resident.
+            resources_view = {
+                rtype: list(self._iter_resource_ids(rtype)) for rtype in enabled_types
+            }
             targets = []
-            for srn, gdict in all_srns.items():
-                if self._resource_matches_compound(tgt, srn, gdict, resources):
-                    rtype, _, rid = srn.partition(":")
-                    if rid:
+            for rtype, rids in resources_view.items():
+                rg = self._collect_resource_grains({rtype: rids})
+                for rid in rids:
+                    srn = f"{rtype}:{rid}"
+                    gdict = rg.get(srn, {})
+                    if self._resource_matches_compound(tgt, srn, gdict, resources_view):
                         targets.append({"id": rid, "type": rtype})
+                # Drop this type's grain dict before moving to the next.
+                del rg
             return targets
 
         if tgt_type == "list":
@@ -6260,54 +6324,61 @@ class Minion(MinionBase):
                 if isinstance(tgt, str)
                 else [str(t).strip() for t in tgt if str(t).strip()]
             )
+            if not tokens:
+                return []
+            token_set = set(tokens)
             targets = []
-            for token in tokens:
-                for rtype, rids in resources.items():
-                    if token in rids:
-                        targets.append({"id": token, "type": rtype})
+            for rtype in enabled_types:
+                for rid in self._iter_resource_ids(rtype):
+                    if rid in token_set:
+                        targets.append({"id": rid, "type": rtype})
             return targets
 
         if tgt_type in ("grain", "grain_pcre"):
             # Match each managed resource's per-resource grains against
-            # ``tgt`` (a ``key:value`` expression). Uses the cache populated
-            # by :meth:`_register_resources_with_master`; refreshes on miss
-            # so a never-registered minion still resolves its own targets.
-            rg = getattr(self, "_resource_grains_cache", None)
-            if rg is None:
-                rg = self._collect_resource_grains()
-                self._resource_grains_cache = rg
+            # ``tgt`` (a ``key:value`` expression).  Render grains
+            # per-type so a 200K-resource minion never holds all grain
+            # dicts resident -- each type's grain dict is dropped after
+            # its scan completes.
             targets = []
-            for srn, gdict in rg.items():
-                if salt.utils.data.subdict_match(
-                    gdict,
-                    tgt,
-                    delimiter=DEFAULT_TARGET_DELIM,
-                    regex_match=(tgt_type == "grain_pcre"),
-                ):
-                    rtype, _, rid = srn.partition(":")
-                    if rid:
-                        targets.append({"id": rid, "type": rtype})
+            for rtype in enabled_types:
+                rids = list(self._iter_resource_ids(rtype))
+                rg = self._collect_resource_grains({rtype: rids})
+                for srn, gdict in rg.items():
+                    if salt.utils.data.subdict_match(
+                        gdict,
+                        tgt,
+                        delimiter=DEFAULT_TARGET_DELIM,
+                        regex_match=(tgt_type == "grain_pcre"),
+                    ):
+                        _rtype, _, rid = srn.partition(":")
+                        if rid:
+                            targets.append({"id": rid, "type": _rtype})
+                del rg
             return targets
 
         # For glob targets, only dispatch to resources when the pattern
         # contains a wildcard.  A bare name like ``salt 'minion' test.ping``
-        # targets the minion itself; it should not implicitly run against its
-        # resources.  ``salt '*' test.ping`` or ``salt 'web*' test.ping``
-        # opts in to resource dispatch.
+        # targets the minion itself; it should not implicitly run against
+        # its resources.
         if (
             tgt_type == "glob"
             and isinstance(tgt, str)
             and not any(c in tgt for c in ("*", "?", "["))
         ):
-            for rtype, rids in resources.items():
-                if tgt in rids:
-                    return [{"id": tgt, "type": rtype}]
+            for rtype in enabled_types:
+                for rid in self._iter_resource_ids(rtype):
+                    if rid == tgt:
+                        return [{"id": tgt, "type": rtype}]
             return []
 
-        # Wildcard glob — dispatch to all managed resources.
+        # Wildcard glob -- dispatch to every managed resource.  This
+        # path is inherently O(inventory) in the number of returned
+        # targets; callers that care about memory should scope their
+        # target pattern tighter.
         all_resources = []
-        for rtype, rids in resources.items():
-            for rid in rids:
+        for rtype in enabled_types:
+            for rid in self._iter_resource_ids(rtype):
                 all_resources.append({"id": rid, "type": rtype})
         return all_resources
 

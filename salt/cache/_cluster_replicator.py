@@ -38,6 +38,46 @@ _EVENT_HANDLE_CACHE = {}
 _EVENT_HANDLE_LOCK = threading.Lock()
 
 
+# Per-(minion_id, chunk_scope) serialization for peer-side register
+# apply.  The publish daemon dispatches each incoming
+# ``cluster/peer/delegate-resource-register-write`` event into the
+# default ThreadPoolExecutor via ``run_in_executor(None, ...)``, which
+# gives no FIFO ordering guarantee.  Without serialization, a fast
+# ``chunk_final=True`` arriving while an earlier non-final chunk is
+# still queued can run the prune pass against an incomplete pending
+# window and wipe valid SRNs, which the slow non-final chunk would
+# then re-insert leaving the mmap in an inconsistent state.
+#
+# A per-``(minion_id, chunk_scope)`` ``threading.Lock`` serializes
+# every peer-side apply for that scope, forcing one chunk to fully
+# commit (and release the lock) before the next grabs it.  The
+# pending-window ``chunk_index`` gap check in
+# :meth:`ResourceRegistry.register_minion_chunk` then handles the
+# terminal-arrived-first case by deferring the prune until the gap
+# fills in.
+_PEER_APPLY_LOCK_REGISTRY = {}
+_PEER_APPLY_LOCK_REGISTRY_GUARD = threading.Lock()
+
+
+def _get_peer_apply_lock(minion_id, chunk_scope):
+    """
+    Return the serialization lock for peer-side register apply for a
+    ``(minion_id, chunk_scope)`` pair.
+
+    Created lazily on first use.  The locks live for the lifetime of
+    the publish-daemon process; a per-minion, per-scope leak is bounded
+    by ``N_minions * N_types`` which is small compared to the
+    resource-registry itself.
+    """
+    key = (minion_id, chunk_scope)
+    with _PEER_APPLY_LOCK_REGISTRY_GUARD:
+        lock = _PEER_APPLY_LOCK_REGISTRY.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _PEER_APPLY_LOCK_REGISTRY[key] = lock
+    return lock
+
+
 def _handle_cache_key(opts):
     """Compose a (sock_dir, master_id, pid) key for the handle cache."""
     return (opts.get("sock_dir"), opts.get("id"), os.getpid())
@@ -230,7 +270,14 @@ def _partition_resources_by_ring(ring, resources):
     return buckets
 
 
-def fire_resource_register_write(opts, minion_id, resources):
+def fire_resource_register_write(
+    opts,
+    minion_id,
+    resources,
+    chunk_final=True,
+    chunk_scope=None,
+    chunk_index=None,
+):
     """
     Fire a resource-registry write event for the publish daemon to
     intercept and dispatch.
@@ -244,17 +291,38 @@ def fire_resource_register_write(opts, minion_id, resources):
     daemon process (its per-ring Raft groups aren't visible across the
     MWorker fork boundary).
 
-    :param opts:      Master opts dict (must contain ``id``).
-    :param minion_id: The reporting minion.
-    :param resources: ``{resource_type: [resource_id, ...]}`` -- the
-                      exact dict that was passed to the local
-                      ``update_resource_index`` call.
+    ``chunk_final`` + ``chunk_scope`` + ``chunk_index`` carry chunked-
+    register metadata through to peers and the local publish-daemon
+    writer so a multi-chunk register preserves additive mid-stream
+    puts and defers the stale-SRN prune to the terminal chunk.  The
+    ``chunk_index`` field additionally lets peer masters detect and
+    buffer out-of-order final-chunk arrivals (publish-daemon
+    ``run_in_executor`` has no FIFO guarantee across chunks).  Legacy
+    single-shot callers can omit all three fields and get pre-chunk
+    semantics (full replace, no gap check).
+
+    :param opts:         Master opts dict (must contain ``id``).
+    :param minion_id:    The reporting minion.
+    :param resources:    ``{resource_type: [resource_id, ...]}`` -- the
+                         exact dict that was passed to the local
+                         ``update_resource_index_chunk`` call.
+    :param chunk_final:  True iff this chunk ends a register window.
+    :param chunk_scope:  ``None``/``"__all__"`` for a legacy single-
+                         shot register, or a type name for a scoped
+                         chunked register.
+    :param chunk_index:  0-based monotonic index of this chunk within
+                         the register window.  ``None`` for legacy
+                         single-shot callers.
     """
     payload = {
         "minion_id": minion_id,
         "resources": resources,
         "originating_master": opts.get("id"),
+        "chunk_final": chunk_final,
+        "chunk_scope": chunk_scope or "__all__",
     }
+    if chunk_index is not None:
+        payload["chunk_index"] = chunk_index
     _fire_payload(
         opts,
         payload,
@@ -328,21 +396,24 @@ def _handle_delegate_resource_register_write(opts, payload):
 
     1. Drop the event if ``originating_master`` equals this master's
        ``opts["id"]`` -- bus bounce-back must not become a write.
-    2. Apply via :func:`salt.utils.minions.update_resource_index` so
-       the local write lands through the same code path as a
-       minion-originated register.  No ``_already_replicated`` flag
-       is needed because that function is a direct call to the
-       ``MmapCache``-backed ``ResourceRegistry.register_minion`` and
-       does not emit any further replication events.
+    2. Apply via :func:`salt.utils.minions.update_resource_index_chunk`
+       so the local write lands through the same chunked code path a
+       minion-originated register would take.  Non-final chunks
+       additively ``put_many`` without pruning; only the terminal
+       chunk runs the stale-SRN delete pass scoped to ``chunk_scope``.
 
-    Idempotency: ``register_minion`` replaces the full set of
-    resources for that minion, so a duplicate delivery converges to
-    the same state (and the per-minion delta it computes means no
-    spurious puts/deletes land either).
+    Idempotency: the chunked API's per-minion accumulator keys by
+    scope, so duplicate deliveries converge to the same state (the
+    same SRN set is re-inserted into the pending window, and a
+    duplicate terminal chunk's delete-diff is a no-op).
 
     :param opts:    Master opts dict (must contain ``id``).
     :param payload: Decoded event payload with keys
-                    ``originating_master``, ``minion_id``, ``resources``.
+                    ``originating_master``, ``minion_id``, ``resources``,
+                    and (chunked registers only)
+                    ``chunk_final``/``chunk_scope``.  Missing chunk
+                    fields default to ``True``/``"__all__"`` for
+                    back-compat with legacy single-shot payloads.
     :returns:       ``True`` if the register was applied, ``False``
                     if dropped (loop-guard or malformed payload).
     """
@@ -362,10 +433,28 @@ def _handle_delegate_resource_register_write(opts, payload):
             payload,
         )
         return False
+    chunk_final = payload.get("chunk_final", True)
+    chunk_scope = payload.get("chunk_scope") or "__all__"
+    chunk_index = payload.get("chunk_index")
     try:
         import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
-        salt.utils.minions.update_resource_index(opts, minion_id, resources)
+        # Serialize apply per ``(minion_id, chunk_scope)`` -- see the
+        # ``_PEER_APPLY_LOCK_REGISTRY`` comment above.  The underlying
+        # ``register_minion_chunk`` also acquires its own lock around
+        # the ``_pending_registers`` mutation + prune; this outer lock
+        # additionally serializes the ``put_many`` + pending update as
+        # one unit so concurrent threads can't interleave puts between
+        # the gap check and the prune of the same window.
+        with _get_peer_apply_lock(minion_id, chunk_scope):
+            salt.utils.minions.update_resource_index_chunk(
+                opts,
+                minion_id,
+                resources,
+                chunk_final,
+                chunk_scope=chunk_scope,
+                chunk_index=chunk_index,
+            )
         return True
     except Exception:  # pylint: disable=broad-except
         log.exception(

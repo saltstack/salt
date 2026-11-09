@@ -27,12 +27,79 @@ RESOURCES = {
 
 @pytest.fixture
 def minion_with_resources(minion_opts):
-    """A Minion instance with resources configured, no real master connection."""
+    """A Minion instance with resources configured, no real master connection.
+
+    The ``opts["resources"]`` assignment is a test-only shim: after the
+    pillar-to-opts refactor the minion no longer reads a central
+    ``opts["resources"]`` dict, so we also wire up ``resource_types`` +
+    patch ``_iter_resource_ids`` to yield the same IDs each test
+    expects.  Tests themselves retain their original semantics.
+
+    The ``_resource_grains_cache`` attribute is no longer an authoritative
+    accumulator (the register loop writes ``None``; see the memory-
+    ceiling invariant in ``feedback_minion_never_holds_full_resource_set``),
+    so tests that preload it get a shim here: we intercept the write and
+    build a ``dummy.grains`` / ``ssh.grains`` resource_funcs pair that
+    returns each SRN's grains on demand -- the same shape the real
+    grains loader would present after per-type streaming.
+    """
     minion_opts["resources"] = RESOURCES
+    minion_opts["resource_types"] = list(RESOURCES.keys())
     minion_opts["multiprocessing"] = False
     with mock_patch("salt.minion.Minion.gen_modules"):
         with mock_patch("salt.minion.Minion.connect_master"):
             m = salt.minion.Minion(minion_opts, load_grains=False)
+
+    # Stream per-type IDs from the static RESOURCES dict so target
+    # resolution sees the same inventory the pre-refactor tests set up.
+    def _fake_iter(resource_type):
+        return iter(RESOURCES.get(resource_type, []))
+
+    m._iter_resource_ids = _fake_iter
+
+    # Per-type grains callables that honor the resource_ctxvar the real
+    # loader context sets around ``.grains()`` calls.  The test shim
+    # writes ``_resource_grains_cache = {...}`` via the setter below
+    # which forwards the mapping into ``_cache_backing`` for this
+    # lookup.  Tests that set the cache directly get grains dispatched
+    # per-type as the new code does.
+    cache_backing = {}
+    m._cache_backing = cache_backing
+
+    def _grains_for(rtype):
+        def _fn():
+            import salt.loader.context as _ctx
+
+            target = _ctx.resource_ctxvar.get()
+            srn = f"{target['type']}:{target['id']}"
+            return cache_backing.get(srn, {})
+
+        return _fn
+
+    m.resource_funcs = {
+        "dummy.grains": _grains_for("dummy"),
+        "ssh.grains": _grains_for("ssh"),
+    }
+
+    # Tests set ``minion._resource_grains_cache = {...}`` as a convenience.
+    # Intercept the write by swapping the instance's class to a lightweight
+    # subclass with a property so the per-instance patch doesn't leak to
+    # every other ``Minion`` built in the test suite.
+    cls = type(m)
+
+    class _MinionWithCacheShim(cls):
+        @property
+        def _resource_grains_cache(self):
+            return self.__dict__.get("__resource_grains_cache_val")
+
+        @_resource_grains_cache.setter
+        def _resource_grains_cache(self, value):
+            cache_backing.clear()
+            if value:
+                cache_backing.update(value)
+            self.__dict__["__resource_grains_cache_val"] = value
+
+    m.__class__ = _MinionWithCacheShim
     return m
 
 
@@ -76,11 +143,13 @@ def test_pure_resource_target_excludes_own_minion_id(minion_opts):
     """A bare id that is BOTH the minion's own id and a managed resource id is
     not a pure-resource target, so the minion still runs its own job."""
     minion_opts["resources"] = RESOURCES
+    minion_opts["resource_types"] = list(RESOURCES.keys())
     minion_opts["multiprocessing"] = False
     minion_opts["id"] = "dummy-01"
     with mock_patch("salt.minion.Minion.gen_modules"):
         with mock_patch("salt.minion.Minion.connect_master"):
             m = salt.minion.Minion(minion_opts, load_grains=False)
+    m._iter_resource_ids = lambda rt: iter(RESOURCES.get(rt, []))
     own_id = {"tgt": "dummy-01", "tgt_type": "glob", "fun": "test.ping", "arg": []}
     other_resource = {
         "tgt": "dummy-02",
@@ -365,238 +434,6 @@ def test_thread_return_grain_swap_source_inspection():
     assert "if grains_fn in minion_instance.resource_funcs:" in source
     assert 'functions_to_use.pack["__grains__"] =' in source
     assert "minion_instance.resource_funcs[grains_fn]()" in source
-
-
-# ---------------------------------------------------------------------------
-# _discover_resources tests
-# ---------------------------------------------------------------------------
-
-
-def test_discover_resources_no_pillar_key_clears_like_empty(minion_with_resources):
-    """
-    When the pillar contains no 'resources' key at all, _discover_resources
-    must behave like pillar['resources'] == {}: return {} and not preserve
-    stale opts["resources"].
-    """
-    minion_with_resources.opts["pillar"] = {}
-    result = minion_with_resources._discover_resources()
-    assert result == {}
-
-
-def test_discover_resources_empty_pillar_key_clears_opts(minion_with_resources):
-    """
-    When the pillar *does* contain a 'resources' key but its value is empty,
-    _discover_resources must return {} and NOT preserve the old opts resources.
-    This is the fix for the stale-cache bug: removing a resource type from the
-    pillar and running sync_all must clear it at runtime.
-    """
-    minion_with_resources.opts["pillar"] = {"resources": {}}
-    result = minion_with_resources._discover_resources()
-    assert (
-        result == {}
-    ), "_discover_resources must return {} when pillar['resources'] is empty"
-
-
-# ---------------------------------------------------------------------------
-# _discover_resources error paths and return-shape contract
-# ---------------------------------------------------------------------------
-
-
-def _fake_resource_loader(discovers):
-    """Return a dict-like loader whose ``<type>.discover`` callables come
-    from the ``discovers`` mapping ({rtype: callable}). Types absent from
-    ``discovers`` have no ``<type>.discover`` key — mirrors a loader where
-    the discover function is missing for that type."""
-    return {f"{rtype}.discover": fn for rtype, fn in discovers.items()}
-
-
-def test_discover_resources_continues_when_one_type_raises(
-    minion_with_resources, caplog
-):
-    """
-    A single resource type whose ``discover()`` raises must not block
-    discovery of the other types. The raising type is omitted from the
-    result; a warning is logged.
-    """
-    minion_with_resources.opts["pillar"] = {
-        "resources": {"good_a": {}, "boom": {}, "good_b": {}}
-    }
-    fake_loader = _fake_resource_loader(
-        {
-            "good_a": lambda opts: ["a-1"],
-            "boom": lambda opts: (_ for _ in ()).throw(
-                RuntimeError("connection refused")
-            ),
-            "good_b": lambda opts: ["b-1", "b-2"],
-        }
-    )
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        with caplog.at_level("WARNING"):
-            result = minion_with_resources._discover_resources()
-
-    assert result == {"good_a": ["a-1"], "good_b": ["b-1", "b-2"]}
-    assert any(
-        "Resource discovery failed for type 'boom'" in rec.message
-        for rec in caplog.records
-    ), "Expected a warning naming the failing type"
-
-
-def test_discover_resources_skips_type_missing_discover_fn(
-    minion_with_resources, caplog
-):
-    """
-    A type listed in pillar whose loader has no ``<type>.discover`` is
-    skipped with a warning; other types still discover normally.
-    """
-    minion_with_resources.opts["pillar"] = {
-        "resources": {"with_disc": {}, "no_disc": {}}
-    }
-    fake_loader = _fake_resource_loader(
-        {"with_disc": lambda opts: ["w-1"]}
-    )  # "no_disc.discover" intentionally absent
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        with caplog.at_level("WARNING"):
-            result = minion_with_resources._discover_resources()
-
-    assert result == {"with_disc": ["w-1"]}
-    assert any(
-        "No resource module found for type 'no_disc'" in rec.message
-        for rec in caplog.records
-    ), "Expected a warning naming the type missing its discover function"
-
-
-def test_discover_resources_drops_type_when_discover_returns_none(
-    minion_with_resources,
-):
-    """
-    ``discover()`` returning ``None`` is treated as "no ids for this type"
-    — the type is omitted from the result entirely. Pins the current
-    ``if ids:`` guard at minion.py:596.
-    """
-    minion_with_resources.opts["pillar"] = {"resources": {"empty": {}, "populated": {}}}
-    fake_loader = _fake_resource_loader(
-        {
-            "empty": lambda opts: None,
-            "populated": lambda opts: ["p-1"],
-        }
-    )
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        result = minion_with_resources._discover_resources()
-
-    assert result == {"populated": ["p-1"]}
-    assert "empty" not in result
-
-
-def test_discover_resources_drops_type_when_discover_returns_empty_list(
-    minion_with_resources,
-):
-    """
-    ``discover()`` returning ``[]`` is treated like ``None`` — type
-    omitted from result, no empty entry created.
-    """
-    minion_with_resources.opts["pillar"] = {"resources": {"empty": {}}}
-    fake_loader = _fake_resource_loader({"empty": lambda opts: []})
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        result = minion_with_resources._discover_resources()
-
-    assert result == {}
-
-
-def test_discover_resources_coerces_tuple_return_to_list(minion_with_resources):
-    """
-    ``discover()`` returning a tuple is wrapped in ``list()`` (minion.py:597),
-    so downstream code consistently sees lists.
-    """
-    minion_with_resources.opts["pillar"] = {"resources": {"tup": {}}}
-    fake_loader = _fake_resource_loader({"tup": lambda opts: ("t-1", "t-2")})
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        result = minion_with_resources._discover_resources()
-
-    assert result == {"tup": ["t-1", "t-2"]}
-    assert isinstance(result["tup"], list)
-
-
-def test_discover_resources_coerces_generator_return_to_list(minion_with_resources):
-    """
-    ``discover()`` returning a generator is fully drained into a list,
-    matching the tuple-coercion contract.
-    """
-    minion_with_resources.opts["pillar"] = {"resources": {"gen": {}}}
-
-    def gen_discover(opts):
-        yield "g-1"
-        yield "g-2"
-        yield "g-3"
-
-    fake_loader = _fake_resource_loader({"gen": gen_discover})
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        result = minion_with_resources._discover_resources()
-
-    assert result == {"gen": ["g-1", "g-2", "g-3"]}
-    assert isinstance(result["gen"], list)
-
-
-def test_discover_resources_stores_dynamic_ids_verbatim(minion_with_resources):
-    """
-    Pins the current contract: ``discover()`` is the sole source of ids
-    for its type. The framework does NOT merge with pillar-declared ids.
-
-    Pillar declares ``dynamic_test`` with ``resource_ids: ["p-1", "p-2"]``
-    (the values a type like dummy/ssh would read), but ``discover()``
-    returns ``["d-1", "d-2"]`` — the result is exactly ``discover()``'s
-    output, with the pillar ids dropped on the floor.
-
-    This test will need updating when union-with-override lands as a
-    framework-level merge for the declarative-resources work.
-    """
-    minion_with_resources.opts["pillar"] = {
-        "resources": {
-            "dynamic_test": {"resource_ids": ["p-1", "p-2"]},
-        }
-    }
-    fake_loader = _fake_resource_loader({"dynamic_test": lambda opts: ["d-1", "d-2"]})
-    with mock_patch("salt.loader.resource", return_value=fake_loader):
-        result = minion_with_resources._discover_resources()
-
-    assert result == {"dynamic_test": ["d-1", "d-2"]}, (
-        "discover() output is currently authoritative; pillar's "
-        "resource_ids are NOT merged in by the framework."
-    )
-
-
-# ---------------------------------------------------------------------------
-# _register_resources_with_master tests
-# ---------------------------------------------------------------------------
-
-
-def test_register_resources_with_master_sends_empty_dict(minion_with_resources):
-    """
-    _register_resources_with_master must send the registration even when
-    opts["resources"] is {}.  Without this, removing resources from the pillar
-    and running sync_all leaves the master cache permanently stale.
-    """
-    minion_with_resources.opts["resources"] = {}
-    sent_loads = []
-
-    async def fake_send(load, timeout=None):
-        sent_loads.append(load)
-
-    import asyncio
-
-    minion_with_resources.tok = b"test-tok"
-    with mock_patch.object(
-        minion_with_resources,
-        "_send_req_async_main",
-        side_effect=fake_send,
-    ):
-        asyncio.run(minion_with_resources._register_resources_with_master())
-
-    assert (
-        len(sent_loads) == 1
-    ), "_register_resources_with_master must always send a load, even for {}"
-    assert (
-        sent_loads[0]["resources"] == {}
-    ), "An empty resource dict must be forwarded to the master to clear stale cache"
 
 
 # ---------------------------------------------------------------------------
@@ -1009,8 +846,12 @@ def test_resolve_resource_targets_grain_lazy_collects_when_cache_missing(
 ):
     """
     If the grain cache has never been populated (e.g. registration hasn't
-    happened yet), the resolver falls back to ``_collect_resource_grains``
-    so a freshly-started minion still acts on grain targets.
+    happened yet), the resolver falls back to per-type
+    ``_collect_resource_grains`` so a freshly-started minion still acts
+    on grain targets.  Post-memory-ceiling refactor: the resolver does
+    NOT backfill the cache -- grains are rendered on demand per type
+    and discarded, otherwise a 200K-resource minion would accumulate
+    the full grain set on first grain-targeted job.
     """
     minion_with_resources._resource_grains_cache = None
     seen = []
@@ -1029,8 +870,8 @@ def test_resolve_resource_targets_grain_lazy_collects_when_cache_missing(
     targets = minion_with_resources._resolve_resource_targets(load)
     ids = {t["id"] for t in targets}
     assert ids == {"dummy-01", "dummy-02", "dummy-03"}
-    # Cache populated on the fly, persisted for the next call.
-    assert minion_with_resources._resource_grains_cache is not None
+    # Cache intentionally NOT backfilled -- memory-ceiling invariant.
+    assert minion_with_resources._resource_grains_cache is None
 
 
 def test_resolve_resource_targets_compound_G_at_grain(minion_with_resources):
@@ -1374,3 +1215,119 @@ def test_handle_payload_per_resource_load_strips_wide_fields(
     reloaded = salt.payload.loads(salt.payload.dumps(delivered[0]))
     assert "resource_targets" not in reloaded
     assert reloaded["resource_target"] == delivered[0]["resource_target"]
+
+
+# ---------------------------------------------------------------------------
+# Register-loop memory-ceiling regression (Concern 2 of the pre-Phase-3 fix)
+#
+# The register loop must NOT accumulate per-chunk grain dicts into a
+# ``_resource_grains_cache`` attribute: for a 200K-resource inventory
+# that would hold ~170 MiB of grain data resident even though the
+# chunk shape was supposed to bound memory to one chunk at a time.
+# ---------------------------------------------------------------------------
+
+
+async def test_register_loop_does_not_accumulate_grain_cache(
+    minion_with_resources,
+):
+    """
+    After ``_register_resources_with_master`` completes, the minion's
+    ``_resource_grains_cache`` must be ``None`` -- the chunk's grains
+    are rendered, shipped, and dropped; nothing accumulates.
+
+    Precedent: Implementer A's first cut rendered grains per chunk but
+    then wrote every chunk's grains into
+    ``self._resource_grains_cache``, which re-introduced the
+    ``total * per-SRN-cost`` memory ceiling violation for 200K-
+    resource inventories.
+    """
+
+    # Capture every chunk the register loop would send.
+    sent_chunks = []
+
+    async def _fake_send_req(load, timeout):
+        sent_chunks.append(dict(load))
+        return True
+
+    # Simple per-resource grains callable -- returns the resource ID as
+    # a grain so each chunk ships a non-empty resource_grains dict.
+    def _dummy_grains():
+        target = salt.loader.context.resource_ctxvar.get()
+        return {"env": "prod", "resource_id": target["id"]}
+
+    minion_with_resources.resource_funcs = {"dummy.grains": _dummy_grains}
+    minion_with_resources.tok = b"t"
+    minion_with_resources._send_req_async_main = _fake_send_req
+    minion_with_resources._return_retry_timer = lambda: 5
+
+    # Force a chunk_size of 1 so every ID becomes its own chunk -- a
+    # multi-chunk register for the 3 dummy IDs in RESOURCES.
+    minion_with_resources.opts["resource_register_chunk_size"] = 1
+
+    # Pre-seed the attribute with a non-None sentinel to catch the
+    # (incorrect) "set to aggregated dict" code path: the loop must
+    # OVERWRITE it with ``None``, not append.
+    minion_with_resources._resource_grains_cache = {"stale": "entry"}
+
+    await minion_with_resources._register_resources_with_master()
+
+    # 3 dummy IDs + 1 terminal chunk per type (ssh type sends a final
+    # empty chunk even though it has no grains).  Each chunk's
+    # resource_grains dict should carry at most that chunk's SRNs.
+    assert sent_chunks, "register loop must send at least one chunk"
+    for chunk in sent_chunks:
+        chunk_ids = chunk.get("resources", {}).get(chunk.get("chunk_rtype"), [])
+        grain_keys = set(chunk.get("resource_grains", {}).keys())
+        assert len(grain_keys) <= max(len(chunk_ids), 0), (
+            f"chunk {chunk.get('chunk_rtype')}#{chunk.get('chunk_index')} "
+            f"shipped {len(grain_keys)} grain dicts for only "
+            f"{len(chunk_ids)} IDs; grain-cache accumulation across "
+            "chunks is forbidden"
+        )
+
+    # Invariant: no grain-cache accumulator remains on the minion.
+    assert minion_with_resources._resource_grains_cache is None, (
+        "register loop must NOT populate ``_resource_grains_cache`` -- "
+        "for a 200K inventory this would hold ~170 MiB resident; got "
+        f"{type(minion_with_resources._resource_grains_cache).__name__}"
+    )
+
+
+async def test_register_loop_terminal_chunk_fired_per_type(
+    minion_with_resources,
+):
+    """
+    Every enabled type produces exactly one ``chunk_final=True`` chunk,
+    and non-final chunks have ``chunk_final=False``.  The master-side
+    stale-SRN prune key depends on exactly-one-terminal-per-type.
+    """
+    sent_chunks = []
+
+    async def _fake_send_req(load, timeout):
+        sent_chunks.append(dict(load))
+        return True
+
+    minion_with_resources.resource_funcs = {"dummy.grains": lambda: {}}
+    minion_with_resources.tok = b"t"
+    minion_with_resources._send_req_async_main = _fake_send_req
+    minion_with_resources._return_retry_timer = lambda: 5
+    # chunk_size=2 against 3 dummy IDs: 2 chunks of (2 ids, 1 id) per
+    # dummy -- first non-final, second final.
+    minion_with_resources.opts["resource_register_chunk_size"] = 2
+
+    await minion_with_resources._register_resources_with_master()
+
+    final_by_type = {}
+    for chunk in sent_chunks:
+        rtype = chunk.get("chunk_rtype")
+        if chunk.get("chunk_final"):
+            final_by_type.setdefault(rtype, 0)
+            final_by_type[rtype] += 1
+
+    # Each enabled type must produce exactly one terminal chunk.
+    enabled = {"dummy", "ssh"}
+    for rtype in enabled:
+        assert final_by_type.get(rtype) == 1, (
+            f"expected exactly one chunk_final=True for type {rtype}; "
+            f"got {final_by_type.get(rtype)}"
+        )

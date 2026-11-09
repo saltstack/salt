@@ -2252,6 +2252,9 @@ class MasterPubServerChannel:
         resources,
         originating_master,
         target_master=None,
+        chunk_final=True,
+        chunk_scope=None,
+        chunk_index=None,
     ):
         """
         Dispatch a resource-registry register across the cluster.
@@ -2286,7 +2289,11 @@ class MasterPubServerChannel:
             "minion_id": minion_id,
             "resources": resources,
             "originating_master": originating_master,
+            "chunk_final": chunk_final,
+            "chunk_scope": chunk_scope or "__all__",
         }
+        if chunk_index is not None:
+            payload["chunk_index"] = chunk_index
         event = salt.utils.event.SaltEvent.pack(
             salt.utils.event.tagify(
                 "delegate-resource-register-write", "peer", "cluster"
@@ -2355,10 +2362,20 @@ class MasterPubServerChannel:
         * **Ring-routed**: partition by owner.  Apply the self-owned
           share locally, fire one targeted event per remote owner
           carrying only that owner's SRNs.
+
+        Chunked-register plumbing: ``chunk_final`` + ``chunk_scope``
+        flow through the local write and every peer publish so a
+        multi-chunk register preserves additive mid-stream puts and
+        defers the stale-SRN prune to the terminal chunk on every
+        peer.  Missing fields default to ``True`` / ``"__all__"`` for
+        back-compat with legacy single-shot payloads.
         """
         minion_id = payload.get("minion_id")
         resources = payload.get("resources") or {}
         originating_master = payload.get("originating_master")
+        chunk_final = payload.get("chunk_final", True)
+        chunk_scope = payload.get("chunk_scope") or "__all__"
+        chunk_index = payload.get("chunk_index")
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
         import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
@@ -2369,8 +2386,13 @@ class MasterPubServerChannel:
         )
         if local_bucket:
             try:
-                salt.utils.minions.update_resource_index(
-                    self.opts, minion_id, local_bucket
+                salt.utils.minions.update_resource_index_chunk(
+                    self.opts,
+                    minion_id,
+                    local_bucket,
+                    chunk_final,
+                    chunk_scope=chunk_scope,
+                    chunk_index=chunk_index,
                 )
             except Exception:  # pylint: disable=broad-except
                 log.exception(
@@ -2381,16 +2403,23 @@ class MasterPubServerChannel:
         if not ring_active:
             # Broadcast: one event, every peer, full set.
             await self.publish_resource_register_write(
-                minion_id, resources, originating_master
+                minion_id,
+                resources,
+                originating_master,
+                chunk_final=chunk_final,
+                chunk_scope=chunk_scope,
+                chunk_index=chunk_index,
             )
             return
         # Ring-routed: one event per remote owner, carrying only its SRNs.
         log.debug(
             "resource-replicate: ring dispatch for minion=%s local_shard=%d "
-            "peer_shards=%s",
+            "peer_shards=%s final=%s scope=%s",
             minion_id,
             sum(len(v) for v in local_bucket.values()),
             {k: sum(len(v) for v in r.values()) for k, r in peer_buckets.items()},
+            chunk_final,
+            chunk_scope,
         )
         for owner, owner_resources in peer_buckets.items():
             await self.publish_resource_register_write(
@@ -2398,6 +2427,9 @@ class MasterPubServerChannel:
                 owner_resources,
                 originating_master,
                 target_master=owner,
+                chunk_final=chunk_final,
+                chunk_scope=chunk_scope,
+                chunk_index=chunk_index,
             )
 
     def _handle_delegate_cache_write(self, payload):

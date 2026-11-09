@@ -505,25 +505,6 @@ def test_check_minions_glob_exact_bare_registered_resource_id(ck_with_resources)
     assert "dummy-02" in result["minions"]
 
 
-def test_check_glob_minions_bare_resource_from_pillar_cache_empty_registry(opts):
-    """Bare glob matches cached pillar ``resources`` when mmap registry is cold."""
-    opts["minion_data_cache"] = True
-    fake_cache = MagicMock()
-
-    def fetch_side_effect(bank, mid):
-        if bank == "pillar" and mid == "m2":
-            return {"resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}}
-        return {}
-
-    fake_cache.list.side_effect = lambda bank: ["m2"]
-    fake_cache.fetch.side_effect = fetch_side_effect
-
-    with patch("salt.cache.factory", return_value=fake_cache):
-        ck = salt.utils.minions.CkMinions(opts)
-        result = ck._check_glob_minions("m2-dummy2", greedy=True)
-    assert "m2-dummy2" in result["minions"]
-
-
 def test_check_glob_minions_bare_resource_from_grains_cache_empty_registry(opts):
     opts["minion_data_cache"] = True
     fake_cache = MagicMock()
@@ -540,25 +521,6 @@ def test_check_glob_minions_bare_resource_from_grains_cache_empty_registry(opts)
         ck = salt.utils.minions.CkMinions(opts)
         result = ck._check_glob_minions("m2-dummy2", greedy=True)
     assert "m2-dummy2" in result["minions"]
-
-
-def test_check_list_minions_bare_resource_from_cache_empty_registry(opts):
-    opts["minion_data_cache"] = True
-    fake_cache = MagicMock()
-    fake_cache.list.side_effect = lambda bank: ["m2"]
-
-    def fetch_side_effect(bank, mid):
-        if bank == "pillar" and mid == "m2":
-            return {"resources": {"dummy": {"resource_ids": ["m2-dummy2"]}}}
-        return {}
-
-    fake_cache.fetch.side_effect = fetch_side_effect
-
-    with patch("salt.cache.factory", return_value=fake_cache):
-        ck = salt.utils.minions.CkMinions(opts)
-        result = ck._check_list_minions("m2-dummy2", greedy=True)
-    assert result["minions"] == ["m2-dummy2"]
-    assert result["missing"] == []
 
 
 # ---------------------------------------------------------------------------
