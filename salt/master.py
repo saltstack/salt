@@ -3004,11 +3004,20 @@ class AESFuncs(TransportMethods):
                 # ``cluster_cache_replicate_batch_size``) instead of one
                 # event per SR.
                 current_srns = set(resource_grains.keys())
-                batch = [
-                    (srn, gdict)
-                    for srn, gdict in resource_grains.items()
-                    if isinstance(gdict, dict)
-                ]
+                batch = []
+                for srn, gdict in resource_grains.items():
+                    if not isinstance(gdict, dict):
+                        continue
+                    # Enforce the ``resource_id`` convention structurally:
+                    # the id portion of the bank key is authoritative, so
+                    # any grain whose module omitted or diverged on
+                    # ``resource_id`` is normalised here.  Grain targeting's
+                    # ``resource_id:<glob>`` fast path relies on this
+                    # invariant to skip the per-match fetch.
+                    _rtype, _sep, _rid = srn.partition(":")
+                    if _sep and _rid:
+                        gdict["resource_id"] = _rid
+                    batch.append((srn, gdict))
                 if batch:
                     cache.store_many(
                         salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
@@ -3842,11 +3851,20 @@ class AESFuncs(TransportMethods):
             try:
                 cache = self.masterapi.cache
                 current_srns = set(resource_grains.keys())
-                batch = [
-                    (srn, gdict)
-                    for srn, gdict in resource_grains.items()
-                    if isinstance(gdict, dict)
-                ]
+                batch = []
+                for srn, gdict in resource_grains.items():
+                    if not isinstance(gdict, dict):
+                        continue
+                    # Enforce the ``resource_id`` convention structurally:
+                    # the id portion of the bank key is authoritative, so
+                    # any grain whose module omitted or diverged on
+                    # ``resource_id`` is normalised here.  Grain targeting's
+                    # ``resource_id:<glob>`` fast path relies on this
+                    # invariant to skip the per-match fetch.
+                    _rtype, _sep, _rid = srn.partition(":")
+                    if _sep and _rid:
+                        gdict["resource_id"] = _rid
+                    batch.append((srn, gdict))
                 if batch:
                     cache.store_many(
                         salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
