@@ -48,8 +48,6 @@ def _shared_pillar_top(salt_master):
             - dummy_resources_2
           '{MINION_ID_DYN}':
             - dynamic_resources
-          '{MINION_ID_CUSTOM_KEY}':
-            - custom_key_resources
         """
     )
     with salt_master.pillar_tree.base.temp_file("top.sls", top_file):
@@ -312,81 +310,6 @@ def write_dynamic_ids_pillar(salt_master, ids):
         """
     )
     return salt_master.pillar_tree.base.temp_file("dynamic_resources.sls", body)
-
-
-MINION_ID_CUSTOM_KEY = "resources-minion-custom-key"
-CUSTOM_PILLAR_KEY = "salt_resources"
-CUSTOM_KEY_DUMMY_RESOURCES = ["custom-01", "custom-02"]
-
-
-@pytest.fixture(scope="module")
-def pillar_tree_custom_key_resources(salt_master, _shared_pillar_top):
-    """
-    Pillar SLS for the custom-key minion: declares dummy resources
-    under a NON-default top-level key (``salt_resources``). Also adds
-    an empty ``resources:`` block (the framework's default key) so we
-    can assert the minion ignores the default when configured to use
-    the alternate key.
-
-    Top.sls comes from :func:`_shared_pillar_top`.
-    """
-    pillar_sls = textwrap.dedent(
-        f"""
-        resources: {{}}
-        {CUSTOM_PILLAR_KEY}:
-          dummy:
-            resource_ids:
-              - {CUSTOM_KEY_DUMMY_RESOURCES[0]}
-              - {CUSTOM_KEY_DUMMY_RESOURCES[1]}
-        """
-    )
-    with salt_master.pillar_tree.base.temp_file("custom_key_resources.sls", pillar_sls):
-        yield
-
-
-@pytest.fixture(scope="module")
-def salt_minion_custom_pillar_key(salt_master, pillar_tree_custom_key_resources):
-    """
-    Minion whose ``resource_pillar_key`` is overridden to
-    ``salt_resources``. Verifies discovery + registration + targeting
-    work end-to-end against a non-default key.
-    """
-    config_overrides = {
-        "fips_mode": FIPS_TESTRUN,
-        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
-        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
-        "multiprocessing": False,
-        "resource_pillar_key": CUSTOM_PILLAR_KEY,
-    }
-    factory = salt_master.salt_minion_daemon(
-        MINION_ID_CUSTOM_KEY,
-        overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-    )
-    factory.after_terminate(
-        pytest.helpers.remove_stale_minion_key, salt_master, factory.id
-    )
-    with factory.started(start_timeout=240):
-        salt_call_cli = factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
-        assert ret.returncode == 0, ret
-        ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
-        assert ret.returncode == 0, ret
-        time.sleep(3)
-        try:
-            yield factory
-        finally:
-            # Clear the master's resource_grains bank of this minion's
-            # entries BEFORE shutdown. Without this, the master keeps
-            # ``dummy:custom-01`` / ``dummy:custom-02`` registered and
-            # a later test querying ``-G dummy_grain_1:one`` will wait
-            # for those (dead) resources to respond.
-            _clear_minion_resource_registration(
-                salt_master,
-                salt_call_cli,
-                "custom_key_resources.sls",
-                f"resources: {{}}\n{CUSTOM_PILLAR_KEY}: {{}}\n",
-            )
 
 
 @pytest.fixture(scope="module")
