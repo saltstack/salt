@@ -2998,15 +2998,22 @@ class AESFuncs(TransportMethods):
             resource_grains = load.get("resource_grains") or {}
             try:
                 cache = self.masterapi.cache
-                # Always store this chunk's grains (additive).
+                # Always store this chunk's grains (additive).  Use
+                # ``store_many`` so the whole chunk fires a single batched
+                # ``delegate-cache-write`` event (bounded by
+                # ``cluster_cache_replicate_batch_size``) instead of one
+                # event per SR.
                 current_srns = set(resource_grains.keys())
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
+                batch = [
+                    (srn, gdict)
+                    for srn, gdict in resource_grains.items()
+                    if isinstance(gdict, dict)
+                ]
+                if batch:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        batch,
+                    )
                 if chunk_final:
                     # Terminal chunk: by this point
                     # ``register_minion_chunk`` has already committed the
@@ -3835,13 +3842,16 @@ class AESFuncs(TransportMethods):
             try:
                 cache = self.masterapi.cache
                 current_srns = set(resource_grains.keys())
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
+                batch = [
+                    (srn, gdict)
+                    for srn, gdict in resource_grains.items()
+                    if isinstance(gdict, dict)
+                ]
+                if batch:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        batch,
+                    )
                 if chunk_final:
                     # Terminal chunk: see __register_resources_sync for
                     # the matching narrative -- orphans only, scoped.

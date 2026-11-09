@@ -21,6 +21,51 @@ import salt.cache
 log = logging.getLogger(__name__)
 
 
+# Per-process shared Cache for the peer-apply hot path.
+#
+# ``_handle_delegate_cache_write`` previously built a fresh ``Cache(opts)``
+# on every incoming event. Under heavy peer-event load (hundreds/s) that
+# forced every one of the publish daemon's ~32 executor threads to
+# acquire the shared ``functools.cached_property`` RLock guarding
+# ``Cache.modules``, which serialised them all through one critical
+# section running ``salt.loader.cache(opts)``. Reusing one long-lived
+# ``Cache`` moves the ``.modules`` lookup to a one-shot, after which
+# the result lives in ``instance.__dict__`` and subsequent accesses
+# bypass the descriptor's lock entirely.
+#
+# Keyed on ``id(opts)`` so a replacement opts dict triggers a rebuild.
+# Driver-level writes (mmap_cache flock, localfs fcntl) remain
+# thread-safe across concurrent ``store()`` calls on the shared
+# instance; the only state ``Cache.store`` reads after the first
+# ``.modules`` access is ``self.opts`` + ``self.kwargs`` (both
+# immutable after construction).
+_PEER_APPLY_CACHE_LOCK = threading.Lock()
+_peer_apply_cache = (0, None)
+
+
+def _get_peer_apply_cache(opts):
+    """
+    Return a long-lived ``Cache`` for peer-apply writes.
+
+    First call initialises; subsequent calls return the cached instance
+    without acquiring any lock (reading a Python-level reference is
+    atomic under the GIL). Rebuilds if ``id(opts)`` changes.
+
+    :param opts: Master opts dict.
+    :rtype:      salt.cache.Cache
+    """
+    global _peer_apply_cache  # pylint: disable=global-statement
+    opts_id = id(opts)
+    cur = _peer_apply_cache
+    if cur[0] == opts_id and cur[1] is not None:
+        return cur[1]
+    with _PEER_APPLY_CACHE_LOCK:
+        cur = _peer_apply_cache
+        if cur[0] != opts_id or cur[1] is None:
+            _peer_apply_cache = (opts_id, salt.cache.Cache(opts))
+    return _peer_apply_cache[1]
+
+
 # Per-(sock_dir, master-id, pid) cached MasterEvent handle.
 #
 # ``Cache.store`` / ``Cache.store_many`` on a clustered master fire a
@@ -555,10 +600,10 @@ def _handle_delegate_cache_write(opts, payload):
         return False
     expires = payload.get("expires")
     try:
-        cache = salt.cache.Cache(opts)
+        cache = _get_peer_apply_cache(opts)
     except Exception:  # pylint: disable=broad-except
         log.exception(
-            "cache-replicate: failed to instantiate Cache for replication apply"
+            "cache-replicate: failed to obtain shared Cache for replication apply"
         )
         return False
     if payload.get("batch"):
