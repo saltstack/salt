@@ -460,6 +460,51 @@ def update_resource_index_chunk(
         return (0, 0)
 
 
+def _resource_id_candidates(sr_keys, expr, delimiter, regex_match):
+    """
+    Narrow ``sr_keys`` to the subset whose id portion matches a
+    top-level ``resource_id:<pattern>`` predicate.
+
+    The ``resource_grains`` bank stores one entry per salt resource,
+    keyed by ``<type>:<id>``. By convention the ``resource_id`` grain
+    equals the id portion of that key, so a ``resource_id:<pattern>``
+    target can be narrowed by filename pattern alone — without
+    pickle-loading every grain dict. Callers still fetch + confirm
+    via ``subdict_match`` so the convention does not have to hold
+    for correctness; this helper only trims the fetch set.
+
+    Returns ``None`` when the fast path does not apply (nested
+    predicate, different key, empty pattern), signalling the caller
+    to fall back to a full-bank scan.
+    """
+    if not isinstance(expr, str):
+        return None
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return None
+    if delimiter in pattern:
+        # Nested predicate (e.g. ``resource_id:sub:value``) — we only
+        # know how to short-circuit the flat top-level case.
+        return None
+    if regex_match:
+        try:
+            rx = re.compile(pattern)
+        except re.error:
+            return None
+        match = rx.search
+    else:
+
+        def match(rid, _pat=pattern):
+            return fnmatch.fnmatchcase(rid, _pat)
+
+    out = []
+    for sr_key in sr_keys:
+        _rtype, sep2, rid = sr_key.partition(":")
+        if sep2 and rid and match(rid):
+            out.append(sr_key)
+    return out
+
+
 class CkMinions:
     """
     Used to check what minions should respond from a target
@@ -767,6 +812,19 @@ class CkMinions:
         # Normalise to list; preserve any existing order.
         if not isinstance(existing, list):
             result["minions"] = list(existing)
+        # Fast path: ``resource_id:<pattern>`` predicates only need to look
+        # at the id portion of each bank key (``<type>:<id>``). The master
+        # enforces ``gdict["resource_id"] == <id>`` at register time (see
+        # ``salt/master.py:__register_resources_sync``), so a bank-key glob
+        # match is the full match -- no fetch / ``subdict_match`` needed.
+        candidates = _resource_id_candidates(srns, expr, delimiter, regex_match)
+        if candidates is not None:
+            for srn in candidates:
+                _rtype, _, rid = srn.partition(":")
+                if rid and rid not in seen:
+                    result["minions"].append(rid)
+                    seen.add(rid)
+            return
         for srn in srns:
             try:
                 gdict = self.cache.fetch(bank, srn)
