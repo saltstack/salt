@@ -170,6 +170,11 @@ def _register_minion_observables():
 # signal handler sets this so that a SIGTERM arriving while the minion is
 # stuck retrying master DNS resolution can shut the io_loop down promptly
 # instead of waiting for ``retry_dns`` seconds * forever. See #69466.
+#
+# NOTE: this is a main-process mechanism only. A forked per-job worker holds
+# its own dead copy of this event that the parent can never set, so workers
+# must not rely on it to escape the retry loop -- they bound resolve_dns via
+# retry_dns_count instead (see Minion._target).
 _RESOLVE_DNS_ABORT = threading.Event()
 
 
@@ -3352,6 +3357,14 @@ class Minion(MinionBase):
     def _target(cls, minion_instance, opts, data, connected, creds_map):
         if creds_map:
             salt.crypt.AsyncAuth.creds_map = creds_map
+        # A forked per-job worker is short-lived and must never sit in the
+        # unbounded resolve_dns() retry loop when the master is unresolvable
+        # (the parent's _RESOLVE_DNS_ABORT event does not cross the fork
+        # boundary, so a stuck worker cannot be aborted short of SIGKILL and
+        # would leak). Fail fast so the worker raises, exits, and is reaped
+        # normally. An explicit operator-set retry_dns_count is honored.
+        if opts.get("retry_dns_count") is None:
+            opts["retry_dns_count"] = 0
         if not minion_instance:
             minion_instance = cls(opts, load_grains=False)
             minion_instance.connected = connected
@@ -5719,8 +5732,24 @@ class Minion(MinionBase):
                 fun = load.get("fun")
                 is_merge_fun = isinstance(fun, str) and fun in self._MERGE_RESOURCE_FUNS
                 if not is_merge_fun:
+                    # Build a stripped base load once so each per-resource
+                    # payload stays O(1) rather than O(N).  Without this,
+                    # the full ``resource_targets`` list (and, on CLI
+                    # ``--static`` retries, the N-wide parent ``tgt`` list)
+                    # would ride along in every per-resource copy and, if
+                    # any copy is queued via :meth:`_queue_job`, be
+                    # msgpacked to disk once per resource — causing
+                    # quadratic queued-file disk usage.
+                    base_load = dict(load)
+                    base_load.pop("resource_targets", None)
+                    if (
+                        isinstance(base_load.get("tgt"), (list, tuple))
+                        and len(base_load.get("tgt", ())) > 1
+                    ):
+                        base_load["tgt"] = "*"
+                        base_load["tgt_type"] = "glob"
                     for resource in load.get("resource_targets", []):
-                        resource_load = dict(load)
+                        resource_load = dict(base_load)
                         resource_load["resource_target"] = resource
                         # Flag so _handle_decoded_payload_impl can bypass JID
                         # deduplication — resource jobs share the parent JID by
@@ -6469,7 +6498,9 @@ class SyndicManager(MinionBase):
         # if its connected, mark it dead
         if self._syndics[master].done():
             syndic = self._syndics[master].result()  # pylint: disable=no-member
-            self._syndics[master] = syndic.reconnect()
+            # reconnect() is a coroutine; schedule it so callers can use the
+            # stored value like a Future (done()/exception()/result()).
+            self._syndics[master] = self.io_loop.create_task(syndic.reconnect())
         else:
             # TODO: debug?
             log.info(
@@ -6543,11 +6574,26 @@ class SyndicManager(MinionBase):
                     continue
                 else:
                     self.tries = collections.defaultdict(int)
-            # XXX This does not make sense
+            # _return_pub_multi(sync=True) blocks and returns the reply (or ""
+            # on timeout), not a Future. Wrap the outcome in a completed Future
+            # so the retry handling above can inspect it on the next call.
             future = asyncio.Future()
-            future = getattr(syndic_future.result(), func)(
-                values, "_syndic_return", timeout=self._return_retry_timer(), sync=True
-            )
+            try:
+                ret = getattr(syndic_future.result(), func)(
+                    values,
+                    "_syndic_return",
+                    timeout=self._return_retry_timer(),
+                    sync=True,
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                future.set_exception(exc)
+            else:
+                if isinstance(ret, str) and not ret:
+                    future.set_exception(
+                        SaltReqTimeoutError(f"Timed out returning data to {master}")
+                    )
+                else:
+                    future.set_result(ret)
             self.pub_futures[master] = (future, values)
             return True
         # Loop done and didn't exit: wasn't sent, try again later

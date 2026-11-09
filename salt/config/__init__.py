@@ -823,7 +823,7 @@ VALID_OPTS = immutabletypes.freeze(
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
         # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
-        "reactor": list,
+        "reactor": (list, str),
         # The TTL for the cache of the reactor configuration
         "reactor_refresh_interval": int,
         # The number of workers for the runner/wheel in the reactor

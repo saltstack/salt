@@ -11,7 +11,10 @@ on:
         default: '0.5h'
         type: choice
         options:
-          - '10m'
+          # 20m is the minimum: analyze_stats.py ignores the first 10
+          # minutes (warm-up) and needs at least 10 more for a meaningful
+          # RSS/FD slope.
+          - '20m'
           - '0.5h'
           - '1h'
           - '1.5h'
@@ -142,6 +145,8 @@ jobs:
         run: |
           cd tests/monitoring
           chmod +x stress_test.sh stress_api.sh
+          # analyze_stats.py skips the first 10 minutes after this point
+          echo "STRESS_START_EPOCH=$(date +%s)" >> "$GITHUB_ENV"
           # Run in background and wait for defined duration
           ./stress_test.sh &
           STRESS_PID=$!
