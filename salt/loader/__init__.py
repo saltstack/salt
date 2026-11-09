@@ -18,6 +18,7 @@ import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
 import salt.syspaths
+import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -121,10 +122,10 @@ def static_loader(
 def _accepts_loader_opts(provider):
     """Whether an entry-point callable accepts a positional options mapping."""
     try:
-        inspect.signature(provider).bind({})
-    except (TypeError, ValueError):
+        aspec = salt.utils.args.get_function_argspec(provider)
+    except TypeError:
         return False
-    return True
+    return len(aspec.args) >= 1
 
 
 def _module_dirs(
