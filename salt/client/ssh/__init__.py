@@ -2456,7 +2456,7 @@ def mod_data(fsclient, target=None):
         "tops",
     ]
     ret = {}
-    opts = fsclient.opts.copy()
+    opts = copy.deepcopy(fsclient.opts)
     if target is not None:
         opts["id"] = target
         opts["ssh_target"] = target
