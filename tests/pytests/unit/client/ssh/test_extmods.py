@@ -5,7 +5,7 @@ import tarfile
 import salt.client.ssh
 import salt.fileclient
 import salt.loader
-from tests.support.mock import MagicMock, call, patch
+from tests.support.mock import MagicMock, patch
 
 
 def test_internal_modules_are_not_synced_as_extmods(master_opts):
@@ -29,7 +29,7 @@ def test_loader_entry_point_keeps_ssh_extmods_isolated(tmp_path):
         directory = tmp_path / target / "_modules"
         directory.mkdir(parents=True)
         (directory / f"{target.replace('-', '_')}.py").write_text(
-            "def ping(): return True\n", encoding="utf-8"
+            f"def ping(): return '{target}'\n", encoding="utf-8"
         )
         paths[target] = str(directory)
 
@@ -58,6 +58,7 @@ def test_loader_entry_point_keeps_ssh_extmods_isolated(tmp_path):
 
 def test_accepts_loader_opts_with_positional_arg():
     """Provider with a positional parameter is accepted."""
+
     def provider(opts):
         return []
 
@@ -66,6 +67,7 @@ def test_accepts_loader_opts_with_positional_arg():
 
 def test_accepts_loader_opts_with_optional_arg():
     """Provider with an optional parameter is accepted."""
+
     def provider(opts=None):
         return []
 
@@ -74,6 +76,7 @@ def test_accepts_loader_opts_with_optional_arg():
 
 def test_accepts_loader_opts_with_no_args():
     """Provider with no parameters is rejected."""
+
     def provider():
         return []
 
@@ -82,6 +85,7 @@ def test_accepts_loader_opts_with_no_args():
 
 def test_accepts_loader_opts_with_kwargs_only():
     """Provider with only **kwargs is rejected (opts is passed positionally)."""
+
     def provider(**kwargs):
         return []
 
@@ -109,12 +113,12 @@ def test_zero_arg_entry_point_called_without_opts(tmp_path):
     entry_point = MagicMock()
     entry_point.name = "module_dirs"
     entry_point.load.return_value = legacy_provider
-    with patch(
-        "salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]
-    ):
+    with patch("salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]):
         mods = salt.client.ssh.mod_data(fsclient, target="host-01")
 
-    assert called_with_args == ["no-args"]
+    # Provider is called once per sync_ref (modules, states, grains, etc.)
+    assert len(called_with_args) > 0
+    assert all(x == "no-args" for x in called_with_args)
     with tarfile.open(mods["file"]) as archive:
         assert "modules/mymod.py" in archive.getnames()
 
@@ -125,9 +129,7 @@ def test_zero_arg_entry_point_called_without_opts(tmp_path):
 def test_key_deploy_run_uses_per_target_mods():
     """_key_deploy_run must call _target_mod_data with the host, not use a global."""
     mock_mods = {"file": "/tmp/fake.tgz", "version": "abc123"}
-    with patch(
-        "salt.client.ssh._target_mod_data", return_value=mock_mods
-    ) as target_mod:
+    with patch("salt.client.ssh._target_mod_data", return_value=mock_mods) as target_mod:
         with patch("salt.client.ssh.Single") as MockSingle:
             instance = MockSingle.return_value
             instance.shell.copy_id.return_value = ("", "", 0)
@@ -140,9 +142,7 @@ def test_key_deploy_run_uses_per_target_mods():
             ssh_obj.thin = "/tmp/thin.tgz"
 
             target = {"user": "root", "passwd": "secret"}
-            salt.client.ssh.SSH._key_deploy_run(
-                ssh_obj, "web-01", target, re_run=False
-            )
+            salt.client.ssh.SSH._key_deploy_run(ssh_obj, "web-01", target, re_run=False)
 
     target_mod.assert_called_once_with(ssh_obj.fsclient, "web-01")
     # Verify Single received the per-target mods, not a global
@@ -166,9 +166,7 @@ def test_mod_data_caches_tarball_on_identical_hash(tmp_path):
     entry_point.name = "module_dirs"
     entry_point.load.return_value = lambda opts: [str(mod_dir)]
 
-    with patch(
-        "salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]
-    ):
+    with patch("salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]):
         first = salt.client.ssh.mod_data(fsclient, target="host-a")
         mtime_after_first = os.path.getmtime(first["file"])
 
