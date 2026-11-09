@@ -117,8 +117,17 @@ services:
   # One-shot: restart policy is "no" and the container exits as soon as
   # ``ring-setup.sh`` returns.  ``docker compose up -d`` still returns
   # after this exits successfully.
+  # The ring runners must publish events through master-1's live
+  # process (``/var/run/salt/master/master_event_pull.ipc``) and write
+  # job trackers under master-1's cache dir.  A sidecar that only
+  # bind-mounts master-1.conf runs the runners in its own local state,
+  # so ``cluster.ring_create`` "succeeds" in the sidecar but never
+  # reaches the running master.  Instead of trying to share master-1's
+  # cache + run dirs (race-prone), we exec the ring-setup script
+  # INSIDE master-1 via the host's docker socket.  The sidecar only
+  # needs the ``docker`` CLI + the socket mount.
   c3-ring-setup:
-    <<: *master-common
+    image: docker:27-cli
     container_name: c3-ring-setup
     hostname: c3-ring-setup
     depends_on:
@@ -127,14 +136,12 @@ services:
       - salt-master-3
       - salt-haproxy
     restart: "no"
+    networks:
+      - salt-net
     volumes:
-      - ${SALT_SRC:-../../..}/salt:/app/salt
-      - ./srv/salt:/srv/salt
-      - ./master-1.conf:/etc/salt/master
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./ring-setup.sh:/usr/local/bin/ring-setup.sh:ro
-      - cluster-pki:/etc/salt/cluster-pki
-      - /etc/localtime:/etc/localtime:ro
-    entrypoint: ["/bin/bash"]
+    entrypoint: ["/bin/sh"]
     command: ["/usr/local/bin/ring-setup.sh"]
 
   salt-minion-1:

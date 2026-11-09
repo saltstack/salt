@@ -3993,7 +3993,8 @@ class MasterPubServerChannel:
                         "Raft RPC received but dispatcher not initialised: %s", tag
                     )
                 return
-            log.debug("Incomming from peer %s %r", tag, data)
+            if log.isEnabledFor(5):  # TRACE level
+                log.log(5, "Incoming from peer %s %r", tag, data)
             if tag.startswith("cluster/peer/state-sync-chunk"):
                 # Encrypted with the shared cluster_aes the joiner just
                 # installed in the matching join-reply.  Each chunk
@@ -5030,7 +5031,7 @@ class MasterPubServerChannel:
                 )
             ]
         for pusher in self.pushers:
-            log.info("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
+            log.debug("Publish event to peer %s:%s", pusher.pull_host, pusher.pull_port)
             if tag.startswith("cluster/peer"):
                 # log.info("Send %s %r", tag, load)
                 tasks.append(

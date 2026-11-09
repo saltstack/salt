@@ -175,9 +175,10 @@ def discover(opts):
     :rtype: Iterator[str]
     """
     count = _dummy_resource_count(opts)
-    log.debug("dummy resource discover() streaming %d id(s)", count)
+    prefix = str(opts.get("dummy_resource_id_prefix") or "")
+    log.debug("dummy resource discover() streaming %d id(s) prefix=%r", count, prefix)
     for i in range(1, count + 1):
-        yield f"dummy-{i:07d}"
+        yield f"{prefix}dummy-{i:07d}"
 
 
 def grains():
