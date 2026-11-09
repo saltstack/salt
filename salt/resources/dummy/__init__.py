@@ -95,9 +95,7 @@ def _save_state(opts, resource_id, details):
     cachefile = os.path.join(opts["cachedir"], f"dummy-resource-{resource_id}.cache")
     with salt.utils.files.fopen(cachefile, "wb") as pck:
         pck.write(salt.utils.msgpack.packb(details, use_bin_type=True))
-    log.warning(
-        "Dummy Resource Saved State(%s):\n%s", cachefile, pprint.pformat(details)
-    )
+    log.debug("Dummy Resource Saved State(%s):\n%s", cachefile, pprint.pformat(details))
 
 
 def _load_state(opts, resource_id):
@@ -112,9 +110,7 @@ def _load_state(opts, resource_id):
         log.exception("Failed to load state: %s", exc, exc_info=True)
         state = _initial_state(resource_id)
         _save_state(opts, resource_id, state)
-    log.warning(
-        "Dummy Resource Loaded State(%s):\n%s", cachefile, pprint.pformat(state)
-    )
+    log.debug("Dummy Resource Loaded State(%s):\n%s", cachefile, pprint.pformat(state))
     return state
 
 
