@@ -36,9 +36,7 @@ def test_loader_entry_point_keeps_ssh_extmods_isolated(tmp_path):
     entry_point = MagicMock()
     entry_point.name = "module_dirs"
     entry_point.load.return_value = lambda opts=None: [paths[opts["id"]]]
-    with patch(
-        "salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]
-    ):
+    with patch("salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]):
         web_mods = salt.client.ssh.mod_data(fsclient, target="web-01")
         db_mods = salt.client.ssh.mod_data(fsclient, target="db-01")
 
@@ -129,7 +127,9 @@ def test_zero_arg_entry_point_called_without_opts(tmp_path):
 def test_key_deploy_run_uses_per_target_mods():
     """_key_deploy_run must call _target_mod_data with the host, not use a global."""
     mock_mods = {"file": "/tmp/fake.tgz", "version": "abc123"}
-    with patch("salt.client.ssh._target_mod_data", return_value=mock_mods) as target_mod:
+    with patch(
+        "salt.client.ssh._target_mod_data", return_value=mock_mods
+    ) as target_mod:
         with patch("salt.client.ssh.Single") as MockSingle:
             instance = MockSingle.return_value
             instance.shell.copy_id.return_value = ("", "", 0)
