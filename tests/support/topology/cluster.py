@@ -592,9 +592,18 @@ def make_single_master(
     link_port = ports.get_unused_localhost_port()
     pki_root = pathlib.Path(tmp_path) / f"{cluster_id}-pki"
     pki_root.mkdir(parents=True, exist_ok=True)
+    # Route the master's writable state (logs, cache, run, sock_dir,
+    # token_dir, keys) under the test's ``tmp_path`` instead of the
+    # salt-factories default (``/tmp/stsuite/<master-id>_<N>/``), which
+    # is session-scoped and accumulates across every test that spins up
+    # a ``topology-<cluster_id>`` master.  The accumulation exhausts the
+    # runner disk on the functional CI shards.
+    root_dir = pathlib.Path(tmp_path) / f"{cluster_id}-root"
+    root_dir.mkdir(parents=True, exist_ok=True)
 
     base_overrides = {
         "open_mode": True,
+        "root_dir": str(root_dir),
         "pki_dir": str(pki_root),
         "topology_enabled": True,
         "cluster_id": cluster_id,
@@ -682,6 +691,12 @@ def make_cluster(
         _ensure_lo_alias(addr)
         own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
         own_pki.mkdir(parents=True, exist_ok=True)
+        # Per-peer writable root under tmp_path so logs / cache / run /
+        # sock_dir do not accumulate under salt-factories' default
+        # session-scoped ``/tmp/stsuite/`` location (exhausts runner
+        # disk on the functional CI shards).
+        own_root = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-root"
+        own_root.mkdir(parents=True, exist_ok=True)
 
         # Master IPC event bus ports (tcp_master_pub_port /
         # tcp_master_pull_port / tcp_master_publish_pull /
@@ -703,6 +718,7 @@ def make_cluster(
         overrides = {
             "open_mode": True,
             "interface": addr,
+            "root_dir": str(own_root),
             "pki_dir": str(own_pki),
             # One ``cluster_id`` serves both features: it names the
             # Raft master cluster AND identifies this logical node
