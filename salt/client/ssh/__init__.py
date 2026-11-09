@@ -472,8 +472,6 @@ class SSH(MultiprocessingStateMixin):
                 saltext_blocklist=self.opts.get("thin_saltext_blocklist"),
             )
 
-        self.mods = mod_data(self.fsclient)
-
     # __setstate__ and __getstate__ are only used on spawning platforms.
     def __setstate__(self, state):
         super().__setstate__(state)
@@ -653,11 +651,12 @@ class SSH(MultiprocessingStateMixin):
             self.get_pubkey(),
         ]
 
+        mods = _target_mod_data(self.fsclient, host)
         single = Single(
             self.opts,
             argv,
             host,
-            mods=self.mods,
+            mods=mods,
             fsclient=self.fsclient,
             thin=self.thin,
             **target,
@@ -673,7 +672,7 @@ class SSH(MultiprocessingStateMixin):
                 self.opts,
                 self.opts["argv"],
                 host,
-                mods=self.mods,
+                mods=mods,
                 fsclient=self.fsclient,
                 thin=self.thin,
                 **target,
