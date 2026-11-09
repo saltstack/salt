@@ -4096,7 +4096,23 @@ class MasterPubServerChannel:
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to decrypt delegate-resource-register-write")
                     return
-                import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+                # Import the submodule WITHOUT binding the top-level
+                # ``salt`` name as a function-scope local.  A plain
+                # ``import salt.cache._cluster_replicator`` statement
+                # here shadows the module-level ``import salt.*`` for
+                # the entire ``handle_pool_publish`` body, making every
+                # earlier ``salt.utils.event...`` /
+                # ``salt.cluster.consensus...`` reference raise
+                # ``UnboundLocalError: local variable 'salt' referenced
+                # before assignment`` -- which drops every incoming
+                # cluster/peer event and prevents the Raft group from
+                # forming.  ``importlib.import_module`` loads the
+                # module into ``sys.modules`` without introducing a
+                # local name, so references like ``salt.cache._cluster_replicator``
+                # keep resolving through the module-level ``salt``.
+                import importlib  # pylint: disable=import-outside-toplevel
+
+                importlib.import_module("salt.cache._cluster_replicator")
 
                 minion_id = payload.get("minion_id")
                 if not minion_id:
