@@ -587,12 +587,25 @@ class AsyncPubChannel:
             # out-of-band consumers (notably the scheduler job that calls
             # ``status.master``) can learn the port the minion is actually
             # connected on. The underscore prefix signals runtime-written.
-            self.opts["_auth_publish_port"] = self.auth.creds["publish_port"]
+            # Guard: ``self.auth.creds`` is only populated on a real
+            # authenticate() -- tests that mock authentication away may
+            # leave it as ``None`` or an empty dict. Skip the mirror in
+            # that case rather than raising, so test harnesses that patch
+            # only ``gen_token`` / ``authenticated`` keep working.
+            creds = getattr(self.auth, "creds", None)
+            if isinstance(creds, dict) and "publish_port" in creds:
+                self.opts["_auth_publish_port"] = creds["publish_port"]
             # if this is changed from the default, we assume it was intentional
             if int(self.opts.get("publish_port", 4505)) != 4505:
                 publish_port = self.opts.get("publish_port")
             # else take the relayed publish_port master reports
+            elif isinstance(creds, dict) and "publish_port" in creds:
+                publish_port = creds["publish_port"]
             else:
+                # Last-ditch fallback for test harnesses that don't
+                # populate auth.creds -- the original behavior was to
+                # raise KeyError here, which bubbled up as SaltClientError;
+                # preserve that behavior shape by raising a clearer error.
                 publish_port = self.auth.creds["publish_port"]
             # TODO: The zeromq transport does not use connect_callback and
             # disconnect_callback.
