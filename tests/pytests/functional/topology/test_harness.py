@@ -90,8 +90,16 @@ def test_single_cluster_single_peer(single_cluster):
     assert cluster.cluster_id == "east"
 
 
+@pytest.mark.timeout(300)
 def test_single_cluster_multi_peer(single_cluster):
-    """``peer_count=3`` spawns a 3-member 3008.x cluster."""
+    """``peer_count=3`` spawns a 3-member 3008.x cluster.
+
+    Needs more than the project-wide ``pytest-timeout`` default (90s)
+    because the three peers have to come up in parallel AND reach Raft
+    quorum before any one of them reports ``started``.  Local bare-metal
+    runs land around 60-100s; slower CI runners (ARM, Fedora 43) overshot
+    90s and tripped the function-level timeout.
+    """
     cluster = single_cluster("west", peer_count=3)
     assert len(cluster.masters) == 3
     # One ``cluster_id`` serves both features; every peer in the
