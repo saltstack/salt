@@ -2459,7 +2459,6 @@ def mod_data(fsclient, target=None):
     opts = copy.deepcopy(fsclient.opts)
     if target is not None:
         opts["id"] = target
-        opts["ssh_target"] = target
 
     # Reuse salt.loader entry points with the roster target's options.
     for ref in sync_refs:
