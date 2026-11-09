@@ -726,9 +726,8 @@ class SSH(MultiprocessingStateMixin):
         Run the routine in a "Thread", put a dict on the queue
         """
         opts = copy.deepcopy(opts)
-        # A target-aware provider (for example a package activator) must be
-        # consulted after roster expansion.  self.mods was built once for the
-        # entire SSH invocation and cannot represent different target sets.
+        # Build target-specific extension modules for this host.  Entry-point
+        # providers may return different module paths per roster target.
         mods = _target_mod_data(self.fsclient, host)
         single = Single(
             opts,
