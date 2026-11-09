@@ -2472,6 +2472,9 @@ def mod_data(fsclient, target=None):
                 kwargs["base_path"] = str(salt.loader.SALT_BASE_PATH / "client" / "ssh")
             else:
                 kwargs["tag"] = ref.rstrip("s")
+            # The default ext_type_dirs for "utils" would be "util_dirs"
+            # (tag.rstrip("s") + "_dirs"), but Salt config uses "utils_dirs".
+            # Match the key used by salt.loader.utils() to pick up config paths.
             if ref == "utils":
                 kwargs["ext_type_dirs"] = "utils_dirs"
             module_dirs = salt.loader._module_dirs(opts, ref, **kwargs)
