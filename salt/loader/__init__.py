@@ -120,7 +120,12 @@ def static_loader(
 
 
 def _accepts_loader_opts(provider):
-    """Whether an entry-point callable accepts a positional options mapping."""
+    """Whether an entry-point callable accepts a positional options mapping.
+
+    Returns True when *provider* has at least one positional parameter
+    (e.g. ``def dirs(opts)``).  Providers that only accept ``**kwargs``
+    are intentionally excluded — opts is passed positionally.
+    """
     try:
         aspec = salt.utils.args.get_function_argspec(provider)
     except TypeError:
