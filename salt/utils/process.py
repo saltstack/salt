@@ -41,6 +41,42 @@ import salt.utils.versions
 
 log = logging.getLogger(__name__)
 
+
+def _log_write_in_progress():
+    """
+    Return ``True`` if the current thread is in the middle of emitting a log
+    record, i.e. it holds the lock of one of the root logger's handlers.
+    """
+    for handler in logging.getLogger().handlers:
+        lock = getattr(handler, "lock", None)
+        is_owned = getattr(lock, "_is_owned", None)
+        try:
+            if is_owned is not None and is_owned():
+                return True
+        except Exception:  # pylint: disable=broad-except
+            continue
+    return False
+
+
+def signal_safe_log(logger, level, msg, *args):
+    """
+    Log a message from a signal handler (or from code reached by one).
+
+    A signal handler runs on the main thread between two bytecodes. If the
+    signal interrupts the main thread while it is writing a log record to
+    ``stderr``, logging again from the handler re-enters the (non-reentrant)
+    ``BufferedWriter`` and fails with ``RuntimeError: reentrant call inside
+    <_io.BufferedWriter name='<stderr>'>``, producing noisy
+    ``--- Logging error ---`` tracebacks on shutdown (issue #67735).
+
+    The message is dropped in that situation, since it cannot be written
+    safely; otherwise it is logged normally.
+    """
+    if _log_write_in_progress():
+        return
+    logger.log(level, msg, *args)
+
+
 HAS_PSUTIL = False
 try:
     import psutil
@@ -1155,7 +1191,7 @@ class SignalHandlingProcess(Process):
         elif signum == signal.SIGTERM:
             msg += "SIGTERM"
         msg += ". Exiting"
-        log.debug(msg)
+        signal_safe_log(log, logging.DEBUG, msg)
 
         # Run any registered process finalization routines
         for method, args, kwargs in self._finalize_methods:
