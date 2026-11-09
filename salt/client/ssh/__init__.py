@@ -2583,17 +2583,24 @@ def mod_data(fsclient, target=None):
     if not os.path.isdir(cache_dir):
         os.makedirs(cache_dir)
 
-    tfp = tarfile.open(ext_tar_path, "w:gz")
-    # The archive is target-specific.  A shared ext_mods.ver file would race
-    # when different targets are prepared in parallel.
-    version_data = ver.encode("ascii")
-    version_info = tarfile.TarInfo("ext_version")
-    version_info.size = len(version_data)
-    tfp.addfile(version_info, io.BytesIO(version_data))
-    for ref in ret:
-        for fn_ in ret[ref]:
-            tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
-    tfp.close()
+    # Write to a temporary file and atomically rename to avoid races when
+    # multiple targets with identical module sets are prepared in parallel.
+    tmp_fd, tmp_path = tempfile.mkstemp(dir=cache_dir, suffix=".tgz")
+    os.close(tmp_fd)
+    try:
+        tfp = tarfile.open(tmp_path, "w:gz")
+        version_data = ver.encode("ascii")
+        version_info = tarfile.TarInfo("ext_version")
+        version_info.size = len(version_data)
+        tfp.addfile(version_info, io.BytesIO(version_data))
+        for ref in ret:
+            for fn_ in ret[ref]:
+                tfp.add(ret[ref][fn_], os.path.join(ref, fn_))
+        tfp.close()
+        os.rename(tmp_path, ext_tar_path)
+    except Exception:
+        os.unlink(tmp_path)
+        raise
     return mods
 
 
