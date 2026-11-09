@@ -2182,9 +2182,11 @@ class MasterPubServerChannel:
         expires,
         originating_master,
         batch_items=None,
+        target_master=None,
     ):
         """
-        Fan a cache write out to every cluster peer.
+        Fan a cache write out to every cluster peer -- or deliver it to
+        a single named peer.
 
         Originator side of default cross-master cache replication --
         wraps a ``salt.cache.Cache`` write in a cluster_aes-encrypted
@@ -2201,9 +2203,14 @@ class MasterPubServerChannel:
         the same loop-guard flag.  ``key``/``data`` are ignored on
         the batched path.
 
-        This is parallel to the existing publish logic for
-        ``cluster/peer/delegate-write`` (ring-routed, single owner) but
-        fans out to all peers rather than resolving an owner.
+        When ``target_master`` is a peer ``pull_host`` the event is
+        delivered only to that peer -- used by the ring-routed branch
+        of :meth:`_run_delegate_cache_write` to send a single-owner
+        write without fanning out.  ``None`` keeps the broadcast
+        behaviour.
+
+        Parallel to the existing publish logic for
+        ``cluster/peer/delegate-write`` (ring-routed, single owner).
         """
         try:
             crypticle = salt.crypt.Crypticle(
@@ -2235,7 +2242,21 @@ class MasterPubServerChannel:
             salt.utils.event.tagify("delegate-cache-write", "peer", "cluster"),
             crypticle.dumps(payload),
         )
-        for pusher in self.pushers:
+        if target_master is None:
+            targets = list(self.pushers)
+        else:
+            targets = [p for p in self.pushers if p.pull_host == target_master]
+            if not targets:
+                log.warning(
+                    "cache-replicate: no pusher for target_master %s; "
+                    "dropping %s/%s (known peers: %s)",
+                    target_master,
+                    bank,
+                    label,
+                    [p.pull_host for p in self.pushers],
+                )
+                return
+        for pusher in targets:
             try:
                 await pusher.publish(event)
             except Exception:  # pylint: disable=broad-except
@@ -2569,48 +2590,113 @@ class MasterPubServerChannel:
                 batch_items=payload.get("items") if batched else None,
             )
         elif write_kind == "ring":
-            # Translate into the existing ring-delegate payload
-            # shape so ``_run_delegate_write`` can reuse its owner
-            # resolution.  We treat ``bank`` as the ``data_type`` for
-            # routing table lookup.
-            ring_payload = {
-                "data_type": payload.get("bank"),
-                "ring_id": payload.get("bank"),
-                "owner": None,
-                "write_kind": "cache_store",
-                "payload": {
-                    "bank": payload.get("bank"),
-                    "key": payload.get("key"),
-                    "data": payload.get("data"),
-                    "expires": payload.get("expires"),
-                    "originating_master": payload.get("originating_master"),
-                },
-            }
-            # Owner resolution is deferred: reuse _run_delegate_write
-            # when the caller populated ``owner``; otherwise log a
-            # pointer for the state-sync expert to wire up.
-            # TODO(state-sync): wire a cache-aware ring owner lookup --
-            # today only ``jobs`` is registered in the HashRing route
-            # table; other banks would need their own ring binding
-            # before this branch is useful.  See
-            # ``agents/scratch/cache-replicate-primary.md``.
-            log.debug(
-                "cache-replicate: ring routing requested for %s/%s but owner "
-                "resolution not yet wired for arbitrary banks; "
-                "falling back to replicate.",
-                payload.get("bank"),
-                payload.get("key"),
-            )
-            await self.publish_cache_write(
-                payload.get("bank"),
-                payload.get("key"),
-                payload.get("data"),
-                payload.get("expires"),
-                payload.get("originating_master"),
-                batch_items=payload.get("items") if batched else None,
-            )
+            await self._run_delegate_cache_write_ring(payload, batched)
         else:
             log.warning("cache-replicate: unknown write_kind %r; dropping", write_kind)
+
+    async def _run_delegate_cache_write_ring(self, payload, batched):
+        """
+        Route a ``write_kind="ring"`` cache write to a single peer.
+
+        Resolves the owning master for each (bank, key) via the
+        ``resource_index`` HashRing and publishes the delegate-write
+        event only to that peer.  The originator already applied the
+        local write in :class:`salt.cache.Cache` before firing this
+        event, so writes whose owner is *this* master are a no-op
+        (we drop them); writes whose owner cannot be resolved (empty
+        ring, missing module) fall back to broadcast replicate so
+        no update is lost.
+
+        Batched payloads are partitioned by owner: each remote owner
+        receives a batch containing only its own ``[key, data]``
+        pairs; self-owned pairs are dropped; None-owner pairs fall
+        back to broadcast.
+
+        All banks that declare ``cluster_cache_routing: <bank>:
+        ring`` in master opts hash their keys against the same
+        ``resource_index`` ring.  That is the only ring populated
+        in the publish daemon today; if another ring is ever added
+        and a bank should hash against it, teach this method to
+        pick the ring by bank prefix.
+        """
+        import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+        import salt.cluster  # pylint: disable=import-outside-toplevel
+
+        bank = payload.get("bank")
+        originating_master = payload.get("originating_master")
+        expires = payload.get("expires")
+        ring = salt.cache._cluster_replicator._get_resource_index_ring()
+        if ring is None or not ring.nodes():
+            log.debug(
+                "cache-replicate: ring unavailable for %s; broadcasting",
+                bank,
+            )
+            await self.publish_cache_write(
+                bank,
+                payload.get("key"),
+                payload.get("data"),
+                expires,
+                originating_master,
+                batch_items=payload.get("items") if batched else None,
+            )
+            return
+        self_node = salt.cluster.node_id(self.opts) if self.opts.get("id") else None
+        if batched:
+            buckets = {}  # owner -> list of [key, data]
+            unresolved = []
+            for pair in payload.get("items") or ():
+                try:
+                    key, data = pair
+                except (TypeError, ValueError):
+                    continue
+                owner = ring.get_owner(key)
+                if owner is None:
+                    unresolved.append([key, data])
+                else:
+                    buckets.setdefault(owner, []).append([key, data])
+            if unresolved:
+                await self.publish_cache_write(
+                    bank,
+                    None,
+                    None,
+                    expires,
+                    originating_master,
+                    batch_items=unresolved,
+                )
+            for owner, items in buckets.items():
+                if owner == self_node:
+                    continue
+                await self.publish_cache_write(
+                    bank,
+                    None,
+                    None,
+                    expires,
+                    originating_master,
+                    batch_items=items,
+                    target_master=owner,
+                )
+            return
+        key = payload.get("key")
+        owner = ring.get_owner(key) if key is not None else None
+        if owner is None:
+            await self.publish_cache_write(
+                bank,
+                key,
+                payload.get("data"),
+                expires,
+                originating_master,
+            )
+            return
+        if owner == self_node:
+            return
+        await self.publish_cache_write(
+            bank,
+            key,
+            payload.get("data"),
+            expires,
+            originating_master,
+            target_master=owner,
+        )
 
     async def _run_shed_unowned_all(self, request_payload):
         """
