@@ -473,6 +473,147 @@ def test_register_minion_chunk_concurrent_apply_no_srn_loss(registry):
     )
 
 
+def test_register_minion_chunk_pending_ttl_evicts_abandoned_window(tmp_path, caplog):
+    """
+    Regression for Phase-3 reviewer concern #3: the pending-register
+    window for a minion that ships non-final chunks and then crashes
+    (never sends ``chunk_final=True``) must not linger forever.
+
+    Shape:
+    1. Minion-A ships chunks 0 and 1 (both non-final) for scope ``dummy``.
+       Its window lives in ``_pending_registers``.
+    2. We synthesise a crash by rewinding minion-A's
+       ``last_activity_ts`` to be older than the TTL.
+    3. Minion-B then arrives with a non-final chunk for its own
+       scope -- the sweep on the write path must evict minion-A's
+       abandoned window and emit a WARNING naming the (minion, scope).
+    4. Minion-A's pending window must be gone after the sweep;
+       minion-B's new window must be intact.
+    """
+    import logging as _logging
+    import time as _time
+
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+        # Small TTL so the rewind is unambiguous; no real sleep
+        # required (we rewind the activity timestamp instead).
+        "cluster_resource_register_pending_ttl": 10.0,
+    }
+    registry = rr.ResourceRegistry(opts, cache=_FakeCache())
+    try:
+        # Minion A: non-final chunks only (simulates crash before final).
+        registry.register_minion_chunk(
+            "minion-a",
+            {"dummy": ["d0"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=0,
+        )
+        registry.register_minion_chunk(
+            "minion-a",
+            {"dummy": ["d1"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=1,
+        )
+        assert "minion-a" in registry._pending_registers
+        scope_state = registry._pending_registers["minion-a"]["dummy"]
+        assert scope_state["keys"] == {"dummy:d0", "dummy:d1"}
+        assert scope_state["created_ts"] is not None
+        assert scope_state["last_activity_ts"] is not None
+
+        # Rewind the last-activity timestamp past the TTL to simulate
+        # a crashed minion.  Using monotonic subtraction keeps the
+        # test fully deterministic (no real sleep, no flakiness).
+        scope_state["last_activity_ts"] = _time.monotonic() - 60.0
+
+        # Minion B's new chunk triggers the sweep.
+        with caplog.at_level(_logging.WARNING, logger="salt.utils.resource_registry"):
+            registry.register_minion_chunk(
+                "minion-b",
+                {"dummy": ["b0"]},
+                chunk_final=False,
+                chunk_scope="dummy",
+                chunk_index=0,
+            )
+
+        # Minion A's entry must be evicted; minion B's must be live.
+        assert "minion-a" not in registry._pending_registers, (
+            "Abandoned pending window for minion-a should be evicted by the "
+            "TTL sweep on the next chunk-arrival write path"
+        )
+        assert "minion-b" in registry._pending_registers
+        assert registry._pending_registers["minion-b"]["dummy"]["keys"] == {"dummy:b0"}
+
+        # The eviction must be logged at WARNING naming the minion
+        # and scope so operators can identify the crash-loop source.
+        eviction_records = [
+            rec
+            for rec in caplog.records
+            if "evicting stale pending-register window" in rec.getMessage()
+        ]
+        assert eviction_records, (
+            "Stale-window eviction must emit a WARNING log; got: "
+            f"{[r.getMessage() for r in caplog.records]}"
+        )
+        msg = eviction_records[0].getMessage()
+        assert "minion=minion-a" in msg
+        assert "scope=dummy" in msg
+    finally:
+        registry.close()
+
+
+def test_register_minion_chunk_pending_ttl_does_not_evict_active_window(tmp_path):
+    """
+    Negative counterpart to the eviction test: a window that keeps
+    receiving chunks must have its ``last_activity_ts`` refreshed so
+    the TTL sweep never evicts it mid-register.  Protects against a
+    false-positive eviction that would otherwise drop a slow-but-
+    active 200K-register window at the TTL boundary.
+    """
+    import time as _time
+
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+        "cluster_resource_register_pending_ttl": 10.0,
+    }
+    registry = rr.ResourceRegistry(opts, cache=_FakeCache())
+    try:
+        # Seed a window far in the past relative to the TTL.
+        registry.register_minion_chunk(
+            "minion-slow",
+            {"dummy": ["s0"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=0,
+        )
+        state = registry._pending_registers["minion-slow"]["dummy"]
+        state["last_activity_ts"] = _time.monotonic() - 9.5  # still inside TTL
+
+        # Next chunk arrives: must NOT be evicted (TTL is 10s, age is
+        # ~9.5s, strictly less than the TTL).  The chunk's own
+        # arrival must update ``last_activity_ts`` so subsequent
+        # chunks also survive.
+        registry.register_minion_chunk(
+            "minion-slow",
+            {"dummy": ["s1"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=1,
+        )
+        assert "minion-slow" in registry._pending_registers
+        state = registry._pending_registers["minion-slow"]["dummy"]
+        assert state["keys"] == {"dummy:s0", "dummy:s1"}
+        # Fresh activity stamp -- well within the current monotonic reading.
+        assert _time.monotonic() - state["last_activity_ts"] < 1.0
+    finally:
+        registry.close()
+
+
 def test_cross_type_collisions_are_not_ambiguous(registry):
     """Composite SRN keys: same bare id on different types resolves distinctly."""
     registry.register_minion("m1", {"ssh": ["web-01"]})

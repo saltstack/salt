@@ -569,8 +569,14 @@ def test_handle_delegate_resource_register_write_out_of_order_no_srn_loss(
       lost-update on the plain dict.
 
     Post-fix:
-    - The peer apply is serialized per ``(minion_id, chunk_scope)`` by
-      the ``_get_peer_apply_lock`` dict.
+    - The publish-daemon dispatch routes every event for a minion
+      through a dedicated single-worker executor
+      (``_get_peer_apply_executor``) so chunk arrivals serialize
+      in-submission-order per minion.  This test bypasses the
+      publish daemon and calls the free-function handler directly,
+      so the executor FIFO does NOT serialize the three threads --
+      what rescues ordering here is the inner gap-check on
+      ``_pending_registers``.
     - The ``register_minion_chunk`` gap check defers the terminal
       prune until every ``chunk_index`` in ``0..final_index`` has
       arrived, closing the ordering hole the executor lacks.

@@ -11,6 +11,7 @@ or a Cache object.  ``Cache.store`` and ``Cache.store_many`` emit via
 """
 
 import atexit
+import concurrent.futures
 import logging
 import os
 import threading
@@ -38,44 +39,97 @@ _EVENT_HANDLE_CACHE = {}
 _EVENT_HANDLE_LOCK = threading.Lock()
 
 
-# Per-(minion_id, chunk_scope) serialization for peer-side register
-# apply.  The publish daemon dispatches each incoming
-# ``cluster/peer/delegate-resource-register-write`` event into the
-# default ThreadPoolExecutor via ``run_in_executor(None, ...)``, which
-# gives no FIFO ordering guarantee.  Without serialization, a fast
-# ``chunk_final=True`` arriving while an earlier non-final chunk is
-# still queued can run the prune pass against an incomplete pending
-# window and wipe valid SRNs, which the slow non-final chunk would
-# then re-insert leaving the mmap in an inconsistent state.
+# Per-minion single-worker executor for peer-side register apply.
 #
-# A per-``(minion_id, chunk_scope)`` ``threading.Lock`` serializes
-# every peer-side apply for that scope, forcing one chunk to fully
-# commit (and release the lock) before the next grabs it.  The
-# pending-window ``chunk_index`` gap check in
-# :meth:`ResourceRegistry.register_minion_chunk` then handles the
-# terminal-arrived-first case by deferring the prune until the gap
-# fills in.
-_PEER_APPLY_LOCK_REGISTRY = {}
-_PEER_APPLY_LOCK_REGISTRY_GUARD = threading.Lock()
+# The publish daemon dispatches each incoming
+# ``cluster/peer/delegate-resource-register-write`` event into a
+# ThreadPoolExecutor via ``run_in_executor(executor, ...)``.  The
+# default (shared) ``run_in_executor(None, ...)`` gives no FIFO
+# ordering guarantee, so a fast ``chunk_final=True`` arriving while
+# an earlier non-final chunk is still queued could run the prune
+# pass against an incomplete pending window and wipe valid SRNs.
+#
+# Fix shape: route every event for a given ``minion_id`` through a
+# dedicated ``concurrent.futures.ThreadPoolExecutor(max_workers=1)``.
+# That executor has an internal FIFO work queue, so successive
+# submissions for the same minion run in submission order with no
+# inter-chunk lock contention.  Different minions each get their own
+# executor and run in parallel.
+#
+# The inner ``_pending_registers_lock`` in
+# :meth:`ResourceRegistry.register_minion_chunk` still guards the
+# ``_pending_registers`` dict against interleaving with originator
+# MWorker paths that also write through the shared registry
+# singleton in the same process.
+#
+# Replaces the previous per-``(minion_id, chunk_scope)`` ``threading.Lock``
+# registry: that design worked but produced heavy contention during
+# high-volume single-minion register storms because every
+# ``_handle_delegate_resource_register_write`` thread blocked on the
+# same contended lock.  Executor FIFO sidesteps the contention entirely.
+#
+# Future refactor: the per-minion work here could be an ``asyncio.Queue``
+# fed by an ``asyncio.Task`` consumer, with each individual mmap write
+# wrapped in ``asyncio.to_thread`` (or ``loop.run_in_executor(None, …)``)
+# since the underlying ``MmapCache`` write path is synchronous and
+# cannot yield.  Benefits over the current thread-per-minion design:
+#
+# * lower per-minion memory (task object vs. OS thread stack) — useful
+#   as deployments scale their minion fleet
+# * cleaner cancellation on daemon shutdown (``task.cancel()`` instead
+#   of best-effort ``ThreadPoolExecutor.shutdown`` from atexit)
+# * one shared worker pool for the sync mmap calls instead of a thread
+#   per minion
+#
+# Not pursued here because the realistic swap still ends up offloading
+# the mmap calls to a thread via ``to_thread`` — it moves the thread
+# cost, it does not eliminate it — and the current design is simple
+# and correct.  Revisit when per-minion thread count becomes observable
+# in master RSS or shutdown latency.
+_PEER_APPLY_EXECUTORS = {}
+_PEER_APPLY_EXECUTORS_GUARD = threading.Lock()
 
 
-def _get_peer_apply_lock(minion_id, chunk_scope):
+def _get_peer_apply_executor(minion_id):
     """
-    Return the serialization lock for peer-side register apply for a
-    ``(minion_id, chunk_scope)`` pair.
+    Return the dedicated single-worker executor for peer-side register
+    apply for ``minion_id``.
 
-    Created lazily on first use.  The locks live for the lifetime of
-    the publish-daemon process; a per-minion, per-scope leak is bounded
-    by ``N_minions * N_types`` which is small compared to the
-    resource-registry itself.
+    Created lazily on first use.  The executor holds one thread for
+    the lifetime of the publish-daemon process; per-minion overhead
+    is bounded by ``N_minions`` registered within the process
+    lifetime (small compared to the resource-registry itself).
+
+    The executor's internal work queue gives natural FIFO ordering
+    for every event dispatched through this function, which is the
+    correctness property that preserves chunk ordering within a
+    minion's registration window.
     """
-    key = (minion_id, chunk_scope)
-    with _PEER_APPLY_LOCK_REGISTRY_GUARD:
-        lock = _PEER_APPLY_LOCK_REGISTRY.get(key)
-        if lock is None:
-            lock = threading.Lock()
-            _PEER_APPLY_LOCK_REGISTRY[key] = lock
-    return lock
+    with _PEER_APPLY_EXECUTORS_GUARD:
+        executor = _PEER_APPLY_EXECUTORS.get(minion_id)
+        if executor is None:
+            executor = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix=f"peer-apply-{minion_id}",
+            )
+            _PEER_APPLY_EXECUTORS[minion_id] = executor
+    return executor
+
+
+def _shutdown_peer_apply_executors():
+    """Best-effort teardown of every per-minion apply executor."""
+    with _PEER_APPLY_EXECUTORS_GUARD:
+        execs = list(_PEER_APPLY_EXECUTORS.values())
+        _PEER_APPLY_EXECUTORS.clear()
+    for ex in execs:
+        try:
+            ex.shutdown(wait=False, cancel_futures=True)
+        except Exception:  # pylint: disable=broad-except
+            # Interpreter shutdown can race the shutdown path; swallow.
+            pass
+
+
+atexit.register(_shutdown_peer_apply_executors)
 
 
 def _handle_cache_key(opts):
@@ -439,22 +493,24 @@ def _handle_delegate_resource_register_write(opts, payload):
     try:
         import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
-        # Serialize apply per ``(minion_id, chunk_scope)`` -- see the
-        # ``_PEER_APPLY_LOCK_REGISTRY`` comment above.  The underlying
-        # ``register_minion_chunk`` also acquires its own lock around
-        # the ``_pending_registers`` mutation + prune; this outer lock
-        # additionally serializes the ``put_many`` + pending update as
-        # one unit so concurrent threads can't interleave puts between
-        # the gap check and the prune of the same window.
-        with _get_peer_apply_lock(minion_id, chunk_scope):
-            salt.utils.minions.update_resource_index_chunk(
-                opts,
-                minion_id,
-                resources,
-                chunk_final,
-                chunk_scope=chunk_scope,
-                chunk_index=chunk_index,
-            )
+        # Ordering invariant: this call expects the publish daemon
+        # to have dispatched through :func:`_get_peer_apply_executor`
+        # (a per-minion, single-worker ThreadPoolExecutor) so every
+        # event for ``minion_id`` runs in submission order.  The
+        # inner ``_pending_registers_lock`` in
+        # :meth:`ResourceRegistry.register_minion_chunk` still
+        # protects the pending-window dict against the originator
+        # MWorker apply path that shares the same registry singleton.
+        # The ``chunk_index`` gap check handles any residual out-of-
+        # order case (e.g. legacy callers bypassing the executor).
+        salt.utils.minions.update_resource_index_chunk(
+            opts,
+            minion_id,
+            resources,
+            chunk_final,
+            chunk_scope=chunk_scope,
+            chunk_index=chunk_index,
+        )
         return True
     except Exception:  # pylint: disable=broad-except
         log.exception(

@@ -4080,6 +4080,13 @@ class MasterPubServerChannel:
                 # register locally; the free-function handler drops
                 # events whose ``originating_master`` equals our own
                 # ``opts["id"]`` so bus echo cannot loop.
+                #
+                # Dispatch per-minion to a dedicated single-worker
+                # executor (not the default ``None`` executor) so
+                # chunks for one minion's registration window arrive
+                # at :func:`_handle_delegate_resource_register_write`
+                # in submission order.  Different minions each get
+                # their own executor and run in parallel.
                 try:
                     crypticle = salt.crypt.Crypticle(
                         self.opts,
@@ -4089,9 +4096,28 @@ class MasterPubServerChannel:
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to decrypt delegate-resource-register-write")
                     return
+                import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
+
+                minion_id = payload.get("minion_id")
+                if not minion_id:
+                    # Malformed payload: the free-function handler
+                    # will log + drop.  Use the default executor
+                    # since we have no minion-id to key on.
+                    loop = asyncio.get_event_loop()
+                    loop.run_in_executor(
+                        None,
+                        self._handle_delegate_resource_register_write,
+                        payload,
+                    )
+                    return
+                executor = salt.cache._cluster_replicator._get_peer_apply_executor(
+                    minion_id
+                )
                 loop = asyncio.get_event_loop()
                 loop.run_in_executor(
-                    None, self._handle_delegate_resource_register_write, payload
+                    executor,
+                    self._handle_delegate_resource_register_write,
+                    payload,
                 )
                 return
             if tag.startswith("cluster/peer/shed-request"):

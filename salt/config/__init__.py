@@ -272,6 +272,16 @@ VALID_OPTS = immutabletypes.freeze(
         # catch-up through natural write churn.  ``None`` is the
         # "unset" sentinel resolved in ``apply_master_config``.
         "cluster_state_sync_cache_banks": (bool, type(None)),
+        # TTL (seconds) for abandoned pending-register windows on the
+        # master.  Chunked-register payloads from a minion that crashes
+        # mid-stream (sends chunks ``0..k`` then never sends
+        # ``chunk_final=True``) accumulate per
+        # ``(minion_id, chunk_scope)`` -- bounded by
+        # ``N_minions * N_types`` live entries but unbounded if the
+        # minion crash-loops.  The master sweeps on every chunk arrival
+        # and drops windows with no activity for longer than this TTL,
+        # logging a WARNING naming the minion.
+        "cluster_resource_register_pending_ttl": (int, float),
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
         # compaction -- fine for small clusters but unbounded growth at
@@ -2046,6 +2056,12 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         # Join-time cache-bank catch-up default -- resolved in
         # ``apply_master_config`` to match ``cluster_cache_replication``.
         "cluster_state_sync_cache_banks": None,
+        # Default pending-register-window TTL mirrors the module
+        # constant :data:`salt.utils.resource_registry.DEFAULT_PENDING_REGISTERS_TTL`
+        # (300 s / 5 min).  Operators sizing clusters with larger
+        # 200K+ registers can increase this if normal per-minion
+        # windows approach the default.
+        "cluster_resource_register_pending_ttl": 300.0,
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
         "cluster_voter_health_check_interval": 1.0,

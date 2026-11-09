@@ -147,6 +147,18 @@ DEFAULT_COMPACT_TOMBSTONE_RATIO = 0.2  # deleted / occupied
 #: rate is a first-order performance concern on hot write paths.
 DEFAULT_COMPACT_MIN_INTERVAL = 30.0
 
+#: Default TTL (seconds) for an entry in the chunked-register pending window
+#: before it is evicted as stale.  Protects against a minion that ships
+#: chunks ``0..k`` and then crashes before ``chunk_final=True``: without
+#: eviction the per-minion pending set accumulates indefinitely, pinning
+#: SRNs in process memory.  The TTL window starts at first-chunk arrival
+#: and refreshes on every subsequent chunk for the same ``(minion_id,
+#: chunk_scope)`` pair, so an active-but-slow register never evicts its
+#: own window.  Configurable via ``cluster_resource_register_pending_ttl``
+#: in master opts.  Default of 5 minutes is comfortably larger than the
+#: observed 200K-register window (~5 min on a clustered deployment).
+DEFAULT_PENDING_REGISTERS_TTL = 300.0
+
 #: Persisted schema version for the in-cache fallback dict (legacy path).
 RESOURCE_INDEX_SCHEMA_VERSION = 2
 
@@ -738,15 +750,34 @@ class ResourceRegistry:
         #   out-of-order ``chunk_final=True`` landed before the full
         #   ``0..final_pending`` sequence was in; the prune is deferred
         #   until the missing indices fill in.
+        # * ``created_ts`` -- ``time.monotonic()`` when the first chunk
+        #   for this ``(minion, scope)`` landed.  Used by the TTL
+        #   sweep to detect crash-loop-abandoned windows.
+        # * ``last_activity_ts`` -- ``time.monotonic()`` when the most
+        #   recent chunk for this scope arrived.  A long gap between
+        #   now and this timestamp triggers eviction via
+        #   :meth:`_evict_stale_pending_registers_locked`.  Refreshing
+        #   on activity means active-but-slow registers never evict
+        #   their own window.
         #
         # ``_pending_registers_lock`` guards both the map structure and
         # the per-scope mutations (``put_many``, prune) so concurrent
         # peer-side apply threads cannot interleave a prune pass against
         # a partially-populated window.  Peer-side arrival ordering is
-        # not FIFO (``run_in_executor(None, ...)`` uses the default
-        # thread pool) so this lock is correctness, not performance.
+        # now FIFO per minion (see
+        # :func:`salt.cache._cluster_replicator._get_peer_apply_executor`),
+        # so this lock is primarily cross-process (originator MWorker
+        # vs. peer apply) and TTL-sweep safety.
         self._pending_registers = {}
         self._pending_registers_lock = threading.Lock()
+        # Per-entry TTL for stale pending-window eviction.  See
+        # :data:`DEFAULT_PENDING_REGISTERS_TTL` for rationale.
+        self._pending_registers_ttl = float(
+            opts.get(
+                "cluster_resource_register_pending_ttl",
+                DEFAULT_PENDING_REGISTERS_TTL,
+            )
+        )
 
     def close(self):
         """
@@ -1005,12 +1036,28 @@ class ResourceRegistry:
         if to_put:
             self._store.put_many(to_put)
 
+        now = time.monotonic()
         with self._pending_registers_lock:
+            # Evict stale pending windows (crash-loop minions that
+            # shipped some non-final chunks then disconnected).  Runs
+            # under the write-path lock so no background task is
+            # required; amortized cost is O(number of live pending
+            # scopes), which is small (bounded by N_minions * N_types).
+            self._evict_stale_pending_registers_locked(now)
+
             pending = self._pending_registers.setdefault(minion_id, {})
-            scope_state = pending.setdefault(
-                scope,
-                {"keys": set(), "seen_indexes": set(), "final_pending": None},
-            )
+            scope_state = pending.get(scope)
+            if scope_state is None:
+                scope_state = {
+                    "keys": set(),
+                    "seen_indexes": set(),
+                    "final_pending": None,
+                    "created_ts": now,
+                    "last_activity_ts": now,
+                }
+                pending[scope] = scope_state
+            else:
+                scope_state["last_activity_ts"] = now
             scope_state["keys"].update(new_keys)
             if chunk_index is not None:
                 scope_state["seen_indexes"].add(chunk_index)
@@ -1089,6 +1136,61 @@ class ResourceRegistry:
         self.maybe_compact()
 
         return len(to_put), len(to_delete)
+
+    def _evict_stale_pending_registers_locked(self, now):
+        """
+        Evict ``_pending_registers`` entries whose last activity is
+        older than :attr:`_pending_registers_ttl` seconds.
+
+        Called from :meth:`register_minion_chunk` on the write path
+        while holding :attr:`_pending_registers_lock`.  No background
+        task required: every new chunk arrival runs the sweep and
+        drops any abandoned windows that belong to a different
+        ``(minion_id, chunk_scope)`` pair.
+
+        Each eviction is logged at WARNING level so operators notice
+        crash-loop minions.  The eviction is intentionally quiet when
+        the pending map is empty (no log spam on cold start).
+
+        :param float now: Current ``time.monotonic()`` reading.
+            Threaded in rather than re-read so the caller's single
+            clock sample is reused for both the sweep and the
+            incoming-chunk ``last_activity_ts`` update, avoiding
+            a boundary where the just-added entry could be evicted
+            on its own creation call.
+        """
+        ttl = self._pending_registers_ttl
+        if ttl <= 0 or not self._pending_registers:
+            return
+        stale_entries = []
+        for minion_id, scopes in self._pending_registers.items():
+            for scope, state in scopes.items():
+                last_activity = state.get("last_activity_ts") or state.get("created_ts")
+                if last_activity is None:
+                    # Legacy-shape entry predating TTL tracking: stamp
+                    # it now so the next sweep can age it correctly.
+                    state["last_activity_ts"] = now
+                    continue
+                age = now - last_activity
+                if age > ttl:
+                    stale_entries.append((minion_id, scope, age, len(state["keys"])))
+        for minion_id, scope, age, srn_count in stale_entries:
+            log.warning(
+                "resource_registry: evicting stale pending-register window "
+                "minion=%s scope=%s age=%.1fs srn_count=%d (TTL=%.1fs). "
+                "Minion likely crashed mid-register or never sent chunk_final.",
+                minion_id,
+                scope,
+                age,
+                srn_count,
+                ttl,
+            )
+            scopes = self._pending_registers.get(minion_id)
+            if scopes is None:
+                continue
+            scopes.pop(scope, None)
+            if not scopes:
+                self._pending_registers.pop(minion_id, None)
 
     def unregister_minion(self, minion_id):
         """
