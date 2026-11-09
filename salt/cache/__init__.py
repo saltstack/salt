@@ -271,8 +271,27 @@ class Cache:
         token_prev = _is_already_replicated()
         _set_already_replicated(True)
         try:
-            for key, data in pairs:
-                self.store(bank, key, data, expires=expires, _already_replicated=True)
+            # Driver-native batch (e.g. ``mmap_cache.store_many``) wins
+            # one flock + batched fsync/msync across the whole batch.
+            # Drivers without a native batch fall back to the per-item
+            # loop so backwards compatibility is preserved.
+            fun = f"{self.driver}.store_many"
+            if fun in self.modules:
+                try:
+                    self.modules[fun](bank, pairs, expires=expires, **self.kwargs)
+                except TypeError:
+                    # Driver's store_many doesn't accept expires=; fall
+                    # back to per-item store so expiry semantics stay
+                    # uniform with the facade's envelope.
+                    for key, data in pairs:
+                        self.store(
+                            bank, key, data, expires=expires, _already_replicated=True
+                        )
+            else:
+                for key, data in pairs:
+                    self.store(
+                        bank, key, data, expires=expires, _already_replicated=True
+                    )
         finally:
             _set_already_replicated(token_prev)
         if not _already_replicated and not token_prev:
