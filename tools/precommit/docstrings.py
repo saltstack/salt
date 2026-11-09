@@ -140,7 +140,6 @@ MISSING_DOCSTRINGS = {
     "salt/pillar/extra_minion_data_in_pillar.py": ["ext_pillar"],
     "salt/pillar/gpg.py": ["ext_pillar"],
     "salt/pillar/makostack.py": ["ext_pillar"],
-    "salt/pillar/nacl.py": ["ext_pillar"],
     "salt/proxy/cisconso.py": ["init"],
     "salt/proxy/esxi.py": ["is_connected_via_vcenter"],
     "salt/proxy/fx2.py": ["host"],
@@ -306,14 +305,6 @@ MISSING_DOCSTRINGS = {
         "regex_escape",
     ],
     "salt/utils/listdiffer.py": ["list_diff"],
-    "salt/utils/namecheap.py": [
-        "atts_to_dict",
-        "get_opts",
-        "post_request",
-        "string_to_value",
-        "xml_to_dict",
-        "get_request",
-    ],
     "salt/utils/nxos.py": ["version_info"],
     "salt/utils/openstack/neutron.py": [
         "check_keystone",

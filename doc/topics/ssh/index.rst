@@ -203,12 +203,19 @@ of /etc/salt for the user and run the command with ``-c /new/config/path``.
 Define CLI Options with Saltfile
 ================================
 
-If you are commonly passing in CLI options to ``salt-ssh``, you can create
-a ``Saltfile`` to automatically use these options. This is common if you're
-managing several different salt projects on the same server.
+A ``Saltfile`` is a YAML file that supplies command-line options to Salt's
+command-line tools, so that frequently-used options do not have to be typed on
+every invocation. A ``Saltfile`` is **not** a configuration file: it can only
+set options that the tool already accepts on the command line, not arbitrary
+minion or master configuration settings.
 
-So you can ``cd`` into a directory that has a ``Saltfile`` with the following
-YAML contents:
+A ``Saltfile`` works with any of the Salt command-line tools -- ``salt``,
+``salt-ssh``, ``salt-call``, ``salt-cloud``, ``salt-key``, and so on -- and is
+handy when managing several different Salt projects on the same machine.
+
+The file is keyed by the name of the command-line tool, with that tool's
+options nested underneath. For example, a ``Saltfile`` with the following YAML
+contents supplies options to ``salt-ssh``:
 
 .. code-block:: yaml
 
@@ -218,30 +225,56 @@ YAML contents:
       ssh_max_procs: 30
       ssh_wipe: True
 
-Instead of having to call
-``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe \* test.version`` you
-can call ``salt-ssh \* test.version``.
-
-Boolean-style options should be specified in their YAML representation.
-
-.. note::
-
-   The option keys specified must match the destination attributes for the
-   options specified in the parser
-   :py:class:`salt.utils.parsers.SaltSSHOptionParser`.  For example, in the
-   case of the ``--wipe`` command line option, its ``dest`` is configured to
-   be ``ssh_wipe`` and thus this is what should be configured in the
-   ``Saltfile``.  Using the names of flags for this option, being ``wipe:
-   True`` or ``w: True``, will not work.
+With that file in the current directory, instead of running
+``salt-ssh --config-dir=path/to/config/dir --max-procs=30 --wipe '*' test.version``
+you can simply run ``salt-ssh '*' test.version``. Boolean options are given
+their YAML value, for example ``ssh_wipe: True``.
 
 .. note::
 
-    For the `Saltfile` to be automatically detected it needs to be named
-    `Saltfile` with a capital `S` and be readable by the user running
-    salt-ssh.
+    The keys under each tool are the *destination* names of the options, not
+    the flag spelling. In most cases this is the long option name with dashes
+    replaced by underscores -- for example ``--config-dir`` becomes
+    ``config_dir``. Some options have a ``dest`` that differs from the flag
+    name; for ``salt-ssh`` the ``--wipe`` option has a ``dest`` of ``ssh_wipe``,
+    so the ``Saltfile`` key is ``ssh_wipe``. Using the flag spelling
+    (``wipe: True`` or ``w: True``) will not work. The option destinations are
+    defined in the parser for each tool in :py:mod:`salt.utils.parsers`.
 
-At last you can create ``~/.salt/Saltfile`` and ``salt-ssh``
-will automatically load it by default.
+Because a ``Saltfile`` only supplies command-line options, settings that are
+valid only in a configuration file have no effect. To supply external
+authentication credentials to ``salt``, for example, use the ``--eauth``,
+``--username`` and ``--password`` command-line options (whose destinations are
+``eauth``, ``username`` and ``password``) rather than master configuration keys
+such as ``external_auth``:
+
+.. code-block:: yaml
+
+    salt:
+      eauth: pam
+      username: fred
+      password: saltrules
+
+When a Salt command starts, it uses the first ``Saltfile`` it finds from the
+following, in order:
+
+#. The path given with the ``--saltfile`` option.
+#. The path in the ``SALT_SALTFILE`` environment variable.
+#. A file named ``Saltfile`` in the current working directory.
+#. ``~/.salt/Saltfile``.
+
+.. note::
+
+    For a ``Saltfile`` in one of the automatically-searched locations to be
+    detected, it must be named ``Saltfile`` (with a capital ``S``) and be
+    readable by the user running the command.
+
+.. note::
+
+    Options set in a ``Saltfile`` currently take precedence over the same
+    options passed on the command line. For example, with ``ssh_max_procs: 30``
+    in the ``Saltfile``, running ``salt-ssh --max-procs=1 '*' test.version``
+    still uses 30 processes.
 
 Advanced options with salt-ssh
 ==============================

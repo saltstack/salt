@@ -8,7 +8,6 @@ import salt.minion
 import salt.utils.event
 import salt.utils.jid
 import salt.utils.verify
-import salt.utils.versions
 
 log = logging.getLogger(__name__)
 

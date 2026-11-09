@@ -111,3 +111,5 @@ sdbetcd:
   etcd.port: 2379
 venafi:
   fake: "true"
+
+master_stats: true

@@ -14,6 +14,7 @@ import salt.loader
 import salt.loader.context
 import salt.modules.config as config
 import salt.modules.state as state
+import salt.payload
 import salt.state
 import salt.utils.args
 import salt.utils.files
@@ -1316,6 +1317,25 @@ def test__check_queue(queue, wait_called, ret_value):
         assert ret is ret_value
         if ret_value is True:
             assert state.__context__["retcode"] == 1
+
+
+def test__check_queue_preserves_args_without_pub_arg(tmp_path):
+    """
+    A queued call with no __pub_arg (scheduler / salt-call) must keep the
+    caller's positional arguments such as ``mods``.
+    """
+    opts = {"cachedir": str(tmp_path), "state_queue": True}
+    with patch.dict(state.__opts__, opts), patch(
+        "salt.utils.state.state_queue_dir", return_value=str(tmp_path)
+    ), patch("salt.utils.state.acquire_queue_lock", MagicMock()), patch(
+        "salt.modules.state._prior_running_states", return_value=[{"jid": "1"}]
+    ):
+        ret = state.sls("target", queue=True, __pub_fun="state.sls", __pub_jid="2")
+    assert ret["queued"] is True
+    (queued,) = tmp_path.glob("queued_*.p")
+    with salt.utils.files.fopen(str(queued), "rb") as fp_:
+        payload = salt.payload.load(fp_)
+    assert payload["arg"] == [{"__kwarg__": True, "mods": "target"}]
 
 
 class TestCheckPriorRunningStates:

@@ -26,4 +26,3 @@ mercurial>=7.2.2
 hglib
 redis
 python-consul
-slack-bolt

@@ -9,7 +9,6 @@
 <%- set gpg_key_id = "64CBBC8173D76B3F" %>
 <%- set prepare_actual_release = prepare_actual_release | default(False) %>
 <%- set gh_actions_workflows_python_version = "3.14" %>
-<%- set nox_archive_hashfiles = "${{ hashFiles('requirements/**/*.txt', 'requirements/**/*.lock', 'cicd/golden-images.json', 'noxfile.py', 'pkg/common/env-cleanup-rules.yml', '.github/workflows/build-deps-ci-action.yml') }}" %>
 ---
 <%- block name %>
 name: <{ workflow_name }>
@@ -127,26 +126,19 @@ jobs:
                 - '**'
             doc-requirements:
               - added|modified: &doc_requirements
-                - requirements/static/ci/py3.*/docs.txt
+                - requirements/static/ci/py3.*/docs.lock
             lint-requirements:
               - added|modified: &lint_requirements
-                - requirements/static/ci/py3.*/lint.txt
+                - requirements/static/ci/py3.*/lint.lock
             pkg_requirements:
               - added|modified: &pkg_requirements
-                - requirements/static/pkg/py3.*/darwin.lock
-                - requirements/static/pkg/py3.*/linux.txt
-                - requirements/static/pkg/py3.*/freebsd.txt
-                - requirements/static/pkg/py3.*/windows.txt
+                - requirements/static/pkg/*.in
+                - requirements/static/pkg/py3.*/*.in
+                - requirements/static/pkg/py3.*/*.lock
             test_requirements:
               - added|modified: &test_requirements
-                - requirements/static/ci/py3.*/darwin.lock
-                - requirements/static/ci/py3.*/linux.txt
-                - requirements/static/ci/py3.*/freebsd.txt
-                - requirements/static/ci/py3.*/windows.txt
-                - requirements/static/ci/py3.*/darwin-crypto.txt
-                - requirements/static/ci/py3.*/linux-crypto.txt
-                - requirements/static/ci/py3.*/freebsd-crypto.txt
-                - requirements/static/ci/py3.*/windows-crypto.txt
+                - requirements/static/ci/*.in
+                - requirements/static/ci/py3.*/*.lock
             deleted:
               - deleted:
                 - '**'
@@ -223,8 +215,15 @@ jobs:
 
       - name: Get Hash For Nox Tarball Cache
         id: nox-archive-hash
+        shell: bash
         run: |
-          echo "nox-archive-hash=<{ nox_archive_hashfiles }>" | tee -a "$GITHUB_OUTPUT"
+          HASH=$(python3 .github/scripts/hash-files.py \
+            'requirements/**/*' \
+            'cicd/golden-images.json' \
+            'noxfile.py' \
+            'pkg/common/env-cleanup-rules.yml' \
+            '.github/workflows/build-deps-ci-action.yml')
+          echo "nox-archive-hash=${HASH}" | tee -a "$GITHUB_OUTPUT"
 
       - name: Write Changed Files To A Local File
         run:

@@ -20,7 +20,7 @@ import importlib
 
 import pytest
 
-from salt.utils.batch_state import progress_batch
+from salt.utils.batch_state import create_batch_state, progress_batch
 from tests.pytests.unit.utils.batch_state.batch_state_scenarios import SCENARIOS
 
 SYNC_TEST_MODULE = "tests.pytests.unit.cli.test_batch"
@@ -79,3 +79,36 @@ def test_scenario(scenario):
                 f"  expected: {expected_value}\n"
                 f"  got:      {state[field]}"
             )
+
+
+def test_sync_batch_waits_for_iterator_timeout():
+    """
+    A synchronous batch must not release a slot based only on elapsed time.
+
+    Its LocalClient iterator probes ``saltutil.find_job`` while a job is
+    running and reports an actual timeout through the ``timed_out`` argument.
+    """
+    state = create_batch_state(
+        {"batch": 1, "timeout": 5, "gather_job_timeout": 10},
+        ["m1", "m2"],
+        "JID",
+        driver="cli",
+        now=1.0,
+    )
+
+    action = progress_batch(state, now=1.0)
+    assert action.publish == ["m1"]
+
+    # The old internal sweep expired the slot after 15 seconds even when the
+    # iterator had confirmed that the minion's job was still running.
+    action = progress_batch(state, now=17.0)
+    assert action.publish == []
+    assert state["active"] == {"m1": 1.0}
+    assert state["pending"] == ["m2"]
+    assert state["failed"] == {}
+
+    # Iterator exhaustion remains authoritative for synchronous timeouts.
+    action = progress_batch(state, now=18.0, timed_out=["m1"])
+    assert action.publish == ["m2"]
+    assert state["active"] == {"m2": 18.0}
+    assert state["failed"] == {"m1": "timeout"}

@@ -151,6 +151,52 @@ def test_wildcard_interface():
         assert ret == _expected
 
 
+def test_ephemeral_interface_no_keyerror():
+    """
+    Beacon must not raise KeyError when a new interface appears between calls.
+
+    LAST_STATS is seeded from the first beacon() call. If an interface comes
+    up afterwards (ephemeral bridge, WireGuard tunnel, hotplug NIC), it will
+    be present in _stats but absent from LAST_STATS. Without the guard added
+    in #64584 the set-difference ``_stats[iface] - LAST_STATS[iface]`` raises
+    a KeyError.
+    """
+    config = [{"interfaces": {"eth*": {"promiscuity": None}}}]
+
+    # First call: only eth0 exists.
+    INITIAL_STATS = network_settings._copy_interfaces_info(
+        {"eth0": {"family": "0", "promiscuity": "0", "group": "0"}}
+    )
+    # Second call: eth1 has appeared (ephemeral addition).
+    AFTER_STATS = network_settings._copy_interfaces_info(
+        {
+            "eth0": {"family": "0", "promiscuity": "0", "group": "0"},
+            "eth1": {"family": "0", "promiscuity": "0", "group": "0"},
+        }
+    )
+
+    ret = network_settings.validate(config)
+    assert ret == (True, "Valid beacon configuration")
+
+    with patch.object(network_settings, "LAST_STATS", {}), patch.object(
+        network_settings, "IP", MockIPClass
+    ), patch(
+        "salt.beacons.network_settings._copy_interfaces_info",
+        MagicMock(side_effect=[INITIAL_STATS, AFTER_STATS]),
+    ):
+        # First call seeds LAST_STATS with eth0 only; no events expected.
+        ret = network_settings.beacon(config)
+        assert ret == []
+
+        # Second call: eth1 is new — must not raise KeyError; eth1 fires an
+        # event because all of its attrs are "new" relative to the empty seed.
+        ret = network_settings.beacon(config)
+        assert isinstance(ret, list)
+        assert not any(isinstance(item, Exception) for item in ret)
+        tags = [item["tag"] for item in ret]
+        assert "eth1" in tags
+
+
 @pytest.mark.skipif(HAS_IPDB is False, reason="pyroute2.IPDB not available, skipping")
 def test_interface_dict_fields_old():
     with IPDB() as ipdb:

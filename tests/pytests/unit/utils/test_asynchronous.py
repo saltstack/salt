@@ -18,8 +18,66 @@ import pytest
 import tornado.gen
 import tornado.ioloop
 
+import salt.transport
+import salt.transport.tcp
 import salt.utils.asynchronous as asynchronous
 from tests.support.mock import patch
+
+
+@pytest.mark.parametrize("warn", [False, True])
+async def test_aioloop_preserves_native_loop_without_warning(warn):
+    loop = asyncio.get_running_loop()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        assert asynchronous.aioloop(loop, warn=warn) is loop
+
+
+def test_aioloop_tornado_deprecation_deadline(io_loop, monkeypatch):
+    monkeypatch.setenv("RAISE_DEPRECATIONS_RUNTIME_ERRORS", "1")
+    with patch("salt.version.__version_info__", (3009, 2)):
+        with pytest.raises(RuntimeError, match="Please remove the warning"):
+            asynchronous.aioloop(io_loop, warn=True)
+
+
+def test_sync_wrapper_passes_its_native_loop_to_constructor():
+    class NativeClient:
+        def __init__(self, io_loop):
+            self.io_loop = io_loop
+            self.current_loop = asyncio.get_event_loop()
+
+    with asynchronous.SyncWrapper(NativeClient, loop_kwarg="io_loop") as wrapper:
+        loop = wrapper.asyncio_loop
+        assert isinstance(wrapper.obj.io_loop, asyncio.AbstractEventLoop)
+        assert wrapper.obj.io_loop is wrapper.asyncio_loop
+        assert wrapper.obj.current_loop is wrapper.asyncio_loop
+    assert loop.is_closed()
+
+
+@pytest.mark.parametrize("transport", ["tcp", "zeromq", "ws"])
+def test_sync_wrapper_constructs_native_publish_clients(transport):
+    with asynchronous.SyncWrapper(
+        salt.transport.publish_client,
+        args=({"transport": transport},),
+        kwargs={"host": "127.0.0.1", "port": 4506},
+        loop_kwarg="io_loop",
+    ) as wrapper:
+        loop = wrapper.asyncio_loop
+        assert wrapper.obj.io_loop is loop
+        assert not loop.is_closed()
+    assert loop.is_closed()
+
+
+def test_sync_wrapper_constructs_native_tcp_ipc_publisher():
+    with asynchronous.SyncWrapper(
+        salt.transport.tcp._TCPPubServerPublisher,
+        args=("127.0.0.1", 4506, None),
+        loop_kwarg="io_loop",
+        close_methods=["close"],
+    ) as wrapper:
+        loop = wrapper.asyncio_loop
+        assert wrapper.obj.io_loop is loop
+        assert wrapper.obj.stream is None
+    assert loop.is_closed()
 
 
 class HelperA:
@@ -51,6 +109,34 @@ class HelperB:
         yield tornado.gen.sleep(0.1)
         self.a.sleep()
         raise tornado.gen.Return(False)
+
+
+async def test_cancel_tasks_drains_all_owned_cleanup():
+    started = [asyncio.Event(), asyncio.Event()]
+    cleaned = []
+
+    async def operation(index):
+        try:
+            started[index].set()
+            await asyncio.Event().wait()
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(index)
+            if index == 0:
+                raise OSError("cleanup failed")
+
+    tasks = [asyncio.create_task(operation(index)) for index in range(2)]
+    await asyncio.gather(*(event.wait() for event in started))
+    await asynchronous.cancel_tasks(*tasks)
+    assert sorted(cleaned) == [0, 1]
+    assert all(task.done() for task in tasks)
+
+
+async def test_cancel_tasks_accepts_current_missing_and_completed_tasks():
+    future = asyncio.get_running_loop().create_future()
+    future.set_exception(OSError("already failed"))
+    await asynchronous.cancel_tasks(None, asyncio.current_task(), future, future)
+    assert not asyncio.current_task().cancelled()
 
 
 class _LoopProbe:
@@ -287,10 +373,79 @@ def test_close_drains_tasks_belonging_to_the_wrappers_own_loop():
     finally:
         driver.close()
 
-    # Only the swallowed exception is asserted on.  The tasks themselves
-    # cannot be driven to completion here -- a loop cannot be run from inside
-    # another running loop -- so their state is not the thing under test.
+    # Only the swallowed exception is asserted on here.  That the tasks are
+    # actually driven to completion is covered by
+    # test_close_from_running_loop_runs_pending_tasks_to_completion_70353.
     assert not errors, errors
+
+
+class HelperHeldTask:
+    """
+    A helper that leaves a task on the wrapper's own loop and keeps a
+    reference to it, so ``_target``'s orphan reaper leaves it alone and only
+    ``close()`` can clean it up.  This is the shape of the
+    ``AsyncAuth._authenticate`` task in #70353, which on Python 3.12+ is
+    referenced by the ``asyncio.Timeout`` of the ``wait_for`` it is
+    suspended in.
+
+    The attributes are slots because the reaper ignores referrers that are
+    containers.  Before Python 3.11, ``gc.get_referrers`` reports a plain
+    instance attribute as held by the instance ``__dict__``, a ``dict``, and
+    on 3.10 the reaper then cancels the task before ``close()`` is reached.
+    A slot is reported as held by the instance on every version.
+    """
+
+    __slots__ = ("task", "cleaned_up")
+
+    async_methods = [
+        "start_background",
+    ]
+
+    def __init__(self, io_loop=None):
+        self.task = None
+        self.cleaned_up = False
+
+    async def _background(self):
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # Stands in for ``RequestClient.close_async`` closing its ZMQ
+            # socket once the task is cancelled.
+            self.cleaned_up = True
+
+    async def start_background(self):
+        self.task = asyncio.ensure_future(self._background())
+        return True
+
+
+def test_close_from_running_loop_runs_pending_tasks_to_completion_70353():
+    """
+    In #70353, ``Minion.handle_event`` (a coroutine on the minion's loop)
+    called the synchronous ``_mine_send``, which used a ``SyncWrapper`` and
+    closed it while the minion's loop was running in the same thread.
+    ``close()`` cancelled the tasks left on the wrapper's loop but could not
+    run that loop to let them finish (``run_until_complete`` refuses to run
+    while another loop is running in the thread), then closed it.  The cancelled
+    coroutines never resumed, so the ZMQ sockets they held were never closed
+    and a later GC pass deadlocked the minion in ``zmq_ctx_term()``.
+    """
+    sync = asynchronous.SyncWrapper(HelperHeldTask)
+    obj = sync.obj
+
+    async def _use_and_close_from_running_loop():
+        assert sync.start_background() is True
+        assert not obj.task.done()
+        sync.close()
+
+    driver = asyncio.new_event_loop()
+    try:
+        driver.run_until_complete(_use_and_close_from_running_loop())
+    finally:
+        driver.close()
+
+    assert obj.task.done()
+    assert obj.task.cancelled()
+    assert obj.cleaned_up is True
 
 
 def test_syncwrapper_del_safety_net_calls_close_70175():

@@ -33,6 +33,148 @@ import salt.utils.stringutils
 log = logging.getLogger(__name__)
 
 
+def get_bnum(opts, minions, quiet):
+    """
+    Return the active number of minions to maintain
+
+    .. versionadded:: 3009.0
+
+    :param dict opts:
+        The salt options dictionary.
+
+    :param minions:
+        The list of the minions to perform the calculation.
+
+    :param boolean quiet:
+        Suppress the output to the CLI.
+
+    :rtype: int or None
+
+    Preserves the legacy return values (``None`` for invalid
+    input, ``0`` for an empty minion list with a percentage spec,
+    ``0`` for ``batch=0``) for backward compatibility with any
+    callers that rely on them.  The shared state machine uses the
+    hardened :func:`salt.utils.batch_state.get_batch_size` which
+    always returns at least 1.
+    """
+
+    def partition(x):
+        return float(x) / 100.0 * len(minions)
+
+    try:
+        if isinstance(opts["batch"], str) and "%" in opts["batch"]:
+            res = partition(float(opts["batch"].strip("%")))
+            if res < 1:
+                return int(math.ceil(res))
+            return int(res)
+        return int(opts["batch"])
+    except ValueError:
+        if not quiet:
+            salt.utils.stringutils.print_cli(
+                "Invalid batch data sent: {}\nData must be in the "
+                "form of %10, 10% or 3".format(opts["batch"])
+            )
+
+
+def batch_get_opts(
+    tgt, fun, batch, parent_opts, arg=(), tgt_type="glob", ret="", kwarg=None, **kwargs
+):
+    """
+    Return the dictionary with batch options populated
+
+    .. versionadded:: 3009.0
+
+    :param tgt:
+        Which minions to target for the execution.
+
+    :param str fun:
+        The function to run.
+
+    :param batch:
+        The batch size.
+
+    :param dict parent_opts:
+        The salt options dictionary.
+
+    :param list arg:
+        The arguments to put to the resulting ``arg`` key of resulting dictionary.
+
+    :param str tgt_type:
+        Default ``glob``. Target type to use with ``tgt``.
+
+    :param ret:
+        ``ret`` parameter to put to the resulting dictionary.
+
+    :param dict kwarg:
+        Extra arguments to put to the resulting ``arg`` key of resulting dictionary.
+
+    :param dict kwargs:
+        Extra keyword arguments.
+
+    :rtype: dict
+    """
+    # We need to re-import salt.utils.args here
+    # even though it has already been imported.
+    # when cmd_batch is called via the NetAPI
+    # the module is unavailable.
+    import salt.utils.args
+
+    arg = salt.utils.args.condition_input(arg, kwarg)
+    opts = {
+        "tgt": tgt,
+        "fun": fun,
+        "arg": arg,
+        "tgt_type": tgt_type,
+        "ret": ret,
+        "batch": batch,
+        "failhard": kwargs.get("failhard", parent_opts.get("failhard", False)),
+        "raw": kwargs.get("raw", False),
+    }
+
+    if "timeout" in kwargs:
+        opts["timeout"] = kwargs["timeout"]
+    if "gather_job_timeout" in kwargs:
+        opts["gather_job_timeout"] = kwargs["gather_job_timeout"]
+    if "batch_wait" in kwargs:
+        opts["batch_wait"] = int(kwargs["batch_wait"])
+
+    for key, val in parent_opts.items():
+        if key not in opts:
+            opts[key] = val
+
+    opts["batch_presence_ping_timeout"] = kwargs.get(
+        "batch_presence_ping_timeout", opts["timeout"]
+    )
+    opts["batch_presence_ping_gather_job_timeout"] = kwargs.get(
+        "batch_presence_ping_gather_job_timeout", opts["gather_job_timeout"]
+    )
+
+    return opts
+
+
+def batch_get_eauth(kwargs):
+    """
+    Return the dictionary with eauth information
+
+    .. versionadded:: 3009.0
+
+    :param dict kwargs:
+        Keyword arguments to extract eauth data from.
+
+    :rtype: dict
+    """
+    eauth = {}
+    if "eauth" in kwargs:
+        eauth["eauth"] = kwargs.pop("eauth")
+    if "username" in kwargs:
+        eauth["username"] = kwargs.pop("username")
+    if "password" in kwargs:
+        eauth["password"] = kwargs.pop("password")
+    if "token" in kwargs:
+        eauth["token"] = kwargs.pop("token")
+    return eauth
+
+
 class Batch:
     """
     Manage the execution of batch runs.
@@ -55,9 +197,28 @@ class Batch:
         self.pub_kwargs = eauth if eauth else {}
         self.quiet = quiet
         self.options = _parser
+        self.minions = set()
         # Passing listen True to local client will prevent it from purging
         # cached events while iterating over the batches.
-        self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
+        #
+        # ``__role=client`` is set by :func:`salt.config.client_config`
+        # when the CLI was invoked against ``/etc/salt/client`` (remote
+        # workstation).  In that case we have no master-local IPC event
+        # bus and must publish / listen over the AES-authenticated
+        # network path -- ``RemoteClient`` inherits ``cmd_iter`` /
+        # ``cmd_iter_no_block`` / ``run_job`` from ``LocalClient`` and
+        # overrides ``pub`` to use the AES channel, so every method
+        # ``Batch`` calls on ``self.local`` works the same way.  The
+        # one difference is ``self.local.event`` is a
+        # :class:`salt.utils.client_event.ClientEventSubscriber` which
+        # cannot fire events on the master's bus; the ``_event()`` /
+        # ``_fire_event()`` helpers below guard against that so remote
+        # batches degrade visibility (``batch.status`` / ``batch.stop``
+        # runners won't observe them) rather than failing outright.
+        if opts.get("__role") == "client":
+            self.local = salt.client.get_remote_client(opts["conf_file"], listen=True)
+        else:
+            self.local = salt.client.get_local_client(opts["conf_file"], listen=True)
 
     def gather_minions(self):
         """
@@ -67,7 +228,7 @@ class Batch:
             self.opts["tgt"],
             "test.ping",
             [],
-            self.opts["timeout"],
+            self.opts.get("batch_presence_ping_timeout", self.opts.get("timeout")),
         ]
 
         selected_target_option = self.opts.get("selected_target_option", None)
@@ -79,7 +240,10 @@ class Batch:
         self.pub_kwargs["yield_pub_data"] = True
         ping_gen = self.local.cmd_iter(
             *args,
-            gather_job_timeout=self.opts["gather_job_timeout"],
+            gather_job_timeout=self.opts.get(
+                "batch_presence_ping_gather_job_timeout",
+                self.opts["gather_job_timeout"],
+            ),
             **self.pub_kwargs,
         )
 
@@ -111,35 +275,6 @@ class Batch:
                         fret.add(m)
 
         return (list(fret), ping_gen, nret.difference(fret))
-
-    def get_bnum(self):
-        """
-        Return the active number of minions to maintain.
-
-        Preserves the legacy return values (``None`` for invalid
-        input, ``0`` for an empty minion list with a percentage spec,
-        ``0`` for ``batch=0``) for backward compatibility with any
-        callers that rely on them.  The shared state machine uses the
-        hardened :func:`salt.utils.batch_state.get_batch_size` which
-        always returns at least 1.
-        """
-
-        def partition(x):
-            return float(x) / 100.0 * len(self.minions)
-
-        try:
-            if isinstance(self.opts["batch"], str) and "%" in self.opts["batch"]:
-                res = partition(float(self.opts["batch"].strip("%")))
-                if res < 1:
-                    return int(math.ceil(res))
-                return int(res)
-            return int(self.opts["batch"])
-        except ValueError:
-            if not self.quiet:
-                salt.utils.stringutils.print_cli(
-                    "Invalid batch data sent: {}\nData must be in the "
-                    "form of %10, 10% or 3".format(self.opts["batch"])
-                )
 
     def run(self):
         """
@@ -478,6 +613,14 @@ class Batch:
         """Fire a batch lifecycle event; never raise."""
         event = self._event()
         if event is None:
+            return
+        # Remote batches run against a ``ClientEventSubscriber`` which
+        # has no ``fire_event`` -- a workstation cannot write to the
+        # master's event bus directly.  Degrade to no-op so sync
+        # batches on remote CLIs run successfully but without
+        # ``batch.status`` / ``batch.stop`` visibility (matches the
+        # "best-effort visibility" docstring above).
+        if not hasattr(event, "fire_event"):
             return
         try:
             event.fire_event(payload, tag)

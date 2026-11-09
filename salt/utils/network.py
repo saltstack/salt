@@ -26,7 +26,7 @@ import salt.utils.stringutils
 from salt._compat import ipaddress
 from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
-from salt.utils.versions import Version
+from salt.utils.versions import Version, warn_until
 
 try:
     import salt.utils.win_network
@@ -296,13 +296,15 @@ def ip_to_host(ip):
 def is_reachable_host(entity_name):
     """
     Returns a bool telling if the entity name is a reachable host (IPv4/IPv6/FQDN/etc).
-    :param hostname:
+    :param entity_name:
     :return:
     """
     try:
         assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
         ret = True
-    except socket.gaierror:
+    except (socket.gaierror, UnicodeError):
+        # UnicodeError is raised (not a subclass of socket.gaierror) when the
+        # name has an overlong IDNA label, e.g. a long salt-ssh -E/--pcre target.
         ret = False
 
     return ret
@@ -664,9 +666,13 @@ def rpad_ipv4_network(ip_addr):
     return ".".join(itertools.islice(itertools.chain(ip_addr.split("."), "0000"), 0, 4))
 
 
+@jinja_filter("cidr_to_ipv4_netmask")
 def cidr_to_ipv4_netmask(cidr_bits):
     """
     Returns an IPv4 netmask
+
+    .. versionchanged:: 3009.0
+        Exposed as the ``cidr_to_ipv4_netmask`` Jinja filter.
     """
     try:
         cidr_bits = int(cidr_bits)
@@ -1110,7 +1116,7 @@ def netbsd_interfaces():
     address)
     """
     # NetBSD versions prior to 8.0 can still use linux_interfaces()
-    if Version(os.uname()[2]) < Version("8.0"):
+    if Version(os.uname()[2].split("_")[0]) < Version("8.0"):
         return linux_interfaces()
 
     ifconfig_path = salt.utils.path.which("ifconfig")
@@ -2378,3 +2384,155 @@ def ip_bracket(addr, strip=False):
     addr = addr.rstrip("]")
     addr = ipaddress.ip_address(addr)
     return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)
+
+
+@jinja_filter("ip_to_int")
+def ip_to_int(addr):
+    """
+    Returns the integer representation of an IPv4 or IPv6 address.
+
+    .. versionadded:: 3009.0
+    """
+    return int(ipaddress.ip_address(str(addr)))
+
+
+@jinja_filter("int_to_ipv4")
+def int_to_ipv4(value):
+    """
+    Returns the IPv4 address corresponding to an integer.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.IPv4Address(int(value)))
+
+
+@jinja_filter("int_to_ipv6")
+def int_to_ipv6(value):
+    """
+    Returns the IPv6 address corresponding to an integer.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.IPv6Address(int(value)))
+
+
+@jinja_filter("nth_host")
+def nth_host(value, nth):
+    """
+    Returns the Nth address within a network.
+
+    The network address is index ``0`` and the broadcast address is index
+    ``-1``; negative indexes count back from the end. Works for IPv4 and IPv6.
+
+    .. versionadded:: 3009.0
+    """
+    return str(ipaddress.ip_network(str(value), strict=False)[int(nth)])
+
+
+@jinja_filter("network_subnets")
+def network_subnets(value, prefix, index=None):
+    """
+    Splits a network into subnets of the given prefix length.
+
+    When ``index`` is omitted, returns the number of subnets of ``prefix``
+    length that fit within ``value``. When ``index`` is given, returns the
+    subnet at that index as a CIDR string. Works for IPv4 and IPv6.
+
+    .. versionadded:: 3009.0
+    """
+    network = ipaddress.ip_network(str(value), strict=False)
+    new_prefix = int(prefix)
+    if not network.prefixlen <= new_prefix <= network.max_prefixlen:
+        raise ValueError(f"prefix {new_prefix} is out of range for network {network}")
+    count = 2 ** (new_prefix - network.prefixlen)
+    if index is None:
+        return count
+    index = int(index)
+    if index < 0:
+        index += count
+    if not 0 <= index < count:
+        raise IndexError(
+            f"subnet index out of range for /{new_prefix} within {network}"
+        )
+    step = 2 ** (network.max_prefixlen - new_prefix)
+    subnet_address = int(network.network_address) + index * step
+    return str(type(network)((subnet_address, new_prefix)))
+
+
+@jinja_filter("cidr_merge")
+def cidr_merge(value, action="merge"):
+    """
+    Merges a list of IP addresses and networks.
+
+    With ``action="merge"`` (the default), returns the minimal list of CIDR
+    networks that covers the inputs. With ``action="span"``, returns the
+    single smallest network that contains all of the inputs. All inputs must
+    be the same IP version.
+
+    .. versionadded:: 3009.0
+    """
+    networks = [ipaddress.ip_network(str(item), strict=False) for item in value]
+    if not networks:
+        raise ValueError("cidr_merge requires at least one address or network")
+    if action == "merge":
+        return [str(network) for network in ipaddress.collapse_addresses(networks)]
+    if action == "span":
+        first = min(network.network_address for network in networks)
+        last = max(network.broadcast_address for network in networks)
+        prefix = first.max_prefixlen
+        while prefix >= 0:
+            candidate = ipaddress.ip_network(f"{first}/{prefix}", strict=False)
+            if last in candidate:
+                return str(candidate)
+            prefix -= 1
+    raise ValueError(f"Unsupported action: {action}")
+
+
+@jinja_filter("slaac")
+def slaac(value, mac):
+    """
+    Returns the IPv6 SLAAC address for ``mac`` within the network ``value``.
+
+    The interface identifier is derived from the MAC address using modified
+    EUI-64. ``value`` must be an IPv6 network, typically a ``/64``.
+
+    .. versionadded:: 3009.0
+    """
+    network = ipaddress.ip_network(str(value), strict=False)
+    if network.version != 6:
+        raise ValueError("slaac requires an IPv6 network")
+    octets = str(mac).replace(":", "").replace("-", "").replace(".", "")
+    mac_bytes = bytes.fromhex(octets)
+    if len(mac_bytes) != 6:
+        raise ValueError(f"Invalid MAC address: {mac}")
+    eui64 = bytes([mac_bytes[0] ^ 0x02]) + mac_bytes[1:3] + b"\xff\xfe" + mac_bytes[3:]
+    interface_id = int.from_bytes(eui64, "big")
+    return str(ipaddress.IPv6Address(int(network.network_address) | interface_id))
+
+
+def neigh_expand_warning(func_name, expand):
+    """
+    Warn about the upcoming neighbour table return shape change when the
+    caller did not pass ``expand`` explicitly, and return the effective
+    value of ``expand``.
+    """
+    if expand is None:
+        warn_until(
+            3011,
+            f"In salt 3011, {func_name} will return a list of neighbour entry "
+            "dicts by default instead of a mac-to-ip mapping, which silently "
+            "drops entries whenever several IP addresses share a MAC address. "
+            "Pass expand=True to opt in to the new shape now, or expand=False "
+            "to keep the current shape and silence this warning.",
+        )
+        return False
+    return expand
+
+
+def neighs_flatten(entries):
+    """
+    Flatten neighbour entry dicts into the legacy ``{mac: ip}`` shape. When
+    several entries share a MAC address, the last one wins, matching the
+    historical behaviour.
+    """
+    return {entry["mac"]: entry["ip"] for entry in entries}

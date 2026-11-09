@@ -2262,8 +2262,33 @@ def _os_release_to_grains(os_release):
         or _os_release_quirks_for_osrelease(os_release),
     }
 
+    cpe = os_release.get("CPE_NAME") or _derive_cpe_grain(
+        grains.get("os"), grains.get("osrelease")
+    )
+    if cpe:
+        grains["cpe"] = cpe
+
     # oscodename and osrelease could be empty or None. Remove those.
     return {key: value for key, value in grains.items() if key}
+
+
+def _derive_cpe_grain(os, osrelease):
+    """
+    Derive the 'cpe' grain from the 'os' and 'osrelease' grains.
+
+    Normally, the 'cpe' grain can be extracted from the os_release file, but not all
+    distributions include it. In that case, we attempt to derive the CPE based on other
+    grains. Returns ``None`` if a CPE cannot be derived.
+
+    .. versionadded:: 3009.0
+    """
+    if not osrelease:
+        return None
+    if os == "Debian":
+        return "cpe:/o:debian:debian_linux:" + osrelease
+    elif os == "Ubuntu":
+        return "cpe:/o:canonical:ubuntu_linux:" + osrelease
+    return None
 
 
 def _linux_distribution_data():
@@ -2849,7 +2874,7 @@ def os_data():
         grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
         grains.update(_bsd_cpudata(grains))
     elif grains["kernel"] in ("OpenBSD", "NetBSD"):
-        grains["os_family"] = grains["os"] = grains["kernel"]
+        grains["os_family"] = grains["osfullname"] = grains["os"] = grains["kernel"]
         grains.update(_bsd_cpudata(grains))
         grains["osrelease"] = grains["kernelrelease"].split("-")[0]
         grains["osfullname"] = "{} {}".format(grains["kernel"], grains["osrelease"])
@@ -2978,24 +3003,13 @@ def fqdns():
     """
     Return all known FQDNs for the system by enumerating all interfaces and
     then trying to reverse resolve them (excluding 'lo' interface).
-    To disable the fqdns grain, set enable_fqdns_grains: False in the minion configuration file.
+    To disable the fqdns grain, add "fqdns" to "disabled_grains" in the minion
+    configuration file.
     """
     # Provides:
     # fqdns
     opt = {"fqdns": []}
-    if __opts__.get(
-        "enable_fqdns_grains",
-        (
-            False
-            if salt.utils.platform.is_windows()
-            or salt.utils.platform.is_proxy()
-            or salt.utils.platform.is_sunos()
-            or salt.utils.platform.is_aix()
-            or salt.utils.platform.is_junos()
-            or salt.utils.platform.is_darwin()
-            else True
-        ),
-    ):
+    if "fqdns" not in __opts__.get("disabled_grains", []):
         opt = __salt__["network.fqdns"]()
     return opt
 
@@ -3193,7 +3207,19 @@ def pythonversion():
     """
     # Provides:
     #   pythonversion
-    return {"pythonversion": list(sys.version_info)}
+    #   pythonrelease
+    #   pythonrelease_info
+    #
+    # ``pythonversion`` is a list rather than a dotted string, which is
+    # inconsistent with the ``<foo>release`` / ``<foo>release_info`` pair used
+    # by the other version grains (e.g. ``osrelease`` / ``osrelease_info``).
+    # ``pythonrelease`` and ``pythonrelease_info`` follow that convention;
+    # ``pythonversion`` is kept unchanged for backwards compatibility.
+    return {
+        "pythonversion": list(sys.version_info),
+        "pythonrelease": platform.python_version(),
+        "pythonrelease_info": list(sys.version_info),
+    }
 
 
 def pythonpath():
@@ -3283,6 +3309,26 @@ def _hw_data(osdata):
         return {}
 
     grains = {}
+
+    # For Xen para-virtualized guests read UUID from /sys/hypervisor/uuid.
+    # This file also exists on Xen Dom0 but contains all-zeros; skip that
+    # sentinel value so the real DMI/smbios UUID is used on Dom0 hosts.
+    if osdata["kernel"] == "Linux" and os.path.exists("/sys/hypervisor/uuid"):
+        try:
+            with salt.utils.files.fopen("/sys/hypervisor/uuid", "rb") as ifile:
+                hypervisor_uuid = salt.utils.stringutils.to_unicode(
+                    ifile.read().strip(), errors="replace"
+                ).lower()
+                # All-zero UUID is the Dom0 sentinel; ignore it.
+                if hypervisor_uuid and hypervisor_uuid.strip("0-"):
+                    grains["uuid"] = hypervisor_uuid
+                    log.debug(
+                        "Read UUID from /sys/hypervisor/uuid for para-virtualized guest: %s",
+                        grains["uuid"],
+                    )
+        except OSError as err:
+            log.debug("Unable to read /sys/hypervisor/uuid: %s", err)
+
     if osdata["kernel"] == "Linux" and os.path.exists("/sys/class/dmi/id"):
         # On many Linux distributions basic firmware information is available via sysfs
         # requires CONFIG_DMIID to be enabled in the Linux kernel configuration
@@ -3297,6 +3343,9 @@ def _hw_data(osdata):
             "serialnumber": "product_serial",
         }
         for key, fw_file in sysfs_firmware_info.items():
+            # Skip UUID if already read from /sys/hypervisor/uuid (Xen PV guests)
+            if key == "uuid" and "uuid" in grains:
+                continue
             contents_file = os.path.join("/sys/class/dmi/id", fw_file)
             if os.path.exists(contents_file):
                 try:
@@ -3327,18 +3376,20 @@ def _hw_data(osdata):
     ):
         # On SmartOS (possibly SunOS also) smbios only works in the global zone
         # smbios is also not compatible with linux's smbios (smbios -s = print summarized)
+        uuid = __salt__["smbios.get"]("system-uuid")
+        if uuid is not None:
+            uuid = uuid.lower()
+        else:
+            uuid = grains.get("uuid")
         grains = {
             "biosversion": __salt__["smbios.get"]("bios-version"),
             "biosvendor": __salt__["smbios.get"]("bios-vendor"),
             "productname": __salt__["smbios.get"]("system-product-name"),
             "manufacturer": __salt__["smbios.get"]("system-manufacturer"),
             "biosreleasedate": __salt__["smbios.get"]("bios-release-date"),
-            "uuid": __salt__["smbios.get"]("system-uuid"),
+            "uuid": uuid,
         }
         grains = {key: val for key, val in grains.items() if val is not None}
-        uuid = __salt__["smbios.get"]("system-uuid")
-        if uuid is not None:
-            grains["uuid"] = uuid.lower()
         for serial in (
             "system-serial-number",
             "chassis-serial-number",

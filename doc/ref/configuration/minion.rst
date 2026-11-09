@@ -237,20 +237,23 @@ minion event bus. The value is expressed in bytes.
 
 .. versionadded:: 2019.2.0
 
-Default: ``True``
+.. versionchanged:: 3009.0
+
+    Default changed from ``True`` to ``False``.
+
+Default: ``False``
 
 When a minion starts up it sends a notification on the event bus with a tag
 that looks like this: ``salt/minion/<minion_id>/start``. For historical reasons
 the minion also sends a similar event with an event tag like this:
 ``minion_start``. This duplication can cause a lot of clutter on the event bus
-when there are many minions. Set ``enable_legacy_startup_events: False`` in the
-minion config to ensure only the ``salt/minion/<minion_id>/start`` events are
-sent. Beginning with the ``3001`` Salt release this option will default to
-``False``.
+when there are many minions. Set ``enable_legacy_startup_events: True`` in the
+minion config to restore the legacy ``minion_start`` events in addition to the
+``salt/minion/<minion_id>/start`` events.
 
 .. code-block:: yaml
 
-    enable_legacy_startup_events: True
+    enable_legacy_startup_events: False
 
 .. conf_minion:: master_failback
 
@@ -826,6 +829,10 @@ Statically assigns grains to the minion.
       deployment: datacenter4
       cabinet: 13
       cab_u: 14-15
+
+The value of ``grains`` must be a mapping. Use ``grains: {}`` for an
+explicit empty section. Any non-dict value is silently defaulted to
+an empty dict.
 
 .. conf_minion:: grains_blacklist
 
@@ -2408,9 +2415,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_minion:: state_output_diff
 
@@ -3584,6 +3601,70 @@ processed as slots become available. ``-1`` is the default and disables the limi
 .. code-block:: yaml
 
     process_count_max: -1
+
+.. conf_minion:: minion_memory_headroom
+
+``minion_memory_headroom``
+--------------------------
+
+.. versionadded:: 3006.28
+
+Default: ``None``
+
+Required free memory the minion must be able to allocate before it will start
+another job. When set, the minion queue admission check compares this against
+the reference "total memory available to this minion" (see
+:conf_minion:`minion_memory_max`) instead of the built-in 95%-of-system-RAM
+rule.
+
+Accepts either a percentage string (``"5%"``) or an absolute size
+(``"5G"``, ``"500M"``, ``"5368709120"``, or a raw int of bytes).
+
+When unset, the minion preserves the legacy behavior of pausing queue
+processing when system-wide RAM usage exceeds 95%. Setting this opt is the
+recommended way to give the minion useful headroom guidance on very large
+hosts (where 5% of RAM is many GB) or on cgroup-limited minions.
+
+The reference memory used to evaluate the percentage / absolute check is
+resolved in this order:
+
+1. ``minion_memory_max`` if set.
+2. cgroup v2 ``memory.max`` if the minion process is confined by a v2
+   cgroup with a finite limit.
+3. cgroup v1 ``memory.limit_in_bytes`` if the minion process is confined by
+   a v1 memory cgroup with a finite limit.
+4. ``psutil.virtual_memory().total`` (system-wide RAM).
+
+.. code-block:: yaml
+
+    minion_memory_headroom: 5%
+
+.. code-block:: yaml
+
+    minion_memory_headroom: 500M
+
+.. conf_minion:: minion_memory_max
+
+``minion_memory_max``
+---------------------
+
+.. versionadded:: 3006.28
+
+Default: ``None``
+
+Explicit override for the reference "total memory available to this minion"
+used by :conf_minion:`minion_memory_headroom`. Accepts an absolute size
+(``"2G"``, ``"1073741824"``, or a raw int of bytes).
+
+When unset, the reference is auto-detected from cgroup v2 / v1 memory limits
+(when the minion process is confined by a cgroup) and finally falls back to
+``psutil.virtual_memory().total``. Set this opt to pin the reference on
+hosts where cgroup detection is unavailable or where the operator wants to
+enforce a lower cap than the cgroup allows.
+
+.. code-block:: yaml
+
+    minion_memory_max: 2G
 
 .. _minion-logging-settings:
 

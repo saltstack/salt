@@ -2,6 +2,8 @@
 :codeauthor: Jayesh Kariya <jayeshk@saltstack.com>
 """
 
+import decimal
+
 import pytest
 
 import salt.modules.disk as disk
@@ -380,6 +382,53 @@ def test_format_():
     with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
         disk.format_(device=device)
         mock.assert_any_call(["mkfs", "-t", "ext4", device], ignore_retcode=True)
+
+
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
+def test_format__nodiscard_ext():
+    """
+    unit tests for disk.format_ with discard=False on an ext filesystem
+    """
+    device = "/dev/sdX1"
+    mock = MagicMock(return_value=0)
+    with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
+        disk.format_(device=device, fs_type="ext4", discard=False)
+        mock.assert_any_call(
+            ["mkfs", "-t", "ext4", "-E", "nodiscard", device], ignore_retcode=True
+        )
+
+
+@pytest.mark.skip_on_windows(reason="Skip on Windows")
+@pytest.mark.skip_if_binaries_missing("mkfs")
+def test_format__nodiscard_xfs():
+    """
+    unit tests for disk.format_ with discard=False on an xfs filesystem
+    """
+    device = "/dev/sdX1"
+    mock = MagicMock(return_value=0)
+    with patch.dict(disk.__salt__, {"cmd.retcode": mock}):
+        disk.format_(device=device, fs_type="xfs", discard=False)
+        mock.assert_any_call(["mkfs", "-t", "xfs", "-K", device], ignore_retcode=True)
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("1.0K", decimal.Decimal("1000.0")),
+        ("32.8K", decimal.Decimal("32800.0")),
+        ("1.0M", decimal.Decimal("1000000.0")),
+        ("1.0G", decimal.Decimal("1000000000.0")),
+        ("100", decimal.Decimal("100")),
+    ],
+)
+def test_parse_numbers_issue_65490(text, expected):
+    """
+    Test for issue #65490 where postfixed values returned by
+    _parse_numbers were off by a factor of 10 (e.g. "1.0K" was
+    parsed as 10000.0 instead of 1000.0)
+    """
+    assert disk._parse_numbers(text) == expected
 
 
 @pytest.mark.skip_on_windows(reason="Skip on Windows")

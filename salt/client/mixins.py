@@ -183,17 +183,48 @@ class SyncClientMixin(ClientStateMixin):
                 'eauth': 'pam',
             })
         """
-        with salt.utils.event.get_master_event(
-            self.opts, self.opts["sock_dir"], listen=True
-        ) as event:
+        # Use self.event if available AND it's a network event subscriber
+        # For IPC events, always create a new listener since self.event uses listen=False
+        if (
+            hasattr(self, "event")
+            and self.event is not None
+            and hasattr(
+                self.event, "connect"
+            )  # Only ClientEventSubscriber has connect()
+        ):
+            # This is a ClientEventSubscriber (network events for remote execution)
+            event = self.event
+            should_close = False
+            # Ensure connected
+            if not getattr(event, "authenticated", False):
+                event.connect()
+        else:
+            # Create new IPC event listener (needed because self.event uses listen=False)
+            event = salt.utils.event.get_master_event(
+                self.opts, self.opts["sock_dir"], listen=True
+            )
+            should_close = True
+
+        try:
             job = self.master_call(**low)
             ret_tag = salt.utils.event.tagify("ret", base=job["tag"])
 
+            # Subscribe to this specific job if using ClientEventSubscriber
+            if hasattr(event, "subscribe_job"):
+                event.subscribe_job(job["jid"])
+
             if timeout is None:
                 timeout = self.opts.get("rest_timeout", 300)
-            ret = event.get_event(
-                tag=ret_tag, full=True, wait=timeout, auto_reconnect=True
-            )
+
+            # ClientEventSubscriber doesn't support auto_reconnect parameter
+            if hasattr(event, "subscribe_job"):
+                # This is a ClientEventSubscriber (network events)
+                ret = event.get_event(tag=ret_tag, full=True, wait=timeout)
+            else:
+                # This is an IPC event (supports auto_reconnect)
+                ret = event.get_event(
+                    tag=ret_tag, full=True, wait=timeout, auto_reconnect=True
+                )
             if ret is None:
                 raise salt.exceptions.SaltClientTimeout(
                     "RunnerClient job '{}' timed out".format(job["jid"]),
@@ -201,6 +232,9 @@ class SyncClientMixin(ClientStateMixin):
                 )
 
             return ret if full_return else ret["data"]["return"]
+        finally:
+            if should_close and hasattr(event, "destroy"):
+                event.destroy()
 
     def cmd(
         self,
@@ -335,6 +369,7 @@ class SyncClientMixin(ClientStateMixin):
                 "__jid_event__": weakref.proxy(namespaced_event),
             }
 
+            proc_fn = None
             try:
                 self_functions = copy.copy(self.functions)
                 salt.utils.lazy.verify_fun(self_functions, fun)
@@ -383,6 +418,12 @@ class SyncClientMixin(ClientStateMixin):
                     fp_.write(salt.payload.dumps(dict(data, pid=os.getpid())))
 
                 func = self.functions[fun]
+                # Reset retcode so a value set by a previous call on a
+                # reused client (e.g. the master's ClearFuncs.wheel_, one
+                # per MWorker, or a cached reactor client) cannot leak into
+                # this call -- low() otherwise never clears it.
+                if isinstance(self.context, dict):
+                    self.context["retcode"] = 0
                 try:
                     data["return"] = func(*args, **kwargs)
                 except TypeError as exc:
@@ -401,7 +442,7 @@ class SyncClientMixin(ClientStateMixin):
                     data["success"] = salt.utils.state.check_result(
                         data["return"]["data"]
                     )
-            except (Exception, SystemExit) as ex:  # pylint: disable=broad-except
+            except Exception as ex:  # pylint: disable=broad-except
                 if isinstance(ex, salt.exceptions.NotImplemented):
                     data["return"] = str(ex)
                 else:
@@ -414,10 +455,13 @@ class SyncClientMixin(ClientStateMixin):
                 data["retcode"] = 1
             finally:
                 # Job has finished or issue found, so let's clean up after ourselves
-                try:
-                    os.remove(proc_fn)
-                except OSError as err:
-                    log.debug("Error attempting to remove master job tracker: %s", err)
+                if proc_fn is not None:
+                    try:
+                        os.remove(proc_fn)
+                    except OSError as err:
+                        log.debug(
+                            "Error attempting to remove master job tracker: %s", err
+                        )
 
             if self.store_job:
                 try:
@@ -528,6 +572,7 @@ class AsyncClientMixin(ClientStateMixin):
         tag,
         jid,
         daemonize=True,
+        print_event=True,
         full_return=False,
     ):
         """
@@ -553,7 +598,7 @@ class AsyncClientMixin(ClientStateMixin):
         low["__user__"] = user
         low["__tag__"] = tag
 
-        return instance.low(fun, low, full_return=full_return)
+        return instance.low(fun, low, print_event=print_event, full_return=full_return)
 
     def cmd_async(self, low):
         """

@@ -40,14 +40,14 @@ def _parse_numbers(text):
 
     try:
         postPrefixes = {
-            "K": "10E3",
-            "M": "10E6",
-            "G": "10E9",
-            "T": "10E12",
-            "P": "10E15",
-            "E": "10E18",
-            "Z": "10E21",
-            "Y": "10E24",
+            "K": "1e3",
+            "M": "1e6",
+            "G": "1e9",
+            "T": "1e12",
+            "P": "1e15",
+            "E": "1e18",
+            "Z": "1e21",
+            "Y": "1e24",
         }
         if text[-1] in postPrefixes:
             v = decimal.Decimal(text[:-1])
@@ -481,6 +481,7 @@ def format_(
     lazy_itable_init=None,
     fat=None,
     force=False,
+    discard=True,
 ):
     """
     Format a filesystem onto a device
@@ -519,6 +520,15 @@ def format_(
 
         This option is dangerous, use it with caution.
 
+    discard
+        Attempt to discard blocks at mkfs time (enabled by default). Set to
+        ``False`` to disable block discard, which prevents sparse file
+        inflation when formatting disk images on a host filesystem.
+
+        This option is only supported for ext and xfs filesystems.
+
+        .. versionadded:: 3009.0
+
     CLI Example:
 
     .. code-block:: bash
@@ -534,6 +544,11 @@ def format_(
     if lazy_itable_init is not None:
         if fs_type[:3] == "ext":
             cmd.extend(["-E", f"lazy_itable_init={lazy_itable_init}"])
+    if not discard:
+        if fs_type[:3] == "ext":
+            cmd.extend(["-E", "nodiscard"])
+        elif fs_type == "xfs":
+            cmd.append("-K")
     if fat is not None and fat in (12, 16, 32):
         if fs_type[-3:] == "fat":
             cmd.extend(["-F", fat])

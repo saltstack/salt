@@ -608,9 +608,18 @@ class SaltStackVersion:
 
 # ----- Hardcoded Salt Codename Version Information ----------------------------------------------------------------->
 #
-#   There's no need to do anything here. The last released codename will be picked up
+#   On master we anchor the reported version on the NEXT (unreleased) codename
+#   from SaltVersionsInfo rather than the current release. Master is always
+#   ahead of the latest release cut, so `current_release()` reports the wrong
+#   line -- e.g. today it returns Argon (3008), which makes every master build
+#   look like `3008.<N>+...` when the truth is closer to `3009.0.dev0+...`.
+#   `next_release()` returns the first codename with released=False (Potassium
+#   / 3009 today), which is what a nightly built on master should carry. This
+#   line is master-only; release branches (3008.x, 3007.x, 3006.x) should keep
+#   `current_release()` because on a release branch the "current" codename is
+#   the correct anchor.
 # --------------------------------------------------------------------------------------------------------------------
-__saltstack_version__ = SaltStackVersion.current_release()
+__saltstack_version__ = SaltStackVersion.next_release()
 # <---- Hardcoded Salt Version Information ---------------------------------------------------------------------------
 
 
@@ -645,26 +654,30 @@ def __discover_version(saltstack_version):
                 "describe",
                 "--tags",
                 "--long",
-                # Constrain to the branch's own major (3008.x) so tags
-                # from other majors reachable in the git graph do not hijack
-                # the detected version. Merged forward from 3007.x's
-                # v3007.* constraint (see git log for f3ffc8f9c9ea) and
-                # rebased to this branch's major.
+                # Constrain to master's own major (3009.x, currently
+                # unreleased -- Potassium in SaltVersionsInfo). No v3009.*
+                # tag exists yet on master, so `git describe` will fall
+                # through to `--always` and return just the sha, and the
+                # parse below will keep saltstack_version anchored on
+                # `next_release()` (see the __saltstack_version__ init
+                # further up). This is intentional: master needs no
+                # hand-cut dev-sentinel tag; the codename table is the
+                # single source of truth for the base version. Merged
+                # forward from 3007.x's v3007.* constraint (see git log
+                # for f3ffc8f9c9ea) and rebased forward for master.
                 "--match",
-                "v3008.*",
-                # Exclude computed / nightly-shaped tags (anything with `+`
-                # in the tag name, e.g. v3008.2+588.g02ea048903). These are
-                # emitted by the nightly publish workflow on salt-nightlies
-                # to give each nightly build a content-addressed release
-                # tag. If describe is allowed to match them, subsequent
-                # builds at the same or a later commit resolve their
-                # "nearest tag" to a nightly tag rather than the real
-                # release tag (v3008.2), and version derivation collapses
-                # to `<base>+<small-distance>.g<sha>` measured from the
-                # poison tag instead of from v3008.2. Concrete instance:
-                # nightly on master @ 2e5d1f521e produced "3008.2+0.g..."
-                # because a prior nightly publish had tagged that commit
-                # `v3008.2+699.g2e5d1f521e`.
+                "v3009.*",
+                # Exclude nightly-shaped tags (anything containing `+` in
+                # the tag name, e.g. v3009.0+123.gabcdef) so that the
+                # nightly publish workflow's own release tags don't get
+                # picked up as version anchors on subsequent builds.
+                # Without this, every publish poisons the tag pool for
+                # the next build of the same or later commit. Concrete
+                # instance on 3008.x: a nightly published tag
+                # `v3008.2+588.g02ea048903` caused the following build at
+                # `80f8673901` to report `3008.2+3.g80f8673901` (measured
+                # from the poison tag) rather than the true distance
+                # (600+ commits) from `v3008.2`.
                 "--exclude",
                 "*+*",
                 "--always",
@@ -729,6 +742,9 @@ def __get_version(saltstack_version):
     If we can get a version provided at installation time or from Git, use
     that instead, otherwise we carry on.
     """
+    if "SALT_VERSION" in os.environ:
+        return SaltStackVersion.parse(os.environ["SALT_VERSION"])
+
     _hardcoded_version_file = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "_version.txt"
     )

@@ -126,14 +126,6 @@ MySQL requires:
     mysql.db: 'salt'
     mysql.port: 3306
 
-Slack requires:
-
-.. code-block:: yaml
-
-    slack.channel: 'channel'
-    slack.api_key: 'key'
-    slack.from_name: 'name'
-
 After you have configured the returner and added settings to the configuration
 file, you can enable the External or Master Job Cache.
 

@@ -3,6 +3,7 @@ import sys
 
 import pytest
 
+from salt.utils.functools import namespaced_function
 from tests.conftest import CODE_DIR
 
 log = logging.getLogger(__name__)
@@ -87,3 +88,13 @@ def test_namespacing(tmp_path, shell):
         assert ret.data["module"] == "foopkg.mod2"
         assert isinstance(ret.data["func1"], float)
         assert ret.data["time_present"] is True
+
+
+def test_kwarg_defaults_preserved():
+    def func(_arg, *, default="foo"):
+        return default
+
+    func2 = namespaced_function(func, globals())
+
+    assert func(None) == "foo"
+    assert func2(None) == "foo"  # pylint: disable=not-callable

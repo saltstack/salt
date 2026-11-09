@@ -2528,102 +2528,15 @@ def test_dns_return(ipv4_tuple, ipv6_tuple):
         assert core.dns() == {}
 
 
-def test_enable_fqdns_false():
-    """
-    tests enable_fqdns_grains is set to False
-    """
-    with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": False}):
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_true():
-    """
-    testing that grains uses network.fqdns module
-    """
+@pytest.mark.parametrize(
+    "disabled_grains,expected", (([], ["my.fake.domain"]), (["fqdns"], []))
+)
+def test_fqdns_disabling(disabled_grains, expected):
     with patch.dict(
         "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ), patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": True}):
-        assert core.fqdns() == "my.fake.domain"
-
-
-def test_enable_fqdns_none():
-    """
-    testing default fqdns grains is returned when enable_fqdns_grains is None
-    """
-    with patch.dict("salt.grains.core.__opts__", {"enable_fqdns_grains": None}):
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_without_patching():
-    """
-    testing fqdns grains is enabled by default
-    """
-    with patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on Windows and macOS
-        if salt.utils.platform.is_windows() or salt.utils.platform.is_darwin():
-            assert core.fqdns() == {"fqdns": []}
-        else:
-            assert core.fqdns() == "my.fake.domain"
-
-
-def test_enable_fqdns_false_is_proxy():
-    """
-    testing fqdns grains is disabled by default for proxy minions
-    """
-    with patch(
-        "salt.utils.platform.is_proxy", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on proxy minions
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_aix():
-    """
-    testing fqdns grains is disabled by default for minions on AIX
-    """
-    with patch(
-        "salt.utils.platform.is_aix", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on AIX
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_sunos():
-    """
-    testing fqdns grains is disabled by default for minions on Solaris platforms
-    """
-    with patch(
-        "salt.utils.platform.is_sunos", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on Solaris platforms
-        assert core.fqdns() == {"fqdns": []}
-
-
-def test_enable_fqdns_false_is_junos():
-    """
-    testing fqdns grains is disabled by default for minions on Junos
-    """
-    with patch(
-        "salt.utils.platform.is_junos", return_value=True, autospec=True
-    ), patch.dict(
-        "salt.grains.core.__salt__",
-        {"network.fqdns": MagicMock(return_value="my.fake.domain")},
-    ):
-        # fqdns is disabled by default on minions on Junos (Juniper)
-        assert core.fqdns() == {"fqdns": []}
+        {"network.fqdns": MagicMock(return_value={"fqdns": ["my.fake.domain"]})},
+    ), patch.dict("salt.grains.core.__opts__", {"disabled_grains": disabled_grains}):
+        assert core.fqdns() == {"fqdns": expected}
 
 
 @pytest.mark.skip_unless_on_linux
@@ -3488,6 +3401,74 @@ def test_bsd_osfullname():
     assert os_grains.get("osfullname") == "FreeBSD 10.3"
 
 
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "kernel,kernelrelease,expected_osfullname",
+    [
+        # kernelrelease.split("-")[0] strips the -RELEASE suffix but not _STABLE
+        ("NetBSD", "10.1_STABLE", "NetBSD 10.1_STABLE"),
+        ("OpenBSD", "7.4-RELEASE", "OpenBSD 7.4"),
+    ],
+)
+def test_netbsd_openbsd_osfullname(kernel, kernelrelease, expected_osfullname):
+    """
+    Test that os_data() sets osfullname for NetBSD and OpenBSD without crashing.
+    The OpenBSD/NetBSD branch must set osfullname so that _osrelease_data() can
+    use it later.
+    """
+    nt_uname = namedtuple(
+        "nt_uname", ["system", "node", "release", "version", "machine", "processor"]
+    )
+    mock_uname = MagicMock(
+        return_value=nt_uname(
+            kernel,
+            "hostname",
+            kernelrelease,
+            f"{kernel} {kernelrelease}",
+            "amd64",
+            "amd64",
+        )
+    )
+    empty_mock = MagicMock(return_value={})
+
+    _cmd_run_map = {
+        "/sbin/sysctl -n hw.physmem": "2121781248",
+        "/sbin/sysctl -n vm.swap_total": "419430400",
+    }
+    cmd_run_mock = MagicMock(side_effect=lambda x: _cmd_run_map.get(x, ""))
+
+    with patch.object(platform, "uname", mock_uname), patch.object(
+        salt.utils.platform, "is_linux", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_proxy", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_windows", MagicMock(return_value=False)
+    ), patch.object(
+        salt.utils.platform, "is_freebsd", MagicMock(return_value=False)
+    ), patch(
+        "salt.utils.path.which", return_value="/sbin/sysctl"
+    ):
+        with patch.object(core, "_bsd_cpudata", empty_mock), patch.object(
+            core, "_hw_data", empty_mock
+        ), patch.object(core, "_virtual", empty_mock), patch.object(
+            core, "_virtual_hv", empty_mock
+        ), patch.object(
+            core, "_ps", empty_mock
+        ), patch.object(
+            core, "_memdata", empty_mock
+        ), patch.object(
+            core, "_netbsd_gpu_data", empty_mock
+        ), patch.dict(
+            core.__salt__, {"cmd.run": cmd_run_mock}
+        ):
+            os_grains = core.os_data()
+
+    assert "osfullname" in os_grains
+    assert os_grains.get("osfullname") == expected_osfullname
+    assert os_grains.get("os") == kernel
+    assert os_grains.get("os_family") == kernel
+
+
 def test_saltversioninfo():
     """
     test saltversioninfo core grain.
@@ -3559,6 +3540,50 @@ def test__hw_data_linux_unicode_error():
         "salt.utils.platform.is_proxy"
     ), patch("salt.utils.files.fopen", _fopen):
         assert core._hw_data({"kernel": "Linux"}) == {}
+
+
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_xen_pv_uuid():
+    hypervisor_uuid = b"12345678-1234-1234-1234-123456789ABC"
+    expected_uuid = "12345678-1234-1234-1234-123456789abc"
+
+    def _exists_side_effect(path):
+        if path == "/sys/hypervisor/uuid":
+            return True
+        return False
+
+    with patch("os.path.exists", side_effect=_exists_side_effect), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.path.which_bin", return_value=None), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data=hypervisor_uuid),
+    ):
+        result = core._hw_data({"kernel": "Linux"})
+        assert result.get("uuid") == expected_uuid
+
+
+@pytest.mark.skip_unless_on_linux
+def test__hw_data_xen_dom0_uuid_ignored():
+    """
+    On Xen Dom0, /sys/hypervisor/uuid contains an all-zero sentinel value.
+    The grain should not be set from that value so the real DMI UUID can
+    be used instead.
+    """
+    dom0_uuid = b"00000000-0000-0000-0000-000000000000"
+
+    def _exists_side_effect(path):
+        if path == "/sys/hypervisor/uuid":
+            return True
+        return False
+
+    with patch("os.path.exists", side_effect=_exists_side_effect), patch(
+        "salt.utils.platform.is_proxy", return_value=False
+    ), patch("salt.utils.path.which_bin", return_value=None), patch(
+        "salt.utils.files.fopen",
+        mock_open(read_data=dom0_uuid),
+    ):
+        result = core._hw_data({"kernel": "Linux"})
+        assert result.get("uuid") is None
 
 
 @pytest.mark.skip_unless_on_windows
@@ -4502,6 +4527,27 @@ def test_pythonversion():
     ret = core.pythonversion()
     assert "pythonversion" in ret
     assert ret["pythonversion"] == python_version
+
+
+def test_pythonrelease():
+    """
+    test pythonrelease and pythonrelease_info
+
+    These follow the ``<foo>release`` / ``<foo>release_info`` convention used
+    by the other version grains, unlike the older list-valued
+    ``pythonversion`` grain which is retained for backwards compatibility.
+    """
+    ret = core.pythonversion()
+
+    assert "pythonrelease" in ret
+    assert ret["pythonrelease"] == platform.python_version()
+    # dotted major.minor.micro, matching the shape of e.g. osrelease
+    assert ret["pythonrelease"] == "{}.{}.{}".format(*sys.version_info[:3])
+
+    assert "pythonrelease_info" in ret
+    assert ret["pythonrelease_info"] == [*sys.version_info]
+    # the pre-existing grain keeps working and stays in sync
+    assert ret["pythonrelease_info"] == ret["pythonversion"]
 
 
 @pytest.mark.skip_unless_on_linux
@@ -5717,6 +5763,110 @@ def test_fibre_channel_host(status):
         grains = core.fibre_channel_host()
         assert "fibre_channel_host" in grains
         assert grains["fibre_channel_host"] is status
+
+
+# ---------------------------------------------------------------------------
+# Tests for the 'cpe' grain introduced in PR #65905
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "os_name,osrelease,expected",
+    [
+        ("Debian", "12", "cpe:/o:debian:debian_linux:12"),
+        ("Debian", "11", "cpe:/o:debian:debian_linux:11"),
+        ("Ubuntu", "22.04", "cpe:/o:canonical:ubuntu_linux:22.04"),
+        ("Ubuntu", "20.04", "cpe:/o:canonical:ubuntu_linux:20.04"),
+        # Unknown OS → no CPE derivable
+        ("CentOS", "8", None),
+        ("Arch", "rolling", None),
+        # Missing version → no CPE derivable
+        ("Debian", None, None),
+        ("Debian", "", None),
+        ("Ubuntu", None, None),
+    ],
+)
+def test_derive_cpe_grain(os_name, osrelease, expected):
+    """
+    _derive_cpe_grain returns a CPE string for Debian/Ubuntu and None otherwise.
+    It also returns None when osrelease is falsy (None or empty string).
+    """
+    result = core._derive_cpe_grain(os_name, osrelease)
+    assert result == expected
+
+
+def test_os_release_to_grains_cpe_from_os_release():
+    """
+    When CPE_NAME is present in os-release, the 'cpe' grain is taken directly.
+    """
+    os_release = {
+        "ID": "centos",
+        "NAME": "CentOS Linux",
+        "PRETTY_NAME": "CentOS Linux 8 (Core)",
+        "VERSION_ID": "8",
+        "CPE_NAME": "cpe:/o:centos:centos:8",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:centos:centos:8"
+
+
+def test_os_release_to_grains_cpe_derived_debian():
+    """
+    When CPE_NAME is absent but OS is Debian, 'cpe' is derived from osrelease.
+    """
+    os_release = {
+        "ID": "debian",
+        "NAME": "Debian GNU/Linux",
+        "PRETTY_NAME": "Debian GNU/Linux 12 (bookworm)",
+        "VERSION_ID": "12",
+        "VERSION_CODENAME": "bookworm",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:debian:debian_linux:12"
+
+
+def test_os_release_to_grains_cpe_derived_ubuntu():
+    """
+    When CPE_NAME is absent but OS is Ubuntu, 'cpe' is derived from osrelease.
+    """
+    os_release = {
+        "ID": "ubuntu",
+        "NAME": "Ubuntu",
+        "PRETTY_NAME": "Ubuntu 22.04.3 LTS",
+        "VERSION_ID": "22.04",
+        "VERSION_CODENAME": "jammy",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert grains["cpe"] == "cpe:/o:canonical:ubuntu_linux:22.04"
+
+
+def test_os_release_to_grains_no_cpe_for_unknown_os():
+    """
+    When CPE_NAME is absent and OS is not in the derivation map, 'cpe' is not set.
+    """
+    os_release = {
+        "ID": "arch",
+        "NAME": "Arch Linux",
+        "PRETTY_NAME": "Arch Linux",
+        "VERSION_ID": "rolling",
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert "cpe" not in grains
+
+
+def test_os_release_to_grains_no_cpe_when_version_missing():
+    """
+    When CPE_NAME is absent and VERSION_ID is missing, 'cpe' is not set even
+    for Debian — avoids a TypeError from concatenating None.
+    """
+    os_release = {
+        "ID": "debian",
+        "NAME": "Debian GNU/Linux",
+        "PRETTY_NAME": "Debian GNU/Linux (unknown version)",
+        # No VERSION_ID intentionally — osrelease will be None/empty
+    }
+    grains = core._os_release_to_grains(os_release)
+    assert "cpe" not in grains
 
 
 @pytest.mark.skip_unless_on_linux

@@ -28,7 +28,7 @@ from tests.support.runtests import RUNTIME_VARS
     reason=(
         "pyOpenSSL 25+ removed the X509Extension API and 26.0+ additionally "
         "removed X509Req / PKCS12 / CRL / load_crl -- the salt.modules.tls "
-        "code paths exercised here cannot run. Use salt.modules.x509 "
+        "code paths exercised here cannot run. Use salt.modules.x509_v2 "
         "(cryptography-backed) instead."
     ),
 )

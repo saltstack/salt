@@ -6,6 +6,7 @@ import pytest
 
 import salt.modules.rpmbuild_pkgbuild as rpmbuild_pkgbuild
 import salt.utils.secret
+from salt.exceptions import SaltInvocationError
 from tests.support.mock import MagicMock, patch
 
 pytestmark = [
@@ -91,3 +92,47 @@ def test_get_gpg_key_resources_unmasks_pillar_values():
     # rpm --import must reference the real public key file
     rpm_import_cmd = retcode_mock.call_args_list[0].args[0]
     assert rpm_import_cmd == "rpm --import /etc/salt/gpgkeys/gpg_pkg_key.pub"
+
+
+def test_get_gpg_key_resources_reports_preset_passphrase_error():
+    """
+    A failing gpg-preset-passphrase must raise SaltInvocationError with its
+    return code, not an IndexError from building the message.
+    """
+    fingerprint = "1234567890ABCDEF1234567890ABCDEF07123E1F"
+    keygrip_listing = "\n".join(
+        [
+            "sec   rsa4096 2026-01-01 [SC]",
+            f"      {fingerprint}",
+            "      Keygrip = 0123456789ABCDEF0123456789ABCDEF01234567",
+        ]
+    )
+    salt_dunder = {
+        "pillar.get": _masking_pillar_get,
+        "gpg.import_key": MagicMock(return_value=True),
+        "gpg.list_keys": MagicMock(
+            return_value=[
+                {
+                    "keyid": "AAAAAAAA07123E1F",
+                    "fingerprint": fingerprint,
+                    "uids": ["Packaging Key <pkg@example.com>"],
+                }
+            ]
+        ),
+        "cmd.run": MagicMock(return_value=keygrip_listing),
+        "cmd.retcode": MagicMock(return_value=2),
+    }
+
+    with patch.dict(rpmbuild_pkgbuild.__salt__, salt_dunder), patch.dict(
+        rpmbuild_pkgbuild.__grains__, {"osmajorrelease": 8}
+    ), patch.object(rpmbuild_pkgbuild, "_check_repo_gpg_phrase_utils", MagicMock()):
+        with pytest.raises(
+            SaltInvocationError, match="Failed to preset passphrase, error 2,"
+        ):
+            rpmbuild_pkgbuild._get_gpg_key_resources(
+                keyid="07123E1F",
+                env={},
+                use_passphrase=True,
+                gnupghome="/etc/salt/gpgkeys",
+                runas="root",
+            )

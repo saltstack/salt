@@ -1,3 +1,23 @@
+salt (3008.5) stable; urgency=medium
+
+
+  # Security
+
+  * Updated certifi to 2026.10.23 to pick up the latest Mozilla CA bundle. [#70571](https://github.com/saltstack/salt/issues/70571)
+
+
+ -- Salt Project <saltproject.pdl@broadcom.com>  Mon, 26 Oct 2026 21:53:59 +0000
+
+salt (3008.4) stable; urgency=medium
+
+
+  # Security
+
+  * Upgraded certifi to 2026.10.19 and the packaged pip to 26.2.2 for the eMudhra/emSign CA incident (intermediates found to have critically weak EC private keys). [#70465](https://github.com/saltstack/salt/issues/70465)
+
+
+ -- Salt Project <saltproject.pdl@broadcom.com>  Fri, 23 Oct 2026 21:40:41 +0000
+
 salt (3008.3) stable; urgency=medium
 
 
@@ -1920,7 +1940,7 @@ salt (3006.10) stable; urgency=medium
   * Upgrade relenv to 0.17.3. This release includes python 3.10.15, openssl 3.2.3,
     and fixes for pip 24.2. [#66858](https://github.com/saltstack/salt/issues/66858)
   * Remove caching of 'systemctl status' in systemd_service to fix automatic daemon-reload for repeated invocations. [#66864](https://github.com/saltstack/salt/issues/66864)
-  * Added cryptogrpahy back to base.txt requirements as a dependency [#66883](https://github.com/saltstack/salt/issues/66883)
+  * Added cryptogrpahy back to base.in requirements as a dependency [#66883](https://github.com/saltstack/salt/issues/66883)
   * Remove "perms" from `linux_acl.list_absent()` documentation [#66891](https://github.com/saltstack/salt/issues/66891)
   * Ensure minion start event coroutines are run [#66932](https://github.com/saltstack/salt/issues/66932)
   * Allow for secure-boot efivars directory having SecureBoot-xxx files, not directories with a data file [#66955](https://github.com/saltstack/salt/issues/66955)

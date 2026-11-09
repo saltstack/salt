@@ -70,6 +70,19 @@ The network port to set up the publication interface.
 
     publish_port: 4505
 
+.. conf_master:: id
+
+``id``
+------
+
+Default: the host's resolved name with ``_master`` appended
+
+This master's own name for identification.
+
+.. code-block:: yaml
+
+    id: master2
+
 .. conf_master:: master_id
 
 ``master_id``
@@ -242,6 +255,12 @@ When ``cluster_peers`` is defined, this setting is a list of other master
     cluster_peers:
        - master2
        - master3
+
+.. important::
+
+    Members of the cluster should set :conf_master:`id` explicitly, and
+    each master's ``id`` must be the same name its siblings list in their
+    ``cluster_peers``.
 
 .. conf_master:: cluster_pki_dir
 
@@ -1022,6 +1041,72 @@ to True.
 
     remote_minions_port: 2222
 
+.. conf_master:: presence_id_tracking
+
+``presence_id_tracking``
+------------------------
+
+.. versionadded:: 3008.5
+
+Default: False
+
+By default a minion is considered present when the address it is connected
+from, as seen by the master on the publish port, is one of the addresses in its
+cached grains. A minion connecting from a different address, for example behind
+NAT or over the internet, is never detected this way and is missing from
+presence events and from ``manage.present``, ``manage.not_present`` and the
+related ``manage`` runner functions (see :issue:`58592`).
+
+When this option is enabled, the master also records the time of every
+authenticated request it receives from an accepted minion. Minions seen within
+the last :conf_master:`presence_id_ttl` seconds are reported as present in
+addition to the ones found by address. The ``manage.status``, ``manage.up`` and
+``manage.down`` functions send a ping to the minions and are not affected.
+
+Only requests using the current authentication protocol, in which the minion's
+id is bound to its session and signed with its accepted key, are recorded. This
+is the default (see :conf_master:`minimum_auth_version`).
+
+.. important::
+
+    A minion that is idle sends no requests to the master. To keep an idle
+    minion present, set :conf_minion:`ping_interval` (in minutes) on the minion
+    so that it periodically contacts the master.
+
+.. note::
+
+    A minion that stopped sending requests is reported as present until its
+    last record is older than :conf_master:`presence_id_ttl`, rather than as
+    soon as its connection drops. Presence events with lost minions and
+    ``manage.not_present`` are delayed accordingly.
+
+    Records are stored in the master cache, so masters sharing a cache (for
+    example in a cluster or with an external cache driver) share the presence
+    information.
+
+.. code-block:: yaml
+
+    presence_id_tracking: True
+
+.. conf_master:: presence_id_ttl
+
+``presence_id_ttl``
+-------------------
+
+.. versionadded:: 3008.5
+
+Default: ``600``
+
+The number of seconds a minion is reported as present after it was last seen
+when :conf_master:`presence_id_tracking` is enabled. Last seen times are
+recorded at most once per half of this value, so set it to at least three times
+the :conf_minion:`ping_interval` of the minions, converted to seconds, to avoid
+minions flapping between present and absent.
+
+.. code-block:: yaml
+
+    presence_id_ttl: 600
+
 
 .. conf_master:: ping_on_rotate
 
@@ -1703,6 +1788,29 @@ Run the ssh_pre_flight script defined in the salt-ssh roster. By default
 the script will only run when the thin dir does not exist on the targeted
 minion. This will force the script to run and not check if the thin dir
 exists first.
+
+.. conf_master:: ssh_minion_opts_cache
+
+``ssh_minion_opts_cache``
+-------------------------
+
+.. versionadded:: 3007.1
+
+Default: ``0``
+
+If a positive integer, defines the number of seconds for which the initial options query
+to an SSH minion is cached on disk, run prior to any module execution on an SSH minion.
+This can speed up large runs, and halves the amount of SSH sessions that ``salt-ssh``
+opens to a minion.
+
+The cached data changes infrequently (for instance, when a full version system upgrade
+is performed on a minion) so it is relatively safe to leave this cache at a high value.
+
+This value is ignored for standard minions or any other kind of minion not SSH.
+
+.. code-block:: yaml
+
+    ssh_minion_opts_cache: 3600
 
 .. conf_master:: thin_extra_mods
 
@@ -2785,9 +2893,19 @@ The state_output setting controls which results will be output full multi line:
 ``full_id``, ``mixed_id``, ``changes_id`` and ``terse_id`` are also allowed;
 when set, the state ID will be used as name in the output.
 
+Any of the above modes can be suffixed with ``_color`` (e.g. ``full_color``,
+``mixed_color``) to enable colorized unified diff output in the changes
+section. Added lines are shown in green, removed lines in red, hunk headers
+in cyan, and context lines in gray. All other output behavior is identical to
+the mode without the ``_color`` suffix.
+
 .. code-block:: yaml
 
     state_output: full
+
+.. code-block:: yaml
+
+    state_output: full_color
 
 .. conf_master:: state_output_diff
 

@@ -92,6 +92,26 @@ A REST API for Salt
     ssl_chain
         (Optional when using PyOpenSSL) the certificate chain to pass to
         ``Context.load_verify_locations``.
+    ssl_ca_certs
+        (Optional) Path to a file or directory of trust-anchor PEM
+        certificates used to verify clients.
+
+        .. versionadded:: 3009.0
+
+    ssl_cert_reqs
+        (Optional) Peer-cert verification. One of ``CERT_NONE``
+        (default; no client cert checked), ``CERT_OPTIONAL`` (verified
+        when presented), ``CERT_REQUIRED`` (handshake fails for
+        clients without a cert signed by a ``ssl_ca_certs``).
+
+        .. versionadded:: 3009.0
+
+    ssl_allowed_cn
+        (Optional) List of allowed Subject CN values for accepted client
+        certificates.
+
+        .. versionadded:: 3009.0
+
     disable_ssl
         A flag to disable SSL. Warning: your Salt authentication credentials
         will be sent in the clear!
@@ -136,6 +156,22 @@ A REST API for Salt
         be useful to enforce only header-based authentication.
 
         .. versionadded:: 2017.7.0
+
+    session_store : ``ram``
+        Where to keep CherryPy session data. The default ``ram`` uses
+        CherryPy's in-memory session store, which is local to each salt-api
+        worker. Set to ``cache`` to store sessions in the master's configured
+        :ref:`cache <cache>` instead, so they are shared across salt-api
+        workers and master-cluster members. This avoids spurious ``401``
+        responses when a client's requests are spread across more than one
+        salt-api worker (for example behind a load balancer), since any worker
+        can then resolve the session. The driver is whatever ``cache`` is set
+        to (``localfs`` by default); a master cluster with a shared
+        ``cachedir`` needs nothing further, while a deployment without shared
+        storage should point ``cache`` at a networked driver such as ``redis``
+        or ``etcd3``.
+
+        .. versionadded:: 3009.0
 
     app : ``index.html``
         A filesystem path to an HTML file that will be served as a static file.
@@ -591,6 +627,7 @@ import logging
 import os
 import signal
 import tarfile
+import threading
 import time
 from collections.abc import Iterator, Mapping
 from multiprocessing import Pipe, Process
@@ -600,6 +637,7 @@ import cherrypy  # pylint: disable=import-error,3rd-party-module-not-gated
 
 import salt
 import salt.auth
+import salt.cache
 import salt.exceptions
 import salt.netapi
 import salt.utils.args
@@ -680,6 +718,113 @@ except ImportError:
     HAS_WEBSOCKETS = False
 
 
+class SaltCacheSession(cherrypy.lib.sessions.Session):
+    """
+    A CherryPy session backend that stores sessions in Salt's configured
+    cache (:py:class:`salt.cache.Cache`) rather than in per-worker RAM.
+
+    By default ``rest_cherrypy`` uses CherryPy's in-memory ``RamSession``,
+    which is local to a single salt-api worker. Because the X-Auth-Token is
+    used as the CherryPy session id, a client whose requests reach a
+    *different* worker than the one that handled its ``/login`` (e.g. two
+    salt-api hosts behind a load balancer, or two members of a master
+    cluster) has no session there and is rejected, even though the Salt token
+    itself is valid. Storing the session in Salt's shared cache instead lets
+    any worker resolve it.
+
+    Enable with ``session_store: cache`` in the ``rest_cherrypy`` config. The
+    sessions are stored using the master's configured ``cache`` driver, so on
+    a master cluster (shared ``cachedir`` with the default ``localfs`` cache)
+    no extra services are required; point ``cache`` at ``redis`` or ``etcd3``
+    for deployments without a shared filesystem.
+    """
+
+    # Per-worker locks. salt.cache exposes no distributed lock, so this only
+    # serializes concurrent requests for the same session within one worker
+    # (the common case, since a client reuses a single connection). Concurrent
+    # writes to one session from two workers are not mutually excluded; this is
+    # acceptable because the stored payload is a small auth marker.
+    locks = {}
+    cache = None
+    bank = "netapi/session"
+
+    @classmethod
+    def setup(cls, **kwargs):
+        """
+        Build the shared cache once, from the Salt master opts that
+        :func:`get_app` stashed in ``cherrypy.config``.
+        """
+        for key, value in kwargs.items():
+            setattr(cls, key, value)
+        cls.cache = salt.cache.factory(cherrypy.config["saltopts"])
+
+    def _exists(self):
+        return self.cache.contains(self.bank, self.id)
+
+    def _load(self):
+        stored = self.cache.fetch(self.bank, self.id)
+        if not stored:
+            return None
+        return stored["data"], stored["expiration"]
+
+    def _save(self, expiration_time):
+        ttl = int((expiration_time - self.now()).total_seconds())
+        self.cache.store(
+            self.bank,
+            self.id,
+            {"data": self._data, "expiration": expiration_time},
+            expires=ttl if ttl > 0 else None,
+        )
+
+    def _delete(self):
+        self.cache.flush(self.bank, self.id)
+
+    def acquire_lock(self):
+        self.locked = True
+        self.locks.setdefault(self.id, threading.RLock()).acquire()
+
+    def release_lock(self):
+        self.locks[self.id].release()
+        self.locked = False
+
+    def clean_up(self):
+        # salt.cache enforces the TTL on read (an expired entry fetches as
+        # empty), and drivers with native expiry (redis, etcd3) drop the keys
+        # themselves. Drivers without it -- notably the default localfs -- leave
+        # the stale entry on disk until it is swept, so walk the bank here
+        # (mirroring CherryPy's FileSession.clean_up) and flush anything past
+        # its expiration. For native-TTL drivers the expired keys are already
+        # gone, so this is a cheap no-op.
+        now = self.now()
+        try:
+            for sid in self.cache.list(self.bank):
+                stored = self.cache.fetch(self.bank, sid)
+                if not stored or stored.get("expiration", now) < now:
+                    self.cache.flush(self.bank, sid)
+        except salt.exceptions.SaltCacheError:
+            logger.warning("Failed to clean up expired netapi sessions", exc_info=True)
+
+
+def _lookup_session_data(session_id):
+    """
+    Return the stored data dict for an existing session id, or an empty dict.
+
+    The EventSource and WebSocket endpoints receive the salt-api token (which
+    is the CherryPy session id) as a URL parameter, because browsers cannot set
+    request headers on those APIs, so they have to resolve the session out of
+    band rather than through the normal cookie/header machinery. This looks the
+    session up via whichever backend is configured.
+    """
+    session = cherrypy.serving.session
+    if isinstance(session, SaltCacheSession):
+        stored = session.cache.fetch(session.bank, session_id)
+        return stored.get("data", {}) if stored else {}
+    # CherryPy's default in-RAM backend keeps a class-level
+    # {session_id: (data, expiration)} mapping.
+    data, _ = session.cache.get(session_id, ({}, None))
+    return data
+
+
 def html_override_tool():
     """
     Bypass the normal handler and serve HTML for all URLs
@@ -699,6 +844,19 @@ def html_override_tool():
         return
 
     if request.path_info.startswith(url_blacklist):
+        return
+
+    # Streaming endpoints (``/events`` SSE, ``/ws`` websocket) must never be
+    # diverted to the HTML app. A browser hitting ``/events`` sends
+    # ``Accept: text/html,*/*`` which would otherwise raise
+    # ``InternalRedirect`` here; that redirect propagates through
+    # ``cherrypy._cpwsgi.AppResponse.__init__`` where the ``except
+    # BaseException: self.close()`` cleanup path in cherrypy 18.10.0 crashes
+    # with ``AttributeError: 'AppResponse' object has no attribute
+    # 'iter_response'`` (``iter_response`` is only assigned after
+    # ``self.run()`` returns). Skip the redirect for any handler that has
+    # opted into ``response.stream``. See issue #69958.
+    if request.config.get("response.stream"):
         return
 
     if request.headers.get("Accept") == "*/*":
@@ -812,6 +970,47 @@ def salt_ip_verify_tool():
                 if rem_ip not in auth_ip_list:
                     logger.error("Blocked IP: %s", rem_ip)
                     raise cherrypy.HTTPError(403, "Bad IP")
+
+
+def _client_cert_cn():
+    """
+    Return the CN from the client certificate, or ``None``.
+    """
+    environ = cherrypy.request.wsgi_environ
+    cn = environ.get("SSL_CLIENT_S_DN_CN")
+    if cn:
+        return cn
+    pem = environ.get("SSL_CLIENT_CERT")
+    if not pem:
+        return None
+    try:
+        import cryptography.x509
+        from cryptography.x509.oid import NameOID
+
+        cert = cryptography.x509.load_pem_x509_certificate(pem.encode())
+        attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+        if attrs:
+            return attrs[0].value
+    except Exception as exc:  # pylint: disable=broad-except
+        logger.debug("Failed to extract client CN from SSL_CLIENT_CERT: %s", exc)
+    return None
+
+
+def salt_ssl_cn_filter_tool():
+    """
+    Optional CN-based filter on top of mTLS
+    """
+    apiopts = cherrypy.config.get("apiopts") or {}
+    allowed = apiopts.get("ssl_allowed_cn")
+    if not allowed:
+        return
+    cn = _client_cert_cn()
+    if not cn or cn not in allowed:
+        logger.error(
+            "ssl_allowed_cn: rejecting client with CN=%r (not in allow list)",
+            cn,
+        )
+        raise cherrypy.HTTPError(403, "Client certificate CN not allowed")
 
 
 def salt_auth_tool():
@@ -1182,6 +1381,7 @@ tools_config = {
         ("lowdata_fmt", lowdata_fmt),
         ("hypermedia_out", hypermedia_out),
         ("salt_ip_verify", salt_ip_verify_tool),
+        ("salt_ssl_cn_filter", salt_ssl_cn_filter_tool),
     ],
 }
 
@@ -1214,6 +1414,7 @@ class LowDataAdapter:
         "tools.hypermedia_in.on": True,
         "tools.lowdata_fmt.on": True,
         "tools.salt_ip_verify.on": True,
+        "tools.salt_ssl_cn_filter.on": True,
     }
 
     def __init__(self):
@@ -2278,7 +2479,7 @@ class Events:
 
         # First check if the given token is in our session table; if so it's a
         # salt-api token and we need to get the Salt token from there.
-        orig_session, _ = cherrypy.session.cache.get(auth_token, ({}, None))
+        orig_session = _lookup_session_data(auth_token)
         # If it's not in the session table, assume it's a regular Salt token.
         salt_token = orig_session.get("token", auth_token)
 
@@ -2629,7 +2830,7 @@ class WebsocketEndpoint:
         # Pulling the session token from an URL param is a workaround for
         # browsers not supporting CORS in the EventSource API.
         if token:
-            orig_session, _ = cherrypy.session.cache.get(token, ({}, None))
+            orig_session = _lookup_session_data(token)
             salt_token = orig_session.get("token")
         else:
             salt_token = cherrypy.session.get("token")
@@ -3014,6 +3215,12 @@ class API:
             conf["global"]["engine.timeout_monitor.on"] = self.apiopts.get(
                 "expire_responses", True
             )
+
+        if self.apiopts.get("session_store") == "cache":
+            # Store CherryPy sessions in Salt's configured cache so they are
+            # shared across salt-api workers / master-cluster members rather
+            # than living in per-worker RAM. See SaltCacheSession.
+            conf["/"]["tools.sessions.storage_class"] = SaltCacheSession
 
         if cpstats and self.apiopts.get("collect_stats", False):
             conf["/"]["tools.cpstats.on"] = True

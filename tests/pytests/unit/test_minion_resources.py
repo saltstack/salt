@@ -72,6 +72,26 @@ def test_resolve_resource_targets_glob_exact_managed_resource_id(minion_with_res
     assert targets == [{"id": "dummy-02", "type": "dummy"}]
 
 
+def test_pure_resource_target_excludes_own_minion_id(minion_opts):
+    """A bare id that is BOTH the minion's own id and a managed resource id is
+    not a pure-resource target, so the minion still runs its own job."""
+    minion_opts["resources"] = RESOURCES
+    minion_opts["multiprocessing"] = False
+    minion_opts["id"] = "dummy-01"
+    with mock_patch("salt.minion.Minion.gen_modules"):
+        with mock_patch("salt.minion.Minion.connect_master"):
+            m = salt.minion.Minion(minion_opts, load_grains=False)
+    own_id = {"tgt": "dummy-01", "tgt_type": "glob", "fun": "test.ping", "arg": []}
+    other_resource = {
+        "tgt": "dummy-02",
+        "tgt_type": "glob",
+        "fun": "test.ping",
+        "arg": [],
+    }
+    assert m._is_pure_resource_target(own_id) is False
+    assert m._is_pure_resource_target(other_resource) is True
+
+
 def test_resolve_resource_targets_list_bare_ids(minion_with_resources):
     load = {
         "tgt": "dummy-02,node1",

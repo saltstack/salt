@@ -265,3 +265,48 @@ def test_system():
                         }
                     )
                     assert network.system("salt") == ret
+
+
+class TestNetworkVirtual:
+    """
+    Tests for states.network.__virtual__ with the build_interface gate added
+    by PR #64676.
+    """
+
+    def test_virtual_loads_when_build_interface_present(self):
+        """State loads when ip.build_interface is available."""
+        with patch("salt.utils.platform.is_windows", return_value=False), patch.dict(
+            network.__salt__,
+            {
+                "ip.build_interface": MagicMock(),
+                "ip.get_interface": MagicMock(),
+            },
+        ):
+            assert network.__virtual__() is True
+
+    def test_virtual_refuses_when_only_get_interface_present(self):
+        """State refuses to load with a clear message when ip can only read, not manage."""
+        with patch("salt.utils.platform.is_windows", return_value=False), patch.dict(
+            network.__salt__,
+            {"ip.get_interface": MagicMock()},
+        ):
+            result = network.__virtual__()
+            assert isinstance(result, tuple)
+            assert result[0] is False
+            assert "can't manage" in result[1]
+
+    def test_virtual_refuses_when_no_ip_module(self):
+        """State refuses to load when no ip execution module is available."""
+        with patch("salt.utils.platform.is_windows", return_value=False), patch.dict(
+            network.__salt__, {}
+        ):
+            result = network.__virtual__()
+            assert isinstance(result, tuple)
+            assert result[0] is False
+
+    def test_virtual_refuses_on_windows(self):
+        """State refuses to load on Windows."""
+        with patch("salt.utils.platform.is_windows", return_value=True):
+            result = network.__virtual__()
+            assert isinstance(result, tuple)
+            assert result[0] is False

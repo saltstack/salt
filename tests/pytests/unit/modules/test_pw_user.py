@@ -339,6 +339,25 @@ def test_list_users():
         assert pw_user.list_users() == [mock_user]
 
 
+def test_primary_group():
+    """
+    Return the primary group of the named user
+    """
+    with patch("salt.utils.user.get_default_group", MagicMock(return_value="wheel")):
+        assert pw_user.primary_group("root") == "wheel"
+
+
+def test_primary_group_nonexistent():
+    """
+    primary_group raises KeyError for a user that does not exist
+    """
+    with patch(
+        "salt.utils.user.get_default_group", MagicMock(side_effect=KeyError("nouser"))
+    ):
+        with pytest.raises(KeyError):
+            pw_user.primary_group("nouser")
+
+
 def test_rename():
     """
     Change the username for a named user

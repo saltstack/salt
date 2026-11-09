@@ -248,7 +248,6 @@ def _add_dependency(container, obj, namespace=None):
     Add a dependency to the top list.
 
     :param obj:
-    :param is_file:
     :param namespace: Optional tuple of parent namespaces for namespace packages
     :return:
     """
@@ -263,8 +262,6 @@ def gte():
     This function is called externally from the alternative
     Python interpreter from within _get_tops function.
 
-    :param extra_mods:
-    :param so_mods:
     :return:
     """
     extra = salt.utils.json.loads(sys.argv[1])
@@ -1124,7 +1121,6 @@ def gen_min(
         "salt/channel/client.py",
         "salt/transport",  # XXX Are the transport imports still needed?
         "salt/transport/__init__.py",
-        "salt/transport/client.py",
         "salt/exceptions.py",
         "salt/grains",
         "salt/grains/__init__.py",

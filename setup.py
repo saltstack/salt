@@ -136,7 +136,7 @@ SALT_LINUX_LOCKED_REQS = [
     )
 ]
 SALT_OSX_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.lock")
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "darwin.in")
 ]
 SALT_OSX_LOCKED_REQS = [
     # OSX packages already defined locked requirements
@@ -150,7 +150,7 @@ SALT_OSX_LOCKED_REQS = [
     )
 ]
 SALT_WINDOWS_REQS = SALT_BASE_REQUIREMENTS + [
-    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.lock")
+    os.path.join(os.path.abspath(SETUP_DIRNAME), "requirements", "windows.in")
 ]
 SALT_WINDOWS_LOCKED_REQS = [
     # Windows packages already defined locked requirements
@@ -173,7 +173,9 @@ PACKAGED_FOR_SALT_SSH = os.path.isfile(PACKAGED_FOR_SALT_SSH_FILE)
 
 
 # pylint: disable=W0122
-if os.path.exists(SALT_VERSION_HARDCODED):
+if os.environ.get("SALT_VERSION"):
+    SALT_VERSION = os.environ.get("SALT_VERSION")
+elif os.path.exists(SALT_VERSION_HARDCODED):
     with open(SALT_VERSION_HARDCODED, encoding="utf-8") as rfh:
         SALT_VERSION = rfh.read().strip()
 else:
@@ -616,20 +618,10 @@ class Build(build):
         build.run(self)
         salt_build_ver_file = os.path.join(self.build_lib, "salt", "_version.txt")
 
-        if getattr(self.distribution, "with_salt_version", False):
-            # Write the hardcoded salt version module salt/_version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_egg", False):
-            # we are building an egg package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
-
-        if getattr(self.distribution, "build_wheel", False):
-            # we are building a wheel package. need to include _version.txt
-            self.distribution.salt_version_hardcoded_path = salt_build_ver_file
-            self.run_command("write_salt_version")
+        # ALWAYS write the version file during build, so it's included in wheels built by PEP 517
+        log.info("Generating %s", salt_build_ver_file)
+        with open(salt_build_ver_file, "w", encoding="utf-8") as wfh:
+            wfh.write(str(SALT_VERSION))
 
         if getattr(self.distribution, "running_salt_install", False):
             # If our install attribute is present and set to True, we'll go
@@ -955,43 +947,35 @@ class SaltDistribution(distutils.dist.Distribution):
         ]
         if self.ssh_packaging or PACKAGED_FOR_SALT_SSH:
             data_files[0][1].append("doc/man/salt-ssh.1")
-            if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
-                return data_files
-            data_files[0][1].append("doc/man/salt-cloud.1")
-
-            return data_files
-
-        if IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
+            if not (IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS")):
+                data_files[0][1].append("doc/man/salt-cloud.1")
+        elif IS_WINDOWS_PLATFORM and not os.environ.get("SALT_BUILD_ALL_BINS"):
             data_files[0][1].extend(
                 [
                     "doc/man/salt-cp.1",
                     "doc/man/salt-minion.1",
                 ]
             )
-            return data_files
+        else:
+            # *nix, so, we need all man pages
+            data_files[0][1].extend(
+                [
+                    "doc/man/salt-api.1",
+                    "doc/man/salt-cloud.1",
+                    "doc/man/salt-cp.1",
+                    "doc/man/salt-key.1",
+                    "doc/man/salt-master.1",
+                    "doc/man/salt-minion.1",
+                    "doc/man/salt-proxy.1",
+                    "doc/man/salt-run.1",
+                    "doc/man/spm.1",
+                    "doc/man/salt.1",
+                    "doc/man/salt-ssh.1",
+                    "doc/man/salt-syndic.1",
+                ]
+            )
 
-        # *nix, so, we need all man pages
-        data_files[0][1].extend(
-            [
-                "doc/man/salt-api.1",
-                "doc/man/salt-cloud.1",
-                "doc/man/salt-cp.1",
-                "doc/man/salt-key.1",
-                "doc/man/salt-master.1",
-                "doc/man/salt-minion.1",
-                "doc/man/salt-proxy.1",
-                "doc/man/salt-run.1",
-                "doc/man/spm.1",
-                "doc/man/salt.1",
-                "doc/man/salt-ssh.1",
-                "doc/man/salt-syndic.1",
-            ]
-        )
-        missing = []
-        for file in data_files[0][1]:
-            if os.path.exists(file):
-                continue
-            missing.append(file)
+        missing = [f for f in data_files[0][1] if not os.path.exists(f)]
         if missing:
             # Only treat missing man pages as fatal error if we're in a packaging build
             # (indicated by SALT_ON_SALTSTACK env var). For development/test installs,
@@ -1000,17 +984,16 @@ class SaltDistribution(distutils.dist.Distribution):
                 sys.stderr.write(MISSING_MAN_MSG.format(", ".join(missing)))
                 sys.stderr.flush()
                 sys.exit(1)
-            else:
-                # Development/test install - remove missing man pages from data_files
-                log.warn(
-                    "Skipping installation of man pages (missing: %s). "
-                    "Run 'tools docs man' to generate them.",
-                    ", ".join(missing),
-                )
-                data_files[0] = (
-                    data_files[0][0],
-                    [f for f in data_files[0][1] if f not in missing],
-                )
+            # Development/test install - remove missing man pages from data_files
+            log.warn(
+                "Skipping installation of man pages (missing: %s). "
+                "Run 'tools docs man' to generate them.",
+                ", ".join(missing),
+            )
+            data_files[0] = (
+                data_files[0][0],
+                [f for f in data_files[0][1] if f not in missing],
+            )
         return data_files
 
     @property

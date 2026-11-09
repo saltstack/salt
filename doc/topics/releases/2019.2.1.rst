@@ -2655,9 +2655,9 @@ Changelog for v2019.2.0..v2019.2.1
 
   * 6ee1260 Static requirements are now placed on `py<major>.<minor>` subdirectories
 
-  * 3504804 The required crypto library is pulled in from zeromq.txt or raet.txt
+  * 3504804 The required crypto library is pulled in from zeromq.in or raet.txt
 
-  * 3ffe03c PyZMQ is pulled in from zeromq.txt
+  * 3ffe03c PyZMQ is pulled in from zeromq.in
 
   * 7c2fe16 Instead of quoting session parameters, proxy nox sessions
 

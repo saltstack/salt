@@ -13,6 +13,16 @@ The data sent to the state calls is as follows:
 
 from __future__ import annotations
 
+try:
+    import contextvars
+except (ImportError, SyntaxError):
+    # Some salt-ssh targets (notably Python 3.6, which lacks a stdlib
+    # contextvars) resolve ``import contextvars`` to the thin's bundled backport,
+    # which pulls in immutables/typing_extensions that can be missing or
+    # syntactically incompatible on the target. Degrade to a shared stack there
+    # -- salt-ssh runs one execution per target, so the per-context isolation
+    # contextvars provides (#63056) is not needed.
+    contextvars = None
 import copy
 import datetime
 import fnmatch
@@ -1131,7 +1141,25 @@ class State:
             if run_cmd_arg not in cmd_opts_exclude:
                 cmd_opts[run_cmd_arg] = low.get(run_cmd_arg)
 
-        if "shell" in low and "shell" not in cmd_opts_exclude:
+        # NOTE: low.get("state") != "user" is a deliberately narrow,
+        # state-name-based carve-out, not a general mechanism. "shell" here
+        # means two different things depending on which state declared it:
+        # for cmd.run it is (correctly) the shell to run the check command
+        # in, but for user.present it is the user's login shell and has
+        # nothing to do with how the check command should execute (see
+        # #59420). A more general solution -- e.g. a registry of state
+        # modules that opt out of shell inheritance, or handling this
+        # entirely inside salt/states/user.py via a custom mod_run_check --
+        # would avoid naming a specific state module here, but no such
+        # mechanism exists today (mod_run_check is unused anywhere in the
+        # codebase), so this targeted check was chosen to fix the reported
+        # bug without introducing new, untested extensibility. Revisit if a
+        # third state module develops the same shell-name collision.
+        if (
+            "shell" in low
+            and "shell" not in cmd_opts_exclude
+            and low.get("state") != "user"
+        ):
             cmd_opts["shell"] = low["shell"]
         elif "shell" in self.opts["grains"]:
             cmd_opts["shell"] = self.opts["grains"].get("shell")
@@ -1656,19 +1684,9 @@ class State:
         else:
             # First verify that the parameters are met
             aspec = salt.utils.args.get_function_argspec(self.states[full])
-            arglen = 0
-            deflen = 0
-            if isinstance(aspec.args, list):
-                arglen = len(aspec.args)
-            if isinstance(aspec.defaults, tuple):
-                deflen = len(aspec.defaults)
-            for ind in range(arglen - deflen):
-                if aspec.args[ind] not in data:
-                    errors.append(
-                        "Missing parameter {} for state {}".format(
-                            aspec.args[ind], full
-                        )
-                    )
+            for arg in aspec.allreq:
+                if arg not in data:
+                    errors.append(f"Missing parameter {arg} for state {full}")
         return errors
 
     def verify_high(self, high: dict) -> list[str]:
@@ -1890,7 +1908,7 @@ class State:
                 if name not in high or state_type not in high[name]:
                     # Check for a matching 'name' override in high data
                     ids = find_name(name, state_type, high, strict=strict)
-                    if len(ids) != 1:
+                    if len(ids) == 0:
                         errors.append(
                             "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
                             "part of the high state.\n"
@@ -1901,6 +1919,22 @@ class State:
                                 name,
                                 body.get("__env__", "base"),
                                 body.get("__sls__", "base"),
+                            )
+                        )
+                        continue
+                    elif len(ids) > 1:
+                        errors.append(
+                            "Cannot extend ID '{0}' in '{1}:{2}'. It is not "
+                            "unique in the running high state.\n"
+                            "This is likely due to more than one state using "
+                            "the same `name` parameter. Ensure that\nthe "
+                            "state with an ID of '{0}' is unique in "
+                            "environment '{1}' and to SLS '{2}'.\nDuplicate "
+                            "states IDs are: '{3}'".format(
+                                name,
+                                body.get("__env__", "base"),
+                                body.get("__sls__", "base"),
+                                ", ".join(f"{state}: {id}" for id, state in ids),
                             )
                         )
                         continue
@@ -2079,6 +2113,12 @@ class State:
                                     else:
                                         found = False
                                         for _id in iter(high):
+                                            # Skip non-state entries such as
+                                            # __exclude__ (a list), whose values
+                                            # are not state bodies -- mirrors the
+                                            # guard in the top-level loop above.
+                                            if not isinstance(high[_id], dict):
+                                                continue
                                             for st8 in [
                                                 _st8
                                                 for _st8 in iter(high[_id])
@@ -3242,12 +3282,40 @@ class State:
                 )
         elif status == "change" and not low.get("__prereq__"):
             ret = self.call(low, chunks, running)
-            if not ret["changes"] and not ret.get("skip_watch", False):
+            force_mod_watch = ret.pop("force_mod_watch", False)
+            if not ret.get("skip_watch", False) and (
+                not ret["changes"] or force_mod_watch
+            ):
                 low = low.copy()
                 low["sfun"] = low["fun"]
                 low["fun"] = "mod_watch"
                 low["__reqs__"] = reqs
-                ret = self.call(low, chunks, running)
+                if not ret["changes"]:
+                    # Normal run produced no changes: replace its result
+                    # with mod_watch's, preserving the historical
+                    # single-result output.
+                    ret = self.call(low, chunks, running)
+                else:
+                    # Normal run produced changes and explicitly opted in
+                    # via ``force_mod_watch`` because those changes do not
+                    # subsume the work of mod_watch (e.g.
+                    # docker_container.running did a network reconnect but
+                    # did not recreate or restart the container). Run
+                    # mod_watch and merge its result so neither set of
+                    # changes is lost.
+                    mod_ret = self.call(low, chunks, running)
+                    for change_key, change_val in mod_ret.get("changes", {}).items():
+                        ret["changes"][change_key] = change_val
+                    mod_comment = mod_ret.get("comment", "")
+                    if mod_comment:
+                        existing_comment = ret.get("comment", "")
+                        if existing_comment:
+                            ret["comment"] = existing_comment + "\n" + mod_comment
+                        else:
+                            ret["comment"] = mod_comment
+                    ret["result"] = bool(ret.get("result")) and bool(
+                        mod_ret.get("result", True)
+                    )
             running[tag] = ret
         elif status == "pre":
             self._assign_not_run_result_dict(
@@ -3754,6 +3822,52 @@ class BaseHighState:
         self.iorder = 10000
         self.avail = self.__gather_avail()
         self.building_highstate = HashableOrderedDict()
+
+    # Fallback shared stack, used only when contextvars is unavailable (see the
+    # guarded import at the top of the module). salt-ssh runs one execution per
+    # target, so a shared stack there is safe.
+    _shared_active_stack = []
+
+    @classmethod
+    def _active_stack(cls):
+        if _active_highstates is None:
+            return BaseHighState._shared_active_stack
+        # The active-HighState stack for the current execution context, created
+        # lazily on first use. A default= on the ContextVar would share one
+        # list object across every context, defeating the isolation, so the
+        # per-context list is set explicitly here instead.
+        try:
+            return _active_highstates.get()
+        except LookupError:
+            stack = []
+            _active_highstates.set(stack)
+            return stack
+
+    def push_active(self):
+        self._active_stack().append(self)
+
+    @classmethod
+    def clear_active(cls):
+        # Nuclear option
+        #
+        # Blow away the active-HighState stack for the current execution
+        # context. Used primarily by the test runner but also useful in custom
+        # wrappers of the HighState class, to reset the stack to a fresh state.
+        if _active_highstates is None:
+            BaseHighState._shared_active_stack.clear()
+        else:
+            _active_highstates.set([])
+
+    @classmethod
+    def pop_active(cls):
+        cls._active_stack().pop()
+
+    @classmethod
+    def get_active(cls):
+        try:
+            return cls._active_stack()[-1]
+        except IndexError:
+            return None
 
     def __gather_avail(self):
         """
@@ -4423,6 +4537,18 @@ class BaseHighState:
                         errors.append(msg)
                         continue
 
+                    if not hasattr(inc_sls, "startswith"):
+                        if inc_sls is None:
+                            msg = (
+                                "Empty include found in include "
+                                "in SLS '{}:{}'".format(saltenv, sls)
+                            )
+                            log.error(msg)
+                            errors.append(msg)
+                            continue
+                        else:
+                            inc_sls = str(inc_sls)
+
                     if inc_sls.startswith("."):
                         match = re.match(r"^(\.+)(.*)$", inc_sls)
                         if match:
@@ -4754,10 +4880,10 @@ class BaseHighState:
                         " conflicting ID is '{}' and is found in SLS"
                         " '{}:{}' and SLS '{}:{}'".format(
                             id_,
-                            highstate[id_]["__env__"],
-                            highstate[id_]["__sls__"],
-                            state[id_]["__env__"],
-                            state[id_]["__sls__"],
+                            highstate[id_].get("__env__"),
+                            highstate[id_].get("__sls__"),
+                            state[id_].get("__env__"),
+                            state[id_].get("__sls__"),
                         )
                     )
         try:
@@ -4977,6 +5103,17 @@ class BaseHighState:
         self.destroy()
 
 
+# The stack of active HighState objects during a state run is kept per
+# execution context rather than on the class, so concurrent runs -- e.g.
+# reactor orchestrations rendered in parallel reactor worker threads -- each
+# get their own stack instead of corrupting a shared class-level list
+# (#63056). This mirrors salt.loader's loader_ctxvar.
+if contextvars is not None:
+    _active_highstates = contextvars.ContextVar("salt_active_highstates")
+else:
+    _active_highstates = None
+
+
 class HighState(BaseHighState):
     """
     Generate and execute the salt "High State". The High State is the
@@ -4984,8 +5121,9 @@ class HighState(BaseHighState):
     salt master or in the local cache.
     """
 
-    # a stack of active HighState objects during a state.highstate run
-    stack = []
+    # The stack of active HighState objects during a state run is stored per
+    # execution context in the module-level ``_active_highstates`` ContextVar;
+    # see ``_active_stack`` and the push/pop/get/clear accessors below.
 
     def __init__(
         self,
@@ -5045,28 +5183,10 @@ class HighState(BaseHighState):
         # a stack of current rendering Sls objects, maintained and used by the pydsl renderer.
         self._pydsl_render_stack = []
 
-    def push_active(self):
-        self.stack.append(self)
-
-    @classmethod
-    def clear_active(cls):
-        # Nuclear option
-        #
-        # Blow away the entire stack. Used primarily by the test runner but also
-        # useful in custom wrappers of the HighState class, to reset the stack
-        # to a fresh state.
-        cls.stack = []
-
-    @classmethod
-    def pop_active(cls):
-        cls.stack.pop()
-
-    @classmethod
-    def get_active(cls):
-        try:
-            return cls.stack[-1]
-        except IndexError:
-            return None
+        # cached top-file matches for pydsl includes, computed once per run.
+        # Held on the instance (not a module global) so concurrent runs do not
+        # share one another's matches (#63056).
+        self._pydsl_sls_matches = None
 
     def destroy(self):
         if not self.preserve_client:

@@ -784,7 +784,10 @@ class SaltPkgInstall:
                     "/etc", "apt", "preferences.d", "salt-pin-1001"
                 )
                 pref_file.parent.mkdir(exist_ok=True)
-                pin = f"{self.artifact_version.rsplit('.', 1)[0]}.*"
+                deb_artifact = pep440_version_to_rpm_nevra_version(
+                    self.artifact_version
+                )
+                pin = f"{deb_artifact.rsplit('.', 1)[0]}.*"
                 with salt.utils.files.fopen(pref_file, "w") as fp:
                     fp.write(
                         f"Package: salt-*\n"
@@ -1369,6 +1372,16 @@ class SaltPkgInstall:
                     )
                 except subprocess.TimeoutExpired:
                     log.warning("launchctl timed out stopping %s", svc_name)
+
+            # The macOS pkg postinstall drops /etc/paths.d/salt, but that file
+            # is only honored by /usr/libexec/path_helper, which runs from
+            # /etc/profile in login shells. GitHub Actions step shells are
+            # non-login, so the pytest process inherits a PATH without
+            # /opt/salt and shutil.which('salt-master') returns None in
+            # saltfactories' get_salt_script_path fallback. install() already
+            # calls update_process_path() for this reason; install_previous()
+            # was missing the same call on this branch.
+            self.update_process_path()
 
     def uninstall(self):
         pkg = self.pkgs[0]

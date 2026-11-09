@@ -104,7 +104,7 @@ Options
     The options are `carbon`, `cassandra`, `couchbase`, `couchdb`,
     `elasticsearch`, `etcd`, `hipchat`, `local`, `local_cache`,
     `memcache`, `mongo`, `mysql`, `odbc`, `postgres`, `redis`,
-    `sentry`, `slack`, `sms`, `smtp`, `sqlite3`, `syslog`, and `xmpp`.
+    `sentry`, `sms`, `smtp`, `sqlite3`, `syslog`, and `xmpp`.
 
 .. option:: -d, --doc, --documentation
 

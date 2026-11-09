@@ -46,6 +46,7 @@ runs:
       shell: bash
       env:
         RELENV_BUILDENV: "1"
+        SALT_VERSION: "${{ inputs.salt-version }}"
       run: |
         tools pkg build salt-onedir salt-${{ inputs.salt-version }}.tar.gz --platform ${{ inputs.platform }} --package-name artifacts/${{ inputs.package-name }}
 

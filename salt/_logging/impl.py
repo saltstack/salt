@@ -404,7 +404,7 @@ class SaltLoggingClass(LOGGING_LOGGER_CLASS, metaclass=LoggingMixinMeta):
         _args = tuple(_args)
 
         logrecord = LOGGING_LOGGER_CLASS.makeRecord(
-            self, name, level, fn, lno, _msg, _args, exc_info, func, sinfo
+            self, name, level, fn, lno, _msg, _args, exc_info, func, extra, sinfo
         )
 
         if exc_info_on_loglevel is not None:

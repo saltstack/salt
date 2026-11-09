@@ -43,7 +43,7 @@ def csr_kwargs():
     not tls.HAS_LEGACY_PYOPENSSL,
     reason=(
         "pyOpenSSL 26.0+ removed X509Extension / X509Req / PKCS12 / CRL "
-        "APIs that salt.modules.tls depends on; use salt.modules.x509 "
+        "APIs that salt.modules.tls depends on; use salt.modules.x509_v2 "
         "instead."
     ),
 )

@@ -4167,7 +4167,7 @@ Changelog for v2018.3.2..v2018.3.3
 
       * 0a621dd0ec add Pipfile for managing dependencies in salt
 
-      * f78b81db94 simplify dev and base.txt to single files
+      * f78b81db94 simplify dev and base.in to single files
 
     * a07a8906a0 Merge pull request `#47578`_ from Ch3LL/mac_service_disabled
 

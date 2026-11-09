@@ -356,3 +356,40 @@ def test_update_str(user, value_name, new_value, info_field, expected, account_s
     info_field = info_field if info_field else value_name
     expected = expected if expected is not None else new_value
     assert ret[info_field] == expected
+
+
+def test_update_clear_fullname(user, account_str):
+    """
+    Regression test: update() used a truthy check (`if fullname:`) which
+    silently ignored an explicit empty fullname, so the Windows "Full Name"
+    field could never be cleared. It must now accept fullname="".
+    """
+    ret = user.chfullname(account_str.username, "Something")
+    assert ret is True
+    assert user.info(account_str.username)["fullname"] == "Something"
+
+    ret = user.update(account_str.username, fullname="")
+    assert ret is True
+    assert user.info(account_str.username)["fullname"] == ""
+
+
+@pytest.fixture
+def group(modules):
+    return modules.group
+
+
+def test_add_group_name_collision(user, group, username_str):
+    """
+    Regression test for #58442: Windows shares one namespace for local users
+    and local groups. Creating a user with the same name as an existing
+    local group must fail with a clear message, not create a broken account.
+    """
+    ret = group.add(username_str)
+    assert ret is True
+    try:
+        result = user.add(username_str)
+        assert isinstance(result, str)
+        assert "already exists" in result
+        assert username_str not in user.list_users()
+    finally:
+        group.delete(username_str)

@@ -13,7 +13,7 @@ For understanding and usage of the cache modules see the :ref:`cache` topic.
     :template: autosummary.rst.tmpl
 
     consul
-    etcd_cache
+    etcd3_cache
     localfs
     localfs_key
     mmap_cache

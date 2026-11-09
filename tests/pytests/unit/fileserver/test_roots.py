@@ -312,7 +312,7 @@ def test_serve_file_not_in_root(tmp_state_tree):
         "rel": f"{pathlib.Path('..') / 'bar'}",
     }
     ret = roots.serve_file(load, fnd)
-    if "win" in sys.platform:
+    if sys.platform.startswith("win"):
         assert ret == {"data": "", "dest": "..\\bar"}
     else:
         assert ret == {"data": "", "dest": "../bar"}

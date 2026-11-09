@@ -1,3 +1,5 @@
+import io
+
 import pytest
 
 import salt.renderers.nacl as nacl
@@ -38,3 +40,10 @@ def test_render():
     crypted = "NACL[MRN3cc+fmdxyQbz6WMF+jq1hKdU5X5BBI7OjK+atvHo1ll+w1gZ7XyWtZVfq9gK9rQaMfkDxmidJKwE0Mw==]"
     with patch.dict(nacl.__salt__, {"nacl.dec": MagicMock(return_value=secret)}):
         assert nacl.render(crypted) == secret
+
+
+def test_render_readable_object():
+    decrypt = MagicMock(return_value="secret")
+    with patch.dict(nacl.__salt__, {"nacl.dec": decrypt}):
+        assert nacl.render(io.StringIO("NACL[ciphertext]")) == "secret"
+    decrypt.assert_called_once_with("ciphertext")

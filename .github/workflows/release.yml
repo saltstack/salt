@@ -47,6 +47,9 @@ jobs:
     name: Check Requirements
     runs-on: ubuntu-22.04
     environment: release-check
+    # Repo-level opt-out. Set `SKIP_RELEASE=true` on forks/mirrors where
+    # stable-release publishing must never happen (e.g. saltstack/salt-nightlies).
+    if: vars.SKIP_RELEASE != 'true'
     steps:
       - name: Check For Admin Permission
         uses: actions-cool/check-user-permission@c21884f3dda18dafc2f8b402fe807ccc9ec1aa5e # v2
@@ -118,9 +121,7 @@ jobs:
         shell: bash
         run: |
           HASH=$(python3 .github/scripts/hash-files.py \
-            'requirements/**/*.txt' \
-            'requirements/**/*.in' \
-            'requirements/**/*.lock' \
+            'requirements/**/*' \
             'cicd/golden-images.json' \
             'noxfile.py' \
             'pkg/common/env-cleanup-rules.yml' \
@@ -162,6 +163,7 @@ jobs:
           git config --global commit.gpgsign true
 
       - name: Setup GnuPG
+        if: ${{ github.repository == 'saltstack/salt' || github.repository == 'saltstack/salt-priv' || github.repository == 'saltstack/salt-nightlies' }}
         env:
           SIGNING_GPG_KEY: ${{ secrets.SIGNING_GPG_KEY }}
           SIGNING_PASSPHRASE: ${{ secrets.SIGNING_PASSPHRASE }}

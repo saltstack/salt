@@ -231,7 +231,7 @@ proxy configuration file:
   * - enable_fqdns_grains
     - If your router does not have the ability to use Reverse DNS lookup to
       obtain the Fully Qualified Domain Name (fqdn) for an IP address, you'll
-      need to change the ``enable_fqdns_grains`` setting in the pillar
+      need to change the ``enable_fqdns_grains`` setting in the proxy
       configuration file to ``False`` instead.
 
   * - multiprocessing

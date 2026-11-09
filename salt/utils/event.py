@@ -79,7 +79,6 @@ import salt.utils.stringutils
 import salt.utils.tracing
 import salt.utils.zeromq
 from salt.exceptions import SaltDeserializationError, SaltInvocationError
-from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
@@ -509,7 +508,14 @@ class SaltEvent:
         if hasattr(self, "_connect_task"):
             task = self._connect_task
             if task and not task.done():
-                task.cancel()
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    # The task's loop is already closed (e.g. a minion
+                    # destroy()'d after its io_loop was closed by a
+                    # failed reconnect). Nothing left to cancel
+                    # gracefully. See #70178.
+                    pass
             self._connect_task = None
         # The subscriber may be a SyncWrapper; call close() directly on the wrapper class
         # so its internal event loop is closed, not just the wrapped object.
@@ -575,7 +581,11 @@ class SaltEvent:
             self.cpush = False
         for task in self._publish_tasks:
             if task and not task.done():
-                task.cancel()
+                try:
+                    task.cancel()
+                except RuntimeError:
+                    # See #70178.
+                    pass
         self._publish_tasks.clear()
 
     @classmethod
@@ -622,8 +632,6 @@ class SaltEvent:
 
         :param tag: The tag to search for
         :type tag: str
-        :param tags_regex: List of re expressions to search for also
-        :type tags_regex: list[re.compile()]
         :return:
         """
         if match_func is None:
@@ -892,7 +900,7 @@ class SaltEvent:
                 continue
             yield data
 
-    async def fire_event_async(self, data, tag, cb=None, timeout=1000):
+    async def fire_event_async(self, data, tag, timeout=1000):
         """
         Send a single event into the publisher with payload dict "data" and
         event identifier "tag"
@@ -972,12 +980,6 @@ class SaltEvent:
                 await loop.run_in_executor(None, self.pusher.publish, msg)
             else:
                 await self.pusher.publish(msg)
-        if cb is not None:
-            warn_until(
-                3009,
-                "The cb argument to fire_event_async will be removed in 3009",
-            )
-            cb(None)
 
     def fire_event(self, data, tag, timeout=1000):
         """
@@ -1028,6 +1030,7 @@ class SaltEvent:
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
+                    self.close_pull()
                     raise
                 # PATCH: do NOT re-raise.  ``fire_event`` is best-effort:
                 # callers use it to publish informational events (job
@@ -1096,6 +1099,10 @@ class SaltEvent:
             retcode = load["retcode"]
 
         if not isinstance(ret, dict):
+            # A malformed / stringified return payload from a minion (e.g. an
+            # error string that never got wrapped in the state-return
+            # per-decl dict); ``ret.items()`` would raise. Log and skip so a
+            # single bad return doesn't break the master event loop.
             log.error(
                 "Event with bad payload received from '%s': %s",
                 load.get("id", "UNKNOWN"),
@@ -1167,6 +1174,7 @@ class SaltEvent:
         assert not self._run_io_loop_sync
         if not self.cpub:
             self.connect_pub()
+
         # This will handle reconnects
         self._schedule(self.subscriber.on_recv, event_handler)
 

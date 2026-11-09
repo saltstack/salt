@@ -1,6 +1,7 @@
 import logging
 import socket
 import textwrap
+import warnings
 
 import pytest
 
@@ -603,6 +604,20 @@ def test_is_ipv6_subnet():
 )
 def test_cidr_to_ipv4_netmask(addr, expected):
     assert network.cidr_to_ipv4_netmask(addr) == expected
+
+
+def test_cidr_to_ipv4_netmask_is_registered_jinja_filter():
+    """
+    cidr_to_ipv4_netmask is exposed as a Jinja filter so templates can render
+    a dotted netmask from a prefix length, e.g. ``{{ 24 | cidr_to_ipv4_netmask }}``.
+    """
+    from salt.utils.decorators.jinja import JinjaFilter
+
+    assert "cidr_to_ipv4_netmask" in JinjaFilter.salt_jinja_filters
+    assert (
+        JinjaFilter.salt_jinja_filters["cidr_to_ipv4_netmask"]
+        is network.cidr_to_ipv4_netmask
+    )
 
 
 def test_number_of_set_bits_to_ipv4_netmask():
@@ -1635,3 +1650,244 @@ def test_ip_addrs(linux_interfaces_dict):
     ):
         ret = network.ip_addrs6("eth0")
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
+
+
+@pytest.mark.parametrize(
+    "addr,expected",
+    (
+        ("0.0.0.0", 0),
+        ("10.0.1.2", 167772418),
+        ("255.255.255.255", 4294967295),
+        ("::", 0),
+        ("::1", 1),
+        ("2001:db8::1", 42540766411282592856903984951653826561),
+    ),
+)
+def test_ip_to_int(addr, expected):
+    assert network.ip_to_int(addr) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (0, "0.0.0.0"),
+        (167772418, "10.0.1.2"),
+        (4294967295, "255.255.255.255"),
+    ),
+)
+def test_int_to_ipv4(value, expected):
+    assert network.int_to_ipv4(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (0, "::"),
+        (1, "::1"),
+        (42540766411282592856903984951653826561, "2001:db8::1"),
+    ),
+)
+def test_int_to_ipv6(value, expected):
+    assert network.int_to_ipv6(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,nth,expected",
+    (
+        ("10.0.0.0/24", 0, "10.0.0.0"),
+        ("10.0.0.0/24", 5, "10.0.0.5"),
+        ("10.0.0.0/24", -1, "10.0.0.255"),
+        ("10.0.0.0/8", 305, "10.0.1.49"),
+        ("2001:db8::/64", 1, "2001:db8::1"),
+    ),
+)
+def test_nth_host(value, nth, expected):
+    assert network.nth_host(value, nth) == expected
+
+
+@pytest.mark.parametrize(
+    "value,prefix,index,expected",
+    (
+        ("192.168.0.0/16", 24, None, 256),
+        ("192.168.0.0/16", 24, 0, "192.168.0.0/24"),
+        ("192.168.0.0/16", 24, 1, "192.168.1.0/24"),
+        ("192.168.0.0/16", 24, -1, "192.168.255.0/24"),
+        ("2001:db8::/48", 64, None, 65536),
+        ("2001:db8::/48", 64, 1, "2001:db8:0:1::/64"),
+        ("2001:db8::/32", 64, None, 4294967296),
+        ("2001:db8::/32", 64, 5, "2001:db8:0:5::/64"),
+    ),
+)
+def test_network_subnets(value, prefix, index, expected):
+    assert network.network_subnets(value, prefix, index) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (["192.168.0.0/24", "192.168.1.0/24"], ["192.168.0.0/23"]),
+        (["10.0.0.0/24", "10.0.2.0/24"], ["10.0.0.0/24", "10.0.2.0/24"]),
+        (["2001:db8::/65", "2001:db8:0:0:8000::/65"], ["2001:db8::/64"]),
+    ),
+)
+def test_cidr_merge_merge(value, expected):
+    assert network.cidr_merge(value) == expected
+
+
+@pytest.mark.parametrize(
+    "value,expected",
+    (
+        (["192.168.0.0/24", "192.168.3.0/24"], "192.168.0.0/22"),
+        (["10.0.0.1", "10.0.0.5"], "10.0.0.0/29"),
+    ),
+)
+def test_cidr_merge_span(value, expected):
+    assert network.cidr_merge(value, "span") == expected
+
+
+@pytest.mark.parametrize(
+    "value,mac,expected",
+    (
+        ("2001:db8::/64", "00:50:56:01:02:03", "2001:db8::250:56ff:fe01:203"),
+        ("2001:db8::/64", "0050.5601.0203", "2001:db8::250:56ff:fe01:203"),
+        ("fe80::/64", "52:54:00:12:34:56", "fe80::5054:ff:fe12:3456"),
+    ),
+)
+def test_slaac(value, mac, expected):
+    assert network.slaac(value, mac) == expected
+
+
+def test_neighs_flatten_maps_mac_to_ip():
+    """
+    neighs_flatten collapses neighbour entry dicts into the legacy
+    ``{mac: ip}`` mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.2", "mac": "00:00:5e:00:53:02", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {
+        "00:00:5e:00:53:01": "203.0.113.1",
+        "00:00:5e:00:53:02": "203.0.113.2",
+    }
+
+
+def test_neighs_flatten_last_wins_on_duplicate_mac():
+    """
+    When several entries share a MAC address the last one parsed wins,
+    matching the historical lossy behaviour of the flat mapping.
+    """
+    entries = [
+        {"ip": "203.0.113.1", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+        {"ip": "203.0.113.9", "mac": "00:00:5e:00:53:01", "dev": "eth0", "state": None},
+    ]
+    assert network.neighs_flatten(entries) == {"00:00:5e:00:53:01": "203.0.113.9"}
+
+
+def test_neigh_expand_warning_returns_expand_when_set():
+    """
+    neigh_expand_warning returns an explicit expand value unchanged and does
+    not emit a deprecation warning.
+    """
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert network.neigh_expand_warning("network.arp", True) is True
+        assert network.neigh_expand_warning("network.arp", False) is False
+
+
+def test_neigh_expand_warning_none_warns_and_returns_false():
+    """
+    When expand is not supplied, neigh_expand_warning emits the deprecation
+    warning and falls back to the legacy (False) shape.
+    """
+    with pytest.warns(DeprecationWarning, match="network.arp"):
+        result = network.neigh_expand_warning("network.arp", None)
+    assert result is False
+
+
+@pytest.mark.skip_on_windows
+@pytest.mark.parametrize(
+    "uname_release",
+    [
+        "10.1_STABLE",
+        "10.1_BETA",
+        "9.3_STABLE",
+    ],
+)
+def test_netbsd_interfaces_version_with_suffix(uname_release):
+    """
+    netbsd_interfaces() must not raise InvalidVersion when os.uname()[2]
+    contains a suffix separated by underscore (e.g. '10.1_STABLE').
+    """
+    from packaging.version import Version
+
+    # Build a fake uname result where index 2 (release) has the given value.
+    # os.uname() is accessed as os.uname()[2] in netbsd_interfaces().
+    fake_uname = ("NetBSD", "hostname", uname_release, "", "amd64")
+    uname_mock = MagicMock(return_value=fake_uname)
+
+    version_part = uname_release.split("_")[0]
+    is_old = Version(version_part) < Version("8.0")
+
+    with patch("os.uname", uname_mock):
+        if is_old:
+            with patch.object(network, "linux_interfaces", MagicMock(return_value={})):
+                result = network.netbsd_interfaces()
+                assert result == {}
+        else:
+            with patch("salt.utils.path.which", return_value="/sbin/ifconfig"), patch(
+                "subprocess.Popen"
+            ) as mock_popen:
+                mock_popen.return_value.communicate.return_value = (b"", None)
+                with patch.object(
+                    network,
+                    "_netbsd_interfaces_ifconfig",
+                    MagicMock(return_value={}),
+                ):
+                    result = network.netbsd_interfaces()
+                    assert isinstance(result, dict)
+
+
+def test_is_reachable_host_57207():
+    """
+    A long salt-ssh -E/--pcre target has a single DNS label longer than 63
+    characters. socket.getaddrinfo raises UnicodeError ("label too long") from
+    the idna codec before any network lookup. UnicodeError is not a subclass of
+    socket.gaierror, so it must be caught explicitly and reported as not
+    reachable rather than crashing salt-ssh's _expand_target.
+    """
+    # Production-exact call: _expand_target passes the raw target as the single
+    # positional arg, e.g. salt.utils.network.is_reachable_host(hostname).
+    # This is the verbatim -E target from the issue; the real getaddrinfo raises
+    # UnicodeError deterministically (69-char label, no network needed).
+    assert (
+        network.is_reachable_host(
+            "some-host|some-host|some-host|some-host|some-host|some-host|some-host"
+        )
+        is False
+    )
+
+
+def test_is_reachable_host_gaierror_unchanged():
+    """
+    Inverse / must-not-regress: broadening the except clause to also catch
+    UnicodeError must not change the pre-existing socket.gaierror path. A name
+    that fails normal resolution still returns False. Passes with and without
+    the fix because the gaierror branch is untouched.
+    """
+    with patch.object(socket, "getaddrinfo", MagicMock(side_effect=socket.gaierror)):
+        assert network.is_reachable_host("nope.invalid") is False
+
+
+def test_is_reachable_host_resolvable_returns_true():
+    """
+    Peripheral coverage of the success branch: when getaddrinfo returns a list
+    the host is reported reachable. Guards against the fix accidentally swallowing
+    a successful lookup.
+    """
+    with patch.object(
+        socket,
+        "getaddrinfo",
+        MagicMock(return_value=[(socket.AF_INET, 0, 0, "", ("127.0.0.1", 0))]),
+    ):
+        assert network.is_reachable_host("localhost") is True
