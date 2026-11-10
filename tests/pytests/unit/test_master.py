@@ -1824,7 +1824,13 @@ async def test_register_resources_flushes_dropped_resource_grain_entry(
         remaining = sorted(cache.list("resource_grains") or [])
         assert remaining == ["dummy:m2-d1"]
         # And the surviving entry must reflect the most recent payload.
-        assert cache.fetch("resource_grains", "dummy:m2-d1") == {"k": "v1-updated"}
+        # The master-side register path normalizes ``resource_id`` into the
+        # grain dict from the bank-key id portion (see
+        # ``__register_resources_sync``), so the stored dict carries it.
+        assert cache.fetch("resource_grains", "dummy:m2-d1") == {
+            "k": "v1-updated",
+            "resource_id": "m2-d1",
+        }
     finally:
         aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
@@ -1860,7 +1866,12 @@ async def test_register_resources_does_not_flush_srn_owned_by_other_minion(
             }
         )
         cache = aes_funcs.masterapi.cache
-        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+        # ``resource_id`` is injected by the register path from the bank
+        # key's id portion.
+        assert cache.fetch("resource_grains", "dummy:shared") == {
+            "who": "B",
+            "resource_id": "shared",
+        }
         # minion-A re-registers with no resources. Its flush walk would
         # consider dummy:shared "stale"; the owner check (registry says B
         # owns it) must prevent the flush.
@@ -1871,7 +1882,10 @@ async def test_register_resources_does_not_flush_srn_owned_by_other_minion(
                 "resource_grains": {},
             }
         )
-        assert cache.fetch("resource_grains", "dummy:shared") == {"who": "B"}
+        assert cache.fetch("resource_grains", "dummy:shared") == {
+            "who": "B",
+            "resource_id": "shared",
+        }
     finally:
         aes_funcs.destroy()
         salt.utils.resource_registry.reset_registry()
@@ -1909,7 +1923,12 @@ async def test_register_resources_resource_grains_visible_across_aes_funcs_insta
     aes_funcs_b = salt.master.AESFuncs(opts)
     try:
         cache_b = aes_funcs_b.masterapi.cache
-        assert cache_b.fetch("resource_grains", "dummy:m2-d1") == {"env": "prod"}
+        # ``resource_id`` is injected by the register path from the bank
+        # key's id portion.
+        assert cache_b.fetch("resource_grains", "dummy:m2-d1") == {
+            "env": "prod",
+            "resource_id": "m2-d1",
+        }
     finally:
         aes_funcs_b.destroy()
         salt.utils.resource_registry.reset_registry()
@@ -2246,9 +2265,16 @@ def test_register_resources_concurrent_workers_no_data_loss(master_opts, tmp_pat
         assert not errs, errs
         cache = aes_a.masterapi.cache
         # Both entries must survive: neither worker's flush walk should
-        # have wiped the other's entry.
-        assert cache.fetch("resource_grains", "dummy:rA") == {"who": "A"}
-        assert cache.fetch("resource_grains", "dummy:rB") == {"who": "B"}
+        # have wiped the other's entry. ``resource_id`` is injected by
+        # the register path from the bank key's id portion.
+        assert cache.fetch("resource_grains", "dummy:rA") == {
+            "who": "A",
+            "resource_id": "rA",
+        }
+        assert cache.fetch("resource_grains", "dummy:rB") == {
+            "who": "B",
+            "resource_id": "rB",
+        }
     finally:
         aes_a.destroy()
         aes_b.destroy()

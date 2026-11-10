@@ -334,11 +334,14 @@ async def test_aes_pub_ret_exception_is_swallowed(tmp_path):
 async def test_aes_register_resources_exception_is_swallowed():
     """
     ``_register_resources`` runs its whole sync body in one executor call.
-    A raise from ``update_resource_index`` must be caught by ``run_func``.
+    A raise from ``update_resource_index_chunk`` (the chunk-aware wrapper
+    now used by ``__register_resources_sync`` -- the older
+    ``update_resource_index`` is no longer on the hot path) must be
+    caught by ``_run_func_async``'s broad except and converted to ``""``.
     """
     aes = _make_aes_funcs()
     with patch(
-        "salt.utils.minions.update_resource_index",
+        "salt.utils.minions.update_resource_index_chunk",
         side_effect=RuntimeError("boom"),
     ):
         worker = _make_worker(aes)
