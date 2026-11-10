@@ -3050,7 +3050,10 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", peer_pub)
+                # A missing peer key is the expected transient state
+                # before cluster key exchange has completed; the next
+                # line schedules the fetch, so this is INFO, not WARNING.
+                log.info("Peer key missing %r", peer_pub)
                 # request peer key
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
