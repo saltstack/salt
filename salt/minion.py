@@ -4715,6 +4715,18 @@ class Minion(MinionBase):
         master-side registry can prune stale entries left by a previous
         registration.
         """
+        # ``self.tok`` is assigned on a successful auth handshake
+        # (see ``connect_master``).  Early callers -- e.g. a
+        # ``pillar_refresh`` fired before the first auth round-trip
+        # has completed, a proxy minion that has not yet attached its
+        # pub channel, or a bare ``Minion`` built for a unit test --
+        # may not have it yet.  Rather than crash with AttributeError
+        # inside ``_send_register_chunk``, bail: the register will be
+        # retried on the next pillar_refresh / tune_in once auth has
+        # populated ``tok``.
+        if getattr(self, "tok", None) is None:
+            log.debug("Skipping resource register: auth token not yet available")
+            return
         enabled_types = salt.utils.resources.enabled_resource_types(self.opts)
         chunk_size = max(int(self.opts.get("resource_register_chunk_size", 10000)), 1)
 
