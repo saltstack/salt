@@ -36,6 +36,7 @@ import logging
 import os
 import pathlib
 import subprocess
+import tempfile
 
 from pytestshellutils.utils import ports
 
@@ -592,14 +593,27 @@ def make_single_master(
     link_port = ports.get_unused_localhost_port()
     pki_root = pathlib.Path(tmp_path) / f"{cluster_id}-pki"
     pki_root.mkdir(parents=True, exist_ok=True)
-    # Route the master's writable state (logs, cache, run, sock_dir,
-    # token_dir, keys) under the test's ``tmp_path`` instead of the
+    # Route the master's writable state (logs, cache, run, token_dir,
+    # keys) under a SHORT ``root_dir`` in ``/tmp`` instead of the
     # salt-factories default (``/tmp/stsuite/<master-id>_<N>/``), which
-    # is session-scoped and accumulates across every test that spins up
-    # a ``topology-<cluster_id>`` master.  The accumulation exhausts the
-    # runner disk on the functional CI shards.
-    root_dir = pathlib.Path(tmp_path) / f"{cluster_id}-root"
-    root_dir.mkdir(parents=True, exist_ok=True)
+    # is session-scoped and accumulates across every test that spins
+    # up a ``topology-<cluster_id>`` master.  The accumulation
+    # exhausts the runner disk on the functional CI shards.
+    #
+    # The root_dir is deliberately NOT under pytest's ``tmp_path``
+    # because that prefix alone
+    # (``/tmp/pytest-of-<user>/pytest-<n>/<nodeid>/``) is 60-80 chars,
+    # and ``root_dir`` propagates into every relative opt via
+    # ``salt.config.prepend_root_dir`` --- notably ``sock_dir`` which
+    # ends up holding unix sockets ``master_event_pub.ipc`` /
+    # ``master_event_pull.ipc`` / ``publish_pull.ipc``.  AF_UNIX
+    # sun_path is 108 bytes on Linux, so anything built from a long
+    # root_dir overflows it and raises ``OSError: AF_UNIX path too
+    # long`` at ``tornado.netutil.bind_unix_socket`` fork time.
+    #
+    # Caller registers explicit cleanup for the root_dir on the exit
+    # stack (teardown happens even if the factory fails to start).
+    root_dir = pathlib.Path(tempfile.mkdtemp(prefix="r", dir="/tmp"))
 
     base_overrides = {
         "open_mode": True,
@@ -691,12 +705,11 @@ def make_cluster(
         _ensure_lo_alias(addr)
         own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
         own_pki.mkdir(parents=True, exist_ok=True)
-        # Per-peer writable root under tmp_path so logs / cache / run /
-        # sock_dir do not accumulate under salt-factories' default
-        # session-scoped ``/tmp/stsuite/`` location (exhausts runner
-        # disk on the functional CI shards).
-        own_root = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-root"
-        own_root.mkdir(parents=True, exist_ok=True)
+        # Short per-peer root in /tmp so sock_dir (derived from
+        # root_dir via ``salt.config.prepend_root_dir``) stays within
+        # the 108-byte AF_UNIX limit on Linux.  See the identical
+        # rationale in ``make_single_master``.
+        own_root = pathlib.Path(tempfile.mkdtemp(prefix="r", dir="/tmp"))
 
         # Master IPC event bus ports (tcp_master_pub_port /
         # tcp_master_pull_port / tcp_master_publish_pull /
