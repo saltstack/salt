@@ -9,6 +9,8 @@ the parent (control) proxy's loader.
 
 import asyncio
 import logging
+import sys
+from contextlib import ExitStack
 
 import pytest
 import tornado.concurrent
@@ -554,6 +556,101 @@ def test_subproxy_post_master_init_gives_each_subproxy_its_own_loader_namespace(
         sub1.loaded_base_name.split(".")[0],
         sub2.loaded_base_name.split(".")[0],
     )
+
+
+@pytest.mark.parametrize("operation", ["reload", "shutdown"])
+def test_subproxy_connection_globals_are_isolated(
+    proxy_opts, fake_main_utils, tmp_path, operation
+):
+    """Initializing, reloading or closing one device must not change another."""
+    proxy_dir = tmp_path / "proxy_modules"
+    proxy_dir.mkdir()
+    proxy_opts["proxy_dirs"] = [str(proxy_dir)]
+    module_contents = """
+    __proxyenabled__ = ["dummy_test_proxy"]
+    DETAILS = {}
+
+    def __virtual__():
+        return True
+
+    def init(opts):
+        DETAILS["id"] = opts["id"]
+        __context__["device_id"] = opts["id"]
+
+    def shutdown(opts):
+        DETAILS.clear()
+
+    def device_id():
+        return DETAILS.get("id")
+
+    def context_id():
+        return __context__["device_id"]
+    """
+    real_proxy_loader = salt.loader.proxy
+    patches = _make_subproxy_patches({"minion1": {}, "minion2": {}})
+
+    def load_proxy(opts, **kwargs):
+        # The other loaders are test doubles; exercise the real proxy loader
+        # and the namespace supplied by subproxy_post_master_init.
+        kwargs["utils"] = None
+        return real_proxy_loader(opts, whitelist=["dummy_test_proxy"], **kwargs)
+
+    patches["proxy_loader"].side_effect = load_proxy
+    targets = [
+        (deltaproxy.salt.config, "proxy_config", "proxy_config"),
+        (deltaproxy.salt.pillar, "get_async_pillar", "get_pillar"),
+        (deltaproxy.salt.loader, "grains", "grains"),
+        (deltaproxy.salt.loader, "proxy", "proxy_loader"),
+        (deltaproxy.salt.loader, "utils", "utils_loader"),
+        (deltaproxy, "ProxyMinion", "proxy_minion_cls"),
+        (deltaproxy.salt.minion, "get_proc_dir", "get_proc_dir"),
+        (deltaproxy.salt.utils.schedule, "Schedule", "schedule"),
+    ]
+    with pytest.helpers.temp_file(
+        "dummy_test_proxy.py", module_contents, directory=proxy_dir
+    ), patch.dict(sys.modules), ExitStack() as stack:
+        control_opts = dict(proxy_opts, proxy={"proxytype": "dummy_test_proxy"})
+        control = real_proxy_loader(
+            control_opts, context={}, whitelist=["dummy_test_proxy"]
+        )
+        control["dummy_test_proxy.init"](control_opts)
+        for target, attribute, key in targets:
+            stack.enter_context(patch.object(target, attribute, patches[key]))
+
+        async def initialize_subproxies():
+            return [
+                await deltaproxy.subproxy_post_master_init(
+                    minion_id, 0, proxy_opts, control, fake_main_utils
+                )
+                for minion_id in ("minion1", "minion2")
+            ]
+
+        results = asyncio.run(initialize_subproxies())
+        sub1, sub2 = (result["proxy_minion"] for result in results)
+        loaders = (control, sub1.proxy, sub2.proxy)
+        assert [loader["dummy_test_proxy.device_id"]() for loader in loaders] == [
+            "control_proxy",
+            "minion1",
+            "minion2",
+        ]
+        assert [loader["dummy_test_proxy.context_id"]() for loader in loaders] == [
+            "control_proxy",
+            "minion1",
+            "minion2",
+        ]
+
+        if operation == "reload":
+            sub1.proxy.reload_modules()
+        else:
+            sub1.proxy["dummy_test_proxy.shutdown"](sub1.opts)
+        assert sub1.proxy["dummy_test_proxy.device_id"]() is None
+        assert control["dummy_test_proxy.device_id"]() == "control_proxy"
+        assert sub2.proxy["dummy_test_proxy.device_id"]() == "minion2"
+
+        sub1.proxy["dummy_test_proxy.init"]({"id": "reconnected"})
+        assert sub1.proxy["dummy_test_proxy.device_id"]() == "reconnected"
+        assert control["dummy_test_proxy.device_id"]() == "control_proxy"
+        assert sub2.proxy["dummy_test_proxy.device_id"]() == "minion2"
 
 
 def test_load_modules_forwards_loaded_base_name_to_minion_mods(minion_opts):
