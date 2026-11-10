@@ -35,7 +35,7 @@ Key / value schema
 Every scalar leaf under a grain dict yields exactly one trie entry::
 
     key   = b"<path_segments-joined-by-\\x1e>\\x1f<str(value)>"
-    value = msgpack.packb([sr_key_1, sr_key_2, ...])
+    value = _pack_list([sr_key_1, sr_key_2, ...])
 
 Separator choice: ``\\x1e`` (ASCII RS) and ``\\x1f`` (ASCII US) are
 ASCII control bytes that cannot appear in grain key identifiers
@@ -47,6 +47,28 @@ key would cause silent slot-identity collisions during probing. The
 separators are also both below ``0x20`` so they cannot be valid
 UTF-8 continuation bytes, keeping the encoding injective across
 every grain-value encoding we might encounter.
+
+Leaf-list binary format
+-----------------------
+sr_key lists use a compact length-prefixed binary record instead of
+msgpack because the Mission 4 live profile showed msgpack decode
+dominates wide-match latency (~78 s for a 600K-element list). The
+format is::
+
+    byte 0        : 0xC1   (magic -- msgpack reserves this byte as
+                            "never used", so it is unambiguous with
+                            any valid msgpack message. Decoding the
+                            cap sentinel still works because that
+                            sentinel is a msgpack MAP whose first
+                            byte is in the 0x80-0x8F or 0xDE/0xDF
+                            range, never 0xC1.)
+    byte 1..4     : uint32 LE  count of sr_keys
+    byte 5..      : repeated for count:
+                      uint16 LE  key length
+                      <key bytes>  (UTF-8)
+
+Decode is a tight ``struct.unpack_from`` loop with no per-element
+Python object overhead -- 2-10x faster than msgpack on large lists.
 
 High-cardinality cap
 --------------------
@@ -60,8 +82,9 @@ slow path for this specific entry" -- the caller continues probing
 other partitions and, if no other path serves the predicate, resumes
 the legacy fetch loop.
 
-Dict-vs-list unambiguous because a real sr_key list is always a
-msgpack ARRAY type while the cap sentinel is a msgpack MAP type.
+Cap-vs-list unambiguous because the cap sentinel is a msgpack MAP
+(leading byte 0x80-0x8F or 0xDE/0xDF) while the sr_key list leads
+with 0xC1 (msgpack's reserved "never used" byte).
 
 Atomic rebuild
 --------------
@@ -84,6 +107,7 @@ import fnmatch
 import logging
 import os
 import re
+import struct
 import tempfile
 import threading
 import time
@@ -105,6 +129,17 @@ log = logging.getLogger(__name__)
 #     comparison to never match on read-back.
 _PATH_SEP = b"\x1e"  # ASCII RS, separates nested path segments
 _PATH_VALUE_SEP = b"\x1f"  # ASCII US, separates path from value
+
+# Leaf-list binary format. 0xC1 is reserved by msgpack as "never used"
+# so it is unambiguous with any valid msgpack message -- in particular
+# the cap sentinel (a msgpack MAP, leading byte 0x80-0x8F or 0xDE/0xDF).
+# See the module docstring "Leaf-list binary format" for the wire
+# layout; _pack_list / _unpack_list below are the only producers /
+# consumers.
+_LIST_MAGIC = b"\xc1"
+_U32 = struct.Struct("<I")
+_U16 = struct.Struct("<H")
+_MAX_KEY_LEN = 0xFFFF  # uint16 limit per sr_key encoded length
 
 # Default knobs mirrored from salt.config so a caller can instantiate
 # an index without pulling the full opts dict through.
@@ -268,8 +303,50 @@ def _flatten_leaves(gdict):
 
 
 def _pack_list(sr_keys):
-    """Serialise an sr_key list to msgpack bytes."""
-    return msgpack.packb(list(sr_keys), use_bin_type=True)
+    """
+    Serialise an sr_key list in the compact length-prefixed binary
+    format documented in the module docstring.
+
+    Raises ``ValueError`` if any key's UTF-8 encoding exceeds the
+    uint16 length field (65535 bytes). SR keys in practice are tens
+    of bytes; exceeding the limit indicates a programming error at
+    the caller, not a data concern.
+    """
+    parts = [_LIST_MAGIC, _U32.pack(len(sr_keys))]
+    for key in sr_keys:
+        if isinstance(key, str):
+            kb = key.encode("utf-8")
+        elif isinstance(key, (bytes, bytearray)):
+            kb = bytes(key)
+        else:
+            kb = str(key).encode("utf-8")
+        if len(kb) > _MAX_KEY_LEN:
+            raise ValueError(
+                f"mmap_trie_index: sr_key length {len(kb)} exceeds uint16 "
+                f"limit ({_MAX_KEY_LEN}); refusing to pack"
+            )
+        parts.append(_U16.pack(len(kb)))
+        parts.append(kb)
+    return b"".join(parts)
+
+
+def _unpack_list(raw):
+    """
+    Decode a leaf-list from the length-prefixed binary format.
+
+    Caller has already validated ``raw[0:1] == _LIST_MAGIC`` before
+    dispatching here. Returns a ``list[str]``; an empty-list record
+    (count=0) is handled cleanly with no further reads.
+    """
+    count = _U32.unpack_from(raw, 1)[0]
+    keys = [None] * count
+    offset = 5
+    for i in range(count):
+        length = _U16.unpack_from(raw, offset)[0]
+        offset += 2
+        keys[i] = raw[offset : offset + length].decode("utf-8")
+        offset += length
+    return keys
 
 
 def _pack_cap(count):
@@ -280,6 +357,13 @@ def _pack_cap(count):
 def _unpack_entry(raw):
     """
     Decode a trie entry value.
+
+    Dispatch is on the first byte:
+
+    * ``0xC1`` -> our length-prefixed binary leaf-list format
+      (see :func:`_unpack_list`).
+    * anything else -> msgpack (currently only the cap sentinel,
+      a msgpack MAP).
 
     Returns one of:
 
@@ -295,13 +379,26 @@ def _unpack_entry(raw):
         return None
     if not raw:
         return ("list", [])
+    buf = bytes(raw)
+    if buf[0:1] == _LIST_MAGIC:
+        try:
+            return ("list", _unpack_list(buf))
+        except Exception:  # pylint: disable=broad-except
+            log.debug(
+                "mmap_trie_index: undecodable binary leaf-list (%d bytes)",
+                len(buf),
+                exc_info=True,
+            )
+            return None
     try:
-        obj = msgpack.unpackb(bytes(raw), raw=False)
+        obj = msgpack.unpackb(buf, raw=False)
     except Exception:  # pylint: disable=broad-except
-        log.debug("mmap_trie_index: undecodable entry (%d bytes)", len(raw))
+        log.debug("mmap_trie_index: undecodable entry (%d bytes)", len(buf))
         return None
     if isinstance(obj, dict) and obj.get("_capped"):
         return ("cap", obj)
+    # Legacy msgpack-list entries from pre-0xC1 builds: still accept
+    # them on read so a rolling upgrade sees no decode regressions.
     if isinstance(obj, list):
         return ("list", obj)
     # Unknown shape -- treat as missing so the caller falls back.
