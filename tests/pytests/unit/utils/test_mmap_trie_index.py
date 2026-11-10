@@ -535,43 +535,57 @@ def test_values_for_path_enumerates_all_values(tmp_path):
 
 
 @requires_trie
-def test_cardinality_cap_returns_sentinel(tmp_path):
+def test_over_cap_bucket_promoted_to_chunks(tmp_path):
     """
-    More than ``max_list_size`` SRs share one (path, value) -> the
-    lookup returns the cap-sentinel (``None``), NOT a truncated list.
+    More than ``max_list_size`` SRs share one (path, value) -> Mission 6
+    promotes the bucket to chunked storage and the lookup returns the
+    FULL sr_key list (no sentinel, no truncation).
+
+    Prior to Mission 6 the trie dropped the sr_keys at this threshold
+    and returned ``None`` so the caller would fall back to the slow
+    path (~32s on a 600K-match predicate). Mission 6 keeps the full
+    answer in chunked storage and the query stays sub-second.
     """
     cap = 100
-    entries = {f"dummy:h-{i:04d}": {"role": "web"} for i in range(cap + 50)}
+    extra = 50
+    entries = {f"dummy:h-{i:04d}": {"role": "web"} for i in range(cap + extra)}
     cache = FakeCache(tmp_path, banks={BANK: entries})
     trie = _make_adapter(cache, tmp_path, max_list_size=cap)
 
     out = trie.lookup(("role",), "web")
-    # The spec says cap-sentinel is returned as ``None`` so the caller
-    # knows to fall through to the slow path.
-    assert (
-        out is None
-    ), f"expected cap-sentinel (None) for over-cap (path, value); got {type(out)}"
+    assert out is not None, (
+        "Mission 6 wide bucket must not return the legacy cap sentinel "
+        "(None); expected the full sr_key list from chunked storage"
+    )
+    assert sorted(out) == sorted(entries)
 
 
 @requires_trie
-def test_cap_sentinel_distinguishable_from_empty(tmp_path):
-    """Empty and capped answers MUST be distinguishable."""
+def test_wide_bucket_distinguishable_from_empty(tmp_path):
+    """
+    Empty miss and wide-hit are distinguishable: the miss is empty/None,
+    the wide-hit is a populated list (post Mission 6, no more cap
+    sentinel on new writes).
+    """
     cap = 50
     entries = {f"dummy:h-{i:04d}": {"role": "web"} for i in range(cap + 1)}
-    entries["dummy:db-1"] = {"role": "db"}  # uncapped bucket
+    entries["dummy:db-1"] = {"role": "db"}  # narrow bucket
     cache = FakeCache(tmp_path, banks={BANK: entries})
     trie = _make_adapter(cache, tmp_path, max_list_size=cap)
 
     empty = trie.lookup(("role",), "no-such-value")
-    assert empty in ([], None), "empty miss must not be a cap-sentinel"
-    capped = trie.lookup(("role",), "web")
-    assert capped is None, "cap-sentinel for oversized bucket must be None"
-    under = trie.lookup(("role",), "db")
-    assert under == ["dummy:db-1"], "under-cap bucket must return the SR list"
-    # Pin the asymmetry explicitly: empty != capped.
-    assert empty != capped or (
-        empty is None and capped is None and under == ["dummy:db-1"]
+    assert empty in ([], None), "empty miss must not accidentally surface SRs"
+
+    wide = trie.lookup(("role",), "web")
+    assert wide is not None, (
+        "wide bucket must not return cap sentinel under Mission 6; "
+        "chunked storage serves the full list"
     )
+    assert len(wide) == cap + 1
+    assert sorted(wide) == sorted(k for k in entries if k.startswith("dummy:h-"))
+
+    narrow = trie.lookup(("role",), "db")
+    assert narrow == ["dummy:db-1"], "narrow bucket must return a plain list"
 
 
 @requires_trie
@@ -1246,44 +1260,651 @@ def test_rebuild_and_lookup_wide_match(tmp_path):
 
 
 @requires_trie
-def test_mixed_magic_byte_dispatch(tmp_path):
+def test_mixed_entry_kind_dispatch(tmp_path):
     """
-    An index with BOTH regular list entries AND a cap sentinel must
-    dispatch each through the right decoder -- list entries resolve to
-    lists, cap entries resolve to ``None``.
+    An index with BOTH chunked and regular-list entries must dispatch
+    each through the right decoder -- chunked entries resolve to the
+    union of their chunks, regular-list entries resolve to a plain
+    sr_key list.
 
-    This is the live-dispatch cousin of the pure-helper magic-byte
-    test: it goes through the real ``MmapTrieIndex.lookup_literal`` so
-    we know the dispatcher (not just the pure helpers) picks correctly
-    on both encodings coexisting on-disk.
+    This is the live-dispatch cousin of the pure-helper tests: it goes
+    through the real ``MmapTrieIndex.lookup_literal`` so we know the
+    dispatcher picks the correct decode path for both entry shapes
+    coexisting on-disk.
     """
     cap = 5
-    # Bucket A: strictly over cap -> cap sentinel.
-    # Bucket B: under cap -> regular list.
     entries = {}
+    # Bucket A: strictly over cap -> chunked.
     for i in range(cap + 3):
         entries[f"dummy:cap-{i:04d}"] = {"role": "web"}
+    # Bucket B: under cap -> regular list.
     for i in range(2):
         entries[f"dummy:lst-{i:04d}"] = {"role": "db"}
     cache = FakeCache(tmp_path, banks={BANK: entries})
     trie = _make_adapter(cache, tmp_path, max_list_size=cap)
 
-    # The capped bucket MUST return None (sentinel decoded via msgpack).
-    capped = trie.lookup(("role",), "web")
+    # The wide bucket MUST return the full sr_key list (chunked read).
+    wide = trie.lookup(("role",), "web")
     assert (
-        capped is None
-    ), f"expected cap sentinel (None) for over-cap bucket; got {capped!r}"
+        wide is not None
+    ), "wide (over-cap) bucket must serve from chunks, not return None"
+    assert sorted(wide) == sorted(
+        [f"dummy:cap-{i:04d}" for i in range(cap + 3)]
+    ), f"wide bucket must union all chunks; got {wide!r}"
 
-    # The uncapped bucket MUST return its sr_key list (decoded via new
-    # binary format). If the dispatcher mis-identified the magic byte,
-    # this would come back as None (cap) or empty.
+    # The narrow bucket MUST return its sr_key list (plain list decode).
+    # If the dispatcher mis-identified the entry kind, this would come
+    # back as None or an empty list.
     listed = trie.lookup(("role",), "db")
-    assert listed is not None, "under-cap bucket must not be cap-sentinel"
+    assert listed is not None, "under-cap bucket must not be a sentinel"
     assert sorted(listed) == ["dummy:lst-0000", "dummy:lst-0001"], (
         f"under-cap bucket must return the full sr_key list via the "
-        f"binary decoder; got {listed!r}"
+        f"list decoder; got {listed!r}"
     )
 
     # Miss is still a miss.
     miss = trie.lookup(("role",), "no-such-role")
     assert miss in ([], None), f"miss must not surface either bucket: {miss!r}"
+
+
+# ---------------------------------------------------------------------------
+# Mission 6: on-disk bucket chunking.
+#
+# Mission 4's cap-sentinel discarded sr_keys once a bucket exceeded
+# ``grain_trie_max_list_size`` and forced the slow-path fallback. Mission 6
+# replaces this: once a bucket crosses the cap, it is split into chunks
+# stored under derived keys. The primary bucket key stores a chunk marker
+# (``{"_chunks": N, "_total": T}``); each chunk key is
+# ``<original_key> + b"\x1d" + 8-char uppercase-hex(chunk_index)`` and
+# contains a regular msgpack list of sr_keys. Queries now stay in the trie
+# for wide buckets.
+#
+# These tests exercise the new storage format, the lookup path, legacy
+# back-compat, and a sub-quadratic cost guarantee.
+# ---------------------------------------------------------------------------
+
+
+_pack_chunk_marker = _resolve("_pack_chunk_marker", "pack_chunk_marker")
+_chunk_key_fn = _resolve("_chunk_key", "chunk_key")
+_pack_cap_fn = _resolve("_pack_cap", "pack_cap")
+_unpack_entry = _resolve("_unpack_entry", "unpack_entry")
+
+# ``\x1d`` is the group-separator character; Mission 6 uses it between the
+# natural bucket key and the 8-char uppercase-hex chunk index (hex avoids
+# the NUL-truncation issue the MmapCache key store has with u32le). Re-
+# declare here rather than importing the module's private constant so
+# tests remain stable if the Implementer renames the attribute.
+_MISSION6_CHUNK_SEP = b"\x1d"
+
+
+def _bucket_key_bytes(path_segments, value):
+    """
+    Build the raw trie key for a ``(path, value)`` bucket.
+
+    The trie module uses ``\\x1e`` to join path segments and ``\\x00`` as
+    the ``path/value`` separator (see ``_build_key``). We re-create the
+    construction locally so the chunk-storage tests can probe raw keys.
+    """
+    if _trie_mod is None:
+        pytest.skip("mmap_trie_index module not loaded")
+    build_key = getattr(_trie_mod, "_build_key", None)
+    enc_path = getattr(_trie_mod, "_encode_path_segments", None)
+    enc_val = getattr(_trie_mod, "_encode_scalar_value", None)
+    if build_key is None or enc_path is None or enc_val is None:
+        pytest.skip(
+            "trie module missing _build_key/_encode_path_segments/_encode_scalar_value"
+        )
+    return build_key(enc_path(path_segments), enc_val(value))
+
+
+def _open_trie_mmap(adapter):
+    """
+    Reach into a built trie adapter and return its underlying MmapCache
+    (opened). Used by tests that need to probe raw entries by key.
+    """
+    inst = adapter._instance  # pylint: disable=protected-access
+    if inst is None:
+        pytest.skip("trie adapter has no class instance; raw-mmap probes require one")
+    getter = getattr(inst, "_get_mmap", None)
+    if getter is None:
+        pytest.skip("trie class exposes no _get_mmap for raw-mmap probes")
+    mm = getter()
+    if mm is None:
+        pytest.skip("trie's MmapCache not yet open")
+    return mm
+
+
+# ---------------------------------------------------------------------------
+# A. Behavioural tests for the storage format
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+def test_chunk_marker_shape(tmp_path):
+    """
+    A >cap bucket writes a chunk-marker dict (``{"_chunks": N, "_total": T}``)
+    at the primary bucket key. N must be >= 2 (any smaller split is a
+    degenerate chunk) and T must equal the total sr_key count.
+    """
+    import msgpack
+
+    cap = 50
+    total_srs = 125  # -> 3 chunks of 50, 50, 25 (or similar)
+    entries = {f"dummy:h-{i:05d}": {"role": "web"} for i in range(total_srs)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    mm = _open_trie_mmap(trie)
+    key = _bucket_key_bytes(("role",), "web")
+    raw = mm.get(key)
+    if raw is None:
+        pytest.skip("primary bucket key not present (impl may store chunks only)")
+    try:
+        obj = msgpack.unpackb(bytes(raw), raw=False)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail(f"chunk marker not msgpack-decodable: {exc!r}")
+
+    assert isinstance(obj, dict), f"expected chunk-marker dict; got {type(obj)}"
+    assert "_chunks" in obj, (
+        f"chunk marker must carry '_chunks' key (Mission 6 shape); "
+        f"got keys={sorted(obj.keys())!r}"
+    )
+    n_chunks = int(obj["_chunks"])
+    total = int(obj.get("_total", -1))
+    assert (
+        n_chunks >= 2
+    ), f"expected >=2 chunks for {total_srs} SRs at cap={cap}; got {n_chunks}"
+    assert total == total_srs, (
+        f"'_total' must equal the sr_key count; got _total={total}, "
+        f"expected {total_srs}"
+    )
+
+
+@requires_trie
+def test_chunk_key_derivation_uses_1d_separator(tmp_path):
+    """
+    Derived chunk keys are shaped ``<primary_key> + b"\\x1d" + 8-char
+    uppercase-hex(idx)`` and are directly fetchable from the trie's
+    MmapCache. Probe the first two chunk indices by their exact derived
+    keys; both must be present for a bucket forced past the cap.
+
+    The implementation uses hex-ASCII rather than a little-endian u32
+    for the chunk index because ``MmapCache`` truncates stored keys at
+    the first NUL byte — a literal ``i.to_bytes(4, "little")`` would
+    silently collapse chunk-0 through chunk-255 onto the same slot. The
+    hex encoding keeps keys NUL-free and preserves 32 bits of index
+    space.
+    """
+    import msgpack
+
+    cap = 50
+    entries = {f"dummy:h-{i:05d}": {"role": "web"} for i in range(cap + 10)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    mm = _open_trie_mmap(trie)
+    primary = _bucket_key_bytes(("role",), "web")
+
+    chunk_zero_key = primary + _MISSION6_CHUNK_SEP + b"00000000"
+    chunk_one_key = primary + _MISSION6_CHUNK_SEP + b"00000001"
+    raw0 = mm.get(chunk_zero_key)
+    raw1 = mm.get(chunk_one_key)
+    assert (
+        raw0 is not None
+    ), f"expected chunk-0 derived key {chunk_zero_key!r} in trie cache"
+    assert (
+        raw1 is not None
+    ), f"expected chunk-1 derived key {chunk_one_key!r} in trie cache"
+
+    # Each chunk's payload is a plain msgpack list of sr_keys.
+    for raw in (raw0, raw1):
+        obj = msgpack.unpackb(bytes(raw), raw=False)
+        assert isinstance(
+            obj, list
+        ), f"chunk payload must be a msgpack list; got {type(obj).__name__}"
+        assert obj, "chunk payload must be non-empty"
+
+
+@requires_trie
+def test_small_bucket_still_regular_list(tmp_path):
+    """
+    A <cap bucket stays stored as a regular msgpack list (not a chunk
+    marker). Narrow queries must not pay the chunk-overhead tax.
+    """
+    import msgpack
+
+    cap = 100
+    entries = {f"dummy:h-{i:03d}": {"role": "web"} for i in range(5)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    mm = _open_trie_mmap(trie)
+    key = _bucket_key_bytes(("role",), "web")
+    raw = mm.get(key)
+    assert raw is not None, "small bucket must be present in the trie"
+    try:
+        obj = msgpack.unpackb(bytes(raw), raw=False)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail(f"small bucket not msgpack-decodable: {exc!r}")
+    assert isinstance(obj, list), (
+        f"small (<cap) bucket must be stored as a msgpack list, not a "
+        f"chunk-marker dict; got {type(obj).__name__} value={obj!r}"
+    )
+    assert sorted(obj) == sorted(entries.keys())
+
+
+# ---------------------------------------------------------------------------
+# B. Correctness of chunked lookups
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+def test_wide_bucket_lookup_returns_all_sr_keys(tmp_path):
+    """
+    Build with >cap SRs sharing one ``(path, value)`` and assert the
+    lookup returns every sr_key — no duplicates, no omissions.
+
+    This is the central Mission 6 contract: a wide bucket no longer
+    falls to the slow path (which is what Mission 4's cap-sentinel did);
+    it serves the full set from chunked storage.
+    """
+    cap = 100
+    # ~2.5x cap is enough to force multiple chunks without a huge
+    # fixture; the spec's 250K / 100K real-world figures aren't needed
+    # for this behavioural assertion.
+    size = 250
+    entries = {f"dummy:sr-{i:07d}": {"role": "web"} for i in range(size)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    out = trie.lookup(("role",), "web")
+    assert out is not None, (
+        "Mission 6 wide bucket must NOT return the cap-sentinel (None); "
+        "it must serve the full sr_key list from chunked storage"
+    )
+    assert isinstance(out, list), f"expected list of sr_keys; got {type(out)}"
+    # No duplicates.
+    assert len(out) == len(set(out)), (
+        f"chunked lookup must not duplicate sr_keys; got {len(out)} with "
+        f"{len(set(out))} unique"
+    )
+    # Full set.
+    assert sorted(out) == sorted(entries.keys()), (
+        f"chunked lookup must return every sr_key in the bucket; missing="
+        f"{sorted(set(entries) - set(out))!r} extra={sorted(set(out) - set(entries))!r}"
+    )
+
+
+@requires_trie
+def test_wide_bucket_lookup_preserves_insertion_order_within_chunks(tmp_path):
+    """
+    Sanity check: when chunks are read back in order, their contents
+    should correspond to (approximately) insertion order. Not a strict
+    contract — the Implementer may partition differently — but a
+    regression here would signal shuffled chunk storage, which hints at
+    a misordered write path.
+    """
+    cap = 50
+    size = 150  # ~3 chunks worth
+    ordered_keys = [f"dummy:sr-{i:05d}" for i in range(size)]
+    entries = {k: {"role": "web"} for k in ordered_keys}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    out = trie.lookup(("role",), "web")
+    assert out is not None and len(out) == size
+    # Equivalence (sanity): set match already verified elsewhere.
+    assert set(out) == set(ordered_keys)
+    # Chunk-0 should contain the first `cap` insertions when iteration
+    # order on the input dict is insertion-stable (Python 3.7+).
+    # Accept any permutation WITHIN a chunk, but assert the first `cap`
+    # emitted sr_keys are a subset of the first `cap` inserted — this
+    # pins "chunks are read in index order AND chunk 0 holds the first
+    # insertion batch".
+    first_chunk_slice = out[:cap]
+    first_batch_set = set(ordered_keys[:cap])
+    # At least half of chunk-0's slots should come from the first batch
+    # (a weak but strictly stronger-than-random signal; a shuffled
+    # writer would score ~1/3 on average).
+    overlap = sum(1 for k in first_chunk_slice if k in first_batch_set)
+    assert overlap >= cap // 2, (
+        f"chunk 0's first {cap} entries overlap only {overlap}/{cap} "
+        f"with the first insertion batch — chunks may be read out of "
+        f"index order or writes are shuffled across chunks"
+    )
+
+
+@requires_trie
+def test_chunked_lookup_no_extra_slow_path(tmp_path):
+    """
+    A wide-bucket lookup must stay IN the trie. The caller's slow-path
+    entry point must not be invoked.
+
+    We spy on ``cache.fetch`` (the slow-path per-SR drain the dispatch
+    falls into when the trie returns None). If the Implementer forgot
+    to teach ``lookup_literal`` about the ``chunks`` entry kind, a wide
+    query would surface None and the caller would drain the bank via
+    ``cache.fetch`` — this test would detect that regression.
+    """
+    cap = 50
+    size = 200
+    entries = {f"dummy:sr-{i:05d}": {"role": "web"} for i in range(size)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    # After build, swap in a fetch spy. A correct chunked lookup must
+    # NOT call cache.fetch — it reads chunks from the mmap, not the
+    # bank.
+    fetch_spy = MagicMock(side_effect=cache.fetch)
+    cache.fetch = fetch_spy  # type: ignore[assignment]
+
+    out = trie.lookup(("role",), "web")
+    assert out is not None, "wide bucket must not return cap-sentinel"
+    assert len(out) == size
+
+    # Zero slow-path fetches during a trie-served wide query.
+    assert fetch_spy.call_count == 0, (
+        f"wide-match lookup escaped the trie — cache.fetch was called "
+        f"{fetch_spy.call_count}x; chunk storage must serve from the mmap"
+    )
+
+
+# ---------------------------------------------------------------------------
+# C. Amortised merge-cost sanity
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+@pytest.mark.slow_test
+def test_build_time_scales_linearly_with_bucket_size(tmp_path_factory):
+    """
+    Loose sub-quadratic growth check: build an index with cap=5000 for
+    bucket sizes 10K, 20K, 40K. Build time should roughly double each
+    step, NOT quadruple. Allow a wide tolerance for noise.
+
+    If the Implementer's ``_flush`` re-reads and re-writes the full
+    bucket on every batch (O(N/B * N)), doubling the bucket size would
+    quadruple the build time; the chunk-append path keeps each
+    additional batch O(B).
+    """
+    import time
+
+    cap = 5000
+    sizes = [10_000, 20_000, 40_000]
+    timings = []
+    for n in sizes:
+        d = tmp_path_factory.mktemp(f"wide-{n}")
+        entries = {f"dummy:sr-{i:07d}": {"role": "web"} for i in range(n)}
+        cache = FakeCache(d, banks={BANK: entries})
+        t0 = time.perf_counter()
+        _make_adapter(cache, d, max_list_size=cap, batch_size=1024)
+        timings.append(time.perf_counter() - t0)
+
+    # Ratios: n=20K/n=10K, n=40K/n=20K. A linear implementation gives
+    # ratios near 2. A quadratic implementation gives ratios near 4.
+    # Allow up to 3x on each step for CI noise / small-N overhead.
+    r1 = timings[1] / timings[0] if timings[0] > 0 else float("inf")
+    r2 = timings[2] / timings[1] if timings[1] > 0 else float("inf")
+    assert r1 < 3.0, (
+        f"build time ratio (20K/10K) = {r1:.2f}x; expected ~2x for "
+        f"linear scaling. Raw: {timings[0]:.3f}s -> {timings[1]:.3f}s. "
+        f"A >3x ratio hints at quadratic re-read on wide buckets."
+    )
+    assert r2 < 3.0, (
+        f"build time ratio (40K/20K) = {r2:.2f}x; expected ~2x for "
+        f"linear scaling. Raw: {timings[1]:.3f}s -> {timings[2]:.3f}s"
+    )
+
+
+# ---------------------------------------------------------------------------
+# D. Legacy back-compat
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+def test_legacy_cap_sentinel_treated_as_missing(tmp_path):
+    """
+    An on-disk legacy cap sentinel (``{"_capped": True, "count": N}``)
+    must not crash the reader. ``lookup_literal`` returns ``None`` (or
+    an empty list), forcing the caller to fall through to the slow
+    path — which is exactly what Mission 4's behaviour was.
+    """
+    import msgpack
+
+    # Build a trivial index first so the on-disk layout exists.
+    cache = FakeCache(tmp_path, banks={BANK: {"dummy:a": {"role": "web"}}})
+    trie = _make_adapter(cache, tmp_path)
+    assert trie.lookup(("role",), "web") == ["dummy:a"]
+
+    # Now manually poke a legacy cap-sentinel entry at a different key.
+    mm = _open_trie_mmap(trie)
+    legacy_key = _bucket_key_bytes(("legacy",), "sentinel")
+    legacy_blob = msgpack.packb({"_capped": True, "count": 1000}, use_bin_type=True)
+    try:
+        mm.put(legacy_key, legacy_blob)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.skip(f"MmapCache.put unavailable: {exc!r}")
+
+    out = trie.lookup(("legacy",), "sentinel")
+    # Either "None -> slow-path" or "[] -> legitimate miss (data lost,
+    # silent)". Both are acceptable back-compat behaviours; the test's
+    # point is "no crash".
+    assert out in (
+        None,
+        [],
+    ), f"legacy cap sentinel must not surface sr_keys or crash; got {out!r}"
+
+
+# ---------------------------------------------------------------------------
+# E. Edge cases
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+def test_orphaned_chunk_marker_returns_none(tmp_path, caplog):
+    """
+    A chunk marker without its chunks (data corruption / partial write)
+    must not crash. ``lookup_literal`` returns ``None`` (treated as a
+    missing bucket, caller falls through to slow path).
+    """
+    import msgpack
+
+    cache = FakeCache(tmp_path, banks={BANK: {"dummy:a": {"role": "web"}}})
+    trie = _make_adapter(cache, tmp_path)
+
+    mm = _open_trie_mmap(trie)
+    orphan_key = _bucket_key_bytes(("orphan",), "marker")
+    # 3 chunks promised, total=100, but no chunk entries written.
+    orphan_marker = msgpack.packb({"_chunks": 3, "_total": 100}, use_bin_type=True)
+    try:
+        mm.put(orphan_key, orphan_marker)
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.skip(f"MmapCache.put unavailable: {exc!r}")
+
+    # Must not crash. Allowable outcomes:
+    #   * None  -> "treat as missing, fall through"
+    #   * []    -> "silent miss, data presumed lost"
+    #   * partial list if the impl chose to return what it found (also OK)
+    try:
+        out = trie.lookup(("orphan",), "marker")
+    except Exception as exc:  # pylint: disable=broad-except
+        pytest.fail(f"orphaned chunk marker crashed the reader: {exc!r}")
+    assert (
+        out is None or out == []
+    ), f"orphaned chunk marker must surface None or []; got {out!r}"
+
+
+@requires_trie
+def test_chunk_boundary_exact(tmp_path):
+    """
+    Bucket size == max_list_size -> stays a regular list (no promotion
+    to chunked). The promotion threshold is "strictly greater than cap".
+    """
+    import msgpack
+
+    cap = 100
+    entries = {f"dummy:h-{i:04d}": {"role": "web"} for i in range(cap)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    mm = _open_trie_mmap(trie)
+    key = _bucket_key_bytes(("role",), "web")
+    raw = mm.get(key)
+    assert raw is not None
+    obj = msgpack.unpackb(bytes(raw), raw=False)
+    assert isinstance(obj, list), (
+        f"bucket at cap boundary (N == cap) must stay a regular list, "
+        f"not a chunk marker; got {type(obj).__name__} value={obj!r}"
+    )
+    assert len(obj) == cap
+
+    # And the user-facing lookup returns all SRs unchanged.
+    out = trie.lookup(("role",), "web")
+    assert out is not None and len(out) == cap
+    assert sorted(out) == sorted(entries)
+
+
+@requires_trie
+def test_chunk_boundary_plus_one(tmp_path):
+    """
+    Bucket size == max_list_size + 1 -> promoted to 2 chunks: chunk 0
+    carries exactly ``max_list_size`` entries, chunk 1 carries 1.
+
+    Loose assertion on the split: SOME chunking happened and the total
+    sr_key count across chunks equals cap+1.
+    """
+    import msgpack
+
+    cap = 100
+    entries = {f"dummy:h-{i:04d}": {"role": "web"} for i in range(cap + 1)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    mm = _open_trie_mmap(trie)
+    primary = _bucket_key_bytes(("role",), "web")
+    raw_marker = mm.get(primary)
+    assert raw_marker is not None
+    marker = msgpack.unpackb(bytes(raw_marker), raw=False)
+    assert isinstance(
+        marker, dict
+    ), f"N=cap+1 must promote to a chunk marker dict; got {type(marker)}"
+    assert "_chunks" in marker
+    n_chunks = int(marker["_chunks"])
+    assert (
+        n_chunks == 2
+    ), f"N=cap+1={cap + 1} should split into exactly 2 chunks; got {n_chunks}"
+    assert int(marker.get("_total", -1)) == cap + 1
+
+    # And the lookup serves the full set.
+    out = trie.lookup(("role",), "web")
+    assert out is not None and len(out) == cap + 1
+    assert sorted(out) == sorted(entries)
+
+
+@requires_trie
+def test_rebuild_from_chunked_state(tmp_path):
+    """
+    Build the index with a wide bucket (chunks on disk) -> mutate the
+    bank -> rebuild. After the rebuild the chunks are re-derived from
+    the primary cache and the lookup still returns every sr_key
+    including the newly-added ones.
+    """
+    cap = 50
+    size = 150
+    entries = {f"dummy:sr-{i:05d}": {"role": "web"} for i in range(size)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+    out1 = trie.lookup(("role",), "web")
+    assert out1 is not None and len(out1) == size
+
+    # Add more SRs to the same bucket; force a new build.
+    extra = {f"dummy:sr-X-{i:05d}": {"role": "web"} for i in range(60)}
+    for sk, g in extra.items():
+        cache.set(BANK, sk, g)
+    trie2 = _make_adapter(cache, tmp_path, max_list_size=cap)
+    out2 = trie2.lookup(("role",), "web")
+    assert (
+        out2 is not None
+    ), "chunked rebuild must still serve the wide bucket; got cap-sentinel"
+    expected = set(entries) | set(extra)
+    assert sorted(out2) == sorted(expected), (
+        f"rebuild over a chunked bucket lost sr_keys; "
+        f"missing={sorted(expected - set(out2))!r} "
+        f"extra={sorted(set(out2) - expected)!r}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# F. Interaction with other missions
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+def test_narrow_queries_unaffected(tmp_path):
+    """
+    Mix narrow (<cap) and wide (>cap) buckets in a single index. Narrow
+    queries behave exactly as they did pre-Mission-6; wide queries now
+    serve the full set.
+    """
+    cap = 50
+    entries = {}
+    # Narrow bucket: 3 SRs on role=db.
+    for i in range(3):
+        entries[f"dummy:db-{i:04d}"] = {"role": "db"}
+    # Narrow bucket: 1 SR on role=cache.
+    entries["dummy:cache-01"] = {"role": "cache"}
+    # Wide bucket: cap+20 SRs on role=web.
+    for i in range(cap + 20):
+        entries[f"dummy:web-{i:04d}"] = {"role": "web"}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    # Narrow results: exact match, unchanged behaviour.
+    db = trie.lookup(("role",), "db")
+    assert sorted(db or []) == sorted([f"dummy:db-{i:04d}" for i in range(3)])
+    cache_bucket = trie.lookup(("role",), "cache")
+    assert cache_bucket == ["dummy:cache-01"]
+    miss = trie.lookup(("role",), "nothing-here")
+    assert miss in ([], None)
+
+    # Wide bucket: full serve (NOT None).
+    web = trie.lookup(("role",), "web")
+    assert web is not None
+    assert len(web) == cap + 20
+    assert sorted(web) == sorted([f"dummy:web-{i:04d}" for i in range(cap + 20)])
+
+
+# ---------------------------------------------------------------------------
+# G. Perf regression guard
+# ---------------------------------------------------------------------------
+
+
+@requires_trie
+@pytest.mark.slow_test
+def test_wide_match_under_budget(tmp_path):
+    """
+    Warm-cache lookup for a 100K-SR shared bucket completes WELL under
+    the 32s pre-Mission-6 baseline. The 300ms budget leaves plenty of
+    headroom for CI noise while catching catastrophic regressions.
+    """
+    import time
+
+    cap = 10_000
+    size = 100_000
+    entries = {f"dummy:sr-{i:07d}": {"role": "web"} for i in range(size)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    # Warm the mmap.
+    warm = trie.lookup(("role",), "web")
+    assert warm is not None and len(warm) == size
+
+    t0 = time.perf_counter()
+    out = trie.lookup(("role",), "web")
+    elapsed = time.perf_counter() - t0
+    assert out is not None and len(out) == size
+    assert elapsed < 0.3, (
+        f"wide-match lookup took {elapsed * 1000:.1f}ms; budget is 300ms. "
+        f"Old pre-Mission-6 slow path was ~32s — any regression toward "
+        f"that signals the trie is falling off the chunked fast path."
+    )
