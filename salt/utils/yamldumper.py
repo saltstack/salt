@@ -15,6 +15,7 @@ import yaml  # pylint: disable=blacklisted-import
 
 import salt.utils.context
 from salt.utils.datastructures import HashableOrderedDict
+from salt.utils.dynamic_dict import DynamicDict
 from salt.utils.optsdict import DictProxy, ListProxy, OptsDict
 from salt.utils.secret import MaskedDict, MaskedList
 
@@ -131,6 +132,16 @@ yaml.SafeDumper.add_representer(
 yaml.Dumper.add_representer(MaskedList, yaml.representer.SafeRepresenter.represent_list)
 yaml.SafeDumper.add_representer(
     MaskedList, yaml.representer.SafeRepresenter.represent_list
+)
+
+for D in (SafeOrderedDumper, OrderedDumper, IndentedSafeOrderedDumper):
+    D.add_representer(DynamicDict, represent_ordereddict)
+del D
+yaml.Dumper.add_representer(
+    DynamicDict, yaml.representer.SafeRepresenter.represent_dict
+)
+yaml.SafeDumper.add_representer(
+    DynamicDict, yaml.representer.SafeRepresenter.represent_dict
 )
 
 
