@@ -712,6 +712,341 @@ def test_augment_grain_match_invalid_srn_skipped(opts):
 
 
 # ---------------------------------------------------------------------------
+# _augment_grain_match_with_resource_grains — literal resource_id fast path
+# (exact-key hash probe: ``self.cache.contains(bank, "<rtype>:<literal>")``)
+# ---------------------------------------------------------------------------
+
+
+def _build_ck_with_contains(opts, present_keys, list_result=None):
+    """
+    Build a ``CkMinions`` whose ``self.cache`` answers:
+
+    * ``contains(bank, key)`` → ``key in present_keys`` for the
+      ``resource_grains`` bank; ``False`` for everything else.
+    * ``list(bank)`` → ``list_result`` (defaults to the keys in
+      ``present_keys``) so the fallback slow path works if the
+      literal fast path is NOT taken.
+
+    Returns ``(ck, fake_cache)`` so tests can introspect call counts.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    keys = list(present_keys)
+
+    def _contains(bank, key):
+        if bank != "resource_grains":
+            return False
+        return key in present_keys
+
+    def _list(bank):
+        if bank != "resource_grains":
+            return []
+        return list(keys if list_result is None else list_result)
+
+    def _fetch(bank, key):
+        if bank != "resource_grains":
+            return None
+        gd = present_keys.get(key) if isinstance(present_keys, dict) else None
+        return gd
+
+    fake.contains = MagicMock(side_effect=_contains)
+    fake.list = MagicMock(side_effect=_list)
+    fake.fetch = MagicMock(side_effect=_fetch)
+    ck.cache = fake
+    return ck, fake
+
+
+def test_augment_grain_literal_resource_id_hits_via_contains_probe(opts):
+    """
+    Literal ``resource_id:<id>`` with a single configured type must probe
+    exactly ``cache.contains("resource_grains", "<rtype>:<literal>")`` and
+    return the bare id. Crucially, ``cache.list`` must NOT be called -- the
+    probe is authoritative and avoids the O(bank-size) scan.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {"dummy:dummy-01": {"resource_id": "dummy-01"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:dummy-01", ":", regex_match=False
+    )
+
+    assert result["minions"] == ["dummy-01"]
+    # Exactly one probe (T == 1); no bank list / fetch on the fast path.
+    assert fake.contains.call_count == 1
+    fake.contains.assert_called_with("resource_grains", "dummy:dummy-01")
+    assert fake.list.call_count == 0
+    assert fake.fetch.call_count == 0
+
+
+def test_augment_grain_literal_resource_id_miss_probes_every_type(opts):
+    """
+    Literal predicate against an id that is not registered under any
+    configured type returns no match -- and we probe each configured type
+    exactly once (``T`` probes total, no fall-through to the scan).
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy", "ssh", "aws"]
+    ck, fake = _build_ck_with_contains(opts, present_keys={})
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:nosuch", ":", regex_match=False
+    )
+
+    assert result["minions"] == []
+    assert fake.contains.call_count == 3
+    probed = [c.args[1] for c in fake.contains.call_args_list]
+    assert set(probed) == {"dummy:nosuch", "ssh:nosuch", "aws:nosuch"}
+    # No fall-through to the scan: the probe is authoritative.
+    assert fake.list.call_count == 0
+    assert fake.fetch.call_count == 0
+
+
+def test_augment_grain_literal_resource_id_matches_second_type(opts):
+    """
+    Multiple configured types; id is registered under exactly one. The
+    probe short-circuits on the first hit -- we may make up to T probes
+    in the worst case, and the matching id is appended once.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy", "ssh"]
+    # Only registered under ssh, not dummy.
+    present = {"ssh:node-42": {"resource_id": "node-42"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:node-42", ":", regex_match=False
+    )
+
+    assert result["minions"] == ["node-42"]
+    # Probe order is enabled_resource_types order: dummy (miss) then ssh (hit).
+    probed = [c.args[1] for c in fake.contains.call_args_list]
+    assert probed == ["dummy:node-42", "ssh:node-42"]
+    assert fake.list.call_count == 0
+
+
+def test_augment_grain_glob_resource_id_falls_through_to_scan_fast_path(opts):
+    """
+    ``resource_id:a-dummy-*`` has a wildcard, so the literal fast path
+    must fall through and the existing bank-scan fast path (via
+    :func:`_resource_id_candidates`) handles it instead. No
+    ``cache.contains`` calls expected.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {
+        "dummy:a-dummy-01": {"resource_id": "a-dummy-01"},
+        "dummy:a-dummy-02": {"resource_id": "a-dummy-02"},
+        "dummy:other": {"resource_id": "other"},
+    }
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-dummy-*", ":", regex_match=False
+    )
+
+    assert sorted(result["minions"]) == ["a-dummy-01", "a-dummy-02"]
+    # Fast path for globs is bank-list-based, not contains-probe-based.
+    assert fake.contains.call_count == 0
+    assert fake.list.call_count >= 1
+
+
+def test_augment_grain_nested_resource_id_predicate_falls_through(opts):
+    """
+    ``resource_id:a:b`` is a nested predicate -- the fast path must NOT
+    swallow it. Falls through to the slow path (which rejects it via
+    :func:`_resource_id_candidates` as well, then does the full scan).
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {"dummy:a": {"resource_id": "a"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a:b", ":", regex_match=False
+    )
+
+    # Nested predicates never hit the hash-probe fast path.
+    assert fake.contains.call_count == 0
+    # No match either way: "resource_id" value in the grain dict is "a",
+    # which does not nest-match "resource_id:a:b".
+    assert result["minions"] == []
+
+
+def test_augment_grain_non_resource_id_predicate_falls_through(opts):
+    """
+    A grain target with a different key (e.g. ``role:web``) must not
+    trigger the literal-probe fast path. It falls through to the
+    existing slow path (bank list + per-key fetch + subdict_match).
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {
+        "dummy:d-1": {"role": "web", "resource_id": "d-1"},
+        "dummy:d-2": {"role": "db", "resource_id": "d-2"},
+    }
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+
+    assert result["minions"] == ["d-1"]
+    assert fake.contains.call_count == 0
+    # Slow path: list + fetch per key.
+    assert fake.list.call_count >= 1
+    assert fake.fetch.call_count >= 1
+
+
+def test_augment_grain_empty_resource_id_predicate_falls_through(opts):
+    """
+    ``resource_id:`` with an empty pattern must not take the fast path
+    (empty literal would probe ``<rtype>:`` which is never a valid
+    bank key). Falls through to the existing behaviour.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {"dummy:x": {"resource_id": "x"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:", ":", regex_match=False
+    )
+
+    assert fake.contains.call_count == 0
+    # No bare match for the empty pattern.
+    assert result["minions"] == []
+
+
+def test_augment_grain_literal_regex_predicate_does_not_take_fast_path(opts):
+    """
+    PCRE form (``salt -P resource_id:^d``) must bypass the literal-exact
+    probe -- regex match semantics are not identity-equal to the literal
+    bank-key test. Falls through to the existing regex-aware scan.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {
+        "dummy:d-1": {"resource_id": "d-1"},
+        "dummy:x-1": {"resource_id": "x-1"},
+    }
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    # "d-1" is a valid regex (treated as literal by re.search anyway) but
+    # the fast path MUST NOT trigger when ``regex_match=True``.
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:d-1", ":", regex_match=True
+    )
+
+    assert fake.contains.call_count == 0
+    assert result["minions"] == ["d-1"]
+
+
+def test_augment_grain_literal_no_configured_types_returns_empty(opts):
+    """
+    Edge case: ``opts["resource_types"]`` missing / empty → the fast path
+    makes zero probes and returns no match. No fall-through to the scan.
+    """
+    opts["minion_data_cache"] = True
+    opts.pop("resource_types", None)
+    present = {"dummy:dummy-01": {"resource_id": "dummy-01"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:dummy-01", ":", regex_match=False
+    )
+
+    assert result["minions"] == []
+    assert fake.contains.call_count == 0
+    # Probe path is authoritative -- the scan must NOT run as a backstop.
+    assert fake.list.call_count == 0
+
+
+def test_augment_grain_literal_contains_raises_is_swallowed(opts):
+    """
+    If the cache driver raises on ``contains`` for one type, we continue
+    to the next type rather than crashing the resolver. A subsequent hit
+    still returns the id.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy", "ssh"]
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+
+    def _contains(bank, key):
+        if key == "dummy:x":
+            raise RuntimeError("driver glitch")
+        return key == "ssh:x"
+
+    fake.contains = MagicMock(side_effect=_contains)
+    fake.list = MagicMock(return_value=[])
+    fake.fetch = MagicMock(return_value=None)
+    ck.cache = fake
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:x", ":", regex_match=False
+    )
+
+    assert result["minions"] == ["x"]
+    assert fake.contains.call_count == 2
+
+
+def test_augment_grain_literal_enabled_types_raises_is_swallowed(opts):
+    """
+    A failure in ``enabled_resource_types`` must not propagate -- the
+    fast path treats it as "zero configured types" and returns empty.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {"dummy:dummy-01": {"resource_id": "dummy-01"}}
+    ck, fake = _build_ck_with_contains(opts, present)
+
+    result = {"minions": [], "missing": []}
+    with patch(
+        "salt.utils.resources.enabled_resource_types",
+        side_effect=RuntimeError("opts corrupt"),
+    ):
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:dummy-01", ":", regex_match=False
+        )
+
+    assert result["minions"] == []
+    assert fake.contains.call_count == 0
+
+
+def test_is_literal_glob_helper_shapes():
+    """Sanity check for the exported shape helpers."""
+    from salt.utils.minions import _is_literal_glob, _is_resource_id_literal_predicate
+
+    assert _is_literal_glob("abc") is True
+    assert _is_literal_glob("a-dummy-0000100") is True
+    assert _is_literal_glob("a*") is False
+    assert _is_literal_glob("a?") is False
+    assert _is_literal_glob("a[0-9]") is False
+    assert _is_literal_glob("") is False
+    assert _is_literal_glob(None) is False
+
+    assert _is_resource_id_literal_predicate("resource_id:dummy-01", ":") is True
+    assert _is_resource_id_literal_predicate("resource_id:a-*", ":") is False
+    assert _is_resource_id_literal_predicate("resource_id:a:b", ":") is False
+    assert _is_resource_id_literal_predicate("resource_id:", ":") is False
+    assert _is_resource_id_literal_predicate("role:web", ":") is False
+    assert _is_resource_id_literal_predicate("", ":") is False
+    assert _is_resource_id_literal_predicate(None, ":") is False
+
+
+# ---------------------------------------------------------------------------
 # Nodegroup expansion with G@ for resources
 # ---------------------------------------------------------------------------
 

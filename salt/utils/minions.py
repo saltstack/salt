@@ -460,6 +460,41 @@ def update_resource_index_chunk(
         return (0, 0)
 
 
+def _is_literal_glob(pattern):
+    """
+    Return ``True`` iff ``pattern`` has no :mod:`fnmatch` wildcards.
+
+    A "literal" pattern contains none of ``*``, ``?``, or ``[`` -- so
+    ``fnmatch.fnmatchcase(x, pattern)`` reduces to ``x == pattern``.
+    Backslash escapes are NOT treated as special (``fnmatch`` does not
+    honour them either on any platform), matching the existing fast-path
+    wildcard check in :meth:`CkMinions._check_glob_minions`.
+    """
+    if not isinstance(pattern, str) or not pattern:
+        return False
+    return not any(c in pattern for c in ("*", "?", "["))
+
+
+def _is_resource_id_literal_predicate(expr, delimiter):
+    """
+    Return ``True`` iff ``expr`` is a flat ``resource_id:<literal-id>``
+    predicate suitable for the exact-key hash-probe fast path.
+
+    Mirrors the shape checks in :func:`_resource_id_candidates` (key is
+    exactly ``resource_id``, non-empty pattern, no nested delimiter) and
+    adds the literal-glob check so ``resource_id:a-*`` and friends fall
+    through to the existing bank-scan fast path.
+    """
+    if not isinstance(expr, str):
+        return False
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return False
+    if delimiter in pattern:
+        return False
+    return _is_literal_glob(pattern)
+
+
 def _resource_id_candidates(sr_keys, expr, delimiter, regex_match):
     """
     Narrow ``sr_keys`` to the subset whose id portion matches a
@@ -801,17 +836,48 @@ class CkMinions:
         if not self.opts.get("minion_data_cache", False):
             return
         bank = salt.utils.resource_registry.RESOURCE_GRAINS_BANK
+        existing = result.get("minions", [])
+        seen = set(existing)
+        # Normalise to list up-front so downstream consumers get a stable
+        # shape regardless of which branch returns (``_check_cache_minions``
+        # may hand us a ``set``).
+        if not isinstance(existing, list):
+            result["minions"] = list(existing)
+
+        # Literal-exact fast path for ``resource_id:<literal-id>`` targets
+        # (no wildcards, no delimiter nesting, non-regex). The master
+        # enforces ``bank-key == "<rtype>:<rid>"`` at register time, so an
+        # ``O(T)`` hash probe across the configured resource types is the
+        # authoritative answer -- no need to list the bank (which is the
+        # ~O(bank-size) step we are avoiding).
+        if not regex_match and _is_resource_id_literal_predicate(expr, delimiter):
+            _, _, literal = expr.partition(delimiter)
+            try:
+                rtypes = salt.utils.resources.enabled_resource_types(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                rtypes = []
+            for rtype in rtypes:
+                try:
+                    hit = self.cache.contains(bank, f"{rtype}:{literal}")
+                except Exception:  # pylint: disable=broad-except
+                    continue
+                if hit:
+                    if literal not in seen:
+                        result["minions"].append(literal)
+                        seen.add(literal)
+                    # The master enforces id-uniqueness per bank key
+                    # ``<rtype>:<rid>``, but the same bare id *may* exist
+                    # under multiple types; either way we only add it once
+                    # and can return.
+                    return
+            return
+
         try:
             srns = list(self.cache.list(bank) or [])
         except Exception:  # pylint: disable=broad-except
             return
         if not srns:
             return
-        existing = result.get("minions", [])
-        seen = set(existing)
-        # Normalise to list; preserve any existing order.
-        if not isinstance(existing, list):
-            result["minions"] = list(existing)
         # Fast path: ``resource_id:<pattern>`` predicates only need to look
         # at the id portion of each bank key (``<type>:<id>``). The master
         # enforces ``gdict["resource_id"] == <id>`` at register time (see
