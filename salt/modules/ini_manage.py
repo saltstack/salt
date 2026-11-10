@@ -226,7 +226,7 @@ def remove_option(file_name, section, option, separator="=", encoding=None):
         value = inifile.get(section, {}).pop(option, None)
     else:
         value = inifile.pop(option, None)
-    if value:
+    if value is not None:
         inifile.flush()
     return value
 
@@ -367,7 +367,7 @@ def get_ini(file_name, separator="=", encoding=None):
 
     Returns:
         dict: A dictionary containing the sections along with the values and
-            names contained in each section
+            names contained in each section.
 
     API Example:
 
@@ -385,24 +385,73 @@ def get_ini(file_name, separator="=", encoding=None):
 
     """
 
-    def ini_odict2dict(odict):
-        """
-        Transform OrderedDict to regular dict recursively
-        :param odict: OrderedDict
-        :return: regular dict
-        """
+    inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
 
-        ret = {}
-        for key, val in odict.items():
-            if key[0] != "#":
-                if isinstance(val, (dict, OrderedDict)):
-                    ret.update({key: ini_odict2dict(val)})
-                else:
-                    ret.update({key: val})
-        return ret
+    return _ini_odict2dict(inifile)
+
+
+def get_ini_with_warnings(file_name, separator="=", encoding=None):
+    """
+    .. versionadded:: TBD
+
+    Retrieve the whole structure from an ini file with the parser warnings and
+    return it as a dictionary.
+
+    Args:
+
+        file_name (str):
+            The full path to the ini file.
+
+        separator (str):
+            The character used to separate keys and values. Standard ini files
+            use the "=" character. The default is ``=``.
+
+        encoding (str):
+            A string value representing encoding of the target ini file. If
+            ``None`` is passed, it uses the system default which is likely
+            ``utf-8``. Default is ``None``
+
+    Returns:
+        dict: A dictionary containing two keys: ``contents`` with the sections
+            along  with the values and names contained in each section; and
+            ``warnings`` with the output messages from the INI parser.
+
+    API Example:
+
+    .. code-block:: python
+
+        import salt.client
+        with salt.client.get_local_client() as sc:
+            sc.cmd('target', 'ini.get_ini', [path_to_ini_file])
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' ini.get_ini /path/to/ini
+
+    """
 
     inifile = _Ini.get_ini_file(file_name, separator=separator, encoding=encoding)
-    return ini_odict2dict(inifile)
+
+    return {"contents": _ini_odict2dict(inifile), "warnings": inifile.warnings}
+
+
+def _ini_odict2dict(odict):
+    """
+    Transform OrderedDict to regular dict recursively
+    :param odict: OrderedDict
+    :return: regular dict
+    """
+
+    ret = {}
+    for key, val in odict.items():
+        if key[0] != "#":
+            if isinstance(val, (dict, OrderedDict)):
+                ret.update({key: _ini_odict2dict(val)})
+            else:
+                ret.update({key: val})
+    return ret
 
 
 class _Section(OrderedDict):
@@ -420,6 +469,7 @@ class _Section(OrderedDict):
         opt_regx_suffix = r"\s*(.*)\s*"
         self.opt_regx_str = rf"{opt_regx_prefix}(\{self.sep}){opt_regx_suffix}"
         self.opt_regx = re.compile(self.opt_regx_str)
+        self.warnings = []
 
     def refresh(self, inicontents=None):
         comment_count = 1
@@ -458,11 +508,9 @@ class _Section(OrderedDict):
                 curr_indent, name, self.sep, value = opt_match.groups()
                 curr_indent = curr_indent.replace("\t", "    ")
                 if name in self:
-                    log.warning(
-                        "Option '%s' was already set. Its value is overridden with: %s",
-                        name,
-                        value,
-                    )
+                    warn_msg = f"'{name}' in '{self.name}' is duplicated, actual value is '{value}'."
+                    log.warning(warn_msg)
+                    self.warnings.append(warn_msg)
                 self.update({name: value})
                 continue
             # Anything remaining is a mystery.
@@ -612,6 +660,7 @@ class _Ini(_Section):
             encoding = __salt_system_encoding__
         self.encoding = encoding
         self.no_spaces = no_spaces
+        self.warnings = []
 
     def refresh(self, inicontents=None):
         if inicontents is None:
@@ -646,6 +695,7 @@ class _Ini(_Section):
                 sect_obj = _Section(section_name, sect_ini, separator=self.sep)
                 sect_obj.refresh()
                 self.update({sect_obj.name: sect_obj})
+                self.warnings += sect_obj.warnings
             except StopIteration:
                 pass
 

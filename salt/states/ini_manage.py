@@ -106,9 +106,11 @@ def options_present(
             for sname, sbody in sections.items():
                 if not isinstance(sbody, (dict, OrderedDict)):
                     options.update({sname: sbody})
-            cur_ini = __salt__["ini.get_ini"](
+            get_ini = __salt__["ini.get_ini_with_warnings"](
                 file_name=name, separator=separator, encoding=encoding
             )
+            cur_ini = get_ini["contents"]
+            parse_warnings = get_ini["warnings"]
             original_top_level_opts = {}
             original_sections = {}
             for key, val in cur_ini.items():
@@ -260,6 +262,9 @@ def options_present(
         ret["comment"] = "Errors encountered. {}".format(changes["error"])
         ret["changes"] = {}
     else:
+        if parse_warnings:
+            ret["comment"] = "Non-standard INI file; check the warnings."
+            ret["warnings"] = parse_warnings
         for ciname, body in changes.items():
             if body:
                 ret["comment"] = "Changes take effect"
@@ -316,6 +321,12 @@ def options_absent(name, sections=None, separator="=", encoding=None):
         "result": True,
         "comment": "No anomaly detected",
     }
+    parse_warnings = __salt__["ini.get_ini_with_warnings"](
+        file_name=name, separator=separator, encoding=encoding
+    )["warnings"]
+    if parse_warnings:
+        ret["comment"] = "Non-standard INI file; check the warnings."
+        ret["warnings"] = parse_warnings
     if __opts__["test"]:
         ret["result"] = True
         ret["comment"] = ""
@@ -435,6 +446,12 @@ def sections_present(name, sections=None, separator="=", encoding=None):
         "result": True,
         "comment": "No anomaly detected",
     }
+    parse_warnings = __salt__["ini.get_ini_with_warnings"](
+        file_name=name, separator=separator, encoding=encoding
+    )["warnings"]
+    if parse_warnings:
+        ret["comment"] = "Non-standard INI file; check the warnings."
+        ret["warnings"] = parse_warnings
     if __opts__["test"]:
         ret["result"] = True
         ret["comment"] = ""
@@ -462,7 +479,7 @@ def sections_present(name, sections=None, separator="=", encoding=None):
     try:
         changes = __salt__["ini.set_option"](
             file_name=name,
-            section=section_to_update,
+            sections=section_to_update,
             separator=separator,
             encoding=encoding,
         )
@@ -525,6 +542,12 @@ def sections_absent(name, sections=None, separator="=", encoding=None):
         "result": True,
         "comment": "No anomaly detected",
     }
+    parse_warnings = __salt__["ini.get_ini_with_warnings"](
+        file_name=name, separator=separator, encoding=encoding
+    )["warnings"]
+    if parse_warnings:
+        ret["comment"] = "Non-standard INI file; check the warnings."
+        ret["warnings"] = parse_warnings
     if __opts__["test"]:
         ret["result"] = True
         ret["comment"] = ""

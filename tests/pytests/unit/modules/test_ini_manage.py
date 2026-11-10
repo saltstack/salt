@@ -203,6 +203,53 @@ def test_get_ini(encoding, linesep, ini_file, ini_content):
 @pytest.mark.parametrize(
     "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
 )
+def test_get_ini_with_warnings(encoding, linesep, ini_file, ini_content):
+    """
+    Test get_ini method.
+    """
+    extra_content = [
+        "",
+        "[SectionD]",
+        "# The following options are duplicated",
+        "double_option=one",
+        "double_option=two",
+    ]
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content + extra_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    expected_contents = {
+        "SectionD": {
+            "double_option": "two",
+        },
+        "SectionC": {
+            "empty_option": "",
+        },
+        "SectionB": {
+            "test1": "value 1B",
+            "test3": "value 3B",
+        },
+        "main": {
+            "test1": "value 1",
+            "test2": "value 2",
+        },
+        "option2": "main2",
+        "option1": "main1",
+    }
+    expected_warnings = [
+        "'double_option' in 'SectionD' is duplicated, actual value is 'two'."
+    ]
+
+    ini_with_warnings = ini.get_ini_with_warnings(str(ini_file), encoding=encoding)
+    assert ini_with_warnings["contents"] == expected_contents
+    assert ini_with_warnings["warnings"] == expected_warnings
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
 def test_set_option(encoding, linesep, ini_file, ini_content):
     """
     Test set_option method.
@@ -624,6 +671,10 @@ def test_no_write_if_option_not_removed(encoding, linesep, ini_file, ini_content
     with patch.object(ini._Ini, "flush") as mock_flush:
         ini.remove_option(str(ini_file), "SectionB", "test2", encoding=encoding)
         mock_flush.assert_not_called()
+
+        # Check if the flush *is* called when an empty option is removed
+        ini.remove_option(str(ini_file), "SectionC", "empty_option", encoding=encoding)
+        mock_flush.assert_called()
 
         # To cover all paths, check if the flush *is* called when an option is removed
         ini.remove_option(str(ini_file), "SectionB", "test1", encoding=encoding)
