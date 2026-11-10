@@ -3,9 +3,11 @@ Unit tests for ``salt-call -r/--resources`` resource dispatch
 (``salt.cli.caller.BaseCaller._call_with_resources``).
 
 The dispatch path runs entirely in-process against an ``SMinion`` whose
-``resources`` config is populated from Pillar.  These tests use the dummy
-resource type (``salt.resources.dummy``) so they exercise the real loader
-and matcher code without needing an actual master/minion daemon.
+resource inventory is declared via the ``resource_types`` minion opt and
+each type's own per-module opts (here, ``dummy_resource_count``).  These
+tests use the dummy resource type (``salt.resources.dummy``) so they
+exercise the real loader and matcher code without needing an actual
+master/minion daemon.
 
 Coverage:
 
@@ -57,9 +59,13 @@ def call_opts(tmp_path):
     opts["file_client"] = "local"
     opts["file_roots"] = {"base": [str(tmp_path / "srv" / "salt")]}
     opts["pillar_roots"] = {"base": [str(tmp_path / "srv" / "pillar")]}
-    opts["pillar"] = {
-        "resources": {"dummy": {"resource_ids": ["dummy-01", "dummy-02", "dummy-03"]}}
-    }
+    # Opts-driven resource inventory: ``resource_types`` enables the dummy
+    # loader, and ``dummy_resource_count`` controls how many synthetic IDs
+    # ``salt.resources.dummy.discover(opts)`` yields.  The IDs follow the
+    # module's fixed ``dummy-NNNNNNN`` (7-digit zero-padded) pattern.
+    opts["resource_types"] = ["dummy"]
+    opts["dummy_resource_count"] = 3
+    opts.setdefault("pillar", {})
     opts.setdefault("grains", {})
     # Caller defaults — all targeting flags off / at their parser defaults.
     opts["fun"] = "test.ping"
@@ -106,36 +112,36 @@ def test_r_off_uses_legacy_call_path(call_opts, monkeypatch):
 
 
 def test_r_default_star_includes_minion_and_all_resources(call_opts):
-    """salt-call -r test.ping → {minion: True, dummy-01: True, ...}."""
+    """salt-call -r test.ping → {minion: True, dummy-0000001: True, ...}."""
     call_opts["resources_dispatch"] = True
     caller = _build_caller(call_opts)
     ret = caller._call_with_resources()
     payload = ret["return"]
     assert isinstance(payload, dict), payload
     assert payload[call_opts["id"]] is True
-    for rid in ("dummy-01", "dummy-02", "dummy-03"):
+    for rid in ("dummy-0000001", "dummy-0000002", "dummy-0000003"):
         assert payload[rid] is True, (rid, payload)
     assert ret["retcode"] == salt.defaults.exitcodes.EX_OK
 
 
 def test_r_bare_id_glob_returns_single_value(call_opts):
-    """salt-call -r --tgt dummy-02 test.ping → True (single, unwrapped)."""
+    """salt-call -r --tgt dummy-0000002 test.ping → True (single, unwrapped)."""
     call_opts["resources_dispatch"] = True
-    call_opts["resources_tgt"] = "dummy-02"
+    call_opts["resources_tgt"] = "dummy-0000002"
     caller = _build_caller(call_opts)
     ret = caller._call_with_resources()
     assert ret["return"] is True
 
 
 def test_r_list_targets_returns_dict_of_those_only(call_opts):
-    """-r --tgt 'dummy-01,dummy-03' --tgt-type list → only those resources."""
+    """-r --tgt 'dummy-0000001,dummy-0000003' --tgt-type list → only those."""
     call_opts["resources_dispatch"] = True
-    call_opts["resources_tgt"] = "dummy-01,dummy-03"
+    call_opts["resources_tgt"] = "dummy-0000001,dummy-0000003"
     call_opts["resources_tgt_type"] = "list"
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict)
-    assert set(payload.keys()) == {"dummy-01", "dummy-03"}
+    assert set(payload.keys()) == {"dummy-0000001", "dummy-0000003"}
     assert all(v is True for v in payload.values())
 
 
@@ -148,24 +154,24 @@ def test_r_pure_compound_excludes_managing_minion(call_opts):
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict)
     assert call_opts["id"] not in payload
-    assert set(payload.keys()) == {"dummy-01", "dummy-02", "dummy-03"}
+    assert set(payload.keys()) == {"dummy-0000001", "dummy-0000002", "dummy-0000003"}
 
 
 def test_r_grains_items_not_supported_without_override(call_opts):
     """
-    ``salt-call -r --tgt dummy-01 grains.items`` — the ``dummy`` resource
-    type ships no ``grains.py`` override, so ``grains.items`` is not
-    reachable via the per-resource loader (deny-by-default surface,
-    #69881 fix).  The caller returns the "not supported for resource
-    type" rejection instead of falling through to the managing minion's
-    stock ``grains.items``.
+    ``salt-call -r --tgt dummy-0000001 grains.items`` — the ``dummy``
+    resource type ships no ``grains.py`` override, so ``grains.items``
+    is not reachable via the per-resource loader (deny-by-default
+    surface, #69881 fix).  The caller returns the "not supported for
+    resource type" rejection instead of falling through to the managing
+    minion's stock ``grains.items``.
 
     A type that legitimately wants to expose grains still can — by
     shipping ``resources/<rtype>/modules/grains.py`` that returns the
     resource's grains (or thin-wraps ``__minion__["grains.items"]``).
     """
     call_opts["resources_dispatch"] = True
-    call_opts["resources_tgt"] = "dummy-01"
+    call_opts["resources_tgt"] = "dummy-0000001"
     call_opts["fun"] = "grains.items"
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
@@ -187,7 +193,7 @@ def test_r_grains_items_not_supported_per_target(call_opts):
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict), payload
-    for rid in ("dummy-01", "dummy-02", "dummy-03"):
+    for rid in ("dummy-0000001", "dummy-0000002", "dummy-0000003"):
         assert rid in payload, payload
         assert isinstance(payload[rid], str), (rid, payload[rid])
         assert "not supported for resource type 'dummy'" in payload[rid], (
@@ -220,7 +226,7 @@ def test_r_state_apply_not_supported_without_override(call_opts):
     caller = _build_caller(call_opts)
     payload = caller._call_with_resources()["return"]
     assert isinstance(payload, dict), payload
-    for rid in ("dummy-01", "dummy-02", "dummy-03"):
+    for rid in ("dummy-0000001", "dummy-0000002", "dummy-0000003"):
         key = f"no_|-{rid}_|-{rid}_|-None"
         assert key in payload, (rid, list(payload))
         entry = payload[key]
