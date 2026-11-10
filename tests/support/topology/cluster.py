@@ -45,6 +45,29 @@ import salt.utils.platform
 log = logging.getLogger(__name__)
 
 
+def _make_short_root_dir():
+    """
+    Return a path for a master's ``root_dir`` that is both short enough
+    to keep AF_UNIX socket paths under the 108-byte Linux limit AND on
+    a filesystem with enough free space to host dozens of masters per
+    test session.
+
+    - On GitHub-Actions runners (the ``GITHUB_WORKSPACE`` env var is
+      set), ``/__w/salt/salt`` (an overlay fs with ~99 GB free on arm
+      and x86 nightly runners) is preferred over ``/tmp`` (a 7.9 GB
+      tmpfs that saturates after ~40 masters even with bulk cleanup).
+    - Locally, ``tempfile.gettempdir()`` is fine --- dev disks are
+      big, cleanup is per-test, and the path is short enough to keep
+      AF_UNIX paths safe.
+
+    The caller is responsible for ``shutil.rmtree``-ing the directory
+    once the master has terminated.
+    """
+    gh_workspace = os.environ.get("GITHUB_WORKSPACE")
+    base = gh_workspace if gh_workspace and os.path.isdir(gh_workspace) else None
+    return tempfile.mkdtemp(prefix="r", dir=base)
+
+
 # Harness-generated identity-key placeholder.  Each cluster gets its
 # own ``master_identity.pub`` byte string so ``accept_peer`` copies
 # are distinguishable.  Keep this far away from a real crypto path:
@@ -594,11 +617,11 @@ def make_single_master(
     pki_root = pathlib.Path(tmp_path) / f"{cluster_id}-pki"
     pki_root.mkdir(parents=True, exist_ok=True)
     # Route the master's writable state (logs, cache, run, token_dir,
-    # keys) under a SHORT ``root_dir`` in ``/tmp`` instead of the
-    # salt-factories default (``/tmp/stsuite/<master-id>_<N>/``), which
-    # is session-scoped and accumulates across every test that spins
-    # up a ``topology-<cluster_id>`` master.  The accumulation
-    # exhausts the runner disk on the functional CI shards.
+    # keys) under a SHORT ``root_dir`` outside the salt-factories
+    # default (``/tmp/stsuite/<master-id>_<N>/``), which is
+    # session-scoped and accumulates across every test that spins up
+    # a ``topology-<cluster_id>`` master.  The accumulation exhausts
+    # the runner disk on the functional CI shards.
     #
     # The root_dir is deliberately NOT under pytest's ``tmp_path``
     # because that prefix alone
@@ -611,9 +634,10 @@ def make_single_master(
     # root_dir overflows it and raises ``OSError: AF_UNIX path too
     # long`` at ``tornado.netutil.bind_unix_socket`` fork time.
     #
-    # Caller registers explicit cleanup for the root_dir on the exit
-    # stack (teardown happens even if the factory fails to start).
-    root_dir = pathlib.Path(tempfile.mkdtemp(prefix="r", dir="/tmp"))
+    # Caller is responsible for ``shutil.rmtree``-ing ``root_dir``
+    # after the factory has been terminated.  This function returns
+    # it as the last element of its tuple for that reason.
+    root_dir = pathlib.Path(_make_short_root_dir())
 
     base_overrides = {
         "open_mode": True,
@@ -646,8 +670,10 @@ def make_single_master(
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
     identity_pub = _make_harness_identity(cluster_id)
-    # The caller is responsible for driving ``factory.started()``.
-    return factory, pki_root, identity_pub
+    # The caller is responsible for driving ``factory.started()``
+    # and for ``shutil.rmtree``-ing ``root_dir`` once the factory
+    # has been terminated.
+    return factory, pki_root, identity_pub, root_dir
 
 
 def make_cluster(
@@ -665,16 +691,19 @@ def make_cluster(
     :meth:`TopologyCluster.config_peer` calls append to each
     peer's ``topology_peers`` list.
 
-    :returns: ``(factories, pki_root, identity_pub)`` --- caller
-        drives ``factory.started()`` for each.
+    :returns: ``(factories, pki_root, identity_pub, root_dirs)``.
+        Caller drives ``factory.started()`` for each factory AND
+        ``shutil.rmtree``'s every path in ``root_dirs`` after
+        termination so the per-master state tree (logs, cache,
+        sockets) does not accumulate across the session.
     """
     if peer_count < 1:
         raise ValueError("peer_count must be >= 1")
     if peer_count == 1:
-        factory, pki_root, identity_pub = make_single_master(
+        factory, pki_root, identity_pub, root_dir = make_single_master(
             salt_factories, tmp_path, cluster_id, opts_overrides, transport
         )
-        return [factory], pki_root, identity_pub
+        return [factory], pki_root, identity_pub, [root_dir]
 
     # Multi-peer: use the loopback-alias pattern from the existing
     # cluster conftest.
@@ -700,16 +729,20 @@ def make_cluster(
     addrs = [f"127.0.0.{i + 1}" for i in range(peer_count)]
 
     factories = []
+    root_dirs = []
     identity_pub = _make_harness_identity(cluster_id)
     for addr in addrs:
         _ensure_lo_alias(addr)
         own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
         own_pki.mkdir(parents=True, exist_ok=True)
-        # Short per-peer root in /tmp so sock_dir (derived from
-        # root_dir via ``salt.config.prepend_root_dir``) stays within
-        # the 108-byte AF_UNIX limit on Linux.  See the identical
-        # rationale in ``make_single_master``.
-        own_root = pathlib.Path(tempfile.mkdtemp(prefix="r", dir="/tmp"))
+        # Short per-peer root (via ``_make_short_root_dir``) so
+        # sock_dir (derived from root_dir via
+        # ``salt.config.prepend_root_dir``) stays within the 108-byte
+        # AF_UNIX limit on Linux AND on a filesystem with enough free
+        # space to host dozens of masters per session.  See the
+        # identical rationale in ``make_single_master``.  Caller
+        # cleans up all returned root_dirs.
+        own_root = pathlib.Path(_make_short_root_dir())
 
         # Master IPC event bus ports (tcp_master_pub_port /
         # tcp_master_pull_port / tcp_master_publish_pull /
@@ -765,5 +798,6 @@ def make_cluster(
             extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         )
         factories.append(factory)
+        root_dirs.append(own_root)
 
-    return factories, cluster_pki, identity_pub
+    return factories, cluster_pki, identity_pub, root_dirs

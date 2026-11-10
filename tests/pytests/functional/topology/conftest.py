@@ -45,6 +45,7 @@ Design decisions worth calling out
 
 import contextlib
 import logging
+import shutil
 
 import pytest
 
@@ -86,13 +87,20 @@ def single_master(request, salt_factories, topology_tmp_path, _topology_exit_sta
     def _factory(opts_overrides=None, cluster_id=None):
         counter["n"] += 1
         resolved_id = cluster_id or f"solo{counter['n']}"
-        factory, pki_root, identity_pub = make_single_master(
+        factory, pki_root, identity_pub, root_dir = make_single_master(
             salt_factories,
             topology_tmp_path,
             resolved_id,
             opts_overrides=opts_overrides,
             transport=transport,
         )
+        # Register the root_dir cleanup BEFORE entering the factory
+        # context so teardown order is (LIFO): factory terminates
+        # first, then shutil.rmtree runs on the now-idle tree.  This
+        # keeps the per-master state (logs / cache / sockets) from
+        # accumulating across the session --- critical on CI, where
+        # ``/tmp`` is a 7.9 GB tmpfs that saturates after ~40 masters.
+        _topology_exit_stack.callback(shutil.rmtree, str(root_dir), ignore_errors=True)
         _topology_exit_stack.enter_context(factory.started(start_timeout=120))
         return TopologyCluster(
             cluster_id=resolved_id,
@@ -117,7 +125,7 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
     transport = request.config.getoption("--transport", default="zeromq")
 
     def _factory(cluster_id, peer_count=1, opts_overrides=None):
-        factories, pki_root, identity_pub = make_cluster(
+        factories, pki_root, identity_pub, root_dirs = make_cluster(
             salt_factories,
             topology_tmp_path,
             cluster_id,
@@ -125,6 +133,14 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
             opts_overrides=opts_overrides,
             transport=transport,
         )
+        # Register per-peer root_dir cleanup BEFORE entering any
+        # factory context so teardown order (LIFO) terminates every
+        # factory first, then rmtree runs on each idle tree.  See
+        # the matching rationale in ``single_master``.
+        for root_dir in root_dirs:
+            _topology_exit_stack.callback(
+                shutil.rmtree, str(root_dir), ignore_errors=True
+            )
         started = []
         if len(factories) == 1:
             # Solo masters have no quorum dependency; keep the
