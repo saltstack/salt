@@ -1,9 +1,10 @@
 """
 Integration test fixtures for Salt Resources.
 
-Spins up a master and a minion whose dummy resources (dummy-01 … dummy-03) are
-declared only in Pillar under ``resources:`` — not in the minion config file.
-All tests in this package run against these two daemons.
+Spins up a master and a minion whose dummy resources are declared via the
+opts-driven inventory API (``resource_types`` + ``dummy_resource_count``)
+rather than pillar.  All tests in this package run against these two
+daemons.
 """
 
 import textwrap
@@ -17,24 +18,32 @@ MINION_ID = "resources-minion"
 MINION_ID_2 = "resources-minion-2"
 MINION_ID_DYN = "resources-minion-dyn"
 
-# Dummy resource IDs that the minion manages in every test in this package.
-DUMMY_RESOURCES = ["dummy-01", "dummy-02", "dummy-03"]
-# Disjoint resource set for the optional second minion. Tests that don't
-# request ``salt_minion_2`` never see these.
-DUMMY_RESOURCES_2 = ["dummy-04", "dummy-05"]
+# Resource type name for the synthetic ``dynamic_test`` type defined
+# further below.  Declared up here so :func:`salt_master` can list it
+# in ``resource_types`` -- the master's literal ``resource_id:<id>``
+# grain fast-path only probes resource types enabled in its own opts.
+DYNAMIC_TEST_RTYPE = "dynamic_test"
+
+# Dummy resource IDs that the minion manages in every test in this
+# package.  IDs follow the dummy module's fixed ``dummy-NNNNNNN``
+# (7-digit zero-padded) pattern produced by ``discover()``.
+DUMMY_RESOURCES = ["dummy-0000001", "dummy-0000002", "dummy-0000003"]
+# Disjoint resource set for the optional second minion.  The second
+# minion uses ``dummy_resource_id_prefix: "m2-"`` so its IDs don't
+# collide with the primary minion's.  Tests that don't request
+# ``salt_minion_2`` never see these.
+DUMMY_RESOURCES_2 = ["m2-dummy-0000001", "m2-dummy-0000002"]
 
 
 @pytest.fixture(scope="package")
 def _shared_pillar_top(salt_master):
     """
-    Single shared ``top.sls`` listing every minion id the test package
-    may use. Each minion's pillar SLS file is provided by its own
-    fixture (``pillar_tree_dummy_resources``, ``..._dynamic_resources``,
-    etc.); if a minion's SLS doesn't exist (because its fixture wasn't
-    requested in this session) the top.sls entry is inert — the minion
-    is never started so its pillar is never compiled.
+    Single shared ``top.sls`` listing every minion id whose pillar SLS
+    is managed by a package-level fixture.  Dummy minions no longer
+    need pillar entries (their inventory is opts-driven) so only the
+    dynamic_test minion appears here.
 
-    Centralizing top.sls prevents multiple fixtures from clobbering
+    Centralising top.sls prevents multiple fixtures from clobbering
     each other via ``temp_file``: when one module-scoped fixture's
     temp_file exits it removes the top.sls; without this central
     fixture there is no replay to restore the package-level entries.
@@ -42,51 +51,11 @@ def _shared_pillar_top(salt_master):
     top_file = textwrap.dedent(
         f"""
         base:
-          '{MINION_ID}':
-            - dummy_resources
-          '{MINION_ID_2}':
-            - dummy_resources_2
           '{MINION_ID_DYN}':
             - dynamic_resources
         """
     )
     with salt_master.pillar_tree.base.temp_file("top.sls", top_file):
-        yield
-
-
-@pytest.fixture(scope="package")
-def pillar_tree_dummy_resources(salt_master, _shared_pillar_top):
-    """
-    Pillar SLS declaring ``resources.dummy.resource_ids`` for the
-    primary and optional second dummy minions. Top.sls comes from
-    :func:`_shared_pillar_top`.
-    """
-    pillar_sls = textwrap.dedent(
-        """
-        resources:
-          dummy:
-            resource_ids:
-              - dummy-01
-              - dummy-02
-              - dummy-03
-        """
-    )
-    pillar_sls_2 = textwrap.dedent(
-        """
-        resources:
-          dummy:
-            resource_ids:
-              - dummy-04
-              - dummy-05
-        """
-    )
-    sls_tempfile = salt_master.pillar_tree.base.temp_file(
-        "dummy_resources.sls", pillar_sls
-    )
-    sls_tempfile_2 = salt_master.pillar_tree.base.temp_file(
-        "dummy_resources_2.sls", pillar_sls_2
-    )
-    with sls_tempfile, sls_tempfile_2:
         yield
 
 
@@ -99,6 +68,15 @@ def salt_master(request, salt_factories):
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
+        # The master's literal ``resource_id:<id>`` fast-path in
+        # :func:`salt.utils.minions._augment_grain_match_with_resource_grains`
+        # probes the ``resource_grains`` bank key per enabled rtype
+        # (``f"{rtype}:{rid}"``).  The enabled set comes from the
+        # master's own ``resource_types`` opt — so for grain targeting
+        # of resource types managed by *minions* to work, the master
+        # must know which rtypes to probe.  Mirror the dummy +
+        # dynamic_test enablement here.
+        "resource_types": ["dummy", DYNAMIC_TEST_RTYPE],
     }
     factory = salt_factories.salt_master_daemon(
         "resources-master",
@@ -110,7 +88,14 @@ def salt_master(request, salt_factories):
 
 
 @pytest.fixture(scope="package")
-def salt_minion(salt_master, pillar_tree_dummy_resources):
+def salt_minion(salt_master):
+    """
+    Primary dummy-resource minion.
+
+    Resource inventory is declared via minion opts (``resource_types``
+    + ``dummy_resource_count``) rather than pillar; the dummy module's
+    ``discover()`` streams ``DUMMY_RESOURCES`` from the configured count.
+    """
     config_overrides = {
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
@@ -118,6 +103,11 @@ def salt_minion(salt_master, pillar_tree_dummy_resources):
         # Use threads (not processes) — this is the path our Race 1/Race 2 fixes
         # target and the most common deployment mode for resource-managing minions.
         "multiprocessing": False,
+        # Opts-driven resource inventory: ``resource_types`` enables the
+        # dummy loader, ``dummy_resource_count`` controls how many
+        # synthetic IDs ``salt.resources.dummy.discover(opts)`` yields.
+        "resource_types": ["dummy"],
+        "dummy_resource_count": len(DUMMY_RESOURCES),
     }
     factory = salt_master.salt_minion_daemon(
         MINION_ID,
@@ -129,9 +119,6 @@ def salt_minion(salt_master, pillar_tree_dummy_resources):
     )
     with factory.started(start_timeout=120):
         salt_call_cli = factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
-        assert ret.returncode == 0, ret
-        assert ret.data is True, ret
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
         assert ret.returncode == 0, ret
         # The minion fires _register_resources_with_master() as a background
@@ -159,24 +146,22 @@ def salt_call_cli(salt_minion):
 # ---------------------------------------------------------------------------
 #
 # A test-only resource type whose ``discover()`` reads its ids from a
-# top-level pillar key (``_dynamic_test_ids``) — NOT from the standard
-# ``resources:`` subtree. That gives us a way to exercise the
-# "discover is the sole source of ids; pillar's resources subtree only
-# enables the type" code path end-to-end. No shipping resource type does
-# this today; dummy and ssh both re-read pillar's resources subtree.
+# top-level pillar key (``_dynamic_test_ids``). That gives us a way to
+# exercise the "discover is the sole source of ids" code path end-to-end
+# while still allowing the test harness to mutate the ID set at runtime
+# via ``saltutil.refresh_pillar`` without a minion restart.
 #
 # The type's source is injected into the master's file_roots via
 # ``temp_file`` and synced down to the minion via
 # ``saltutil.sync_resources``. Nothing lands in the source tree.
 
-DYNAMIC_TEST_RTYPE = "dynamic_test"
-
 DYNAMIC_TEST_SOURCE = '''\
 """
 Test-only resource type whose ``discover()`` reads ids from a top-level
-pillar key (``_dynamic_test_ids``) rather than the standard ``resources:``
-subtree. Used by ``test_dynamic_discovery.py`` to exercise the
-"discover is authoritative for ids" code path end-to-end.
+pillar key (``_dynamic_test_ids``).  Used by ``test_dynamic_discovery.py``
+to exercise the "discover() is authoritative for ids" code path
+end-to-end while still allowing the test harness to rotate the ID set
+at runtime via ``saltutil.refresh_pillar``.
 """
 
 import logging
@@ -197,11 +182,7 @@ def initialized():
 
 
 def discover(opts):
-    """Return ids from the top-level ``_dynamic_test_ids`` pillar key.
-
-    NOT from ``opts["pillar"]["resources"]["dynamic_test"]`` — this is
-    the whole point of the type.
-    """
+    """Return ids from the top-level ``_dynamic_test_ids`` pillar key."""
     ids = opts.get("pillar", {}).get("_dynamic_test_ids", []) or []
     log.debug("dynamic_test discover() returning: %s", ids)
     return list(ids)
@@ -261,7 +242,7 @@ def _clear_minion_resource_registration(
     doesn't leave stale ``resource_grains`` bank entries that confuse
     later tests' targeting. Writes a temp ``sls_name`` with an empty
     pillar body, runs ``saltutil.refresh_pillar`` on the minion so
-    ``_discover_resources`` returns nothing, and waits briefly for
+    ``discover()`` returns nothing, and waits briefly for
     ``_register_resources_with_master`` to land. Best-effort: failures
     are swallowed because the alternative is leaving a noisy traceback
     in the teardown of an otherwise green test.
@@ -277,10 +258,8 @@ def _clear_minion_resource_registration(
 @pytest.fixture(scope="module")
 def pillar_tree_dynamic_resources(salt_master, _shared_pillar_top):
     """
-    Pillar SLS for the dynamic_test minion: enables the
-    ``dynamic_test`` resource type in the standard ``resources:`` tree
-    (no ids declared there) and seeds ``_dynamic_test_ids`` at the top
-    level — that's what ``dynamic_test.discover()`` reads.
+    Pillar SLS for the dynamic_test minion: seeds ``_dynamic_test_ids``
+    at the top level — that's what ``dynamic_test.discover()`` reads.
 
     Top.sls comes from :func:`_shared_pillar_top`. Initial id list is
     empty; tests use ``write_dynamic_ids_pillar`` to rewrite the SLS
@@ -288,8 +267,6 @@ def pillar_tree_dynamic_resources(salt_master, _shared_pillar_top):
     """
     pillar_sls = textwrap.dedent(
         """
-        resources:
-          dynamic_test: {}
         _dynamic_test_ids: []
         """
     )
@@ -304,8 +281,6 @@ def write_dynamic_ids_pillar(salt_master, ids):
     contents."""
     body = textwrap.dedent(
         f"""
-        resources:
-          dynamic_test: {{}}
         _dynamic_test_ids: {list(ids)!r}
         """
     )
@@ -318,13 +293,16 @@ def salt_minion_dynamic(salt_master, pillar_tree_dynamic_resources, dynamic_test
 
     Module-scoped — startup is expensive (~10s). Tests rotate the
     dynamic ids in pillar between runs and call
-    ``sync_resources_and_refresh`` to propagate.
+    ``sync_resources_and_refresh`` to propagate.  ``resource_types``
+    lists ``dynamic_test`` so the opts-driven loader picks up the
+    synthetic type synced via ``saltutil.sync_resources``.
     """
     config_overrides = {
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         "multiprocessing": False,
+        "resource_types": [DYNAMIC_TEST_RTYPE],
     }
     factory = salt_master.salt_minion_daemon(
         MINION_ID_DYN,
@@ -339,39 +317,46 @@ def salt_minion_dynamic(salt_master, pillar_tree_dynamic_resources, dynamic_test
         # Pull the dynamic_test type down into the minion's extmods.
         ret = salt_call_cli.run("saltutil.sync_resources", _timeout=120)
         assert ret.returncode == 0, ret
-        # Pillar refresh after sync so _discover_resources sees the new type.
+        # Pillar refresh after sync so discover() sees the new ids.
         ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
         assert ret.returncode == 0, ret
         time.sleep(3)
         try:
             yield factory
         finally:
-            # Same as the custom-key minion: clear master state of this
-            # minion's dynamic_test resources before shutdown so later
-            # tests don't see stale entries in the resource_grains bank.
+            # Clear master state of this minion's dynamic_test resources
+            # before shutdown so later tests don't see stale entries in
+            # the resource_grains bank.
             _clear_minion_resource_registration(
                 salt_master,
                 salt_call_cli,
                 "dynamic_resources.sls",
-                "resources: {}\n_dynamic_test_ids: []\n",
+                "_dynamic_test_ids: []\n",
             )
 
 
 @pytest.fixture(scope="module")
-def salt_minion_2(salt_master, pillar_tree_dummy_resources):
+def salt_minion_2(salt_master):
     """
     Optional second minion managing :data:`DUMMY_RESOURCES_2`.
 
     Module-scoped so single-minion tests don't pay the bring-up cost.
-    Tests requesting this fixture get a minion whose pillar maps
-    ``dummy-04`` / ``dummy-05`` — disjoint from the package's primary
-    minion — so multi-minion master state can be exercised end-to-end.
+    Tests requesting this fixture get a minion whose opts set
+    ``dummy_resource_id_prefix: "m2-"`` so its dummy IDs are disjoint
+    from the primary minion's.  This lets multi-minion master state be
+    exercised end-to-end.
     """
     config_overrides = {
         "fips_mode": FIPS_TESTRUN,
         "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
         "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
         "multiprocessing": False,
+        # Opts-driven inventory: same count/prefix scheme as the primary
+        # minion, with a ``m2-`` prefix so the IDs don't collide with
+        # the primary minion's ``dummy-NNNNNNN`` set.
+        "resource_types": ["dummy"],
+        "dummy_resource_count": len(DUMMY_RESOURCES_2),
+        "dummy_resource_id_prefix": "m2-",
     }
     factory = salt_master.salt_minion_daemon(
         MINION_ID_2,
@@ -383,8 +368,6 @@ def salt_minion_2(salt_master, pillar_tree_dummy_resources):
     )
     with factory.started(start_timeout=240):
         salt_call_cli = factory.salt_call_cli()
-        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True, _timeout=120)
-        assert ret.returncode == 0, ret
         ret = salt_call_cli.run("saltutil.sync_all", _timeout=120)
         assert ret.returncode == 0, ret
         # Same wait as ``salt_minion``: lets the background
