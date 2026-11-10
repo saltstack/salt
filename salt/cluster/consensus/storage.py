@@ -123,7 +123,14 @@ class SaltStorage(BaseStorage):
     # BaseStorage implementation
     # ------------------------------------------------------------------
 
-    def save_state(self, term, voted_for, leader_id=None):
+    def save_state(
+        self,
+        term,
+        voted_for,
+        leader_id=None,
+        commit_index=None,
+        last_applied=None,
+    ):
         """
         Persist currentTerm and votedFor (Raft §5.2), plus the optional
         ``leader_id`` of the most recently observed leader for this term.
@@ -133,11 +140,61 @@ class SaltStorage(BaseStorage):
         can answer "who is the leader" without IPC into the publish
         daemon.  Stored alongside ``term`` so it can be interpreted
         relative to the most recent term.
+
+        ``commit_index`` is the highest log entry known to be committed
+        (Raft §5.3); ``last_applied`` is the highest index that has
+        been fed to a state machine (Raft §5.3).  Both must survive
+        restart so ``apply_entries`` can replay just the gap between
+        them into every registered state machine without having to
+        re-apply already-applied COMMAND entries (which may not be
+        idempotent — some application SMs track per-client sequence
+        numbers in their session table).  Raft §5.4's restriction on
+        committing prior-term entries is a CLIENT-VISIBILITY rule
+        (for not-yet-committed entries); replaying locally-durable
+        committed entries at startup is a separate safe operation.
+
+        A caller that passes ``commit_index=None`` / ``last_applied=None``
+        preserves the existing on-disk value so bumping only ``term`` /
+        ``voted_for`` / ``leader_id`` does not regress either index.
         """
         with self._lock:
+            existing = self._cache.fetch(self._meta_bank, _KEY_STATE) or {}
             payload = {"term": term, "voted_for": voted_for}
             if leader_id is not None:
                 payload["leader_id"] = leader_id
+            if commit_index is not None:
+                payload["commit_index"] = commit_index
+            elif "commit_index" in existing:
+                payload["commit_index"] = existing["commit_index"]
+            if last_applied is not None:
+                payload["last_applied"] = last_applied
+            elif "last_applied" in existing:
+                payload["last_applied"] = existing["last_applied"]
+            self._cache.store(self._meta_bank, _KEY_STATE, payload)
+            self._fsync_bank_key(self._meta_bank, _KEY_STATE)
+
+    def save_commit_index(self, commit_index, last_applied=None):
+        """
+        Persist ``commit_index`` (and optionally ``last_applied``)
+        while preserving every other field in the state record.
+
+        Called from the commit hot path (``Log.commit``) and from
+        ``apply_entries`` so a restart can replay committed-but-not-
+        yet-applied entries without a peer round trip.  Reads the
+        current state record, merges the new indices in, and writes
+        the whole record back — a single fsynced state file stays the
+        authoritative on-disk record.
+        """
+        with self._lock:
+            existing = self._cache.fetch(self._meta_bank, _KEY_STATE) or {}
+            payload = dict(existing)
+            payload["commit_index"] = commit_index
+            if last_applied is not None:
+                payload["last_applied"] = last_applied
+            # Fill mandatory defaults when the state record was never
+            # written (first commit on a brand-new node).
+            payload.setdefault("term", 0)
+            payload.setdefault("voted_for", None)
             self._cache.store(self._meta_bank, _KEY_STATE, payload)
             self._fsync_bank_key(self._meta_bank, _KEY_STATE)
 
@@ -146,9 +203,19 @@ class SaltStorage(BaseStorage):
         with self._lock:
             data = self._cache.fetch(self._meta_bank, _KEY_STATE)
         if not data:
-            return {"term": 0, "voted_for": None, "leader_id": None}
-        # Older state records may not have leader_id; default to None.
+            return {
+                "term": 0,
+                "voted_for": None,
+                "leader_id": None,
+                "commit_index": -1,
+                "last_applied": -1,
+            }
+        # Older state records may not have leader_id / commit_index /
+        # last_applied; supply defaults so callers don't have to guard
+        # every lookup.
         data.setdefault("leader_id", None)
+        data.setdefault("commit_index", -1)
+        data.setdefault("last_applied", -1)
         return data
 
     def save_log(self, entries):

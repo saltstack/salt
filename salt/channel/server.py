@@ -3754,7 +3754,19 @@ class MasterPubServerChannel:
                         payload["peer_id"],
                     )
 
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list.
+                # ``self.cluster_peers`` is a reference to
+                # ``opts["cluster_peers"]`` (see ``__init__``), and a naive
+                # append on a join from a statically-configured peer would
+                # grow the list with a duplicate entry.  Any downstream code
+                # that iterates ``opts["cluster_peers"]`` positionally (the
+                # pre-BUG-030 shape of ``build_peer_pushers``) would then
+                # mis-key the Raft dispatcher's pusher table and silently
+                # drop inbound ``cluster/raft/*`` replies for the tail
+                # peer.  ``_add_pusher`` already dedups the pusher list by
+                # ``(pull_host, pull_port)``; mirror that here.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 self._add_pusher(self.pusher(payload["peer_id"]))
 
                 # Add the joining peer to our own Raft state as a learner.
@@ -3948,7 +3960,11 @@ class MasterPubServerChannel:
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     tosign, algorithm=self.opts["publish_signing_algorithm"]
                 )
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list — see
+                # the matching guard in the join handler above for the
+                # BUG-030 rationale.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
