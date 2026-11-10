@@ -176,3 +176,55 @@ def test_mod_data_caches_tarball_on_identical_hash(tmp_path):
     assert first["file"] == second["file"]
     assert first["version"] == second["version"]
     assert os.path.getmtime(second["file"]) == mtime_after_first
+
+
+# -- all sync_refs are packed into the archive --------------------------------
+
+
+def test_mod_data_includes_all_sync_ref_types(tmp_path):
+    """Files from every sync_ref type end up in the extmods archive."""
+    fsclient = MagicMock()
+    fsclient.opts = {"cachedir": str(tmp_path), "file_roots": {}}
+
+    # Map from sync_ref name to the archive directory it should produce.
+    # The archive path equals the ref name (e.g. "pillar/mypillar.py").
+    ref_types = {
+        "modules": "modules",
+        "states": "states",
+        "grains": "grains",
+        "renderers": "renderers",
+        "returners": "returners",
+        "utils": "utils",
+        "tops": "tops",
+        "pillar": "pillar",
+        "serializers": "serializers",
+        "executors": "executors",
+        "cache": "cache",
+        "sdb": "sdb",
+    }
+
+    dirs = {}
+    for ref, archive_dir in ref_types.items():
+        d = tmp_path / "ext" / ref
+        d.mkdir(parents=True)
+        (d / f"my_{ref}.py").write_text(f"# {ref}\n", encoding="utf-8")
+        dirs[ref] = str(d)
+
+    def provider(opts):
+        """Return the matching directory for whichever ext_type_dirs is asked."""
+        return {ref: [path] for ref, path in dirs.items()}
+
+    # The provider returns a dict (new-style entry point), keyed by ext_type.
+    # _module_dirs will pick the matching key for each ref.
+    entry_point = MagicMock()
+    entry_point.name = "salt_bundle"
+    entry_point.load.return_value = provider
+
+    with patch("salt.utils.entrypoints.iter_entry_points", return_value=[entry_point]):
+        mods = salt.client.ssh.mod_data(fsclient, target="host-01")
+
+    with tarfile.open(mods["file"]) as archive:
+        names = archive.getnames()
+        for ref, archive_dir in ref_types.items():
+            expected = f"{archive_dir}/my_{ref}.py"
+            assert expected in names, f"{expected} not found in archive; got {names}"
