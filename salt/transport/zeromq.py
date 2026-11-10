@@ -585,14 +585,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
             os.chmod(ipc_path, 0o600)
 
-        # Initialize request router for command classification
-        # In non-pooled mode, this is primarily for statistics and consistency
-        import salt.master
-
-        router = salt.master.RequestRouter(
-            self.opts, secrets=secrets or getattr(self, "secrets", None)
-        )
-
         try:
             while True:
                 if self.clients.closed or self.workers.closed:
