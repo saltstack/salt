@@ -999,3 +999,291 @@ def test_on_disk_layout_exists_in_cachedir(tmp_path):
     assert (
         plausible or found
     ), f"expected trie-specific layout under cachedir; got {found!r}"
+
+
+# ---------------------------------------------------------------------------
+# Mission 5: compact binary leaf-list encoding.
+#
+# Mission 4 stored each leaf's sr_key list as msgpack. Mission 5 switches
+# to a length-prefixed binary format:
+#
+#     byte 0        : 0xC1   (magic -- distinguishes from msgpack lead)
+#     byte 1..4     : uint32 LE count
+#     byte 5..      : repeated: uint16 LE key length, then UTF-8 key bytes
+#
+# The cap sentinel stays as a msgpack map ({"_capped": True, ...}) so the
+# decode dispatcher branches on raw[0:1] == b"\xc1".
+#
+# These tests pin: (a) round-trip correctness, (b) that the magic byte
+# distinguishes from msgpack sentinels, (c) that decoding a 10K-element
+# list is meaningfully faster than msgpack (the whole reason for the
+# switch), (d) that tiny lists do not regress, and (e) that both encodings
+# coexist in a live index -- the dispatcher picks the right decoder.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_pack_helpers():
+    """
+    Probe the trie module for the Mission 5 pack/unpack helpers.
+
+    Returns ``(pack_list, unpack_list)`` or ``(None, None)`` if the
+    helpers are not yet landed. The Implementer may have chosen slightly
+    different names, so probe a handful.
+    """
+    if _trie_mod is None:
+        return None, None
+    pack_candidates = ("_pack_list", "pack_list", "_encode_list", "_pack_sr_keys")
+    unpack_candidates = (
+        "_unpack_list",
+        "unpack_list",
+        "_decode_list",
+        "_unpack_sr_keys",
+    )
+    pack = None
+    for name in pack_candidates:
+        pack = getattr(_trie_mod, name, None)
+        if pack is not None:
+            break
+    unpack = None
+    for name in unpack_candidates:
+        unpack = getattr(_trie_mod, name, None)
+        if unpack is not None:
+            break
+    return pack, unpack
+
+
+_pack_list, _unpack_list = _resolve_pack_helpers()
+
+requires_pack_helpers = pytest.mark.skipif(
+    _pack_list is None or _unpack_list is None,
+    reason="Mission 5 _pack_list/_unpack_list helpers not yet landed",
+)
+
+
+@requires_trie
+@requires_pack_helpers
+def test_pack_unpack_list_round_trip():
+    """Round-trip empty / 1 / 10 / 1000 / unicode sr_key lists."""
+    cases = [
+        [],
+        ["dummy:a-01"],
+        [f"dummy:sr-{i:03d}" for i in range(10)],
+        [f"dummy:sr-{i:05d}" for i in range(1000)],
+        ["a-ümlaut-01", "zh-中文-02", "emoji-\U0001f600-03"],
+    ]
+    for case in cases:
+        packed = _pack_list(case)
+        assert isinstance(
+            packed, (bytes, bytearray)
+        ), f"_pack_list returned non-bytes for {case!r}: {type(packed)}"
+        got = _unpack_list(bytes(packed))
+        assert list(got) == list(
+            case
+        ), f"round-trip mismatch: input={case!r}, got={got!r}"
+
+
+@requires_trie
+@requires_pack_helpers
+def test_pack_list_magic_byte_distinguishes_from_cap_sentinel():
+    """``_pack_list`` output starts with ``\\xc1``; cap sentinel differs."""
+    import msgpack
+
+    packed = _pack_list(["dummy:a-01", "dummy:a-02"])
+    assert (
+        bytes(packed[0:1]) == b"\xc1"
+    ), f"_pack_list must prefix with magic byte 0xC1; got {bytes(packed[0:1])!r}"
+
+    # The cap sentinel stays msgpack-encoded -- a map's leading byte is
+    # in the 0x80..0x8f (fixmap) or 0xDE..0xDF (map16/map32) range.
+    # In no case is it 0xC1. 0xC1 is an explicitly reserved / never-used
+    # byte in the msgpack wire format, which is exactly why Mission 5
+    # chose it as the discriminator.
+    cap_sentinel = msgpack.packb({"_capped": True, "count": 123}, use_bin_type=True)
+    assert cap_sentinel[0:1] != b"\xc1", (
+        f"cap sentinel must not share the new-format magic byte; "
+        f"got {cap_sentinel[0:1]!r}"
+    )
+
+    # Also pin: an empty list's packed form still has the magic byte
+    # (encoding is not opportunistically short-circuited).
+    empty_packed = _pack_list([])
+    assert (
+        bytes(empty_packed[0:1]) == b"\xc1"
+    ), f"empty list must still carry the magic byte; got {empty_packed[0:1]!r}"
+
+
+@requires_trie
+@requires_pack_helpers
+def test_unpack_list_rejects_short_buffer():
+    """Truncated buffer -> ``_unpack_list`` raises a decode-ish error."""
+    import struct
+
+    # Magic byte + count=100 header, but only 5 bytes of body (nowhere
+    # near enough for 100 length-prefixed entries). A well-written
+    # decoder either raises struct.error (short read on struct.unpack)
+    # or a ValueError / IndexError (explicit length check). Any of
+    # those is acceptable -- we just assert the decoder does NOT
+    # silently return a partial list.
+    truncated = b"\xc1" + struct.pack("<I", 100) + b"abcde"
+    with pytest.raises((struct.error, ValueError, IndexError, EOFError)):
+        _unpack_list(truncated)
+
+
+@requires_trie
+@requires_pack_helpers
+@pytest.mark.slow_test
+def test_wide_list_decode_is_fast():
+    """
+    Decoding a 10K-element leaf list in the new format must be at
+    least 2x faster than msgpack decode of the equivalent list. That
+    speedup is the whole promise of Mission 5 -- a regression here
+    means the switch hasn't delivered its gain.
+    """
+    import time
+
+    import msgpack
+
+    keys = [f"dummy:sr-{i:07d}" for i in range(10000)]
+    packed_new = _pack_list(keys)
+    packed_msgpack = msgpack.packb(keys, use_bin_type=True)
+
+    # Warm up: first calls may hit import caches / JIT paths.
+    for _ in range(3):
+        _unpack_list(packed_new)
+        msgpack.unpackb(packed_msgpack, raw=False)
+
+    n_iterations = 100
+    t0 = time.perf_counter()
+    for _ in range(n_iterations):
+        _unpack_list(packed_new)
+    t_new = (time.perf_counter() - t0) / n_iterations
+
+    t0 = time.perf_counter()
+    for _ in range(n_iterations):
+        msgpack.unpackb(packed_msgpack, raw=False)
+    t_msgpack = (time.perf_counter() - t0) / n_iterations
+
+    assert t_new < t_msgpack / 2, (
+        f"new format must be at least 2x faster than msgpack on wide "
+        f"lists: new={t_new * 1000:.3f}ms msgpack={t_msgpack * 1000:.3f}ms "
+        f"ratio={t_msgpack / t_new if t_new > 0 else float('inf'):.2f}x"
+    )
+
+
+@requires_trie
+@requires_pack_helpers
+def test_narrow_list_decode_no_regression():
+    """
+    10-element decode must not be meaningfully slower in the new
+    format. On tiny lists overhead dominates; allow up to 2x slower
+    before flagging a regression.
+    """
+    import time
+
+    import msgpack
+
+    keys = [f"dummy:sr-{i:02d}" for i in range(10)]
+    packed_new = _pack_list(keys)
+    packed_msgpack = msgpack.packb(keys, use_bin_type=True)
+
+    for _ in range(3):
+        _unpack_list(packed_new)
+        msgpack.unpackb(packed_msgpack, raw=False)
+
+    n_iterations = 2000
+    t0 = time.perf_counter()
+    for _ in range(n_iterations):
+        _unpack_list(packed_new)
+    t_new = (time.perf_counter() - t0) / n_iterations
+
+    t0 = time.perf_counter()
+    for _ in range(n_iterations):
+        msgpack.unpackb(packed_msgpack, raw=False)
+    t_msgpack = (time.perf_counter() - t0) / n_iterations
+
+    # Allow up to 2x slower on tiny lists; any worse is a regression.
+    assert t_new < t_msgpack * 2, (
+        f"narrow list decode regressed more than 2x: "
+        f"new={t_new * 1e6:.2f}us msgpack={t_msgpack * 1e6:.2f}us "
+        f"ratio={t_new / t_msgpack if t_msgpack > 0 else float('inf'):.2f}x"
+    )
+
+
+@requires_trie
+def test_rebuild_and_lookup_wide_match(tmp_path):
+    """
+    End-to-end smoke: build an index where 10K SRs all share a single
+    ``(path, value)``, then look it up. The decode path uses the new
+    format -- the lookup must complete under a reasonable warm budget.
+
+    The budget is loose (100ms) because this test runs under CI load
+    and the whole point is to catch catastrophic regressions (e.g. the
+    dispatcher falling back to msgpack by accident), not to pin exact
+    timings.
+    """
+    import time
+
+    size = 10000
+    entries = {f"dummy:sr-{i:07d}": {"role": "web"} for i in range(size)}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    # Set max_list_size well above the SR count so the bucket does NOT
+    # trip the cap sentinel; we want to exercise the wide-list decode.
+    trie = _make_adapter(cache, tmp_path, max_list_size=size + 1000)
+
+    # Warm lookup (first call may have to open the mmap).
+    first = trie.lookup(("role",), "web")
+    assert first is not None and len(first) == size
+
+    # Warm timing: a single lookup should come back well under 100ms.
+    t0 = time.perf_counter()
+    got = trie.lookup(("role",), "web")
+    elapsed = time.perf_counter() - t0
+    assert got is not None and len(got) == size
+    assert elapsed < 0.1, (
+        f"wide-match lookup took {elapsed * 1000:.2f}ms; expected <100ms "
+        f"for a 10K-element bucket under the new binary format"
+    )
+
+
+@requires_trie
+def test_mixed_magic_byte_dispatch(tmp_path):
+    """
+    An index with BOTH regular list entries AND a cap sentinel must
+    dispatch each through the right decoder -- list entries resolve to
+    lists, cap entries resolve to ``None``.
+
+    This is the live-dispatch cousin of the pure-helper magic-byte
+    test: it goes through the real ``MmapTrieIndex.lookup_literal`` so
+    we know the dispatcher (not just the pure helpers) picks correctly
+    on both encodings coexisting on-disk.
+    """
+    cap = 5
+    # Bucket A: strictly over cap -> cap sentinel.
+    # Bucket B: under cap -> regular list.
+    entries = {}
+    for i in range(cap + 3):
+        entries[f"dummy:cap-{i:04d}"] = {"role": "web"}
+    for i in range(2):
+        entries[f"dummy:lst-{i:04d}"] = {"role": "db"}
+    cache = FakeCache(tmp_path, banks={BANK: entries})
+    trie = _make_adapter(cache, tmp_path, max_list_size=cap)
+
+    # The capped bucket MUST return None (sentinel decoded via msgpack).
+    capped = trie.lookup(("role",), "web")
+    assert (
+        capped is None
+    ), f"expected cap sentinel (None) for over-cap bucket; got {capped!r}"
+
+    # The uncapped bucket MUST return its sr_key list (decoded via new
+    # binary format). If the dispatcher mis-identified the magic byte,
+    # this would come back as None (cap) or empty.
+    listed = trie.lookup(("role",), "db")
+    assert listed is not None, "under-cap bucket must not be cap-sentinel"
+    assert sorted(listed) == ["dummy:lst-0000", "dummy:lst-0001"], (
+        f"under-cap bucket must return the full sr_key list via the "
+        f"binary decoder; got {listed!r}"
+    )
+
+    # Miss is still a miss.
+    miss = trie.lookup(("role",), "no-such-role")
+    assert miss in ([], None), f"miss must not surface either bucket: {miss!r}"
