@@ -2691,6 +2691,11 @@ class Minion(MinionBase):
                 opts, force_refresh, proxy=proxy, context=context
             )
             opts.mutate_key("grains", new_grains)
+        if opts.get("proxy") and proxy is not None:
+            # The grains loader replaces opts["grains"]. Keep the existing
+            # proxy loader's dunder current too, without reloading the proxy
+            # module and resetting its connection globals or __context__.
+            proxy.pack["__grains__"] = opts["grains"]
         self.utils = salt.loader.utils(opts, proxy=proxy, context=context)
 
         if opts.get("multimaster", False):
