@@ -891,6 +891,23 @@ VALID_OPTS = immutabletypes.freeze(
         # legacy full-bank scan behaviour.  See
         # :mod:`salt.utils.grain_reverse_index`.
         "index_grain_keys": list,
+        # Opt-in switch for the persistent mmap-backed grain trie
+        # index (Mission 4).  When ``True`` the master builds a
+        # scalar-leaf-level index of every grain dict in
+        # ``resource_grains`` and uses it to answer arbitrary
+        # ``<path>:<value>`` grain-target predicates without walking
+        # the bank.  See :mod:`salt.utils.mmap_trie_index`.
+        "enable_grain_trie_index": bool,
+        # Per-``(path, value)`` sr_key list cap for the trie index.
+        # Buckets that exceed this size are replaced with a sentinel
+        # that forces that specific predicate to fall back to the
+        # slow path, bounding on-disk size and query cost.
+        "grain_trie_max_list_size": int,
+        # Streaming-build accumulator threshold for the trie.  The
+        # builder flushes when the aggregate number of pending
+        # sr_keys across all buckets reaches this value, keeping
+        # peak builder RAM bounded.
+        "grain_trie_build_batch_size": int,
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
         # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
@@ -1862,6 +1879,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "job_cache_store_endtime": False,
         "minion_data_cache": True,
         "index_grain_keys": [],
+        "enable_grain_trie_index": False,
+        "grain_trie_max_list_size": 100000,
+        "grain_trie_build_batch_size": 1024,
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,

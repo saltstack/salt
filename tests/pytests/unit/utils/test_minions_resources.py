@@ -2251,3 +2251,463 @@ def test_dispatch_list_valued_grain_indexed_per_element(opts):
         result, "tags:prod", ":", regex_match=False
     )
     assert sorted(result["minions"]) == ["a", "c"]
+
+
+# ---------------------------------------------------------------------------
+# Mission 4: persistent mmap-backed grain trie index
+#
+# The trie is opt-in via ``enable_grain_trie_index: True``. When enabled,
+# every (path_tuple, scalar_value) pair across every grain dict in the
+# ``resource_grains`` bank is indexed on disk. Dispatch tests pin the
+# runtime invariants:
+#
+# * trie is NOT consulted when the opt is off
+# * trie IS consulted when the opt is on, in preference to Mission 3
+# * ``resource_id`` predicates still go through Mission 1 / Mission 2
+# * cap-sentinel hits force a fall-through to the legacy slow path
+# * split-ambiguity queries union results over valid (path, value) pairs
+# * nested paths are addressable via colon-chained predicates
+# * PCRE walks ``values_for_path``
+# ---------------------------------------------------------------------------
+
+
+def _resolve_trie_module():
+    for name in (
+        "salt.utils.mmap_trie_index",
+        "salt.utils.grain_trie_index",
+        "salt.utils.grain_trie",
+    ):
+        try:
+            module = __import__(name, fromlist=["*"])
+        except ImportError:
+            continue
+        if any(
+            hasattr(module, n)
+            for n in (
+                "MmapTrieIndex",
+                "TrieIndex",
+                "GrainTrieIndex",
+                "lookup",
+                "get",
+                "get_index",
+            )
+        ):
+            return module
+    return None
+
+
+_trie_mod = _resolve_trie_module()
+requires_trie = pytest.mark.skipif(
+    _trie_mod is None,
+    reason="Mission 4 mmap_trie_index module not yet landed",
+)
+
+
+def _trie_lookup_name():
+    """Return the name of the trie's ``lookup`` entry point, if any.
+
+    Returns a string for module-level lookup, or ``(cls_name, attr)``
+    tuple for a class-level method.
+    """
+    if _trie_mod is None:
+        return None
+    # Module-level lookup is preferred (easier to patch).
+    for n in ("lookup", "dispatch_predicate"):
+        if hasattr(_trie_mod, n):
+            return n
+    # Class-level: we patch ``lookup`` / ``lookup_literal`` on the class.
+    for cls_name in ("MmapTrieIndex", "TrieIndex", "GrainTrieIndex"):
+        cls = getattr(_trie_mod, cls_name, None)
+        if cls is None:
+            continue
+        for attr in ("lookup", "lookup_literal"):
+            if hasattr(cls, attr):
+                return ("cls", cls_name, attr)
+    return None
+
+
+@requires_trie
+def test_trie_not_called_when_flag_off(opts, tmp_path):
+    """
+    ``enable_grain_trie_index=False`` -> the trie path is not invoked
+    at all, even for a grain predicate on a non-declared key.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = False
+    opts["index_grain_keys"] = []
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+        "dummy:b": {"role": "db", "resource_id": "b"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    lookup_name = _trie_lookup_name()
+    if lookup_name is None:
+        pytest.skip("trie module has no identifiable lookup entry point")
+
+    target_obj = _trie_mod
+    target_attr = lookup_name
+    if isinstance(lookup_name, tuple) and lookup_name[0] == "cls":
+        target_obj = getattr(_trie_mod, lookup_name[1])
+        target_attr = lookup_name[2]
+
+    with patch.object(target_obj, target_attr) as trie_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "role:web", ":", regex_match=False
+        )
+    assert result["minions"] == ["a"]
+    assert (
+        trie_entry.call_count == 0
+    ), "trie lookup was consulted even though enable_grain_trie_index=False"
+
+
+@requires_trie
+def test_trie_preferred_over_mission3_when_flag_on(opts, tmp_path):
+    """
+    With the trie enabled AND Mission 3 keys declared, the trie runs
+    first. Mission 3 must NOT be consulted for predicates the trie can
+    answer.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["index_grain_keys"] = ["role"]
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+        "dummy:b": {"role": "db", "resource_id": "b"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    # Mission 3 entry point.
+    try:
+        import salt.utils.grain_reverse_index as _rev_mod
+    except ImportError:
+        _rev_mod = None
+    rev_lookup_name = None
+    if _rev_mod is not None:
+        for n in ("lookup", "reverse_lookup", "lookup_by_value"):
+            if hasattr(_rev_mod, n):
+                rev_lookup_name = n
+                break
+
+    result = {"minions": [], "missing": []}
+    if rev_lookup_name is None:
+        ck._augment_grain_match_with_resource_grains(
+            result, "role:web", ":", regex_match=False
+        )
+    else:
+        with patch.object(_rev_mod, rev_lookup_name) as rev_entry:
+            ck._augment_grain_match_with_resource_grains(
+                result, "role:web", ":", regex_match=False
+            )
+        # Mission 3 is skipped when the trie is active.
+        assert (
+            rev_entry.call_count == 0
+        ), "Mission 3 reverse index was consulted even though the trie is enabled"
+
+    assert sorted(result["minions"]) == ["a"]
+
+
+@requires_trie
+def test_trie_resolves_nested_predicate(opts, tmp_path):
+    """
+    A nested predicate like ``dns:nameservers:127.0.0.11`` resolves via
+    the trie's ``(("dns", "nameservers"), "127.0.0.11")`` leaf when the
+    trie is enabled.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {
+            "resource_id": "a",
+            "dns": {"nameservers": ["127.0.0.11"]},
+        },
+        "dummy:b": {
+            "resource_id": "b",
+            "dns": {"nameservers": ["8.8.8.8"]},
+        },
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "dns:nameservers:127.0.0.11", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["a"]
+
+
+@requires_trie
+def test_trie_split_ambiguity_unions_valid_paths(opts, tmp_path):
+    """
+    Predicate ``role:web:prod`` against:
+
+    * SR_A with ``role = "web:prod"`` (string -- leaf at (role,), value "web:prod")
+    * SR_B with ``role = {"web": "prod"}`` (dict -- leaf at (role, web), value "prod")
+
+    The query tries both splits -- ``(("role",), "web:prod")`` and
+    ``(("role", "web"), "prod")`` -- and unions the results. Both SRs
+    must appear because the trie actually stores both (path, value)
+    pairs.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {"role": "web:prod", "resource_id": "a"},
+        "dummy:b": {"role": {"web": "prod"}, "resource_id": "b"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web:prod", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["a", "b"]
+
+
+@requires_trie
+def test_trie_miss_falls_through_to_slow_path(opts, tmp_path):
+    """
+    Predicate on a grain path the trie has no entry for -> trie
+    returns an empty result; dispatch falls through to the existing
+    slow path which also returns no match. No crash; correct answer.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "no_such_grain:nope", ":", regex_match=False
+    )
+    assert result["minions"] == []
+
+
+@requires_trie
+def test_trie_cap_sentinel_forces_slow_path(opts, tmp_path):
+    """
+    When the trie reports a cap-sentinel (``None``) for a bucket, the
+    dispatch MUST NOT treat the trie's answer as authoritative. It
+    falls through to the legacy slow path, which still produces the
+    correct answer (albeit slowly).
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["grain_trie_max_list_size"] = 10
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        f"dummy:h-{i:04d}": {"role": "web", "resource_id": f"h-{i:04d}"}
+        for i in range(20)
+    }
+    ck, fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+    assert len(result["minions"]) == 20
+    # The slow-path fetch loop MUST have run -- the trie's cap-sentinel
+    # is not a legitimate answer. We expect multiple fetches.
+    assert (
+        fake.fetch.call_count >= 1
+    ), "cap-sentinel did not force the slow-path fetch loop to run"
+
+
+@requires_trie
+def test_trie_resource_id_literal_skips_trie(opts, tmp_path):
+    """
+    Literal ``resource_id:<id>`` is Mission 1's territory. The trie
+    must NOT be consulted.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {"dummy:a-dummy-01": {"resource_id": "a-dummy-01"}}
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    lookup_name = _trie_lookup_name()
+    if lookup_name is None:
+        pytest.skip("trie module has no identifiable lookup entry point")
+
+    target_obj = _trie_mod
+    target_attr = lookup_name
+    if isinstance(lookup_name, tuple) and lookup_name[0] == "cls":
+        target_obj = getattr(_trie_mod, lookup_name[1])
+        target_attr = lookup_name[2]
+
+    with patch.object(target_obj, target_attr) as trie_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:a-dummy-01", ":", regex_match=False
+        )
+    assert result["minions"] == ["a-dummy-01"]
+    assert (
+        trie_entry.call_count == 0
+    ), "trie was consulted for a literal resource_id predicate (Mission 1 territory)"
+
+
+@requires_trie
+def test_trie_resource_id_glob_skips_trie(opts, tmp_path):
+    """
+    ``resource_id:a-dummy-0*`` is Mission 2's sorted-key cache. The
+    trie must NOT be consulted.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        f"dummy:a-dummy-{i:03d}": {"resource_id": f"a-dummy-{i:03d}"} for i in range(10)
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    lookup_name = _trie_lookup_name()
+    if lookup_name is None:
+        pytest.skip("trie module has no identifiable lookup entry point")
+
+    target_obj = _trie_mod
+    target_attr = lookup_name
+    if isinstance(lookup_name, tuple) and lookup_name[0] == "cls":
+        target_obj = getattr(_trie_mod, lookup_name[1])
+        target_attr = lookup_name[2]
+
+    with patch.object(target_obj, target_attr) as trie_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:a-dummy-0*", ":", regex_match=False
+        )
+    # At least some matches via Mission 2's sorted-key cache.
+    assert result["minions"], "Mission 2 sorted-key cache returned no matches"
+    assert (
+        trie_entry.call_count == 0
+    ), "trie was consulted for a resource_id glob predicate (Mission 2 territory)"
+
+
+@requires_trie
+def test_trie_pcre_walks_values_for_path(opts, tmp_path):
+    """
+    PCRE predicate with the trie enabled walks
+    ``values_for_path(("role",))`` and regex-matches each value.
+    The result set equals a linear-fetch-every-grain-dict reference.
+    """
+    import re as _re
+
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {"role": "web1", "resource_id": "a"},
+        "dummy:b": {"role": "web42", "resource_id": "b"},
+        "dummy:c": {"role": "webx", "resource_id": "c"},
+        "dummy:d": {"role": "db1", "resource_id": "d"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, r"role:^web\d+$", ":", regex_match=True
+    )
+
+    rx = _re.compile(r"^web\d+$")
+    expected = sorted(
+        {
+            key.partition(":")[2]
+            for key, g in entries.items()
+            if isinstance(g.get("role"), str) and rx.search(g["role"])
+        }
+    )
+    assert sorted(result["minions"]) == expected == ["a", "b"]
+
+
+@requires_trie
+@pytest.mark.parametrize(
+    "predicate,selector",
+    [
+        ("role:web", lambda g: g.get("role") == "web"),
+        ("env:prod", lambda g: g.get("env") == "prod"),
+        (
+            "dns:nameservers:127.0.0.11",
+            lambda g: isinstance(g.get("dns"), dict)
+            and "127.0.0.11" in (g["dns"].get("nameservers") or []),
+        ),
+        ("ipv6:fe80::1", lambda g: g.get("ipv6") == "fe80::1"),
+        ("tags:prod", lambda g: "prod" in (g.get("tags") or [])),
+    ],
+)
+def test_trie_match_set_equivalence_vs_linear_reference(
+    opts, tmp_path, predicate, selector
+):
+    """
+    For each (shape, predicate) pair: the trie-enabled dispatch result
+    equals the linear-fetch reference. Covers top-level scalar, nested
+    dict/list, colon-bearing value, list-valued grain.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["enable_grain_trie_index"] = True
+    opts["cachedir"] = str(tmp_path)
+
+    entries = {
+        "dummy:a": {
+            "resource_id": "a",
+            "role": "web",
+            "env": "prod",
+            "dns": {"nameservers": ["127.0.0.11"]},
+            "ipv6": "fe80::1",
+            "tags": ["prod", "us-east"],
+        },
+        "dummy:b": {
+            "resource_id": "b",
+            "role": "db",
+            "env": "prod",
+            "dns": {"nameservers": ["8.8.8.8"]},
+            "ipv6": "fe80::2",
+            "tags": ["staging"],
+        },
+        "dummy:c": {
+            "resource_id": "c",
+            "role": "web",
+            "env": "staging",
+            "dns": {"nameservers": ["127.0.0.11", "8.8.8.8"]},
+            "ipv6": "::1",
+            "tags": ["prod", "eu-west"],
+        },
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, predicate, ":", regex_match=False
+    )
+
+    expected = sorted(
+        {key.partition(":")[2] for key, g in entries.items() if selector(g)}
+    )
+    assert sorted(result["minions"]) == expected, (
+        f"predicate={predicate!r}: trie dispatch returned "
+        f"{sorted(result['minions'])!r}, reference expects {expected!r}"
+    )

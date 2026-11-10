@@ -16,6 +16,7 @@ import salt.utils.data
 import salt.utils.files
 import salt.utils.grain_reverse_index
 import salt.utils.grain_target_cache
+import salt.utils.mmap_trie_index
 import salt.utils.network
 import salt.utils.resource_registry
 import salt.utils.resources
@@ -1031,6 +1032,35 @@ class CkMinions:
                     return
                 # ``None`` means the index couldn't serve the query
                 # (e.g. build failed); fall through to the slow path.
+
+        # Mission 4 persistent-trie fast path. Opt-in via
+        # ``opts["enable_grain_trie_index"]``. The trie covers every
+        # scalar leaf across every grain dict in the bank, so nested
+        # predicates (``dns:nameservers:127.0.0.11``) and
+        # non-operator-declared keys are auto-indexed. Returns ``None``
+        # when the trie cannot authoritatively serve the predicate
+        # (cap hit, missing build, shape mismatch) -- we then fall
+        # through to the same slow path Mission 3 falls through to.
+        if self.opts.get("enable_grain_trie_index"):
+            try:
+                trie_hits = salt.utils.mmap_trie_index.dispatch_predicate(
+                    self.cache, bank, self.opts, expr, delimiter, regex_match
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "mmap_trie_index: dispatch failed for expr=%r; "
+                    "falling through to slow path",
+                    expr,
+                    exc_info=True,
+                )
+                trie_hits = None
+            if trie_hits is not None:
+                for sr_key in trie_hits:
+                    _rtype, _, rid = sr_key.partition(":")
+                    if rid and rid not in seen:
+                        result["minions"].append(rid)
+                        seen.add(rid)
+                return
 
         for srn in srns:
             try:
