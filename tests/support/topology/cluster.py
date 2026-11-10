@@ -786,6 +786,15 @@ def make_cluster(
             "topology_breadcrumb_grace": 2,
             "topology_breadcrumb_max_age": 60,
             "topology_detach_quiesce": 1,
+            # FIPS-safe RSA algorithms for the clustered master's
+            # ``send_aes_key_event`` and cluster-peer publish-signing
+            # paths.  Salt's defaults (``OAEP-SHA1`` /
+            # ``PKCS1v15-SHA1``) trip ``_enforce_fips`` at
+            # ``salt/crypt.py`` and abort master startup on FIPS-mode
+            # CI shards (e.g. Photon OS fips).  SHA224 variants are
+            # valid on both FIPS and non-FIPS runners.
+            "cluster_encryption_algorithm": "OAEP-SHA224",
+            "publish_signing_algorithm": "PKCS1v15-SHA224",
             "log_granular_levels": {
                 "salt": "info",
             },
