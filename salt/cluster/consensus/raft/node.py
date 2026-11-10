@@ -679,6 +679,39 @@ class Node:
 
         self.next_index = {p.node_id: self.log.index + 1 for p in self.peers}
         self.match_index = {p.node_id: -1 for p in self.peers}
+
+        # Append a no-op barrier entry in the new leader's term when the
+        # log already carries entries from a prior term that still need
+        # to be committed.  Raft §5.4.2 forbids a leader from committing
+        # an entry solely because it exists on a quorum of logs if that
+        # entry's term is not the leader's current term; the leader must
+        # first commit (by replication count) an entry from its own term,
+        # which transitively commits all prior entries.
+        #
+        # Without this barrier, a cluster that restarts from persisted
+        # log with no snapshot cannot commit the founding CONFIG from
+        # the previous term — ``MembershipStateMachine`` never applies
+        # it, ``RaftService._on_ready`` never fires, and minion requests
+        # sit behind ``cluster_retry`` indefinitely.
+        #
+        # We *only* append when there's something uncommitted from a
+        # prior term.  On a fresh cluster the log is empty and the
+        # founding CONFIG proposal path in
+        # ``RaftService._maybe_commit_founding_config`` is still
+        # responsible for the first entry — appending a NOOP at index 0
+        # would push the founding CONFIG to index 1 and permanently
+        # suppress the founding path (which keys on ``log.index < 0``).
+        try:
+            needs_barrier = self.log.index > self.log.commit_index and any(
+                e.term != self.term for e in self.log.entries
+            )
+            if needs_barrier:
+                self.log.append(self.term, None, entry_type=LogEntryType.NOOP)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Node %s failed to append NOOP barrier on becoming leader", self.node_id
+            )
+
         self.schedule_heartbeat()
 
     def schedule_heartbeat(self):
@@ -854,6 +887,12 @@ class Node:
                     routing_sm = self.log._extra_state_machines.get("routing_sm")
                     if routing_sm is not None:
                         routing_sm.apply(entry.cmd, index=entry.index)
+                elif entry.type == LogEntryType.NOOP:
+                    # Leader barrier; no payload, no state-machine
+                    # effect.  Its role is purely to anchor a current-
+                    # term entry so Raft §5.4.2 allows prior-term
+                    # entries above it to commit.
+                    pass
             self.log.last_applied = new_applied
 
     @lock

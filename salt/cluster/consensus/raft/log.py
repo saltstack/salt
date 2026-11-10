@@ -77,6 +77,14 @@ class LogEntryType:
     # the cluster log; gates consult the routing table to decide
     # which ring (if any) owns a given cache.
     ROUTE = 5
+    # Leader barrier: a no-op entry appended on every ``become_leader``
+    # so the new leader can commit prior-term entries under Raft §5.4.2
+    # (a leader may only commit by counting replicas on an entry from
+    # its own term; committing the no-op implicitly commits everything
+    # before it).  Carries no payload and has no state-machine effect;
+    # ``apply_entries`` simply advances ``last_applied`` past it.  See
+    # ``Node.become_leader`` / ``Node.apply_entries``.
+    NOOP = 6
 
 
 class LogEntry(NamedTuple):
