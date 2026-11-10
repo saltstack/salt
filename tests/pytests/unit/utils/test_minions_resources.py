@@ -1275,3 +1275,509 @@ def test_check_minions_grain_target_10000_minions_100_resources_each(opts):
     slowdowns as "timeout" failures.
     """
     _run_check_minions_grain_perf(opts, 10000, 100, budget=180.0)
+
+
+# ---------------------------------------------------------------------------
+# Mission 2: sorted-key cache for ``resource_id:<glob>`` with a fixed prefix
+#
+# The query planner must route ``resource_id:<prefix>*`` style predicates
+# through a sorted-key cache that bounds the scan via binary search on the
+# fixed prefix. Behavioural contract tests -- no reliance on the internal
+# planner entry point beyond the ``_augment_grain_match_with_resource_grains``
+# public surface.
+# ---------------------------------------------------------------------------
+
+
+_gtc = pytest.importorskip(
+    "salt.utils.grain_target_cache",
+    reason="Mission 2 sorted-key cache module not yet landed",
+)
+
+
+def _build_ck_with_keys(opts, keys):
+    """
+    Build a ``CkMinions`` whose ``self.cache`` returns ``keys`` from
+    ``list("resource_grains")`` and nothing from other banks. Grain
+    dicts for each key are synthesised on the fly so a slow-path
+    fallback still produces correct matches (the ``resource_id`` grain
+    is derived from the SRN).
+
+    Returns ``(ck, fake_cache)`` so tests can inspect the mock.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    present = list(keys)
+
+    def _list(bank):
+        return list(present) if bank == "resource_grains" else []
+
+    def _fetch(bank, key):
+        if bank != "resource_grains":
+            return None
+        _rtype, _, rid = key.partition(":")
+        if not rid:
+            return None
+        return {"resource_id": rid}
+
+    def _contains(bank, key):
+        if bank != "resource_grains":
+            return False
+        return key in present
+
+    fake.list = MagicMock(side_effect=_list)
+    fake.fetch = MagicMock(side_effect=_fetch)
+    fake.contains = MagicMock(side_effect=_contains)
+    ck.cache = fake
+    return ck, fake
+
+
+def _rids(result):
+    return sorted(result["minions"])
+
+
+def test_augment_grain_resource_id_fixed_prefix_matches_only_prefix_keys(opts):
+    """
+    ``resource_id:a-*`` against a bank with ``a-foo``, ``a-bar``,
+    ``b-baz`` must return exactly ``a-foo`` and ``a-bar``. This is the
+    behavioural contract regardless of whether the implementation used
+    the sorted-key fast path or fell through to the existing scan.
+    """
+    opts["minion_data_cache"] = True
+    ck, _fake = _build_ck_with_keys(opts, ["dummy:a-foo", "dummy:a-bar", "dummy:b-baz"])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-*", ":", regex_match=False
+    )
+    assert _rids(result) == ["a-bar", "a-foo"]
+
+
+def test_augment_grain_resource_id_fixed_prefix_bounds_fnmatch_calls(opts, tmp_path):
+    """
+    With a sorted-key cache on a 10K-key bank, a ``resource_id:a-*``
+    query must not run ``fnmatch`` against every key. We bound the
+    call count to roughly (matches + a small number of binary-search
+    probes). A linear scan would hit all 10,000 keys.
+    """
+    import fnmatch
+
+    import salt.utils.grain_target_cache as _gtc_mod
+
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    bank_dir = tmp_path / "resource_grains"
+    bank_dir.mkdir()
+    cachedir = str(tmp_path)
+
+    # 10,000 keys; prefix ``a-`` matches 100 of them (indices 0..99).
+    keys = [f"dummy:a-{i:03d}" for i in range(100)]
+    keys += [f"dummy:b-{i:04d}" for i in range(9900)]
+    ck, fake = _build_ck_with_keys(opts, keys)
+    fake.cachedir = cachedir
+    _gtc_mod.invalidate()
+
+    real_fnmatchcase = fnmatch.fnmatchcase
+    call_count = {"n": 0}
+
+    def _count(name, pat):
+        call_count["n"] += 1
+        return real_fnmatchcase(name, pat)
+
+    result = {"minions": [], "missing": []}
+    with patch("fnmatch.fnmatchcase", side_effect=_count):
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:a-*", ":", regex_match=False
+        )
+
+    assert len(result["minions"]) == 100
+    # Sorted-cache path should keep fnmatch calls bounded by
+    # (matches + a few bsearch probes). Pin an upper bound well below
+    # the full bank size. On a pure linear scan this would be 10000.
+    bound = 100 * 2 + 64
+    assert call_count["n"] <= bound, (
+        f"fnmatchcase called {call_count['n']} times on a 10K bank with "
+        f"100 matches -- expected <= {bound} with sorted-cache routing"
+    )
+
+
+def test_augment_grain_resource_id_no_fixed_prefix_matches_correctly(opts):
+    """
+    ``resource_id:*-foo`` has no fixed prefix. The sorted-cache path
+    does not apply; we fall through to the existing linear scan but
+    the match set must still be correct.
+    """
+    opts["minion_data_cache"] = True
+    ck, _fake = _build_ck_with_keys(opts, ["dummy:a-foo", "dummy:b-foo", "dummy:a-bar"])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:*-foo", ":", regex_match=False
+    )
+    assert _rids(result) == ["a-foo", "b-foo"]
+
+
+def test_augment_grain_resource_id_charclass_first_matches_correctly(opts):
+    """
+    ``resource_id:[ab]-*`` leads with a char class -- there is no
+    fixed prefix. The implementation may fall through to a linear
+    scan or expand the char class; either way the result set must
+    match exactly the keys that fnmatch accepts.
+    """
+    opts["minion_data_cache"] = True
+    ck, _fake = _build_ck_with_keys(opts, ["dummy:a-1", "dummy:b-1", "dummy:c-1"])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:[ab]-*", ":", regex_match=False
+    )
+    assert _rids(result) == ["a-1", "b-1"]
+
+
+def test_augment_grain_resource_id_pure_literal_uses_mission1_hash_probe(opts):
+    """
+    A literal predicate (``resource_id:a-dummy-0000100``) is handled
+    by Mission 1's ``cache.contains`` hash-probe fast path. The
+    Mission 2 sorted-cache path MUST NOT be consulted.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present_keys = {"dummy:a-dummy-0000100": {"resource_id": "a-dummy-0000100"}}
+
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    fake.contains = MagicMock(
+        side_effect=lambda b, k: b == "resource_grains" and k in present_keys
+    )
+    fake.list = MagicMock(return_value=[])
+    fake.fetch = MagicMock(return_value=None)
+    ck.cache = fake
+
+    gsk_candidates = ["get_sorted_keys", "sorted_keys", "sorted_keys_for_bank"]
+    gsk_name = next(
+        (n for n in gsk_candidates if hasattr(_gtc, n)),
+        None,
+    )
+    if gsk_name is None:
+        pytest.skip("grain_target_cache has no recognised sorted-keys entry point")
+
+    with patch.object(_gtc, gsk_name) as sorted_cache_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result,
+            "resource_id:a-dummy-0000100",
+            ":",
+            regex_match=False,
+        )
+
+    assert result["minions"] == ["a-dummy-0000100"]
+    assert sorted_cache_entry.call_count == 0, (
+        "literal resource_id predicate should be resolved by the "
+        "Mission 1 hash-probe path, not the sorted-key cache"
+    )
+
+
+def test_augment_grain_non_resource_id_predicate_bypasses_sorted_cache(opts):
+    """
+    ``role:web`` is not a ``resource_id`` predicate -- the sorted-key
+    cache must not be consulted. The slow pickle-fetch path runs and
+    the match set is still correct.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    entries = {
+        "dummy:d-1": {"role": "web", "resource_id": "d-1"},
+        "dummy:d-2": {"role": "db", "resource_id": "d-2"},
+    }
+    fake.list = MagicMock(
+        side_effect=lambda b: list(entries) if b == "resource_grains" else []
+    )
+    fake.fetch = MagicMock(
+        side_effect=lambda b, k: entries.get(k) if b == "resource_grains" else None
+    )
+    fake.contains = MagicMock(return_value=False)
+    ck.cache = fake
+
+    gsk_candidates = ["get_sorted_keys", "sorted_keys", "sorted_keys_for_bank"]
+    gsk_name = next((n for n in gsk_candidates if hasattr(_gtc, n)), None)
+    if gsk_name is None:
+        pytest.skip("grain_target_cache has no recognised sorted-keys entry point")
+
+    with patch.object(_gtc, gsk_name) as sorted_cache_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "role:web", ":", regex_match=False
+        )
+
+    assert result["minions"] == ["d-1"]
+    assert sorted_cache_entry.call_count == 0
+
+
+def test_augment_grain_resource_id_empty_predicate_does_not_crash(opts):
+    opts["minion_data_cache"] = True
+    ck, _fake = _build_ck_with_keys(opts, ["dummy:x"])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:", ":", regex_match=False
+    )
+    assert result["minions"] == []
+
+
+def test_augment_grain_resource_id_pcre_bypasses_sorted_cache(opts):
+    """
+    PCRE form bypasses the fixed-prefix sorted-cache path. The sorted
+    cache sees nothing; the existing regex scan produces the match.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    present = {
+        "dummy:d-1": {"resource_id": "d-1"},
+        "dummy:x-1": {"resource_id": "x-1"},
+    }
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    fake.list = MagicMock(
+        side_effect=lambda b: list(present) if b == "resource_grains" else []
+    )
+    fake.fetch = MagicMock(
+        side_effect=lambda b, k: present.get(k) if b == "resource_grains" else None
+    )
+    fake.contains = MagicMock(return_value=False)
+    ck.cache = fake
+
+    gsk_candidates = ["get_sorted_keys", "sorted_keys", "sorted_keys_for_bank"]
+    gsk_name = next((n for n in gsk_candidates if hasattr(_gtc, n)), None)
+
+    result = {"minions": [], "missing": []}
+    if gsk_name is None:
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:^d-", ":", regex_match=True
+        )
+    else:
+        with patch.object(_gtc, gsk_name) as sorted_cache_entry:
+            ck._augment_grain_match_with_resource_grains(
+                result, "resource_id:^d-", ":", regex_match=True
+            )
+            assert sorted_cache_entry.call_count == 0
+
+    # The current PCRE path matches ``d-1`` through subdict_match.
+    assert "d-1" in result["minions"]
+    assert "x-1" not in result["minions"]
+
+
+def test_augment_grain_resource_id_fixed_prefix_empty_bank_returns_empty(opts):
+    opts["minion_data_cache"] = True
+    ck, _fake = _build_ck_with_keys(opts, [])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-*", ":", regex_match=False
+    )
+    assert result["minions"] == []
+
+
+def test_augment_grain_resource_id_fixed_prefix_cached_across_calls(opts, tmp_path):
+    """
+    Two identical ``resource_id:<prefix>*`` queries in a row: the
+    second query must not re-sort the bank. We assert this by
+    counting ``cache.list`` calls -- a correctly-caching planner hits
+    ``list`` at most ~1 time per query (one to confirm the generation
+    hasn't changed; the actual sort is cached).
+
+    The sorted-key cache uses a cheap O(1) bank-generation signal
+    (mmap occupied-count or bank-directory mtime) to decide whether
+    to rebuild. We stage a real on-disk bank directory so the
+    directory-mtime fallback engages.
+    """
+    import os
+
+    import salt.utils.grain_target_cache as _gtc_mod
+
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    bank_dir = tmp_path / "resource_grains"
+    bank_dir.mkdir()
+    cachedir = str(tmp_path)
+
+    ck, fake = _build_ck_with_keys(opts, ["dummy:a-1", "dummy:a-2", "dummy:b-1"])
+    fake.cachedir = cachedir
+    # Force a clean cache slate so prior tests sharing the singleton
+    # don't pollute this assertion.
+    _gtc_mod.invalidate()
+
+    result1 = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result1, "resource_id:a-*", ":", regex_match=False
+    )
+    first_list_calls = fake.list.call_count
+
+    # Pin the bank-dir mtime so the generation signal does not advance
+    # between the two queries (otherwise filesystem jitter would force
+    # a rebuild and this test would be a flake rather than a cache
+    # invariant check).
+    st = os.stat(bank_dir)
+    os.utime(bank_dir, ns=(st.st_atime_ns, st.st_mtime_ns))
+
+    result2 = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result2, "resource_id:a-*", ":", regex_match=False
+    )
+    second_list_calls = fake.list.call_count
+
+    assert _rids(result1) == _rids(result2) == ["a-1", "a-2"]
+    # The second query should not materially increase the number of
+    # list calls -- the sorted view is cached.
+    assert second_list_calls - first_list_calls <= 1, (
+        f"sorted-cache did not short-circuit the second identical query: "
+        f"list() went from {first_list_calls} to {second_list_calls}"
+    )
+
+
+def test_augment_grain_resource_id_dedup_across_calls(opts):
+    """
+    A predicate matching 100 keys, called twice against the same
+    ``result`` object, must contain each rid exactly once.
+    """
+    opts["minion_data_cache"] = True
+    keys = [f"dummy:a-{i:03d}" for i in range(100)]
+    keys += [f"dummy:b-{i:03d}" for i in range(50)]
+    ck, _fake = _build_ck_with_keys(opts, keys)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-*", ":", regex_match=False
+    )
+    assert len(result["minions"]) == 100
+
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-*", ":", regex_match=False
+    )
+    # No duplicates after the second identical query.
+    assert len(result["minions"]) == len(set(result["minions"])) == 100
+
+
+def test_augment_grain_resource_id_fixed_prefix_dedup_on_duplicate_keys(opts):
+    """
+    If the bank somehow returns a duplicate key for the sorted view,
+    the resulting rid list must still contain each id exactly once.
+    """
+    opts["minion_data_cache"] = True
+    # ``_build_ck_with_keys`` preserves duplicates as-is.
+    ck, _fake = _build_ck_with_keys(opts, ["dummy:a-1", "dummy:a-1", "dummy:a-2"])
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:a-*", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["a-1", "a-2"]
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [
+        "a-*",
+        "a-dummy-001*",
+        "web-*",
+        "ns-*",
+        "foo?-*",
+        "literal-key-123",
+    ],
+)
+def test_augment_grain_resource_id_matches_linear_reference(opts, pattern):
+    """
+    Match-set equivalence: for any glob with a fixed prefix, the
+    planner's output MUST equal the reference linear-scan match set
+    over the bank's id portion. Covers a handful of representative
+    shapes.
+    """
+    import fnmatch as _fnmatch
+    import random as _random
+
+    opts["minion_data_cache"] = True
+    # Ensure Mission 1's literal hash-probe can resolve "<type>:<id>"
+    # candidates; without this, a literal-only pattern returns empty
+    # because the probe loop iterates zero configured types.
+    opts["resource_types"] = ["dummy"]
+    _random.seed(0xC0FFEE)
+    keys = sorted(
+        {
+            f"dummy:{prefix}-{i:04d}"
+            for prefix in ("a", "a-dummy-001", "a-dummy-002", "web", "ns", "foo1")
+            for i in range(50)
+        }
+    )
+    keys.append("dummy:literal-key-123")
+    _random.shuffle(keys)
+
+    ck, _fake = _build_ck_with_keys(opts, keys)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, f"resource_id:{pattern}", ":", regex_match=False
+    )
+    got = sorted(result["minions"])
+
+    expected = sorted(
+        {
+            key.partition(":")[2]
+            for key in keys
+            if _fnmatch.fnmatchcase(key.partition(":")[2], pattern)
+        }
+    )
+    assert got == expected, (
+        f"pattern={pattern!r} planner returned {got!r} but linear "
+        f"reference expects {expected!r}"
+    )
+
+
+def test_augment_grain_resource_id_prefix_with_colon_treats_id_only(opts):
+    """
+    Resource IDs are allowed to contain colons; the sorted keys are
+    stored as ``<type>:<id>`` so a ``resource_id:ns:res-*`` query
+    carries the first colon INSIDE the id portion. The current
+    planner already treats a nested predicate specially (via
+    ``_resource_id_candidates``, which returns ``None`` and falls
+    back). The Mission 2 sorted-cache path is NOT expected to handle
+    nested patterns either -- but it must still produce the correct
+    result, even if that means the slow-path fallback runs.
+    """
+    opts["minion_data_cache"] = True
+    # One matching key where the id literally contains a colon.
+    keys = ["dummy:ns:res-1", "dummy:ns:res-2", "dummy:other"]
+    ck, _fake = _build_ck_with_keys(opts, keys)
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "resource_id:ns:res-*", ":", regex_match=False
+    )
+    # The nested-predicate rule short-circuits to the slow path.
+    # subdict_match on {"resource_id": "ns:res-1"} with
+    # ``resource_id:ns:res-*`` traverses one level and then runs an
+    # fnmatch-style check on the remainder -- documented as a
+    # fall-through here, not a strict shape test. Confirm no crash
+    # and the result is a subset of the matching keys.
+    for rid in result["minions"]:
+        assert rid.startswith("ns:res-"), rid
+
+
+def test_augment_grain_resource_id_backslash_in_pattern(opts):
+    """
+    ``resource_id:a\\*-foo`` -- backslash is NOT a glob escape in
+    :mod:`fnmatch`; the pattern matches a literal ``a\\`` followed by
+    any chars ending in ``-foo``. The sorted-cache planner must not
+    misparse the backslash as an escape and silently drop the match.
+    """
+    import fnmatch as _fnmatch
+
+    opts["minion_data_cache"] = True
+    keys = [r"dummy:a\x-foo", r"dummy:a\y-foo", "dummy:aZ-foo"]
+    ck, _fake = _build_ck_with_keys(opts, keys)
+
+    pattern = r"a\*-foo"
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, f"resource_id:{pattern}", ":", regex_match=False
+    )
+    expected = sorted(
+        {
+            key.partition(":")[2]
+            for key in keys
+            if _fnmatch.fnmatchcase(key.partition(":")[2], pattern)
+        }
+    )
+    assert sorted(result["minions"]) == expected

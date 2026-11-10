@@ -14,6 +14,7 @@ import salt.roster
 import salt.transport
 import salt.utils.data
 import salt.utils.files
+import salt.utils.grain_target_cache
 import salt.utils.network
 import salt.utils.resource_registry
 import salt.utils.resources
@@ -495,6 +496,38 @@ def _is_resource_id_literal_predicate(expr, delimiter):
     return _is_literal_glob(pattern)
 
 
+def _resource_id_prefix_predicate(expr, delimiter, regex_match):
+    """
+    Return ``(id_prefix, full_pattern)`` iff ``expr`` is a flat
+    ``resource_id:<glob>`` predicate with a non-empty fixed prefix.
+
+    Mirrors the shape checks of :func:`_resource_id_candidates` (same
+    key / no nested delimiter / non-empty pattern) and adds the
+    prefix-non-empty / non-literal requirements so the caller can
+    dispatch to the sorted-key fast path. Returns ``None`` when the
+    predicate shape doesn't apply, when the glob is literal (the
+    Mission 1 hash-probe path already handled it), when regex matching
+    is in effect (prefix analysis of arbitrary regex is not worth the
+    complexity), or when the glob has no fixed prefix (e.g. starts with
+    ``*`` or ``[``).
+    """
+    if regex_match or not isinstance(expr, str):
+        return None
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return None
+    if delimiter in pattern:
+        return None
+    # Literal globs are already served by the Mission 1 hash probe; we
+    # only want to handle the "prefix + wildcard tail" shape.
+    if _is_literal_glob(pattern):
+        return None
+    prefix = salt.utils.grain_target_cache.fixed_prefix_of(pattern)
+    if not prefix:
+        return None
+    return prefix, pattern
+
+
 def _resource_id_candidates(sr_keys, expr, delimiter, regex_match):
     """
     Narrow ``sr_keys`` to the subset whose id portion matches a
@@ -871,6 +904,60 @@ class CkMinions:
                     # and can return.
                     return
             return
+
+        # Sorted-key prefix fast path for ``resource_id:<prefix>*`` style
+        # predicates. Avoids the O(bank-size) ``cache.list()`` + fnmatch
+        # scan below by binary-searching the sorted bank keys and walking
+        # only the prefix range. The in-process cache is keyed by
+        # ``(cachedir, bank)`` and invalidated via a cheap O(1)
+        # generation signal (mmap_cache occupied-count header or bank
+        # directory mtime).
+        prefix_info = _resource_id_prefix_predicate(expr, delimiter, regex_match)
+        if prefix_info is not None:
+            id_prefix, pattern = prefix_info
+            try:
+                sorted_keys = salt.utils.grain_target_cache.get_sorted_keys(
+                    self.cache, bank
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "resource_id prefix fast-path: sorted-key cache fetch failed "
+                    "for bank=%r; falling through to linear scan",
+                    bank,
+                    exc_info=True,
+                )
+                sorted_keys = None
+            if sorted_keys is not None:
+                # Bank keys are ``<rtype>:<rid>``; we match against the
+                # id portion. ``<rtype>:`` segments sort lexically, so a
+                # single prefix search across the full sorted-keys list
+                # would miss matches whose rtype differs. Instead we
+                # intersect per rtype so each binary-search range only
+                # covers one type-scoped stride. For a bank with K rtypes
+                # and N keys total, this is O(K * log N + matches).
+                try:
+                    rtypes = salt.utils.resources.enabled_resource_types(self.opts)
+                except Exception:  # pylint: disable=broad-except
+                    rtypes = []
+                if rtypes:
+                    for rtype in rtypes:
+                        scoped = f"{rtype}:{id_prefix}"
+                        for (
+                            sr_key
+                        ) in salt.utils.grain_target_cache.prefix_range_candidates(
+                            sorted_keys, scoped
+                        ):
+                            _rtype, sep2, rid = sr_key.partition(":")
+                            if not sep2 or not rid:
+                                continue
+                            if not fnmatch.fnmatchcase(rid, pattern):
+                                continue
+                            if rid not in seen:
+                                result["minions"].append(rid)
+                                seen.add(rid)
+                    return
+                # No enabled rtypes derivable: fall through to the
+                # linear-scan path below so correctness is preserved.
 
         try:
             srns = list(self.cache.list(bank) or [])
