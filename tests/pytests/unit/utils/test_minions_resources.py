@@ -1781,3 +1781,473 @@ def test_augment_grain_resource_id_backslash_in_pattern(opts):
         }
     )
     assert sorted(result["minions"]) == expected
+
+
+# ---------------------------------------------------------------------------
+# Mission 3: reverse-value grain index for operator-declared grain keys
+#
+# When the operator sets ``index_grain_keys: [role, env, os]`` in master
+# opts, predicates on any of those keys route to an in-process reverse
+# index instead of the per-key pickle-fetch slow path. These tests nail
+# down the dispatch behaviour from the public
+# :meth:`_augment_grain_match_with_resource_grains` surface:
+#
+# * a declared key with a populated bank goes through the index and the
+#   slow-path fetch loop is NOT invoked
+# * an undeclared key, or an empty ``index_grain_keys`` list, falls
+#   through to the existing slow path
+# * fast paths earlier in the dispatch chain (Mission 1 hash probe,
+#   Mission 2 sorted-key cache) take precedence -- the reverse index
+#   is NOT consulted for ``resource_id`` predicates
+# ---------------------------------------------------------------------------
+
+
+def _resolve_rev_module():
+    """Return the module exposing the Mission 3 reverse-value index."""
+    try:
+        import salt.utils.grain_reverse_index as mod
+    except ImportError:
+        mod = None
+    if mod is not None and any(
+        hasattr(mod, n) for n in ("lookup", "reverse_lookup", "lookup_by_value")
+    ):
+        return mod
+    # Fallback: extended grain_target_cache.
+    try:
+        import salt.utils.grain_target_cache as mod2
+    except ImportError:
+        return None
+    if any(hasattr(mod2, n) for n in ("lookup", "reverse_lookup", "lookup_by_value")):
+        return mod2
+    return None
+
+
+def _resolve_rev_entry(mod, *names):
+    if mod is None:
+        return None
+    for n in names:
+        fn = getattr(mod, n, None)
+        if fn is not None:
+            return fn
+    return None
+
+
+_rev = _resolve_rev_module()
+_rev_lookup_name = next(
+    (
+        n
+        for n in ("lookup", "reverse_lookup", "lookup_by_value")
+        if _rev is not None and hasattr(_rev, n)
+    ),
+    None,
+)
+_rev_values_name = next(
+    (
+        n
+        for n in ("values_for_key", "values", "list_values")
+        if _rev is not None and hasattr(_rev, n)
+    ),
+    None,
+)
+
+requires_rev = pytest.mark.skipif(
+    _rev is None, reason="Mission 3 reverse-value index not yet landed"
+)
+
+
+def _build_ck_with_bank(opts, entries):
+    """
+    Build a CkMinions whose ``self.cache`` returns ``entries`` for the
+    ``resource_grains`` bank via ``list``, ``fetch``, ``list_all``, and
+    ``contains``. Used to let both the reverse-index path and the slow
+    pickle-fetch fallback work from the same fixture.
+
+    Returns ``(ck, fake)``.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    fake = MagicMock()
+    present = dict(entries)
+
+    def _list(bank):
+        return list(present) if bank == "resource_grains" else []
+
+    def _fetch(bank, key):
+        if bank != "resource_grains":
+            return None
+        return present.get(key)
+
+    def _list_all(bank, include_data=False):
+        if bank != "resource_grains":
+            return {}
+        return dict(present) if include_data else {k: None for k in present}
+
+    def _contains(bank, key):
+        if bank != "resource_grains":
+            return False
+        return key in present
+
+    fake.cachedir = opts.get("cachedir", "/fake")
+    fake.list = MagicMock(side_effect=_list)
+    fake.fetch = MagicMock(side_effect=_fetch)
+    fake.list_all = MagicMock(side_effect=_list_all)
+    fake.contains = MagicMock(side_effect=_contains)
+    ck.cache = fake
+    return ck, fake
+
+
+@requires_rev
+def test_dispatch_declared_key_uses_reverse_index_and_skips_slow_path(opts):
+    """
+    Declared key ``role`` with a populated bank: ``role:web`` must
+    resolve via the reverse index. The slow-path ``fetch`` loop MUST
+    NOT be called -- that is the whole point of the index.
+    """
+    import salt.utils.grain_target_cache as _gtc
+
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role", "env"]
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+        "dummy:b": {"role": "web", "resource_id": "b"},
+        "dummy:c": {"role": "db", "resource_id": "c"},
+    }
+    ck, fake = _build_ck_with_bank(opts, entries)
+    # Reset singleton between tests so stale state does not leak.
+    try:
+        _gtc.invalidate()
+    except Exception:  # pylint: disable=broad-except
+        pass
+    try:
+        _rev.invalidate()  # type: ignore[attr-defined]
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["a", "b"]
+    # The slow path does per-key ``fetch(bank, sr_key)``; the index does
+    # not. If the index was consulted, the fetch count stays zero
+    # (or at worst a tiny constant for driver-sniffing).
+    assert fake.fetch.call_count == 0, (
+        f"reverse-index path leaked into the slow fetch loop "
+        f"({fake.fetch.call_count} fetch calls)"
+    )
+
+
+@requires_rev
+def test_dispatch_undeclared_key_falls_through_to_slow_path(opts):
+    """
+    ``env:prod`` with ``index_grain_keys=["role"]`` -- the predicate
+    key is NOT in the declared set so the reverse index does not
+    apply. The slow-path fetch loop must run.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        "dummy:a": {"env": "prod", "resource_id": "a"},
+        "dummy:b": {"env": "staging", "resource_id": "b"},
+    }
+    ck, fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "env:prod", ":", regex_match=False
+    )
+    assert result["minions"] == ["a"]
+    # Slow path should have run: at least one ``list`` + one ``fetch``.
+    assert fake.list.call_count >= 1
+    assert fake.fetch.call_count >= 1
+
+
+@requires_rev
+def test_dispatch_empty_index_grain_keys_falls_through_to_slow_path(opts):
+    """
+    ``role:web`` with ``index_grain_keys=[]`` -- no key is declared so
+    the reverse index does not apply. Slow path must handle it.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = []
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+        "dummy:b": {"role": "db", "resource_id": "b"},
+    }
+    ck, fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+    assert result["minions"] == ["a"]
+    # Slow path: list + fetch per key.
+    assert fake.fetch.call_count >= 1
+
+
+@requires_rev
+def test_dispatch_glob_on_indexed_key_uses_values_for_key_walk(opts):
+    """
+    ``role:web-*`` with ``index_grain_keys=["role"]`` must walk the
+    index's distinct role values with fnmatch and union the results.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        "dummy:a": {"role": "web-fe", "resource_id": "a"},
+        "dummy:b": {"role": "web-be", "resource_id": "b"},
+        "dummy:c": {"role": "db", "resource_id": "c"},
+        "dummy:d": {"role": "web-fe", "resource_id": "d"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web-*", ":", regex_match=False
+    )
+    # Compare against the linear-scan reference.
+    import fnmatch as _fnmatch
+
+    expected = sorted(
+        {
+            key.partition(":")[2]
+            for key, g in entries.items()
+            if isinstance(g.get("role"), str)
+            and _fnmatch.fnmatchcase(g["role"], "web-*")
+        }
+    )
+    assert sorted(result["minions"]) == expected == ["a", "b", "d"]
+
+
+@requires_rev
+def test_dispatch_pcre_on_indexed_key_either_walks_or_falls_through(opts):
+    """
+    PCRE form against a declared key: the implementation may walk the
+    index values and regex-match each, OR decline PCRE and fall
+    through to the existing regex scan. Either way the match set must
+    be correct.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        "dummy:a": {"role": "web1", "resource_id": "a"},
+        "dummy:b": {"role": "web42", "resource_id": "b"},
+        "dummy:c": {"role": "webx", "resource_id": "c"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, r"role:^web\d+$", ":", regex_match=True
+    )
+    # web1 + web42 match; webx does not.
+    assert sorted(result["minions"]) == ["a", "b"]
+
+
+@requires_rev
+def test_dispatch_resource_id_prefix_does_not_hit_reverse_index(opts):
+    """
+    ``resource_id:a-dummy-0010*`` is served by the Mission 2 sorted-
+    key cache. The Mission 3 reverse index must NOT be consulted.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        f"dummy:a-dummy-{i:07d}": {"resource_id": f"a-dummy-{i:07d}", "role": "web"}
+        for i in range(10)
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    if _rev_lookup_name is None:
+        pytest.skip("reverse-index module has no recognised lookup entry point")
+
+    with patch.object(_rev, _rev_lookup_name) as rev_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "resource_id:a-dummy-000000*", ":", regex_match=False
+        )
+
+    # At least one result expected via Mission 2's sorted-key cache.
+    assert result["minions"], "sorted-key cache path returned no matches"
+    # Mission 3 must not have been consulted.
+    assert (
+        rev_entry.call_count == 0
+    ), "reverse-value index was called for a resource_id predicate"
+
+
+@requires_rev
+def test_dispatch_resource_id_literal_does_not_hit_reverse_index(opts):
+    """
+    Literal ``resource_id:a-dummy-0000100`` is served by Mission 1's
+    hash-probe fast path. The Mission 3 reverse index must NOT be
+    consulted.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {"dummy:a-dummy-0000100": {"resource_id": "a-dummy-0000100"}}
+    ck, fake = _build_ck_with_bank(opts, entries)
+
+    if _rev_lookup_name is None:
+        pytest.skip("reverse-index module has no recognised lookup entry point")
+
+    with patch.object(_rev, _rev_lookup_name) as rev_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result,
+            "resource_id:a-dummy-0000100",
+            ":",
+            regex_match=False,
+        )
+
+    assert result["minions"] == ["a-dummy-0000100"]
+    assert (
+        rev_entry.call_count == 0
+    ), "reverse-value index was called for a literal resource_id predicate"
+
+
+@requires_rev
+def test_dispatch_nested_predicate_falls_through_all_fast_paths(opts):
+    """
+    ``role:sub:web`` is a nested predicate -- it does not match the
+    top-level ``role`` key alone. All fast paths must decline, and the
+    existing slow path handles it (produces whatever subdict_match
+    produces; typically empty).
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+        "dummy:b": {"role": {"sub": "web"}, "resource_id": "b"},
+    }
+    ck, fake = _build_ck_with_bank(opts, entries)
+
+    if _rev_lookup_name is None:
+        pytest.skip("reverse-index module has no recognised lookup entry point")
+
+    with patch.object(_rev, _rev_lookup_name) as rev_entry:
+        result = {"minions": [], "missing": []}
+        ck._augment_grain_match_with_resource_grains(
+            result, "role:sub:web", ":", regex_match=False
+        )
+
+    # Reverse index MUST NOT be consulted for a nested predicate.
+    assert rev_entry.call_count == 0
+    # Slow path should have run (or at worst listed the bank).
+    assert fake.list.call_count >= 1 or fake.fetch.call_count >= 1
+
+
+@requires_rev
+@pytest.mark.parametrize(
+    "predicate,expected_sel",
+    [
+        ("role:web", lambda g: g.get("role") == "web"),
+        ("role:db", lambda g: g.get("role") == "db"),
+        ("env:prod", lambda g: g.get("env") == "prod"),
+        ("env:staging", lambda g: g.get("env") == "staging"),
+        ("os:Ubuntu", lambda g: g.get("os") == "Ubuntu"),
+    ],
+)
+def test_dispatch_match_set_equivalence_vs_linear_reference(
+    opts, predicate, expected_sel
+):
+    """
+    For each predicate on a declared key against a synthetic bank of
+    200+ keys, the reverse-index path must return exactly the same set
+    as the linear-scan reference. Guards against off-by-one skew,
+    list-value corner cases, and value-coercion drift between the two
+    paths.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role", "env", "os"]
+
+    roles = ["web", "db", "cache", "worker"]
+    envs = ["prod", "staging", "dev"]
+    oses = ["Ubuntu", "Debian", "CentOS"]
+    entries = {}
+    for i in range(250):
+        entries[f"dummy:r-{i:05d}"] = {
+            "resource_id": f"r-{i:05d}",
+            "role": roles[i % len(roles)],
+            "env": envs[i % len(envs)],
+            "os": oses[i % len(oses)],
+        }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, predicate, ":", regex_match=False
+    )
+
+    expected = sorted(
+        {key.partition(":")[2] for key, g in entries.items() if expected_sel(g)}
+    )
+    assert sorted(result["minions"]) == expected
+
+
+@requires_rev
+def test_dispatch_no_duplicates_on_same_key_seen_twice(opts):
+    """
+    Defensive: even if the reverse-index build somehow sees the same
+    sr_key twice (a storage anomaly), the resulting rid list has no
+    duplicate entries.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["role"]
+
+    entries = {
+        "dummy:a": {"role": "web", "resource_id": "a"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    # First call populates the index; second call hits it (and must not
+    # double-append).
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+    ck._augment_grain_match_with_resource_grains(
+        result, "role:web", ":", regex_match=False
+    )
+    assert result["minions"] == ["a"]
+
+
+@requires_rev
+def test_dispatch_list_valued_grain_indexed_per_element(opts):
+    """
+    ``tags`` is a list-valued grain on each SR. A predicate
+    ``tags:prod`` must find all SRs whose ``tags`` list contains the
+    literal ``prod``.
+    """
+    opts["minion_data_cache"] = True
+    opts["resource_types"] = ["dummy"]
+    opts["index_grain_keys"] = ["tags"]
+
+    entries = {
+        "dummy:a": {"tags": ["prod", "us-east"], "resource_id": "a"},
+        "dummy:b": {"tags": ["staging"], "resource_id": "b"},
+        "dummy:c": {"tags": ["prod", "eu-west"], "resource_id": "c"},
+    }
+    ck, _fake = _build_ck_with_bank(opts, entries)
+
+    result = {"minions": [], "missing": []}
+    ck._augment_grain_match_with_resource_grains(
+        result, "tags:prod", ":", regex_match=False
+    )
+    assert sorted(result["minions"]) == ["a", "c"]

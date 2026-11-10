@@ -882,6 +882,15 @@ VALID_OPTS = immutabletypes.freeze(
         # cachedir under the name of the minion and used to predetermine what minions are expected to
         # reply from executions.
         "minion_data_cache": bool,
+        # Operator-declared list of resource-grain keys to index for
+        # grain-target queries.  When set, the master builds an
+        # in-process reverse map ``{(grain_key, value) -> [sr_key, ...]}``
+        # for the named keys so predicates like ``role:web`` or
+        # ``env:prod`` hit the ``resource_grains`` bank in O(matches)
+        # instead of walking every entry.  Empty / unset preserves the
+        # legacy full-bank scan behaviour.  See
+        # :mod:`salt.utils.grain_reverse_index`.
+        "index_grain_keys": list,
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
         # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
@@ -1852,6 +1861,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "master_job_cache": "local_cache",
         "job_cache_store_endtime": False,
         "minion_data_cache": True,
+        "index_grain_keys": [],
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
