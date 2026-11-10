@@ -148,10 +148,18 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
             import threading as _threading
 
             errors = [None] * len(factories)
+            # Per-attempt start budget.  Saltfactories retries up to
+            # ``max_start_attempts`` (default 3) on FactoryNotStarted,
+            # so the worst-case wall-clock for one peer is
+            # ``start_timeout * max_start_attempts``.  Keep that
+            # under the pytest-timeout budget on the test (300s) so a
+            # genuine failure surfaces as a FactoryNotStarted traceback
+            # rather than a pytest-timeout on ``Thread.join``.
+            _PEER_START_TIMEOUT = 60
 
             def _start_one(idx):
                 try:
-                    factories[idx].start(start_timeout=240)
+                    factories[idx].start(start_timeout=_PEER_START_TIMEOUT)
                 except BaseException as exc:  # pylint: disable=broad-except
                     errors[idx] = exc
 
@@ -161,8 +169,27 @@ def single_cluster(request, salt_factories, topology_tmp_path, _topology_exit_st
             ]
             for t in threads:
                 t.start()
+            # Hard wall clock on ``Thread.join`` so the test cannot
+            # block forever if a peer's ``factory.start`` itself
+            # deadlocks (observed on slower Linux CI runners where
+            # one peer never signalled ``started`` and saltfactories
+            # swallowed the retry traceback).  The bound is comfortably
+            # larger than ``_PEER_START_TIMEOUT * max_start_attempts``
+            # so a normal failure path raises below instead of here.
+            _JOIN_TIMEOUT = 240
             for t in threads:
-                t.join()
+                t.join(timeout=_JOIN_TIMEOUT)
+            stuck = [i for i, t in enumerate(threads) if t.is_alive()]
+            if stuck:
+                for i, other_factory in enumerate(factories):
+                    try:
+                        other_factory.terminate()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+                raise RuntimeError(
+                    f"multi-peer cluster start stuck: peer threads "
+                    f"{stuck} still running after {_JOIN_TIMEOUT}s"
+                )
             for idx, exc in enumerate(errors):
                 if exc is not None:
                     # Tear down any peers that DID come up before
