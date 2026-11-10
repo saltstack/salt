@@ -2665,6 +2665,11 @@ def mod_data(fsclient, target=None):
         "utils",
         "wrapper",
         "tops",
+        "pillar",
+        "serializers",
+        "executors",
+        "cache",
+        "sdb",
     ]
     ret = {}
     if target is not None:
@@ -2683,13 +2688,19 @@ def mod_data(fsclient, target=None):
             if ref == "wrapper":
                 kwargs["tag"] = "wrapper"
                 kwargs["base_path"] = str(salt.loader.SALT_BASE_PATH / "client" / "ssh")
+            elif ref == "cache":
+                # salt.loader.cache() uses explicit tag "cache"; the default
+                # rstrip("s") would produce "cach".
+                kwargs["tag"] = "cache"
+            elif ref == "executors":
+                # salt.loader.executors() uses explicit tag "executor".
+                kwargs["tag"] = "executor"
             else:
                 kwargs["tag"] = ref.rstrip("s")
-            # The default ext_type_dirs for "utils" would be "util_dirs"
-            # (tag.rstrip("s") + "_dirs"), but Salt config uses "utils_dirs".
-            # Match the key used by salt.loader.utils() to pick up config paths.
-            if ref == "utils":
-                kwargs["ext_type_dirs"] = "utils_dirs"
+            # Some ext_type names diverge from tag + "_dirs" after rstrip.
+            # Match the keys used by the corresponding salt.loader functions.
+            if ref in ("utils", "serializers"):
+                kwargs["ext_type_dirs"] = f"{ref}_dirs"
             module_dirs = salt.loader._module_dirs(opts, ref, **kwargs)
 
             for mod_dir in module_dirs:
