@@ -1269,6 +1269,16 @@ class AsyncAuth:
         from the waiter set and, if the set drained to empty while a
         sign-in is still in flight, cancels the sign-in so it does not
         hold its request channel open with no one waiting for the result.
+
+        ``Task.cancel()`` is cooperative: the task stays ``done() is
+        False`` until it next hits an await point and the
+        ``CancelledError`` propagates.  Clear ``_sign_in_task`` (and
+        ``_last_result``) *before* requesting the cancellation so a
+        fresh ``authenticate()`` call arriving during that window
+        starts over with a new task instead of latching onto the
+        doomed one -- its ``_on_sign_in_done`` short-circuits without
+        fanning out, so any caller that registered as a waiter on the
+        cancelled task would otherwise wait forever.
         """
         self._waiters.discard(future)
         if (
@@ -1276,7 +1286,10 @@ class AsyncAuth:
             and self._sign_in_task is not None
             and not self._sign_in_task.done()
         ):
-            self._sign_in_task.cancel()
+            task = self._sign_in_task
+            self._sign_in_task = None
+            self._last_result = None
+            task.cancel()
 
     def _on_sign_in_done(self, task):
         """
@@ -1286,6 +1299,13 @@ class AsyncAuth:
         this callback returns spawns a fresh sign-in task instead of
         latching onto the just-completed one.
 
+        If this task was superseded -- ``_on_waiter_done`` cleared
+        ``_sign_in_task`` during the pending-cancel window, or a later
+        ``authenticate()`` installed a fresh task -- return without
+        touching instance state.  The current owner of
+        ``_sign_in_task`` manages its own ``_waiters`` and
+        ``_last_result``; a stale callback must not clobber them.
+
         A cancelled task is the "last waiter cancelled me" path -- callers
         already cancelled their own futures so there is nothing to fan
         out.  Any other exception (including ``OSError`` and other
@@ -1293,6 +1313,8 @@ class AsyncAuth:
         unhandled task exceptions) is set on every waiter so no caller
         hangs indefinitely.
         """
+        if self._sign_in_task is not task:
+            return
         waiters = self._waiters
         self._waiters = set()
         self._sign_in_task = None

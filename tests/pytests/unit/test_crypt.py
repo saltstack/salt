@@ -975,12 +975,15 @@ async def test_authenticate_last_waiter_cancel_cancels_sign_in_task(
         # does not continue to hold the ``AsyncReqChannel`` open.
         future.cancel()
 
-        # Drive the loop until the task finishes and its
-        # ``_on_sign_in_done`` callback (which clears ``_sign_in_task``)
-        # has had a chance to run.
+        # Drive the loop until the task itself actually finishes
+        # cancelling.  ``_sign_in_task`` is cleared *synchronously* in
+        # ``_on_waiter_done`` to close the pending-cancel window (see
+        # the dedicated test below), so it is not a reliable "task is
+        # done" indicator -- we have to wait on the task handle we
+        # captured before cancel().
         for _ in range(20):
             await _asyncio.sleep(0)
-            if auth._sign_in_task is None:
+            if sign_in_task.done():
                 break
 
         assert sign_in_task.done()
@@ -989,6 +992,139 @@ async def test_authenticate_last_waiter_cancel_cancels_sign_in_task(
         assert auth._sign_in_task is None
         assert auth._waiters == set()
         assert not auth.authenticated
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_after_last_waiter_cancel_spawns_fresh_task(
+    minion_root, io_loop
+):
+    """
+    Regression test for the pending-cancel window race.
+
+    ``Task.cancel()`` is cooperative: it requests cancellation but the
+    task stays ``done() is False`` until it next hits an await point
+    and the ``CancelledError`` propagates out of the coroutine.  If a
+    fresh ``authenticate()`` call arrives in that window and
+    ``_on_waiter_done`` has not already cleared ``_sign_in_task``, the
+    new caller would register as a waiter on the doomed task.  When
+    the cancellation eventually completes, ``_on_sign_in_done`` fires
+    with ``task.cancelled() is True`` and short-circuits without
+    fanning out -- the new caller would hang forever on its future.
+
+    The fix clears ``_sign_in_task`` and ``_last_result`` in
+    ``_on_waiter_done`` *before* calling ``.cancel()``, so a fresh
+    ``authenticate()`` call sees "no task in flight" and spawns a new
+    one.  The cancelled task's ``_on_sign_in_done`` later checks
+    ``self._sign_in_task is task`` and bails out without touching the
+    new owner's state.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    sign_in_calls = 0
+    first_entered = _asyncio.Event()
+    second_entered = _asyncio.Event()
+    release_first = _asyncio.Event()
+    release_second = _asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        nonlocal sign_in_calls
+        sign_in_calls += 1
+        if sign_in_calls == 1:
+            first_entered.set()
+            await release_first.wait()
+        else:
+            second_entered.set()
+            await release_second.wait()
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        future_a = auth.authenticate()
+        await first_entered.wait()
+        first_task = auth._sign_in_task
+        assert first_task is not None
+        assert not first_task.done()
+
+        # Cancel the only waiter.  ``_on_waiter_done`` runs on the
+        # next tick and must clear ``_sign_in_task`` / ``_last_result``
+        # *before* dispatching the task cancellation, so the second
+        # ``authenticate()`` call below sees a clean slate.
+        future_a.cancel()
+        await _asyncio.sleep(0)
+
+        # Pending-cancel window: ``first_task.done()`` is still False
+        # because ``CancelledError`` has not propagated out of
+        # ``_authenticate`` yet (it is parked in ``await
+        # release_first.wait()``).  But ``_sign_in_task`` and
+        # ``_last_result`` must already be cleared.
+        assert not first_task.done()
+        assert auth._sign_in_task is None
+        assert auth._last_result is None
+
+        # A new caller arrives in the pending-cancel window.  Because
+        # ``_sign_in_task is None``, ``authenticate()`` must spawn a
+        # fresh task rather than register this caller as a waiter on
+        # ``first_task``.
+        future_b = auth.authenticate()
+        second_task = auth._sign_in_task
+        assert second_task is not None
+        assert second_task is not first_task
+
+        # Let the first task finish its cancellation.  Its
+        # ``_on_sign_in_done`` must observe ``self._sign_in_task is
+        # not task`` (the attribute now points at ``second_task``) and
+        # return without clobbering the new waiter set or
+        # ``_last_result``.
+        release_first.set()
+        for _ in range(20):
+            await _asyncio.sleep(0)
+            if first_task.done():
+                break
+        assert first_task.done()
+        assert first_task.cancelled()
+        assert auth._sign_in_task is second_task
+        assert future_b in auth._waiters
+
+        # Finish the second sign-in.  ``future_b`` must resolve with
+        # True -- the test for this regression is that it does *not*
+        # hang because a stale ``_on_sign_in_done`` consumed its
+        # waiter entry without notifying it.
+        release_second.set()
+        result_b = await _asyncio.wait_for(future_b, timeout=5)
+        assert result_b is True
+        assert future_a.cancelled()
+        assert auth.authenticated
+        assert sign_in_calls == 2
     finally:
         crypt.AsyncAuth.creds_map.pop(credskey, None)
 
