@@ -649,6 +649,27 @@ def test_connect():
                 }
 
 
+def test_connect_udp():
+    """
+    Test that a UDP connection sends a bytes payload and reports success
+    """
+    address = ("127.0.0.1", 53)
+    addrinfo = [(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP, "", address)]
+    with patch.object(socket, "getaddrinfo", return_value=addrinfo), patch(
+        "socket.socket"
+    ) as mock_socket:
+        skt = mock_socket.return_value
+        skt.recvfrom.return_value = (b"reply", address)
+        ret = networkmod.connect("127.0.0.1", 53, proto="udp")
+    assert ret == {
+        "result": True,
+        "comment": "Successfully connected to 127.0.0.1 (127.0.0.1) on udp port 53",
+    }
+    payload, destination = skt.sendto.call_args.args
+    assert isinstance(payload, bytes)
+    assert destination == address
+
+
 def test_is_private():
     """
     Test for Check if the given IP address is a private address

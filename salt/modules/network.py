@@ -3,12 +3,11 @@ Module for gathering and managing network information
 """
 
 import concurrent.futures
-import datetime
-import hashlib
 import logging
 import os
 import random
 import re
+import secrets
 import socket
 import time
 
@@ -1756,9 +1755,7 @@ def connect(host, port=None, **kwargs):
         if proto == "udp":
             # Generate a random string of a
             # decent size to test UDP connection
-            md5h = hashlib.md5()
-            md5h.update(datetime.datetime.now().strftime("%s"))
-            msg = md5h.hexdigest()
+            msg = secrets.token_hex(16).encode()
             skt.sendto(msg, _address)
             recv, svr = skt.recvfrom(255)
             skt.close()
