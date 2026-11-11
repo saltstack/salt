@@ -52,10 +52,16 @@ Incremental Ruff Checks (3008 and Later)
 ========================================
 
 Ruff runs alongside pylint in pre-commit and CI. Black remains the formatter.
-The initial rules check unused imports, f-strings without placeholders,
-always-true tuple assertions and conditions, mutable argument defaults, and
-loop variables captured by nested functions. This check does not enforce type
-annotations or replace mypy.
+The rules cover correctness problems only: all pyflakes checks (unused
+imports, undefined names, redefined names, and so on), common bugbear checks
+such as mutable argument defaults and loop variables captured by nested
+functions, comparisons to ``None``, ``True`` and ``False``, bare ``except``,
+dropped asyncio tasks, and pylint error checks. Star imports and unused local
+variables are not checked. Names Salt injects into modules, such as
+``__salt__`` and ``__opts__``, are not reported as undefined. The list is in
+``pyproject.toml`` and must match ``additional-builtins`` in ``.pylintrc``.
+This check does not enforce style or type annotations, and does not replace
+mypy.
 
 Only new violations are blocking. CI compares with the pull request's target
 commit using the same Ruff version and configuration on both revisions.

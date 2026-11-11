@@ -249,6 +249,15 @@ def test_inherited_git_hook_environment_is_isolated(
             "callbacks = []\nfor index in range(3):\n    callbacks.append(lambda: index)\n",
             "B023",
         ),
+        ("print(missing_name)\n", "F821"),
+        ("def f():\n    pass\n\n\ndef f():\n    pass\n", "F811"),
+        ("try:\n    pass\nexcept:\n    pass\n", "E722"),
+        ("def f(x):\n    return x == None\n", "E711"),
+        ("def f(x, y):\n    return not x in y\n", "E713"),
+        ("def f(a, b):\n    return type(a) == type(b)\n", "E721"),
+        ("import asyncio\n\n\nasync def f(c):\n    asyncio.create_task(c)\n", "RUF006"),
+        ("def f():\n    raise\n", "PLE0704"),
+        ("import pytest\n\nwith pytest.raises(Exception):\n    pass\n", "B017"),
     ],
 )
 def test_additional_rules_are_enforced(repo: Path, source: str, code: str) -> None:
@@ -256,3 +265,9 @@ def test_additional_rules_are_enforced(repo: Path, source: str, code: str) -> No
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert code in result.stdout
+
+
+def test_salt_injected_globals_are_not_undefined(repo: Path) -> None:
+    write(repo, "new.py", "def f():\n    return __salt__, __opts__, __context__\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout

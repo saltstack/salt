@@ -66,19 +66,69 @@ known_third_party = [
 target-version = "py38"
 line-length = 88
 extend-exclude = ["salt/ext", "templates"]
-
-[tool.ruff.lint]
-# Start with a small set of correctness checks, alongside Salt's pylint plugins.
-# Black remains the formatter. Type checking is a separate rollout.
-select = [
-    "F401",  # unused imports
-    "F541",  # f-strings without placeholders
-    "F631",  # assertions with a non-empty tuple (always true)
-    "F634",  # conditions with a non-empty tuple (always true)
-    "B006",  # mutable argument defaults
-    "B023",  # loop variables captured without binding
+# Names Salt injects into modules at load time. Keep in sync with
+# additional-builtins in .pylintrc.
+builtins = [
+    "__opts__",
+    "__utils__",
+    "__salt__",
+    "__pillar__",
+    "__grains__",
+    "__context__",
+    "__runner__",
+    "__ret__",
+    "__env__",
+    "__low__",
+    "__states__",
+    "__lowstate__",
+    "__running__",
+    "__active_provider_name__",
+    "__master_opts__",
+    "__jid_event__",
+    "__instance_id__",
+    "__salt_system_encoding__",
+    "__proxy__",
+    "__serializers__",
+    "__reg__",
+    "__executors__",
+    "__events__",
+    "__resource_funcs__",
+    "napalm_device",
 ]
 
+[tool.ruff.lint]
+# Correctness checks, alongside Salt's pylint plugins. Only new violations
+# block a PR (see tools/precommit/ruff.py). Black remains the formatter, so no
+# style rules are enabled. Type checking is a separate rollout.
+select = [
+    "F",     # pyflakes
+    "B004",  # unreliable callable check
+    "B005",  # strip() with multi-character strings
+    "B006",  # mutable argument defaults
+    "B015",  # useless comparisons
+    "B017",  # assertRaises/pytest.raises(Exception)
+    "B018",  # useless expressions
+    "B020",  # loop variable overrides the iterable
+    "B023",  # loop variables captured without binding
+    "B025",  # duplicate exception in try/except
+    "B026",  # star-arg unpacking after a keyword argument
+    "B034",  # re.sub/split/subn positional count or flags
+    "B039",  # mutable ContextVar default
+    "E711",  # comparison to None
+    "E712",  # comparison to True/False
+    "E713",  # "not x in y"
+    "E714",  # "not x is y"
+    "E721",  # type comparison with ==
+    "E722",  # bare except
+    "PLE",   # pylint errors
+    "RUF006",  # asyncio task reference dropped
+    "W605",  # invalid escape sequence
+]
+ignore = [
+    "F403",  # star imports
+    "F405",  # names from star imports
+    "F841",  # unused variables
+]
 [tool.towncrier]
     package = "salt"
     filename = "CHANGELOG.md"
