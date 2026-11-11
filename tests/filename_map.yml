@@ -131,6 +131,39 @@ salt/cache/*:
   - pytests.functional.cache.test_mysql
   - pytests.functional.cache.test_redis
 
+salt/utils/etcd_util.py:
+  - pytests.unit.utils.test_etcd_util
+  - pytests.functional.utils.test_etcd_util
+  - pytests.unit.modules.test_etcd_mod
+  - pytests.functional.modules.test_etcd_mod
+  - pytests.unit.states.test_etcd_mod
+  - pytests.functional.states.test_etcd_mod
+  - pytests.unit.cache.test_etcd3_cache
+  - pytests.functional.cache.test_etcd3
+  - pytests.integration.cache.test_etcd3_cache
+  - pytests.unit.sdb.test_etcd_db
+  - pytests.functional.sdb.test_etcd_db
+  - pytests.integration.sdb.test_etcd_db
+  - pytests.unit.pillar.test_etcd_pillar
+  - pytests.functional.pillar.test_etcd_pillar
+  - pytests.unit.returners.test_etcd_return
+  - pytests.functional.returners.test_etcd_return
+  - pytests.integration.returners.test_etcd_return
+
+salt/returners/etcd_return.py:
+  - pytests.unit.returners.test_etcd_return
+  - pytests.functional.returners.test_etcd_return
+  - pytests.integration.returners.test_etcd_return
+
+salt/sdb/etcd_db.py:
+  - pytests.unit.sdb.test_etcd_db
+  - pytests.functional.sdb.test_etcd_db
+  - pytests.integration.sdb.test_etcd_db
+
+salt/pillar/etcd_pillar.py:
+  - pytests.unit.pillar.test_etcd_pillar
+  - pytests.functional.pillar.test_etcd_pillar
+
 salt/cli/*:
   - integration.shell.test_arguments
 
