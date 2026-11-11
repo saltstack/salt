@@ -654,6 +654,27 @@ def service_name():
     return "salt_minion" if "bsd" in sys.platform else "salt-minion"
 
 
+def _store_master_cluster_id(opts, pub_channel):
+    """
+    Lift the ``cluster_id`` field (if any) out of the master's auth
+    response and store it into ``opts["master_cluster_id"]`` so the
+    minion-side ``master_cluster_id`` grain can read it.
+
+    Additive: the master only emits ``cluster_id`` when it is
+    topology-enabled *and* ``topology_push_cluster_grain`` is True.
+    Missing/empty values are a no-op (the grain stays absent).
+    """
+    try:
+        creds = pub_channel.auth.creds
+    except AttributeError:
+        return
+    if not creds:
+        return
+    cluster_id = creds.get("cluster_id")
+    if cluster_id:
+        opts["master_cluster_id"] = cluster_id
+
+
 # The loaders a threaded job needs from one MinionBase.gen_modules() call. They
 # share that call's __context__ dict, so a job that looks up its function, runs it
 # through an executor and reads its retcode back using one generation is
@@ -1383,6 +1404,7 @@ class MinionBase:
                 else:
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
+                    _store_master_cluster_id(self.opts, pub_channel)
                     return (opts["master"], pub_channel)
 
         # single master sign in
@@ -1443,6 +1465,7 @@ class MinionBase:
                         await pub_channel.connect()
                     self.tok = pub_channel.auth.gen_token(b"salt")
                     self.connected = True
+                    _store_master_cluster_id(self.opts, pub_channel)
                     # Hand the channel off to the caller; clear the local so
                     # the finally block does not close it.
                     ret_pub_channel = pub_channel
@@ -1569,6 +1592,15 @@ class SMinion(MinionBase):
                 Wrap eval master in order to close the returned publish channel.
                 """
                 master, pub_channel = await self.eval_master(self.opts, failed=True)
+                # Topology master_cluster_id grain: eval_master populated
+                # ``opts["master_cluster_id"]`` from the auth response. Grains
+                # loaded before the handshake could not see it, so re-run
+                # core.master_cluster_id now; the no-opt branch below leaves
+                # existing grains unchanged.
+                if self.opts.get("master_cluster_id"):
+                    self.opts["grains"]["master_cluster_id"] = self.opts[
+                        "master_cluster_id"
+                    ]
                 pub_channel.close()
 
             io_loop.run_sync(

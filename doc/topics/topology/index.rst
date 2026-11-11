@@ -25,3 +25,6 @@ your deployment as needed for redundancy, geographical distribution, and scale.
     ../tutorials/master-cluster-reference
     ../tutorials/multimaster
     ../tutorials/multimaster_pki
+    ../master-topology/overview
+    ../master-topology/index
+    ../master-topology/pub-ack-complete

@@ -121,7 +121,18 @@ Use the following Pg database schema:
       id varchar(255) NOT NULL,
       success varchar(10) NOT NULL,
       full_ret jsonb NOT NULL,
-      alter_time TIMESTAMP WITH TIME ZONE DEFAULT NOW());
+      alter_time TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      cluster_path jsonb NULL);
+
+    -- Schema migration (RFC item 9): the ``cluster_path`` column is
+    -- additive and nullable so pre-existing deployments survive
+    -- without data loss.  Operators upgrading from a pre-topology
+    -- schema should run:
+    --
+    --   ALTER TABLE salt_returns ADD COLUMN IF NOT EXISTS cluster_path jsonb NULL;
+    --
+    -- The returner probes for the column once per connection and only
+    -- writes it when present.
 
     CREATE INDEX idx_salt_returns_id ON salt_returns (id);
     CREATE INDEX idx_salt_returns_jid ON salt_returns (jid);
@@ -199,6 +210,32 @@ log = logging.getLogger(__name__)
 
 # Define the module's virtual name
 __virtualname__ = "pgjsonb"
+
+
+def _has_cluster_path_column(cur):
+    """
+    Probe ``information_schema`` for the optional ``cluster_path``
+    column on ``salt_returns`` (RFC item 9).
+
+    Returns ``True`` on hit, ``False`` otherwise.  Caches on the
+    cursor's connection so the probe cost is amortised across every
+    insert that reuses the same connection pool slot.
+    """
+    conn = cur.connection
+    cached = getattr(conn, "_salt_cluster_path_column_present", None)
+    if cached is not None:
+        return cached
+    try:
+        cur.execute(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'salt_returns' "
+            "AND column_name = 'cluster_path' LIMIT 1"
+        )
+        present = cur.fetchone() is not None
+    except psycopg2.DatabaseError:
+        present = False
+    conn._salt_cluster_path_column_present = present  # pylint: disable=protected-access
+    return present
 
 
 def __virtual__():
@@ -308,23 +345,44 @@ def returner(ret):
     """
     try:
         with _get_serv(ret, commit=True) as cur:
-            sql = """INSERT INTO salt_returns
-                    (fun, jid, return, id, success, full_ret, alter_time)
-                    VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
-
             cleaned_return = salt.utils.data.decode(ret)
-            cur.execute(
-                sql,
-                (
-                    ret["fun"],
-                    ret["jid"],
-                    psycopg2.extras.Json(cleaned_return["return"]),
-                    ret["id"],
-                    ret.get("success", False),
-                    psycopg2.extras.Json(cleaned_return),
-                    time.time(),
-                ),
-            )
+            cluster_path = ret.get("cluster_path")
+            # RFC item 9: write cluster_path only when the operator has
+            # run the additive ALTER TABLE.  Pre-topology installs keep
+            # the 7-column INSERT shape exactly.
+            if cluster_path and _has_cluster_path_column(cur):
+                sql = """INSERT INTO salt_returns
+                        (fun, jid, return, id, success, full_ret, alter_time, cluster_path)
+                        VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s), %s)"""
+                cur.execute(
+                    sql,
+                    (
+                        ret["fun"],
+                        ret["jid"],
+                        psycopg2.extras.Json(cleaned_return["return"]),
+                        ret["id"],
+                        ret.get("success", False),
+                        psycopg2.extras.Json(cleaned_return),
+                        time.time(),
+                        psycopg2.extras.Json(list(cluster_path)),
+                    ),
+                )
+            else:
+                sql = """INSERT INTO salt_returns
+                        (fun, jid, return, id, success, full_ret, alter_time)
+                        VALUES (%s, %s, %s, %s, %s, %s, to_timestamp(%s))"""
+                cur.execute(
+                    sql,
+                    (
+                        ret["fun"],
+                        ret["jid"],
+                        psycopg2.extras.Json(cleaned_return["return"]),
+                        ret["id"],
+                        ret.get("success", False),
+                        psycopg2.extras.Json(cleaned_return),
+                        time.time(),
+                    ),
+                )
     except salt.exceptions.SaltMasterError:
         log.critical(
             "pgjsonb: PostgreSQL unavailable, dropping return for jid=%s id=%s",
@@ -417,6 +475,30 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     """
     with _get_serv(ret=None, commit=True) as cur:
+
+        # RFC item 9: surface cluster_path alongside the return record
+        # when the column is present.  Pre-topology deployments stay on
+        # the two-column SELECT.
+        if _has_cluster_path_column(cur):
+            sql = """SELECT id, full_ret, cluster_path FROM salt_returns
+                    WHERE jid = %s"""
+            cur.execute(sql, (jid,))
+            data = cur.fetchall()
+            ret = {}
+            if data:
+                for minion, full_ret, cluster_path in data:
+                    record = dict(full_ret) if isinstance(full_ret, dict) else full_ret
+                    if cluster_path:
+                        # psycopg2 already decodes jsonb — pass through.
+                        if isinstance(record, dict):
+                            record["cluster_path"] = cluster_path
+                        else:
+                            record = {
+                                "return": full_ret,
+                                "cluster_path": cluster_path,
+                            }
+                    ret[minion] = record
+            return ret
 
         sql = """SELECT id, full_ret FROM salt_returns
                 WHERE jid = %s"""

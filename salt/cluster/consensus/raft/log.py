@@ -77,6 +77,26 @@ class LogEntryType:
     # the cluster log; gates consult the routing table to decide
     # which ring (if any) owns a given cache.
     ROUTE = 5
+    # Master-topology identity key commit.  Applied by
+    # ``TopologyStateMachine`` on the cluster log; writes the
+    # master's identity public key bytes into the shared registry
+    # MmapCache and persists the keypair to disk under
+    # ``pki_dir/master/master_identity.{pub,pem}``.  Issued at
+    # bootstrap and on identity rotation.
+    MASTER_IDENTITY_KEY = 6
+    # Master-topology peer-attach commit.  Operator-accepted peer
+    # masters land here; applied by ``TopologyStateMachine`` on the
+    # cluster log.  Each committed entry writes a
+    # ``PeerState`` into the shared registry MmapCache keyed by
+    # ``cluster_id`` and finalises the pending ``masters_pre/``
+    # key file into ``masters/``.
+    MASTER_PEER_ATTACH = 7
+    # Master-topology peer-detach commit.  Operator-revoked peer
+    # masters land here; applied by ``TopologyStateMachine`` on the
+    # cluster log.  Each committed entry removes the peer entry
+    # from the registry MmapCache and moves/removes the on-disk
+    # key file per the ``reason`` field.
+    MASTER_PEER_DETACH = 8
 
 
 class LogEntry(NamedTuple):
@@ -145,6 +165,16 @@ class BaseStorage:
         """Persist currentTerm and votedFor (§5.2)."""
         raise NotImplementedError
 
+    def save_commit_index(self, commit_index, last_applied=None):
+        """
+        Persist the highest log entry known to be committed (§5.3),
+        plus (optionally) the highest index already fed to a state
+        machine.  Optional for backends that do not need durable
+        commit_index — without it the ``Log.commit`` call falls back
+        to in-memory only and restart recovery depends on receiving a
+        fresh ``AppendEntries`` from the leader.
+        """
+
     def load_state(self):
         """Load persisted state. Returns dict with 'term' and 'voted_for'."""
         raise NotImplementedError
@@ -203,6 +233,34 @@ class Log:
                 self.restore_state_machines_from_data(snapshot["data"])
             state = self.storage.load_state()
             self._term = state.get("term", 0) if isinstance(state, dict) else state[0]
+            # Restore the highest previously committed index and the
+            # highest index already fed to a state machine so
+            # ``apply_entries`` can replay just the gap between them
+            # into every registered state machine before any peer
+            # AppendEntries arrives.  Clamp both against the current
+            # snapshot's ``last_included_index`` — the snapshot already
+            # compacted every index up through there into every SM, so
+            # commit_index / last_applied can never sit below it.
+            # State files written before commit_index / last_applied
+            # persistence was added read as -1 here (see
+            # SaltStorage.load_state).
+            if isinstance(state, dict):
+                persisted_commit = state.get("commit_index", -1)
+                if persisted_commit is None:
+                    persisted_commit = -1
+                persisted_applied = state.get("last_applied", -1)
+                if persisted_applied is None:
+                    persisted_applied = -1
+                self.commit_index = max(
+                    self.commit_index,
+                    self.last_included_index,
+                    persisted_commit,
+                )
+                self.last_applied = max(
+                    self.last_applied,
+                    self.last_included_index,
+                    persisted_applied,
+                )
 
         self._update_cached_index()
 
@@ -461,7 +519,38 @@ class Log:
         return payload
 
     def commit(self, index):
-        self.commit_index = max(getattr(self, "commit_index", -1), index)
+        """
+        Advance the highest committed index and persist it.
+
+        ``commit_index`` is monotonic — a stale incoming ``index`` below
+        the current value is ignored.  When a storage backend is wired
+        up, the new value is written through its ``save_commit_index``
+        (optional method) so a subsequent restart replays committed
+        entries into every state machine without needing a peer
+        AppendEntries.  Storage is only touched when the value actually
+        advances, so the hot path stays idempotent.
+        """
+        new_commit = max(getattr(self, "commit_index", -1), index)
+        if new_commit == self.commit_index:
+            return
+        self.commit_index = new_commit
+        if self.storage is not None:
+            save = getattr(self.storage, "save_commit_index", None)
+            if save is not None:
+                try:
+                    save(new_commit)
+                except Exception as exc:  # pylint: disable=broad-except
+                    # Durability is best-effort at this layer: a failed
+                    # write means the next restart falls back to peer
+                    # AppendEntries for recovery, which is still
+                    # correct — just less eager.  Log and continue so a
+                    # transient cache hiccup doesn't halt the Raft
+                    # thread.
+                    log.warning(
+                        "Log.commit: save_commit_index(%s) failed: %s",
+                        new_commit,
+                        exc,
+                    )
 
     def clear(self):
         """Discard all log entries."""
@@ -552,6 +641,11 @@ class MembershipStateMachine(BaseStateMachine):
        ``Node.peers`` voting flags and ``Node.voting``.
     """
 
+    # Pre-topology peers are implicitly version 0 (no field in their
+    # join payload).  Topology-aware peers advertise ``>= 1`` via
+    # ``RaftService.TOPOLOGY_PROTOCOL_VERSION``.
+    PROTOCOL_VERSION_PRE_TOPOLOGY = 0
+
     def __init__(self, on_change=None):
         """
         :param on_change: Optional ``callable(voters, learners)`` called after
@@ -560,6 +654,12 @@ class MembershipStateMachine(BaseStateMachine):
         """
         self._voters = set()
         self._learners = set()
+        # Per-node advertised protocol version.  Keyed by node_id;
+        # entries only exist for nodes that advertised a version in
+        # their CONFIG entry.  Absent entries default to
+        # ``PROTOCOL_VERSION_PRE_TOPOLOGY``, which is the "N" the
+        # rolling-upgrade gate blocks on.
+        self._protocol_versions = {}
         self._membership_version = -1
         self.on_change = on_change
 
@@ -571,20 +671,71 @@ class MembershipStateMachine(BaseStateMachine):
         """
         Apply a committed CONFIG entry.
 
-        :param cmd:   ``dict`` with keys ``"voters"`` (list[str]) and
-                      optionally ``"learners"`` (list[str]).  Non-dict values
-                      are treated as a plain voter list with no learners.
+        :param cmd:   ``dict`` with keys ``"voters"`` (list[str]),
+                      optionally ``"learners"`` (list[str]), and
+                      optionally ``"protocol_versions"`` (dict[str, int]
+                      mapping node_id -> advertised protocol version).
+                      Non-dict values are treated as a plain voter list
+                      with no learners and no versions.
         :param index: Raft log index of this entry (used as version stamp).
+
+        A stale CONFIG at an index less than or equal to the SM's
+        ``_membership_version`` is ignored: log truncation (leader
+        stomps a divergent follower tail) or a recovery replay can
+        re-deliver an older CONFIG after a newer one has already
+        applied, and silently overwriting ``_voters`` / ``_learners``
+        with the older view would regress routing and ring bring-up.
+        ``Node.on_config_change`` is already gated by
+        ``_applied_config_index`` at the callsite so the ``on_change``
+        hook does not double-fire, but that gate does not protect the
+        SM's own state --- hence the skip here.  ``index == -1``
+        (the no-index default used by test harnesses) always applies
+        to preserve the pre-existing "I do not care about replay
+        safety" contract.
         """
+        if (
+            index >= 0
+            and self._membership_version >= 0
+            and index <= self._membership_version
+        ):
+            log.debug(
+                "MembershipStateMachine.apply: ignoring stale CONFIG at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._membership_version,
+            )
+            return
+
         if isinstance(cmd, dict):
             voters = list(cmd.get("voters", []))
             learners = list(cmd.get("learners", []))
+            raw_versions = cmd.get("protocol_versions") or {}
         else:
             voters = list(cmd) if cmd else []
             learners = []
+            raw_versions = {}
 
         self._voters = set(voters)
         self._learners = set(learners)
+        # Prune per-node versions for nodes that are no longer part
+        # of the committed membership so a laggard that leaves the
+        # cluster stops blocking the gate.  Merge in any newly
+        # advertised versions from this CONFIG entry (coerce to int;
+        # bogus payloads degrade to the pre-topology default).
+        current = set(self._voters) | set(self._learners)
+        self._protocol_versions = {
+            node_id: version
+            for node_id, version in self._protocol_versions.items()
+            if node_id in current
+        }
+        if isinstance(raw_versions, dict):
+            for node_id, version in raw_versions.items():
+                if node_id not in current:
+                    continue
+                try:
+                    self._protocol_versions[node_id] = int(version)
+                except (TypeError, ValueError):
+                    continue
         self._membership_version = index
 
         if self.on_change is not None:
@@ -595,6 +746,7 @@ class MembershipStateMachine(BaseStateMachine):
         return {
             "voters": sorted(self._voters),
             "learners": sorted(self._learners),
+            "protocol_versions": dict(self._protocol_versions),
             "version": self._membership_version,
         }
 
@@ -606,6 +758,15 @@ class MembershipStateMachine(BaseStateMachine):
             return
         self._voters = set(data.get("voters", []))
         self._learners = set(data.get("learners", []))
+        raw_versions = data.get("protocol_versions") or {}
+        restored = {}
+        if isinstance(raw_versions, dict):
+            for node_id, version in raw_versions.items():
+                try:
+                    restored[node_id] = int(version)
+                except (TypeError, ValueError):
+                    continue
+        self._protocol_versions = restored
         self._membership_version = data.get("version", -1)
 
     # ------------------------------------------------------------------
@@ -627,6 +788,62 @@ class MembershipStateMachine(BaseStateMachine):
     def is_learner(self, node_id):
         """Return True if *node_id* is in the current learner set."""
         return node_id in self._learners
+
+    # ------------------------------------------------------------------
+    # Protocol-version advertisement (rolling-upgrade gate, RFC
+    # ``master-topology.md`` --- "Rolling-upgrade protocol-version gate")
+    # ------------------------------------------------------------------
+
+    def get_protocol_version(self, node_id):
+        """
+        Return the advertised protocol version for *node_id*.
+
+        Peers that joined before the gate landed never set this field,
+        so an absent entry maps to
+        :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY` (0).  Topology-aware
+        peers advertise a strictly greater value via
+        :attr:`RaftService.TOPOLOGY_PROTOCOL_VERSION`.
+        """
+        return self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+
+    def protocol_versions(self):
+        """Return a copy of the per-node advertised protocol-version map."""
+        return dict(self._protocol_versions)
+
+    def min_protocol_version(self):
+        """
+        Return the minimum advertised protocol version across the current
+        voter set.
+
+        Learners are excluded: a laggard learner cannot block a
+        ``MASTER_*`` commit because learners do not count toward
+        quorum.  A voter with no advertised version is treated as
+        :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY`.  An empty voter set
+        returns :attr:`PROTOCOL_VERSION_PRE_TOPOLOGY` so the gate
+        defaults closed on a brand-new cluster whose founding CONFIG
+        has not yet applied.
+        """
+        if not self._voters:
+            return self.PROTOCOL_VERSION_PRE_TOPOLOGY
+        return min(
+            self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+            for node_id in self._voters
+        )
+
+    def laggard_voters(self, floor):
+        """
+        Return the sorted list of voter node_ids whose advertised
+        protocol version is below *floor*.
+
+        Used to construct operator-visible error messages that name
+        the specific peer(s) still running the pre-topology release.
+        """
+        return sorted(
+            node_id
+            for node_id in self._voters
+            if self._protocol_versions.get(node_id, self.PROTOCOL_VERSION_PRE_TOPOLOGY)
+            < floor
+        )
 
     @property
     def membership_version(self):
@@ -699,11 +916,22 @@ class RingConfigStateMachine(BaseStateMachine):
         :param cmd:   ``dict`` with keys ``"members"`` (str, one of
                       ``RING_MEMBERS_VALID``) and ``"replicas"`` (int).
                       Either may be omitted to keep the existing value
-                      — useful for partial updates that only flip one
+                      -- useful for partial updates that only flip one
                       knob.  Unknown keys are ignored.
         :param index: Raft log index of this entry; stored as the
                       version stamp visible via :attr:`config_version`.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for ring-policy state.
         """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RingConfigStateMachine.apply: ignoring stale RING_CONFIG at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if isinstance(cmd, dict):
             new_members = cmd.get("members", self._members)
             new_replicas = cmd.get("replicas", self._replicas)
@@ -835,7 +1063,18 @@ class RingRegistryStateMachine(BaseStateMachine):
         Status defaults to ``"active"`` so the common create case is
         a two-field commit; founding voters are sorted to canonicalise
         the on-disk representation.  ``ring_id`` is required.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for ring-registry state.
         """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RingRegistryStateMachine.apply: ignoring stale RING_REGISTRY "
+                "at index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if not isinstance(cmd, dict):
             log.warning("RingRegistryStateMachine: ignoring non-dict cmd %r", cmd)
             return
@@ -971,7 +1210,19 @@ class RoutingStateMachine(BaseStateMachine):
     # ------------------------------------------------------------------
 
     def apply(self, cmd, client_id=None, sequence_num=None, index=-1):
-        """Apply a committed ROUTE entry."""
+        """Apply a committed ROUTE entry.
+
+        See :meth:`MembershipStateMachine.apply` for the stale-CONFIG
+        rationale; same shape applies here for routing-table state.
+        """
+        if index >= 0 and self._version >= 0 and index <= self._version:
+            log.debug(
+                "RoutingStateMachine.apply: ignoring stale ROUTE at "
+                "index=%s (already applied through index=%s)",
+                index,
+                self._version,
+            )
+            return
         if not isinstance(cmd, dict):
             log.warning("RoutingStateMachine: ignoring non-dict cmd %r", cmd)
             return

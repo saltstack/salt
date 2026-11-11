@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import traceback
+import warnings
 from random import randint
 
 import salt.defaults.exitcodes
@@ -463,6 +464,12 @@ def salt_syndic():
     """
     Start the salt syndic.
     """
+    warnings.warn(
+        "The salt-syndic daemon is deprecated and will be removed in a future release. "
+        "Use master topology (topology_enabled: True) for cross-site job delegation.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     _pin_multiprocessing_fork()
 
     import salt.utils.process

@@ -652,6 +652,137 @@ async def test_authenticate_missing_creds_attribute_67947(minion_root, io_loop, 
     assert auth._creds["session"] == session
 
 
+async def test_authenticate_future_set_exception_guarded_against_double_set(
+    minion_root, io_loop, caplog
+):
+    """
+    Regression test for the ``InvalidStateError`` wedge described in
+    ``agents/bugs/2026-11-01-asyncauth-invalid-state.md``.
+
+    ``AsyncAuth._authenticate()`` finishes its retry loop by calling either
+    ``_authenticate_future.set_exception(error)`` (failure branch at
+    ``crypt.py:1449``) or ``_authenticate_future.set_result(True)``
+    (success branch).  A stale coroutine racing against a sibling
+    ``authenticate()`` call that already resolved the future (or against
+    another instance of ``_authenticate()`` scheduled after
+    ``invalidate()`` dropped the attribute) would hit a done future and
+    raise ``asyncio.exceptions.InvalidStateError: invalid state`` out of
+    the coroutine task, leaving the minion wedged in an un-authenticated
+    state with no further auth attempts.
+
+    This test simulates the race by pre-resolving
+    ``_authenticate_future`` before the loop reaches ``set_exception``,
+    then awaits the ``_authenticate`` task itself to observe its final
+    exit state.  Before the guard, the task raises
+    ``InvalidStateError`` from its tail; with the guard, the task
+    completes cleanly and a subsequent ``authenticate()`` schedules a
+    fresh retry task with a brand-new future.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    # Capture the _authenticate task so we can inspect its final state
+    # after authenticate() returns.  Without this, the task runs on the
+    # same loop in the background and its unhandled InvalidStateError
+    # would only surface as an "asyncio: Task exception was never
+    # retrieved" warning on the stderr --- which is exactly the wedge
+    # observed on the live minions but not detectable via pytest.raises
+    # on the outer future.
+    captured_task = {}
+    original_create_task = auth.io_loop.create_task
+
+    def tracked_create_task(coro):
+        task = original_create_task(coro)
+        captured_task["task"] = task
+        return task
+
+    auth.io_loop.create_task = tracked_create_task
+
+    # Simulate the race: have ``sign_in`` resolve ``_authenticate_future``
+    # from under the running coroutine before returning the
+    # ``"bad enc algo"`` sentinel that routes the loop to the failure
+    # branch at ``_authenticate()``'s tail.  Without the guard, the tail
+    # call to ``set_exception`` would then raise ``InvalidStateError``.
+    pre_resolve_error = salt.exceptions.SaltClientError(
+        "pre-resolved by a sibling coroutine"
+    )
+
+    async def mock_sign_in(*args, **kwargs):
+        if not auth._authenticate_future.done():
+            auth._authenticate_future.set_exception(pre_resolve_error)
+        return "bad enc algo"
+
+    auth.sign_in = mock_sign_in
+
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(salt.exceptions.SaltClientError) as exc_info:
+            await auth.authenticate()
+        # The awaiter sees the pre-resolved exception --- the correct
+        # user-facing behavior.
+        assert exc_info.value is pre_resolve_error
+        # Drain the _authenticate task: before the guard this re-raises
+        # InvalidStateError; with the guard it completes cleanly.
+        task = captured_task["task"]
+        try:
+            await task
+        except _asyncio.InvalidStateError:
+            pytest.fail(
+                "AsyncAuth._authenticate raised InvalidStateError when "
+                "its _authenticate_future was already resolved; the "
+                "set_exception call at the tail of _authenticate must "
+                "be guarded with ``if not done()`` so the coroutine does "
+                "not die with an unhandled exception and wedge the "
+                "minion in a non-authenticated state."
+            )
+        assert task.done()
+        # The guard logs a DEBUG line when it drops the redundant set.
+        assert any("already resolved" in rec.getMessage() for rec in caplog.records)
+
+    assert auth._authenticate_future.done()
+
+    # A subsequent ``authenticate()`` must be able to schedule a fresh
+    # retry: the previous future is done, so ``authenticate()`` takes
+    # the else-branch, allocates a new future, and schedules a new
+    # ``_authenticate`` task.  This is the retry wiring that would be
+    # dead if ``InvalidStateError`` had leaked out of the first attempt
+    # as an "unhandled task exception".
+    previous_future = auth._authenticate_future
+
+    async def mock_sign_in_retry(*args, **kwargs):
+        return "bad enc algo"
+
+    auth.sign_in = mock_sign_in_retry
+    with pytest.raises(salt.exceptions.SaltClientError):
+        await auth.authenticate()
+
+    assert auth._authenticate_future is not previous_future
+    assert auth._authenticate_future.done()
+
+
 # --- PublicKey / PrivateKey caching regression tests --------------------------
 
 

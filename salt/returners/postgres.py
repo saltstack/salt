@@ -73,13 +73,25 @@ correctly:
       full_ret  text,
       id        varchar(255) NOT NULL,
       success   varchar(10) NOT NULL,
-      alter_time   TIMESTAMP WITH TIME ZONE DEFAULT now()
+      alter_time   TIMESTAMP WITH TIME ZONE DEFAULT now(),
+      cluster_path text NULL
     );
 
     CREATE INDEX idx_salt_returns_id ON salt_returns (id);
     CREATE INDEX idx_salt_returns_jid ON salt_returns (jid);
     CREATE INDEX idx_salt_returns_fun ON salt_returns (fun);
     CREATE INDEX idx_salt_returns_updated ON salt_returns (alter_time);
+
+    -- Schema migration (RFC item 9): the ``cluster_path`` column is
+    -- additive and nullable so pre-existing deployments survive without
+    -- data loss.  Operators upgrading from a pre-topology schema should
+    -- run the following ALTER on each returner database:
+    --
+    --   ALTER TABLE salt_returns ADD COLUMN IF NOT EXISTS cluster_path text NULL;
+    --
+    -- The returner probes for the column once per connection and only
+    -- writes it when present; non-topology deployments can ignore the
+    -- migration entirely.
 
     --
     -- Table structure for table `salt_events`
@@ -145,6 +157,27 @@ except ImportError:
 __virtualname__ = "postgres"
 
 log = logging.getLogger(__name__)
+
+
+def _has_cluster_path_column(cur):
+    """
+    Probe ``information_schema`` once per cursor for the optional
+    ``cluster_path`` column on ``salt_returns`` (RFC item 9).
+
+    Returns ``True`` on hit, ``False`` otherwise.  The returner
+    serialises cluster_path only when this is ``True`` — on
+    deployments that haven't run the additive ``ALTER TABLE`` the
+    column is simply skipped, preserving backward compatibility.
+    """
+    try:
+        cur.execute(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'salt_returns' "
+            "AND column_name = 'cluster_path' LIMIT 1"
+        )
+        return cur.fetchone() is not None
+    except psycopg2.DatabaseError:
+        return False
 
 
 def __virtual__():
@@ -231,21 +264,42 @@ def returner(ret):
     """
     try:
         with _get_serv(ret, commit=True) as cur:
-            sql = """INSERT INTO salt_returns
-                    (fun, jid, return, id, success, full_ret)
-                    VALUES (%s, %s, %s, %s, %s, %s)"""
             cleaned_return = salt.utils.data.decode(ret)
-            cur.execute(
-                sql,
-                (
-                    ret["fun"],
-                    ret["jid"],
-                    salt.utils.json.dumps(cleaned_return["return"]),
-                    ret["id"],
-                    ret.get("success", False),
-                    salt.utils.json.dumps(cleaned_return),
-                ),
-            )
+            cluster_path = ret.get("cluster_path")
+            # RFC item 9: write the ``cluster_path`` column only if the
+            # operator has run the additive ALTER TABLE.  Pre-topology
+            # deployments stay on the original 6-column INSERT.
+            if cluster_path and _has_cluster_path_column(cur):
+                sql = """INSERT INTO salt_returns
+                        (fun, jid, return, id, success, full_ret, cluster_path)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+                cur.execute(
+                    sql,
+                    (
+                        ret["fun"],
+                        ret["jid"],
+                        salt.utils.json.dumps(cleaned_return["return"]),
+                        ret["id"],
+                        ret.get("success", False),
+                        salt.utils.json.dumps(cleaned_return),
+                        salt.utils.json.dumps(list(cluster_path)),
+                    ),
+                )
+            else:
+                sql = """INSERT INTO salt_returns
+                        (fun, jid, return, id, success, full_ret)
+                        VALUES (%s, %s, %s, %s, %s, %s)"""
+                cur.execute(
+                    sql,
+                    (
+                        ret["fun"],
+                        ret["jid"],
+                        salt.utils.json.dumps(cleaned_return["return"]),
+                        ret["id"],
+                        ret.get("success", False),
+                        salt.utils.json.dumps(cleaned_return),
+                    ),
+                )
     except salt.exceptions.SaltMasterError:
         log.critical(
             "Could not store return with postgres returner. PostgreSQL server"
@@ -313,6 +367,30 @@ def get_jid(jid):
     Return the information returned when the specified job id was executed
     """
     with _get_serv(ret=None, commit=True) as cur:
+
+        # RFC item 9: when the ``cluster_path`` column is present,
+        # surface it alongside the full return so
+        # ``salt-run jobs.lookup_jid`` can disambiguate duplicate
+        # minion ids coming back from different clusters.
+        if _has_cluster_path_column(cur):
+            sql = """SELECT id, full_ret, cluster_path FROM salt_returns
+                    WHERE jid = %s"""
+            cur.execute(sql, (jid,))
+            data = cur.fetchall()
+            ret = {}
+            if data:
+                for row in data:
+                    minion, full_ret, cluster_path = row
+                    record = salt.utils.json.loads(full_ret)
+                    if cluster_path:
+                        try:
+                            record["cluster_path"] = salt.utils.json.loads(cluster_path)
+                        except (ValueError, TypeError):
+                            # Column may hold a legacy plain-string value;
+                            # pass it through rather than losing the annotation.
+                            record["cluster_path"] = cluster_path
+                    ret[minion] = record
+            return ret
 
         sql = """SELECT id, full_ret FROM salt_returns
                 WHERE jid = %s"""

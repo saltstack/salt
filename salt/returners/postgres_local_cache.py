@@ -82,12 +82,22 @@ and then:
       jid       varchar(20) NOT NULL,
       return    text NOT NULL,
       id        text NOT NULL,
-      success   boolean
+      success   boolean,
+      cluster_path text NULL
     );
     CREATE INDEX ON salt_returns (added);
     CREATE INDEX ON salt_returns (id);
     CREATE INDEX ON salt_returns (jid);
     CREATE INDEX ON salt_returns (fun);
+
+    -- Schema migration (RFC item 9): ``cluster_path`` is additive and
+    -- nullable so pre-existing deployments survive untouched.
+    -- Operators upgrading from a pre-topology schema should run:
+    --
+    --   ALTER TABLE salt_returns ADD COLUMN IF NOT EXISTS cluster_path text NULL;
+    --
+    -- The returner probes for the column once per connection and
+    -- writes it only when present.
 
     DROP TABLE IF EXISTS salt_events;
     CREATE TABLE salt_events (
@@ -125,6 +135,30 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 __virtualname__ = "postgres_local_cache"
+
+
+def _has_cluster_path_column(cur):
+    """
+    RFC item 9: probe ``information_schema`` for the optional
+    ``cluster_path`` column on ``salt_returns``.  Cached per-connection
+    so the hot write path pays the probe cost at most once per
+    connection reuse.
+    """
+    conn = cur.connection
+    cached = getattr(conn, "_salt_cluster_path_column_present", None)
+    if cached is not None:
+        return cached
+    try:
+        cur.execute(
+            "SELECT 1 FROM information_schema.columns "
+            "WHERE table_name = 'salt_returns' "
+            "AND column_name = 'cluster_path' LIMIT 1"
+        )
+        present = cur.fetchone() is not None
+    except psycopg2.DatabaseError:
+        present = False
+    conn._salt_cluster_path_column_present = present  # pylint: disable=protected-access
+    return present
 
 
 def __virtual__():
@@ -229,25 +263,44 @@ def returner(load):
     if conn is None:
         return None
     cur = conn.cursor()
-    sql = """INSERT INTO salt_returns
-            (fun, jid, return, id, success)
-            VALUES (%s, %s, %s, %s, %s)"""
     ret = str(load["return"])
     job_ret = {"return": ret}
     if "retcode" in load:
         job_ret["retcode"] = load["retcode"]
     if "success" in load:
         job_ret["success"] = load["success"]
-    cur.execute(
-        sql,
-        (
-            load["fun"],
-            load["jid"],
-            salt.utils.json.dumps(job_ret),
-            load["id"],
-            load.get("success"),
-        ),
-    )
+    # RFC item 9: write cluster_path only when the operator has run
+    # the additive ALTER TABLE.
+    cluster_path = load.get("cluster_path")
+    if cluster_path and _has_cluster_path_column(cur):
+        sql = """INSERT INTO salt_returns
+                (fun, jid, return, id, success, cluster_path)
+                VALUES (%s, %s, %s, %s, %s, %s)"""
+        cur.execute(
+            sql,
+            (
+                load["fun"],
+                load["jid"],
+                salt.utils.json.dumps(job_ret),
+                load["id"],
+                load.get("success"),
+                salt.utils.json.dumps(list(cluster_path)),
+            ),
+        )
+    else:
+        sql = """INSERT INTO salt_returns
+                (fun, jid, return, id, success)
+                VALUES (%s, %s, %s, %s, %s)"""
+        cur.execute(
+            sql,
+            (
+                load["fun"],
+                load["jid"],
+                salt.utils.json.dumps(job_ret),
+                load["id"],
+                load.get("success"),
+            ),
+        )
     _close_conn(conn)
 
 
@@ -395,18 +448,33 @@ def get_jid(jid):
     if conn is None:
         return None
     cur = conn.cursor()
-    sql = """SELECT id, return FROM salt_returns WHERE jid = %s"""
+    # RFC item 9: surface cluster_path when the column is present.
+    has_cp = _has_cluster_path_column(cur)
+    if has_cp:
+        sql = """SELECT id, return, cluster_path FROM salt_returns WHERE jid = %s"""
+    else:
+        sql = """SELECT id, return FROM salt_returns WHERE jid = %s"""
 
     cur.execute(sql, (jid,))
     data = cur.fetchall()
     ret = {}
     if data:
-        for minion, full_ret in data:
+        for row in data:
+            if has_cp:
+                minion, full_ret, cluster_path = row
+            else:
+                minion, full_ret = row
+                cluster_path = None
             ret_data = salt.utils.json.loads(full_ret)
             if not isinstance(ret_data, dict) or "return" not in ret_data:
                 # Convert the old format in which the return contains the only return data to the
                 # new that is dict containing 'return' and optionally 'retcode' and 'success'.
                 ret_data = {"return": ret_data}
+            if cluster_path:
+                try:
+                    ret_data["cluster_path"] = salt.utils.json.loads(cluster_path)
+                except (ValueError, TypeError):
+                    ret_data["cluster_path"] = cluster_path
             ret[minion] = ret_data
     _close_conn(conn)
     return ret

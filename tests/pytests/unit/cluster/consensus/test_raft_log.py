@@ -178,16 +178,148 @@ def test_salt_storage_state_roundtrip(storage):
         "term": 7,
         "voted_for": "voter-a",
         "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
     }
     storage.save_state(8, None)
-    assert storage.load_state() == {"term": 8, "voted_for": None, "leader_id": None}
+    assert storage.load_state() == {
+        "term": 8,
+        "voted_for": None,
+        "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
+    }
     # Round-trip with an explicit leader_id (observability path).
     storage.save_state(9, "voter-b", leader_id="voter-b")
     assert storage.load_state() == {
         "term": 9,
         "voted_for": "voter-b",
         "leader_id": "voter-b",
+        "commit_index": -1,
+        "last_applied": -1,
     }
+
+
+def test_salt_storage_persists_commit_index(storage):
+    """
+    ``save_state`` round-trips the Raft ``commit_index``.
+
+    Without durable ``commit_index`` a master restart cannot replay
+    the committed suffix into its state machines when no peer is
+    reachable — the whole motivation for persisting the field.
+    """
+    storage.save_state(5, "voter-a", leader_id="voter-a", commit_index=42)
+    loaded = storage.load_state()
+    assert loaded["term"] == 5
+    assert loaded["commit_index"] == 42
+
+
+def test_salt_storage_preserves_commit_index_when_only_term_updates(storage):
+    """
+    A subsequent ``save_state`` that omits ``commit_index`` must not
+    regress the persisted value.  The commit hot path updates
+    ``commit_index`` independently of term/voted_for; if a later
+    term bump wiped commit_index we'd drop on-disk durability.
+    """
+    storage.save_state(1, "voter-a", commit_index=17)
+    # Bumping term without passing commit_index must keep 17.
+    storage.save_state(2, "voter-a")
+    loaded = storage.load_state()
+    assert loaded["term"] == 2
+    assert loaded["commit_index"] == 17
+
+
+def test_salt_storage_save_commit_index_merges_with_existing_state(storage):
+    """
+    ``save_commit_index`` writes only the commit_index field but must
+    preserve everything else already in state.p.
+    """
+    storage.save_state(3, "voter-b", leader_id="voter-b", commit_index=0)
+    storage.save_commit_index(99)
+    loaded = storage.load_state()
+    assert loaded["term"] == 3
+    assert loaded["voted_for"] == "voter-b"
+    assert loaded["leader_id"] == "voter-b"
+    assert loaded["commit_index"] == 99
+
+
+def test_salt_storage_commit_index_defaults_when_missing(storage):
+    """
+    State files written before ``commit_index`` persistence was
+    added lack the field entirely.  ``load_state`` must surface ``-1``
+    as the default so a newly upgraded master sees "no persisted
+    commit" and falls back to the membership-seed / peer
+    AppendEntries recovery paths.
+    """
+    storage.save_state(4, "voter-c")  # no commit_index passed
+    loaded = storage.load_state()
+    assert loaded["commit_index"] == -1
+
+
+def test_log_persists_commit_index_across_restart(storage):
+    """
+    End-to-end: a ``Log`` that commits through index N must restore
+    that index on a fresh ``Log(storage=...)`` construction.  This
+    is the core restart invariant — without it ``apply_entries`` on
+    startup replays nothing and the cluster-ready gate latches
+    closed when no peer is reachable.
+    """
+    log_a = Log(storage=storage)
+    log_a.add(1, "a")
+    log_a.add(1, "b")
+    log_a.add(1, "c")
+    log_a.commit(2)
+    assert log_a.commit_index == 2
+
+    log_b = Log(storage=storage)
+    assert log_b.commit_index == 2
+
+
+def test_log_init_handles_missing_commit_index_field(storage):
+    """
+    Backward compat: an on-disk state file without ``commit_index``
+    (format predating the field) must load as ``-1`` so recovery is purely
+    additive — no node upgrades into a broken state.
+    """
+    # Write a state record without commit_index (simulates pre-upgrade).
+    storage.save_state(2, "voter-a")
+    log = Log(storage=storage)
+    assert log.commit_index == -1
+
+
+def test_log_commit_is_monotonic_across_peer_sync(storage):
+    """
+    A loaded ``commit_index=N`` that later receives a lower
+    ``leader_commit`` from a peer AppendEntries must not retreat.
+    Raft's commit_index invariant is strictly monotonic; a merge
+    through ``Log.commit`` enforces that via ``max(new, current)``.
+    """
+    log_a = Log(storage=storage)
+    for i in range(5):
+        log_a.add(1, f"cmd{i}")
+    log_a.commit(4)  # commit everything we have
+
+    log_b = Log(storage=storage)
+    assert log_b.commit_index == 4
+    log_b.commit(2)  # simulate a stale AppendEntries with lower leader_commit
+    assert log_b.commit_index == 4
+
+
+def test_log_init_clamps_commit_index_against_snapshot(storage):
+    """
+    If a snapshot restored at ``last_included_index = L`` is present
+    and the persisted ``commit_index`` is ``N < L``, the effective
+    commit on load must be ``max(N, L)`` — the snapshot already
+    compacted entries up through L into the SMs, so commit_index
+    can never sit below it.
+    """
+    # Seed a snapshot at index 5 and persist commit_index=3.
+    storage.save_snapshot(b"snapshot-data", 5, 1)
+    storage.save_state(1, None, commit_index=3)
+    log = Log(storage=storage)
+    assert log.last_included_index == 5
+    # commit_index is clamped up to the snapshot's last_included_index.
+    assert log.commit_index == 5
 
 
 def test_salt_storage_log_append_and_reload(storage):
@@ -201,7 +333,13 @@ def test_salt_storage_log_append_and_reload(storage):
 
 
 def test_salt_storage_defaults_when_empty(storage):
-    assert storage.load_state() == {"term": 0, "voted_for": None, "leader_id": None}
+    assert storage.load_state() == {
+        "term": 0,
+        "voted_for": None,
+        "leader_id": None,
+        "commit_index": -1,
+        "last_applied": -1,
+    }
     assert storage.load_log() == []
     assert storage.load_snapshot() is None
 
@@ -319,7 +457,14 @@ class TestMembershipStateMachine:
         sm.apply({"voters": ["m1", "m2"], "learners": ["m3"]}, index=5)
 
         snap = sm.get_snapshot()
-        assert snap == {"voters": ["m1", "m2"], "learners": ["m3"], "version": 5}
+        # The ``protocol_versions`` field is new (rolling-upgrade gate);
+        # a CONFIG without an advertisement produces an empty dict.
+        assert snap == {
+            "voters": ["m1", "m2"],
+            "learners": ["m3"],
+            "protocol_versions": {},
+            "version": 5,
+        }
 
         sm2 = MembershipStateMachine()
         sm2.restore_snapshot(snap)
@@ -355,6 +500,80 @@ class TestMembershipStateMachine:
         assert "m1" in r
         assert "m2" in r
         assert "version=2" in r
+
+    def test_stale_config_apply_does_not_regress_voters(self):
+        """
+        A CONFIG apply at an index <= the SM's last-applied CONFIG index
+        must not overwrite the authoritative voter/learner view.
+
+        This guards against log truncation (leader stomps a divergent
+        follower tail) or a recovery replay re-delivering an older
+        CONFIG after a newer one has already applied.  Pre-fix the SM
+        silently regressed to the older view; ``Node._applied_config_index``
+        only gated the ``on_change`` callback, not the SM's own state.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        received = []
+        sm = MembershipStateMachine(
+            on_change=lambda v, l: received.append((list(v), list(l)))
+        )
+        # Apply newer CONFIG first.
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Stale CONFIG at a lower index must be ignored --- voters MUST
+        # still be {A, B, C}, membership_version MUST still be 5, and
+        # the on_change callback MUST NOT fire a second time.
+        sm.apply({"voters": ["A"], "learners": []}, index=3)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.current_learners() == []
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # Equal-index apply is also a no-op (same entry re-delivered
+        # via truncation + re-replication).
+        sm.apply({"voters": ["X"], "learners": []}, index=5)
+        assert sm.current_voters() == ["A", "B", "C"]
+        assert sm.membership_version == 5
+        assert received == [(["A", "B", "C"], [])]
+
+        # A strictly-newer CONFIG still wins (regression guard for the
+        # existing increasing-index path).
+        sm.apply({"voters": ["A", "B"], "learners": ["D"]}, index=6)
+        assert sm.current_voters() == ["A", "B"]
+        assert sm.current_learners() == ["D"]
+        assert sm.membership_version == 6
+        assert received == [
+            (["A", "B", "C"], []),
+            (["A", "B"], ["D"]),
+        ]
+
+    def test_stale_config_skip_survives_snapshot_roundtrip(self):
+        """
+        ``_membership_version`` already round-trips through
+        get_snapshot / restore_snapshot as the ``version`` field, so
+        a restored SM must reject stale CONFIG entries just like a
+        hot SM does.  Regression guard for the round-trip of the
+        short-circuit gate introduced for the CONFIG-downgrade fix.
+        """
+        from salt.cluster.consensus.raft.log import MembershipStateMachine
+
+        sm = MembershipStateMachine()
+        sm.apply({"voters": ["A", "B", "C"], "learners": []}, index=7)
+        snap = sm.get_snapshot()
+        assert snap["version"] == 7
+
+        restored = MembershipStateMachine()
+        restored.restore_snapshot(snap)
+        assert restored.membership_version == 7
+
+        # Stale CONFIG at index < 7 must be ignored on the restored SM.
+        restored.apply({"voters": ["X"], "learners": []}, index=4)
+        assert restored.current_voters() == ["A", "B", "C"]
+        assert restored.membership_version == 7
 
 
 # ---------------------------------------------------------------------------
@@ -1042,6 +1261,7 @@ class TestLogSnapshotMultiSM:
         assert envelope["machines"]["membership_sm"] == {
             "voters": ["m1", "m2", "m3"],
             "learners": [],
+            "protocol_versions": {},
             "version": 2,
         }
 
@@ -1611,6 +1831,59 @@ class TestRingConfigStateMachine:
         assert sm.members == "self"
         assert sm.replicas == 1
 
+    def test_stale_ring_config_apply_does_not_regress_policy(self):
+        """
+        A RING_CONFIG apply at an index <= the SM's last-applied index
+        must not overwrite the authoritative ring policy.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to sibling SM state.
+        """
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        received = []
+        sm = RingConfigStateMachine(on_change=lambda m, r: received.append((m, r)))
+        sm.apply({"members": "voters", "replicas": 3}, index=5)
+        assert sm.members == "voters"
+        assert sm.replicas == 3
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Stale apply at a lower index must be ignored.
+        sm.apply({"members": "self", "replicas": 1}, index=3)
+        assert sm.members == "voters"
+        assert sm.replicas == 3
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"members": "self", "replicas": 1}, index=5)
+        assert sm.members == "voters"
+        assert sm.config_version == 5
+        assert received == [("voters", 3)]
+
+        # Strictly-newer still wins.
+        sm.apply({"replicas": 5}, index=6)
+        assert sm.replicas == 5
+        assert sm.config_version == 6
+
+    def test_stale_ring_config_skip_survives_snapshot_roundtrip(self):
+        """``_version`` round-trips through snapshot; restored SM must
+        still reject stale RING_CONFIG entries."""
+        from salt.cluster.consensus.raft.log import RingConfigStateMachine
+
+        sm = RingConfigStateMachine()
+        sm.apply({"members": "voters", "replicas": 2}, index=7)
+        snap = sm.get_snapshot()
+
+        restored = RingConfigStateMachine()
+        restored.restore_snapshot(snap)
+        assert restored.config_version == 7
+
+        restored.apply({"members": "self", "replicas": 1}, index=4)
+        assert restored.members == "voters"
+        assert restored.replicas == 2
+        assert restored.config_version == 7
+
 
 class TestNodeAppliesRingConfigEntry:
     """
@@ -1978,6 +2251,39 @@ class TestRingRegistryStateMachine:
         assert restored.active_rings() == ["jobs"]
         assert restored.registry_version == 1
 
+    def test_stale_registry_apply_does_not_regress(self):
+        """
+        A RING_REGISTRY apply at an index <= the SM's last-applied
+        index must not overwrite the authoritative registry.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to ring-registry
+        state.  Round-trip via snapshot also covered.
+        """
+        sm = self._sm()
+        sm.apply({"ring_id": "jobs", "founding_voters": ["m1", "m2"]}, index=5)
+        assert sm.registry_version == 5
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+
+        # Stale apply at lower index must be ignored --- registry
+        # must still reflect the newer entry.
+        sm.apply({"ring_id": "jobs", "founding_voters": ["stale"]}, index=3)
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert sm.registry_version == 5
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"ring_id": "jobs", "founding_voters": ["equal"]}, index=5)
+        assert sm.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert sm.registry_version == 5
+
+        # Round-trip the gate through snapshot.
+        snap = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(snap)
+        assert restored.registry_version == 5
+        restored.apply({"ring_id": "jobs", "founding_voters": ["still-stale"]}, index=4)
+        assert restored.get("jobs")["founding_voters"] == ["m1", "m2"]
+        assert restored.registry_version == 5
+
 
 # ---------------------------------------------------------------------------
 # RoutingStateMachine — cluster-log data-type -> ring routing (multi-ring)
@@ -2061,6 +2367,38 @@ class TestRoutingStateMachine:
         restored = self._sm()
         restored.restore_snapshot(raw)
         assert restored.get("jobs") == "jobs_ring"
+
+    def test_stale_route_apply_does_not_regress(self):
+        """
+        A ROUTE apply at an index <= the SM's last-applied index
+        must not overwrite the authoritative routing table.  Same
+        truncation/replay regression as the MembershipStateMachine
+        stale-CONFIG short-circuit; applied here to routing-table
+        state.  Round-trip via snapshot also covered.
+        """
+        sm = self._sm()
+        sm.apply({"data_type": "jobs", "ring_id": "jobs_ring"}, index=5)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Stale apply at a lower index must be ignored.
+        sm.apply({"data_type": "jobs", "ring_id": None}, index=3)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Equal-index apply is also a no-op.
+        sm.apply({"data_type": "jobs", "ring_id": None}, index=5)
+        assert sm.get("jobs") == "jobs_ring"
+        assert sm.routing_version == 5
+
+        # Round-trip through snapshot.
+        snap = sm.get_snapshot()
+        restored = self._sm()
+        restored.restore_snapshot(snap)
+        assert restored.routing_version == 5
+        restored.apply({"data_type": "jobs", "ring_id": None}, index=4)
+        assert restored.get("jobs") == "jobs_ring"
+        assert restored.routing_version == 5
 
 
 # ---------------------------------------------------------------------------

@@ -24,7 +24,12 @@ from tests.pytests.functional.cluster.consensus.test_raft_learner import _elect
 # ---------------------------------------------------------------------------
 
 # Shared temporary directory for the test module so SaltStorage can write.
+# Each _make_opts call gets a fresh per-invocation subdir so on-disk
+# state from a previous test (log entries + persisted commit_index)
+# does not bleed into the next test's RaftService startup
+# apply_entries replay.
 _TMPDIR = tempfile.mkdtemp(prefix="salt_raft_svc_test_")
+_OPTS_COUNTER = [0]
 
 
 def _run(coro):
@@ -32,12 +37,17 @@ def _run(coro):
 
 
 def _make_opts(node_id, peers):
+    _OPTS_COUNTER[0] += 1
+    import os  # pylint: disable=import-outside-toplevel
+
+    cachedir = os.path.join(_TMPDIR, f"opts-{_OPTS_COUNTER[0]}")
+    os.makedirs(cachedir, exist_ok=True)
     return {
         "id": node_id,
         "interface": node_id,
         "cluster_id": "test-cluster",
         "cluster_peers": peers,
-        "cachedir": _TMPDIR,
+        "cachedir": cachedir,
         # Use the legacy tight election window so in-process functional
         # tests stay fast (real cluster masters override the defaults via
         # opts to ride out CI heartbeat jitter).
@@ -47,7 +57,7 @@ def _make_opts(node_id, peers):
 
 
 def _make_pushers(peer_ids):
-    return {pid: FakePusher() for pid in peer_ids}
+    return {pid: FakePusher(pull_host=pid) for pid in peer_ids}
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +68,8 @@ def _make_pushers(peer_ids):
 class TestBuildPeerPushers:
     def test_pairs_peers_with_pushers_in_order(self):
         opts = _make_opts("m1", ["m2", "m3"])
-        p2, p3 = FakePusher(), FakePusher()
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
         result = build_peer_pushers(opts, [p2, p3])
         assert result == {"m2": p2, "m3": p3}
 
@@ -68,8 +79,43 @@ class TestBuildPeerPushers:
 
     def test_single_peer(self):
         opts = _make_opts("m1", ["m2"])
-        p = FakePusher()
+        p = FakePusher(pull_host="m2")
         assert build_peer_pushers(opts, [p]) == {"m2": p}
+
+    def test_cluster_peers_duplicate_does_not_lose_pusher(self):
+        """
+        Duplicate-peer resilience: ``self.cluster_peers.append`` on a join/discover from a
+        statically-configured peer could leave ``opts["cluster_peers"]``
+        with a duplicate while ``self.pushers`` (dedup-ed by
+        ``_add_pusher``) does not grow.  A ``zip``-based implementation
+        truncated to the shorter pushers list and left the tail peer
+        unkeyed in the pusher table, so inbound Raft RPCs from it hit
+        "no pusher for <peer>, dropping <tag> reply".
+        """
+        # opts list drifted with a duplicate — pushers list is clean.
+        opts = _make_opts("m1", ["m2", "m2", "m3"])
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
+        result = build_peer_pushers(opts, [p2, p3])
+        # Both peers must be reachable; "m3" must NOT be missing.
+        assert set(result) == {"m2", "m3"}
+        assert result["m2"] is p2
+        assert result["m3"] is p3
+
+    def test_cluster_peers_host_port_form_still_keys_by_host(self):
+        """
+        Host:port keying variant: ``cluster_peers`` entries may carry an explicit
+        ``host:port`` suffix (the ``peer.rsplit(":", 1)`` branch in
+        ``_publish_daemon``), while the resulting pusher's
+        ``pull_host`` is just ``host``.  Keying by ``pull_host``
+        guarantees the dispatcher looks the pusher up under the same
+        bare node-id that peers put in their ``callback_node`` field.
+        """
+        opts = _make_opts("m1", ["m2:4520", "m3:4520"])
+        p2 = FakePusher(pull_host="m2")
+        p3 = FakePusher(pull_host="m3")
+        result = build_peer_pushers(opts, [p2, p3])
+        assert result == {"m2": p2, "m3": p3}
 
 
 # ---------------------------------------------------------------------------

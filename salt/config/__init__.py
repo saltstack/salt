@@ -128,6 +128,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The fingerprint of the master key may be specified to increase security. Generate
         # a master fingerprint with `salt-key -F master`
         "master_finger": str,
+        # Cluster ID of the master this minion is currently connected to.
+        # Populated by the auth-response hook when
+        # ``topology_push_cluster_grain`` is enabled on the master side;
+        # exposed to the minion as a grain for targeting across a
+        # topology.  Empty string means "no cluster / standalone master".
+        "master_cluster_id": str,
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
@@ -252,6 +258,75 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_min_voters": int,
         "cluster_demote_cooldown": float,
         "cluster_auto_replace_voters": bool,
+        # Master-topology opts (see rfcs/master-topology.md "New config
+        # options").  Grouped here next to cluster_* so the two feature
+        # surfaces live together.  ``topology_enabled`` is the master
+        # key; when False every runtime hook short-circuits.  See
+        # ``salt/topology/`` and ``salt/config/topology.py`` for how
+        # the other opts are consumed.
+        "topology_enabled": bool,
+        "topology_peers": list,
+        "topology_event_subscriptions": (type(None), list),
+        "topology_link_port": int,
+        "topology_summary_interval": int,
+        "topology_breadcrumb_grace": int,
+        "topology_breadcrumb_max_age": int,
+        "topology_push_cluster_grain": bool,
+        # Mirrors ``auto_accept`` but for cross-master MasterIdentityKey
+        # presentation during link setup (see trust-model section of the
+        # RFC).
+        "auto_accept_masters": bool,
+        # MmapCache sizing for breadcrumb / registry stores (see
+        # salt/utils/mmap_cache.py for shape semantics).
+        "topology_breadcrumb_cache_size": int,
+        "topology_breadcrumb_cache_key_size": int,
+        "topology_registry_cache_size": int,
+        "topology_registry_cache_key_size": int,
+        # Seconds a detaching master waits for in-flight work to drain
+        # before tearing down its links.
+        "topology_detach_quiesce": int,
+        # Grains the summary thread fans out alongside the periodic
+        # topology summary.  Empty list disables the extra fan-out.
+        "topology_summary_grains": list,
+        # topology/pub-ack + topology/pub-complete frame emission.  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.  Default-on;
+        # peers running without the opt (or older code) simply don't send
+        # the frames and the originator falls back to the pre-RFC silent-
+        # inference behavior.  No breaking change in mixed deployments.
+        "topology_pub_ack": bool,
+        # Seconds a peer's local-return collector waits before giving up and
+        # emitting topology/pub-complete with its current returned/missed
+        # tallies.  Consumed by Phase 2's completion loop; reserved here
+        # so the config schema is stable across Phase 1/2 releases.
+        "topology_pub_complete_timeout": float,
+        # Phase 1.5: receiver-side emission of topology/pub-complete.  When
+        # True the inbound dispatcher spawns a bounded per-jid collector
+        # that watches salt/job/<jid>/ret/* and emits pub-complete when the
+        # ack'd minion set is drained (or when topology_pub_complete_timeout
+        # fires, whichever comes first).  Default-on; peers running without
+        # emission never fire the frame and the originator falls back to
+        # the pre-RFC silence-mode timeout.
+        "topology_pub_complete_enabled": bool,
+        # Upper bound on concurrent in-flight pub-complete collectors.  Caps
+        # memory under a publish flood; when exceeded new jids skip spawning
+        # with a WARNING log and the originator falls back to --timeout for
+        # those jids.  See RFC pub-ack-complete, Phase 1.5.
+        "topology_pub_complete_max_inflight": int,
+        # Grace window in seconds for pub-ack arrival before relying on
+        # syndic-style silent-inference fallback.  See RFC pub-ack-complete.
+        "topology_wait": float,
+        # Originator-side CLI consumption of topology/pub-ack +
+        # topology/pub-complete.  Default on: CLI exits the wait loop
+        # as soon as every ack'd peer has signaled pub-complete, instead
+        # of always waiting ``--timeout``.  Mixed-deployment safety: a
+        # peer running without ``topology_pub_ack``/``topology_pub_complete_enabled``
+        # never emits; its origin_cluster_id is absent from
+        # ``peers_acked`` and the generic ``--timeout`` branch catches
+        # the fallback -- no hang, no behavior regression vs. a silent
+        # syndic.  Operators can set this False to force the
+        # pre-RFC syndic-style silent-inference behavior.  See RFC
+        # pub-ack-complete, Phase 3 (default flipped 2026-11-04).
+        "topology_pub_ack_consumer": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -1201,6 +1276,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "interface": "0.0.0.0",
         "master": "salt",
         "master_type": "str",
+        "master_cluster_id": "",
         "master_uri_format": "default",
         "source_interface_name": "",
         "source_address": "",
@@ -2011,6 +2087,28 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        # Master-topology defaults (see VALID_OPTS block for docs).
+        "topology_enabled": False,
+        "topology_peers": [],
+        "topology_event_subscriptions": None,
+        "topology_link_port": 4521,
+        "topology_summary_interval": 30,
+        "topology_breadcrumb_grace": 30,
+        "topology_breadcrumb_max_age": 600,
+        "topology_push_cluster_grain": True,
+        "auto_accept_masters": False,
+        "topology_breadcrumb_cache_size": 1_000_000,
+        "topology_breadcrumb_cache_key_size": 64,
+        "topology_registry_cache_size": 10_000,
+        "topology_registry_cache_key_size": 64,
+        "topology_detach_quiesce": 60,
+        "topology_summary_grains": [],
+        "topology_pub_ack": True,
+        "topology_pub_complete_timeout": 60.0,
+        "topology_pub_complete_enabled": True,
+        "topology_pub_complete_max_inflight": 1024,
+        "topology_wait": 2.0,
+        "topology_pub_ack_consumer": True,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",

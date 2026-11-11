@@ -3641,6 +3641,23 @@ def get_master():
     return {"master": __opts__.get("master", "")}
 
 
+def master_cluster_id():
+    """
+    Return the ``master_cluster_id`` grain, populated from the master's
+    auth response (``opts["master_cluster_id"]``).
+
+    Returns an empty dict (no grain) when the field is absent --- i.e.
+    when the master is not topology-enabled or has opted out of
+    publishing the grain via ``topology_push_cluster_grain: False``.
+    """
+    # Provides:
+    #   master_cluster_id
+    cluster_id = __opts__.get("master_cluster_id")
+    if not cluster_id:
+        return {}
+    return {"master_cluster_id": cluster_id}
+
+
 def default_gateway():
     """
     Populates grains which describe whether a server has a default gateway

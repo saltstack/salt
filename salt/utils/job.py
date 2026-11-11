@@ -12,9 +12,18 @@ import salt.utils.verify
 log = logging.getLogger(__name__)
 
 
-def store_job(opts, load, event=None, mminion=None):
+def store_job(opts, load, event=None, mminion=None, cluster_path=None):
     """
     Store job information using the configured master_job_cache
+
+    :param cluster_path: Optional tuple of ``cluster_id`` strings
+        identifying the originating topology path for this return.
+        When present, the job cache key becomes
+        ``(jid, cluster_path, id)`` so duplicate minion ids
+        across clusters are disambiguated.  Returners that key by
+        a flat path receive the ``cluster_path`` joined with ``/``
+        as a path prefix on the id (e.g. ``east/web-01``).  An
+        empty tuple is equivalent to ``None``.
     """
     # Generate EndTime
     endtime = salt.utils.jid.jid_to_time(salt.utils.jid.gen_jid(opts))
@@ -23,14 +32,21 @@ def store_job(opts, load, event=None, mminion=None):
         return False
     if not salt.utils.verify.valid_id(opts, load["id"]):
         return False
+    # Normalize cluster_path: empty tuple/list == None (legacy path).
+    if not cluster_path:
+        cluster_path = None
     if mminion is None:
         with salt.minion.MasterMinion(opts, states=False, rend=False) as mminion:
-            return _store_job(opts, load, event, mminion, endtime=endtime)
+            return _store_job(
+                opts, load, event, mminion, endtime=endtime, cluster_path=cluster_path
+            )
     else:
-        return _store_job(opts, load, event, mminion, endtime=endtime)
+        return _store_job(
+            opts, load, event, mminion, endtime=endtime, cluster_path=cluster_path
+        )
 
 
-def _store_job(opts, load, event, mminion, endtime=None):
+def _store_job(opts, load, event, mminion, endtime=None, cluster_path=None):
     job_cache = opts["master_job_cache"]
     if load["jid"] == "req":
         # The minion is returning a standalone job, request a jobid
@@ -83,6 +99,16 @@ def _store_job(opts, load, event, mminion, endtime=None):
                 job_cache,
                 exc_info=True,
             )
+
+    # Annotate the load with cluster_path (as a list for msgpack-safe
+    # serialization) so downstream event subscribers and returner
+    # save_load calls can see where the return originated.  Done
+    # *after* the ``req`` jid-prep block so that path does not see a
+    # pre-populated cluster_path, and *before* firing events so that
+    # subscribers observe the annotation.  Truthiness-based: an empty
+    # cluster_path (``()`` / ``[]``) is a no-op, matching legacy.
+    if cluster_path:
+        load["cluster_path"] = list(cluster_path)
 
     if event:
         # If the return data is invalid, just ignore it
@@ -145,12 +171,24 @@ def _store_job(opts, load, event, mminion, endtime=None):
                 exc_info=True,
             )
 
+    # When a cluster_path is present, flat-path returners (those that
+    # key by ``load["id"]`` --- notably the shipped ``local_cache``
+    # returner, which uses ``os.path.join(jid_dir, load["id"])`` as
+    # the per-minion directory) need the path prefix on the id so
+    # duplicate minion ids across topology clusters do not clobber
+    # each other.  Swap-and-restore keeps the mutation scoped to the
+    # single returner call.
+    original_id = load["id"]
+    if cluster_path:
+        load["id"] = "/".join([*cluster_path, original_id])
     try:
         mminion.returners[fstr](load)
     except Exception:  # pylint: disable=broad-except
         log.critical(
             "The specified '%s' returner threw a stack trace", job_cache, exc_info=True
         )
+    finally:
+        load["id"] = original_id
 
     if opts.get("job_cache_store_endtime") and updateetfstr in mminion.returners:
         mminion.returners[updateetfstr](load["jid"], endtime)

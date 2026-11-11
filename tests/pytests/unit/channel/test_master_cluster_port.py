@@ -15,9 +15,15 @@ from tests.support.mock import patch
 
 
 def _cluster_opts(**overrides):
+    # ``MasterPubServerChannel.factory`` only takes the TCP cluster branch
+    # when BOTH ``cluster_id`` and non-empty ``cluster_peers`` are set
+    # (commit ``b7c0cdf5a4d`` -- topology-only solo master must fall into
+    # the IPC branch to avoid a publish-port collision on Windows).  The
+    # pool-port regression this file guards is a TCP-branch concern, so
+    # the fixture carries a non-empty ``cluster_peers`` to exercise it.
     opts = {
         "cluster_id": "test-cluster",
-        "cluster_peers": [],
+        "cluster_peers": ["127.0.0.2"],
         "cluster_pool_port": 4520,
         "sock_dir": "/tmp/does-not-matter",
         "interface": "127.0.0.1",

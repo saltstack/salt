@@ -27,6 +27,7 @@ attrs==26.1.0
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   -r requirements/base.txt
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -161,6 +162,8 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
+hypothesis==6.130.13
+    # via -r requirements/pytest.txt
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
@@ -544,6 +547,8 @@ smmap==5.0.2
     # via
     #   -c requirements/static/pkg/py3.11/windows.lock
     #   gitdb
+sortedcontainers==2.4.0
+    # via hypothesis
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 sspilib==0.5.0

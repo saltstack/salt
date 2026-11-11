@@ -880,8 +880,17 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param func message_handler: A function to called to handle incoming payloads as
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
+
+        :keyword bool direct_bind: When True, bind the REP socket directly to
+            ``tcp://interface:ret_port`` instead of connecting to an
+            ``MWorkerQueue``'s DEALER on ``workers.ipc``.  Used when the
+            caller owns the external port in a single process and dispatches
+            inbound requests in-process via ``message_handler`` (e.g.
+            :mod:`salt.topology`), rather than fronting the port with a
+            separate ``MWorkerQueue`` + MWorker pool.
         """
         pool_name = kwargs.get("pool_name")
+        direct_bind = kwargs.get("direct_bind", False)
         # context = zmq.Context(1)
         self.context = zmq.asyncio.Context(1)
         self._socket = self.context.socket(zmq.REP)
@@ -889,22 +898,27 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._socket.setsockopt(zmq.LINGER, 1)
         self._start_zmq_monitor()
 
-        # Use get_worker_uri() for consistent URI construction
-        self.w_uri = self.get_worker_uri(pool_name=pool_name)
-        log.info("Worker binding to socket %s", self.w_uri)
-        self._socket.connect(self.w_uri)
+        if direct_bind:
+            self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
+            log.info("RequestServer direct-bind listening on %s", self.uri)
+            self._socket.bind(self.uri)
+        else:
+            # Use get_worker_uri() for consistent URI construction
+            self.w_uri = self.get_worker_uri(pool_name=pool_name)
+            log.info("Worker binding to socket %s", self.w_uri)
+            self._socket.connect(self.w_uri)
 
-        # Set permissions for IPC sockets
-        if self.opts.get("ipc_mode", "") != "tcp":
-            pool_name = self.opts.get("pool_name", "")
-            if pool_name:
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
-                )
-            else:
-                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
-            if os.path.isfile(ipc_path):
-                os.chmod(ipc_path, 0o600)
+            # Set permissions for IPC sockets
+            if self.opts.get("ipc_mode", "") != "tcp":
+                pool_name = self.opts.get("pool_name", "")
+                if pool_name:
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                    )
+                else:
+                    ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+                if os.path.isfile(ipc_path):
+                    os.chmod(ipc_path, 0o600)
         self.message_handler = message_handler
 
         async def callback():
@@ -935,6 +949,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.trace("RequestServer.request_handler started")
         try:
             while not self._event.is_set():
+                # Phase 1: receive.  Any exception here means we did NOT
+                # consume a message, so the REP FSM is still in
+                # "expecting recv" state and we can safely loop.
                 try:
                     # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
                     # Python 3.12 rewrote wait_for to use asyncio.timeout() which
@@ -947,20 +964,53 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     if not events:
                         continue
                     request = await self._socket.recv()
-                    reply = await self.handle_message(None, request)
-                    await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Exception in request handler: %s",
+                        "Exception during recv: %s",
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
                     await asyncio.sleep(0)
                     continue
+
+                # Phase 2: dispatch to payload handler.  REP FSM is now
+                # in "expecting send" state -- we MUST send() a reply
+                # (even an error reply) before the next recv() can
+                # succeed.  Catch handler exceptions here and fall
+                # through to the send with an error payload so the
+                # socket does not deadlock.
+                try:
+                    reply = await self.handle_message(None, request)
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception in handle_message: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    reply = {"msg": "handler error"}
+
+                # Phase 3: send the reply.  A send() failure after a
+                # successful recv() is unrecoverable at this layer
+                # (REP FSM is still in "expecting send"); log and loop
+                # -- the next recv() will fail with a state error and
+                # push us into the recovery path.
+                try:
+                    await self._socket.send(self.encode_payload(reply))
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception during send: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    await asyncio.sleep(0)
         finally:
             log.trace("RequestServer.request_handler exiting")
 

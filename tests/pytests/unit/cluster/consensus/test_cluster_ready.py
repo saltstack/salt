@@ -10,6 +10,7 @@ Covers:
 import asyncio
 import multiprocessing
 
+import salt.cluster
 from tests.support.mock import AsyncMock, MagicMock, patch
 
 
@@ -30,12 +31,24 @@ class TestClusterIsReady:
         assert _cluster_is_ready({"cluster_id": None}) is True
         assert _cluster_is_ready({"cluster_id": ""}) is True
 
+    def test_topology_only_master_is_ready(self):
+        """
+        A topology-only master sets ``cluster_id`` but no
+        ``cluster_peers``.  There is no Raft readiness to wait on,
+        so the gate must pass through.
+        """
+        from salt.channel.server import _cluster_is_ready
+
+        assert _cluster_is_ready({"cluster_id": "east"}) is True
+        assert _cluster_is_ready({"cluster_id": "east", "cluster_peers": []}) is True
+
     def test_cluster_not_ready_when_entry_missing(self):
         from salt.channel.server import _cluster_is_ready
 
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {}
-            assert _cluster_is_ready({"cluster_id": "test"}) is False
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is False
 
     def test_cluster_not_ready_when_event_not_set(self):
         from salt.channel.server import _cluster_is_ready
@@ -43,7 +56,8 @@ class TestClusterIsReady:
         event = multiprocessing.Event()
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {"cluster_ready": {"event": event}}
-            assert _cluster_is_ready({"cluster_id": "test"}) is False
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is False
 
     def test_cluster_ready_when_event_set(self):
         from salt.channel.server import _cluster_is_ready
@@ -52,7 +66,8 @@ class TestClusterIsReady:
         event.set()
         with patch("salt.master.SMaster") as mock_smaster:
             mock_smaster.secrets = {"cluster_ready": {"event": event}}
-            assert _cluster_is_ready({"cluster_id": "test"}) is True
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
+            assert _cluster_is_ready(opts) is True
 
 
 # ---------------------------------------------------------------------------
@@ -254,3 +269,440 @@ class TestPoolRoutingChannelGate:
 
         # Should get the "no client" error, not cluster_retry
         assert result != {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
+
+# ---------------------------------------------------------------------------
+# RaftService readiness persistence across restarts
+# ---------------------------------------------------------------------------
+
+
+class TestRaftServiceReadinessSticky:
+    """
+    Regression: after a RaftService restart (master process restart, not a
+    simple re-election), the readiness gate must re-open from the on-disk
+    Raft log even if no new CONFIG entry commits in the new leader's term.
+
+    Raft §5.4 forbids a new leader from committing entries written in prior
+    terms via ``advance_commit_index``; without seeding ``membership_sm``
+    from the persisted log, ``_on_membership_change`` never fires and the
+    ``cluster_ready`` Event stays unset forever, latching every publish
+    through the ``cluster_retry`` sentinel.
+    """
+
+    def _build_opts(self, tmp_path, my_addr="192.168.0.1"):
+        import salt.config
+
+        opts = salt.config.master_config("/dev/null")
+        opts["interface"] = my_addr
+        opts["cluster_id"] = "west"
+        opts["cluster_peers"] = ["192.168.0.2", "192.168.0.3"]
+        opts["cluster_pool_port"] = 55596
+        opts["cachedir"] = str(tmp_path)
+        return opts
+
+    def test_on_ready_fires_from_persisted_config_entry(self, tmp_path):
+        """
+        Pre-seed the on-disk Raft log with a CONFIG entry listing this
+        node as a voter, then construct a fresh RaftService.  The
+        ``on_ready`` callback must fire without any AppendEntries
+        arriving — the gate re-opens from disk.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        # Pre-seed storage with a committed-shape CONFIG entry.
+        storage = SaltStorage(my_addr, opts)
+        config_entry = LogEntry(
+            term=1,
+            index=0,
+            cmd={
+                "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                "learners": [],
+                "protocol_versions": {},
+            },
+            node_id=None,
+            type=LogEntryType.CONFIG,
+        )
+        storage.append_log(config_entry)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            assert svc is not None
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()
+
+    def test_no_fire_when_not_in_voter_set(self, tmp_path):
+        """
+        A CONFIG entry that does NOT list this node must not fire
+        ``on_ready`` — the master is still pre-join.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        config_entry = LogEntry(
+            term=1,
+            index=0,
+            cmd={
+                "voters": ["192.168.0.2", "192.168.0.3"],
+                "learners": [],
+                "protocol_versions": {},
+            },
+            node_id=None,
+            type=LogEntryType.CONFIG,
+        )
+        storage.append_log(config_entry)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
+
+    def test_fresh_node_no_log_does_not_fire(self, tmp_path):
+        """
+        A fresh RaftService with no log entries must not fire
+        ``on_ready`` — the gate only opens after real consensus.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.service import RaftService
+
+        opts = self._build_opts(tmp_path)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
+
+    def test_latest_config_wins_when_multiple_in_log(self, tmp_path):
+        """
+        If the log contains several CONFIG entries (membership churn),
+        the seed must apply the LAST one — dropping a node that has
+        since left the voter set should not re-fire readiness for it.
+        """
+        import asyncio
+
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        # Earlier entry: we WERE a voter.
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # Later entry: we were DEMOTED / removed.
+        storage.append_log(
+            LogEntry(
+                term=2,
+                index=1,
+                cmd={
+                    "voters": ["192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+        finally:
+            loop.close()
+
+        on_ready.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Persisted commit_index drives apply_entries on restart
+# ---------------------------------------------------------------------------
+
+
+class TestCommitIndexPersistenceRestart:
+    """
+    Verifies the restart invariant: with ``commit_index`` persisted to
+    ``state.p``, a ``RaftService`` restart drives ``apply_entries``
+    through every registered state machine (``membership_sm``,
+    ``ring_registry_sm``, ``routing_sm``, application SM) without
+    needing a peer ``AppendEntries``.
+    """
+
+    def _build_opts(self, tmp_path, my_addr="192.168.0.1"):
+        import salt.config
+
+        opts = salt.config.master_config("/dev/null")
+        opts["interface"] = my_addr
+        opts["cluster_id"] = "west"
+        opts["cluster_peers"] = ["192.168.0.2", "192.168.0.3"]
+        opts["cluster_pool_port"] = 55596
+        opts["cachedir"] = str(tmp_path)
+        return opts
+
+    def test_apply_entries_replays_committed_membership_on_restart(self, tmp_path):
+        """
+        Seed storage with a CONFIG entry at index=0 AND persist
+        ``commit_index=0``.  On a fresh RaftService start — no peer
+        AppendEntries — ``apply_entries`` must drive
+        ``_on_membership_change`` and the ``on_ready`` gate must fire.
+        This is the proper fix the membership-seed path worked around.
+        """
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # Persist the commit_index so apply_entries on restart knows
+        # the CONFIG entry is committed.  This is the state the normal
+        # commit path would have left behind.
+        storage.save_state(1, None, commit_index=0)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            # Restart drove apply_entries up through commit_index=0,
+            # which populated the membership SM the normal way.
+            assert svc._node.log.commit_index == 0
+            assert svc._node.log.last_applied == 0
+            assert my_addr in svc._node.membership_sm.current_voters()
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()
+
+    def test_seed_does_not_run_when_apply_entries_populated_sm(self, tmp_path):
+        """
+        With persisted ``commit_index``, ``apply_entries`` drives the
+        membership SM before ``_seed_membership_from_log`` is called —
+        and the seed early-returns at its ``current_voters()`` guard.
+        """
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        storage.save_state(1, None, commit_index=0)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            # Re-run the seed manually; it must early-return because
+            # apply_entries already populated membership_sm.
+            applied_before = svc._node._applied_config_index
+            svc._seed_membership_from_log()
+            assert svc._node._applied_config_index == applied_before
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()
+
+    def test_restart_without_persisted_commit_index_falls_back_to_seed(self, tmp_path):
+        """
+        Backward compat: an on-disk log containing a CONFIG entry
+        but NO persisted ``commit_index`` (state file written before
+        the format change) still opens the gate via the
+        membership-seed path.  This proves the new persistence path
+        is purely additive — upgrading does not break a cluster
+        whose state files predate the format change.
+        """
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # No save_state call — simulates a state file written
+        # before commit_index persistence was added.
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            # commit_index stays at -1 (no persisted value), but the
+            # membership-seed path populated membership_sm anyway.
+            assert svc._node.log.commit_index == -1
+            assert my_addr in svc._node.membership_sm.current_voters()
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()
+
+    def test_seed_skips_uncommitted_config_when_commit_index_bounds(self, tmp_path):
+        """
+        If a CONFIG entry sits on disk at an index > ``commit_index``,
+        the seed must NOT apply it — a never-committed CONFIG could
+        name this node (or not) and clobbering ``membership_sm``
+        would break both readiness and future AppendEntries
+        reconciliation.  The seed bounds itself by the persisted
+        commit_index precisely to avoid this trap.
+        """
+        from salt.cluster.consensus.raft.log import LogEntry, LogEntryType
+        from salt.cluster.consensus.service import RaftService
+        from salt.cluster.consensus.storage import SaltStorage
+
+        opts = self._build_opts(tmp_path)
+        my_addr = salt.cluster.node_id(opts)
+
+        storage = SaltStorage(my_addr, opts)
+        # Committed CONFIG at index 0 — we ARE a voter here.
+        storage.append_log(
+            LogEntry(
+                term=1,
+                index=0,
+                cmd={
+                    "voters": [my_addr, "192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # Uncommitted CONFIG at index 1 — we were speculatively
+        # demoted; this entry never made it to a majority.
+        storage.append_log(
+            LogEntry(
+                term=2,
+                index=1,
+                cmd={
+                    "voters": ["192.168.0.2", "192.168.0.3"],
+                    "learners": [],
+                    "protocol_versions": {},
+                },
+                node_id=None,
+                type=LogEntryType.CONFIG,
+            )
+        )
+        # Persist commit_index=0 — only the first entry committed.
+        storage.save_state(2, None, commit_index=0)
+
+        on_ready = MagicMock()
+        loop = asyncio.new_event_loop()
+        try:
+            peer_pushers = {
+                "192.168.0.2": MagicMock(),
+                "192.168.0.3": MagicMock(),
+            }
+            svc = RaftService(opts, loop, peer_pushers, on_ready=on_ready)
+            # Seed must have respected commit_index — we remain a voter.
+            assert my_addr in svc._node.membership_sm.current_voters()
+        finally:
+            loop.close()
+
+        on_ready.assert_called_once()

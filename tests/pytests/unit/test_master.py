@@ -398,6 +398,9 @@ def test_aes_funcs_black(master_opts):
         "_sync_minion_publish",
         "_sync_minion_runner",
         "_sync_revoke_auth",
+        # Internal helper for the topology-return envelope hand-off from
+        # both ``_return`` and ``_sync_return``.  Not exposed to minions.
+        "_maybe_fire_topology_return",
     ]
     try:
         for name in dir(aes_funcs):
@@ -452,12 +455,14 @@ def test_clear_funcs_black(master_opts):
         "__sizeof__",
         "__str__",
         "__subclasshook__",
+        "_fire_event_on_running_loop",
         "_is_known_client",
         "_prep_auth_info",
         "_prep_jid",
         "_prep_pub",
         "_send_pub",
         "_send_ssh_pub",
+        "_topology_forward_only_target",
         "connect",
         "destroy",
         "get_method",
@@ -611,6 +616,116 @@ def test_prep_pub_start_event_value_is_normalized_to_true(clear_funcs):
             f"start_event was {load.get('start_event')!r} for truthy "
             f"input {truthy!r}; expected strict True"
         )
+
+
+# ---------------------------------------------------------------------------
+# _topology_forward_only_target
+# ---------------------------------------------------------------------------
+
+
+def _topology_opts(master_opts, cluster_id="east"):
+    """
+    Return a copy of master_opts with topology-enabled fields set so the
+    forward-only widening path is in effect.  The helper intentionally
+    does NOT touch the pki / cache paths because the method under test
+    only reads opts["topology_enabled"] + the identity-level cluster_id.
+    """
+    opts = master_opts.copy()
+    opts["topology_enabled"] = True
+    opts["cluster_id"] = cluster_id
+    return opts
+
+
+def test_topology_forward_only_target_disabled_returns_false(master_opts):
+    """
+    When topology is not enabled, every call is a no-op: the legacy
+    "no minions matched" error path must still fire for every
+    tgt_type.
+    """
+    opts = master_opts.copy()
+    opts["topology_enabled"] = False
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        for tgt_type in ("glob", "list", "pcre", "compound"):
+            assert clear_funcs._topology_forward_only_target("foo", tgt_type) is False
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_bare_minion_glob_widens(master_opts):
+    """
+    A bare minion-id glob (``east-sub-minion-1``) that resolves to
+    zero local minions must widen on a topology-enabled master so
+    :func:`salt.topology.router.on_publish` can flood-forward the
+    publish to peer clusters.
+    """
+    opts = _topology_opts(master_opts)
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        assert (
+            clear_funcs._topology_forward_only_target("east-sub-minion-1", "glob")
+            is True
+        )
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_bare_targets_all_types_widen(master_opts):
+    """
+    Bare targets of every non-compound tgt_type widen under topology:
+    ``glob`` (``salt east-sub-minion-1 ...``), ``list``
+    (``salt -L east-sub-minion-1,west-sub-minion-1 ...``), and
+    ``pcre`` (``salt -E 'east-.*' ...``) all need to reach peer
+    clusters whose minion-id manifest the origin cannot pre-enumerate.
+    """
+    opts = _topology_opts(master_opts)
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        for tgt_type in ("glob", "list", "pcre"):
+            assert (
+                clear_funcs._topology_forward_only_target("east-sub-minion-1", tgt_type)
+                is True
+            ), tgt_type
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_compound_c_at_peer_widens(master_opts):
+    """
+    Compound ``C@<peer>`` target widens for a peer cluster (case 1 of
+    the docstring).  This was the original pre-fix behaviour and must
+    continue to work.
+    """
+    opts = _topology_opts(master_opts, cluster_id="east")
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        with patch("salt.master._topology_cluster_id_for_auth", return_value="east"):
+            assert (
+                clear_funcs._topology_forward_only_target("C@east-sub", "compound")
+                is True
+            )
+    finally:
+        clear_funcs.destroy()
+
+
+def test_topology_forward_only_target_compound_c_at_local_only_does_not_widen(
+    master_opts,
+):
+    """
+    Compound ``C@<local>`` target with no peer scope must NOT widen:
+    the only destination is the local cluster, where the match
+    genuinely failed, so the legacy "could not resolve minions" error
+    is the correct response.
+    """
+    opts = _topology_opts(master_opts, cluster_id="east")
+    clear_funcs = salt.master.ClearFuncs(opts, {})
+    try:
+        with patch("salt.master._topology_cluster_id_for_auth", return_value="east"):
+            assert (
+                clear_funcs._topology_forward_only_target("C@east", "compound") is False
+            )
+    finally:
+        clear_funcs.destroy()
 
 
 @pytest.mark.slow_test
@@ -4328,6 +4443,50 @@ async def test_clearfuncs_wheel_exception_fires_event_via_fire_event_async():
 
 
 # ---------------------------------------------------------------------------
+# _fire_event_on_running_loop regression
+# ---------------------------------------------------------------------------
+
+
+async def test_fire_event_on_running_loop_uses_async_path_with_running_loop():
+    """Regression: when invoked from a coroutine with a running
+    event loop, ``_fire_event_on_running_loop`` must schedule
+    ``fire_event_async`` via ``loop.create_task`` -- NEVER the sync
+    ``fire_event`` which goes through ``SyncWrapper._wrap`` and
+    spawns-and-joins a thread (blocks the running loop for the IPC
+    write; the symptom was ``salt/job/<jid>/new`` lagging
+    ``salt/job/<jid>/ret/*`` by multiple seconds on a hub master)."""
+    cf = _make_bare_clear_funcs()
+
+    async def _fake_fire_async(data, tag):
+        return None
+
+    cf.event.fire_event_async = MagicMock(side_effect=_fake_fire_async)
+    cf.event.fire_event = MagicMock()
+
+    cf._fire_event_on_running_loop({"payload": 1}, "salt/job/0/new")
+
+    cf.event.fire_event.assert_not_called()
+    cf.event.fire_event_async.assert_called_once_with({"payload": 1}, "salt/job/0/new")
+    # Drain any pending task so pytest-asyncio doesn't warn.
+    await asyncio.sleep(0)
+
+
+def test_fire_event_on_running_loop_falls_back_sync_without_loop():
+    """When no running loop exists (synchronous caller), the helper
+    must fall back to the sync ``fire_event``.  Without the fallback
+    the method would raise ``RuntimeError: no running event loop``
+    and the caller would lose the event entirely."""
+    cf = _make_bare_clear_funcs()
+    cf.event.fire_event = MagicMock()
+    cf.event.fire_event_async = MagicMock()
+
+    cf._fire_event_on_running_loop({"payload": 2}, "salt/job/0/new")
+
+    cf.event.fire_event.assert_called_once_with({"payload": 2}, "salt/job/0/new")
+    cf.event.fire_event_async.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
 # AuthFuncs async dispatch: minion authentication (``_auth`` / ``_auth_impl``).
 #
 # The auth state machine now runs on the MWorker event loop as ``async def``.
@@ -4687,3 +4846,287 @@ async def test_publish_batch_runs_batch_in_owned_task(publish_clear_funcs):
     await asyncio.wait_for(started.wait(), 1)
     release.set()
     await asyncio.sleep(0)
+
+
+# ---------------------------------------------------------------------------
+# ClearFuncs.publish --- topology forward-only pass on empty local match
+# ---------------------------------------------------------------------------
+
+
+async def test_publish_topology_c_scope_forward_only_pass(
+    publish_clear_funcs, tmp_path
+):
+    """
+    When ``topology_enabled`` is set and a compound target names a
+    peer cluster via ``C@west`` that this master is not part of,
+    ``check_minions`` returns empty locally.  The publish must NOT
+    short-circuit with "Master could not resolve minions for
+    target"; it must proceed through ``_prep_jid`` and ``_send_pub``
+    so the topology router's ``on_publish`` hook (fired from
+    :meth:`MasterPubServerChannel.publish_payload`) can forward it
+    to west.
+    """
+    # Set topology opts inline so ``_topology_cluster_id_for_auth``
+    # resolves to ``east`` for the forward-only check.
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["cluster_id"] = "east"
+    publish_clear_funcs.opts["topology_peers"] = []
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "C@west",
+        "tgt_type": "compound",
+        "arg": [],
+    }
+    # Local check_minions returns empty: east has no accepted minions
+    # that match the ``C@west`` compound locally.
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+
+    jid_value = "20260101000000000000"
+
+    def _fake_prep_pub(minions_arg, jid, cl, extra, missing):
+        # Mirror the sole mutation ``_prep_pub`` makes to the caller's
+        # ``clear_load`` so the final return in ``publish`` can read
+        # ``clear_load["jid"]`` without blowing up.
+        cl["jid"] = jid
+        return {"enc": "aes"}
+
+    send_pub = AsyncMock()
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_jid",
+        MagicMock(return_value=jid_value),
+    ), patch.object(
+        publish_clear_funcs,
+        "_prep_pub",
+        side_effect=_fake_prep_pub,
+    ), patch.object(
+        publish_clear_funcs, "_send_pub", send_pub
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    # Must NOT be the no-match error load; the jid is populated and
+    # ``_send_pub`` was invoked so the on_publish topology hook can
+    # forward to west.
+    assert result == {
+        "enc": "clear",
+        "load": {"jid": jid_value, "minions": [], "missing": []},
+    }, f"forward-only publish got unexpected envelope: {result!r}"
+    send_pub.assert_awaited_once()
+
+
+async def test_publish_topology_c_scope_matches_local_cluster_normal_path(
+    publish_clear_funcs, tmp_path
+):
+    """
+    Companion to the forward-only test: a target that names the
+    LOCAL cluster (``C@east`` on east) must still go through the
+    normal path.  The empty-minion short-circuit only widens for
+    *peer* clusters; a local-cluster target with zero accepted
+    minions must still error out so operators see the real
+    "nothing matched" signal.
+    """
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["cluster_id"] = "east"
+    publish_clear_funcs.opts["topology_peers"] = []
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "C@east",
+        "tgt_type": "compound",
+        "arg": [],
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    assert (
+        "Master could not resolve minions for target" in result["load"]["error"]
+    ), f"local-only C@east with empty minions should still error: {result!r}"
+
+
+async def test_publish_glob_empty_minions_errors_without_topology(
+    publish_clear_funcs,
+):
+    """
+    On a NON-topology master, a plain glob with no local matches must
+    short-circuit with "Master could not resolve minions for target"
+    --- the forward-only widening is gated on ``topology_enabled`` and
+    must not fire when the master is a solo publish daemon.
+    """
+    publish_clear_funcs.opts["topology_enabled"] = False
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "nonexistent-*",
+        "tgt_type": "glob",
+        "arg": [],
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    assert "Master could not resolve minions for target" in result["load"]["error"]
+
+
+async def test_publish_glob_empty_minions_forwards_under_topology(
+    publish_clear_funcs,
+):
+    """
+    On a topology-enabled master, a bare glob target that resolves to
+    zero local minions must NOT short-circuit --- the publish is
+    widened so :func:`salt.topology.router.on_publish` can forward it
+    to peer clusters whose minion-id manifest the origin cannot
+    pre-enumerate.  ``east-sub-minion-1`` targeting a minion attached
+    to a peer cluster is the canonical shape here.
+    """
+    publish_clear_funcs.opts["topology_enabled"] = True
+    publish_clear_funcs.opts["_topology_cluster_id_cache"] = "east"
+
+    load = {
+        "user": "foo",
+        "fun": "test.ping",
+        "tgt": "east-sub-minion-1",
+        "tgt_type": "glob",
+        "arg": [],
+        "ret": "",
+    }
+    check_minions_ret = {"minions": [], "missing": [], "ssh_minions": False}
+    with patch(
+        "salt.acl.PublisherACL.user_is_blacklisted", MagicMock(return_value=False)
+    ), patch(
+        "salt.acl.PublisherACL.cmd_is_blacklisted", MagicMock(return_value=False)
+    ), patch.object(
+        publish_clear_funcs.ckminions,
+        "check_minions",
+        MagicMock(return_value=check_minions_ret),
+    ), patch.object(
+        publish_clear_funcs.loadauth,
+        "check_authentication",
+        MagicMock(return_value={"auth_list": [], "error": None}),
+    ), patch.object(
+        publish_clear_funcs, "_prep_jid", MagicMock(return_value="20260101000000000001")
+    ), patch.object(
+        publish_clear_funcs, "_send_pub", AsyncMock(return_value=None)
+    ), patch.object(
+        publish_clear_funcs, "_send_ssh_pub", MagicMock(return_value=None)
+    ), patch.object(
+        publish_clear_funcs, "_fire_event_on_running_loop", MagicMock(return_value=None)
+    ):
+        result = await publish_clear_funcs.publish(load)
+
+    # The publish must reach _prep_pub / _send_pub.  The successful-publish
+    # shape has {"enc": "clear", "load": {"jid": ..., "minions": [], "missing": []}}.
+    assert "error" not in result.get("load", {}), (
+        f"topology bare-target publish should widen past the no-minions "
+        f"guard: {result!r}"
+    )
+    assert result["load"]["jid"] == "20260101000000000001"
+
+
+# ---------------------------------------------------------------------------
+# populate_secrets: topology-only master skips the Raft-readiness Event
+#
+# ``salt/channel/server.py:should_serve_requests`` short-circuits True
+# for a topology-only master (``cluster_id`` set, no ``cluster_peers``)
+# WITHOUT consulting the Event -- so allocating the Event is dead code
+# there.  Worse, keeping it in ``SMaster.secrets`` makes it
+# un-pickleable through ``MWorker.__getstate__`` on Windows
+# ``multiprocessing.spawn``: SemLock handles only duplicate via
+# ``Process(args=...)``, not plain pickle.  Crashes every spawned
+# MWorker with exit 1 before logging is initialised and makes minion
+# authentication time out forever (nightly 41510296234 / Windows
+# functional 4).
+# ---------------------------------------------------------------------------
+
+
+def _bare_smaster(opts):
+    """Build an ``SMaster`` shell without running ``__init__`` -- enough to
+    exercise ``populate_secrets`` without the real master bring-up."""
+    master = salt.master.Master.__new__(salt.master.Master)
+    master.opts = opts
+    master.secrets = {}
+    return master
+
+
+def test_populate_secrets_topology_only_skips_cluster_ready_event():
+    """Topology-only master (``cluster_id`` set, no ``cluster_peers``) must
+    NOT allocate the ``cluster_ready`` entry -- an unused
+    ``multiprocessing.Event`` in ``SMaster.secrets`` crashes every
+    MWorker on Windows ``spawn``.
+    """
+    salt.master.SMaster.secrets = {}
+    opts = {
+        "cluster_id": "solo",
+        "cluster_peers": [],
+    }
+    master = _bare_smaster(opts)
+
+    with patch.object(
+        salt.master.Master, "read_or_generate_key", return_value="x" * 32
+    ):
+        master.populate_secrets()
+
+    assert (
+        "cluster_ready" not in salt.master.SMaster.secrets
+    ), "topology-only masters should not allocate cluster_ready Event"
+
+
+def test_populate_secrets_real_cluster_allocates_cluster_ready_event():
+    """A real cluster master (``cluster_id`` set, ``cluster_peers``
+    populated) still gets the Event -- Raft readiness gating depends
+    on it.
+    """
+    salt.master.SMaster.secrets = {}
+    opts = {
+        "cluster_id": "prod",
+        "cluster_peers": ["127.0.0.2", "127.0.0.3"],
+    }
+    master = _bare_smaster(opts)
+
+    with patch.object(
+        salt.master.Master, "read_or_generate_key", return_value="x" * 32
+    ):
+        master.populate_secrets()
+
+    assert "cluster_ready" in salt.master.SMaster.secrets
+    assert "event" in salt.master.SMaster.secrets["cluster_ready"]

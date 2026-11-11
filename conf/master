@@ -1386,7 +1386,13 @@
 # When defined, the master will operate in cluster mode. The master will send
 # the cluster key and id to minions instead of its own key and id. The master
 # will also forward its local event bus to other masters defined by
-# ``cluster_peers``
+# ``cluster_peers``.
+#
+# ``cluster_id`` is also the external identity other masters use to address
+# this one for master-topology peer links.  Solo masters (no ``cluster_peers``)
+# may still set ``cluster_id`` to participate in the topology graph; from a
+# peer master's point of view the value is just "this master's identity,"
+# regardless of whether it fronts a Raft cluster.
 #cluster_id: master_cluster
 
 # Defines the other masters in the cluster. Can be IP addresses or hostnames

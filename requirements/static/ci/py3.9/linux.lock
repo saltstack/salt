@@ -40,6 +40,7 @@ attrs==23.2.0
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -140,6 +141,7 @@ durationpy==0.10
 exceptiongroup==1.1.1
     # via
     #   anyio
+    #   hypothesis
     #   pytest
 filelock==3.19.1
     # via
@@ -180,6 +182,8 @@ httpcore==0.17.3
     # via httpx
 httpx==0.24.1
     # via python-telegram-bot
+hypothesis==6.130.13
+    # via -r requirements/pytest.txt
 idna==3.18
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
@@ -644,6 +648,8 @@ sniffio==1.3.0
     #   anyio
     #   httpcore
     #   httpx
+sortedcontainers==2.4.0
+    # via hypothesis
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7

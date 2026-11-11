@@ -2633,6 +2633,38 @@ class SaltKeyOptionParser(
             action="store_true",
             help="Print all keys' fingerprints.",
         )
+        actions_group.add_option(
+            "--master",
+            dest="master_scope",
+            default=False,
+            action="store_true",
+            help=(
+                "Operate on master-topology cluster-peer keys stored under "
+                "``pki_dir/masters*/`` instead of the minion keys.  When set, "
+                "-L / -a / -d / -F / -A / -D dispatch to the :class:`MasterKey` "
+                "subclass (``list_keys``, ``accept``, ``delete_key``, "
+                "``finger``, ...).  Equivalent to ``--kind=master``.  No-op "
+                "on solo masters that have no cluster peers configured."
+            ),
+        )
+        actions_group.add_option(
+            "--kind",
+            dest="kind",
+            default=None,
+            choices=("minion", "master", "client"),
+            help=(
+                "Select the key namespace that -L / -a / -d / -F / -A / -D "
+                "dispatch to: ``minion`` (default; unchanged behavior), "
+                "``master`` (equivalent to ``--master`` --- operates on "
+                "``pki_dir/masters*/``), or ``client`` (operates on the "
+                "``client_keys`` cache banks; equivalent to using the "
+                "``--list-clients`` / ``--accept-client`` / etc. family of "
+                "action flags).  Introduced to give operators a single "
+                "mental model across all three Key subclasses; the legacy "
+                "``--master`` flag and ``*-client`` action flags remain "
+                "supported."
+            ),
+        )
         self.add_option_group(actions_group)
 
         # Client key management actions

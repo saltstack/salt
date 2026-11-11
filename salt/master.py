@@ -33,6 +33,7 @@ import salt.client.ssh.client
 import salt.cluster
 import salt.cluster.healthchecks
 import salt.cluster.ring_membership
+import salt.config.topology
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -92,6 +93,41 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+def _topology_cluster_id_for_auth(opts):
+    """
+    Return the topology ``cluster_id`` string to publish in the auth
+    response, or ``""`` when the grain should not be pushed.
+
+    Gated on ``topology_enabled`` + ``topology_push_cluster_grain``
+    (the latter defaults to True per RFC).  The topology ``cluster_id``
+    comes from ``topology.conf`` --- it is deliberately distinct from
+    the 3008.x ``cluster_id`` master-cluster primitive, so we go
+    through :func:`salt.config.topology.load_topology_config`.
+
+    Cached per-opts after first call to avoid re-parsing topology.conf
+    on every minion auth.
+    """
+    if not opts.get("topology_enabled"):
+        return ""
+    if not opts.get("topology_push_cluster_grain", True):
+        return ""
+    cached = opts.get("_topology_cluster_id_cache")
+    if cached is not None:
+        return cached
+    try:
+        cfg = salt.config.topology.load_topology_config(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology.conf unreadable during auth; skipping master_cluster_id grain",
+            exc_info=True,
+        )
+        opts["_topology_cluster_id_cache"] = ""
+        return ""
+    cluster_id = cfg.cluster_id if cfg.enabled else ""
+    opts["_topology_cluster_id_cache"] = cluster_id
+    return cluster_id
 
 
 class _ContextThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
@@ -228,21 +264,22 @@ class SMaster:
     # on Windows since spawning processes on Windows requires pickling.
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
+    #
+    # ``object`` has no ``__setstate__`` method, so the ``super()`` call
+    # pattern used elsewhere in Salt raises
+    # ``AttributeError: 'super' object has no attribute '__setstate__'``
+    # on Python 3.11+ Windows (where ``multiprocessing`` uses ``spawn``
+    # and must pickle/unpickle the master object).  Mirror the pickle
+    # default (``self.__dict__.update(state)``) by hand instead, and
+    # explicitly round-trip the class-level ``secrets`` attribute.
     def __setstate__(self, state):
-        super().__setstate__(state)
-        self.master_key = state["master_key"]
-        self.key = state["key"]
-        SMaster.secrets = state["secrets"]
+        secrets = state.pop("secrets", {})
+        self.__dict__.update(state)
+        SMaster.secrets = secrets
 
     def __getstate__(self):
-        state = super().__getstate__()
-        state.update(
-            {
-                "key": self.key,
-                "master_key": self.master_key,
-                "secrets": SMaster.secrets,
-            }
-        )
+        state = dict(self.__dict__)
+        state["secrets"] = SMaster.secrets
         return state
 
     def __prep_key(self):
@@ -379,10 +416,22 @@ class SMaster:
     def populate_secrets(self):
         if self.opts["cluster_id"]:
             # Gate that request workers check before serving minion/CLI traffic.
-            # Cleared on start; set by RaftService once this node is a committed voter.
-            SMaster.secrets["cluster_ready"] = {
-                "event": multiprocessing.Event(),
-            }
+            # Cleared on start; set by RaftService once this node is a committed
+            # voter.  Only allocated when the master is actually in a Raft
+            # cluster: a topology-only master (``cluster_id`` set,
+            # ``cluster_peers`` empty) short-circuits
+            # ``should_serve_requests`` to True without consulting the Event
+            # (see ``salt/channel/server.py:85-98``), so the Event is dead
+            # code there -- and worse, embedding a ``multiprocessing.Event``
+            # in ``SMaster.secrets`` makes it unpickleable through
+            # ``MWorker.__getstate__`` on Windows ``multiprocessing.spawn``
+            # (SemLock handle isn't duplicated via plain pickle, only via
+            # ``Process(args=...)``), which crashes every spawned MWorker
+            # with exit 1 before logging is initialised.
+            if self.opts.get("cluster_peers"):
+                SMaster.secrets["cluster_ready"] = {
+                    "event": multiprocessing.Event(),
+                }
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["cluster_aes"] = {
@@ -1071,11 +1120,33 @@ class Master(SMaster):
                 finally:
                     del new_opts
 
-        if self.opts.get("cluster_id") and not self.opts.get("cluster_peers"):
+        if (
+            self.opts.get("cluster_id")
+            and not self.opts.get("cluster_peers")
+            and not self.opts.get("topology_enabled")
+        ):
             critical_errors.append(
-                "cluster_id is set but cluster_peers is empty. "
-                "Every cluster member must have at least one peer configured. "
-                "Dynamic peer discovery is not supported."
+                "cluster_id is set but cluster_peers is empty and "
+                "topology_enabled is False.  cluster_id identifies this "
+                "master either as a 3008.x master-cluster peer (requires "
+                "cluster_peers) or as a topology-graph node (requires "
+                "topology_enabled)."
+            )
+
+        # Topology + syndic coexistence note (RFC "Syndic deprecation plan"):
+        # running both on the same master is permitted during the deprecation
+        # window but discouraged.  ``syndic_master`` has a sentinel default
+        # of ``"masterofmasters"`` meaning "unconfigured", so only log when
+        # the operator has set it to something else.
+        syndic_master = self.opts.get("syndic_master")
+        syndic_configured = syndic_master and syndic_master != "masterofmasters"
+        if self.opts.get("topology_enabled") and syndic_configured:
+            log.info(
+                "Master is configured with BOTH topology_enabled=True and "
+                "syndic_master=%r. This coexistence is permitted during the "
+                "syndic deprecation window; topology is the recommended "
+                "replacement. See the master-topology RFC.",
+                syndic_master,
             )
 
         if errors or critical_errors:
@@ -3367,6 +3438,86 @@ class AESFuncs(TransportMethods):
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
 
+        # Topology-return hand-off: detect via envelope origin (NOT by
+        # parsing ``load["jid"]``) so native Salt jid formats and
+        # ``unique_jid: True`` keep working.  When this return belongs to
+        # a publish that was originated by a foreign cluster, fire
+        # ``salt/topology/return/<origin>/<jid>`` so the publish daemon's
+        # topology event subscriber can forward it upstream.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=True)
+
+    def _maybe_fire_topology_return(self, load, *, async_path):
+        """
+        Shared helper for the async and sync ``_return`` paths.
+
+        Determines, from the envelope on ``load["topology"]``, whether an
+        incoming minion return needs upstream forwarding.  Checks the
+        breadcrumb MmapCache under ``opts["pki_dir"]/master/`` to confirm
+        this master actually forwarded the originating publish; if so,
+        fires a ``salt/topology/return/<origin>/<jid>`` event that the
+        publish daemon's topology subscriber picks up.
+
+        No action on any guard-clause miss.  Any exception during the
+        hand-off is logged and swallowed --- a storage/forwarding error
+        on the topology path must never fail the local return path.
+        """
+        try:
+            topology = load.get("topology") or {}
+            origin = topology.get("origin")
+            jid = load.get("jid")
+            if jid is None:
+                return
+            # Lazy imports so pre-topology deployments never pull in the
+            # topology package.
+            import salt.topology.breadcrumbs as _bc  # pylint: disable=import-outside-toplevel
+
+            # Minions do not echo ``load["topology"]`` back through the
+            # ``_return`` payload (the minion rebuilds ``load`` from the
+            # function result dict in :meth:`_prepare_return_pub`).  The
+            # breadcrumb table on this master records every jid that we
+            # forwarded from an inbound peer along with that peer's
+            # ``cluster_id`` -- which is the correct next hop for a
+            # return heading back toward origin.  Use the breadcrumb's
+            # link as the tag's routing slug when the envelope is
+            # missing; the publish daemon's subscriber only needs
+            # "where to send next" and will look up the breadcrumb
+            # itself anyway.
+            cache = _bc.open_reader(self.opts)
+            try:
+                inbound = _bc.lookup(cache, jid)
+            finally:
+                closer = getattr(cache, "close", None)
+                if closer is not None:
+                    try:
+                        closer()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            if inbound is None:
+                # No breadcrumb -- we did not forward this jid, so there
+                # is nothing to send upstream.  This also covers the
+                # locally-originated publish case (origin == self).
+                return
+            if not origin:
+                origin = inbound
+            if origin == self.opts.get("cluster_id"):
+                return
+            tag = f"salt/topology/return/{origin}/{jid}"
+            data = {"load": load}
+            if async_path and hasattr(self.event, "fire_event_async"):
+                # Schedule the async fire without awaiting --- the sync
+                # ``fire_event`` fallback keeps semantics identical even
+                # if an async loop isn't currently running the handler.
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.event.fire_event_async(data, tag))
+                    return
+                except RuntimeError:
+                    pass
+            self.event.fire_event(data, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: _return hand-off failed")
+
     async def _syndic_return(self, load):
         """
         Receive a syndic minion return and format it to look like returns from
@@ -3964,6 +4115,11 @@ class AESFuncs(TransportMethods):
             )
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
+
+        # Topology-return hand-off: envelope-based detection, breadcrumb
+        # gated.  See ``_maybe_fire_topology_return`` for details.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=False)
 
     def _sync_syndic_return(self, load):
         """Sync-shim body of ``_syndic_return`` (pre-PR verbatim)."""
@@ -4809,6 +4965,10 @@ class AuthFuncs(TransportMethods):
             "publish_port": self.opts["publish_port"],
         }
 
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
+
         # sign the master's pubkey (if enabled) before it is
         # sent to the minion that was just authenticated
         if self.opts["master_sign_pubkey"]:
@@ -5367,6 +5527,10 @@ class AuthFuncs(TransportMethods):
             "publish_port": self.opts["publish_port"],
         }
 
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
+
         if self.opts["master_sign_pubkey"]:
             if self.master_key.pubkey_signature:
                 log.debug("Adding pubkey signature to auth-reply")
@@ -5531,6 +5695,34 @@ class ClearFuncs(TransportMethods):
             self.mk_token = self._sync_mk_token
             self.get_token = self._sync_get_token
             self.ping = self._sync_ping
+
+    def _fire_event_on_running_loop(self, data, tag):
+        """
+        Fire an event without blocking the current ``asyncio`` loop.
+
+        ``SaltEvent.fire_event`` is synchronous and its underlying
+        ``self.pusher.publish`` goes through
+        :class:`salt.utils.asynchronous.SyncWrapper._wrap`.  When
+        ``_wrap`` detects a running loop in the caller, it spawns an
+        OS thread and ``thread.join()`` s --- blocking this coroutine
+        for the duration of the IPC write to
+        ``master_event_pull.ipc``.  On a hub master (e.g. the sandbox
+        ``topo-east`` where two peers connect inbound) the per-event
+        write latency amplifies the join overhead and
+        ``salt/job/<jid>/new`` arrival drifts behind
+        ``salt/job/<jid>/ret/*`` by multiple seconds.
+
+        Prefer :func:`asyncio.get_running_loop().create_task` with
+        :meth:`SaltEvent.fire_event_async` so the fire runs on the
+        caller's own loop with no thread spawn; fall back to the
+        synchronous path when no loop is running.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.event.fire_event(data, tag)
+            return
+        loop.create_task(self.event.fire_event_async(data, tag))
 
     async def runner(self, clear_load):
         """
@@ -5979,7 +6171,7 @@ class ClearFuncs(TransportMethods):
                 }
             }
             if "jid" in clear_load:
-                self.event.fire_event(
+                self._fire_event_on_running_loop(
                     {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
                 )
             return err
@@ -6179,7 +6371,7 @@ class ClearFuncs(TransportMethods):
                     }
                 }
                 if "jid" in clear_load:
-                    self.event.fire_event(
+                    self._fire_event_on_running_loop(
                         {**clear_load, **err},
                         tagify([clear_load["jid"], "error"], "job"),
                     )
@@ -6199,18 +6391,37 @@ class ClearFuncs(TransportMethods):
         if not self.opts.get("order_masters"):
             # Check for no minions
             if not minions:
-                return {
-                    "enc": "clear",
-                    "load": {
-                        "jid": None,
-                        "minions": minions,
-                        "error": (
-                            "Master could not resolve minions for target {}".format(
-                                clear_load["tgt"]
-                            )
-                        ),
-                    },
-                }
+                # Topology forward-only exception: when
+                # ``topology_enabled`` is set and the target contains
+                # ``C@`` scopes that name clusters OTHER than this
+                # master's own topology ``cluster_id``, the publish
+                # must still flow through
+                # :meth:`MasterPubServerChannel.publish_payload` ->
+                # :func:`salt.topology.router.on_publish` so the
+                # topology router can forward it to the named peer
+                # cluster(s).  Short-circuiting here on the empty
+                # local-match would drop the publish before it ever
+                # reaches the router.
+                #
+                # A target like ``nonexistent-minion`` (no topology
+                # scope) still errors out below --- the forward-only
+                # path is only taken when at least one ``C@`` scope
+                # names a non-local cluster.
+                if not self._topology_forward_only_target(
+                    clear_load["tgt"], clear_load.get("tgt_type", "glob")
+                ):
+                    return {
+                        "enc": "clear",
+                        "load": {
+                            "jid": None,
+                            "minions": minions,
+                            "error": (
+                                "Master could not resolve minions for target {}".format(
+                                    clear_load["tgt"]
+                                )
+                            ),
+                        },
+                    }
         if extra.get("batch", None) and batch_async_required(self.opts, minions, extra):
             return await self.publish_batch(clear_load, minions, missing)
 
@@ -6229,7 +6440,9 @@ class ClearFuncs(TransportMethods):
         # Send it!
         # Copy the payload when firing event for now since it's adding a
         # __pub_stamp field.
-        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        self._fire_event_on_running_loop(
+            payload.copy(), tagify([jid, "publish"], "job")
+        )
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
@@ -6260,6 +6473,94 @@ class ClearFuncs(TransportMethods):
         if not record:
             return False
         return record.get("state") == "accepted"
+
+    def _topology_forward_only_target(self, tgt, tgt_type):
+        """
+        Return ``True`` when a publish with no local-match minions
+        should still be allowed through for topology-level
+        forwarding to one or more peer clusters.
+
+        Two widening cases, both gated on ``topology_enabled``:
+
+        1. **Compound ``C@`` scope to peer cluster(s)**: the target
+           carries at least one ``C@`` scope naming a cluster
+           OTHER than this master's own topology ``cluster_id``.
+           :func:`salt.topology.router.on_publish` fans the publish
+           to the named peers; the origin's empty local-match is
+           expected.
+
+        2. **Bare target on topology-enabled master**: a glob /
+           list / pcre target that resolved to zero local minions
+           at this master.  The target may name a minion that
+           lives on an adjacent peer cluster whose minion ids
+           this master has no way to pre-enumerate (the summary
+           gossip carries aggregate counts + histograms, not the
+           minion-id manifest; see
+           :class:`salt.topology.summary.ClusterSummary`).  The
+           publish is widened to flood-forward so the peer
+           cluster(s) whose local matcher resolves the target can
+           publish and return.  Per-publish amplification is
+           bounded by:
+
+           * jid-keyed breadcrumb + path authentication in
+             :meth:`TopologyRouter.forward_publish` --- each hop
+             forwards a given jid exactly once.
+           * mesh dedup via the authenticated path --- no cycle
+             re-propagates.
+           * every peer's local matcher independently decides
+             whether to publish; genuinely-nonexistent target
+             ids simply match nothing everywhere and the client
+             reports timeout, not a lingering flood.
+
+           Trade-off: a mistyped glob (``salt east-sub-minionx
+           test.ping``) now cross-cluster-floods instead of
+           returning "could not resolve minions."  The
+           alternative (summary-driven minion-id resolution)
+           would require wire-level changes to
+           :class:`ClusterSummary` that break its size-bounding
+           invariant; see follow-up ``bug-003`` in the agents
+           report.
+
+        For non-topology masters this always returns ``False``;
+        the legacy "no minions matched" error fires as before.
+        """
+        if not self.opts.get("topology_enabled"):
+            return False
+        try:
+            # Local import keeps non-topology masters out of this path.
+            import salt.topology.router as topology_router
+        except ImportError:
+            return False
+
+        if tgt_type in ("compound", "compound_pillar_exact", "nodegroup"):
+            # Case 1: compound target with ``C@`` scoping.
+            try:
+                destinations = topology_router.extract_cluster_scope(tgt)
+            except Exception:  # pylint: disable=broad-except
+                return False
+            if destinations is None:
+                # Flood (either no C@ at all, or a ``not`` makes extraction
+                # conservative-flood).  Fall through to the bare-target
+                # case below so the publish still forwards --- a compound
+                # target like ``not C@east and web-*`` from topo-east
+                # might legitimately resolve on a peer cluster.
+                pass
+            else:
+                local_cluster_id = _topology_cluster_id_for_auth(self.opts)
+                # Any destination not equal to our local cluster_id
+                # implies a peer-cluster forward opportunity.
+                # ``local_cluster_id`` may be ``""`` on a master whose
+                # topology config has no ``cluster_id`` --- in that case
+                # every named destination is "someone else" and the
+                # forward is still worth attempting.
+                remote = {c for c in destinations if c and c != local_cluster_id}
+                return bool(remote)
+
+        # Case 2: bare target (glob / list / pcre) under topology.
+        # No cluster scope to inspect --- let the publish forward and
+        # rely on peer-cluster local matchers to resolve.  See the
+        # docstring above for the bound-and-trade-off discussion.
+        return True
 
     def _prep_auth_info(self, clear_load, want_stacked=False):
         """
@@ -6422,7 +6723,9 @@ class ClearFuncs(TransportMethods):
         }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, tagify([clear_load["jid"], "new"], "job"))
+        self._fire_event_on_running_loop(
+            new_job_load, tagify([clear_load["jid"], "new"], "job")
+        )
 
         if self.opts["ext_job_cache"]:
             fstr = "{}.save_load".format(self.opts["ext_job_cache"])
