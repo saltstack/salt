@@ -247,6 +247,16 @@ def _resolve_user_group_names(opts):
     return opts
 
 
+def _escape_fstab_field(value):
+    """
+    Escape the whitespace in a value destined for an fstab field. Fields are
+    whitespace separated, so a space must be written as ``\\040`` and a tab as
+    ``\\011`` or the line cannot be parsed. A backslash followed by a space is
+    accepted as an already-escaped space.
+    """
+    return value.replace("\\ ", "\\040").replace(" ", "\\040").replace("\t", "\\011")
+
+
 def active(extended=False):
     """
     List the active mounts.
@@ -810,10 +820,10 @@ def set_fstab(
 
     # preserve arguments for updating
     entry_args = {
-        "name": name,
-        "device": device.replace("\\ ", "\\040"),
+        "name": _escape_fstab_field(name),
+        "device": _escape_fstab_field(device),
         "fstype": fstype,
-        "opts": opts.replace("\\ ", "\\040"),
+        "opts": _escape_fstab_field(opts),
         "dump": dump,
         "pass_num": pass_num,
     }

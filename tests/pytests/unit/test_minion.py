@@ -122,6 +122,102 @@ def test_minion_load_grains_default(minion_opts):
             minion.destroy()
 
 
+def test_sync_grains_masterless_syncs_every_file_roots_env(minion_opts):
+    """
+    A masterless minion syncs ``_grains`` from its local file_roots, ``base``
+    first, without removing modules that are not in the file roots.
+    """
+    minion_opts["file_client"] = "local"
+    minion_opts["file_roots"] = {"prod": ["/prod"], "base": ["/base"], "dev": ["/dev"]}
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_called_once()
+    assert sync.call_args.args[1] == "grains"
+    assert sync.call_args.kwargs == {
+        "saltenv": ["base", "dev", "prod"],
+        "clean": False,
+    }
+
+
+def test_sync_grains_uses_a_throwaway_cachedir(minion_opts):
+    """
+    The sync must not leave fileserver state (file lists, cached files) in the
+    real ``cachedir``: it runs against a temporary one, which is removed
+    afterwards, and does not modify the opts it was given.
+    """
+    minion_opts["file_client"] = "local"
+    real_cachedir = minion_opts["cachedir"]
+    expected = copy.deepcopy(minion_opts)
+    seen = {}
+
+    def fake_sync(opts, form, **kwargs):
+        seen["cachedir"] = opts["cachedir"]
+        seen["existed"] = os.path.isdir(opts["cachedir"])
+        seen["others"] = {k: v for k, v in opts.items() if k != "cachedir"}
+
+    with patch("salt.utils.extmods.sync", fake_sync):
+        salt.minion._sync_grains(minion_opts)
+
+    assert seen["cachedir"] != real_cachedir
+    assert seen["existed"] is True
+    assert not os.path.exists(seen["cachedir"])
+    assert seen["others"] == {k: v for k, v in expected.items() if k != "cachedir"}
+    assert minion_opts == expected
+
+
+def test_sync_grains_masterless_defaults_to_base_env(minion_opts):
+    minion_opts["file_client"] = "local"
+    minion_opts.pop("file_roots", None)
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    assert sync.call_args.kwargs["saltenv"] == ["base"]
+
+
+def test_sync_grains_remote_file_client_does_not_sync(minion_opts):
+    """
+    A minion that gets its files from a master must not sync here; the
+    master serves the files and ``saltutil.sync_grains`` handles it.
+    """
+    minion_opts["file_client"] = "remote"
+    with patch("salt.utils.extmods.sync") as sync:
+        salt.minion._sync_grains(minion_opts)
+    sync.assert_not_called()
+
+
+def test_sync_grains_failure_does_not_prevent_startup(minion_opts, caplog):
+    minion_opts["file_client"] = "local"
+    with caplog.at_level(logging.ERROR):
+        with patch("salt.utils.extmods.sync", side_effect=OSError("boom")):
+            salt.minion._sync_grains(minion_opts)
+    assert "Failed to sync custom grains" in caplog.text
+    assert "boom" in caplog.text
+
+
+@pytest.mark.parametrize(
+    "file_client,expect_sync", [("local", True), ("remote", False)]
+)
+def test_sminion_syncs_grains_before_loading_them(
+    minion_opts, file_client, expect_sync
+):
+    """
+    ``SMinion`` (salt-call) syncs ``_grains`` before it loads grains, because
+    pillar is compiled from those grains.
+    """
+    minion_opts["file_client"] = file_client
+    calls = MagicMock()
+    with patch("salt.utils.extmods.sync", calls.sync), patch(
+        "salt.loader.grains", calls.grains
+    ), patch.object(salt.minion.SMinion, "gen_modules"), patch.object(
+        salt.minion.SMinion, "eval_master", AsyncMock(return_value=(None, MagicMock()))
+    ):
+        salt.minion.SMinion(minion_opts)
+    called = [c[0] for c in calls.mock_calls]
+    if expect_sync:
+        assert called[:2] == ["sync", "grains"]
+    else:
+        assert "sync" not in called
+
+
 @pytest.mark.parametrize(
     "event",
     [
@@ -1469,6 +1565,70 @@ def test_resolve_dns_retry_aborts_on_shutdown_request_69466(minion_opts):
         f"resolve_dns did not honor the shutdown abort flag "
         f"(elapsed={elapsed:.2f}s); regression of #69466."
     )
+
+
+def test_resolve_dns_count_zero_fails_fast(minion_opts):
+    """
+    ``retry_dns_count: 0`` must make resolve_dns raise immediately on an
+    unresolvable master instead of entering the ``retry_dns`` sleep loop.
+    This is what lets forked workers fail fast rather than leak.
+    """
+    minion_opts.update(
+        {
+            "ipv6": False,
+            "master": "dummy",
+            "master_port": "4555",
+            # A large interval so that if the retry loop is (wrongly) entered
+            # the test would visibly stall instead of passing by luck.
+            "retry_dns": 90,
+            "retry_dns_count": 0,
+        },
+    )
+
+    dns_check = MagicMock(side_effect=SaltClientError("unresolvable"))
+    started = time.monotonic()
+    with patch("salt.utils.network.dns_check", dns_check):
+        with pytest.raises(SaltMasterUnresolvableError):
+            salt.minion.resolve_dns(minion_opts)
+    elapsed = time.monotonic() - started
+
+    # With retry_dns_count == 0 the loop raises on its first iteration before
+    # any retry sleep, so the initial lookup is the only dns_check call and
+    # the call returns effectively immediately.
+    assert dns_check.call_count == 1
+    assert elapsed < 5, (
+        f"resolve_dns slept before failing with retry_dns_count=0 "
+        f"(elapsed={elapsed:.2f}s); it should fail fast."
+    )
+
+
+def test_target_bounds_worker_dns_retry(minion_opts):
+    """
+    A forked per-job worker must not inherit an unbounded DNS retry loop.
+    Minion._target should force ``retry_dns_count`` to 0 when the operator
+    has not set it, and leave an explicit value untouched.
+    """
+    data = {"jid": "20240101000000000000", "fun": "test.ping", "arg": []}
+
+    # Stub out the actual job execution so the test exercises only the
+    # ``opts`` mutation in ``_target``'s preamble, without requiring a fully
+    # initialized minion (functions/ctx). ``_target`` on this branch runs
+    # the real body under ``request_context`` directly (no tornado
+    # ``stack_context`` wrapper), so patching ``_thread_return`` is enough.
+    with patch.object(salt.minion.Minion, "_thread_return", MagicMock()):
+        # Operator did not set retry_dns_count -> worker fails fast.
+        unset_opts = copy.deepcopy(minion_opts)
+        unset_opts["retry_dns_count"] = None
+        minion = salt.minion.Minion(unset_opts, load_grains=False)
+        salt.minion.Minion._target(minion, unset_opts, data, True, None)
+        assert unset_opts["retry_dns_count"] == 0
+
+        # Operator set an explicit bound -> _target leaves it alone.
+        explicit_opts = copy.deepcopy(minion_opts)
+        explicit_opts["retry_dns_count"] = 5
+        minion = salt.minion.Minion(explicit_opts, load_grains=False)
+        salt.minion.Minion._target(minion, explicit_opts, data, True, None)
+        assert explicit_opts["retry_dns_count"] == 5
 
 
 def test_minion_manager_stop_unblocks_resolve_dns_69466(minion_opts):
@@ -3095,6 +3255,167 @@ async def test_connect_master_general_exception_error(minion_opts, connect_maste
     assert minion.connect_master.calls == 2
 
 
+async def test_connect_master_cluster_not_ready_is_quiet(
+    minion_opts, connect_master_mock, caplog
+):
+    """
+    Regression test for the cluster-bootstrap log-noise issue (#70727).
+
+    When a clustered master defers the initial pillar fetch with the
+    ``cluster_retry`` sentinel, the minion's multi-master connect loop must:
+
+    1. Log a single ``INFO`` retry notice instead of a full ``log.error``
+       with traceback for "Error while bringing up minion for multi-master".
+    2. Reset ``_running`` after ``destroy()`` so the subsequent successful
+       ``tune_in(start=False)`` does not trip the "scheduled to stop" branch
+       in ``_pre_tune``.
+    """
+    import salt.crypt
+    from salt.channel.client import CLUSTER_NOT_READY_SUFFIX
+
+    minion_opts["acceptance_wait_time"] = 0
+
+    # Build a SaltClientError whose ``__cause__`` carries the cluster-not-ready
+    # sentinel message exactly as ``AsyncPillar.compile_pillar`` re-raises it.
+    auth_exc = salt.crypt.AuthenticationError(
+        "Master did not return a session key for pillar request"
+        + CLUSTER_NOT_READY_SUFFIX
+    )
+    chained = SaltClientError("Exception getting pillar.")
+    chained.__cause__ = auth_exc
+
+    class _RaiseCausedSaltClientError:
+        calls = 0
+
+        async def __call__(self, *args, **kwargs):
+            _RaiseCausedSaltClientError.calls += 1
+            if _RaiseCausedSaltClientError.calls == 1:
+                raise chained
+            return True
+
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    minion.connect_master = _RaiseCausedSaltClientError()
+
+    # ``_pre_tune`` would otherwise log "scheduled to stop" when _running
+    # stays ``False``.  Record the state the retry loop leaves ``_running``
+    # in when the retry-and-recover path runs.
+    seen_running_values = []
+    original_tune_in = minion.tune_in
+
+    def _capture_tune_in(*args, **kwargs):
+        seen_running_values.append(minion._running)
+        # Short-circuit the real tune_in so the test does not set up IPC.
+        return None
+
+    minion.tune_in = _capture_tune_in
+    minion.destroy = MagicMock(wraps=minion.destroy)
+
+    with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+        await mm._connect_minion(minion)
+
+    # destroy() ran exactly once on the failed first attempt.
+    minion.destroy.assert_called_once()
+    # Two calls to connect_master: the first raised, the second succeeded.
+    assert minion.connect_master.calls == 2
+
+    # Fix 1: the retry loop logged at INFO (not ERROR) with a short retry
+    # message, and did not emit the alarming "Error while bringing up minion
+    # for multi-master" ERROR + traceback.
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up minion for multi-master" in r.getMessage()
+    ]
+    assert error_records == [], (
+        "cluster-not-ready retry should not log the bringing-up-minion ERROR; "
+        f"got {[r.getMessage() for r in error_records]}"
+    )
+    info_records = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.INFO
+        and "is still catching up (cluster not ready)" in r.getMessage()
+    ]
+    assert len(info_records) == 1, (
+        "cluster-not-ready retry should log exactly one INFO notice; "
+        f"got {[r.getMessage() for r in info_records]}"
+    )
+
+    # Fix 2: _running was reset after destroy() so the subsequent
+    # tune_in(start=False) did not land in _pre_tune's "scheduled to stop"
+    # branch.  ``_pre_tune`` treats both ``None`` and ``True`` as "fine, run
+    # tune_in"; only ``False`` means "we already called destroy()".
+    assert seen_running_values == [None], (
+        "_running must be reset to None after destroy() so the successful "
+        f"retry can actually bind; got {seen_running_values}"
+    )
+    scheduled_to_stop = [
+        r for r in caplog.records if "scheduled to stop" in r.getMessage()
+    ]
+    assert scheduled_to_stop == [], (
+        "retry-and-recover must not trip the 'scheduled to stop' ERROR; "
+        f"got {[r.getMessage() for r in scheduled_to_stop]}"
+    )
+
+
+async def test_connect_master_non_cluster_salt_client_error_still_logs_error(
+    minion_opts, connect_master_mock, caplog
+):
+    """
+    Non-cluster ``SaltClientError`` on the connect loop must keep the
+    existing ERROR + traceback path — the quieting is scoped strictly to the
+    cluster-not-ready sentinel.
+    """
+    minion_opts["acceptance_wait_time"] = 0
+
+    mm = salt.minion.MinionManager(minion_opts)
+    minion = salt.minion.Minion(minion_opts)
+    connect_master_mock.exc = SaltClientError
+    minion.connect_master = connect_master_mock
+    minion.destroy = MagicMock(wraps=minion.destroy)
+    minion.tune_in = MagicMock()
+
+    with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+        await mm._connect_minion(minion)
+
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up minion for multi-master" in r.getMessage()
+    ]
+    assert len(error_records) == 1
+
+
+def test_cluster_not_ready_suffix_detector_round_trip():
+    """
+    Lock in the sentinel contract between
+    ``AsyncReqChannel.crypted_transfer_decode_dictentry`` (raiser) and the
+    detectors used by the pillar and minion modules (quiet-logging consumers).
+    """
+    from salt.channel.client import (
+        CLUSTER_NOT_READY_SUFFIX,
+        _is_cluster_not_ready_message,
+    )
+
+    # The exact message string raised by the channel.
+    msg = (
+        "Master did not return a session key for pillar request"
+        + CLUSTER_NOT_READY_SUFFIX
+    )
+    assert _is_cluster_not_ready_message(msg) is True
+
+    # Ordinary auth failures do not match — they stay at ERROR.
+    assert _is_cluster_not_ready_message("Key verification failed.") is False
+    assert _is_cluster_not_ready_message("Pillar nonce verification failed.") is False
+
+    # Non-string inputs never match (defensive against ``exc.message is None``).
+    assert _is_cluster_not_ready_message(None) is False
+    assert _is_cluster_not_ready_message(b"cluster not ready") is False
+
+
 async def test_minion_manager_async_stop(io_loop, minion_opts, tmp_path):
     """
     Ensure MinionManager's stop method works correctly and calls the
@@ -3878,3 +4199,228 @@ async def test_pillar_refresh_marks_request_as_regular_fetch():
     assert kwargs["snapshot"] is True
     assert kwargs["pillarenv"] == "dev"
     assert kwargs["clean_cache"] is True
+
+
+# Follow-up to PR #70733: ensure fire-and-forget background coroutines spawned
+# on the minion's io_loop keep a strong reference until they complete, so
+# CPython's garbage collector can't destroy the Task mid-``await`` and emit
+# ``Task was destroyed but it is pending!``.  Issue #70748.
+
+
+def _assert_no_task_destroyed_warning(records):
+    """
+    Fail if asyncio emitted ``Task was destroyed but it is pending!`` via
+    the stdlib ``asyncio`` logger during the captured records.
+    """
+    offenders = [
+        rec
+        for rec in records
+        if "Task was destroyed but it is pending" in rec.getMessage()
+    ]
+    assert not offenders, (
+        "asyncio emitted 'Task was destroyed but it is pending!' - "
+        f"{len(offenders)} occurrence(s): "
+        f"{[rec.getMessage() for rec in offenders]}"
+    )
+
+
+def test_minion_manager_spawn_minions_keeps_task_reference(
+    minion_opts, connect_master_mock, tmp_path, caplog
+):
+    """
+    ``MinionManager._spawn_minions`` must keep a strong reference to each
+    ``_connect_minion`` Task.  Prior to the fix for #70748 the call-site
+    ``self.io_loop.create_task(self._connect_minion(minion))`` discarded
+    the return value, leaving the Task referenced only by asyncio's
+    module-level :class:`WeakSet`.  CPython's garbage collector could
+    then destroy the still-pending Task mid-retry and emit
+    ``Task was destroyed but it is pending!``.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+    minion_opts["acceptance_wait_time"] = 0
+    minion_opts["master"] = ["127.0.0.1"]
+    minion_opts["master_type"] = "failover"
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        # The fix adds this attribute; its absence is the regression
+        # itself (the old create_task call-site did not keep refs).
+        assert hasattr(mm, "_background_tasks"), (
+            "MinionManager must expose _background_tasks so spawned "
+            "coroutines are strong-referenced; otherwise asyncio's "
+            "WeakSet is the only reference and the GC can destroy the "
+            "pending Task."
+        )
+        assert isinstance(mm._background_tasks, set)
+
+        before = set(mm._background_tasks)
+
+        # Patch _create_minion_object so we don't need a real minion
+        # (which would try to open a transport). Patch _connect_minion
+        # to a long-lived coroutine that stays pending so we can
+        # observe the task reference without racing completion.
+        connect_started = asyncio.Event()
+
+        async def _long_connect(_minion):
+            connect_started.set()
+            await asyncio.sleep(3600)
+
+        mm._create_minion_object = MagicMock(return_value=MagicMock())
+        mm._connect_minion = _long_connect
+
+        async def _run():
+            mm._spawn_minions(timeout=60)
+            # Yield so the newly-scheduled tasks actually start and reach
+            # their first ``await``, mirroring real-world bootstrap retry.
+            await connect_started.wait()
+
+        with caplog.at_level(logging.ERROR, logger="asyncio"):
+            mm.io_loop.run_until_complete(_run())
+
+        after = set(mm._background_tasks)
+        new_tasks = after - before
+        assert new_tasks, (
+            "_spawn_minions did not register any task in "
+            "_background_tasks -- a bare io_loop.create_task was used, "
+            "which lets the GC destroy pending Tasks (#70748)."
+        )
+        # Each new task must still be alive -- that's the crux of the
+        # regression: the old call-site dropped the ref, so by the time
+        # we looked here the task would already be gone.
+        for task in new_tasks:
+            assert not task.done(), (
+                "Spawned _connect_minion task completed unexpectedly; "
+                "the test expected a long-running pending task."
+            )
+
+        _assert_no_task_destroyed_warning(caplog.records)
+
+        # Clean up every registered background task so the loop doesn't
+        # tear down with pending tasks (which would itself emit the
+        # warning, purely as a test-cleanup artifact).
+        for task in list(mm._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            mm.io_loop.run_until_complete(
+                asyncio.gather(*mm._background_tasks, return_exceptions=True)
+            )
+    finally:
+        mm.destroy()
+        if not mm.io_loop.is_closed():
+            mm.io_loop.close()
+
+
+def test_minion_manager_bind_keeps_publisher_task_reference(
+    minion_opts, tmp_path, caplog
+):
+    """
+    ``MinionManager._bind`` must route the event-publisher coroutine
+    through ``_spawn_background`` so a strong reference is retained
+    until the task completes.  See #70748.
+    """
+    minion_opts["sock_dir"] = str(tmp_path / "sock")
+    os.makedirs(minion_opts["sock_dir"])
+
+    mm = salt.minion.MinionManager(minion_opts)
+    try:
+        assert hasattr(mm, "_background_tasks")
+
+        # Record every call into _spawn_background so we can assert the
+        # publisher task went through it (and not a bare create_task).
+        orig_spawn = mm._spawn_background
+        spawn_calls = []
+
+        def _recording_spawn(coro):
+            spawn_calls.append(coro)
+            return orig_spawn(coro)
+
+        mm._spawn_background = _recording_spawn
+
+        with caplog.at_level(logging.ERROR, logger="asyncio"):
+            mm._bind()
+            # Let the publisher coroutine actually start.
+            mm.io_loop.run_until_complete(asyncio.sleep(0.2))
+
+        assert spawn_calls, (
+            "_bind did not go through _spawn_background -- the bare "
+            "io_loop.create_task regression is back (#70748)."
+        )
+        _assert_no_task_destroyed_warning(caplog.records)
+    finally:
+        # Drain every registered background task before closing the
+        # loop.  Without this, the long-running publisher and
+        # process-manager coroutines remain pending when the loop
+        # tears down and asyncio emits the very warning the fix is
+        # meant to prevent -- purely as a test-cleanup artifact.
+        for task in list(mm._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            mm.io_loop.run_until_complete(
+                asyncio.gather(*mm._background_tasks, return_exceptions=True)
+            )
+        mm.destroy()
+        if not mm.io_loop.is_closed():
+            mm.io_loop.close()
+
+
+async def test_minion_process_process_queue_keeps_task_reference(
+    minion_opts, io_loop, caplog
+):
+    """
+    ``Minion.process_process_queue`` must route its fire-and-forget
+    coroutine through ``_spawn_background`` so the resulting Task is
+    strong-referenced.  See #70748.
+    """
+    minion = salt.minion.Minion(minion_opts)
+    # The _spawn_background helper lives on Minion; make sure the
+    # periodic callback actually uses it.
+    assert hasattr(minion, "_spawn_background")
+    before = set(getattr(minion, "_background_tasks", set()))
+
+    # Replace the heavy inner coroutine with a cooperative stub so
+    # we're testing the scheduling behaviour, not the queue semantics.
+    started = asyncio.Event()
+
+    async def _stub():
+        started.set()
+        await asyncio.sleep(0.05)
+
+    minion._process_process_queue_async = _stub
+
+    with caplog.at_level(logging.ERROR, logger="asyncio"):
+        minion.process_process_queue()
+        # Yield to let the scheduled stub actually execute.
+        await started.wait()
+        await asyncio.sleep(0.1)
+
+    after = set(getattr(minion, "_background_tasks", set()))
+    # It may have been added and already-discarded via add_done_callback
+    # -- but it must have been present at some point.  Easier to assert
+    # on: _background_tasks must exist and be a set (the fixing helper
+    # creates it lazily on first use).
+    assert hasattr(minion, "_background_tasks"), (
+        "Minion did not initialise _background_tasks after a "
+        "process_process_queue dispatch; the bare io_loop.create_task "
+        "regression is back (#70748)."
+    )
+    assert isinstance(minion._background_tasks, set)
+    assert started.is_set(), (
+        "The scheduled process-queue coroutine never ran; this is the "
+        "GC-mid-await symptom #70748 targets."
+    )
+    _assert_no_task_destroyed_warning(caplog.records)
+    # ``after`` may be empty (callback already discarded) or non-empty;
+    # either is consistent with the fix.  The actively-pending window
+    # is narrow enough that asserting it would flake.
+    assert after.issubset(set(minion._background_tasks))
+
+    # Drain any remaining background tasks (notably the process_manager
+    # coroutine spawned by ``Minion.__init__``) so they don't emit the
+    # very warning this test is guarding against purely as a
+    # test-cleanup artifact.
+    for task in list(minion._background_tasks):
+        task.cancel()
+    with contextlib.suppress(Exception):
+        await asyncio.gather(*minion._background_tasks, return_exceptions=True)
+    minion.destroy()

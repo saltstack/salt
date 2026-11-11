@@ -1,5 +1,16 @@
 .. _proxy-minion:
 
+.. note::
+
+   Proxy minions remain supported in Salt 3008.x and will continue to
+   work as documented. For new deployments and for existing deployments
+   hitting scaling limits (process count, auth churn, fd pressure),
+   consider :ref:`Salt resources <resources>` — a first-class
+   targeting primitive that supersedes proxy minions by hosting many
+   "things being proxied for" inside one managing minion. Resources
+   are the intended long-term direction for proxy minions and
+   deltaproxy minions.
+
 =================
 Salt Proxy Minion
 =================

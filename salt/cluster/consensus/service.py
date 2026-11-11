@@ -198,6 +198,40 @@ class RaftService:
         # without extra plumbing.
         self._dispatcher = RaftDispatcher(self._nodes, node_id, self._peer_pushers)
 
+        # Readiness is sticky across RaftService restarts.  The primary
+        # recovery path is ``Log.__init__`` loading the persisted
+        # ``commit_index`` from ``state.p`` and this call to
+        # ``apply_entries`` driving every registered state machine —
+        # membership, ring registry, routing, and the application SM —
+        # through the on-disk committed suffix.  Every registration
+        # (``ring_registry_sm``, ``routing_sm``) has completed above, so
+        # the replay fans out to all of them atomically.
+        #
+        # Raft safety (§5.4) forbids a newly-elected leader from
+        # committing CONFIG entries written in prior terms via
+        # ``advance_commit_index`` — that rule is about CLIENT-VISIBILITY
+        # of still-uncommitted entries, not local durability.  Entries
+        # that this node already persisted at a known-good
+        # ``commit_index`` are safe to re-apply (the SMs are idempotent
+        # under ``_applied_config_index`` / ``_applied_index`` guards).
+        if self._node.log.commit_index > self._node.log.last_applied:
+            log.info(
+                "RaftService: replaying committed suffix on startup "
+                "(commit_index=%s, last_applied=%s)",
+                self._node.log.commit_index,
+                self._node.log.last_applied,
+            )
+            self._node.apply_entries()
+
+        # Defence-in-depth seed for older state records that lack a
+        # persisted ``commit_index``.  On a cleanly
+        # upgraded node ``apply_entries`` above has already populated
+        # ``membership_sm`` and the seed early-returns at the
+        # ``current_voters()`` guard.  On a mixed-vintage state file
+        # (pre-upgrade ``state.p``), the seed is the recovery path that
+        # keeps the cluster-ready gate from latching closed.
+        self._seed_membership_from_log()
+
         # If Node started from a saved snapshot the membership SM was
         # restored before this on_change wiring existed, so the cluster-
         # ready / peer-table side effects never fired.  Reconcile now so
@@ -251,6 +285,84 @@ class RaftService:
             )
             self._on_ready()
             self._on_ready = None  # fire only once
+
+    def _seed_membership_from_log(self):
+        """
+        Populate ``membership_sm`` from the latest CONFIG entry on disk
+        so ``reconcile_membership`` sees the restored voter view.
+
+        Defence-in-depth path kept for older state files that
+        lack a persisted ``commit_index``.  On a cleanly upgraded node
+        ``Log.__init__`` restores ``commit_index`` from ``state.p`` and
+        ``RaftService.__init__`` drives ``apply_entries`` directly —
+        making this seed a no-op because the SM is already populated
+        (``current_voters()`` guard below).  When a master upgrades
+        with an on-disk state file that pre-dates commit_index
+        persistence, this seed is the fallback that keeps the
+        cluster-ready gate from latching closed.
+
+        Only the latest on-disk CONFIG index is applied — the SM is a
+        pure store (last write wins) and newer AppendEntries will
+        converge any stale view.  ``on_change`` is stashed during the
+        seed so ``reconcile_membership`` remains the single call site
+        that drives ``_on_membership_change``.  A no-op when the log
+        is empty, when no CONFIG is present, or when the SM has
+        already been populated by a snapshot restore / replay.
+        """
+        if self._node.log is None or not self._node.log.entries:
+            return
+        if self._node.membership_sm.current_voters():
+            return
+        # Bound the seed by ``commit_index`` when it's persisted.
+        # Applying an *uncommitted* CONFIG (an entry the
+        # leader wrote but never committed, e.g. after a late crash
+        # pre-commit) would pin ``_applied_config_index`` above
+        # ``commit_index`` and later suppress a legitimately-committed
+        # CONFIG at the same index arriving from a new leader.  An
+        # older state file reads ``commit_index = -1`` from
+        # ``load_state`` — in that case fall back to the historical
+        # "latest on-disk CONFIG" behaviour, which is safe because a
+        # cluster that was previously up had its CONFIG entries
+        # committed before they reached disk via normal AppendEntries.
+        commit_bound = self._node.log.commit_index
+        latest_config = None
+        for entry in self._node.log.entries:
+            if entry.type != LogEntryType.CONFIG:
+                continue
+            if commit_bound >= 0 and entry.index > commit_bound:
+                continue
+            latest_config = entry
+        if latest_config is None:
+            return
+        cmd = latest_config.cmd
+        if isinstance(cmd, (bytes, bytearray, memoryview)):
+            try:
+                import json  # pylint: disable=import-outside-toplevel
+
+                cmd = json.loads(bytes(cmd).decode("utf-8"))
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "RaftService: could not decode on-disk CONFIG entry at index %s",
+                    latest_config.index,
+                )
+                return
+        log.info(
+            "RaftService: seeding membership_sm from on-disk CONFIG at index %s",
+            latest_config.index,
+        )
+        # Suppress on_change for the seed apply; reconcile_membership
+        # (called right after this) is the single site that fans out
+        # to _on_membership_change / on_config_change.  Also bump
+        # Node._applied_config_index so a future AppendEntries carrying
+        # an older CONFIG cannot downgrade this restored view.
+        saved_on_change = self._node.membership_sm.on_change
+        self._node.membership_sm.on_change = None
+        try:
+            self._node.membership_sm.apply(cmd, index=latest_config.index)
+        finally:
+            self._node.membership_sm.on_change = saved_on_change
+        if latest_config.index > self._node._applied_config_index:
+            self._node._applied_config_index = latest_config.index
 
     def _on_ring_registry_change(self, ring_id, founding_voters, status):
         """
@@ -1131,15 +1243,38 @@ class RaftService:
 def build_peer_pushers(opts, pushers_list):
     """
     Convert the flat ``pushers`` list from ``_publish_daemon`` into the
-    ``dict[addr, PublishServer]`` that ``RaftService`` expects.
+    ``dict[peer_id, PublishServer]`` that ``RaftService`` expects.
 
-    ``_publish_daemon`` builds ``self.pushers`` as a plain list of
-    ``PublishServer`` objects in the same order as
-    ``opts["cluster_peers"]``.  This helper pairs them back up.
+    Keys the dict by each pusher's own ``pull_host`` attribute (set
+    from the ``cluster_peers`` entry when the pusher was constructed in
+    ``_publish_daemon``).  Using ``pull_host`` directly — rather than
+    ``zip``-ing against ``opts["cluster_peers"]`` — is resilient to two
+    classes of desync that silently broke the Raft dispatcher's pusher
+    table (BUG-030):
 
-    :param opts:          Salt master opts.
+    * ``self.pushers`` is deduplicated by ``_add_pusher``; join /
+      discover handlers append to ``self.cluster_peers`` without a
+      dedup check, so ``opts["cluster_peers"]`` can carry a duplicate
+      entry while ``self.pushers`` does not.  A ``zip`` then truncates
+      and the tail entry of ``cluster_peers`` gets no pusher — inbound
+      Raft RPCs from that peer log ``no pusher for <peer_id>, dropping
+      <tag> reply`` and pre-vote / append-entries replies are lost.
+    * ``cluster_peers`` entries can carry an explicit ``host:port``
+      suffix (``peer.rsplit(":", 1)`` branch in ``_publish_daemon``)
+      while the pusher's ``pull_host`` is just ``host``.  A ``zip``
+      produces ``"host:port"`` as the pusher-table key while the
+      dispatcher looks up ``"host"`` (the sender's ``callback_node`` =
+      its ``node_id``), which never matches.
+
+    Mirrors ``_start_raft_as_learner``'s already-robust pattern
+    (``{p.pull_host: p for p in self.pushers}``), unifying all three
+    pusher-dict construction sites on the same keying strategy.
+
+    :param opts:          Salt master opts (unused; kept for API
+                          compatibility with the pre-BUG-030 shape).
     :param pushers_list:  ``self.pushers`` from ``_publish_daemon``.
-    :returns:             ``{peer_addr: PublishServer}``
+    :returns:             ``{peer_id: PublishServer}``
     """
-    peers = opts.get("cluster_peers", [])
-    return dict(zip(peers, pushers_list))
+    # ``opts`` is intentionally ignored: pull_host is authoritative.
+    del opts  # noqa: F841 - kept for API compatibility
+    return {p.pull_host: p for p in pushers_list}

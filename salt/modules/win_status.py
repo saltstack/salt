@@ -568,8 +568,17 @@ def master(master=None, connected=True):
     if not master_ips:
         return
 
-    if __salt__["config.get"]("publish_port") != "":
-        port = int(__salt__["config.get"]("publish_port"))
+    # Prefer the master-reported publish_port that the pub channel actually
+    # connected on (mirrored into opts by AsyncPubChannel.connect). Fall back
+    # to the operator-configured publish_port, then to the hard default. This
+    # prevents a bogus __master_disconnected when the master uses a non-default
+    # publish_port and the minion config does not mirror it (issue #66846).
+    auth_port = __opts__.get("_auth_publish_port")
+    config_port = __salt__["config.get"]("publish_port")
+    if auth_port:
+        port = int(auth_port)
+    elif config_port != "":
+        port = int(config_port)
 
     master_connection_status = False
     connected_ips = _get_connected_ips(port)

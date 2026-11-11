@@ -34,6 +34,61 @@ log = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
+# Fast-tick minion: lowers ``master_alive_interval`` so
+# ``status.master`` runs many times during a short observation window.
+#
+# The cluster conftest's default ``cluster_minion_1`` uses
+# ``master_alive_interval`` = 60 s (the Salt default), so a 60 s test only
+# fires ``status.master`` once.  The ``status.master()`` + non-default
+# publish_port regression (#66846 / PR #70726) manifests as a per-tick
+# spurious ``__master_disconnected`` + full pub-channel teardown + reconnect
+# cycle.  To observe many flap cycles inside a reasonable test runtime we
+# accelerate the tick.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def cluster_minion_fast_tick(cluster_master_1):
+    """
+    A cluster minion identical to ``cluster_minion_1`` except
+    ``master_alive_interval`` is 3 s (vs. 60 s default).  ``status.master``
+    runs ~20× in a 60 s observation window so a 1 Hz disconnect regression
+    is recorded many times over, not once.
+
+    The minion does **not** set ``publish_port``, so its default is 4505
+    while the master's ephemeral port is some high value.  This is the
+    exact mismatch that triggered the #66846 flap in production.
+    """
+    config_defaults = {
+        "transport": cluster_master_1.config["transport"],
+    }
+    port = cluster_master_1.config["ret_port"]
+    addr = cluster_master_1.config["interface"]
+    config_overrides = {
+        "master": f"{addr}:{port}",
+        "master_alive_interval": 3,
+        "test.foo": "baz",
+        "log_granular_levels": {
+            "salt": "info",
+            "salt.transport": "debug",
+            "salt.channel": "debug",
+            "salt.utils.event": "debug",
+        },
+        "fips_mode": FIPS_TESTRUN,
+        "encryption_algorithm": "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1",
+    }
+    factory = cluster_master_1.salt_minion_daemon(
+        "cluster-minion-fast-tick",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    with factory.started(start_timeout=240):
+        yield factory
+
+
+# ---------------------------------------------------------------------------
 # Isolated-FS cluster masters with open_mode=False, used by
 # test_isolated_salt_key_cli.py to exercise the salt-key CLI accept path
 # (issue #70401).  Keeping these in the scenarios conftest so the integration

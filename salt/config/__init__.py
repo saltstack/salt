@@ -213,17 +213,17 @@ VALID_OPTS = immutabletypes.freeze(
         # Use this location instead of pki dir for cluster. This allows users
         # to define where minion keys and the cluster private key will be
         # stored.
-        "cluster_pki_dir": str,
+        "cluster_pki_dir": (type(None), str),
         # The port required to be open for a master cluster to properly function
         "cluster_pool_port": int,
         # Optional SHA-256 hex fingerprint of the shared cluster public key.
         # When set, a joining master rejects any discover-reply whose
         # ``cluster_pub`` does not hash to this value. See the ``cluster_secret``
         # docs and the master-cluster tutorial for the trust model.
-        "cluster_pub_fingerprint": str,
+        "cluster_pub_fingerprint": (type(None), str),
         # Shared pre-shared string that authenticates a master joining an
         # existing cluster at runtime.
-        "cluster_secret": str,
+        "cluster_secret": (type(None), str),
         # When True, cluster masters do NOT share ``cluster_pki_dir`` /
         # ``cachedir`` between members.  In this mode keys.cache_driver
         # defaults to mmap_key (so cache files are deterministic per-bank
@@ -823,7 +823,7 @@ VALID_OPTS = immutabletypes.freeze(
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
         # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
-        "reactor": list,
+        "reactor": (list, str),
         # The TTL for the cache of the reactor configuration
         "reactor_refresh_interval": int,
         # The number of workers for the runner/wheel in the reactor

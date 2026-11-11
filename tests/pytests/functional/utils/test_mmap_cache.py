@@ -10,6 +10,7 @@ These tests exercise the real on-disk behaviour that unit tests cannot:
 - Large datasets that push the index near capacity
 """
 
+import logging
 import multiprocessing
 import os
 import struct
@@ -149,6 +150,75 @@ def _worker_read(idx_path, keys, result_queue):
         result_queue.put(("err", str(exc)))
 
 
+def _worker_read_sized(idx_path, keys, result_queue, size=2048):
+    """Read a list of keys at a given index size and report how many were found."""
+    try:
+        c = MmapCache(idx_path, size=size, slot_size=128, key_size=48)
+        found = sum(1 for k in keys if c.get(k) is not None)
+        c.close()
+        result_queue.put(("ok", found))
+    except Exception as exc:  # pylint: disable=broad-except
+        result_queue.put(("err", str(exc)))
+
+
+def _worker_put_many(idx_path, worker_id, n_keys, result_queue, size=2048):
+    """Bulk-insert n_keys entries via put_many and report success."""
+    try:
+        c = MmapCache(idx_path, size=size, slot_size=128, key_size=48)
+        items = [(f"w{worker_id}k{i}", f"val-{worker_id}-{i}") for i in range(n_keys)]
+        ok = c.put_many(items)
+        c.close()
+        result_queue.put(("ok", worker_id, int(bool(ok)), n_keys))
+    except Exception as exc:  # pylint: disable=broad-except
+        result_queue.put(("err", worker_id, str(exc)))
+
+
+def _worker_put_many_fixed(
+    idx_path, worker_id, n_keys, result_queue, size=2048, key_prefix="pm"
+):
+    """Bulk-insert n_keys entries via put_many with a custom key prefix."""
+    try:
+        c = MmapCache(idx_path, size=size, slot_size=128, key_size=48)
+        items = [
+            (f"{key_prefix}-{worker_id}-{i}", f"val-{worker_id}-{i}")
+            for i in range(n_keys)
+        ]
+        ok = c.put_many(items)
+        c.close()
+        result_queue.put(("ok", worker_id, int(bool(ok)), n_keys))
+    except Exception as exc:  # pylint: disable=broad-except
+        result_queue.put(("err", worker_id, str(exc)))
+
+
+def _worker_put_loop_fixed(idx_path, worker_id, n_keys, result_queue, size=2048):
+    """Per-entry put loop (not put_many) with a known key prefix."""
+    try:
+        c = MmapCache(idx_path, size=size, slot_size=128, key_size=48)
+        ok = 0
+        for i in range(n_keys):
+            if c.put(f"loop-{worker_id}-{i}", f"val-{worker_id}-{i}"):
+                ok += 1
+        c.close()
+        result_queue.put(("ok", worker_id, ok))
+    except Exception as exc:  # pylint: disable=broad-except
+        result_queue.put(("err", worker_id, str(exc)))
+
+
+def _reader_min_count(idx_path, seed_keys, iters, result_queue, size=2048):
+    """Loop get() on seed_keys; report the minimum count observed."""
+    try:
+        c = MmapCache(idx_path, size=size, slot_size=128, key_size=48)
+        min_seen = len(seed_keys)
+        for _ in range(iters):
+            seen = sum(1 for k in seed_keys if c.get(k) is not None)
+            if seen < min_seen:
+                min_seen = seen
+        c.close()
+        result_queue.put(("ok", min_seen))
+    except Exception as exc:  # pylint: disable=broad-except
+        result_queue.put(("err", str(exc)))
+
+
 class TestMultiProcess:
     def test_concurrent_writers_no_data_loss(self, tmp_path):
         idx_path = str(tmp_path / "mp.idx")
@@ -204,6 +274,116 @@ class TestMultiProcess:
         results = [q.get(timeout=5), q.get(timeout=5)]
         errors = [r for r in results if r[0] == "err"]
         assert not errors, errors
+
+    def test_concurrent_put_many_writers_no_data_loss(self, tmp_path):
+        """Four processes each do a 50-entry put_many simultaneously; every
+        entry must be readable afterwards."""
+        idx_path = str(tmp_path / "pm.idx")
+        n_workers = 4
+        n_keys = 50
+        q = multiprocessing.Queue()
+        procs = [
+            multiprocessing.Process(
+                target=_worker_put_many,
+                args=(idx_path, w, n_keys, q, 2048),
+            )
+            for w in range(n_workers)
+        ]
+        for p in procs:
+            p.start()
+        for p in procs:
+            p.join(timeout=60)
+
+        results = [q.get(timeout=5) for _ in range(n_workers)]
+        errors = [r for r in results if r[0] == "err"]
+        assert not errors, errors
+
+        # Verify every key is readable from a fresh process at the same size.
+        all_keys = [f"w{w}k{i}" for w in range(n_workers) for i in range(n_keys)]
+        rq = multiprocessing.Queue()
+        verifier = multiprocessing.Process(
+            target=_worker_read_sized,
+            args=(idx_path, all_keys, rq, 2048),
+        )
+        verifier.start()
+        verifier.join(timeout=30)
+        res = rq.get(timeout=5)
+        assert res[0] == "ok", res
+        assert res[1] == n_workers * n_keys, (res[1], n_workers * n_keys)
+
+    def test_mixed_put_and_put_many_writers(self, tmp_path):
+        """One loop-put worker and one put_many worker against the same bank;
+        both writers' entries must be durable afterwards."""
+        idx_path = str(tmp_path / "mix.idx")
+        n_keys = 40
+        q = multiprocessing.Queue()
+        loop_proc = multiprocessing.Process(
+            target=_worker_put_loop_fixed,
+            args=(idx_path, 1, n_keys, q, 2048),
+        )
+        pm_proc = multiprocessing.Process(
+            target=_worker_put_many_fixed,
+            args=(idx_path, 2, n_keys, q, 2048, "pm"),
+        )
+        loop_proc.start()
+        pm_proc.start()
+        loop_proc.join(timeout=60)
+        pm_proc.join(timeout=60)
+
+        results = [q.get(timeout=5), q.get(timeout=5)]
+        errors = [r for r in results if r[0] == "err"]
+        assert not errors, errors
+
+        loop_keys = [f"loop-1-{i}" for i in range(n_keys)]
+        pm_keys = [f"pm-2-{i}" for i in range(n_keys)]
+        rq = multiprocessing.Queue()
+        verifier = multiprocessing.Process(
+            target=_worker_read_sized,
+            args=(idx_path, loop_keys + pm_keys, rq, 2048),
+        )
+        verifier.start()
+        verifier.join(timeout=30)
+        res = rq.get(timeout=5)
+        assert res[0] == "ok", res
+        assert res[1] == 2 * n_keys, (res[1], 2 * n_keys)
+
+    def test_reader_sees_only_committed_batches(self, tmp_path):
+        """A concurrent reader looping over seeded keys must never observe a
+        count below the seed total while a put_many of different keys runs."""
+        idx_path = str(tmp_path / "commit.idx")
+        seed_count = 30
+        # Seed at size=2048, same as all workers/readers below.
+        c = MmapCache(idx_path, size=2048, slot_size=128, key_size=48)
+        for i in range(seed_count):
+            assert c.put(f"seed-{i}", f"val-{i}")
+        c.close()
+
+        seed_keys = [f"seed-{i}" for i in range(seed_count)]
+        q = multiprocessing.Queue()
+        reader = multiprocessing.Process(
+            target=_reader_min_count,
+            args=(idx_path, seed_keys, 200, q, 2048),
+        )
+        writer = multiprocessing.Process(
+            target=_worker_put_many_fixed,
+            args=(idx_path, 7, 50, q, 2048, "batch"),
+        )
+        reader.start()
+        writer.start()
+        writer.join(timeout=60)
+        reader.join(timeout=60)
+
+        results = [q.get(timeout=5), q.get(timeout=5)]
+        errors = [r for r in results if r[0] == "err"]
+        assert not errors, errors
+
+        reader_results = [r for r in results if r[0] == "ok" and len(r) == 2]
+        assert reader_results, results
+        min_seen = reader_results[0][1]
+        assert min_seen == seed_count, (
+            f"reader observed {min_seen} seed keys (expected {seed_count}); "
+            "a committed put_many of different keys must not drop seeded entries"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -377,3 +557,30 @@ class TestLargeDataset:
         for i in range(1, 50, 2):
             assert c.get(f"k{i}") == f"v{i}"
         c.close()
+
+
+# ---------------------------------------------------------------------------
+# Roster-version regression: no divergence cascade on hot write loops
+# ---------------------------------------------------------------------------
+
+
+class TestRosterVersionRegression:
+    def test_no_divergence_warning_on_hot_write_loop(self, tmp_path, caplog):
+        """Regression: N put() calls in a tight loop must not log any
+        "Roster/index divergence detected" warning. Before the
+        roster_version fix every ``open(write=True)`` ran a full recovery
+        scan and could trip the warning via timing on the inode-unlinked
+        write fd; the counter gate in ``_maybe_recover_roster`` prevents
+        the cascade."""
+        c = MmapCache(str(tmp_path / "hot.idx"), size=2048, slot_size=128, key_size=48)
+        with caplog.at_level(logging.WARNING, logger="salt.utils.mmap_cache"):
+            for i in range(500):
+                assert c.put(f"hot-{i}", f"v-{i}")
+        c.close()
+
+        divergence_warnings = [
+            r
+            for r in caplog.records
+            if "Roster/index divergence detected" in r.getMessage()
+        ]
+        assert not divergence_warnings, [r.getMessage() for r in divergence_warnings]
