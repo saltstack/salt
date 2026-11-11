@@ -1045,6 +1045,46 @@ def test_job_status():
         }
 
 
+def test_show_next_fire_time():
+    """
+    Test show_next_fire_time returns the time reported by the minion
+    """
+    patch_schedule_salt = patch.dict(
+        schedule.__salt__, {"event.fire": MagicMock(return_value=True)}
+    )
+    patch_schedule_get_event = patch.object(
+        SaltEvent,
+        "get_event",
+        return_value={"complete": True, "next_fire_time": "2021-11-01T13:36:57"},
+    )
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
+    with patch_schedule_salt, patch_schedule_get_event, patch_schedule_connect_pub:
+        ret = schedule.show_next_fire_time("job1")
+    assert ret == {"result": True, "next_fire_time": "2021-11-01T13:36:57"}
+
+
+@pytest.mark.parametrize("fire_result", [True, False])
+def test_show_next_fire_time_no_minion_response(fire_result):
+    """
+    Test show_next_fire_time returns a clean failure, not an exception, when
+    the minion does not answer (event not fired, or the reply timed out)
+    """
+    patch_schedule_salt = patch.dict(
+        schedule.__salt__, {"event.fire": MagicMock(return_value=fire_result)}
+    )
+    patch_schedule_get_event = patch.object(SaltEvent, "get_event", return_value=None)
+    patch_schedule_connect_pub = patch.object(
+        SaltEvent, "connect_pub", return_value=True
+    )
+    with patch_schedule_salt, patch_schedule_get_event, patch_schedule_connect_pub:
+        ret = schedule.show_next_fire_time("job1")
+    assert ret["result"] is False
+    assert "next_fire_time" not in ret
+    assert "next fire time not available" in ret["comment"]
+
+
 # 'purge' function tests: 1
 @pytest.mark.slow_test
 def test_list(job1):
