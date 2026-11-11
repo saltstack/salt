@@ -31,7 +31,8 @@ jobs:
           name: ${{ inputs.name }}
           path: artifacts
       - run: find artifacts -maxdepth 1 -type f -printf '%f\n'
-      - id: list-files
+      - name: Build artifact file matrix
+        id: list-files
         run: |
           if [ "${{ inputs.pattern }}" != "" ]; then
             echo files="$(find artifacts -maxdepth 1 -type f -name '${{ inputs.pattern }}' -printf '%f\n' | jq -Rnc '[inputs | { file: "\(.)" }]')" >> "$GITHUB_OUTPUT"
