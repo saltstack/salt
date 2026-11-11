@@ -1239,6 +1239,18 @@ class AsyncAuth:
         future.add_done_callback(self._on_waiter_done)
 
         if self._sign_in_task is None or self._sign_in_task.done():
+            # A forced re-auth (for example after a caller hits
+            # ``AuthenticationError`` because the master rotated its
+            # key) enters this branch with ``_last_result`` still
+            # holding the previous ``(True,)``.  Clear it before
+            # spawning so ``authenticated`` flips to False for the
+            # duration of the re-auth -- otherwise other callers
+            # observing the ``if not self.auth.authenticated: await
+            # self.auth.authenticate()`` gate in ``channel/client.py``
+            # would skip the wait, send with the stale key, hit
+            # ``AuthenticationError``, and bounce back into another
+            # forced re-auth.
+            self._last_result = None
             self._sign_in_task = self.io_loop.create_task(self._authenticate())
             self._sign_in_task.add_done_callback(self._on_sign_in_done)
 

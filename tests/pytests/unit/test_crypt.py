@@ -1129,6 +1129,123 @@ async def test_authenticate_after_last_waiter_cancel_spawns_fresh_task(
         crypt.AsyncAuth.creds_map.pop(credskey, None)
 
 
+async def test_authenticate_forced_reauth_flips_authenticated_to_false(
+    minion_root, io_loop
+):
+    """
+    A forced re-auth must flip ``authenticated`` to ``False`` while the
+    new sign-in is in flight, matching the pre-refactor behavior.
+
+    Scenario (filed by @charzl in PR review of #70772): a caller hits
+    ``AuthenticationError`` -- e.g. the master rotated its AES key and
+    decrypt failed on the old key -- and calls ``authenticate()`` to
+    force a fresh sign-in.  Other callers meanwhile gate on
+    ``if not self.auth.authenticated: await self.auth.authenticate()``
+    in ``channel/client.py``.
+
+    Before the refactor, ``authenticate()`` allocated a new pending
+    ``_authenticate_future`` and the ``authenticated`` property
+    (``_authenticate_future.done() and exception() is None``) flipped
+    to ``False`` for the duration, so those other callers correctly
+    waited on the new sign-in.
+
+    In the per-caller design the shared future is gone, so the
+    equivalent behavior requires clearing ``_last_result`` at the
+    moment a new ``_sign_in_task`` is spawned.  Without that, the
+    other callers see ``authenticated`` still True, send with the
+    stale key, hit their own ``AuthenticationError``, and bounce back
+    into another forced re-auth -- one wasted master roundtrip per
+    sibling caller.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+
+    # Pre-populate ``creds_map`` so a fresh ``AsyncAuth`` reports
+    # ``authenticated`` True immediately (the
+    # ``__singleton_init__`` cached-creds branch).  This is the
+    # state at the moment the caller's decrypt fails and they
+    # decide to force a re-auth.
+    aes_old = crypt.Crypticle.generate_key_string()
+    session_old = crypt.Crypticle.generate_key_string()
+    crypt.AsyncAuth.creds_map[credskey] = {
+        "aes": aes_old,
+        "session": session_old,
+    }
+
+    try:
+        auth = crypt.AsyncAuth(opts, io_loop)
+        assert auth.authenticated
+        assert auth._last_result == (True,)
+
+        # The master has rotated keys; the fresh sign-in returns a
+        # new ``aes`` / ``session`` pair.  Gate it on an event so
+        # we can observe the intermediate state.
+        aes_new = crypt.Crypticle.generate_key_string()
+        session_new = crypt.Crypticle.generate_key_string()
+        sign_in_entered = _asyncio.Event()
+        release = _asyncio.Event()
+
+        async def mock_sign_in(*args, **kwargs):
+            sign_in_entered.set()
+            await release.wait()
+            return {"enc": "pub", "aes": aes_new, "session": session_new}
+
+        auth.sign_in = mock_sign_in
+
+        # Force the re-auth.  ``authenticate()`` must clear
+        # ``_last_result`` and spawn a fresh ``_sign_in_task``, so
+        # ``authenticated`` goes False for the duration.
+        forced = auth.authenticate()
+        await sign_in_entered.wait()
+
+        assert auth._sign_in_task is not None
+        assert not auth._sign_in_task.done()
+        assert auth._last_result is None
+        assert not auth.authenticated, (
+            "authenticated must be False during a forced re-auth so "
+            "other callers wait on the new sign-in instead of "
+            "sending with the stale key"
+        )
+
+        # A sibling caller entering now observes the unauthenticated
+        # state and correctly joins the in-flight sign-in as a waiter
+        # rather than skipping past the gate.
+        sibling = auth.authenticate()
+        assert not sibling.done()
+        assert sibling in auth._waiters
+
+        # Complete the sign-in.  Both the original forcing caller and
+        # the sibling resolve, and ``authenticated`` flips back to True.
+        release.set()
+        results = await _asyncio.gather(forced, sibling)
+        assert results == [True, True]
+        assert auth.authenticated
+        assert auth._last_result == (True,)
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
 async def test_authenticate_cached_creds_fast_path_via_authenticated_property(
     minion_root, io_loop
 ):
