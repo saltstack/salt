@@ -30,19 +30,27 @@ WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", 10 * 60))
 # the limit is 15 KB/sec (it was 10 KB/sec).
 MASTER_RSS_SLOPE_LIMIT = 15 * 1024
 
-# Smallest slice of data (the end of the run) the check will judge on.
-# Fewer points make the slope too noisy to compare with the thresholds.
+# Tail: the newest TAIL_SECONDS of data are ignored too.  The last samples
+# of a run are taken while the stress is being stopped and prometheus is
+# still scraping, and they are not representative of the steady state.
+# Override with ``STRESS_TAIL_SECONDS`` if that needs tuning.
+TAIL_SECONDS = int(os.environ.get("STRESS_TAIL_SECONDS", 2 * 60))
+
+# Smallest slice of data the check will judge on, taken between the
+# warm-up and the tail.  Fewer points make the slope too noisy to compare
+# with the thresholds.
 MIN_ANALYSIS_SECONDS = 10 * 60
 
 # The workflow's shortest run (nightly-stress-test.yml ``duration``
-# options) is 30m, which must stay at least WARMUP_SECONDS +
-# MIN_ANALYSIS_SECONDS = 20m.  Keep the two in step.
+# options) is 30m, which must stay at least
+# WARMUP_SECONDS + MIN_ANALYSIS_SECONDS + TAIL_SECONDS = 22m.  Keep them
+# in step.
 #
 # The workflow exports ``STRESS_START_EPOCH`` when the stress starts; the
-# slope window then covers everything after ``start + WARMUP_SECONDS``
-# (a 30m run is judged on its last 20m, a 60m run on its last 50m).
-# Without it the window is MIN_ANALYSIS_SECONDS, the one span that no
-# allowed run overlaps with the warm-up.
+# slope window then covers everything from ``start + WARMUP_SECONDS`` up
+# to ``TAIL_SECONDS`` before now (a 30m run is judged on 18m, a 60m run on
+# 48m).  Without it the window is MIN_ANALYSIS_SECONDS, the one span that
+# no allowed run overlaps with the warm-up.
 
 
 def query_prom(query):
@@ -66,24 +74,27 @@ def get_elapsed_seconds():
 def get_slope_window():
     """
     Prometheus range-selector duration for the slope check: everything
-    after the warm-up period at the start of the stress run.
+    after the warm-up period at the start of the stress run and before
+    the tail at its end.  The selector is evaluated ``TAIL_SECONDS`` in
+    the past (see :func:`get_linear_slope`), so the window length is the
+    elapsed time less both ends.
     """
     elapsed = get_elapsed_seconds()
     if elapsed is None:
         return f"{MIN_ANALYSIS_SECONDS}s"
-    return f"{max(elapsed - WARMUP_SECONDS, MIN_ANALYSIS_SECONDS)}s"
+    return f"{max(elapsed - WARMUP_SECONDS - TAIL_SECONDS, MIN_ANALYSIS_SECONDS)}s"
 
 
 def get_linear_slope(metric_name, duration=None):
     """
-    Slope (rate-of-change per second) of ``metric_name`` over the recent
-    ``duration``.  Returns 0.0 if prometheus is unreachable or has no
-    series for the metric, so a missing exporter doesn't crash the
-    analyzer -- the threshold checks downstream will simply see no
+    Slope (rate-of-change per second) of ``metric_name`` over ``duration``,
+    ending ``TAIL_SECONDS`` ago.  Returns 0.0 if prometheus is unreachable
+    or has no series for the metric, so a missing exporter doesn't crash
+    the analyzer -- the threshold checks downstream will simply see no
     leak.
     """
     duration = duration or get_slope_window()
-    query = f"deriv({metric_name}[{duration}])"
+    query = f"deriv({metric_name}[{duration}] offset {TAIL_SECONDS}s)"
     try:
         data = query_prom(query)
     except (urllib.error.URLError, ConnectionError, TimeoutError) as exc:
@@ -144,7 +155,10 @@ def check_salt_prometheus_metrics(window=None):
 
 def main():
     print("--- Salt Stress Test Analysis ---")
-    print(f"Slope window (warm-up of {WARMUP_SECONDS}s excluded): {get_slope_window()}")
+    print(
+        f"Slope window (warm-up of {WARMUP_SECONDS}s and last {TAIL_SECONDS}s "
+        f"excluded): {get_slope_window()}"
+    )
 
     # 1. Check for zombie processes (process count growth)
     master_procs_slope = get_linear_slope("salt_master_process_count")
