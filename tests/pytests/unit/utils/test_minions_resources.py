@@ -1781,3 +1781,189 @@ def test_augment_grain_resource_id_backslash_in_pattern(opts):
         }
     )
     assert sorted(result["minions"]) == expected
+
+
+# ---------------------------------------------------------------------------
+# Trie dispatch on the per-minion ``grains`` bank.
+#
+# The trie infrastructure is bank-agnostic. When
+# ``opts["enable_grain_trie_index"]`` is set, ``_check_cache_minions``
+# consults :func:`salt.utils.mmap_trie_index.dispatch_predicate` for the
+# ``grains`` bank BEFORE the legacy per-minion pickle-fetch loop, so
+# arbitrary grain-target predicates on real minions (``os:Linux``,
+# ``cpuinfo:vendor_id:AMD``) short-circuit when the trie can
+# authoritatively serve them.
+#
+# These tests pin the contract from the public
+# :meth:`_check_grain_minions` surface:
+#
+# * dispatch is gated on ``enable_grain_trie_index`` -- off by default,
+#   legacy slow path runs
+# * a trie hit skips the ``cache.fetch(bank, id)`` loop entirely
+# * trie ``None`` (cap sentinel, missing build) falls through to the
+#   legacy path so no match is lost
+# * trie results intersect with the starting minion set (PKI for
+#   greedy, cached list for non-greedy) so an accepted-key filter
+#   isn't bypassed by stale cached grains
+# ---------------------------------------------------------------------------
+
+
+def _build_ck_with_minion_grains(opts, minion_grains):
+    """
+    Build a ``CkMinions`` whose ``self.cache`` returns the given
+    ``{minion_id: {grain_key: grain_value, ...}}`` map from the
+    ``grains`` bank.  The fixture also makes ``self._pki_minions()``
+    return every minion id in the map so greedy dispatch includes all
+    of them as candidates.
+    """
+    ck = salt.utils.minions.CkMinions(opts)
+    present = dict(minion_grains)
+
+    def _list(bank):
+        if bank == "grains":
+            return list(present)
+        return []
+
+    def _fetch(bank, key):
+        if bank != "grains":
+            return None
+        return present.get(key)
+
+    fake = MagicMock()
+    fake.list = MagicMock(side_effect=_list)
+    fake.fetch = MagicMock(side_effect=_fetch)
+    ck.cache = fake
+    # Pretend every cached minion is accepted (PKI is the greedy
+    # starting set).
+    ck._pki_minions = MagicMock(return_value=list(present))
+    return ck, fake
+
+
+def test_check_grain_minions_trie_dispatch_disabled_by_default(opts):
+    """
+    With ``enable_grain_trie_index`` unset, the trie dispatch MUST
+    NOT be consulted for the ``grains`` bank -- behaviour is 100%
+    the legacy pickle-fetch loop.
+    """
+    opts["minion_data_cache"] = True
+    opts.pop("enable_grain_trie_index", None)
+    ck, fake = _build_ck_with_minion_grains(
+        opts,
+        {
+            "web-01": {"role": "web"},
+            "db-01": {"role": "db"},
+        },
+    )
+    with patch("salt.utils.mmap_trie_index.dispatch_predicate") as trie_dispatch:
+        result = ck._check_grain_minions("role:web", ":", greedy=True)
+    assert trie_dispatch.call_count == 0
+    assert sorted(result["minions"]) == ["web-01"]
+
+
+def test_check_grain_minions_trie_dispatch_served_skips_slow_path(opts):
+    """
+    With the trie enabled and dispatch returning a hit list,
+    ``_check_cache_minions`` must NOT call ``cache.fetch("grains", id)``
+    for any minion -- the trie is authoritative.
+    """
+    opts["minion_data_cache"] = True
+    opts["enable_grain_trie_index"] = True
+    ck, fake = _build_ck_with_minion_grains(
+        opts,
+        {
+            "web-01": {"role": "web"},
+            "web-02": {"role": "web"},
+            "db-01": {"role": "db"},
+        },
+    )
+    with patch(
+        "salt.utils.mmap_trie_index.dispatch_predicate",
+        return_value=["web-01", "web-02"],
+    ):
+        result = ck._check_grain_minions("role:web", ":", greedy=True)
+    assert sorted(result["minions"]) == ["web-01", "web-02"]
+    # cache.list for cached-minion enumeration is fine, but
+    # cache.fetch("grains", <id>) must not have been called -- that
+    # is the slow-path loop we are skipping.
+    fetch_grains_calls = [
+        c for c in fake.fetch.call_args_list if c.args and c.args[0] == "grains"
+    ]
+    assert (
+        fetch_grains_calls == []
+    ), f"slow-path grain fetches should not have fired: {fetch_grains_calls!r}"
+
+
+def test_check_grain_minions_trie_dispatch_none_falls_through(opts):
+    """
+    ``dispatch_predicate`` returning ``None`` (cap sentinel or build
+    failure) must trigger a fall-through to the legacy per-minion
+    fetch loop so correctness is preserved.
+    """
+    opts["minion_data_cache"] = True
+    opts["enable_grain_trie_index"] = True
+    ck, fake = _build_ck_with_minion_grains(
+        opts,
+        {
+            "web-01": {"role": "web"},
+            "db-01": {"role": "db"},
+        },
+    )
+    with patch("salt.utils.mmap_trie_index.dispatch_predicate", return_value=None):
+        result = ck._check_grain_minions("role:web", ":", greedy=True)
+    assert sorted(result["minions"]) == ["web-01"]
+    # Fall-through MUST have fetched both minions' grain dicts.
+    fetch_grains_keys = sorted(
+        c.args[1] for c in fake.fetch.call_args_list if c.args and c.args[0] == "grains"
+    )
+    assert fetch_grains_keys == ["db-01", "web-01"]
+
+
+def test_check_grain_minions_trie_dispatch_intersects_with_pki(opts):
+    """
+    If the trie returns minions whose cache was never purged but whose
+    keys are no longer accepted, those must be excluded.  The starting
+    set (PKI for greedy) is the upper bound; the trie can only narrow
+    it, never add outside it.
+    """
+    opts["minion_data_cache"] = True
+    opts["enable_grain_trie_index"] = True
+    ck, fake = _build_ck_with_minion_grains(
+        opts,
+        {
+            "web-01": {"role": "web"},
+            "stale-web-rejected": {"role": "web"},
+        },
+    )
+    # Only web-01 is still PKI-accepted.
+    ck._pki_minions = MagicMock(return_value=["web-01"])
+    with patch(
+        "salt.utils.mmap_trie_index.dispatch_predicate",
+        return_value=["web-01", "stale-web-rejected"],
+    ):
+        result = ck._check_grain_minions("role:web", ":", greedy=True)
+    assert sorted(result["minions"]) == ["web-01"]
+
+
+def test_check_grain_minions_trie_dispatch_pcre(opts):
+    """
+    PCRE predicates (``salt -P``) still take the trie path when
+    enabled -- the dispatch helper passes ``regex_match=True``
+    through to ``dispatch_predicate``.
+    """
+    opts["minion_data_cache"] = True
+    opts["enable_grain_trie_index"] = True
+    ck, fake = _build_ck_with_minion_grains(
+        opts,
+        {"web-01": {"role": "web"}, "db-01": {"role": "db"}},
+    )
+    with patch(
+        "salt.utils.mmap_trie_index.dispatch_predicate",
+        return_value=["web-01"],
+    ) as trie_dispatch:
+        result = ck._check_grain_pcre_minions(r"role:^web$", ":", greedy=True)
+    assert sorted(result["minions"]) == ["web-01"]
+    # Confirm regex_match=True reached dispatch_predicate.
+    _, kwargs = trie_dispatch.call_args
+    # Positional path: (cache, bank, opts, expr, delimiter, regex_match)
+    args = trie_dispatch.call_args.args
+    assert args[5] is True

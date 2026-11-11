@@ -795,6 +795,42 @@ class CkMinions:
             if not cminions:
                 return {"minions": [], "missing": []}
             minions = set(minions)
+            # Trie fast path for the per-minion ``grains`` bank. Opt-in
+            # via ``opts["enable_grain_trie_index"]``.  The trie covers
+            # every scalar leaf of every cached minion grain dict, so
+            # arbitrary ``<path>:<value>`` and nested predicates are
+            # served without the per-minion pickle-fetch loop below.
+            # ``exact_match=True`` keeps the old behaviour (the trie's
+            # literal path already short-circuits on equality so there
+            # is no separate exact-match dispatch).  Returns ``None``
+            # when the trie cannot authoritatively answer (cap hit,
+            # missing build, shape mismatch); we then fall through to
+            # the legacy loop.
+            if search_type == "grains" and self.opts.get("enable_grain_trie_index"):
+                try:
+                    trie_hits = salt.utils.mmap_trie_index.dispatch_predicate(
+                        self.cache,
+                        "grains",
+                        self.opts,
+                        expr,
+                        delimiter,
+                        regex_match,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "mmap_trie_index: grains dispatch failed for expr=%r; "
+                        "falling through to slow path",
+                        expr,
+                        exc_info=True,
+                    )
+                    trie_hits = None
+                if trie_hits is not None:
+                    # Intersect with the starting set so greedy ∩ PKI
+                    # and non-greedy ∩ cached-list semantics are both
+                    # preserved; the trie only knows which minions
+                    # have cached grains, not which are accepted.
+                    filtered = [m for m in trie_hits if m in minions]
+                    return {"minions": filtered, "missing": []}
             # Track which accepted minions have cache data we can evaluate.
             # Any accepted minion not present in ``cminions`` has no cache
             # entry and must be excluded; otherwise grain/pillar targeting
