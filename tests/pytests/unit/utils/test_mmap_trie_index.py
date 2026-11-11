@@ -27,9 +27,8 @@ Behavioural contract (from the Mission 4 spec):
   in flight never see partial state.
 
 The public API spelling may differ in detail. Tests use an import
-shim (the same pattern as Mission 3 did for ``grain_reverse_index``)
-to resolve module and attribute names and to skip gracefully when the
-Implementer has not yet landed.
+shim to resolve module and attribute names and to skip gracefully
+when the implementation module is not present.
 """
 
 import os

@@ -882,15 +882,6 @@ VALID_OPTS = immutabletypes.freeze(
         # cachedir under the name of the minion and used to predetermine what minions are expected to
         # reply from executions.
         "minion_data_cache": bool,
-        # Operator-declared list of resource-grain keys to index for
-        # grain-target queries.  When set, the master builds an
-        # in-process reverse map ``{(grain_key, value) -> [sr_key, ...]}``
-        # for the named keys so predicates like ``role:web`` or
-        # ``env:prod`` hit the ``resource_grains`` bank in O(matches)
-        # instead of walking every entry.  Empty / unset preserves the
-        # legacy full-bank scan behaviour.  See
-        # :mod:`salt.utils.grain_reverse_index`.
-        "index_grain_keys": list,
         # Opt-in switch for the persistent mmap-backed grain trie
         # index (Mission 4).  When ``True`` the master builds a
         # scalar-leaf-level index of every grain dict in
@@ -1878,7 +1869,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "master_job_cache": "local_cache",
         "job_cache_store_endtime": False,
         "minion_data_cache": True,
-        "index_grain_keys": [],
         "enable_grain_trie_index": False,
         "grain_trie_max_list_size": 100000,
         "grain_trie_build_batch_size": 1024,

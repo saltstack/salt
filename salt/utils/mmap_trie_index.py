@@ -2,12 +2,8 @@
 Persistent mmap-backed grain trie index for resource-registry
 grain-target queries.
 
-This module is the Mission 4 successor to
-:mod:`salt.utils.grain_reverse_index`. Where the reverse index covers
-operator-declared top-level grain keys from an in-process dict (RAM
-scales with inventory size), the trie index persists an exhaustive
-``(path_tuple, scalar_value) -> [sr_key, ...]`` mapping on disk using
-:class:`salt.utils.mmap_cache.MmapCache`, so:
+Persists an exhaustive ``(path_tuple, scalar_value) -> [sr_key, ...]``
+mapping on disk using :class:`salt.utils.mmap_cache.MmapCache`, so:
 
 * **Nested paths are auto-covered.** ``dns:nameservers:127.0.0.11`` or
   any other arbitrarily-deep ``<a>:<b>:<c>:<value>`` predicate is served
@@ -21,8 +17,8 @@ scales with inventory size), the trie index persists an exhaustive
 Scope
 -----
 * Opt-in via ``opts["enable_grain_trie_index"]``. When off, the
-  resource-grain dispatch falls back to Mission 3's reverse-value
-  index (and ultimately the legacy slow path).
+  resource-grain dispatch falls back to the legacy per-key
+  fetch loop.
 * Per-bank. Each bank gets its own trie-cache files under
   ``<cachedir>/<bank>/.trie/`` -- never mixed with the primary bank's
   mmap files.

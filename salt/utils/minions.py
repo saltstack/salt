@@ -14,7 +14,6 @@ import salt.roster
 import salt.transport
 import salt.utils.data
 import salt.utils.files
-import salt.utils.grain_reverse_index
 import salt.utils.grain_target_cache
 import salt.utils.mmap_trie_index
 import salt.utils.network
@@ -575,33 +574,6 @@ def _resource_id_candidates(sr_keys, expr, delimiter, regex_match):
     return out
 
 
-def _indexed_grain_predicate(expr, delimiter, declared_keys):
-    """
-    Decode ``expr`` into ``(grain_key, pattern)`` iff the predicate is
-    a flat ``<grain_key>:<pattern>`` targeting an operator-declared
-    indexed grain.
-
-    Returns ``None`` when the predicate shape is not indexable:
-    nested delimiter (``a:b:c``), empty pattern, non-string input, or
-    ``grain_key`` not in ``declared_keys``. The caller still decides
-    whether ``pattern`` is literal / glob / regex -- this helper only
-    enforces the shape and operator-config membership check.
-    """
-    if not declared_keys or not isinstance(expr, str):
-        return None
-    key, sep, pattern = expr.partition(delimiter)
-    if not sep or not key or not pattern:
-        return None
-    if delimiter in pattern:
-        # Nested predicate (``<key>:<sub>:<value>``). The reverse
-        # index only covers top-level ``<key>:<value>`` -- fall
-        # through to the slow path so ``subdict_match`` handles it.
-        return None
-    if key not in declared_keys:
-        return None
-    return key, pattern
-
-
 class CkMinions:
     """
     Used to check what minions should respond from a target
@@ -1008,39 +980,14 @@ class CkMinions:
                     seen.add(rid)
             return
 
-        # Reverse-value index fast path for operator-declared grain keys
-        # (opts ``index_grain_keys``). Avoids the O(N) pickle-fetch loop
-        # below by consulting an in-process ``{(grain_key, value):
-        # [sr_key, ...]}`` map built lazily from the primary bank. The
-        # index covers only flat ``<grain_key>:<value>`` predicates where
-        # ``grain_key`` is in the declared set; everything else falls
-        # through.
-        declared_keys = self.opts.get("index_grain_keys") or []
-        if declared_keys:
-            indexed = _indexed_grain_predicate(expr, delimiter, declared_keys)
-            if indexed is not None:
-                grain_key, pattern = indexed
-                index_hits = self._reverse_index_lookup(
-                    bank, declared_keys, grain_key, pattern, regex_match
-                )
-                if index_hits is not None:
-                    for sr_key in index_hits:
-                        _rtype, _, rid = sr_key.partition(":")
-                        if rid and rid not in seen:
-                            result["minions"].append(rid)
-                            seen.add(rid)
-                    return
-                # ``None`` means the index couldn't serve the query
-                # (e.g. build failed); fall through to the slow path.
-
-        # Mission 4 persistent-trie fast path. Opt-in via
+        # Persistent-trie fast path. Opt-in via
         # ``opts["enable_grain_trie_index"]``. The trie covers every
         # scalar leaf across every grain dict in the bank, so nested
-        # predicates (``dns:nameservers:127.0.0.11``) and
-        # non-operator-declared keys are auto-indexed. Returns ``None``
-        # when the trie cannot authoritatively serve the predicate
-        # (cap hit, missing build, shape mismatch) -- we then fall
-        # through to the same slow path Mission 3 falls through to.
+        # predicates (``dns:nameservers:127.0.0.11``) and arbitrary
+        # grain keys are auto-indexed. Returns ``None`` when the trie
+        # cannot authoritatively serve the predicate (cap hit, missing
+        # build, shape mismatch) -- we then fall through to the
+        # per-key fetch loop below.
         if self.opts.get("enable_grain_trie_index"):
             try:
                 trie_hits = salt.utils.mmap_trie_index.dispatch_predicate(
@@ -1080,77 +1027,6 @@ class CkMinions:
             if rid and rid not in seen:
                 result["minions"].append(rid)
                 seen.add(rid)
-
-    def _reverse_index_lookup(
-        self, bank, declared_keys, grain_key, pattern, regex_match
-    ):
-        """
-        Resolve a ``<grain_key>:<pattern>`` predicate against the
-        in-process reverse-value index.
-
-        Returns a list of sr_keys matching the predicate, or ``None``
-        when the index couldn't serve the query so the caller should
-        fall through to the slow-path fetch loop. Semantics:
-
-        * Non-regex literal pattern (no ``?``/``*``/``[``): one
-          O(matches) list lookup.
-        * Non-regex glob: enumerate values seen for ``grain_key`` in
-          the index, ``fnmatch`` each, union the matching sr_key
-          lists.
-        * ``regex_match=True``: same walk but ``re.search`` against
-          each known value. Unparseable regex -> ``None`` (slow path
-          will do the same compile and handle the error consistently).
-
-        Build / lookup errors propagate as ``None`` so the slow path
-        preserves correctness even if the index subsystem is broken.
-        """
-        try:
-            index = salt.utils.grain_reverse_index.get()
-            if regex_match:
-                try:
-                    rx = re.compile(pattern)
-                except re.error:
-                    return None
-                values = index.values_for_key(
-                    self.cache, bank, declared_keys, grain_key
-                )
-                out = []
-                seen_sr = set()
-                for value in values:
-                    if not rx.search(value):
-                        continue
-                    for sr_key in index.lookup(
-                        self.cache, bank, declared_keys, grain_key, value
-                    ):
-                        if sr_key not in seen_sr:
-                            out.append(sr_key)
-                            seen_sr.add(sr_key)
-                return out
-            if _is_literal_glob(pattern):
-                return index.lookup(self.cache, bank, declared_keys, grain_key, pattern)
-            # Glob with wildcards: walk indexed values, fnmatch each.
-            values = index.values_for_key(self.cache, bank, declared_keys, grain_key)
-            out = []
-            seen_sr = set()
-            for value in values:
-                if not fnmatch.fnmatchcase(value, pattern):
-                    continue
-                for sr_key in index.lookup(
-                    self.cache, bank, declared_keys, grain_key, value
-                ):
-                    if sr_key not in seen_sr:
-                        out.append(sr_key)
-                        seen_sr.add(sr_key)
-            return out
-        except Exception:  # pylint: disable=broad-except
-            log.debug(
-                "grain_reverse_index: lookup failed for "
-                "grain_key=%r pattern=%r; falling through",
-                grain_key,
-                pattern,
-                exc_info=True,
-            )
-            return None
 
     def _check_pillar_minions(self, expr, delimiter, greedy, minions=None):
         """
