@@ -5771,6 +5771,7 @@ def line(
         backup=backup,
         quiet=quiet,
         indent=indent,
+        dry_run=__opts__["test"],
     )
     if changes:
         ret["changes"]["diff"] = changes
