@@ -2279,3 +2279,41 @@ def test_install_proxy_keeps_env_vars_and_virtualenv(tmp_path):
         "PIP_PROXY": "http://proxy:8080",
         "VIRTUAL_ENV": str(tmp_path),
     }
+
+
+def test_list_all_versions_skips_invalid_versions_66686():
+    """
+    A PyPI mirror may publish a release string that is not PEP 440 compliant.
+    ``pip.list_all_versions`` must skip those entries and return the valid
+    remainder instead of raising ``packaging.version.InvalidVersion``.
+
+    Regression test for #66686 (sibling of #66687).
+    """
+    # The ``excludes`` filter inside list_all_versions drops any version
+    # containing ``a``/``b``/``rc`` as a cheap pre-PEP440 filter for
+    # alpha/beta/rc releases, so an invalid string used here must avoid
+    # those letters to actually reach the ``parse`` call.
+    stdout = "Available versions: 2.0, 1..2.3, 1.0"
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": stdout})
+    with patch.dict(pip.__opts__, {}, clear=True), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value="26.2"):
+        assert pip.list_all_versions("example") == ["1.0", "2.0"]
+
+
+def test_list_all_versions_all_invalid_returns_none_66686():
+    """
+    If *every* candidate version fails PEP 440 parsing,
+    ``pip.list_all_versions`` returns ``None`` (the empty-result path),
+    not an exception.
+
+    Regression test for #66686 (sibling of #66687).
+    """
+    # See note above: avoid ``a``/``b``/``rc`` so the strings survive the
+    # ``excludes`` pre-filter and reach the ``parse`` call.
+    stdout = "Available versions: 1..2.3, v1_0"
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": stdout})
+    with patch.dict(pip.__opts__, {}, clear=True), patch.dict(
+        pip.__salt__, {"cmd.run_all": run_all}
+    ), patch.object(pip, "version", return_value="26.2"):
+        assert pip.list_all_versions("example") is None
