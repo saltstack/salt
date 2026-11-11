@@ -1296,9 +1296,9 @@ def set_mark(pkgs, mark="manual"):
     """
     .. versionadded:: 3008.0
 
-    Set the apt mark on packages. Always acts, even when ``test=True``; use
-    :py:func:`pkg.mark_manual <salt.modules.aptpkg.mark_manual>` for a state
-    friendly interface.
+    Set the apt mark on packages. Always acts; deciding whether a change is
+    needed, and honouring ``test=True``, is up to the caller (e.g. the
+    :py:func:`pkg.installed <salt.states.pkg.installed>` state).
 
     pkgs
         A list of packages to mark. Must be passed as a python list.
@@ -1324,69 +1324,6 @@ def set_mark(pkgs, mark="manual"):
             f"Unable to mark packages as {mark}: {out['stderr']}"
         )
     return True
-
-
-def mark_manual(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
-    """
-    .. versionadded:: 3008.0
-
-    Mark packages as manually installed, so that ``apt autoremove`` will not
-    remove them when the package that pulled them in as a dependency is
-    removed. Packages that are not installed or are already manually installed
-    are left alone. With ``test=True``, the changes that would be made are
-    returned but nothing is changed.
-
-    name
-        The name of the package, e.g., 'jq'
-
-    pkgs
-        A list of packages to mark. Must be passed as a python list.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' pkg.mark_manual jq
-        salt '*' pkg.mark_manual pkgs='["jq", "libonig5"]'
-    """
-    if not name and not pkgs:
-        raise SaltInvocationError("One of name or pkgs must be specified.")
-
-    targets = []
-    if pkgs:
-        targets.extend(next(iter(x)) if isinstance(x, dict) else x for x in pkgs)
-    else:
-        targets.append(name)
-
-    auto = set(get_mark("auto"))
-    test = __opts__.get("test")
-
-    ret = {}
-    to_mark = []
-    for target in targets:
-        ret[target] = {"name": target, "changes": {}, "result": True, "comment": ""}
-        if target not in auto:
-            ret[target][
-                "comment"
-            ] = f"Package {target} is not automatically installed, nothing to do."
-            continue
-        ret[target]["changes"] = {"old": "auto", "new": "manual"}
-        if test:
-            ret[target]["result"] = None
-            ret[target]["comment"] = f"Package {target} would be marked as manual."
-        else:
-            to_mark.append(target)
-
-    if to_mark:
-        try:
-            set_mark(to_mark, "manual")
-        except CommandExecutionError as exc:
-            for target in to_mark:
-                ret[target].update(changes={}, result=False, comment=str(exc))
-        else:
-            for target in to_mark:
-                ret[target]["comment"] = f"Package {target} is now marked as manual."
-    return ret
 
 
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
