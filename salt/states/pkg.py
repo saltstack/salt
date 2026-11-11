@@ -1080,26 +1080,47 @@ def _mark_manual(name, pkgs, ret):
     """
     Mark the requested packages as manually installed and merge the outcome
     into the state return ``ret``.
+
+    The execution module only reads (``pkg.get_mark``) and writes
+    (``pkg.set_mark``) the mark; deciding what needs to change and honouring
+    ``test=True`` happens here.
     """
-    if "pkg.mark_manual" not in __salt__:
-        ret["comment"] += "\npkg.mark_manual is not supported on this platform"
+    if "pkg.get_mark" not in __salt__ or "pkg.set_mark" not in __salt__:
+        ret[
+            "comment"
+        ] += "\nMarking packages as manual is not supported on this platform"
         ret["result"] = False
         return ret
+    if pkgs:
+        targets = [next(iter(x)) if isinstance(x, dict) else x for x in pkgs]
+    else:
+        targets = [name]
     try:
-        mark_ret = __salt__["pkg.mark_manual"](name=name, pkgs=pkgs or None)
+        auto = set(__salt__["pkg.get_mark"]("auto"))
+        to_mark = [x for x in targets if x in auto]
+        if not to_mark:
+            ret["comment"] += "\nNo requested packages are marked as automatic."
+            return ret
+        changes = {x: {"old": "auto", "new": "manual"} for x in to_mark}
+        if __opts__["test"]:
+            ret["changes"]["mark_manual"] = changes
+            ret[
+                "comment"
+            ] += "\nThe following packages would be marked as manual: " + ", ".join(
+                to_mark
+            )
+            if ret["result"] is True:
+                ret["result"] = None
+            return ret
+        __salt__["pkg.set_mark"](to_mark, "manual")
     except (CommandExecutionError, SaltInvocationError) as exc:
-        ret["comment"] += f"\nUnable to mark packages as manually installed: {exc}"
+        ret["comment"] += f"\nUnable to mark packages as manual: {exc}"
         ret["result"] = False
         return ret
-    for pkg_name, info in mark_ret.items():
-        if info["comment"]:
-            ret["comment"] += "\n" + info["comment"]
-        if info["changes"]:
-            ret["changes"].setdefault("mark_manual", {})[pkg_name] = info["changes"]
-        if info["result"] is False:
-            ret["result"] = False
-        elif info["result"] is None and ret["result"] is True:
-            ret["result"] = None
+    ret["changes"]["mark_manual"] = changes
+    ret["comment"] += "\nThe following packages were marked as manual: " + ", ".join(
+        to_mark
+    )
     return ret
 
 

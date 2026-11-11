@@ -3762,59 +3762,6 @@ def test_dnf5_group_info_skips_blank_member_lines():
     assert "" not in info["optional"]
 
 
-def _mark_manual_run(yum_bin, user_installed, test=False, mark_retcode=0, **kwargs):
-    call_yum = MagicMock(
-        side_effect=[
-            {"retcode": 0, "stdout": user_installed, "stderr": ""},
-            {"retcode": mark_retcode, "stdout": "", "stderr": "boom"},
-        ]
-    )
-    with patch.object(yumpkg, "_yum", MagicMock(return_value=yum_bin)), patch.object(
-        yumpkg, "_call_yum", call_yum
-    ), patch.object(
-        yumpkg, "list_pkgs", MagicMock(return_value={"jq": "1.6", "vim": "9.0"})
-    ), patch.dict(
-        yumpkg.__opts__, {"test": test}
-    ):
-        return yumpkg.mark_manual(**kwargs), call_yum
-
-
-@pytest.mark.parametrize("yum_bin,action", [("dnf", "install"), ("dnf5", "user")])
-def test_mark_manual(yum_bin, action):
-    """
-    Only installed packages that are not user installed get marked, using
-    ``mark install`` on dnf and ``mark user`` on dnf5.
-    """
-    ret, call_yum = _mark_manual_run(yum_bin, "vim\n", pkgs=["jq", "vim", "absent"])
-    assert call_yum.call_args_list[0] == call(
-        ["repoquery", "--userinstalled", "--queryformat", r"%{name}\n"]
-    )
-    assert call_yum.call_args_list[1] == call(["mark", action, "jq"])
-    assert ret["jq"]["result"] is True
-    assert ret["jq"]["changes"] == {"old": "dependency", "new": "user"}
-    assert ret["vim"]["changes"] == {}
-    assert ret["absent"]["changes"] == {}
-    assert ret["absent"]["result"] is True
-
-
-def test_mark_manual_nothing_to_do():
-    ret, call_yum = _mark_manual_run("dnf", "jq\n", name="jq")
-    assert call_yum.call_count == 1
-    assert ret["jq"]["changes"] == {}
-    assert ret["jq"]["result"] is True
-
-
-def test_mark_manual_test_mode():
-    """
-    In test mode the changes that would be made are returned, but nothing runs
-    """
-    ret, call_yum = _mark_manual_run("dnf", "", test=True, name="jq")
-    assert call_yum.call_count == 1
-    assert ret["jq"]["result"] is None
-    assert ret["jq"]["changes"] == {"old": "dependency", "new": "user"}
-    assert "would be marked" in ret["jq"]["comment"]
-
-
 def test_get_mark():
     call_yum = MagicMock(return_value={"retcode": 0, "stdout": "vim\n", "stderr": ""})
     with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")), patch.object(
@@ -3822,8 +3769,8 @@ def test_get_mark():
     ), patch.object(
         yumpkg, "list_pkgs", MagicMock(return_value={"jq": "1.6", "vim": "9.0"})
     ):
-        assert yumpkg.get_mark("user") == ["vim"]
-        assert yumpkg.get_mark("dependency") == ["jq"]
+        assert yumpkg.get_mark("manual") == ["vim"]
+        assert yumpkg.get_mark("auto") == ["jq"]
         with pytest.raises(SaltInvocationError):
             yumpkg.get_mark("hold")
 
@@ -3834,35 +3781,24 @@ def test_set_mark(yum_bin, action):
     with patch.object(yumpkg, "_yum", MagicMock(return_value=yum_bin)), patch.object(
         yumpkg, "_call_yum", call_yum
     ):
-        assert yumpkg.set_mark(["jq", "vim"], "user") is True
+        assert yumpkg.set_mark(["jq", "vim"], "manual") is True
         call_yum.assert_called_once_with(["mark", action, "jq", "vim"])
         with pytest.raises(SaltInvocationError):
-            yumpkg.set_mark([], "user")
+            yumpkg.set_mark([], "manual")
         with pytest.raises(SaltInvocationError):
-            yumpkg.set_mark(["jq"], "dependency")
+            yumpkg.set_mark(["jq"], "auto")
 
 
-def test_mark_manual_failure():
-    ret, _ = _mark_manual_run("dnf", "", mark_retcode=1, name="jq")
-    assert ret["jq"]["result"] is False
-    assert "boom" in ret["jq"]["comment"]
-
-
-def test_mark_manual_unsupported_yum_bin():
+def test_get_mark_unsupported_yum_bin():
     with patch.object(yumpkg, "_yum", MagicMock(return_value="tdnf")):
         with pytest.raises(CommandExecutionError):
-            yumpkg.mark_manual(name="jq")
+            yumpkg.get_mark("auto")
 
 
-def test_mark_manual_no_name_pkgs():
-    with pytest.raises(SaltInvocationError):
-        yumpkg.mark_manual()
-
-
-def test_mark_manual_repoquery_failure():
+def test_get_mark_repoquery_failure():
     call_yum = MagicMock(return_value={"retcode": 1, "stdout": "", "stderr": "bad"})
     with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")), patch.object(
         yumpkg, "_call_yum", call_yum
-    ), patch.object(yumpkg, "list_pkgs", MagicMock(return_value={"jq": "1"})):
+    ):
         with pytest.raises(CommandExecutionError):
-            yumpkg.mark_manual(name="jq")
+            yumpkg.get_mark("auto")
