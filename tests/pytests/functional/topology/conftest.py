@@ -280,6 +280,13 @@ def attach_minion(_topology_exit_stack):
         resolved_id = minion_id or f"topology-minion-{cluster.cluster_id}"
         config_overrides = {
             "master": f"{host}:{port}",
+            # FIPS-safe RSA algorithms.  Must match the master-side
+            # overrides in ``make_single_master`` / ``make_cluster``;
+            # SHA1 defaults trip ``_enforce_fips`` under FIPS shards
+            # and the minion->master auth silently retries past the
+            # pytest-timeout.
+            "encryption_algorithm": "OAEP-SHA224",
+            "signing_algorithm": "PKCS1v15-SHA224",
             "log_granular_levels": {
                 "salt": "info",
             },

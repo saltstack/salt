@@ -650,6 +650,16 @@ def make_single_master(
         "topology_breadcrumb_grace": 2,
         "topology_breadcrumb_max_age": 60,
         "topology_detach_quiesce": 1,
+        # FIPS-safe RSA algorithms.  Salt's defaults (``OAEP-SHA1`` /
+        # ``PKCS1v15-SHA1``) trip ``_enforce_fips`` at
+        # ``salt/crypt.py`` under FIPS-mode CI shards and cause the
+        # master-minion handshake to silently retry past the test's
+        # 90s pytest-timeout.  SHA224 variants are valid on both FIPS
+        # and non-FIPS runners.
+        "encryption_algorithm": "OAEP-SHA224",
+        "signing_algorithm": "PKCS1v15-SHA224",
+        "publish_signing_algorithm": "PKCS1v15-SHA224",
+        "cluster_encryption_algorithm": "OAEP-SHA224",
         "log_granular_levels": {
             "salt": "info",
         },
@@ -786,13 +796,17 @@ def make_cluster(
             "topology_breadcrumb_grace": 2,
             "topology_breadcrumb_max_age": 60,
             "topology_detach_quiesce": 1,
-            # FIPS-safe RSA algorithms for the clustered master's
-            # ``send_aes_key_event`` and cluster-peer publish-signing
-            # paths.  Salt's defaults (``OAEP-SHA1`` /
-            # ``PKCS1v15-SHA1``) trip ``_enforce_fips`` at
-            # ``salt/crypt.py`` and abort master startup on FIPS-mode
-            # CI shards (e.g. Photon OS fips).  SHA224 variants are
+            # FIPS-safe RSA algorithms.  Salt's defaults
+            # (``OAEP-SHA1`` / ``PKCS1v15-SHA1``) trip
+            # ``_enforce_fips`` at ``salt/crypt.py`` under FIPS-mode
+            # CI shards: ``send_aes_key_event`` fails master startup
+            # when ``cluster_encryption_algorithm`` carries SHA1, and
+            # master<->minion auth silently retries past
+            # pytest-timeout when ``encryption_algorithm`` /
+            # ``signing_algorithm`` carry SHA1.  SHA224 variants are
             # valid on both FIPS and non-FIPS runners.
+            "encryption_algorithm": "OAEP-SHA224",
+            "signing_algorithm": "PKCS1v15-SHA224",
             "cluster_encryption_algorithm": "OAEP-SHA224",
             "publish_signing_algorithm": "PKCS1v15-SHA224",
             "log_granular_levels": {

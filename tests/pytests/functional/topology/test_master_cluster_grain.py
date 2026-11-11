@@ -23,6 +23,12 @@ import pytest
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.skip_on_windows,
+    # Tests spawn a master + a minion inside the test body via
+    # ``single_master`` / ``attach_minion`` factory-callables, so the
+    # per-test pytest-timeout counts that setup.  FIPS CI shards need
+    # more than the project-default 90s for the RSA handshake to
+    # complete.
+    pytest.mark.timeout(600),
 ]
 
 

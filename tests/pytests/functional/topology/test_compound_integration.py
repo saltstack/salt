@@ -31,6 +31,12 @@ import salt.utils.minions
 pytestmark = [
     pytest.mark.slow_test,
     pytest.mark.windows_whitelisted,
+    # Tests spawn two masters + a minion inside the test body via
+    # ``two_cluster_fixture`` / ``attach_minion`` factory-callables,
+    # so the per-test pytest-timeout counts that setup.  FIPS CI
+    # shards need more than the project-default 90s for the RSA
+    # handshake to complete.
+    pytest.mark.timeout(600),
 ]
 
 

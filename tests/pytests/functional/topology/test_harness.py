@@ -215,8 +215,17 @@ def test_inspect_breadcrumbs_shape(single_master):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.timeout(600)
 def test_attach_minion(attach_minion, single_master):
-    """A minion attached to a cluster has that cluster's ret_port in opts."""
+    """A minion attached to a cluster has that cluster's ret_port in opts.
+
+    ``single_master`` and ``attach_minion`` are factory-callables; they
+    spawn master + minion inside the test body rather than during
+    pytest fixture setup, so the 90s project-default pytest-timeout
+    counts their startup time.  Under FIPS-mode CI shards the RSA
+    keygen + handshake is slow enough to exhaust 90s.  600s gives
+    comfortable headroom while still catching real hangs.
+    """
     cluster = single_master(cluster_id="solo")
     minion = attach_minion(cluster)
     assert minion.is_running()
