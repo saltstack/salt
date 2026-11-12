@@ -62,7 +62,7 @@ load_topology
 # file is ``exit "$OVERALL_RC"`` so the orchestrator sees the aggregate.
 OVERALL_RC=0
 
-: "${PHASE_DURATION_SEC:=60}"
+: "${PHASE_DURATION_SEC:=$TIER_STANDARD_SEC}"
 : "${MASTER_RET_PORT:=44506}"
 export PHASE_DURATION_SEC MASTER_RET_PORT
 
@@ -365,6 +365,93 @@ run_netem_phase "netem_corrupt_5"    "corrupt 5%"
 }
 
 # ---------------------------------------------------------------
+# Phase 7a: asymmetric outbound (egress) loss 100% held through
+# multiple auth_timeout retries (DEEPREC tier).
+# ---------------------------------------------------------------
+{
+    label="netem_asymmetric_outbound_deep"
+    read -r fd_before rss_before < <(sample_all_minions)
+    log "PHASE ${label}: netem loss 100% egress-only for ${TIER_DEEPREC_SEC}s"
+    if [ "$NETEM_AVAILABLE" != "1" ]; then
+        record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
+            "tc/iproute2 unavailable in $CHOKE_CONTAINER"
+    elif ! docker exec "$CHOKE_CONTAINER" sh -c "
+        tc qdisc replace dev ${CHOKE_IFACE} root netem loss 100%
+    " >/dev/null 2>&1; then
+        log "PHASE ${label}: tc qdisc replace failed"
+        record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
+            "tc qdisc replace netem loss 100% (egress, deep) failed"
+        clear_root_qdisc
+    else
+        NETEM_ROOT_ACTIVE=1
+        _saved_window="$RECONNECT_WINDOW_SEC"
+        RECONNECT_WINDOW_SEC="$RECOVER_STANDARD_SEC"
+        export RECONNECT_WINDOW_SEC
+        sleep "$TIER_DEEPREC_SEC"
+        clear_root_qdisc
+        assert_reconnect "$label" "$TIER_DEEPREC_SEC" "$fd_before" "$rss_before" \
+            "egress-only loss 100% via root netem (deep)"  || OVERALL_RC=1
+        RECONNECT_WINDOW_SEC="$_saved_window"
+        export RECONNECT_WINDOW_SEC
+        unset _saved_window
+    fi
+    unset label fd_before rss_before
+}
+
+# ---------------------------------------------------------------
+# Phase 7b: asymmetric inbound (ifb+mirred) loss 100% held through
+# multiple auth_timeout retries (DEEPREC tier).
+# ---------------------------------------------------------------
+{
+    label="netem_asymmetric_inbound_deep"
+    read -r fd_before rss_before < <(sample_all_minions)
+    log "PHASE ${label}: ifb + mirred ingress redirect + netem loss 100% for ${TIER_DEEPREC_SEC}s"
+    if [ "$NETEM_AVAILABLE" != "1" ]; then
+        record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
+            "tc/iproute2 unavailable in $CHOKE_CONTAINER"
+    elif ! docker exec "$CHOKE_CONTAINER" sh -c '
+        modprobe ifb numifbs=1 2>/dev/null \
+        || (ls /sys/class/net/ifb0 >/dev/null 2>&1)
+    ' >/dev/null 2>&1; then
+        log "PHASE ${label}: modprobe ifb failed"
+        record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
+            "modprobe ifb failed in $CHOKE_CONTAINER (unprivileged container?)"
+    else
+        setup_rc=0
+        docker exec "$CHOKE_CONTAINER" sh -c "
+            set -e
+            ip link set dev ifb0 up
+            tc qdisc add dev ${CHOKE_IFACE} ingress
+            tc filter add dev ${CHOKE_IFACE} parent ffff: protocol all u32 \
+                match u32 0 0 action mirred egress redirect dev ifb0
+            tc qdisc replace dev ifb0 root netem loss 100%
+        " >/dev/null 2>&1 || setup_rc=$?
+
+        if [ "$setup_rc" != "0" ]; then
+            log "PHASE ${label}: tc setup failed (rc=${setup_rc})"
+            record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
+                "ifb/mirred ingress setup failed in $CHOKE_CONTAINER (deep)"
+            clear_ingress_qdisc
+        else
+            NETEM_INGRESS_ACTIVE=1
+            IFB_ACTIVE=1
+            _saved_window="$RECONNECT_WINDOW_SEC"
+            RECONNECT_WINDOW_SEC="$RECOVER_STANDARD_SEC"
+            export RECONNECT_WINDOW_SEC
+            sleep "$TIER_DEEPREC_SEC"
+            clear_ingress_qdisc
+            assert_reconnect "$label" "$TIER_DEEPREC_SEC" "$fd_before" "$rss_before" \
+                "ingress-only loss 100% via ifb0 mirred redirect (deep)"  || OVERALL_RC=1
+            RECONNECT_WINDOW_SEC="$_saved_window"
+            export RECONNECT_WINDOW_SEC
+            unset _saved_window
+        fi
+        unset setup_rc
+    fi
+    unset label fd_before rss_before
+}
+
+# ---------------------------------------------------------------
 # Phase 8: SYN flood against the master return port (44506).
 # hping3 --flood --syn from the choke container.  For cluster3 this
 # comes from haproxy (so it floods its own backends); for single /
@@ -431,7 +518,7 @@ run_netem_phase "netem_corrupt_5"    "corrupt 5%"
         sick_master=""
         for m in $MASTERS; do sick_master="$m"; done
         sick_ip="$(container_ip "$sick_master")"
-        log "PHASE ${label}: tc u32 drop to ${sick_master} (${sick_ip}) via haproxy for ${PHASE_DURATION_SEC}s"
+        log "PHASE ${label}: tc u32 drop to ${sick_master} (${sick_ip}) via haproxy for ${TIER_DEEPREC_SEC}s"
         if [ "$NETEM_AVAILABLE" != "1" ]; then
             record_result "$label" "setup_error" "-1" "0" "" "0" "0" "0" \
                 "tc/iproute2 unavailable in $CHOKE_CONTAINER"
@@ -458,10 +545,16 @@ run_netem_phase "netem_corrupt_5"    "corrupt 5%"
                 clear_root_qdisc
             else
                 NETEM_ROOT_ACTIVE=1
-                sleep "$PHASE_DURATION_SEC"
+                _saved_window="$RECONNECT_WINDOW_SEC"
+                RECONNECT_WINDOW_SEC="$RECOVER_STANDARD_SEC"
+                export RECONNECT_WINDOW_SEC
+                sleep "$TIER_DEEPREC_SEC"
                 clear_root_qdisc
-                assert_reconnect "$label" "$PHASE_DURATION_SEC" "$fd_before" "$rss_before" \
-                    "tc u32 drop to ${sick_master} ${sick_ip} via $CHOKE_CONTAINER"  || OVERALL_RC=1
+                assert_reconnect "$label" "$TIER_DEEPREC_SEC" "$fd_before" "$rss_before" \
+                    "tc u32 drop to ${sick_master} ${sick_ip} via $CHOKE_CONTAINER (deep)"  || OVERALL_RC=1
+                RECONNECT_WINDOW_SEC="$_saved_window"
+                export RECONNECT_WINDOW_SEC
+                unset _saved_window
             fi
             unset setup_rc
         fi

@@ -53,7 +53,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_topology
 
-: "${INTER_PHASE_WAIT_SEC:=15}"
+: "${INTER_PHASE_WAIT_SEC:=$PACING_INTER_PHASE_SEC}"
 : "${KEY_REJECT_HOLD_SEC:=30}"
 : "${PEM_TRUNCATE_HOLD_SEC:=10}"
 : "${BEACON_HOLD_SEC:=60}"

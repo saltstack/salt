@@ -25,8 +25,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_topology
 
-: "${INTER_MINION_WAIT_SEC:=20}"
-: "${STOP_DURATION_SEC:=60}"
+: "${INTER_MINION_WAIT_SEC:=$PACING_ROLLING_SEC}"
+: "${STOP_DURATION_SEC:=$TIER_STANDARD_SEC}"
 : "${KILL_RESTART_DELAY_SEC:=2}"
 
 # Track per-phase success; we do NOT short-circuit on first failure.

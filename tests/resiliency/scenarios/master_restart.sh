@@ -39,9 +39,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_topology
 
-: "${RESTART_IDLE_SEC:=10}"
-: "${INTER_MASTER_WAIT_SEC:=30}"
-: "${INTER_PHASE_WAIT_SEC:=15}"
+: "${RESTART_IDLE_SEC:=$TIER_SUBKEEPALIVE_SEC}"
+: "${INTER_MASTER_WAIT_SEC:=$PACING_ROLLING_SEC}"
+: "${INTER_PHASE_WAIT_SEC:=$PACING_INTER_PHASE_SEC}"
 
 # Count masters without arrays so `set -u` is happy and word-splitting is explicit.
 MASTER_COUNT=0

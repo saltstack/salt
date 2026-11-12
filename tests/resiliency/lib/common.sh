@@ -40,7 +40,77 @@
 set -u
 
 : "${RESILIENCY_WORKDIR:=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/results/$(date -u +%Y%m%dT%H%M%SZ)}"
-: "${RECONNECT_WINDOW_SEC:=180}"
+
+# ------------------------------------------------------------------------
+# Duration model
+#
+# These are the authoritative duration values for the resiliency suite.
+# Each scenario script picks one of the TIER_* values for its fault
+# hold and the RECOVER_* that matches.  The values are keyed to the
+# salt-side timeouts they are meant to exercise rather than being
+# round numbers inherited from stress-test precedents.
+#
+# Reference: salt's own default timeouts.  These are the boundaries
+# the tiers straddle.
+: "${SALT_MASTER_ALIVE_INTERVAL:=30}"      # minion keepalive default
+: "${SALT_AUTH_TIMEOUT:=60}"               # per-auth-attempt deadline
+: "${SALT_REQUEST_CHANNEL_TIMEOUT:=60}"    # request channel ceiling
+#
+# Fault-hold tiers, named for the regime each exercises:
+#   SUBKEEPALIVE (25s)   -- shorter than master_alive_interval; the
+#                           minion keepalive never fires during the
+#                           outage.  Exercises data-path failures
+#                           only (in-flight publish / pending reply),
+#                           not reconnect state machinery.
+#   FIRSTMISS    (35s)   -- just over master_alive_interval; the
+#                           first scheduled __master_alive_* check
+#                           fails.  Exercises the "I just noticed"
+#                           transition code specifically.
+#   STANDARD     (90s)   -- 3x keepalive; reconnect state machine is
+#                           fully engaged; first auth_timeout window
+#                           has elapsed at least once.  This is the
+#                           default for most fault phases.
+#   DEEPREC      (300s)  -- 5 minutes; multiple auth_timeout retries
+#                           have fired; exponential-backoff cycles
+#                           are observable.
+#   BACKOFF      (600s)  -- 10 minutes; backoff caps are hit; tests
+#                           the long-tail of retry pacing.
+#   ACCUM        (1800s) -- 30 minutes; the empirical lower bound
+#                           for the UBMVCFOPS-19586 concurrent-auth
+#                           race (per PR #70772's repro notes).
+#   MARATHON     (3600s) -- 1 hour; the direct target of the
+#                           #70772 fix validation.
+#   UPGRADE      (7200s) -- 2 hours; matches the real-world
+#                           VCF-upgrade-window scale that produced
+#                           the Jira report.
+: "${TIER_SUBKEEPALIVE_SEC:=25}"
+: "${TIER_FIRSTMISS_SEC:=35}"
+: "${TIER_STANDARD_SEC:=90}"
+: "${TIER_DEEPREC_SEC:=300}"
+: "${TIER_BACKOFF_SEC:=600}"
+: "${TIER_ACCUM_SEC:=1800}"
+: "${TIER_MARATHON_SEC:=3600}"
+: "${TIER_UPGRADE_SEC:=7200}"
+#
+# Recovery-window pairs.  How long assert_reconnect waits for every
+# minion to answer test.ping after the fault is cleared.  Wider for
+# deeper outages where exponential backoff might land the minion
+# mid-sleep when the fault clears.
+: "${RECOVER_FAST_SEC:=60}"        # paired with SUB/FIRSTMISS/STANDARD
+: "${RECOVER_STANDARD_SEC:=180}"   # paired with DEEPREC/BACKOFF
+: "${RECOVER_LONG_SEC:=300}"       # paired with ACCUM
+: "${RECOVER_MARATHON_SEC:=600}"   # paired with MARATHON/UPGRADE
+#
+# Pacing.  Between-phase and between-rolling-step quiescence.
+: "${PACING_INTER_PHASE_SEC:=30}"  # one keepalive of quiet
+: "${PACING_ROLLING_SEC:=60}"      # between rolling-restart iterations
+#
+# Legacy default.  Some scenarios still read RECONNECT_WINDOW_SEC
+# directly; it tracks RECOVER_STANDARD_SEC so a caller overriding one
+# gets the other for free unless they also override explicitly.
+: "${RECONNECT_WINDOW_SEC:=$RECOVER_STANDARD_SEC}"
+# ------------------------------------------------------------------------
+
 : "${PING_TIMEOUT_SEC:=15}"
 : "${RSS_LEAK_KB_PER_MIN:=200}"
 : "${MASTER_FD_LEAK_PER_MIN:=30}"
