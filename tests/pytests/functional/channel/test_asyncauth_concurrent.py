@@ -169,6 +169,7 @@ class CountingReqServerChannel(salt.channel.server.ReqServerChannel):
     auth_counter = None  # type: ignore[assignment]
     auth_delay = 0.0
 
+    # pylint: disable=invalid-overridden-method
     def _auth(self, load, sign_messages=False, version=0):
         if self.auth_counter is not None:
             self.auth_counter[0] += 1
