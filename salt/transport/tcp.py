@@ -1896,7 +1896,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         else:
             self.started = started
         self.pub_server = None
-        self.io_loop = None
         self._closing = False
         # Record creating pid so a forked child that inherits this instance
         # via copy-on-write does NOT touch (close) or warn on the shared FDs
@@ -1959,6 +1958,7 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             pass
         finally:
             self.close()
+            io_loop.close(all_fds=True)
 
     async def publisher(
         self,
@@ -2284,22 +2284,6 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             except Exception:  # pylint: disable=broad-except
                 pass
             self.pull_sock = None
-        if self.io_loop:
-            # Each io_loop step can raise during GC-time close when the
-            # loop has already been half-torn-down (e.g. by a
-            # ``__del__``-driven cleanup on a partially freed C
-            # extension).  Guard each step individually so a failure in
-            # ``stop()`` does not leak the underlying fds that
-            # ``close(all_fds=True)`` would otherwise release.
-            try:
-                self.io_loop.stop()
-            except Exception:  # pylint: disable=broad-except
-                pass
-            try:
-                self.io_loop.close(all_fds=True)
-            except Exception:  # pylint: disable=broad-except
-                pass
-            self.io_loop = None
         # Drop the multiprocessing.Event reference so its internal pipe FDs can be
         # released when no other references remain.
         if hasattr(self, "started"):
