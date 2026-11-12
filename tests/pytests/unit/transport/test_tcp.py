@@ -1,5 +1,6 @@
 import asyncio
 import gc
+import logging
 import os
 import socket
 import warnings
@@ -444,6 +445,81 @@ async def test_tcppubserverpublisher_close_resolves_connecting_future_69187(io_l
                 let_connect_finish.set()
                 # Give the io_loop a chance to drain the _connect task.
                 await asyncio.sleep(0.05)
+
+
+def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+    """
+    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
+    disables the cap (preserves the prior unbounded default).
+    """
+    pub = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=99999
+    )
+    assert pub.max_write_buffer_size == 99999
+
+    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null"
+    )
+    assert pub_none.max_write_buffer_size is None
+
+    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+        host=None, port=None, path="/dev/null", max_write_buffer_size=0
+    )
+    assert pub_zero.max_write_buffer_size is None
+
+
+@pytest.mark.parametrize(
+    "host,family", [("127.0.0.1", socket.AF_INET), ("::1", socket.AF_INET6)]
+)
+async def test_publisher_connect_address_family(host, family):
+    publisher = salt.transport.tcp._AsyncPubServerPublisher(host, 4511, None)
+    try:
+        with patch(
+            "salt.transport.tcp.socket.socket", side_effect=OSError("test abort")
+        ) as create:
+            with pytest.raises(OSError, match="test abort"):
+                await publisher.connect()
+        create.assert_called_once_with(family, socket.SOCK_STREAM)
+    finally:
+        publisher.close()
+
+
+@pytest.mark.parametrize("failed", [False, True])
+async def test_publisher_close_during_connect(failed):
+    """Closing a real in-flight await must finish it with ClosingError (#69187)."""
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    class Stream:
+        socket = None
+
+        def __init__(self, *args, **kwargs):
+            self._closed = False
+
+        async def connect(self, address):
+            started.set()
+            await release.wait()
+            if failed:
+                raise tornado.iostream.StreamClosedError()
+
+        def closed(self):
+            return self._closed
+
+        def close(self):
+            self._closed = True
+            release.set()
+
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 4511, None)
+    with patch("salt.transport.tcp.socket.socket", return_value=MagicMock()), patch(
+        "salt.transport.tcp.tornado.iostream.IOStream", Stream
+    ):
+        task = asyncio.create_task(publisher.connect())
+        await started.wait()
+        publisher.close()
+        with pytest.raises(salt.transport.tcp.ClosingError):
+            await asyncio.wait_for(task, 1)
+        assert task.done()
 
 
 async def test_async_tcp_pub_channel_connect_publish_port(
@@ -1092,7 +1168,7 @@ async def test_pub_server_publish_payload_closed_stream(master_opts, io_loop):
     assert server.clients == set()
 
 
-async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
+async def test_publish_closes_stale_publisher_on_stream_closed(master_opts, caplog):
     """
     When ``PublishServer.publish`` is invoked from an async context (the
     ``master_async_mworker=True`` bypass path) and the cached
@@ -1122,6 +1198,7 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
     stale_pub = MagicMock()
     stale_pub.stream = MagicMock()
     stale_pub.stream.closed.return_value = False
+    stale_pub.connect = AsyncMock()
     stale_pub.send = AsyncMock(side_effect=tornado.iostream.StreamClosedError("mock"))
     stale_pub.close = MagicMock()
 
@@ -1146,10 +1223,14 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
     server._async_pub_by_loop[loop] = (stale_pub, lock)
 
     try:
-        with patch(
-            "salt.transport.tcp._TCPPubServerPublisher", side_effect=_new_publisher
+        with caplog.at_level(logging.DEBUG, logger="salt.transport.tcp"), patch(
+            "salt.transport.tcp._AsyncPubServerPublisher", side_effect=_new_publisher
         ):
             await server.publish(b"payload")
+
+        # The reconnect is logged so a dropped connection is visible.
+        assert "reconnecting and sending again" in caplog.text
+        assert "StreamClosedError" in caplog.text
 
         # The stale publisher must have had ``close()`` called on it
         # before being replaced.
@@ -1163,6 +1244,31 @@ async def test_publish_closes_stale_publisher_on_stream_closed(master_opts):
         cached_pub, _cached_lock = server._async_pub_by_loop[loop]
         assert cached_pub is new_pub_instances[0]
         assert cached_pub is not stale_pub
+    finally:
+        server.close()
+
+
+async def test_publisher_cache_drops_closed_loops(master_opts):
+    """
+    A cached publisher keeps a reference to its loop, so the weak key never
+    frees it. ``_publisher_for_loop`` must drop publishers of closed loops.
+    """
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts),
+        pub_host="127.0.0.1",
+        pub_port=5151,
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    stale = MagicMock()
+    other = asyncio.new_event_loop()
+    server._async_pub_by_loop[other] = (stale, asyncio.Lock())
+    other.close()
+    try:
+        server._publisher_for_loop()
+        assert other not in server._async_pub_by_loop
+        stale.close.assert_called_once_with()
+        assert asyncio.get_running_loop() in server._async_pub_by_loop
     finally:
         server.close()
 
@@ -2036,23 +2142,23 @@ def test_cap_stream_write_buffer_helper_noop_when_zero_or_missing():
     assert fs.max_write_buffer_size == "sentinel"
 
 
-def test_tcp_pub_server_publisher_accepts_max_write_buffer_size():
+async def test_async_pub_server_publisher_accepts_max_write_buffer_size():
     """
-    ``_TCPPubServerPublisher`` records the passed cap on the instance so
+    ``_AsyncPubServerPublisher`` records the passed cap on the instance so
     ``_connect`` can apply it to the outbound ``IOStream``.  Zero / None
     disables the cap (preserves the prior unbounded default).
     """
-    pub = salt.transport.tcp._TCPPubServerPublisher(
+    pub = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null", max_write_buffer_size=99999
     )
     assert pub.max_write_buffer_size == 99999
 
-    pub_none = salt.transport.tcp._TCPPubServerPublisher(
+    pub_none = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null"
     )
     assert pub_none.max_write_buffer_size is None
 
-    pub_zero = salt.transport.tcp._TCPPubServerPublisher(
+    pub_zero = salt.transport.tcp._AsyncPubServerPublisher(
         host=None, port=None, path="/dev/null", max_write_buffer_size=0
     )
     assert pub_zero.max_write_buffer_size is None
@@ -2195,17 +2301,46 @@ async def test_pub_server_discard_on_close_cancels_read_task(master_opts):
         ), f"Subscriber._read_task not cleared post-close for {client!r}"
 
 
-def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
+async def test_publish_server_connect_wires_ipc_write_buffer_into_publisher(
+    master_opts,
+):
+    master_opts["ipc_write_buffer"] = 4321
+    master_opts["master_async_mworker"] = True
+    server = salt.transport.tcp.PublishServer(
+        master_opts,
+        pub_host="127.0.0.1",
+        pub_port=1,
+        pull_host="127.0.0.1",
+        pull_port=2,
+    )
+    try:
+        with patch("salt.transport.tcp._AsyncPubServerPublisher") as publisher:
+            publisher.return_value.connect = AsyncMock()
+            await server.connect(timeout=3)
+            publisher.assert_called_once_with(
+                "127.0.0.1",
+                2,
+                None,
+                io_loop=asyncio.get_running_loop(),
+                max_write_buffer_size=4321,
+            )
+            publisher.return_value.connect.assert_awaited_once_with(timeout=3)
+    finally:
+        server.close()
+
+
+def test_publish_server_connect_wires_ipc_write_buffer_into_sync_publisher(
     master_opts,
 ):
     """
-    ``PublishServer.connect`` must forward ``ipc_write_buffer`` into the
-    ``_TCPPubServerPublisher`` it spins up via ``SyncWrapper``.  Without
-    this wiring the publisher's outbound stream (MWorker fire_event ->
-    EP pull) has no cap even when ``ipc_write_buffer`` is set on the
-    master.
+    With ``master_async_mworker`` off, ``PublishServer.connect`` forwards
+    ``ipc_write_buffer`` into the ``_TCPPubServerPublisher`` it spins up via
+    ``SyncWrapper``.
+
+    REMOVE-WITH-FLAG(master_async_mworker)
     """
     master_opts["ipc_write_buffer"] = 4321
+    master_opts["master_async_mworker"] = False
 
     captured = {}
 
@@ -2318,7 +2453,6 @@ def test_tcppubserverpublisher_del_safety_net_calls_close_70175():
     fake_stream.closed.return_value = False
     fake_stream.socket = MagicMock()
     publisher.stream = fake_stream
-    publisher._connecting_future = tornado.concurrent.Future()
     assert publisher._closing is False
 
     with warnings.catch_warnings(record=True) as caught:
@@ -2591,6 +2725,27 @@ def test_tcp_pubserver_publisher_close_removes_partial_fd(io_loop):
     )
     # And the stream itself must be closed.
     fake_stream.close.assert_called()
+
+
+async def test_closing_error_names_the_target(master_opts):
+    server = salt.transport.tcp.PublishServer(
+        dict(master_opts, master_async_mworker=True),
+        pull_host="127.0.0.1",
+        pull_port=5152,
+    )
+    server.close()
+    with pytest.raises(
+        salt.transport.tcp.ClosingError,
+        match="127.0.0.1:5152 was already closed by close",
+    ):
+        await server.publish(b"event")
+    publisher = salt.transport.tcp._AsyncPubServerPublisher("127.0.0.1", 5152, None)
+    publisher.close()
+    with pytest.raises(
+        salt.transport.tcp.ClosingError,
+        match="127.0.0.1:5152 was already closed by close",
+    ):
+        await publisher.connect()
 
 
 @pytest.mark.parametrize(
