@@ -2390,7 +2390,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions
+
+        :param int timeout: Upper bound in seconds for the send on the
+                            local publish channel. A wedged pull side
+                            raises ``TimeoutError`` to the caller instead
+                            of blocking it forever (#69824). Optional;
+                            when omitted the send is unbounded, matching
+                            the other transports' ``publish``.
         """
+        timeout = kwargs.get("timeout")
         # LTS default: sync publish path preserved; async-context bypass is
         # opt-in via ``master_async_mworker``. The bypass exists to avoid a
         # nested-SyncWrapper deadlock that can only happen when async
@@ -2403,7 +2411,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         if not async_mworker:
             if not self.pub_sock:
                 self.connect()
-            self.pub_sock.send(payload)
+            if timeout is None:
+                self.pub_sock.send(payload)
+            else:
+                self.pub_sock.send(payload, timeout=timeout)
             return
         # PATCH: avoid the nested-SyncWrapper deadlock in the
         # ``fire_event`` -> ``PublishServer.publish`` -> ``pub_sock.send``
@@ -2496,7 +2507,10 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 current_entry = per_loop.get(loop)
                 active_pub = current_entry[0] if current_entry else pub
                 try:
-                    await active_pub.send(payload)
+                    if timeout is None:
+                        await active_pub.send(payload)
+                    else:
+                        await active_pub.send(payload, timeout=timeout)
                 except tornado.iostream.StreamClosedError:
                     # PATCH: puller closed on us mid-send.  Drop the
                     # cached publisher and rebuild once so the next call
@@ -2538,11 +2552,17 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                     )
                     await pub.connect()
                     per_loop[loop] = (pub, lock)
-                    await pub.send(payload)
+                    if timeout is None:
+                        await pub.send(payload)
+                    else:
+                        await pub.send(payload, timeout=timeout)
             return
         if not self.pub_sock:
             self.connect()
-        self.pub_sock.send(payload)
+        if timeout is None:
+            self.pub_sock.send(payload)
+        else:
+            self.pub_sock.send(payload, timeout=timeout)
 
     def close(self):
         self._closing = True
@@ -2697,6 +2717,35 @@ def _socket_family(host):
         return socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)[0][0]
     except socket.gaierror:
         return socket.AF_INET6 if ":" in (host or "") else socket.AF_INET
+
+
+def _observe_late_write(write):
+    """Consume a timed-out write's late outcome.
+
+    ``_TCPPubServerPublisher.send`` stops waiting for a wedged write
+    without cancelling it.  Retrieve the result or exception -- now if
+    the write already settled (a failure completing in the cancellation
+    or timeout race window), otherwise from a done callback -- so the
+    late completion, failure or cancellation produces neither an
+    unretrieved-exception warning nor an unhandled callback error on the
+    loop.
+    """
+
+    def _consume(future):
+        try:
+            future.result()
+        except (Exception, asyncio.CancelledError):  # pylint: disable=broad-except
+            # The caller already stopped waiting for this write; its
+            # late failure or cancellation is expected, not an error.
+            # The catch is deliberately wide: the observer's contract is
+            # to consume ANY late outcome of a write the caller gave up
+            # on, and the stream can surface arbitrary write errors.
+            pass
+
+    if write.done():
+        _consume(write)
+    else:
+        write.add_done_callback(_consume)
 
 
 class _TCPPubServerPublisher:
@@ -2979,7 +3028,6 @@ class _TCPPubServerPublisher:
     def __exit__(self, *args):
         self.close()
 
-    # FIXME timeout unimplemented
     # FIXME tries unimplemented
     async def send(self, msg, timeout=None, tries=None):
         """
@@ -2988,12 +3036,36 @@ class _TCPPubServerPublisher:
         If the socket is not currently connected, a connection will be established.
 
         :param dict msg: The message to be sent
-        :param int timeout: Timeout when sending message (Currently unimplemented)
+        :param int timeout: Timeout in seconds when sending the message. A
+                            write that does not complete within ``timeout``
+                            raises ``TimeoutError`` to the caller instead of
+                            waiting forever (#69824).
         """
         if not self.connected():
             await self.connect()
         pack = salt.transport.frame.frame_msg_ipc(msg, raw_body=True)
-        await self.stream.write(pack)
+        # FIXME tries unimplemented
+        if timeout is None:
+            await self.stream.write(pack)
+            return
+        write = self.stream.write(pack)
+        try:
+            # asyncio.wait does NOT cancel the pending write on timeout:
+            # cancelling could drop bytes the stream may still flush and
+            # races a write completing at the same moment.  The caller
+            # stops waiting; the late completion is observed so it can
+            # neither leak nor warn.
+            done, _ = await asyncio.wait({write}, timeout=timeout)
+        except BaseException:
+            _observe_late_write(write)
+            raise
+        if write not in done:
+            _observe_late_write(write)
+            # ``asyncio.TimeoutError`` is only the builtin ``TimeoutError``
+            # on Python >= 3.11.  Raise the builtin so callers see one
+            # exception type on every supported Python.
+            raise TimeoutError(f"send did not complete within {timeout} seconds")
+        write.result()  # propagate StreamClosedError and friends
 
 
 class RequestClient(salt.transport.base.RequestClient):

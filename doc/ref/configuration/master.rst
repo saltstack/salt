@@ -835,6 +835,25 @@ documentation.
       - syslog
       - splunk
 
+.. conf_master:: event_publish_timeout
+
+``event_publish_timeout``
+-------------------------
+
+.. versionadded:: 3008.5
+
+Default: ``60``
+
+Upper bound in seconds for a single publish on the master's local event
+bus. If the pull side of the bus is wedged and the send does not complete
+within this time, the publish raises ``TimeoutError`` to the caller
+instead of blocking its worker forever. The bound is implemented with
+``asyncio`` on the event loop's monotonic clock.
+
+.. code-block:: yaml
+
+    event_publish_timeout: 60
+
 .. conf_master:: event_return_queue
 
 ``event_return_queue``
