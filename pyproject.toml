@@ -101,7 +101,8 @@ builtins = [
 # block a PR (see tools/precommit/ruff.py). Black remains the formatter, so no
 # style rules are enabled. Type checking is a separate rollout.
 select = [
-    "F",     # pyflakes
+    "F",     # pyflakes: F401 unused imports, F541 f-strings without placeholders,
+             # F631/F634 always-true tuples, F811 redefinitions, F821 undefined names
     "B004",  # unreliable callable check
     "B005",  # strip() with multi-character strings
     "B006",  # mutable argument defaults
@@ -123,6 +124,59 @@ select = [
     "PLE",   # pylint errors
     "RUF006",  # asyncio task reference dropped
     "W605",  # invalid escape sequence
+    # Bugs that are not present in the code base today.
+    "B002",  # ++x / --x do nothing
+    "B003",  # assignment to os.environ
+    "B012",  # return/break/continue in finally
+    "B013",  # one-element tuple in except
+    "B014",  # duplicate exception in one except
+    "B016",  # raise of a literal
+    "B019",  # lru_cache on a method
+    "B021",  # f-string docstring
+    "B022",  # contextlib.suppress() without arguments
+    "B029",  # except with an empty tuple
+    "B030",  # except with a non-exception class
+    "B031",  # itertools.groupby group used twice
+    "B032",  # annotation instead of assignment
+    "B033",  # duplicate item in a set literal
+    "B035",  # static key in a dict comprehension
+    "PLW0127",  # variable assigned to itself
+    "PLW0128",  # same name twice in one assignment
+    "PLW0131",  # walrus used as a statement
+    "PLW0133",  # exception created but not raised
+    "PLW0177",  # comparison with NaN
+    "PLW0211",  # staticmethod with self/cls
+    "PLW0245",  # super without ()
+    "PLW0406",  # module imports itself
+    "PLW0604",  # global at module level
+    "PLW0642",  # self/cls reassigned
+    "PLW0711",  # "except A or B"
+    "PLW1501",  # invalid open() mode
+    "PLW1507",  # shallow copy of os.environ
+    "PLW2101",  # lock created inside with
+    "PGH003",  # blanket "type: ignore"
+    "PGH005",  # wrong mock assertion attribute
+    "LOG001",  # logging.Logger() instantiated directly
+    "LOG007",  # logging.exception(exc_info=False)
+    "LOG014",  # exc_info outside an exception handler
+    "G101",  # extra key clashes with a LogRecord attribute
+    "YTT101",  # sys.version[:3]
+    "YTT102",  # sys.version[2]
+    "YTT103",  # sys.version compared to a string
+    "YTT201",  # sys.version_info[0] == 3
+    "YTT202",  # six.PY3
+    "YTT301",  # sys.version[0]
+    "YTT302",  # sys.version compared to a string
+    "YTT303",  # sys.version[:1]
+    "RUF008",  # mutable dataclass default
+    "RUF009",  # function call in a dataclass default
+    "RUF016",  # list/str/tuple index of the wrong type
+    "RUF018",  # walrus inside assert
+    "RUF024",  # dict.fromkeys with a mutable value
+    "RUF026",  # defaultdict(default_factory=...)
+    "RUF033",  # default in __post_init__
+    "RUF060",  # "in" test on an empty collection
+    "RUF068",  # duplicate entry in __all__
 ]
 ignore = [
     "F403",  # star imports
