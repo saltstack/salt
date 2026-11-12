@@ -161,6 +161,16 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
+
+    # pygit2 1.14.0 replaced the GIT_* constants with pygit2.enums, and 1.20.0
+    # removed the old names, including GIT_FETCH_PRUNE. Fetch pruning itself
+    # is only available in pygit2 0.26.2 and newer.
+    try:
+        from pygit2.enums import FetchPrune
+
+        PYGIT2_FETCH_PRUNE = FetchPrune.PRUNE
+    except ImportError:
+        PYGIT2_FETCH_PRUNE = getattr(pygit2, "GIT_FETCH_PRUNE", None)
 except Exception as exc:  # pylint: disable=broad-except
     # Exceptions other than ImportError can be raised in cases where there is a
     # problem with cffi (such as when python-cffi is upgraded and pygit2 tries
@@ -169,6 +179,7 @@ except Exception as exc:  # pylint: disable=broad-except
     # than an ImportError.
     PYGIT2_VERSION = None
     LIBGIT2_VERSION = None
+    PYGIT2_FETCH_PRUNE = None
     if not isinstance(exc, ImportError):
         log.exception("Failed to import pygit2")
 
@@ -2119,13 +2130,9 @@ class Pygit2(GitProvider):
         """
         Clean stale local refs so they don't appear as fileserver environments
         """
-        try:
-            if pygit2.GIT_FETCH_PRUNE:
-                # Don't need to clean anything, pygit2 can do it by itself
-                return []
-        except AttributeError:
-            # However, only in 0.26.2 and newer
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            # Don't need to clean anything, pygit2 can do it by itself
+            return []
         if self.credentials is not None:
             log.debug(
                 "The installed version of pygit2 (%s) does not support "
@@ -2266,11 +2273,8 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
-        try:
-            fetch_kwargs["prune"] = pygit2.GIT_FETCH_PRUNE
-        except AttributeError:
-            # pruning only available in pygit2 >= 0.26.2
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            fetch_kwargs["prune"] = PYGIT2_FETCH_PRUNE
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
 
@@ -3803,9 +3807,7 @@ class GitBase:
                 f"{self.role} is configured, but the libgit2 version is earlier than "
                 f"{LIBGIT2_MINVER}. Version {LIBGIT2_VERSION} detected."
             )
-        if not getattr(pygit2, "GIT_FETCH_PRUNE", False) and not salt.utils.path.which(
-            "git"
-        ):
+        if PYGIT2_FETCH_PRUNE is None and not salt.utils.path.which("git"):
             errors.append(
                 "The git command line utility is required when using the "
                 f"'pygit2' {self.role}_provider."
