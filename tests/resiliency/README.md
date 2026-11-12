@@ -1,39 +1,27 @@
 # Salt resiliency test suite
 
-Black-box resiliency harness that drives a live Salt stack through a
-battery of injected faults and asserts recovery + absence of resource
-leaks. This complements, and does not replace, the pytest-based
-failover / cluster coverage under `tests/pytests/scenarios/`.
+Pytest-driven resiliency harness that brings up a live Salt stack and
+subjects it to a battery of injected faults.  Every phase asserts the
+same two invariants:
 
-## What this is
+1. **Minions always reconnect** within a bounded window after the
+   fault clears.
+2. **No per-minute RSS leak** across the fault+recovery window.
 
-- A compose-based harness that runs real Salt containers across four
-  topologies (single master, 3-master cluster, 2-master failover,
-  2-master hot/hot).
-- Per-topology scenario batteries (`scenarios/*.sh`) that inject
-  faults — process restart, SIGKILL, haproxy kill, network partition,
-  minion churn — and call `assert_reconnect` after each fault.
-- A prometheus-backed leak detector that fails the run if master
-  `salt_master_open_fds` or `salt_master_rss_bytes` are trending up
-  across the 30-minute test window (mirrors
-  `tests/monitoring/analyze_stats.py`).
-- A single machine-readable verdict in `results.jsonl` +
-  `analysis.txt` so CI step summaries can quote the exact row that
-  failed.
+Prometheus provides a second-order verdict on the master side (FD and
+RSS slope across the 30-minute test window).
 
-Infra is **reused from `tests/monitoring/`** (compose stacks, Grafana
-panels, `fd_exporter.py`, prometheus scrape config) so a nightly
-resiliency run looks the same as a nightly stress run from the
-operator's dashboard.
+This complements, and does not replace, the pytest-based failover /
+cluster coverage under `tests/pytests/scenarios/`.
 
 ## What this is NOT
 
-This suite deliberately does not re-implement what the pytest suite
-already covers. Point your change at the pytest if you want:
+This suite deliberately does not re-implement what the broader pytest
+suite already covers.  Point your change at the pytest if you want:
 
-- **Multimaster failover semantics** — client-side reconnect behavior,
-  `master_type: failover` ordering, pub/ret channel swap, grains cache
-  under failover:
+- **Multimaster failover semantics** — client-side reconnect
+  behavior, `master_type: failover` ordering, pub/ret channel swap,
+  grains cache under failover:
   [`tests/pytests/scenarios/failover/multimaster/test_failover_master.py`](../pytests/scenarios/failover/multimaster/test_failover_master.py)
 - **Cluster correctness** — cluster-mode auth, shared caches, ring
   membership, cross-master event routing:
@@ -41,83 +29,134 @@ already covers. Point your change at the pytest if you want:
 - **Haproxy + isolated file-server behavior**:
   [`tests/pytests/scenarios/cluster/test_haproxy_isolated_fs.py`](../pytests/scenarios/cluster/test_haproxy_isolated_fs.py)
 
-If a reviewer could sensibly ask "why isn't this a pytest?", the
-answer is one of:
+If a reviewer could sensibly ask "why isn't this a pytest under
+`tests/pytests/`?", the answer is one of:
 
 1. The fault must be injected at the container / tc / docker-signal
    level, not inside the python test runner.
 2. The leak check needs a 30-minute prometheus time window.
 3. The invariant is operator-facing ("after SIGKILL does every minion
-   come back?") rather than a Salt-API contract.
+   reconnect?") rather than code-semantic.
+
+## Layout
+
+```
+tests/resiliency/
+├── conftest.py              # pytest fixtures: topology (session), workload,
+│                             # JSONL-row-writing hook, --topology/--marathon flags
+├── pytest.ini               # isolates from parent tests/conftest.py gate
+├── durations.py             # tier constants (TIER_SUBKEEPALIVE..UPGRADE, RECOVER_*)
+├── lib/
+│   ├── topology.py          # Topology class + load_topology (6 topologies)
+│   ├── injectors.py         # 15 context managers (netem, iptables, SIGSTOP,
+│   │                         # pause, remount-ro, docker-net disconnect, ...)
+│   └── metrics.py           # prometheus slope queries (stdlib urllib)
+├── test_baseline.py         # 7 tests: idle/workload-only/ping-burst/etc
+├── test_master_restart.py   # SIGTERM/SIGKILL/restart/rolling/simultaneous
+├── test_minion_churn.py     # single/rolling/simultaneous/kill9/stop-start
+├── test_network_faults.py   # latency/loss/jitter/partition×4/tcp-reset/pause/DNS
+├── test_netem_advanced.py   # reorder/duplicate/corrupt/MTU/tbf/asymmetric/SYN/split
+├── test_signal_pause.py     # SIGSTOP/SIGHUP/SIGUSR1/worker-kill/publisher-kill
+├── test_resource_pressure.py # OOM/FD/CPU/inode/write-amplify
+├── test_disk_faults.py      # cache ENOSPC/RO/slow-io, log fill, PKI RO
+├── test_clock_skew.py       # minion/master fwd+back, drift-during-auth
+├── test_salt_ops.py         # key reject, master.pem truncate+recover,
+│                             # grain mutation, pillar flip, kill_job,
+│                             # event storm, beacon flood, mine burst
+├── test_fileserver_orch.py  # SLS swap/pillar flip/net disconnect/iface down/...
+├── test_cluster_faults.py   # peer SIGSTOP/unreachable/AES rotation/haproxy flap/
+│                             # split-brain/rolling+traffic/mm_* variants
+├── test_master_marathon.py  # opt-in: 30m/60m/120m outages + flap-during-auth-wave
+├── workload.sh              # bash: background traffic loop (ping/state/grains)
+├── run_resiliency.sh        # bash: thin pytest wrapper that handles the
+│                             # --confcutdir + plugin-disable boilerplate
+├── analyze_resiliency.py    # standalone verdict analyzer (reads results.jsonl)
+├── compose/                 # docker compose stacks per topology
+│   ├── single/
+│   ├── cluster3/            # monitoring overlay for tests/monitoring/cluster-3node/
+│   ├── cluster5/            # monitoring overlay for tests/monitoring/cluster-5node/
+│   ├── multimaster/         # 2 independent masters + failover|hothot overlays
+│   └── syndic/              # master-of-masters + sub-syndic + 2 minions
+└── results/                 # per-run output (gitignored)
+```
 
 ## Topologies
 
-| `TOPOLOGY` value          | Compose files                                                                 | Masters | Minions |
-|---------------------------|-------------------------------------------------------------------------------|---------|---------|
-| `single`                  | `tests/monitoring/docker-compose.yml`                                         | 1       | 3       |
-| `cluster3`                | `tests/monitoring/cluster-3node/docker-compose.yml` + monitoring overlay      | 3 behind haproxy | 5 |
-| `multimaster-failover`    | `tests/resiliency/compose/multimaster/{docker-compose.yml,docker-compose.failover.yml}` | 2 (`master_type: failover`) | 1 |
-| `multimaster-hothot`      | `tests/resiliency/compose/multimaster/{docker-compose.yml,docker-compose.hothot.yml}`   | 2 (both active)             | 1 |
+| Name | Masters | Minions | Notes |
+|---|---|---|---|
+| `single` | 1 (`rs-single-salt-master`) | 3 (`rs-single-salt-minion-{1..3}`) | Self-contained compose with aggressive-reconnect `minion.conf`.  Prom :19090 |
+| `cluster3` | 3 (`c3-salt-master-{1..3}`) + haproxy VIP | 5 (`c3-salt-minion-{1..5}`) | Overlays `tests/monitoring/cluster-3node/`.  Prom :19090 |
+| `cluster5` | 5 (`c5-salt-master-{1..5}`) | 5 (`c5-salt-minion-{1..5}`) | Overlays `tests/monitoring/cluster-5node/`.  Prom :19093 |
+| `multimaster-failover` | 2 (`mm-salt-master-{a,b}`) | 1 (`mm-minion-1`) | `master_type: failover` on the minion.  Prom :19091 |
+| `multimaster-hothot` | 2 (`mm-salt-master-{a,b}`) | 1 (`mm-minion-1`) | `master_type: str` + list (connects to both).  Prom :19091 |
+| `syndic` | 2 (`rs-syndic-{mom,sub}`) | 2 (`rs-syndic-minion-{1,2}`) | MoM + sub-syndic + minions.  Prom :19092 |
 
-The orchestrator resolves topology → compose-files → container-names
-via `lib/common.sh::load_topology`; that function is the single source
-of truth and the only place to edit when adding a new topology.
-
-## How to run locally
+## How to run
 
 ```bash
-cd tests/resiliency
-
-# cluster3 — the richest topology, exercises haproxy failover and
-# ring replication alongside the scenario battery.
-TOPOLOGY=cluster3 ./run_resiliency.sh
-
-# single — fastest, only covers restart / churn scenarios because
-# rolling + simultaneous master restart auto-skip on 1-master topologies.
+# Full battery on single:
 TOPOLOGY=single ./run_resiliency.sh
 
-# Run just the master-restart battery, skip network + churn:
-TOPOLOGY=cluster3 SCENARIOS="master_restart" ./run_resiliency.sh
-
-# Override results destination:
-TOPOLOGY=cluster3 RESILIENCY_WORKDIR=/var/tmp/salt-resil-$(date -u +%s) \
+# Subset against the 3-master cluster:
+TOPOLOGY=cluster3 SCENARIOS="baseline master_restart signal_pause" \
   ./run_resiliency.sh
+
+# Marathon phases on multimaster-failover (opt-in; ~90 min):
+TOPOLOGY=multimaster-failover MARATHON_ENABLED=1 \
+  SCENARIOS="baseline master_marathon" \
+  ./run_resiliency.sh
+
+# Same with the 2-hour phase (~3.5h total):
+TOPOLOGY=multimaster-failover MARATHON_ENABLED=1 MARATHON_120M=1 \
+  SCENARIOS="baseline master_marathon" \
+  ./run_resiliency.sh
+
+# Direct pytest invocation (for ad-hoc filtering):
+venv314/bin/pytest -c tests/resiliency/pytest.ini \
+    --confcutdir=tests/resiliency \
+    -p no:system-statistics -p no:salt-factories \
+    --topology=cluster3 \
+    tests/resiliency/test_network_faults.py::test_network_partition
 ```
 
-Requirements: docker + docker compose plugin, python3, enough
-disk under `tests/monitoring/*/prometheus_data` for a 30-minute TSDB
-(~100MB).
+Requirements: docker + docker compose plugin, python 3.10+ with
+pytest (the repo's `venv314` or `venv310`), enough disk under the
+compose project's `prometheus_data/` for a 30-min TSDB (~100 MB).
 
 ## Env tunables
 
-Every tunable has a sensible default. Common overrides:
+Every tunable has a sensible default; the duration tiers in
+`durations.py` are keyed to salt's own default timeouts.  Common
+overrides:
 
-| Env var                   | Default                                       | Effect                                     |
-|---------------------------|-----------------------------------------------|--------------------------------------------|
-| `TOPOLOGY`                | (required)                                    | which topology to run                      |
-| `SCENARIOS`               | full 12-scenario battery                      | space-separated subset                     |
-| `RESILIENCY_WORKDIR`      | `results/<utc-timestamp>`                     | results + log destination                  |
-| `RECONNECT_WINDOW_SEC`    | 180                                           | max seconds to wait for post-fault recovery before calling it a FAIL |
-| `PING_TIMEOUT_SEC`        | 15                                            | per-attempt `test.ping` timeout            |
-| `RECONNECT_WARN_SEC`      | 60                                            | recovered-but-slow threshold (WARN in analyzer) |
-| `MASTER_FD_LEAK_PER_MIN`  | 30                                            | master open_fds slope FAIL threshold (fds/min) |
-| `RSS_LEAK_KB_PER_MIN`     | 200                                           | minion RSS slope WARN threshold (used in-script) |
-| `PROMETHEUS_URL`          | per-topology (see `run_resiliency.sh`)        | analyzer prometheus endpoint               |
-| `PROM_HOST_PORT`          | 19090                                         | single-topology prometheus host port (set to avoid monitoring-sandbox collision) |
-| `CADVISOR_HOST_PORT`      | 18081                                         | single-topology cadvisor host port         |
+| Env var | Default | Effect |
+|---|---|---|
+| `TOPOLOGY` | (required) | which topology to run |
+| `SCENARIOS` | full 13-scenario battery | space-separated stems → pytest `-k` filter |
+| `RESILIENCY_WORKDIR` | `results/<utc-timestamp>` | results + log destination |
+| `MARATHON_ENABLED` | 0 | 1 to run the 30m/60m marathon phases |
+| `MARATHON_120M` | 0 | 1 to also run the 2-hour phase |
+| `PROM_HOST_PORT` | 19090 | single-topology prometheus host port (set to avoid collision) |
+| `CADVISOR_HOST_PORT` | 18081 | single-topology cadvisor host port |
+| `PROMETHEUS_URL` | per-topology | analyzer prometheus endpoint |
+| `RESILIENCY_TIER_STANDARD_SEC` | 90 | override the "standard" fault-hold tier (every tier is env-overridable) |
+| `RESILIENCY_RECOVER_STANDARD_SEC` | 180 | override the "standard" recovery window |
+| `RESILIENCY_RSS_LEAK_KB_PER_MIN` | 200 | minion RSS slope leak threshold |
 
-### Fast-smoke env
+See `durations.py` for the full tier table.
 
-For CI-free structural smoke runs that just verify the harness is wired
-up correctly, use these shorter defaults:
+## Fast-smoke env
+
+For CI-free structural smoke runs that just verify the harness is
+wired up, use these shorter defaults:
 
 ```bash
 TOPOLOGY=single \
   SCENARIOS="baseline master_restart signal_pause" \
-  RECONNECT_WINDOW_SEC=60 RESTART_IDLE_SEC=5 INTER_PHASE_WAIT_SEC=5 \
-  BASELINE_WORKLOAD_SEC=60 BASELINE_IDLE_SHORT_SEC=30 \
-  BASELINE_LONG_IDLE=0 BASELINE_BURST_SEC=20 BASELINE_CONCURRENT_N=50 \
-  timeout 900 ./run_resiliency.sh
+  RESILIENCY_TIER_STANDARD_SEC=20 \
+  RESILIENCY_RECOVER_STANDARD_SEC=60 \
+  RESILIENCY_PACING_INTER_PHASE_SEC=5 \
+  ./run_resiliency.sh
 ```
 
 ## Results
@@ -126,68 +165,64 @@ One run writes:
 
 ```
 $RESILIENCY_WORKDIR/
-├── results.jsonl              # one JSON record per fault (see schema below)
-├── analysis.txt               # verdict table from analyze_resiliency.py
-├── compose.log                # `docker compose logs` snapshot (always)
-├── workload.log               # stdout/stderr of the background workload
-├── master_restart.log         # per-scenario stdout/stderr
-├── network.log
-├── minion_churn.log
-└── prometheus-data.tar.gz     # TSDB snapshot for offline Grafana
+├── results.jsonl              # one JSON record per fault
+├── compose.log                # docker compose logs snapshot on teardown
+├── compose-up.log             # compose up --build output
+├── exporters.log              # fd_exporter launch output
+└── workload.log               # background workload stdout/stderr
 ```
 
-### `results.jsonl` schema
+### JSONL schema (one record per phase)
 
-Each line is a self-contained JSON object:
+```json
+{
+  "ts": 1731494400.0,
+  "topology": "cluster3",
+  "scenario": "network_partition_deep",
+  "outcome": "recovered",
+  "reconnect_seconds": 42,
+  "attempts": 9,
+  "missing": [],
+  "fd_delta": 0,
+  "rss_kb_delta": 1024,
+  "fault_seconds": 300,
+  "notes": ""
+}
+```
 
-| Field               | Type       | Meaning                                                          |
-|---------------------|------------|------------------------------------------------------------------|
-| `ts`                | float      | unix epoch at record time                                        |
-| `topology`          | str        | topology name                                                    |
-| `scenario`          | str        | human label, e.g. `master_restart_sigkill_rolling_c3-salt-master-2` |
-| `outcome`           | str        | `recovered` / `failed` / `setup_error` / `skipped_for_topology`  |
-| `reconnect_seconds` | int        | seconds from fault-clear to full-minion recovery; `-1` if never  |
-| `attempts`          | int        | how many `test.ping` rounds the asserter issued                  |
-| `missing`           | list[str]  | minion ids that never answered within the window                 |
-| `fd_delta`          | int        | sum(minion fd_after - fd_before) across the fault window         |
-| `rss_kb_delta`      | int        | sum(minion rss_after - rss_before) in KB across the fault window |
-| `fault_seconds`     | int        | how long the fault was held                                      |
-| `notes`             | str        | free-text                                                        |
+`outcome` is one of: `recovered`, `failed`, `setup_error`,
+`skipped_for_topology`.
 
-## Verdict rules
+The `scenario` field is the authoritative phase label (first arg
+passed to `Topology.assert_reconnect`), not the pytest nodeid —
+preserved across the bash-to-pytest port for analyzer compatibility.
 
-The analyzer (`analyze_resiliency.py`) produces exactly one of three exit codes:
+## Verdict
 
-- **`0` — PASS**: every record has `outcome in {recovered, skipped_for_topology}`
-  AND master-side prometheus slopes are below threshold.
-- **`1` — FAIL**: at least one of:
-  - any JSONL record with `outcome` not in the pass set;
-  - master `salt_master_open_fds` slope > `MASTER_FD_LEAK_PER_MIN / 60`
-    fds/sec (default `0.5` fds/sec == 30 fds/min);
-  - master `salt_master_rss_bytes` slope > `10240` bytes/sec sustained
-    over 30m (same threshold as `analyze_stats.py`).
-- **`2` — data missing**: results file absent/empty, OR (with `--ci` /
-  the `CI` env var set) prometheus is unreachable or has no
-  `salt_master_*` series. Rationale: a CI run without prometheus
-  produces blank Grafana panels and a useless step summary, so a hard
-  fail is friendlier than a false green.
+`analyze_resiliency.py` turns the JSONL into a pass/fail verdict:
 
-A WARN is emitted but does not FAIL the run when any recovered
-scenario's `reconnect_seconds` exceeds `RECONNECT_WARN_SEC` (default
-60s) — slow is yellow, missing is red.
+- **FAIL** if any row has `outcome` in `{failed, setup_error}` (skips
+  don't count).
+- **FAIL** if master FD slope > `MASTER_FD_LEAK_PER_MIN / 60` fds/sec
+  (default: 0.5).
+- **FAIL** if master RSS slope > `MASTER_RSS_LEAK_BYTES_PER_SEC`
+  (default: 10 KB/sec sustained over 30 min).
+- **WARN** if any `recovered` row's `reconnect_seconds` exceeds the
+  WARN threshold (default: 60s).
 
-## Adding a scenario
+`run_resiliency.sh` exits with pytest's exit code; the workflow
+re-runs `analyze_resiliency.py` after the pytest pass as an
+idempotent verdict check.
 
-1. Create `scenarios/<name>.sh`.
-2. `set -u`, source `lib/common.sh`, call `load_topology`.
-3. For every fault:
-   - `read -r fd_before rss_before < <(sample_all_minions)`
-   - inject the fault
-   - clear the fault
-   - `assert_reconnect "$label" "$fault_s" "$fd_before" "$rss_before"`
-4. Make the script executable; add its basename to the default
-   `$SCENARIOS` list in `run_resiliency.sh` if it should run by
-   default.
-5. Record `skipped_for_topology` (not `setup_error`) when the scenario
-   doesn't apply to the current topology — the analyzer counts the
-   former as PASS.
+## Adding a new scenario
+
+1. Write `tests/resiliency/test_<name>.py` following the pattern of
+   the existing files: import a tier from `durations.py`, grab a
+   context manager from `lib/injectors.py`, call
+   `topology.assert_reconnect(label, fault_sec=..., before=...,
+   item=request.node)` with the bash phase label as the first arg.
+2. If the scenario is topology-specific, add
+   `@pytest.mark.topology("cluster3", ...)`.
+3. If it needs the opt-in long-runtime gate, add
+   `@pytest.mark.marathon`.
+4. No orchestrator edits needed; pytest auto-discovers the new file.
