@@ -572,8 +572,23 @@ def pytest_report_header(config):
 
 def pytest_itemcollected(item):
     """We just collected a test item."""
+    item_path = pathlib.Path(item.fspath.strpath).resolve()
+    # The resiliency suite is pytest-style but intentionally NOT under
+    # tests/pytests/ -- it drives live docker stacks and must only run
+    # via its own pytest.ini (``pytest -c tests/resiliency/pytest.ini
+    # --confcutdir=tests/resiliency ...``).  Root pytest.ini already
+    # norecursedirs's tests/resiliency, so a plain ``pytest`` never
+    # collects it; this exemption only matters if someone explicitly
+    # targets the dir without -c, in which case we want a useful error
+    # from the resiliency pytest.ini rather than this misleading one.
     try:
-        pathlib.Path(item.fspath.strpath).resolve().relative_to(PYTESTS_DIR)
+        item_path.relative_to(CODE_DIR / "tests" / "resiliency")
+    except ValueError:
+        pass
+    else:
+        return
+    try:
+        item_path.relative_to(PYTESTS_DIR)
         # Test is under tests/pytests
         if item.cls and issubclass(item.cls, TestCase):
             pytest.fail(
