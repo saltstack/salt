@@ -28,10 +28,11 @@ param(
     [String] $RelenvVersion,
 
     [Parameter(Mandatory=$false)]
-    [ValidateSet("x64", "x86", "amd64")]
+    [ValidateSet("x64", "x86", "amd64", "arm64")]
     [Alias("a")]
     # The System Architecture to build. "x86" will build a 32-bit installer.
-    # "x64" will build a 64-bit installer. Default is: x64
+    # "x64" will build a 64-bit installer. "arm64" will build a native
+    # ARM64 installer. Default is: x64
     [String] $Architecture = "x64",
 
     [Parameter(Mandatory=$false)]
@@ -179,6 +180,8 @@ $BLD_PY_BIN   = "$BUILD_DIR\Scripts\python.exe"
 
 if ( $Architecture -eq "x64" ) {
     $ARCH         = "amd64"
+} elseif ( $Architecture -eq "arm64" ) {
+    $ARCH         = "arm64"
 } else {
     $ARCH         = "x86"
 }
