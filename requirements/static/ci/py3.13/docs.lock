@@ -273,7 +273,7 @@ psutil==7.2.2
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
     #   -r requirements/base.txt
