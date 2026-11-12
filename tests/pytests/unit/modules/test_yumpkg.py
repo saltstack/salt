@@ -3760,3 +3760,45 @@ def test_dnf5_group_info_skips_blank_member_lines():
     assert info["optional"] == ["cmake"]
     assert "" not in info["mandatory"]
     assert "" not in info["optional"]
+
+
+def test_get_mark():
+    call_yum = MagicMock(return_value={"retcode": 0, "stdout": "vim\n", "stderr": ""})
+    with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")), patch.object(
+        yumpkg, "_call_yum", call_yum
+    ), patch.object(
+        yumpkg, "list_pkgs", MagicMock(return_value={"jq": "1.6", "vim": "9.0"})
+    ):
+        assert yumpkg.get_mark("manual") == ["vim"]
+        assert yumpkg.get_mark("auto") == ["jq"]
+        with pytest.raises(SaltInvocationError):
+            yumpkg.get_mark("hold")
+
+
+@pytest.mark.parametrize("yum_bin,action", [("dnf", "install"), ("dnf5", "user")])
+def test_set_mark(yum_bin, action):
+    call_yum = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    with patch.object(yumpkg, "_yum", MagicMock(return_value=yum_bin)), patch.object(
+        yumpkg, "_call_yum", call_yum
+    ):
+        assert yumpkg.set_mark(["jq", "vim"], "manual") is True
+        call_yum.assert_called_once_with(["mark", action, "jq", "vim"])
+        with pytest.raises(SaltInvocationError):
+            yumpkg.set_mark([], "manual")
+        with pytest.raises(SaltInvocationError):
+            yumpkg.set_mark(["jq"], "auto")
+
+
+def test_get_mark_unsupported_yum_bin():
+    with patch.object(yumpkg, "_yum", MagicMock(return_value="tdnf")):
+        with pytest.raises(CommandExecutionError):
+            yumpkg.get_mark("auto")
+
+
+def test_get_mark_repoquery_failure():
+    call_yum = MagicMock(return_value={"retcode": 1, "stdout": "", "stderr": "bad"})
+    with patch.object(yumpkg, "_yum", MagicMock(return_value="dnf")), patch.object(
+        yumpkg, "_call_yum", call_yum
+    ):
+        with pytest.raises(CommandExecutionError):
+            yumpkg.get_mark("auto")
