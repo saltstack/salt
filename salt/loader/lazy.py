@@ -46,6 +46,17 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Maps a LazyLoader ``tag`` to the ``form`` argument expected by
+# ``salt.utils.extmods.sync``/``saltutil.sync_*`` for that module type, where
+# the two names differ. Loaders whose tag already matches the sync form
+# (e.g. "states", "grains") don't need an entry here.
+LOADER_TAG_TO_SYNC_FORM = {
+    "module": "modules",
+    "render": "renderers",
+    "returner": "returners",
+    "executor": "executors",
+}
+
 # pylint: disable=no-member
 MODULE_KIND_SOURCE = 1
 MODULE_KIND_COMPILED = 2
@@ -400,6 +411,10 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             self.suffix_order.append(suffix)
 
         self._lock = self._get_lock()
+        # module names for which an on-demand sync has already been
+        # attempted, so we don't hammer the master with repeated sync
+        # requests for a module that genuinely doesn't exist.
+        self._sync_attempted = set()
 
         with self._lock:
             self._refresh_file_mapping()
@@ -1331,6 +1346,52 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         return True
 
+    def _sync_on_demand(self, mod_name):
+        """
+        Best-effort, on-demand sync of a single dynamic module from the
+        master, triggered when ``mod_name`` can't be found locally and
+        ``sync_on_missing_function`` is enabled. This lets minions avoid
+        requiring an explicit, environment-wide ``saltutil.sync_*`` call
+        before a dynamic module/state/etc. can be used.
+
+        Returns True if a sync was attempted (regardless of outcome), so the
+        caller knows whether it's worth re-scanning the filesystem.
+        """
+        if mod_name in self._sync_attempted:
+            return False
+        self._sync_attempted.add(mod_name)
+
+        if not self.opts.get("sync_on_missing_function"):
+            return False
+        # Only meaningful on a minion talking to a master; on the master
+        # itself the "sync" source and destination are the same files.
+        if self.opts.get("__role") != "minion" or self.opts.get("local", False):
+            return False
+
+        form = LOADER_TAG_TO_SYNC_FORM.get(self.tag, self.tag)
+
+        try:
+            import salt.utils.extmods
+
+            log.debug(
+                "Attempting on-demand sync of '%s' (form=%s) because '%s' "
+                "was not found locally",
+                mod_name,
+                form,
+                mod_name,
+            )
+            salt.utils.extmods.sync(
+                self.opts,
+                form,
+                extmod_whitelist={form: [mod_name]},
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            log.debug(
+                "On-demand sync of '%s' (form=%s) failed: %s", mod_name, form, exc
+            )
+            return False
+        return True
+
     def _load(self, key):
         """
         Load a single item if you have it
@@ -1369,15 +1430,22 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # try to load the module
             ret = None
             reloaded = False
+            synced = False
             # re-scan up to once, IOErrors or a failed load cause re-scans of the
-            # filesystem
+            # filesystem. If still not found, and on-demand sync is enabled,
+            # try pulling the module from the master once and re-scan again.
             while True:
                 try:
                     ret = _inner_load(mod_name)
-                    if not reloaded and ret is not True:
-                        self._refresh_file_mapping()
-                        reloaded = True
-                        continue
+                    if ret is not True:
+                        if not reloaded:
+                            self._refresh_file_mapping()
+                            reloaded = True
+                            continue
+                        if not synced and self._sync_on_demand(mod_name):
+                            synced = True
+                            self._refresh_file_mapping()
+                            continue
                     break
                 except OSError:
                     if not reloaded:
