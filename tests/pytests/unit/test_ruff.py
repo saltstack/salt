@@ -271,3 +271,22 @@ def test_salt_injected_globals_are_not_undefined(repo: Path) -> None:
     write(repo, "new.py", "def f():\n    return __salt__, __opts__, __context__\n")
     result = check(repo)
     assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_unused_local_variable_is_reported_outside_tests(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f(g):\n    ret = g()\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "F841" in result.stdout
+
+
+def test_underscore_is_allowed_for_unused_values(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f(g):\n    _ = g()\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_unused_local_variable_is_allowed_in_tests(repo: Path) -> None:
+    write(repo, "tests/test_new.py", "def test_f(g):\n    ret = g()\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout

@@ -127,8 +127,12 @@ select = [
 ignore = [
     "F403",  # star imports
     "F405",  # names from star imports
-    "F841",  # unused variables
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Unused local variables are not checked in tests for now.
+"tests/**" = ["F841"]
+
 [tool.towncrier]
     package = "salt"
     filename = "CHANGELOG.md"

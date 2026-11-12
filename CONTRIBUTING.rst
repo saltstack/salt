@@ -56,8 +56,9 @@ The rules cover correctness problems only: all pyflakes checks (unused
 imports, undefined names, redefined names, and so on), common bugbear checks
 such as mutable argument defaults and loop variables captured by nested
 functions, comparisons to ``None``, ``True`` and ``False``, bare ``except``,
-dropped asyncio tasks, and pylint error checks. Star imports and unused local
-variables are not checked. Names Salt injects into modules, such as
+dropped asyncio tasks, pylint error checks, and unused local variables outside
+``tests/``. Use ``_`` for a value you do not need. Star imports are not
+checked. Names Salt injects into modules, such as
 ``__salt__`` and ``__opts__``, are not reported as undefined. The list is in
 ``pyproject.toml`` and must match ``additional-builtins`` in ``.pylintrc``.
 This check does not enforce style or type annotations, and does not replace
