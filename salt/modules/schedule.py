@@ -1502,6 +1502,7 @@ def show_next_fire_time(name, **kwargs):
     """
 
     ret = {"result": True}
+    event_ret = None
 
     if not name:
         ret["comment"] = "Job name is required."
@@ -1525,10 +1526,14 @@ def show_next_fire_time(name, **kwargs):
         ret["result"] = True
         return ret
 
-    if "next_fire_time" in event_ret:
+    if event_ret and "next_fire_time" in event_ret:
         ret["next_fire_time"] = event_ret["next_fire_time"]
     else:
-        ret["comment"] = "next fire time not available."
+        ret["comment"] = (
+            "next fire time not available. No response from the minion; make sure"
+            " the salt-minion service is running."
+        )
+        ret["result"] = False
     return ret
 
 
