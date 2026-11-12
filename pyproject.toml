@@ -101,8 +101,7 @@ builtins = [
 # block a PR (see tools/precommit/ruff.py). Black remains the formatter, so no
 # style rules are enabled. Type checking is a separate rollout.
 select = [
-    "F",     # pyflakes: F401 unused imports, F541 f-strings without placeholders,
-             # F631/F634 always-true tuples, F811 redefinitions, F821 undefined names
+    "F",     # pyflakes
     "B004",  # unreliable callable check
     "B005",  # strip() with multi-character strings
     "B006",  # mutable argument defaults
