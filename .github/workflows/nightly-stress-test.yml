@@ -11,10 +11,9 @@ on:
         default: '0.5h'
         type: choice
         options:
-          # 20m is the minimum: analyze_stats.py ignores the first 10
-          # minutes (warm-up) and needs at least 10 more for a meaningful
-          # RSS/FD slope.
-          - '20m'
+          # 0.5h is the minimum: analyze_stats.py ignores the first 10
+          # minutes (warm-up), and a shorter slope window is too noisy for
+          # the thresholds (master RSS oscillates with a ~6 minute period).
           - '0.5h'
           - '1h'
           - '1.5h'
