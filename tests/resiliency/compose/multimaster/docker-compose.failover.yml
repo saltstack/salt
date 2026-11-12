@@ -1,0 +1,11 @@
+# Overlay: run salt-minion-1 in master_type=failover mode.
+#
+# Applied on top of docker-compose.yml.  Adds the bind-mount for the
+# failover minion config to the minion service.  Compose merges
+# ``volumes:`` lists by concatenation, so this appends without
+# clobbering the PKI/cache volumes declared in the base file.
+
+services:
+  salt-minion-1:
+    volumes:
+      - ./minion-failover.conf:/etc/salt/minion:ro

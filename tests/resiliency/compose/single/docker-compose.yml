@@ -1,0 +1,124 @@
+# Single-master resiliency topology.
+#
+# Self-contained stack: one salt-master + 3 minions + prometheus +
+# cadvisor.  This is deliberately NOT a reuse of
+# ``tests/monitoring/docker-compose.yml`` because that file hardcodes
+# ``container_name: salt-master`` etc., which collides with any
+# monitoring stack a developer may have running on the same host.  A
+# ``docker compose down -v --remove-orphans`` on the resiliency project
+# would then vaporise the developer's running monitoring containers.
+#
+# Container-name convention: ``rs-single-*`` (resiliency, single
+# topology).  Must match tests/resiliency/lib/common.sh's load_topology
+# single branch.
+#
+# Reuses ``tests/monitoring/Dockerfile.salt`` and the master/minion
+# config files from the monitoring stack -- those are the
+# well-maintained defaults; no reason to duplicate them.
+
+x-salt-common: &salt-common
+  build:
+    context: ../../../..
+    dockerfile: tests/monitoring/Dockerfile.salt
+  image: resiliency-single-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  volumes:
+    - ../../../../salt:/app/salt
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - salt-net
+
+services:
+  rs-single-salt-master:
+    <<: *salt-common
+    container_name: rs-single-salt-master
+    hostname: salt-master
+    command: ["sh", "-c", "salt-master -d && salt-api"]
+    volumes:
+      - ../../../../salt:/app/salt
+      - ../../../monitoring/master.conf:/etc/salt/master:ro
+      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - ../../../monitoring/srv/salt:/srv/salt:ro
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        aliases:
+          - salt
+
+  rs-single-salt-minion-1:
+    <<: *salt-common
+    container_name: rs-single-salt-minion-1
+    hostname: rs-single-salt-minion-1
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../../../salt:/app/salt
+      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - rs-single-salt-master
+
+  rs-single-salt-minion-2:
+    <<: *salt-common
+    container_name: rs-single-salt-minion-2
+    hostname: rs-single-salt-minion-2
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../../../salt:/app/salt
+      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - rs-single-salt-master
+
+  rs-single-salt-minion-3:
+    <<: *salt-common
+    container_name: rs-single-salt-minion-3
+    hostname: rs-single-salt-minion-3
+    entrypoint: ["/usr/local/bin/salt-minion"]
+    volumes:
+      - ../../../../salt:/app/salt
+      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      - rs-single-salt-master
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rs-single-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    ports:
+      # Host port is parameterised so a developer running the monitoring
+      # sandbox (which binds its own prometheus on :19090) can still spin
+      # up a resiliency-single stack by exporting PROM_HOST_PORT=19094
+      # (or any free port).  Workflow + orchestrator default to 19090.
+      - "${PROM_HOST_PORT:-19090}:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: rs-single-cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "${CADVISOR_HOST_PORT:-18081}:8080"
+    networks:
+      - salt-net
+
+networks:
+  salt-net:
+    driver: bridge

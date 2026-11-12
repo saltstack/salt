@@ -1,0 +1,135 @@
+# Multimaster resiliency topology.
+#
+# Two independent salt-masters -- NOT in a salt cluster, no shared PKI,
+# no cluster_peers -- plus one minion that talks to both.  Which mode
+# the minion uses (failover vs. hot-hot) is picked by overlaying
+# ``docker-compose.failover.yml`` or ``docker-compose.hothot.yml`` on
+# top of this file; those overlays swap the minion's /etc/salt/minion
+# bind-mount.
+#
+# Compose usage from the resiliency orchestrator:
+#
+#   docker compose \
+#       -f tests/resiliency/compose/multimaster/docker-compose.yml \
+#       -f tests/resiliency/compose/multimaster/docker-compose.failover.yml \
+#       --project-name resiliency-multimaster up -d
+#
+# Path parameterization mirrors cluster-3node: ``SALT_SRC`` bind-mounts
+# the salt package under test.  Default resolves to the repo root via
+# ../../../.. so a plain ``docker compose up -d`` from this directory
+# works against the parent checkout.
+
+x-master-common: &master-common
+  build:
+    context: ${SALT_SRC:-../../../..}
+    dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
+  image: cluster-3node-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  networks:
+    - salt-net
+
+services:
+  salt-master-a:
+    <<: *master-common
+    container_name: mm-salt-master-a
+    hostname: mm-salt-master-a
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./master-a.conf:/etc/salt/master:ro
+      # fd_exporter.py is bind-mounted into /srv so the orchestrator
+      # can launch it with ``docker exec -d <c> python3 /srv/fd_exporter.py``.
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/srv/fd_exporter.py:ro
+      - master-a-pki:/etc/salt/pki/master
+      - master-a-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.88.0.11
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-master-b:
+    <<: *master-common
+    container_name: mm-salt-master-b
+    hostname: mm-salt-master-b
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./master-b.conf:/etc/salt/master:ro
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/srv/fd_exporter.py:ro
+      - master-b-pki:/etc/salt/pki/master
+      - master-b-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.88.0.12
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-minion-1:
+    <<: *master-common
+    container_name: mm-salt-minion-1
+    hostname: mm-minion-1
+    depends_on:
+      - salt-master-a
+      - salt-master-b
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      # Minion config file is injected by the failover/hothot overlay.
+      # No bind-mount here so compose won't fail if an overlay is absent
+      # during development -- but note the two overlays MUST be applied
+      # for the minion to have a working /etc/salt/minion.
+      - minion-1-pki:/etc/salt/pki/minion
+      - minion-1-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.88.0.21
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mm-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "19091:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: mm-cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "18082:8080"
+    networks:
+      - salt-net
+
+networks:
+  salt-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.88.0.0/24
+
+volumes:
+  master-a-pki:
+  master-b-pki:
+  master-a-cache:
+  master-b-cache:
+  minion-1-pki:
+  minion-1-cache:
