@@ -56,7 +56,7 @@ load_topology
 # file is ``exit "$OVERALL_RC"`` so the orchestrator sees the aggregate.
 OVERALL_RC=0
 
-: "${PHASE_DURATION_SEC:=60}"
+: "${PHASE_DURATION_SEC:=$TIER_STANDARD_SEC}"
 export PHASE_DURATION_SEC
 
 SCENARIO_WORKDIR="${RESILIENCY_WORKDIR}/clock_skew"

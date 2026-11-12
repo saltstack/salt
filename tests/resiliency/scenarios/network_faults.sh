@@ -47,7 +47,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_topology
 
-: "${PHASE_DURATION_SEC:=60}"
+: "${PHASE_DURATION_SEC:=$TIER_STANDARD_SEC}"
 : "${MASTER_RET_PORT:=44506}"
 export PHASE_DURATION_SEC MASTER_RET_PORT
 
@@ -243,6 +243,60 @@ run_netem_phase "network_jitter_loss" "delay 100ms 40ms distribution normal loss
 
 # Phase 4: full partition (loss 100%)
 run_netem_phase "network_partition_full" "loss 100%"
+
+# ---------------------------------------------------------------
+# Phase 4a: sub-keepalive partition.  Hold shorter than
+# master_alive_interval so the minion keepalive never fires during the
+# outage -- exercises the in-flight-only data-path recovery.
+# ---------------------------------------------------------------
+{
+    _saved_phase_dur="$PHASE_DURATION_SEC"
+    _saved_window="$RECONNECT_WINDOW_SEC"
+    PHASE_DURATION_SEC="$TIER_SUBKEEPALIVE_SEC"
+    RECONNECT_WINDOW_SEC="$RECOVER_FAST_SEC"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    run_netem_phase "network_partition_sub_keepalive" "loss 100%"
+    PHASE_DURATION_SEC="$_saved_phase_dur"
+    RECONNECT_WINDOW_SEC="$_saved_window"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    unset _saved_phase_dur _saved_window
+}
+
+# ---------------------------------------------------------------
+# Phase 4b: first-miss partition.  Hold just past
+# master_alive_interval so the first scheduled keepalive check fails.
+# Exercises the "I just noticed" transition code specifically.
+# ---------------------------------------------------------------
+{
+    _saved_phase_dur="$PHASE_DURATION_SEC"
+    _saved_window="$RECONNECT_WINDOW_SEC"
+    PHASE_DURATION_SEC="$TIER_FIRSTMISS_SEC"
+    RECONNECT_WINDOW_SEC="$RECOVER_FAST_SEC"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    run_netem_phase "network_partition_first_miss" "loss 100%"
+    PHASE_DURATION_SEC="$_saved_phase_dur"
+    RECONNECT_WINDOW_SEC="$_saved_window"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    unset _saved_phase_dur _saved_window
+}
+
+# ---------------------------------------------------------------
+# Phase 4c: deep-recovery partition.  Hold long enough for multiple
+# auth_timeout retries to fire and exponential-backoff cycles to be
+# observable.
+# ---------------------------------------------------------------
+{
+    _saved_phase_dur="$PHASE_DURATION_SEC"
+    _saved_window="$RECONNECT_WINDOW_SEC"
+    PHASE_DURATION_SEC="$TIER_DEEPREC_SEC"
+    RECONNECT_WINDOW_SEC="$RECOVER_STANDARD_SEC"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    run_netem_phase "network_partition_deep" "loss 100%"
+    PHASE_DURATION_SEC="$_saved_phase_dur"
+    RECONNECT_WINDOW_SEC="$_saved_window"
+    export PHASE_DURATION_SEC RECONNECT_WINDOW_SEC
+    unset _saved_phase_dur _saved_window
+}
 
 # ---------------------------------------------------------------
 # Phase 5: TCP reset injection on each minion's OUTPUT dport 44506

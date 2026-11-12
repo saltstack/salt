@@ -13,7 +13,8 @@
 #
 # Phases (each independent):
 #
-#   1. cluster_peer_sigstop_60s                 (cluster3 only)
+#   1. cluster_peer_sigstop_standard            (cluster3 only; STANDARD tier)
+#   1b. cluster_peer_sigstop_backoff            (cluster3 only; BACKOFF tier)
 #   2. cluster_peer_unreachable                 (cluster3 only)
 #   3. cluster_aes_rotation_under_load          (cluster3 only)
 #   4. cluster_haproxy_backend_flap             (cluster3 only)
@@ -61,16 +62,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 load_topology
 
-: "${PEER_SIGSTOP_SEC:=60}"
-: "${PEER_UNREACHABLE_SEC:=90}"
+: "${PEER_SIGSTOP_SEC:=$TIER_STANDARD_SEC}"
+: "${PEER_SIGSTOP_BACKOFF_SEC:=$TIER_BACKOFF_SEC}"
+: "${PEER_UNREACHABLE_SEC:=$TIER_BACKOFF_SEC}"
 : "${AES_PROPAGATION_WAIT_SEC:=30}"
-: "${HAPROXY_FLAP_SEC:=60}"
-: "${SPLIT_BRAIN_SEC:=60}"
+: "${HAPROXY_FLAP_SEC:=$TIER_STANDARD_SEC}"
+: "${SPLIT_BRAIN_SEC:=$TIER_DEEPREC_SEC}"
 : "${ROLLING_WORKLOAD_BURST_SEC:=15}"
 : "${MM_PRIMARY_UNREACH_SEC:=90}"
-: "${MM_HOTHOT_PARTITION_SEC:=60}"
+: "${MM_HOTHOT_PARTITION_SEC:=$TIER_STANDARD_SEC}"
 : "${MM_STAGGERED_GAP_SEC:=10}"
-: "${INTER_PHASE_WAIT_SEC:=15}"
+: "${INTER_PHASE_WAIT_SEC:=$PACING_INTER_PHASE_SEC}"
 
 MASTER_COUNT=0
 for _m in $MASTERS; do MASTER_COUNT=$((MASTER_COUNT + 1)); done
@@ -191,9 +193,10 @@ start_workload_burst() {
 
 # -------------------------------------------------------------------
 # Phase 1: SIGSTOP a non-primary peer master for PEER_SIGSTOP_SEC
+# (STANDARD tier; 3x keepalive, reconnect SM fully engaged).
 # -------------------------------------------------------------------
-phase_cluster_peer_sigstop_60s() {
-    local label="cluster_peer_sigstop_60s"
+phase_cluster_peer_sigstop_standard() {
+    local label="cluster_peer_sigstop_standard"
     case "${TOPOLOGY:-}" in
         cluster3) ;;
         *) record_skip "$label" "requires cluster3 (need >=2 masters sharing cluster_pki)"; return 0 ;;
@@ -225,6 +228,52 @@ phase_cluster_peer_sigstop_60s() {
             "paused_peer=${peer}"; then
         OVERALL_RC=1
     fi
+}
+
+# -------------------------------------------------------------------
+# Phase 1b: SIGSTOP a non-primary peer for BACKOFF tier so reconnect
+# exponential-backoff caps are observable.  Uses a wider recovery
+# window (RECOVER_STANDARD_SEC) because a minion mid-backoff may land
+# in a long sleep when the peer resumes.
+# -------------------------------------------------------------------
+phase_cluster_peer_sigstop_backoff() {
+    local label="cluster_peer_sigstop_backoff"
+    case "${TOPOLOGY:-}" in
+        cluster3) ;;
+        *) record_skip "$label" "requires cluster3 (need >=2 masters sharing cluster_pki)"; return 0 ;;
+    esac
+    local peer
+    peer="$(pick_non_primary_peer || true)"
+    if [ -z "$peer" ]; then
+        record_setup_error "$label" "no non-primary peer in MASTERS=${MASTERS}"
+        return 1
+    fi
+    local fd_before rss_before fault_start fault_end fault_s
+    read -r fd_before rss_before < <(sample_all_minions)
+    log "---- phase: ${label} (peer=${peer} hold=${PEER_SIGSTOP_BACKOFF_SEC}s) ----"
+    fault_start=$(date +%s)
+    if ! docker kill -s STOP "$peer" >/dev/null 2>&1; then
+        record_setup_error "$label" "docker kill -s STOP ${peer} failed"
+        return 1
+    fi
+    PAUSED_CONTAINERS="${PAUSED_CONTAINERS} ${peer}"
+    sleep "$PEER_SIGSTOP_BACKOFF_SEC"
+    if ! docker kill -s CONT "$peer" >/dev/null 2>&1; then
+        record_setup_error "$label" "docker kill -s CONT ${peer} failed"
+        docker kill -s CONT "$peer" >/dev/null 2>&1 || true
+        return 1
+    fi
+    fault_end=$(date +%s)
+    fault_s=$(( fault_end - fault_start ))
+    local _saved_window="$RECONNECT_WINDOW_SEC"
+    RECONNECT_WINDOW_SEC="$RECOVER_STANDARD_SEC"
+    export RECONNECT_WINDOW_SEC
+    if ! assert_reconnect "$label" "$fault_s" "$fd_before" "$rss_before" \
+            "paused_peer=${peer} tier=backoff"; then
+        OVERALL_RC=1
+    fi
+    RECONNECT_WINDOW_SEC="$_saved_window"
+    export RECONNECT_WINDOW_SEC
 }
 
 # -------------------------------------------------------------------
@@ -651,7 +700,10 @@ phase_multimaster_both_masters_restart_staggered() {
 # -------------------------------------------------------------------
 log "cluster_faults scenario starting topology=${TOPOLOGY} masters=${MASTER_COUNT}"
 
-phase_cluster_peer_sigstop_60s
+phase_cluster_peer_sigstop_standard
+between_phases
+
+phase_cluster_peer_sigstop_backoff
 between_phases
 
 phase_cluster_peer_unreachable
