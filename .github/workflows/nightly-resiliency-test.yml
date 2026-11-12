@@ -196,8 +196,13 @@ jobs:
         if: always()
         run: |
           # Pick the newest results dir written by this run.  The
-          # orchestrator writes results/<utc-timestamp>/results.jsonl.
-          results_file=$(ls -1dt tests/resiliency/results/*/results.jsonl 2>/dev/null | head -1 || true)
+          # orchestrator writes results/<utc-timestamp>/results.jsonl
+          # where ``utc-timestamp`` is ``YYYYMMDDTHHMMSSZ`` — strictly
+          # lexically sortable, so ``sort | tail -1`` is equivalent
+          # to an mtime-sort without triggering shellcheck SC2012.
+          results_file=$(find tests/resiliency/results -mindepth 2 -maxdepth 2 \
+                             -name results.jsonl 2>/dev/null \
+                         | sort | tail -1)
           if [ -z "$results_file" ]; then
             echo "no results.jsonl found -- orchestrator likely never reached analyze step"
             exit 0
