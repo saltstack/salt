@@ -1,0 +1,7 @@
+# Runtime artifacts produced by the orchestrator.  These are per-run
+# outputs (results.jsonl, compose.log, per-scenario logs) and the
+# prometheus TSDB; none of them belong in the repo.
+results/
+artifacts/
+panels/
+compose/*/prometheus_data/

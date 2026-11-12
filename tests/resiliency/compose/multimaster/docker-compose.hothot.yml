@@ -1,0 +1,11 @@
+# Overlay: run salt-minion-1 in hot-hot mode (``master_type: str`` with
+# a list of masters -- i.e. the minion connects to BOTH masters
+# simultaneously via salt's MultiMinion manager).
+#
+# Applied on top of docker-compose.yml.  Only swaps the minion config
+# bind-mount.
+
+services:
+  salt-minion-1:
+    volumes:
+      - ./minion-hothot.conf:/etc/salt/minion:ro

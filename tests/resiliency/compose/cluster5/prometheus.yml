@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: cluster5
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          cluster: cluster5
+
+  # fd_exporter.py launched via start_exporters.sh inside each master.
+  # Reachable by service hostname on the shared salt-net.
+  - job_name: 'salt-masters'
+    static_configs:
+      - targets:
+          - 'salt-master-1:8002'
+          - 'salt-master-2:8002'
+          - 'salt-master-3:8002'
+          - 'salt-master-4:8002'
+          - 'salt-master-5:8002'
+        labels:
+          cluster: cluster5

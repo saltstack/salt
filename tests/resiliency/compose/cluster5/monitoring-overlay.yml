@@ -1,0 +1,97 @@
+# Monitoring overlay for tests/monitoring/cluster-5node/docker-compose.yml.
+#
+# The resiliency test orchestrator composes this file on top of the base
+# cluster-5node stack:
+#
+#   docker compose \
+#       -f tests/monitoring/cluster-5node/docker-compose.yml \
+#       -f tests/resiliency/compose/cluster5/monitoring-overlay.yml \
+#       --project-name cluster-5node up -d
+#
+# What it adds:
+#
+#   * prometheus  scrapes the five master fd_exporters (:8002) + cadvisor
+#   * cadvisor    per-container resource metrics
+#
+# Both attach to the base stack's existing ``salt-net`` network as an
+# *external* network.  Compose names unqualified networks
+# ``<project>_<name>``, so with ``--project-name cluster-5node`` the base
+# network is ``cluster-5node_salt-net``.  We declare it ``external: true``
+# here so this overlay does not try to re-create it.
+#
+# Host port mapping (avoids collisions with the other resiliency topologies
+# that may be running on the same box):
+#
+#   prometheus   19093  (cluster3 owns 19090; keep a clear gap for 19091/19092)
+#   cadvisor     18084  (cluster3 owns 18081)
+#
+# The fd_exporter itself is not launched as a compose service -- it has
+# to run *inside* each salt-master container so it can read /proc of the
+# master processes directly.  The companion ``start_exporters.sh`` in
+# this directory does that via ``docker exec -d`` after compose up.
+
+services:
+  # Bind-mount fd_exporter.py into each master so ``start_exporters.sh``
+  # can run it via ``docker exec -d``.  The base cluster-5node compose
+  # mounts its own ``./srv/salt`` (pillar + states only), which does NOT
+  # contain the exporter -- so this overlay adds the file to the volume
+  # list, where it merges with the base service definition.
+  salt-master-1:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-2:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-3:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-4:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-5:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rs-cluster5-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "19093:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: rs-cluster5-cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "18084:8080"
+    networks:
+      - salt-net
+
+networks:
+  salt-net:
+    external: true
+    name: cluster-5node_salt-net

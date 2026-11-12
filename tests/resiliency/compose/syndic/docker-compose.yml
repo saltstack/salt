@@ -1,0 +1,165 @@
+# Syndic resiliency topology.
+#
+# Master-of-Masters (MoM) --> salt-syndic / salt-master --> minions.
+#
+#   rs-syndic-mom      10.99.0.11   ordinary salt-master, opt-in syndic
+#                                   receiver (order_masters: True)
+#   rs-syndic-sub      10.99.0.12   salt-master (for the two downstream
+#                                   minions) AND salt-syndic daemon
+#                                   (reports upward to rs-syndic-mom)
+#   rs-syndic-minion-{1,2}          minions, point at syndic-sub
+#
+# Container-name convention: ``rs-syndic-*`` matches the
+# ``load_topology`` syndic branch in tests/resiliency/lib/common.sh.
+#
+# Compose usage from the resiliency orchestrator:
+#
+#   docker compose \
+#       -f tests/resiliency/compose/syndic/docker-compose.yml \
+#       --project-name resiliency-syndic up -d
+#
+# Reuses tests/monitoring/cluster-3node/Dockerfile.salt so the image is
+# shared with cluster3 / multimaster -- saves a rebuild when switching
+# topologies on the same host.
+#
+# Subnet 10.99.0.0/24 and prometheus port 19092 / cadvisor 18083 are
+# chosen to avoid collisions with cluster3 (19090/18081) and multimaster
+# (19091/18082) stacks that may be up simultaneously.
+
+x-master-common: &master-common
+  build:
+    context: ${SALT_SRC:-../../../..}
+    dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
+  image: cluster-3node-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  networks:
+    - salt-net
+
+services:
+  syndic-mom:
+    <<: *master-common
+    container_name: rs-syndic-mom
+    hostname: syndic-mom
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./master-mom.conf:/etc/salt/master:ro
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - mom-pki:/etc/salt/pki/master
+      - mom-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.99.0.11
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  syndic-sub:
+    <<: *master-common
+    container_name: rs-syndic-sub
+    hostname: syndic-sub
+    depends_on:
+      - syndic-mom
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./master-sub.conf:/etc/salt/master:ro
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - sub-pki:/etc/salt/pki/master
+      - sub-cache:/var/cache/salt/master
+      - sub-syndic-pki:/etc/salt/pki/minion
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.99.0.12
+    # Run BOTH the master and the syndic daemon in this container.  The
+    # Dockerfile's default ENTRYPOINT is /usr/bin/tini -- so we only
+    # need a shell command.  salt-master -d forks into the background;
+    # salt-syndic then runs in the foreground so tini has a PID to
+    # supervise and the container stays up.  (The monitoring stack
+    # pairs salt-master -d + salt-api the same way.)
+    command: ["sh", "-c", "salt-master -d && exec salt-syndic -l info"]
+
+  syndic-minion-1:
+    <<: *master-common
+    container_name: rs-syndic-minion-1
+    hostname: syndic-minion-1
+    depends_on:
+      - syndic-sub
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./minion-syndic.conf:/etc/salt/minion:ro
+      - minion-1-pki:/etc/salt/pki/minion
+      - minion-1-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.99.0.21
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  syndic-minion-2:
+    <<: *master-common
+    container_name: rs-syndic-minion-2
+    hostname: syndic-minion-2
+    depends_on:
+      - syndic-sub
+    volumes:
+      - ${SALT_SRC:-../../../..}/salt:/app/salt
+      - ./minion-syndic.conf:/etc/salt/minion:ro
+      - minion-2-pki:/etc/salt/pki/minion
+      - minion-2-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      salt-net:
+        ipv4_address: 10.99.0.22
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: rs-syndic-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "19092:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: rs-syndic-cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "18083:8080"
+    networks:
+      - salt-net
+
+networks:
+  salt-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.0.0/24
+
+volumes:
+  mom-pki:
+  mom-cache:
+  sub-pki:
+  sub-cache:
+  sub-syndic-pki:
+  minion-1-pki:
+  minion-1-cache:
+  minion-2-pki:
+  minion-2-cache:
