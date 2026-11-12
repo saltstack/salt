@@ -2269,7 +2269,7 @@ class MasterPubServerChannel:
             discover_replies,
             peer_keys,
             self.opts,
-            context=f"delegate-cache-write({bank}/{label})",
+            context="delegate-cache-write",
         )
         for pusher in targets:
             try:
@@ -2362,7 +2362,7 @@ class MasterPubServerChannel:
             discover_replies,
             peer_keys,
             self.opts,
-            context=f"delegate-resource-register-write({minion_id})",
+            context="delegate-resource-register-write",
         )
         for pusher in targets:
             try:
