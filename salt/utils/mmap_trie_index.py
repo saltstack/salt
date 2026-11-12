@@ -1391,6 +1391,10 @@ def for_bank(cache, bank, opts):
 
     * ``grain_trie_max_list_size`` -- default 100000
     * ``grain_trie_build_batch_size`` -- default 1024
+    * ``grain_trie_mmap_size`` -- MmapCache slot count, default 2000000
+    * ``grain_trie_mmap_max_segment_bytes`` -- per-segment heap cap
+      forwarded to :class:`MmapCache`; ``None`` / absent inherits the
+      1 GiB default.
 
     When the cache driver does not expose ``cachedir`` (some test
     fakes) the function returns ``None`` -- the caller falls back to
@@ -1405,6 +1409,19 @@ def for_bank(cache, bank, opts):
     batch = int(opts.get("grain_trie_build_batch_size", DEFAULT_BATCH_SIZE) or 0)
     if batch <= 0:
         batch = DEFAULT_BATCH_SIZE
+    # ``grain_trie_mmap_size`` sets the MmapCache slot count. Each slot
+    # is ``slot_size`` bytes (default 160) so the sparse index file is
+    # ``mmap_size * slot_size`` bytes. Tests shrink this to avoid
+    # allocating a 320 MiB sparse file per tmp bank -- a fleet of them
+    # on tmpfs-backed CI runners fills ``/tmp`` and silently drops
+    # writes.
+    mmap_size_raw = opts.get("grain_trie_mmap_size")
+    try:
+        mmap_size = int(mmap_size_raw) if mmap_size_raw else None
+    except (TypeError, ValueError):
+        mmap_size = None
+    if mmap_size is not None and mmap_size <= 0:
+        mmap_size = None
     # ``grain_trie_mmap_max_segment_bytes`` lets the operator tune (or,
     # in tests, shrink) the per-segment heap cap passed to
     # :class:`MmapCache`. ``None`` / absent means "inherit the mmap
@@ -1427,13 +1444,16 @@ def for_bank(cache, bank, opts):
             entry.batch_size = batch
             entry.max_segment_bytes = max_seg
             return entry
-        idx = MmapTrieIndex(
-            cachedir=cachedir,
-            bank=bank,
-            max_list_size=max_list,
-            batch_size=batch,
-            max_segment_bytes=max_seg,
-        )
+        kwargs = {
+            "cachedir": cachedir,
+            "bank": bank,
+            "max_list_size": max_list,
+            "batch_size": batch,
+            "max_segment_bytes": max_seg,
+        }
+        if mmap_size is not None:
+            kwargs["mmap_size"] = mmap_size
+        idx = MmapTrieIndex(**kwargs)
         _registry[reg_key] = idx
         return idx
 

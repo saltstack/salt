@@ -199,6 +199,15 @@ class _TrieAdapter:
             "grain_trie_max_list_size": max_list_size,
             "grain_trie_build_batch_size": batch_size,
             "enable_grain_trie_index": True,
+            # Shrink the MmapCache allocation so each test only writes
+            # a ~32 MiB sparse file (200_000 slots * 160 bytes). The
+            # production default is 2_000_000 slots -> 320 MiB per
+            # bank, which multiplied across ~40 trie tests quickly
+            # fills the tmpfs-backed /tmp on CI runners and causes the
+            # key-store writes to silently drop (mm.get returns None
+            # for every key). Tests never need more than a few
+            # thousand distinct (path, value) buckets.
+            "grain_trie_mmap_size": 200_000,
         }
 
     def rebuild(self):
@@ -907,6 +916,10 @@ def test_rebuild_swaps_every_rolled_heap_segment(tmp_path):
         "grain_trie_build_batch_size": 64,
         # Shrink the per-segment cap so a modest key count rolls.
         "grain_trie_mmap_max_segment_bytes": 4096,
+        # Tiny index-slot allocation: keeps the sparse ``trie.idx``
+        # file under 10 MiB so we don't pile 320 MiB per test onto
+        # a tmpfs-backed /tmp on CI.
+        "grain_trie_mmap_size": 50_000,
     }
     idx = for_bank(cache, BANK, opts)
     assert idx is not None
