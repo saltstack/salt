@@ -35,14 +35,14 @@ on:
         default: 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon'
         type: string
       marathon_enabled:
-        description: Run master_marathon phases (30m + 60m master outages). Adds 90+ min runtime per topology; keep off for nightly, enable for the weekly long-outage run.
+        description: Run master_marathon phases (30m + 60m master outages). Defaults ON for nightly; flip to false for a fast dispatch.
         required: false
-        default: false
+        default: true
         type: boolean
       marathon_120m:
-        description: Also run the 2-hour marathon_outage_120m phase (requires marathon_enabled=true). Adds ~2h runtime per topology on top of the other marathon phases.
+        description: Also run the 2-hour marathon_outage_120m phase (requires marathon_enabled=true). Defaults ON for nightly; adds ~2h per topology.
         required: false
-        default: false
+        default: true
         type: boolean
 
 jobs:
@@ -154,8 +154,13 @@ jobs:
         # marathon-enabled run expands to 5h (120m phase alone is 2h)
         # and 120m-enabled to 6h (hard GHA ceiling).
         env:
-          MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'false' }}
-          MARATHON_120M_INPUT: ${{ github.event.inputs.marathon_120m || 'false' }}
+          # Default to true on scheduled triggers (``github.event.inputs``
+          # is empty on schedule events, so the workflow_dispatch
+          # ``default:`` never applies there).  The nightly cron runs
+          # the full battery including marathon + 120m; a developer
+          # can still flip either off via workflow_dispatch.
+          MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'true' }}
+          MARATHON_120M_INPUT: ${{ github.event.inputs.marathon_120m || 'true' }}
         run: |
           cd tests/resiliency
           # Pick the outer timeout from the marathon opt-ins so an
