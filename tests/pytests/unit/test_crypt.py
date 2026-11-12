@@ -1246,6 +1246,110 @@ async def test_authenticate_forced_reauth_flips_authenticated_to_false(
         crypt.AsyncAuth.creds_map.pop(credskey, None)
 
 
+async def test_authenticate_during_done_callback_gap_does_not_respawn_sign_in(
+    minion_root, io_loop
+):
+    """
+    Regression test for the ``.done()``-gap race in the spawn guard.
+
+    Asyncio schedules a task's done-callbacks via ``loop.call_soon``,
+    not synchronously when the task finishes.  There is a real window
+    where ``_sign_in_task.done() is True`` but ``_on_sign_in_done``
+    has not run yet (it is queued on the loop).  If a fresh
+    ``authenticate()`` call enters that window under a guard of
+    ``if self._sign_in_task is None or self._sign_in_task.done():``,
+    it spawns a *second* sign-in task while the first's done-callback
+    is still queued.  The queued callback then observes
+    ``self._sign_in_task is not task`` and short-circuits without
+    fanning out -- the original waiters are resolved only by the
+    redundant second sign-in.  One wasted master roundtrip per caller
+    that arrives in the gap.
+
+    The fix drops ``.done()`` from the guard so a caller in the gap
+    simply joins the first task's waiter set; the first's queued
+    ``_on_sign_in_done`` runs, finds ``self._sign_in_task is task``,
+    and fans out to every waiter (including the late one).  No
+    second sign-in.
+
+    Unfixed: ``sign_in_calls == 2``.  Fixed: ``sign_in_calls == 1``.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    sign_in_calls = 0
+    entered = _asyncio.Event()
+    release = _asyncio.Event()
+    late = {}
+
+    async def mock_sign_in(*args, **kwargs):
+        nonlocal sign_in_calls
+        sign_in_calls += 1
+        entered.set()
+        await release.wait()
+        # Schedule a late ``authenticate()`` to run in the call_soon
+        # gap *after* this task completes (``return`` below) but
+        # *before* ``_on_sign_in_done`` fires -- both are deferred via
+        # ``call_soon``, so a ``call_soon`` scheduled here lands
+        # between them.  Under the buggy ``.done()`` guard, the late
+        # call sees ``_sign_in_task.done() is True`` and spawns a
+        # second sign-in; under the fix it sees
+        # ``_sign_in_task is None`` False (not yet cleared) but
+        # ``.done()`` is not consulted, so it joins the waiter set
+        # and the first's done-callback fans out to it.
+        auth.io_loop.call_soon(lambda: late.update(fut=auth.authenticate()))
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+    try:
+        first = auth.authenticate()
+        await entered.wait()
+        release.set()
+        assert await _asyncio.wait_for(first, timeout=5) is True
+
+        for _ in range(50):
+            await _asyncio.sleep(0)
+            if "fut" in late:
+                break
+        assert "fut" in late, "late authenticate() did not get scheduled"
+        assert await _asyncio.wait_for(late["fut"], timeout=5) is True
+        assert sign_in_calls == 1, (
+            f"expected exactly one sign_in; got {sign_in_calls}. "
+            "A second call indicates the spawn guard is re-entering "
+            "via ``_sign_in_task.done()`` in the call_soon gap."
+        )
+        assert auth.authenticated
+        assert auth._sign_in_task is None
+        assert auth._waiters == set()
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
 async def test_authenticate_cached_creds_fast_path_via_authenticated_property(
     minion_root, io_loop
 ):
