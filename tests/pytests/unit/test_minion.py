@@ -4707,6 +4707,30 @@ def test_minion_manager_destroy_after_closed_io_loop_does_not_raise(
         # -- cancelling a task that never got a single iteration doesn't
         # exercise the "Event loop is closed" hazard being guarded here.
         manager.io_loop.run_until_complete(asyncio.sleep(0.2))
+
+        # Close the event publisher BEFORE closing the loop so its
+        # PubServer drains its subscribers cleanly (each client's
+        # ``_stream_read`` task exits via ``StreamClosedError``).  The
+        # per-subscriber tasks are not in ``_background_tasks``, so
+        # without this they survive loop teardown and later cross a
+        # test boundary -- on CPython 3.14 asyncio then emits
+        # ``Task was destroyed but it is pending!`` from a subsequent
+        # test's caplog, breaking #70748's regression check purely as
+        # a test-cleanup artifact.  See siblings
+        # ``test_minion_manager_spawn_minions_keeps_task_reference``
+        # and ``test_minion_manager_bind_keeps_publisher_task_reference``
+        # for the equivalent drain pattern on tracked tasks.  Cancel
+        # the manager's own background tasks the same way and drain
+        # them before closing the loop.
+        if manager.event_publisher is not None:
+            with contextlib.suppress(Exception):
+                manager.event_publisher.close()
+        for task in list(manager._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            manager.io_loop.run_until_complete(
+                asyncio.gather(*manager._background_tasks, return_exceptions=True)
+            )
         manager.io_loop.close()
 
         manager.destroy()
