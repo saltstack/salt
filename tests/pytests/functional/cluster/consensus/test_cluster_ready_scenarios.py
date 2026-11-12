@@ -31,6 +31,7 @@ Restart
 import asyncio
 import multiprocessing
 
+import tests.pytests.functional.cluster.consensus.test_raft_scenarios as _raft_scenarios_module
 from salt.cluster.consensus.service import RaftService
 from tests.pytests.functional.cluster.consensus.conftest import FakePusher
 from tests.pytests.functional.cluster.consensus.test_raft_scenarios import (
@@ -57,12 +58,26 @@ def _make_cluster_with_ready_tracking(node_ids, cachedir):
     Build a ``ServiceCluster`` where every service has an ``on_ready``
     callback that appends the node-id to a shared ``fired`` list.
 
+    ``on_ready`` must be wired BEFORE ``RaftService.__init__`` returns
+    because ``__init__`` now drives ``apply_entries`` + ``reconcile_membership``
+    on startup (see persisted ``commit_index`` fix in
+    ``salt/cluster/consensus/raft/log.py``).  A node restarting against a
+    cachedir that already has the founding CONFIG committed fires
+    ``_on_ready`` during construction; a callback assigned to ``svc._on_ready``
+    after construction would miss that fan-out.
+
+    To wire the callback at construction time we monkey-patch the
+    ``RaftService`` symbol inside ``test_raft_scenarios`` (the module
+    whose ``ServiceCluster._init_service`` references it) for the
+    duration of ``ServiceCluster.__init__``, injecting an ``on_ready``
+    keyword from a pre-built per-node map.
+
     Returns ``(cluster, fired_list)``.
     """
     fired = []
-    cluster = ServiceCluster(node_ids, cachedir=cachedir)
 
-    for nid, svc in cluster.services.items():
+    callbacks = {}
+    for nid in node_ids:
         nid_capture = nid
 
         def _make_callback(n):
@@ -71,9 +86,21 @@ def _make_cluster_with_ready_tracking(node_ids, cachedir):
 
             return _cb
 
-        svc._on_ready = _make_callback(nid_capture)
-        # Re-wire membership SM on_change so _on_membership_change runs
-        svc._node.membership_sm.on_change = svc._on_membership_change
+        callbacks[nid_capture] = _make_callback(nid_capture)
+
+    original_raft_service = _raft_scenarios_module.RaftService
+
+    class _ReadyTrackingRaftService(original_raft_service):
+        def __init__(self, opts, loop, peer_pushers, voting=True, on_ready=None):
+            if on_ready is None:
+                on_ready = callbacks.get(opts.get("id"))
+            super().__init__(opts, loop, peer_pushers, voting=voting, on_ready=on_ready)
+
+    _raft_scenarios_module.RaftService = _ReadyTrackingRaftService
+    try:
+        cluster = ServiceCluster(node_ids, cachedir=cachedir)
+    finally:
+        _raft_scenarios_module.RaftService = original_raft_service
 
     for svc in cluster.services.values():
         svc._node.become_follower()
@@ -479,33 +506,44 @@ class TestClusterReadyOnRestart:
     """
     Regression tests for the restart-with-persisted-state bootstrap bug.
 
-    Repro in the field: three cluster masters bootstrap cleanly on a
-    fresh cachedir, then are stopped and restarted with the same
-    ``cache/consensus`` / ``cache/raft`` state on disk.  On restart the
-    Raft log is loaded from storage (founding CONFIG at index 0, term
-    N), but ``commit_index`` is not persisted so it comes back at -1
-    and ``MembershipStateMachine`` is empty.  A new leader is elected
-    in term N+1 but — per Raft §5.4.2 — cannot commit the index-0
-    CONFIG by replication count alone because its term is less than
-    the leader's current term.  Nothing new is proposed in steady
-    state so ``commit_index`` stays at -1 forever, ``_on_ready`` never
-    fires, and ``_cluster_is_ready`` returns ``False`` indefinitely.
+    Original repro in the field (now fixed): three cluster masters
+    bootstrap cleanly on a fresh cachedir, then are stopped and
+    restarted with the same ``cache/consensus`` / ``cache/raft`` state
+    on disk.  Pre-fix, the Raft log was loaded from storage (founding
+    CONFIG at index 0, term N) but ``commit_index`` was not persisted
+    so it came back at -1 with an empty ``MembershipStateMachine``.
+    A new leader elected in term N+1 could not commit the index-0
+    CONFIG by replication count alone (Raft §5.4.2 forbids committing
+    a prior-term entry that way), so ``commit_index`` stayed at -1
+    forever, ``_on_ready`` never fired, and ``_cluster_is_ready``
+    returned ``False`` indefinitely.
 
-    The fix: ``Node.become_leader`` appends a NOOP barrier in the new
-    leader's term when the log carries uncommitted prior-term entries.
-    Replicating + committing the NOOP transitively commits every prior
-    entry, including the restored founding CONFIG, which the
-    ``MembershipStateMachine`` then applies, firing ``on_change`` /
-    ``_on_ready`` on every node whose id is in the voter set.
+    The fix (PR #70755, commits ``3e87ddd8bd8`` + backport
+    ``7af42dd28e0``): persist ``commit_index`` + ``last_applied`` in
+    ``state.p`` and replay the committed suffix through
+    ``apply_entries`` + ``reconcile_membership`` during
+    ``RaftService.__init__``.  On restart the membership SM is
+    repopulated and ``_on_membership_change`` — hence ``_on_ready`` —
+    fires from inside the constructor for every node whose id is in
+    the restored voter set, without needing a NOOP barrier commit.
+
+    The companion ``Node.become_leader`` NOOP-barrier fix is still
+    needed (and exercised by
+    ``test_noop_barrier_appended_on_become_leader_with_prior_term_log``)
+    as a defence-in-depth path for a master whose ``state.p`` predates
+    the persistence change — ``_seed_membership_from_log`` falls back
+    to the latest on-disk CONFIG and the barrier guarantees that any
+    late replay commits transitively.
     """
 
     def test_cluster_ready_fires_on_restart_from_persisted_log(self, tmp_path):
         """
-        Bootstrap → stop → restart with the same cachedir.  Within
-        a bounded number of ticks, every founding node fires
-        ``on_ready`` again; ``commit_index`` advances past the
-        founding CONFIG; ``MembershipStateMachine`` applies the
-        restored voter set.
+        Bootstrap → stop → restart with the same cachedir.  The
+        persisted ``commit_index`` + ``last_applied`` recorded in
+        Phase 1 drive ``apply_entries`` inside ``RaftService.__init__``
+        in Phase 2, so ``_on_ready`` fires on every founding node from
+        inside the constructor; ``MembershipStateMachine`` is already
+        populated by the time ``__init__`` returns.
         """
         cachedir = str(tmp_path)
         node_ids = ["m1", "m2", "m3"]
@@ -536,22 +574,36 @@ class TestClusterReadyOnRestart:
         cluster2, fired2 = _make_cluster_with_ready_tracking(node_ids, cachedir)
 
         # Immediately post-construction, each node has loaded the log
-        # from storage but ``commit_index`` is not persisted so it
-        # resets to -1 and the membership SM is empty.
+        # from storage AND restored ``commit_index`` / ``last_applied``
+        # from ``state.p``; ``apply_entries`` ran inside
+        # ``RaftService.__init__`` and repopulated the membership SM.
         for nid, svc in cluster2.services.items():
             assert len(svc._node.log.entries) >= 1
-            assert svc._node.log.commit_index == -1
-            assert svc._node.membership_sm.current_voters() == []
+            assert svc._node.log.commit_index >= 0, (
+                f"{nid!r}: commit_index must be restored from state.p "
+                f"after restart (got {svc._node.log.commit_index})"
+            )
+            assert set(svc._node.membership_sm.current_voters()) == set(node_ids), (
+                f"{nid!r}: MembershipStateMachine must be repopulated by "
+                f"apply_entries during RaftService.__init__ "
+                f"(got {svc._node.membership_sm.current_voters()})"
+            )
 
-        # Pre-restart: no readiness signals have fired yet.
-        assert fired2 == [], (
-            f"on_ready must not fire during RaftService construction; "
-            f"fired2={fired2}"
+        # ``_on_ready`` is wired via the ``RaftService`` constructor
+        # (see ``_make_cluster_with_ready_tracking``) so the replay
+        # driven inside ``__init__`` already fans it out to every node
+        # whose id is in the restored voter set — ``fired2`` is full
+        # before we ever call ``elect()``.
+        assert set(fired2) == set(node_ids), (
+            f"on_ready must fire during RaftService.__init__ on restart "
+            f"from persisted commit_index; fired2={fired2}"
         )
 
-        # Phase 3: drive election + heartbeats.  A bounded loop
-        # mirrors the real-world "within ~10s" expectation from the
-        # field repro.
+        # Phase 3: drive election + heartbeats to confirm the restart
+        # loop reaches a steady state and nothing we did in Phase 2
+        # regresses on further activity.  No new readiness signals
+        # should be emitted (``_on_ready`` is one-shot and already
+        # consumed).
         async def _restart():
             await cluster2.elect()
             for _ in range(60):
@@ -560,21 +612,25 @@ class TestClusterReadyOnRestart:
 
         _run(_restart())
 
-        # With the fix: every founding node fires on_ready; commit
-        # index advances past the founding CONFIG; SM applies the
-        # restored voter set.  Without the fix: fired2 stays empty.
+        # Invariants hold after election + heartbeats, and no node
+        # fired ``_on_ready`` twice.
         assert set(fired2) == set(node_ids), (
-            f"RESTART REGRESSION: on_ready must fire on every "
-            f"founding node after restart from persisted state; "
-            f"fired={fired2}"
+            f"on_ready must remain fired on every founding node after "
+            f"restart from persisted state; fired={fired2}"
         )
+        for nid in node_ids:
+            assert fired2.count(nid) == 1, (
+                f"{nid!r}: on_ready must fire exactly once across restart "
+                f"(got {fired2.count(nid)}); fired={fired2}"
+            )
         for nid, svc in cluster2.services.items():
             assert svc._node.log.commit_index >= 0, (
-                f"{nid!r}: commit_index must advance past founding CONFIG "
-                f"after restart (got {svc._node.log.commit_index})"
+                f"{nid!r}: commit_index must remain committed past the "
+                f"founding CONFIG after restart "
+                f"(got {svc._node.log.commit_index})"
             )
             assert set(svc._node.membership_sm.current_voters()) == set(node_ids), (
-                f"{nid!r}: MembershipStateMachine must reapply restored "
+                f"{nid!r}: MembershipStateMachine must reflect restored "
                 f"voter set (got {svc._node.membership_sm.current_voters()})"
             )
 
