@@ -385,7 +385,7 @@ psutil==7.2.2
     #   pytest-system-statistics
 py-cpuinfo2==10.1.1
     # via pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/pkg/py3.12/darwin.lock
     #   -r requirements/base.txt

@@ -79,7 +79,7 @@ xxhash>=3.7.0; python_version >= '3.10'
 packaging>=26.3
 psutil<6.0.0; python_version <= '3.9'
 psutil>=7.2.2; python_version >= '3.10'
-pyasn1>=0.6.4
+pyasn1>=0.6.5
 pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; 3008.x still

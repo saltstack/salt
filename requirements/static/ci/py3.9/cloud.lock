@@ -553,7 +553,7 @@ py-cpuinfo==9.0.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
