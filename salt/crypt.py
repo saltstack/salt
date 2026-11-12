@@ -1238,10 +1238,28 @@ class AsyncAuth:
         self._waiters.add(future)
         future.add_done_callback(self._on_waiter_done)
 
-        if self._sign_in_task is None or self._sign_in_task.done():
+        if self._sign_in_task is None:
+            # Spawn only on ``_sign_in_task is None`` -- intentionally
+            # *not* ``or self._sign_in_task.done()``.  Asyncio schedules
+            # a task's done-callbacks via ``loop.call_soon``, not
+            # synchronously when the task finishes, so there is a real
+            # window where ``_sign_in_task.done()`` is True but
+            # ``_on_sign_in_done`` has not run yet.  A new caller
+            # entering that window under a ``.done()``-based guard
+            # would spawn a *second* sign-in task while the first's
+            # done-callback is still queued; the queued callback would
+            # then observe ``self._sign_in_task is not task`` and
+            # short-circuit without fanning out, leaving the old
+            # waiters to be resolved only by the redundant second
+            # sign-in -- an unnecessary master roundtrip per concurrent
+            # caller.  ``_sign_in_task`` is cleared to ``None`` on all
+            # teardown paths (``_on_sign_in_done`` on normal completion,
+            # ``_on_waiter_done`` on last-waiter cancel), so ``is None``
+            # alone is the correct "can spawn" predicate.
+            #
             # A forced re-auth (for example after a caller hits
             # ``AuthenticationError`` because the master rotated its
-            # key) enters this branch with ``_last_result`` still
+            # key) also enters this branch with ``_last_result`` still
             # holding the previous ``(True,)``.  Clear it before
             # spawning so ``authenticated`` flips to False for the
             # duration of the re-auth -- otherwise other callers
