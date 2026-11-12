@@ -2399,7 +2399,7 @@ def nm_managed():
     return (
         bool(salt.utils.path.which("nmcli"))
         and os.path.isdir("/run/NetworkManager")
-        and not (salt.utils.path.which("ifup") and salt.utils.path.which("ifdown"))
+        and not (salt.utils.path.which("ifup") or salt.utils.path.which("ifdown"))
     )
 
 

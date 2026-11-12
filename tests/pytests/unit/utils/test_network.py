@@ -1660,6 +1660,21 @@ def test_nm_managed_detects_networkmanager_without_network_scripts():
             assert network.nm_managed() is False
 
 
+@pytest.mark.parametrize("present", ["ifup", "ifdown"])
+def test_nm_managed_false_when_only_one_legacy_tool_present(present):
+    """
+    Either ifup or ifdown alone means the legacy tooling is (partly) there, so
+    rh_ip keeps the ip provider and nm_managed must be False.
+    """
+
+    def _which(cmd):
+        return f"/usr/sbin/{cmd}" if cmd in ("nmcli", present) else None
+
+    with patch("salt.utils.path.which", MagicMock(side_effect=_which)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
+
+
 def test_neighs_flatten_maps_mac_to_ip():
     """
     neighs_flatten collapses neighbour entry dicts into the legacy
