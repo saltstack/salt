@@ -42,6 +42,7 @@ import salt.utils.event
 import salt.utils.metrics
 import salt.utils.minions
 import salt.utils.platform
+import salt.utils.process
 import salt.utils.stringutils
 import salt.utils.tracing
 from salt.exceptions import SaltDeserializationError
@@ -1486,7 +1487,9 @@ class PoolRoutingChannel:
         """
         Close all resources: pool clients, pool servers, event manager, and external transport.
         """
-        log.info("Closing PoolRoutingChannel")
+        salt.utils.process.signal_safe_log(
+            log, logging.INFO, "Closing PoolRoutingChannel"
+        )
 
         # Close all pool clients (RequestClients to pool RequestServers)
         # PATCH: iterate the per-pool list rather than treating each

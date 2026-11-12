@@ -803,7 +803,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         """
         if self._closing:
             return
-        log.info("MWorkerQueue under PID %s is closing", os.getpid())
+        salt.utils.process.signal_safe_log(
+            log, logging.INFO, "MWorkerQueue under PID %s is closing", os.getpid()
+        )
         self._closing = True
         self._event.set()
         if getattr(self, "_monitor", None) is not None:
@@ -1007,7 +1009,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         elif signum == signal.SIGTERM:
             msg += "SIGTERM"
         msg += ". Exiting"
-        log.debug(msg)
+        salt.utils.process.signal_safe_log(log, logging.DEBUG, msg)
         self.close()
         sys.exit(salt.defaults.exitcodes.EX_OK)
 
