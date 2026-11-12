@@ -37,7 +37,7 @@ services:
     volumes:
       - ../../../../salt:/app/salt
       - ../../../monitoring/master.conf:/etc/salt/master:ro
-      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - ./minion.conf:/etc/salt/minion:ro
       - ../../../monitoring/srv/salt:/srv/salt:ro
       - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
       - /etc/localtime:/etc/localtime:ro
@@ -53,7 +53,7 @@ services:
     entrypoint: ["/usr/local/bin/salt-minion"]
     volumes:
       - ../../../../salt:/app/salt
-      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - ./minion.conf:/etc/salt/minion:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       - rs-single-salt-master
@@ -65,7 +65,7 @@ services:
     entrypoint: ["/usr/local/bin/salt-minion"]
     volumes:
       - ../../../../salt:/app/salt
-      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - ./minion.conf:/etc/salt/minion:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       - rs-single-salt-master
@@ -77,7 +77,7 @@ services:
     entrypoint: ["/usr/local/bin/salt-minion"]
     volumes:
       - ../../../../salt:/app/salt
-      - ../../../monitoring/minion.conf:/etc/salt/minion:ro
+      - ./minion.conf:/etc/salt/minion:ro
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       - rs-single-salt-master
