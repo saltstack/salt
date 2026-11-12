@@ -250,6 +250,9 @@ salt/utils/channel.py:
   - pytests.unit.utils.test_channel
   - pytests.unit.channel.test_server
 
+salt/(channel/server|transport/ws)\.py:
+  - pytests.functional.transport.ws.test_request_server
+
 salt/utils/minions.py:
   - pytests.integration.cli.test_matcher
 

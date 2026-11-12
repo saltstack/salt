@@ -5,6 +5,7 @@ Helpers/utils for working with tornado asynchronous stuff
 import asyncio
 import contextlib
 import gc
+import inspect
 import logging
 import os
 import sys
@@ -18,6 +19,13 @@ import salt.utils.resource_warnings
 import salt.utils.versions
 
 log = logging.getLogger(__name__)
+
+
+async def resolve_result(result):
+    """Await an awaitable result, or return a synchronous value unchanged."""
+    if inspect.isawaitable(result):
+        return await result
+    return result
 
 
 def aioloop(io_loop, warn=False):
