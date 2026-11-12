@@ -2256,6 +2256,21 @@ class MasterPubServerChannel:
                     [p.pull_host for p in self.pushers],
                 )
                 return
+        # Sender-side handshake gate: skip peers that have not yet
+        # completed the cluster discover/join handshake.  See
+        # :func:`salt.cache._cluster_replicator.filter_joined_pushers`
+        # for the catch-up guarantee that makes this safe.
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        targets, _skipped = _crep.filter_joined_pushers(
+            targets,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context=f"delegate-cache-write({bank}/{label})",
+        )
         for pusher in targets:
             try:
                 await pusher.publish(event)
@@ -2335,6 +2350,20 @@ class MasterPubServerChannel:
                     [p.pull_host for p in self.pushers],
                 )
                 return
+        # Sender-side handshake gate: peers that have not completed
+        # the cluster handshake cannot decrypt cluster_aes payloads.
+        # See :func:`salt.cache._cluster_replicator.filter_joined_pushers`.
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        targets, _skipped = _crep.filter_joined_pushers(
+            targets,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context=f"delegate-resource-register-write({minion_id})",
+        )
         for pusher in targets:
             try:
                 await pusher.publish(event)
@@ -4149,13 +4178,27 @@ class MasterPubServerChannel:
                 # flag set so the peer-side ``Cache.store`` does
                 # NOT re-broadcast.
                 try:
-                    crypticle = salt.crypt.Crypticle(
-                        self.opts,
-                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-                    )
+                    cluster_aes_secret = salt.master.SMaster.secrets["cluster_aes"][
+                        "secret"
+                    ].value
+                    crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_secret)
                     payload = crypticle.loads(data)
                 except Exception:  # pylint: disable=broad-except
-                    log.exception("Failed to decrypt delegate-cache-write")
+                    # Correlatable, rate-limited log.  The sender-side
+                    # gate in ``filter_joined_pushers`` should prevent
+                    # this for the pre-handshake class of failures, but
+                    # we keep the loud log for the bootstrap-race +
+                    # secret-rotation residuals so operators have a
+                    # signal.
+                    import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+                    _crep.log_decrypt_failure(
+                        tag,
+                        self.opts,
+                        locals().get("cluster_aes_secret"),
+                        source_peer=None,
+                        extra={"handler": "delegate-cache-write"},
+                    )
                     return
                 loop = asyncio.get_event_loop()
                 loop.run_in_executor(None, self._handle_delegate_cache_write, payload)
@@ -4175,13 +4218,21 @@ class MasterPubServerChannel:
                 # in submission order.  Different minions each get
                 # their own executor and run in parallel.
                 try:
-                    crypticle = salt.crypt.Crypticle(
-                        self.opts,
-                        salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-                    )
+                    cluster_aes_secret = salt.master.SMaster.secrets["cluster_aes"][
+                        "secret"
+                    ].value
+                    crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_secret)
                     payload = crypticle.loads(data)
                 except Exception:  # pylint: disable=broad-except
-                    log.exception("Failed to decrypt delegate-resource-register-write")
+                    import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+                    _crep.log_decrypt_failure(
+                        tag,
+                        self.opts,
+                        locals().get("cluster_aes_secret"),
+                        source_peer=None,
+                        extra={"handler": "delegate-resource-register-write"},
+                    )
                     return
                 # Import the submodule WITHOUT binding the top-level
                 # ``salt`` name as a function-scope local.  A plain

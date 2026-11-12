@@ -12,13 +12,305 @@ or a Cache object.  ``Cache.store`` and ``Cache.store_many`` emit via
 
 import atexit
 import concurrent.futures
+import hashlib
 import logging
 import os
 import threading
+import time
 
 import salt.cache
 
 log = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Sender-side handshake gate
+# ---------------------------------------------------------------------------
+#
+# A cluster_aes-encrypted ``cluster/peer/delegate-cache-write`` /
+# ``delegate-resource-register-write`` event must only be fanned out to
+# peers that have completed the cluster discover/join handshake.  A peer
+# that is still running on its initial random ``cluster_aes`` (join-reply
+# not yet installed) cannot decrypt the event; the publish daemon on
+# that peer logs a loud ``Failed to decrypt`` exception and drops the
+# payload.  The write is lost on that peer until the next write to the
+# same (bank, key) lands, or until state-sync primitives (initiated by
+# join-reply) catch the peer up.
+#
+# Catch-up guarantee: a peer that completes its handshake AFTER this
+# gate decides to skip it still ends up consistent because
+#
+#   * the join-reply's ``state_sync_cache_banks`` enumerates every
+#     replicate-mode bank and streams the current contents in
+#     ``state-sync-chunk`` events (see
+#     :mod:`salt.cluster.state_sync` and the ``send_state_sync_chunks``
+#     call in the join-reply handler), AND
+#   * subsequent writes on the originator will see the peer as joined
+#     and fan out normally.
+#
+# So the gate never silently drops data on the floor -- it just defers
+# the write to the peer's catch-up stream, which is the design-intended
+# path for pre-handshake writes.
+#
+# API shape: the publish daemon holds the authoritative ``_discover_replies``
+# + ``peer_keys`` sets; it passes them into :func:`filter_joined_pushers`
+# which returns ``(kept, skipped)`` and emits a warning when a peer is
+# skipped.  The gate can be disabled globally via
+# ``opts["cluster_cache_replicate_require_joined"] = False``.
+_SKIP_LOG_INTERVAL = 5.0  # seconds; coalesce skip-warnings per peer
+_SKIP_LOG_LAST = {}  # (host, context) -> (last_ts, suppressed_count)
+_SKIP_LOG_LOCK = threading.Lock()
+
+
+def peer_is_joined(discover_replies, peer_keys, peer_host):
+    """
+    Return ``True`` if ``peer_host`` has completed the cluster
+    discover/join handshake far enough to decrypt cluster_aes
+    events.
+
+    The handshake has two observable signals:
+
+    * ``discover_replies`` -- this master has received a signed
+      ``cluster/peer/discover-reply`` from the peer.  That reply is
+      sent only after the peer has installed cluster.pub locally,
+      which in turn happens after the peer processed a ``join-reply``
+      (which carried ``cluster_aes``).  A peer in this set is
+      therefore guaranteed to have our current ``cluster_aes``.
+
+    * ``peer_keys`` -- this master has received the peer's session AES
+      key via the ``cluster/peer/<master_id>`` AES-key broadcast.
+      That broadcast is independent of the discover protocol but it
+      ALSO only fires after the peer has installed cluster_aes
+      (``send_aes_key_event`` is called from the ``cluster/peer``
+      handler which itself runs after key installation).  So
+      ``peer_keys`` membership is a slightly later-but-equivalent
+      signal; we accept it to tolerate restart scenarios where
+      ``discover_replies`` is empty but the peer is fully joined.
+
+    The host match is lenient: ``cluster_peers`` entries may carry a
+    ``:port`` suffix while the handshake handlers key on the bare
+    host, so we match either form.
+
+    :param discover_replies: Iterable/set of peer ids that have
+                             sent us ``discover-reply``.
+    :param peer_keys:        Dict of ``peer_id -> session_key`` from
+                             ``MasterPubServerChannel.peer_keys``.
+    :param peer_host:        The peer's ``pull_host`` (or
+                             ``cluster_peers`` entry).
+    :rtype:                  bool
+    """
+    if not peer_host:
+        return False
+    replies = discover_replies or set()
+    keys = peer_keys or {}
+    bare = peer_host.rsplit(":", 1)[0] if ":" in peer_host else peer_host
+    if peer_host in replies or bare in replies:
+        return True
+    if peer_host in keys or bare in keys:
+        return True
+    return False
+
+
+def _log_skip(peer_host, context, reason):
+    """
+    Emit a WARN for a skipped fan-out, coalesced per ``(host, context)``.
+
+    A joiner that stays un-joined for many seconds will otherwise
+    flood the log on every write on a busy master.  The first skip
+    for a given ``(host, context)`` logs immediately; subsequent
+    skips within ``_SKIP_LOG_INTERVAL`` increment a suppressed-count
+    that is flushed on the next log past the interval.
+    """
+    now = time.monotonic()
+    emit = False
+    suppressed = 0
+    with _SKIP_LOG_LOCK:
+        last_ts, prev_suppressed = _SKIP_LOG_LAST.get((peer_host, context), (0.0, 0))
+        if now - last_ts >= _SKIP_LOG_INTERVAL:
+            emit = True
+            suppressed = prev_suppressed
+            _SKIP_LOG_LAST[(peer_host, context)] = (now, 0)
+        else:
+            _SKIP_LOG_LAST[(peer_host, context)] = (last_ts, prev_suppressed + 1)
+    if emit:
+        if suppressed:
+            log.warning(
+                "cluster-cache-replication: skipping %s fan-out to %s "
+                "(%s); %d similar skips suppressed in last %ds",
+                context,
+                peer_host,
+                reason,
+                suppressed,
+                int(_SKIP_LOG_INTERVAL),
+            )
+        else:
+            log.warning(
+                "cluster-cache-replication: skipping %s fan-out to %s (%s)",
+                context,
+                peer_host,
+                reason,
+            )
+
+
+def filter_joined_pushers(pushers, discover_replies, peer_keys, opts, context=None):
+    """
+    Filter ``pushers`` down to peers that have completed the cluster
+    handshake.
+
+    This is the single seam the publish daemon consults before
+    emitting a cluster_aes-encrypted replication event.  Peers that
+    have not sent a ``discover-reply`` and whose session key has not
+    been installed cannot decrypt the event and would log a loud
+    ``Failed to decrypt`` on receive; skipping them here converts the
+    silent-loss failure mode into a WARN on the sender side and lets
+    the join-time state-sync stream catch them up.
+
+    Catch-up guarantee: a peer that joined after this check executed
+    but before the fan-out arrived will NOT receive this specific
+    write; they catch up via the state-sync primitives streamed in
+    the ``join-reply`` handler (see
+    :mod:`salt.cluster.state_sync`) and via subsequent writes that
+    see the peer as joined.  No write is silently dropped.
+
+    :param pushers:          Iterable of ``Pusher`` objects (each
+                             exposes ``pull_host``).
+    :param discover_replies: Set of peer ids that have sent us
+                             ``discover-reply``.
+    :param peer_keys:        Dict of ``peer_id -> session_key``.
+    :param opts:             Master opts dict.  Consulted for the
+                             ``cluster_cache_replicate_require_joined``
+                             master switch -- if False, the gate is
+                             inactive and every pusher is kept.
+    :param context:          Short human-readable label (e.g.
+                             ``"delegate-cache-write"``) used only in
+                             the skip-log; may be ``None``.
+    :returns:                ``(kept, skipped)`` -- two lists of
+                             pushers.  Callers that want pre-gate
+                             semantics can ignore ``skipped``; today
+                             we just warn.
+    """
+    pushers_list = list(pushers or ())
+    if opts is not None and opts.get("cluster_cache_replicate_require_joined") is False:
+        return pushers_list, []
+    if not pushers_list:
+        return pushers_list, []
+    kept = []
+    skipped = []
+    for pusher in pushers_list:
+        host = getattr(pusher, "pull_host", None)
+        if peer_is_joined(discover_replies, peer_keys, host):
+            kept.append(pusher)
+        else:
+            skipped.append(pusher)
+            _log_skip(
+                host, context or "cache-replicate", "peer has not completed handshake"
+            )
+    return kept, skipped
+
+
+def secret_fingerprint(secret):
+    """
+    Return the first 8 hex chars of ``sha256(secret)`` for log
+    correlation.
+
+    Never logs the full secret; the fingerprint is useful for
+    matching an operator's ``cluster_aes converge`` events against a
+    ``Failed to decrypt`` entry in the log stream.  Returns
+    ``"<unavailable>"`` if ``secret`` cannot be hashed (missing or
+    wrong type).
+    """
+    if secret is None:
+        return "<unavailable>"
+    try:
+        if isinstance(secret, str):
+            secret = secret.encode()
+        return hashlib.sha256(secret).hexdigest()[:8]
+    except Exception:  # pylint: disable=broad-except
+        return "<unavailable>"
+
+
+# ---------------------------------------------------------------------------
+# Decrypt-failure log rate-limiting
+# ---------------------------------------------------------------------------
+#
+# Receivers that cannot decrypt a cluster_aes event today log a full
+# stack trace via ``log.exception(...)``.  Under a bootstrap race the
+# originator may keep firing writes faster than the receiver's
+# handshake can complete; a naive log.exception per arrival explodes
+# the log.  ``log_decrypt_failure`` keeps the stack trace on the
+# FIRST failure for each ``(tag, peer)`` tuple within a window and
+# coalesces subsequent failures into a counter flushed on the next
+# log past the window.
+_DECRYPT_LOG_INTERVAL = 5.0  # seconds
+_DECRYPT_LOG_LAST = {}  # (tag, peer) -> (last_ts, suppressed_count)
+_DECRYPT_LOG_LOCK = threading.Lock()
+
+
+def log_decrypt_failure(tag, opts, secret, source_peer=None, extra=None):
+    """
+    Correlatable, rate-limited log for a cluster_aes decrypt failure.
+
+    Called from the receiver side (``handle_pool_publish``) when
+    ``Crypticle.loads()`` raises on an incoming cluster event.
+    Captures the cluster identity, a short fingerprint of the local
+    cluster_aes (never the key itself), the event tag, and whatever
+    source-peer identifier the caller can supply (the ciphertext is
+    opaque so source_peer may be ``None`` on wire arrivals).
+
+    The first failure for a ``(tag, source_peer)`` tuple in each
+    window logs with a full stack trace (``log.exception``) so the
+    operator still gets the diagnostic signal.  Subsequent failures
+    in the same window increment a suppressed-count flushed when the
+    window expires.
+
+    :param tag:         Event tag string (e.g.
+                        ``cluster/peer/delegate-cache-write``).
+    :param opts:        Master opts dict; ``cluster_id`` is logged.
+    :param secret:      The local cluster_aes value that failed to
+                        decrypt the event (passed in so the caller can
+                        pass a bytes value fetched under
+                        ``SMaster.secrets[...]`` without re-fetching
+                        here).
+    :param source_peer: Optional source-peer identifier.  ``None``
+                        is acceptable; cluster_aes events on the
+                        pool channel don't carry a sender id in
+                        the ciphertext envelope.
+    :param extra:       Optional dict of additional key/value pairs
+                        to include in the log (e.g. write_kind,
+                        bank name on decrypted failures).  Each
+                        entry is formatted ``k=v``.
+    """
+    now = time.monotonic()
+    key = (tag, source_peer)
+    emit_exc = False
+    suppressed = 0
+    with _DECRYPT_LOG_LOCK:
+        last_ts, prev_suppressed = _DECRYPT_LOG_LAST.get(key, (0.0, 0))
+        if now - last_ts >= _DECRYPT_LOG_INTERVAL:
+            emit_exc = True
+            suppressed = prev_suppressed
+            _DECRYPT_LOG_LAST[key] = (now, 0)
+        else:
+            _DECRYPT_LOG_LAST[key] = (last_ts, prev_suppressed + 1)
+    if not emit_exc:
+        return
+    cluster_id = (opts or {}).get("cluster_id") if isinstance(opts, dict) else None
+    fingerprint = secret_fingerprint(secret)
+    parts = [
+        f"tag={tag}",
+        f"cluster_id={cluster_id!r}",
+        f"cluster_aes_fp={fingerprint}",
+        f"source_peer={source_peer!r}",
+    ]
+    if extra:
+        for k, v in extra.items():
+            parts.append(f"{k}={v!r}")
+    if suppressed:
+        parts.append(f"suppressed_similar={suppressed}")
+    log.exception(
+        "cluster-decrypt-failed: %s -- handshake incomplete or cluster_aes mismatch",
+        " ".join(parts),
+    )
 
 
 # Per-process shared Cache for the peer-apply hot path.

@@ -262,6 +262,20 @@ VALID_OPTS = immutabletypes.freeze(
         # grain-shaped records and keeps catch-up latency bounded when
         # a peer is behind.
         "cluster_cache_replicate_batch_size": int,
+        # Sender-side handshake gate on cross-master cache replication.
+        # When True (the default) the publish daemon consults its
+        # ``_discover_replies`` / ``peer_keys`` state before fanning a
+        # ``delegate-cache-write`` / ``delegate-resource-register-write``
+        # out to a peer; peers that have not completed the cluster
+        # discover/join handshake are skipped (they catch up via the
+        # join-time state-sync stream + subsequent write churn).  Without
+        # this gate a bootstrap-race on slow runners causes the sender
+        # to ship cluster_aes-encrypted events to peers that haven't
+        # installed cluster_aes yet; the receiver's decrypt fails
+        # loudly but the write is lost.  Operators can set this False
+        # to restore the pre-gate "always fan out" behaviour (e.g.
+        # for diagnosis of a stuck handshake).
+        "cluster_cache_replicate_require_joined": bool,
         # Join-time catch-up for replicate-mode cache banks.  When True
         # (the default when ``cluster_cache_replication`` is True) a
         # newly-joining master receives every replicate-mode bank's
@@ -2073,6 +2087,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         # expand or override it.  See ``cluster_cache_replication``.
         "cluster_cache_routing": {},
         "cluster_cache_replicate_batch_size": 1024,
+        "cluster_cache_replicate_require_joined": True,
         # Join-time cache-bank catch-up default -- resolved in
         # ``apply_master_config`` to match ``cluster_cache_replication``.
         "cluster_state_sync_cache_banks": None,
