@@ -6,6 +6,7 @@ expected to return
 import fnmatch
 import logging
 import re
+import time
 
 import salt.cache
 import salt.payload
@@ -32,10 +33,33 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
+# Cache bank holding ``{"ts": <epoch seconds>}`` per minion id, written by the
+# master's request server when ``presence_id_tracking`` is enabled.
+PRESENCE_BANK = "presence"
+
+
+def presence_is_fresh(record, ttl, now=None):
+    """
+    Return ``True`` if ``record`` is a presence record that was written less
+    than ``ttl`` seconds before ``now``.
+
+    Anything that is not a dict with a numeric ``ts`` is treated as stale, so a
+    corrupt or foreign cache entry can never make a minion appear present.
+    """
+    if not isinstance(record, dict):
+        return False
+    ts = record.get("ts")
+    if isinstance(ts, bool) or not isinstance(ts, (int, float)):
+        return False
+    if now is None:
+        now = time.time()
+    return now - ts < ttl
+
+
 TARGET_REX = re.compile(
     r"""(?x)
         (
-            (?P<engine>G|P|I|J|L|N|S|E|R|T|M)  # Possible target engines
+            (?P<engine>G|P|I|J|L|N|S|E|R|T|M|C)  # Possible target engines
             (?P<delimiter>(?<=G|P|I|J).)?        # Optional delimiter (G/P/I/J only)
         @)?                                      # Engine+delimiter separated by '@', optional
         (?P<pattern>.+)$"""  # The pattern passed to the target engine
@@ -855,6 +879,7 @@ class CkMinions:
                 "R": self._all_minions,
                 "T": self._check_resource_minions,
                 "M": self._check_managing_minion_minions,
+                "C": self._check_cluster_minions,
             }
             if pillar_exact:
                 ref["I"] = self._check_pillar_exact_minions
@@ -1002,6 +1027,56 @@ class CkMinions:
     def connected_ids(self, subset=None, show_ip=False):
         """
         Return a set of all connected minion ids, optionally within a subset
+
+        Minions are detected by matching the addresses connected to the publish
+        port against the addresses in the minions' cached grains. If
+        ``presence_id_tracking`` is enabled, accepted minions that
+        authenticated to the master within the last ``presence_id_ttl``
+        seconds are included as well. That covers minions whose connecting
+        address is not in their grains, such as NAT'd or internet-facing
+        minions. See issue #58592.
+        """
+        minions = self._connected_ids_by_address(subset=subset, show_ip=show_ip)
+        if self.opts.get("presence_id_tracking", False):
+            found = {minion[0] for minion in minions} if show_ip else minions
+            for id_ in self._recently_seen_ids(subset):
+                if id_ in found:
+                    continue
+                minions.add((id_, None) if show_ip else id_)
+        return minions
+
+    def _recently_seen_ids(self, subset=None):
+        """
+        Return the accepted minion ids with a fresh record in the presence
+        cache bank, optionally within a subset.
+        """
+        ttl = self.opts.get("presence_id_ttl", 600)
+        # Don't use ``self.cache``: it may be a MemCache which would serve
+        # stale presence records.
+        cache = salt.cache.Cache(self.opts)
+        try:
+            candidates = set(cache.list(PRESENCE_BANK) or [])
+        except SaltCacheError as exc:
+            log.warning("Unable to list minion presence records: %s", exc)
+            return set()
+        candidates &= self._pki_minions()
+        if subset:
+            candidates &= set(subset)
+        now = time.time()
+        recent = set()
+        for id_ in candidates:
+            try:
+                record = cache.fetch(PRESENCE_BANK, id_)
+            except SaltCacheError:
+                continue
+            if presence_is_fresh(record, ttl, now):
+                recent.add(id_)
+        return recent
+
+    def _connected_ids_by_address(self, subset=None, show_ip=False):
+        """
+        Return the minion ids (or ``(id, ip)`` tuples if ``show_ip``) whose
+        cached grains contain an address connected to the publish port.
         """
         minions = set()
         if self.opts.get("minion_data_cache", False):
@@ -1182,6 +1257,48 @@ class CkMinions:
         matches ``expr``.
         """
         return self._check_glob_minions(expr, greedy, minions=minions)
+
+    def _local_cluster_id(self):
+        """
+        Return this master's effective local ``cluster_id`` for
+        ``C@`` compound matching.
+
+        One ``opts["cluster_id"]`` serves both the 3008.x master
+        cluster and the topology graph; a solo topology master,
+        a Raft master cluster, and a Raft cluster participating
+        in topology all set the same opt.  Minion harness tests
+        occasionally set ``master_cluster_id`` instead; honour it
+        as a fallback.
+        """
+        return self.opts.get("cluster_id") or self.opts.get("master_cluster_id") or ""
+
+    def _check_cluster_minions(self, expr, greedy, minions=None):
+        """
+        Return the minion set for a ``C@`` cluster-id expression.
+
+        ``expr`` is a comma-separated list of ``cluster_id`` values
+        (``east`` or ``east,west``).  Semantics mirror
+        :mod:`salt.matchers.cluster_match`: when this master's
+        ``cluster_id`` (resolved via :meth:`_local_cluster_id`,
+        which also consults ``topology.conf``) is in the target
+        set, every local accepted minion is in-scope; when it is
+        not, the clause contributes an empty set and gates out
+        anything ``and``-combined with it.
+
+        The actual peer-link fan-out for non-local ``C@`` clauses is
+        handled later by :func:`salt.topology.router.on_publish`;
+        this check only decides whether the origin cluster itself
+        has local minions to publish to.
+        """
+        local = self._local_cluster_id()
+        if not local:
+            return {"minions": [], "missing": []}
+        if not isinstance(expr, str):
+            return {"minions": [], "missing": []}
+        wanted = {token.strip() for token in expr.split(",") if token.strip()}
+        if local in wanted:
+            return self._all_minions(minions=minions)
+        return {"minions": [], "missing": []}
 
     def check_minions(
         self,

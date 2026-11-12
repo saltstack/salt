@@ -37,7 +37,7 @@ def _run(coro):
 
 def _make_opts(node_id, peers, cachedir):
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cluster_id": "ready-test-cluster",
         "cluster_peers": peers,
@@ -273,7 +273,10 @@ class TestClusterReadyIntegration:
         orig_secrets = salt.master.SMaster.secrets.copy()
         try:
             salt.master.SMaster.secrets["cluster_ready"] = {"event": event}
-            opts = {"cluster_id": "test"}
+            # ``cluster_peers`` is required to exercise the Raft
+            # readiness gate; a solo topology master would
+            # short-circuit True before touching ``cluster_ready``.
+            opts = {"cluster_id": "test", "cluster_peers": ["127.0.0.2"]}
             assert not _cluster_is_ready(opts)
             event.set()
             assert _cluster_is_ready(opts)

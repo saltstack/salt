@@ -3,10 +3,13 @@
 import asyncio
 import uuid
 
+import pytest
+
+import salt.cluster.consensus.peer as peer_module
 from salt.cluster.consensus import rpc
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import ManualPeer, ManualTimeoutScheduler, Node
-from tests.support.mock import AsyncMock, MagicMock
+from tests.support.mock import AsyncMock, MagicMock, patch
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -514,3 +517,95 @@ def test_dispatcher_publish_exception_is_caught():
     }
     # Must not raise — exception is caught and logged
     _run(dispatcher.dispatch(rpc.REQUEST_VOTE, "2", "r", payload))
+
+
+# ---------------------------------------------------------------------------
+# _publish transport lifetime
+# ---------------------------------------------------------------------------
+
+
+class _FakePublisherPusher:
+    """
+    Stand-in for a real ``PublishServer``.
+
+    ``_publish`` classifies pushers by ``type(pusher).__module__``, so we need
+    to claim the same module.
+    """
+
+    __module__ = "salt.transport.tcp"
+
+    def __init__(self):
+        self.pull_host = "peer-b"
+        self.pull_port = 4520
+        self.pull_path = None
+
+
+def _patch_publisher(connect_error=None):
+    """
+    Patch ``_TCPPubServerPublisher`` with a recorder.
+
+    Returns ``(patcher, created)`` where ``created`` collects every instance
+    so the test can assert on ``closed`` / ``sent``.
+    """
+    created = []
+
+    class _RecordingClient:
+        def __init__(self, host, port, path=None):
+            self.host = host
+            self.port = port
+            self.path = path
+            self.closed = 0
+            self.sent = []
+            created.append(self)
+
+        async def connect(self):
+            if connect_error is not None:
+                raise connect_error
+
+        async def send(self, raw):
+            self.sent.append(raw)
+
+        def close(self):
+            self.closed += 1
+
+    return patch("salt.transport.tcp._TCPPubServerPublisher", _RecordingClient), created
+
+
+def test_publish_closes_client_when_connect_fails():
+    """
+    Regression test for issue #70561.
+
+    A failed connect must not abandon the half-built publisher.
+    """
+    pusher = _FakePublisherPusher()
+    patcher, created = _patch_publisher(connect_error=OSError("peer unreachable"))
+
+    with patcher:
+        with pytest.raises(OSError, match="peer unreachable"):
+            _run(peer_module._publish(pusher, b"raw-rpc"))
+
+    assert len(created) == 1
+    assert created[0].closed == 1, "the half-built client must be closed"
+    assert (
+        getattr(pusher, "_consensus_async_client", None) is None
+    ), "a client that never connected must not be stashed for reuse"
+
+
+def test_publish_keeps_client_when_connect_succeeds():
+    """
+    Regression test for issue #70561.
+
+    The success path must stash the client and leave it open.
+    """
+    pusher = _FakePublisherPusher()
+    patcher, created = _patch_publisher()
+
+    with patcher:
+        _run(peer_module._publish(pusher, b"raw-rpc"))
+        # A second send must reuse the stashed client rather than build one.
+        _run(peer_module._publish(pusher, b"raw-rpc-2"))
+
+    assert len(created) == 1
+    assert created[0].closed == 0
+    assert created[0].sent == [b"raw-rpc", b"raw-rpc-2"]
+    assert pusher._consensus_async_client is created[0]

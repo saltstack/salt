@@ -6,6 +6,57 @@
 Add release specific details below
 -->
 
+## etcd: new client library
+
+The etcd execution module, state module, `etcd3` cache and
+`salt.utils.etcd_util` now use [etcd3gw](https://pypi.org/project/etcd3gw/)
+instead of `etcd3-py`, which has not had a release since 2019. Configuration
+is unchanged, including `etcd.username`/`etcd.password` and the TLS options.
+etcd3gw needs Python 3.10 or later.
+
+To upgrade, install the new library on each master and minion that talks to
+etcd. Salt no longer uses `etcd3-py`, so it can be removed.
+
+```bash
+salt-pip install etcd3gw
+```
+
+The etcd sdb module (`driver: etcd`), the `etcd` ext_pillar and the `etcd`
+returner, removed in 3008.0, are back for the etcd v3 API. Their 3007
+configuration works unchanged, apart from `etcd.require_v2`, which is no
+longer accepted. Values are msgpack-encoded unless the profile sets
+`etcd.encode_values: False`, which is needed to read values written by other
+tools such as `etcdctl`.
+
+The returner can now also be the master job cache (`master_job_cache: etcd`).
+It stores each minion return as one key, so the layout under
+`etcd.returner_root` differs from 3007, handles binary return data, and
+removes jobs older than `keep_jobs_seconds` when `etcd.ttl` is not set.
+
+This release also changes some etcd behavior:
+
+- Recursive operations (`etcd.rm ... recurse=True`, `etcd.tree`, `etcd.ls`,
+  `etcd.get ... recurse=True` and recursive watches) used a plain prefix, so
+  `/app` also matched `/application` and `/app-old`; a recursive delete of
+  `/app` deleted those keys too. They now cover only the key itself and the
+  keys under `/app/`.
+- Errors talking to etcd (unreachable server, bad credentials, permission
+  denied) used to return `None`, the same as a missing key. They now raise,
+  so `etcd.get` and the other functions fail instead of returning nothing.
+  `None` still means the key does not exist.
+- `etcd.watch` with `timeout=0`, the default, returned `None` at once. It
+  now waits until the key changes.
+- `etcd.username` without `etcd.password`, or only one of `etcd.client_cert`
+  and `etcd.client_key`, raises an error instead of being ignored. A client
+  certificate without `etcd.ca` now uses HTTPS with the system CA bundle
+  instead of plain HTTP.
+- The `etcd.set`, `etcd.rm` and `etcd.directory` states honor `test=True`.
+  `etcd.set` no longer rewrites a key that already has the right value, can
+  create a key when no profile is given, and fails the state when etcd
+  returns an error. `etcd.wait_rm` keeps `recurse` when triggered.
+  `etcd.directory` fails with an explanation, since etcd v3 has no
+  directories.
+
 <!--
 Do not edit the changelog below.
 This is auto generated.

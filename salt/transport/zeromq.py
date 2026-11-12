@@ -880,8 +880,17 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param func message_handler: A function to called to handle incoming payloads as
                                      they are picked up off the wire
         :param IOLoop io_loop: An instance of a Tornado IOLoop, to handle event scheduling
+
+        :keyword bool direct_bind: When True, bind the REP socket directly to
+            ``tcp://interface:ret_port`` instead of connecting to an
+            ``MWorkerQueue``'s DEALER on ``workers.ipc``.  Used when the
+            caller owns the external port in a single process and dispatches
+            inbound requests in-process via ``message_handler`` (e.g.
+            :mod:`salt.topology`), rather than fronting the port with a
+            separate ``MWorkerQueue`` + MWorker pool.
         """
         pool_name = kwargs.get("pool_name")
+        direct_bind = kwargs.get("direct_bind", False)
         # context = zmq.Context(1)
         self.context = zmq.asyncio.Context(1)
         self._socket = self.context.socket(zmq.REP)
@@ -889,22 +898,27 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         self._socket.setsockopt(zmq.LINGER, 1)
         self._start_zmq_monitor()
 
-        # Use get_worker_uri() for consistent URI construction
-        self.w_uri = self.get_worker_uri(pool_name=pool_name)
-        log.info("Worker binding to socket %s", self.w_uri)
-        self._socket.connect(self.w_uri)
+        if direct_bind:
+            self.uri = "tcp://{interface}:{ret_port}".format(**self.opts)
+            log.info("RequestServer direct-bind listening on %s", self.uri)
+            self._socket.bind(self.uri)
+        else:
+            # Use get_worker_uri() for consistent URI construction
+            self.w_uri = self.get_worker_uri(pool_name=pool_name)
+            log.info("Worker binding to socket %s", self.w_uri)
+            self._socket.connect(self.w_uri)
 
-        # Set permissions for IPC sockets
-        if self.opts.get("ipc_mode", "") != "tcp":
-            pool_name = self.opts.get("pool_name", "")
-            if pool_name:
-                ipc_path = os.path.join(
-                    self.opts["sock_dir"], f"workers-{pool_name}.ipc"
-                )
-            else:
-                ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
-            if os.path.isfile(ipc_path):
-                os.chmod(ipc_path, 0o600)
+            # Set permissions for IPC sockets
+            if self.opts.get("ipc_mode", "") != "tcp":
+                pool_name = self.opts.get("pool_name", "")
+                if pool_name:
+                    ipc_path = os.path.join(
+                        self.opts["sock_dir"], f"workers-{pool_name}.ipc"
+                    )
+                else:
+                    ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
+                if os.path.isfile(ipc_path):
+                    os.chmod(ipc_path, 0o600)
         self.message_handler = message_handler
 
         async def callback():
@@ -935,6 +949,9 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         log.trace("RequestServer.request_handler started")
         try:
             while not self._event.is_set():
+                # Phase 1: receive.  Any exception here means we did NOT
+                # consume a message, so the REP FSM is still in
+                # "expecting recv" state and we can safely loop.
                 try:
                     # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
                     # Python 3.12 rewrote wait_for to use asyncio.timeout() which
@@ -947,20 +964,53 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     if not events:
                         continue
                     request = await self._socket.recv()
-                    reply = await self.handle_message(None, request)
-                    await self._socket.send(self.encode_payload(reply))
                 except zmq.error.Again:
                     continue
                 except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
                     break
                 except Exception as exc:  # pylint: disable=broad-except
                     log.error(
-                        "Exception in request handler: %s",
+                        "Exception during recv: %s",
                         exc,
                         exc_info_on_loglevel=logging.DEBUG,
                     )
                     await asyncio.sleep(0)
                     continue
+
+                # Phase 2: dispatch to payload handler.  REP FSM is now
+                # in "expecting send" state -- we MUST send() a reply
+                # (even an error reply) before the next recv() can
+                # succeed.  Catch handler exceptions here and fall
+                # through to the send with an error payload so the
+                # socket does not deadlock.
+                try:
+                    reply = await self.handle_message(None, request)
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception in handle_message: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    reply = {"msg": "handler error"}
+
+                # Phase 3: send the reply.  A send() failure after a
+                # successful recv() is unrecoverable at this layer
+                # (REP FSM is still in "expecting send"); log and loop
+                # -- the next recv() will fail with a state error and
+                # push us into the recovery path.
+                try:
+                    await self._socket.send(self.encode_payload(reply))
+                except (asyncio.CancelledError, zmq.eventloop.future.CancelledError):
+                    break
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.error(
+                        "Exception during send: %s",
+                        exc,
+                        exc_info_on_loglevel=logging.DEBUG,
+                    )
+                    await asyncio.sleep(0)
         finally:
             log.trace("RequestServer.request_handler exiting")
 
@@ -1126,18 +1176,31 @@ class ZeroMQSocketMonitor:
     def start_io_loop(self, io_loop):
         log.trace("Event monitor start!")
         self._running.set()
-        self._running_task = salt.utils.asynchronous.aioloop(io_loop).create_task(
-            self.consume()
-        )
+        # Hold a strong reference to the consume task.  Without it CPython
+        # can GC the pending Task, which on Windows manifests as a libzmq
+        # abort at ``zmq.cpp`` when the destructor races an in-flight
+        # ``poll()`` / ``recv_multipart()`` on the monitor socket.
+        # ``io_loop`` may be a tornado IOLoop wrapper or a raw asyncio loop
+        # (the transport clients now normalize to asyncio via ``aioloop``).
+        aio = salt.utils.asynchronous.aioloop(io_loop)
+        self._monitor_task = aio.create_task(self.consume())
 
     async def consume(self):
         while self._running.is_set():
+            sock = self._monitor_socket
+            if sock is None:
+                break
             try:
-                if await self._monitor_socket.poll():
-                    msg = await self._monitor_socket.recv_multipart()
+                if await sock.poll():
+                    sock = self._monitor_socket
+                    if sock is None:
+                        break
+                    msg = await sock.recv_multipart()
                     self.monitor_callback(msg)
                 else:
                     await asyncio.sleep(0.3)
+            except (asyncio.CancelledError, GeneratorExit):
+                break
             except zmq.error.ZMQError as exc:
                 log.error("ZmqMonitor, %s", exc)
                 # We've disconnected just die
@@ -1184,19 +1247,27 @@ class ZeroMQSocketMonitor:
     def stop(self):
         if self._socket is None:
             return
+        # Signal ``consume`` to exit and cancel the task before closing the
+        # monitor socket so libzmq isn't polling a socket we're tearing down.
+        # On Windows the race between ``recv_multipart`` and ``close`` would
+        # abort inside libzmq (``zmq.cpp`` errno_assert on EINVAL).
+        self._running.clear()
+        task = self._monitor_task
+        self._monitor_task = None
+        if task is not None and not task.done():
+            task.cancel()
         try:
             self._socket.disable_monitor()
         except zmq.Error:
             pass
-        if self._monitor_socket is not None:
-            try:
-                self._monitor_socket.close(0)
-            except zmq.Error:
-                pass
         self._socket = None
-        self._running.clear()
-        self._monitor_socket.close()
+        monitor_socket = self._monitor_socket
         self._monitor_socket = None
+        if monitor_socket is not None:
+            try:
+                monitor_socket.close(0)
+            except (zmq.Error, AttributeError):
+                pass
         log.trace("Event monitor done!")
 
 

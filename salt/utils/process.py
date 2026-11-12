@@ -994,6 +994,19 @@ class Process(multiprocessing.Process):
         logging_config = state["logging_config"]
         # This will invoke __init__ of the most derived class.
         self.__init__(*args, **kwargs)
+        # Re-seed the pickle-support attributes so a subsequent pickle
+        # (second-generation spawn via a child's own ``ProcessManager``) does
+        # not emit empty args/kwargs.  ``__new__`` set these from the original
+        # constructor call in the parent, but pickle's default unpickle flow
+        # calls ``cls.__new__(cls)`` with no args, leaving both attributes as
+        # empty tuples/dicts.  Without this re-seed, any grandchild's
+        # ``__setstate__`` calls ``self.__init__()`` with no positional args
+        # and crashes with ``TypeError: ... missing required positional
+        # arguments``.  Observed on Windows topology masters whose
+        # RequestServer sub-process spawns ``EventMonitor`` via its own
+        # ``ProcessManager`` (second-generation pickle).
+        self._args_for_getstate = copy.copy(args)
+        self._kwargs_for_getstate = copy.copy(kwargs)
         # Override self.__logging_config__ with what's in state
         self.__logging_config__ = logging_config
         for function, args, kwargs in state["after_fork_methods"]:

@@ -36,9 +36,9 @@ SDB) writes under this prefix.
 Setup
 -----
 
-Install the etcd3-py client::
+Install the etcd3gw client::
 
-    pip install etcd3-py
+    salt-pip install etcd3gw
 
 Enable as the master's data cache::
 
@@ -112,7 +112,7 @@ Migrating from the v2 etcd cache
 The v2 API uses a store isolated from v3, so the v3 cache cannot read v2
 data (and cannot interfere with it). Because the master cache is
 ephemeral and repopulates as minions check in, migration is just: install
-``etcd3-py``, change ``cache: etcd`` to ``cache: etcd3``, and restart the
+``etcd3gw``, change ``cache: etcd`` to ``cache: etcd3``, and restart the
 master. Old v2 keys are orphaned in the v2 store; remove them with
 ``ETCDCTL_API=2 etcdctl rm --recursive /salt_cache`` if desired.
 
@@ -139,8 +139,8 @@ import salt.payload
 import salt.utils.etcd_util
 from salt.exceptions import SaltCacheError
 
-# salt.utils.etcd_util imports cleanly without etcd3-py; HAS_ETCD_V3 reports
-# whether the etcd3-py library is actually available.
+# salt.utils.etcd_util imports cleanly without etcd3gw; HAS_ETCD_V3 reports
+# whether the etcd3gw library is actually available.
 HAS_ETCD = salt.utils.etcd_util.HAS_ETCD_V3
 
 _DEFAULT_PATH_PREFIX = "/salt_cache"
@@ -148,7 +148,7 @@ _DEFAULT_PATH_PREFIX = "/salt_cache"
 log = logging.getLogger(__name__)
 
 # Module-level singletons populated by _init_client() on first use. ``client``
-# is a configured etcd3-py client (etcd3.Client), not the EtcdClientV3 wrapper.
+# is a configured etcd3gw client, not the EtcdClientV3 wrapper.
 client = None
 path_prefix = None
 
@@ -158,12 +158,12 @@ __func_alias__ = {"ls": "list"}
 
 def __virtual__():
     """
-    Only load if the etcd3-py library is available.
+    Only load if the etcd3gw library is available.
     """
     if not HAS_ETCD:
         return (
             False,
-            "Please install etcd3-py to use the etcd3 data cache driver",
+            "Please install etcd3gw to use the etcd3 data cache driver",
         )
     return __virtualname__
 
@@ -182,7 +182,7 @@ def _init_client():
 
     Connection handling (profile resolution, auth, TLS) is reused from
     :class:`salt.utils.etcd_util.EtcdClientV3`; we then operate on the
-    configured etcd3-py client directly. The wrapper's read/write layer
+    configured etcd3gw client directly. The wrapper's read/write layer
     applies a msgpack codec and has neither lease nor keys-only support,
     none of which suits a cache that serializes with :mod:`salt.payload`
     and lists large banks.
@@ -250,10 +250,18 @@ def _unpack(raw):
 
 def _range(key, prefix=False, keys_only=False, limit=0):
     """
-    Issue an etcd range request and return its key/value pairs as a list
-    (etcd3-py returns ``None`` for an empty result).
+    Issue an etcd range request and return its ``(key, value)`` pairs as a
+    list of bytes.
     """
-    return client.range(key, prefix=prefix, keys_only=keys_only, limit=limit).kvs or []
+    kwargs = {"metadata": True}
+    if prefix:
+        kwargs["range_end"] = salt.utils.etcd_util.prefix_range_end(key)
+    if keys_only:
+        kwargs["keys_only"] = True
+    if limit:
+        kwargs["limit"] = limit
+    items = list(client.get(key, **kwargs))
+    return [(kv["key"], value) for value, kv in items]
 
 
 def store(bank, key, data, expires=None):
@@ -275,9 +283,7 @@ def store(bank, key, data, expires=None):
     try:
         payload = _pack(data)
         if expires and int(expires) > 0:
-            lease = client.Lease(ttl=int(expires))
-            lease.grant()
-            client.put(etcd_key, payload, lease=lease.ID)
+            client.put(etcd_key, payload, lease=client.lease(ttl=int(expires)))
         else:
             client.put(etcd_key, payload)
     except Exception as exc:  # pylint: disable=broad-except
@@ -300,7 +306,7 @@ def fetch(bank, key):
         kvs = _range(etcd_key)
         if not kvs:
             return {}
-        return _unpack(kvs[0].value)[0]
+        return _unpack(kvs[0][1])[0]
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             f"etcd3 cache: error reading key {etcd_key}: {exc}"
@@ -319,9 +325,13 @@ def flush(bank, key=None):
     _init_client()
     try:
         if key is None:
-            client.delete_range(_bank_prefix(bank), prefix=True)
+            prefix = _bank_prefix(bank)
+            client.delete(
+                prefix,
+                range_end=salt.utils.etcd_util.prefix_range_end(prefix),
+            )
         else:
-            client.delete_range(_value_key(bank, key))
+            client.delete(_value_key(bank, key))
         return True
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
@@ -348,11 +358,11 @@ def ls(bank):
     try:
         seen = set()
         result = []
-        for kv in _range(prefix, prefix=True, keys_only=True):
+        for etcd_key, _ in _range(prefix, prefix=True, keys_only=True):
             # etcd returns keys as bytes; the first path component after the
             # bank prefix is either a direct key name or an immediate
             # sub-bank name (deeper nesting collapses to the same name).
-            first = kv.key.decode("utf-8")[len(prefix) :].split("/", 1)[0]
+            first = etcd_key.decode("utf-8")[len(prefix) :].split("/", 1)[0]
             if first and first not in seen:
                 seen.add(first)
                 result.append(first)
@@ -394,7 +404,7 @@ def updated(bank, key):
         kvs = _range(etcd_key)
         if not kvs:
             return None
-        return _unpack(kvs[0].value)[1]
+        return _unpack(kvs[0][1])[1]
     except Exception as exc:  # pylint: disable=broad-except
         raise SaltCacheError(
             f"etcd3 cache: error reading timestamp for {etcd_key}: {exc}"

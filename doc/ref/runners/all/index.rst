@@ -25,6 +25,7 @@ runner modules
     manage
     match
     mine
+    nacl
     net
     network
     pillar
@@ -39,4 +40,5 @@ runner modules
     state
     survey
     test
+    topology
     winrepo

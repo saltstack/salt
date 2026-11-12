@@ -22,5 +22,9 @@ your deployment as needed for redundancy, geographical distribution, and scale.
     syndic
     ../tutorials/intro_scale
     ../tutorials/master-cluster
+    ../tutorials/master-cluster-reference
     ../tutorials/multimaster
     ../tutorials/multimaster_pki
+    ../master-topology/overview
+    ../master-topology/index
+    ../master-topology/pub-ack-complete

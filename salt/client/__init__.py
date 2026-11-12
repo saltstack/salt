@@ -32,6 +32,7 @@ import salt.loader
 import salt.payload
 import salt.syspaths as syspaths
 import salt.utils.args
+import salt.utils.error
 import salt.utils.event
 import salt.utils.files
 import salt.utils.jid
@@ -224,6 +225,7 @@ def get_local_client(
     io_loop=None,
     auto_reconnect=False,
     listen=False,
+    profile=None,
 ):
     """
     .. versionadded:: 2014.7.0
@@ -251,8 +253,6 @@ def get_local_client(
                            set_event_handler() API. Otherwise, operation
                            will be synchronous.
 
-    :param bool keep_loop: Do not destroy the event loop when closing the event
-                           subsriber.
 
     :param bool auto_reconnect: When True the event subscriber will reconnect
                                 automatically if a disconnect error is raised.
@@ -270,10 +270,64 @@ def get_local_client(
         # Late import to prevent circular import
         import salt.config
 
-        opts = salt.config.client_config(c_path)
+        opts = salt.config.client_config(c_path, profile=profile)
 
     # TODO: AIO core is separate from transport
     return LocalClient(
+        mopts=opts,
+        skip_perm_errors=skip_perm_errors,
+        io_loop=io_loop,
+        auto_reconnect=auto_reconnect,
+        listen=listen,
+    )
+
+
+def get_remote_client(
+    c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+    mopts=None,
+    skip_perm_errors=False,
+    io_loop=None,
+    auto_reconnect=False,
+    listen=False,
+    profile=None,
+):
+    """
+    Create a RemoteClient for remote CLI authentication.
+
+    The RemoteClient authenticates with the Salt master using AES encryption,
+    similar to how minions authenticate. Client keys are managed separately
+    from minion keys and must be manually accepted on the master.
+
+    :param str c_path: Path to the master config file
+    :param dict mopts: Master options dictionary (overrides config file)
+    :param bool skip_perm_errors: Skip permission errors when accessing files
+    :param IOLoop io_loop: Tornado IOLoop to use
+    :param bool auto_reconnect: Automatically reconnect on disconnect
+    :param bool listen: Start listening for events immediately
+    :param str profile: Connection profile to use from /etc/salt/client
+
+    :return: Configured RemoteClient instance
+    :rtype: RemoteClient
+
+    .. code-block:: python
+
+        client = salt.client.get_remote_client()
+        ret = client.cmd('*', 'test.ping')
+
+        # With profile
+        client = salt.client.get_remote_client(profile='prod')
+        ret = client.cmd('*', 'test.ping')
+    """
+    if mopts:
+        opts = mopts
+    else:
+        # Late import to prevent circular import
+        import salt.config
+
+        opts = salt.config.client_config(c_path, profile=profile)
+
+    # TODO: AIO core is separate from transport
+    return RemoteClient(
         mopts=opts,
         skip_perm_errors=skip_perm_errors,
         io_loop=io_loop,
@@ -383,6 +437,15 @@ class LocalClient:
         self.utils = salt.loader.utils(self.opts)
         self.functions = salt.loader.minion_mods(self.opts, utils=self.utils)
         self.returners = salt.loader.returners(self.opts, self.functions)
+        # Phase 2 of RFC pub-ack-complete: originator-side aggregation
+        # state that persists after :meth:`get_iter_returns` has
+        # exhausted.  Callers inspect these to render per-peer missed /
+        # ack / complete context distinct from "CLI never heard from
+        # peer X".  See doc/topics/master-topology/rfc-pub-ack-complete.md.
+        self._last_topology_missed_by_peer = {}
+        self._last_topology_peers_acked = set()
+        self._last_topology_peers_complete = set()
+        self._last_topology_expected_set = set()
 
     def __read_master_key(self):
         """
@@ -484,8 +547,14 @@ class LocalClient:
             return {}
 
         # If we order masters (via a syndic), don't short circuit if no minions
-        # are found
-        if not self.opts.get("order_masters"):
+        # are found.  Same for topology-forward-only publishes: when
+        # ``topology_enabled`` is set and the target names a non-local
+        # cluster via ``C@``, the originating master cannot know the
+        # peer-cluster minion ids at pub-time -- those return
+        # asynchronously via the topology forwarder.  Short-circuiting
+        # here on empty-local-match would hide every cross-cluster return
+        # the user is actually waiting on.
+        if not self.opts.get("order_masters") and not self.opts.get("topology_enabled"):
             # Check for no minions
             if not pub_data["minions"]:
                 print(
@@ -503,6 +572,18 @@ class LocalClient:
             self.event.subscribe("syndic/.*/{}".format(pub_data["jid"]), "regex")
 
         self.event.subscribe("salt/job/{}".format(pub_data["jid"]))
+
+        # Phase 2 of RFC pub-ack-complete: originator-side consumption of
+        # topology/pub-ack + topology/pub-complete.  Gated on both the
+        # consumer opt (semantic change to the wait-loop exit condition)
+        # and cluster_id (a non-cluster master cannot originate topology
+        # frames so there is nothing to consume).  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.
+        if self.opts.get("topology_pub_ack_consumer") and self.opts.get("cluster_id"):
+            self.event.subscribe(
+                "salt/topology/pub-(ack|complete)/{}".format(pub_data["jid"]),
+                "regex",
+            )
 
         return pub_data
 
@@ -552,13 +633,13 @@ class LocalClient:
             raise SaltClientError(
                 "The salt master could not be contacted. Is master running?"
             )
-        except AuthenticationError as err:
+        except AuthenticationError:  # pylint: disable=try-except-raise
             raise
-        except AuthorizationError as err:
+        except AuthorizationError:  # pylint: disable=try-except-raise
             raise
-        except Exception as general_exception:  # pylint: disable=broad-except
-            # Convert to generic client error and pass along message
-            raise SaltClientError(general_exception)
+        # except Exception as general_exception:  # pylint: disable=broad-except
+        #    # Convert to generic client error and pass along message
+        #    raise SaltClientError(general_exception)
 
         return self._check_pub_data(pub_data, listen=listen)
 
@@ -1318,6 +1399,36 @@ class LocalClient:
         open_jids = set()
         timeout_at = time.time() + timeout
         gather_syndic_wait = time.time() + self.opts["syndic_wait"]
+
+        # Phase 2 of RFC pub-ack-complete: originator-side consumption of
+        # topology/pub-ack + topology/pub-complete.  Gated on both the
+        # consumer opt and cluster_id (a non-cluster master cannot
+        # originate topology frames).  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.
+        topology_consumer_active = bool(
+            self.opts.get("topology_pub_ack_consumer") and self.opts.get("cluster_id")
+        )
+        # Expected set grows as pub-ack frames arrive from peers.  The
+        # publisher's own local matcher output (``minions``) seeds it.
+        topo_expected_set = set(minions) if topology_consumer_active else set()
+        # Set of origin_cluster_id of peers that have emitted a pub-ack.
+        topo_peers_acked = set()
+        # Set of origin_cluster_id of peers that have emitted a pub-complete.
+        topo_peers_complete = set()
+        # ``origin_cluster_id -> [minion_id, ...]`` reported missed in
+        # pub-complete by each peer.  Surfaced to the caller via
+        # ``self._last_topology_missed_by_peer`` after the loop returns.
+        topo_missed_by_peer = {}
+        if topology_consumer_active:
+            topo_iter = self.get_returns_no_block(
+                f"salt/topology/pub-(ack|complete)/{jid}", "regex"
+            )
+            topo_pub_ack_deadline = time.time() + float(
+                self.opts.get("topology_wait", 2.0)
+            )
+        else:
+            topo_iter = None
+            topo_pub_ack_deadline = 0.0
         # are there still minions running the job out there
         # start as True so that we ping at least once
         minions_running = True
@@ -1391,10 +1502,94 @@ class LocalClient:
                     log.debug("jid %s return from %s", jid, display_id)
                     yield ret
 
+            # Drain topology/pub-ack + topology/pub-complete frames.
+            # Each pub-ack grows ``topo_expected_set`` by the peer's
+            # matched_minion_ids list and records the peer's cluster_id
+            # in ``topo_peers_acked``.  Each pub-complete records the
+            # peer in ``topo_peers_complete`` and captures its
+            # ``missed`` list.  See RFC pub-ack-complete, "Originator
+            # aggregation" section.
+            if topology_consumer_active:
+                for raw in topo_iter:
+                    if raw is None:
+                        break
+                    tag = raw.get("tag", "")
+                    data = raw.get("data") or {}
+                    topo_info = data.get("topology") or {}
+                    origin = topo_info.get("origin")
+                    if tag.startswith("salt/topology/pub-ack/"):
+                        matched = data.get("matched_minion_ids")
+                        if isinstance(matched, list):
+                            topo_expected_set.update(matched)
+                        if origin:
+                            topo_peers_acked.add(origin)
+                        log.debug(
+                            "jid %s pub-ack from %s matched=%s",
+                            jid,
+                            origin,
+                            matched,
+                        )
+                    elif tag.startswith("salt/topology/pub-complete/"):
+                        if origin:
+                            topo_peers_complete.add(origin)
+                            missed = data.get("missed")
+                            if isinstance(missed, list) and missed:
+                                topo_missed_by_peer[origin] = list(missed)
+                        log.debug(
+                            "jid %s pub-complete from %s missed=%s",
+                            jid,
+                            origin,
+                            data.get("missed"),
+                        )
+
             # if we have all of the returns (and we aren't a syndic), no need for anything fancy
+            #
+            # Topology forwarding (:mod:`salt.topology`) carries publishes
+            # to peer-cluster minions whose ids this master cannot
+            # pre-enumerate at pub time -- a ``C@west`` publish from east
+            # arrives here with ``minions=set()``.  Peer-cluster returns
+            # stream in later as ``salt/job/<jid>/ret/<id>`` events, and
+            # the row-handling loop above adds each id to ``found``.
+            # Without the ``len(minions) > 0`` guard below, ``found >=
+            # minions`` is a trivial ``0 >= 0`` on the first iteration
+            # and the loop exits before any peer-cluster return has had
+            # time to arrive.  Local topology publishes (non-empty
+            # ``minions`` populated from a glob match) still short-circuit
+            # as usual once every expected minion has returned.
+            #
+            # Topology pub-ack-complete early-exit (RFC Phase 2): when
+            # ``topology_pub_ack_consumer`` is on and we have a cluster_id,
+            # exit as soon as returned_set >= expected_set (happy path) or
+            # every ack'd peer has sent pub-complete AND the pub-ack
+            # grace window has elapsed (so a late-arriving peer's ack
+            # does not get skipped).  The generic ``--timeout`` branch
+            # still catches silent peers.
+            if topology_consumer_active:
+                if topo_expected_set and found >= topo_expected_set:
+                    log.debug(
+                        "jid %s topology happy-path exit: returned_set covers "
+                        "expected_set=%s",
+                        jid,
+                        topo_expected_set,
+                    )
+                    break
+                if (
+                    topo_peers_acked
+                    and topo_peers_complete >= topo_peers_acked
+                    and time.time() > topo_pub_ack_deadline
+                ):
+                    log.debug(
+                        "jid %s topology peers-complete exit: peers_complete=%s "
+                        "peers_acked=%s",
+                        jid,
+                        topo_peers_complete,
+                        topo_peers_acked,
+                    )
+                    break
             if (
                 len(found.intersection(minions)) >= len(minions)
                 and not self.opts["order_masters"]
+                and not (self.opts.get("topology_enabled") and len(minions) == 0)
             ):
                 # All minions have returned, break out of the loop
                 log.debug("jid %s found all minions %s", jid, found)
@@ -1544,6 +1739,20 @@ class LocalClient:
         if open_jids:
             for jid in open_jids:
                 self.event.unsubscribe(jid)
+
+        # Surface the pub-complete ``missed`` lists for post-loop
+        # inspection.  Callers that care (e.g. a CLI wrapper rendering
+        # per-peer failure context) read ``self._last_topology_missed_by_peer``
+        # after the generator has exhausted.  Dict is keyed by the peer
+        # cluster_id so operators can distinguish "peer east-sub timed
+        # out on 2 of its minions" from "CLI never heard from east-sub."
+        # Underscore prefix avoids clashing with real minion ids in any
+        # downstream dict merge.  See RFC pub-ack-complete, "Originator
+        # aggregation" + Phase 2.
+        self._last_topology_missed_by_peer = topo_missed_by_peer
+        self._last_topology_peers_acked = set(topo_peers_acked)
+        self._last_topology_peers_complete = set(topo_peers_complete)
+        self._last_topology_expected_set = set(topo_expected_set)
 
         if expect_minions:
             yield from _iter_failed_missing_returns(self.opts, found, minions - found)
@@ -2089,7 +2298,6 @@ class LocalClient:
             salt.utils.network.ip_bracket(self.opts["interface"]),
             str(self.opts["ret_port"]),
         )
-
         with salt.channel.client.ReqChannel.factory(
             self.opts, crypt="clear", master_uri=master_uri
         ) as channel:
@@ -2138,6 +2346,19 @@ class LocalClient:
 
             if not payload:
                 return payload
+
+        # Clustered masters defer every publish with a ``cluster_retry``
+        # sentinel while Raft is still forming / not a committed voter.
+        # The load shape is ``{"ret": False, "cluster_retry": True}``
+        # with no ``jid`` key -- without this guard we would ``KeyError:
+        # 'jid'`` on the return below and cmd_async would wrap it as
+        # ``SaltClientError: 'jid'``, which is useless to operators.
+        load_dict = payload.get("load") if isinstance(payload, dict) else None
+        if isinstance(load_dict, dict) and load_dict.get("cluster_retry"):
+            raise SaltClientError(
+                "Master is not ready; cluster consensus still forming. "
+                "Retry the command once the cluster is ready."
+            )
 
         return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
@@ -2244,6 +2465,19 @@ class LocalClient:
             if not payload:
                 return payload
 
+        # Clustered masters defer every publish with a ``cluster_retry``
+        # sentinel while Raft is still forming / not a committed voter.
+        # The load shape is ``{"ret": False, "cluster_retry": True}``
+        # with no ``jid`` key -- without this guard we would ``KeyError:
+        # 'jid'`` on the return below and cmd_async would wrap it as
+        # ``SaltClientError: 'jid'``, which is useless to operators.
+        load_dict = payload.get("load") if isinstance(payload, dict) else None
+        if isinstance(load_dict, dict) and load_dict.get("cluster_retry"):
+            raise SaltClientError(
+                "Master is not ready; cluster consensus still forming. "
+                "Retry the command once the cluster is ready."
+            )
+
         return {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
 
     # pylint: disable=W1701
@@ -2282,6 +2516,290 @@ class LocalClient:
 
     def __exit__(self, *args):
         self.destroy()
+
+
+class RemoteClient(LocalClient):
+    def __init__(
+        self,
+        c_path=os.path.join(syspaths.CONFIG_DIR, "master"),
+        mopts=None,
+        skip_perm_errors=False,
+        io_loop=None,
+        keep_loop=False,
+        auto_reconnect=False,
+        listen=False,
+    ):
+        # If mopts not provided, load from config file
+        if mopts is None:
+            mopts = salt.config.client_config(c_path)
+
+        # Update with client-specific settings
+        mopts.update(
+            id=mopts.get("id", "client"),  # Use configured ID or default to "client"
+            __role="client",
+            acceptance_wait_time=mopts.get("acceptance_wait_time", 30),
+            acceptance_wait_time_max=mopts.get("acceptance_wait_time_max", 30),
+            verify_master_pubkey_sign=False,
+            always_verify_signature=False,
+        )
+        super().__init__(
+            c_path, mopts, skip_perm_errors, io_loop, keep_loop, auto_reconnect, listen
+        )
+
+        # Replace IPC event system with network event subscriber
+        # This allows RemoteClient to work from truly remote machines
+        self._use_network_events = True
+        self._setup_network_events(listen)
+
+    def returns_for_job(self, jid):
+        """
+        Master-local job-cache check that LocalClient uses to verify a
+        published jid landed in the returner store.  On a truly remote
+        client we have no local access to the master's job cache, so
+        trust that the publish succeeded if we received a jid.
+        """
+        return [{"jid": jid}]
+
+    def _setup_network_events(self, listen):
+        """
+        Set up network-based event subscription for remote clients.
+
+        Replaces the IPC event system with an authenticated network
+        subscriber that works from remote machines.
+        """
+        from salt.utils import client_event
+
+        # Destroy the IPC event subscriber created by LocalClient
+        if self.event:
+            self.event.destroy()
+
+        # Create network event subscriber
+        self.event = client_event.ClientEventSubscriber(self.opts)
+
+        if listen:
+            self.event.connect()
+
+    def pub(
+        self,
+        tgt,
+        fun,
+        arg=(),
+        tgt_type="glob",
+        ret="",
+        jid="",
+        timeout=5,
+        listen=False,
+        **kwargs,
+    ):
+        """
+        Take the required arguments and publish the given command.
+        Arguments:
+            tgt:
+                The tgt is a regex or a glob used to match up the ids on
+                the minions. Salt works by always publishing every command
+                to all of the minions and then the minions determine if
+                the command is for them based on the tgt value.
+            fun:
+                The function name to be called on the remote host(s), this
+                must be a string in the format "<modulename>.<function name>"
+            arg:
+                The arg option needs to be a tuple of arguments to pass
+                to the calling function, if left blank
+        Returns:
+            jid:
+                A string, as returned by the publisher, which is the job
+                id, this will inform the client where to get the job results
+            minions:
+                A set, the targets that the tgt passed should match.
+        """
+        # RemoteClient does not depend on the master's IPC publisher socket
+        # (that check is appropriate for LocalClient on the master host).
+        # The connection to the master is via network transport below.
+
+        payload_kwargs = self._prep_pub(
+            tgt, fun, arg, tgt_type, ret, jid, timeout, **kwargs
+        )
+
+        # Advertise the client identity in two places because
+        # ``ClearFuncs.publish`` reads auth/eauth material out of
+        # ``clear_load["kwargs"]`` (the nested dict) when calling
+        # :meth:`MWorker._prep_auth_info`, while runner/wheel/batch
+        # endpoints read it off the top of ``clear_load``.  Setting
+        # both lets a single ``_prep_auth_info`` implementation find
+        # ``client_id`` regardless of which dispatcher is live.
+        payload_kwargs["client_id"] = self.opts["id"]
+        payload_kwargs.setdefault("kwargs", {})
+        if isinstance(payload_kwargs["kwargs"], dict):
+            payload_kwargs["kwargs"]["client_id"] = self.opts["id"]
+        # ``LocalClient._prep_pub`` always injects ``key=self.key``.
+        # On a remote workstation ``self.key`` is ``""`` (the master's
+        # ``.root_key`` file isn't readable), and leaving that empty
+        # string in the payload makes :meth:`MWorker._prep_auth_info`
+        # treat it as a failed user-auth attempt instead of recognising
+        # the client's PKI identity.  Drop the empty value here so the
+        # master falls into the ``auth_type == "client"`` path.
+        if not payload_kwargs.get("key"):
+            payload_kwargs.pop("key", None)
+
+        # Use master address from config, not interface (for remote clients)
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
+        )
+        # AES channel: the ReqChannel does the standard PKI handshake
+        # (minion-style sign-in using ``pki_dir/client.pem``, auto-
+        # generated on first use and accepted on the master via the
+        # ``client_keys`` acceptance workflow) and encrypts the entire
+        # payload with the resulting session key.  Eauth credentials
+        # inside the inner load are therefore protected on the wire.
+        # The master's :meth:`salt.master.MWorker._handle_payload_inner`
+        # bridges AES-encrypted ``publish`` (and ``runner``/``wheel``/
+        # ``mk_token``/``get_token``) cmds whose authenticated sender id
+        # is a known client over to :meth:`ClearFuncs.publish`, so eauth
+        # authorization still runs there.
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri
+        ) as channel:
+            try:
+                # For network events, ensure we're connected.  Prefer
+                # token-auth when a Salt token is in the publish payload
+                # (eauth-only remote clients that have no client.pem to
+                # sign the PKI handshake with); fall back to PKI auth
+                # otherwise.  LocalClient._prep_pub nests kwargs under
+                # ``payload_kwargs["kwargs"]``, so check both locations.
+                if listen and self._use_network_events:
+                    if not self.event.authenticated:
+                        inner_kwargs = payload_kwargs.get("kwargs") or {}
+                        salt_token = payload_kwargs.get("token") or inner_kwargs.get(
+                            "token"
+                        )
+                        salt_eauth = payload_kwargs.get("eauth") or inner_kwargs.get(
+                            "eauth"
+                        )
+                        if salt_token:
+                            self.event.connect(salt_token=salt_token, eauth=salt_eauth)
+                        else:
+                            self.event.connect()
+                # For IPC events (shouldn't happen), use original logic
+                elif listen and not self.event.connect_pub(timeout=timeout):
+                    raise SaltReqTimeoutError()
+
+                payload = channel.send(payload_kwargs, timeout=timeout)
+            except SaltReqTimeoutError as err:
+                log.error(err)
+                raise SaltReqTimeoutError(
+                    "Salt request timed out. The master is not responding. You "
+                    "may need to run your command with `--async` in order to "
+                    "bypass the congested event bus. With `--async`, the CLI tool "
+                    "will print the job id (jid) and exit immediately without "
+                    "listening for responses. You can then use "
+                    "`salt-run jobs.lookup_jid` to look up the results of the job "
+                    "in the job cache later."
+                )
+
+            if not payload:
+                # The master key could have changed out from under us! Regen
+                # and try again if the key has changed
+                key = self.__read_master_key()
+                if key == self.key:
+                    return payload
+                self.key = key
+                payload_kwargs["key"] = self.key
+                payload = channel.send(payload_kwargs)
+
+            error = payload.pop("error", None)
+            if error is not None:
+                if isinstance(error, dict):
+                    err_name = error.get("name", "")
+                    err_msg = error.get("message", "")
+                    if err_name == "AuthenticationError":
+                        raise AuthenticationError(err_msg)
+                    elif err_name == "AuthorizationError":
+                        raise AuthorizationError(err_msg)
+
+                raise PublishError(error)
+
+            if not payload:
+                return payload
+
+        # Clustered masters defer every publish with a ``cluster_retry``
+        # sentinel while Raft is still forming / not a committed voter.
+        # The load shape is ``{"ret": False, "cluster_retry": True}`` with
+        # no ``jid`` key -- without this guard we would ``KeyError: 'jid'``
+        # on the return below and the caller would wrap that as
+        # ``SaltClientError: 'jid'``, which is useless to operators.
+        # Mirrors the same handling in LocalClient.pub / pub_async.
+        load_dict = payload.get("load") if isinstance(payload, dict) else None
+        if isinstance(load_dict, dict) and load_dict.get("cluster_retry"):
+            raise SaltClientError(
+                "Master is not ready; cluster consensus still forming. "
+                "Retry the command once the cluster is ready."
+            )
+
+        result = {"jid": payload["load"]["jid"], "minions": payload["load"]["minions"]}
+
+        # Subscribe to job events if using network events
+        if self._use_network_events and listen and "jid" in result:
+            self.event.subscribe_job(result["jid"])
+
+        return result
+
+    def __read_master_key(self):
+        """
+        Read in the rotating master authentication key
+
+        This method is not expected to be called for RemoteClient as it
+        uses client authentication keys instead of the master key.
+        """
+        raise RuntimeError(
+            "Unexpected method call: RemoteClient should not read master key"
+        )
+
+    def batch_adopt(self, batch_jid, state, **auth_kwargs):
+        """
+        Ask the master to adopt a batch state blob built on this client.
+
+        Routes to :meth:`salt.master.ClearFuncs.batch_adopt` via the
+        standard AES bridge used by publish/runner/wheel.  Enables
+        ``salt --batch --async`` from a workstation: the client runs
+        ``gather_minions`` and publishes the first sub-batch locally,
+        then hands the composed BatchState dict (with
+        ``driver="master"``) to the master so :class:`BatchManager`
+        can own cachedir writes and drive subsequent sub-batches.
+
+        :param str batch_jid:
+            The JID assigned to the batch run.
+
+        :param dict state:
+            A BatchState dict as returned by
+            :func:`salt.utils.batch_state.create_batch_state` with
+            ``driver="master"`` set.
+
+        :param auth_kwargs:
+            Eauth fields (``eauth``/``username``/``password`` or
+            ``token``) consumed by ``ClearFuncs._prep_auth_info`` on
+            the master.
+
+        :raises SaltClientError: if the master rejects the request.
+        """
+        master = self.opts.get("master", "localhost")
+        master_uri = "tcp://{}:{}".format(
+            salt.utils.network.ip_bracket(master), str(self.opts["ret_port"])
+        )
+        load = {
+            "cmd": "batch_adopt",
+            "id": self.opts["id"],
+            "batch_jid": batch_jid,
+            "state": state,
+        }
+        load.update(auth_kwargs)
+        with salt.channel.client.ReqChannel.factory(
+            self.opts, crypt="aes", master_uri=master_uri
+        ) as channel:
+            ret = channel.send(load)
+        if isinstance(ret, dict) and "error" in ret:
+            salt.utils.error.raise_error(**ret["error"])
+        return ret
 
 
 class FunctionWrapper(dict):

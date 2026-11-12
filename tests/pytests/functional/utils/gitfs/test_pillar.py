@@ -2,7 +2,6 @@ import os
 
 import pytest
 
-from salt.pillar.git_pillar import GLOBAL_ONLY, PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitPillar, GitPython, Pygit2
 from salt.utils.immutabletypes import ImmutableDict, ImmutableList
 from salt.utils.platform import get_machine_identifier as _get_machine_identifier
@@ -63,13 +62,7 @@ def pygit2_pillar_opts(pillar_opts):
 
 
 def _get_pillar(opts, *remotes):
-    return GitPillar(
-        opts,
-        remotes,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
-    )
+    return GitPillar(opts, remotes)
 
 
 @skipif_no_gitpython
@@ -208,8 +201,12 @@ def _test_multiple_repos(opts):
         assert f in files
 
 
+@pytest.mark.timeout(300)
 @skipif_no_gitpython
 def test_gitpython_multiple_repos(gitpython_pillar_opts):
+    # Pure-Python GitPython clones 5 GitHub remotes serially; under CI load
+    # this reliably exceeds the 90s default pytest-timeout. Pygit2
+    # (libgit2-backed) runs the same test under the default budget.
     _test_multiple_repos(gitpython_pillar_opts)
 
 
@@ -256,8 +253,12 @@ def _test_fetch_request(opts):
     assert os.path.isfile(frequest_other) is False
 
 
+@pytest.mark.timeout(300)
 @skipif_no_gitpython
 def test_gitpython_fetch_request(gitpython_pillar_opts):
+    # Pure-Python GitPython + fetch_remotes loops over 5+ clones from
+    # GitHub; the default 90s budget is too tight under CI network load.
+    # Pygit2's equivalent passes well under the default.
     _test_fetch_request(gitpython_pillar_opts)
 
 

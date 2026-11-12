@@ -42,6 +42,7 @@ def match(tgt, opts=None, minion_id=None):
         "E": "pcre",
         "T": "resource",
         "M": "managing_minion",
+        "C": "cluster",
     }
     if HAS_RANGE:
         ref["R"] = "range"

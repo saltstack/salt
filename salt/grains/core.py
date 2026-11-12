@@ -3207,7 +3207,19 @@ def pythonversion():
     """
     # Provides:
     #   pythonversion
-    return {"pythonversion": list(sys.version_info)}
+    #   pythonrelease
+    #   pythonrelease_info
+    #
+    # ``pythonversion`` is a list rather than a dotted string, which is
+    # inconsistent with the ``<foo>release`` / ``<foo>release_info`` pair used
+    # by the other version grains (e.g. ``osrelease`` / ``osrelease_info``).
+    # ``pythonrelease`` and ``pythonrelease_info`` follow that convention;
+    # ``pythonversion`` is kept unchanged for backwards compatibility.
+    return {
+        "pythonversion": list(sys.version_info),
+        "pythonrelease": platform.python_version(),
+        "pythonrelease_info": list(sys.version_info),
+    }
 
 
 def pythonpath():
@@ -3627,6 +3639,23 @@ def get_master():
     # Provides:
     #   master
     return {"master": __opts__.get("master", "")}
+
+
+def master_cluster_id():
+    """
+    Return the ``master_cluster_id`` grain, populated from the master's
+    auth response (``opts["master_cluster_id"]``).
+
+    Returns an empty dict (no grain) when the field is absent --- i.e.
+    when the master is not topology-enabled or has opted out of
+    publishing the grain via ``topology_push_cluster_grain: False``.
+    """
+    # Provides:
+    #   master_cluster_id
+    cluster_id = __opts__.get("master_cluster_id")
+    if not cluster_id:
+        return {}
+    return {"master_cluster_id": cluster_id}
 
 
 def default_gateway():

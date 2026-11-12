@@ -6,9 +6,9 @@ This includes server side transport, for the ReqServer and the Publisher
 
 import asyncio
 import collections
-import errno
 import hashlib
 import hmac
+import importlib
 import logging
 import os
 import pathlib
@@ -28,6 +28,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 import salt.cache
+import salt.cluster
 import salt.cluster.consensus.rpc
 import salt.crypt
 import salt.daemons.masterapi
@@ -45,8 +46,12 @@ import salt.utils.stringutils
 import salt.utils.tracing
 from salt.exceptions import SaltDeserializationError
 from salt.utils.cache import CacheCli
+from salt.utils.network import ip_bracket
 
 log = logging.getLogger(__name__)
+
+# Upper bound on the per-process presence write throttle table
+PRESENCE_MEMO_MAX = 65536
 
 
 def _get_crypticle(opts, key_string, key_size=192, serial=0):
@@ -75,12 +80,23 @@ def _cluster_is_ready(opts):
     """
     Return ``True`` if this master may serve minion/CLI requests.
 
-    For non-cluster masters this is always ``True``.  For cluster members it
-    returns ``True`` only after the Raft ``MembershipStateMachine`` has
-    committed a CONFIG entry listing this node as a voter and
+    The "cluster" in the name reflects *where* this gate matters
+    (3008.x master clusters); the gate is invoked on every master.
+    Solo and topology-only masters always pass through — they are
+    not in a Raft quorum and have nothing to wait on.
+
+    For 3008.x master-cluster members this returns ``True`` only
+    after the Raft ``MembershipStateMachine`` has committed a
+    CONFIG entry listing this node as a voter and
     ``SMaster.secrets["cluster_ready"]["event"]`` has been set.
+
+    A topology-only master sets ``cluster_id`` but no
+    ``cluster_peers``; it is not in a Raft cluster and the readiness
+    check should pass through.
     """
     if not opts.get("cluster_id"):
+        return True
+    if not opts.get("cluster_peers"):
         return True
     import salt.master  # pylint: disable=import-outside-toplevel
 
@@ -208,6 +224,10 @@ class ReqServerChannel:
 
         (pathlib.Path(self.opts["cachedir"]) / "sessions").mkdir(exist_ok=True)
         self.sessions = {}
+        # Presence tracking (``presence_id_tracking``): per-process throttle of
+        # the last time a minion's presence record was written.
+        self._presence_cache = None
+        self._presence_written = {}
 
     @property
     def aes_key(self):
@@ -215,10 +235,80 @@ class ReqServerChannel:
             return salt.master.SMaster.secrets["cluster_aes"]["secret"].value
         return salt.master.SMaster.secrets["aes"]["secret"].value
 
+    async def _record_presence(self, id_):
+        """
+        Record that minion ``id_`` was just seen, for ``presence_id_tracking``.
+
+        Only call this once the request has been authenticated, i.e. the id is
+        bound to the session and the token was signed by the accepted key.
+
+        Writes are throttled to one per ``presence_id_ttl / 2`` per minion in
+        this process, and run in an executor so a slow cache backend cannot
+        stall the event loop. Recording is best effort: it never fails the
+        minion's request.
+        """
+        if not self.opts.get("presence_id_tracking", False):
+            return
+        ttl = self.opts.get("presence_id_ttl", 600)
+        now = time.monotonic()
+        previous = self._presence_written.get(id_)
+        if previous is not None and now - previous < ttl / 2:
+            return
+        if len(self._presence_written) >= PRESENCE_MEMO_MAX:
+            # Bounded by the number of accepted keys in practice; this only
+            # guards against pathological churn of minion ids.
+            self._presence_written.clear()
+        # Set before awaiting so concurrent requests from the same minion
+        # don't each write.
+        self._presence_written[id_] = now
+        try:
+            loop = asyncio.get_running_loop()
+            await loop.run_in_executor(None, self._store_presence, id_, ttl)
+        except Exception as exc:  # pylint: disable=broad-except
+            # Keep the throttle timestamp so a failing backend is retried (and
+            # logged) at most once per throttle window instead of per request.
+            log.warning("Unable to record presence of minion %s: %s", id_, exc)
+
+    def _store_presence(self, id_, ttl):
+        if self._presence_cache is None:
+            # Not ``salt.cache.factory``: MemCache would hide the write from
+            # the other processes reading the bank.
+            self._presence_cache = salt.cache.Cache(self.opts)
+        self._presence_cache.store(
+            salt.utils.minions.PRESENCE_BANK,
+            id_,
+            {"ts": time.time()},
+            expires=ttl,
+        )
+
     def session_key(self, minion):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file, so the random-file path would hand
+        # each peer a different session key and an L4-balanced minion
+        # would fail "bad load" on its first non-auth request routed to
+        # a peer.  Derive from ``cluster.pem`` instead -- it is
+        # distributed master-to-master in join-reply and never leaves
+        # the cluster, so no minion can derive another minion's session
+        # key.  ``cluster_aes`` is used as the HKDF salt so a
+        # cluster-wide aes rotation rotates every derived session key
+        # in lockstep.  See ``Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -414,6 +504,9 @@ class ReqServerChannel:
                     return "bad load"
                 if not self.validate_token(payload, required=True):
                     return "bad load"
+                # Only protocol version 3 binds the id to the session and the
+                # minion key, so it is the only one that can vouch for presence.
+                await self._record_presence(payload["load"]["id"])
             # The token won't always be present in the payload for and
             # below, but if it is we always wanto validate it.
             elif not self.validate_token(payload, required=False):
@@ -436,6 +529,11 @@ class ReqServerChannel:
                 return ret
 
             # Block non-_auth requests until this node is a committed Raft voter.
+            # The ``cluster_retry`` sentinel on the wire means "this master
+            # isn't ready to serve yet" — the sender retries.  Solo masters
+            # never hit this branch (``_cluster_is_ready`` short-circuits true),
+            # so the sentinel in practice only fires from clustered masters,
+            # but the client-side handling does not need to distinguish.
             if not _cluster_is_ready(self.opts):
                 log.debug(
                     "Cluster not ready yet — deferring request from %s",
@@ -452,15 +550,44 @@ class ReqServerChannel:
             )
             cmd = load.get("cmd") if isinstance(load, dict) else None
             span_name = f"salt.req.recv.{cmd}" if cmd else "salt.req.recv"
+            span_attrs = {
+                "salt.req.cmd": cmd or "",
+                "salt.req.minion_id": (
+                    payload.get("id", "") if isinstance(payload, dict) else ""
+                ),
+            }
+            if isinstance(load, dict):
+                # Return-leg correlation: a ``_return`` carries the
+                # originating ``jid`` and the function name, but no
+                # ``id`` on the outer envelope -- surface both as
+                # span attributes so a return span is joinable to
+                # the originating publish without a trace walk.
+                if cmd == "_return":
+                    jid = load.get("jid")
+                    if jid is not None:
+                        span_attrs["salt.jid"] = str(jid)
+                    fun = load.get("fun")
+                    if fun is not None:
+                        span_attrs["salt.fun"] = fun
+                # Publish-leg correlation: ``publish`` is directed at
+                # the master, not a specific minion, so
+                # ``salt.req.minion_id`` is always empty.  Fill in the
+                # jid + target expression so the span is joinable to
+                # the originating publish via ``salt.jid`` or
+                # ``salt.pub.tgt``.
+                elif cmd == "publish":
+                    jid = load.get("jid")
+                    if jid is not None:
+                        span_attrs["salt.jid"] = str(jid)
+                    tgt = load.get("tgt")
+                    if tgt is not None:
+                        span_attrs["salt.pub.tgt"] = (
+                            str(tgt) if not isinstance(tgt, str) else tgt
+                        )
             with salt.utils.tracing.start_span(
                 span_name,
                 kind=salt.utils.tracing.SpanKind.SERVER,
-                attributes={
-                    "salt.req.cmd": cmd or "",
-                    "salt.req.minion_id": (
-                        payload.get("id", "") if isinstance(payload, dict) else ""
-                    ),
-                },
+                attributes=span_attrs,
                 context=trace_ctx,
             ):
                 ret, req_opts = await self.payload_handler(payload)
@@ -607,14 +734,22 @@ class ReqServerChannel:
                 pki_dir = self.opts["cluster_pki_dir"]
             else:
                 pki_dir = self.opts.get("pki_dir", "")
-            try:
-                pub_path = salt.utils.verify.clean_join(pki_dir, "minions", id_)
-            except salt.exceptions.SaltValidationError:
-                log.warning("Invalid minion id: %s", id_)
-                return False
-            try:
-                pub = salt.crypt.PublicKey.from_file(pub_path)
-            except OSError:
+            # Try the minions pub dir first, then clients -- remote CLI
+            # clients share the AES channel but their keys live under
+            # ``pki_dir/clients`` (see salt.cache.localfs_key).
+            pub = None
+            for subdir in ("minions", "clients"):
+                try:
+                    pub_path = salt.utils.verify.clean_join(pki_dir, subdir, id_)
+                except salt.exceptions.SaltValidationError:
+                    log.warning("Invalid minion id: %s", id_)
+                    return False
+                try:
+                    pub = salt.crypt.PublicKey.from_file(pub_path)
+                    break
+                except OSError:
+                    continue
+            if pub is None:
                 log.warning(
                     "Salt minion claiming to be %s attempted to communicate with "
                     "master, but key could not be read and verification was denied.",
@@ -836,6 +971,24 @@ class PoolRoutingChannel:
         """
         Returns a session key for the given minion id.
         """
+        # See ``ReqServerChannel.session_key`` -- derive from
+        # ``cluster.pem`` (master-only) salted by ``cluster_aes`` so
+        # isolated-FS peers agree without replicating the sessions
+        # directory and no minion can derive a peer minion's key.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = salt.master.SMaster.secrets["cluster_aes"]["secret"].value
+            cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         if minion in self.sessions:
@@ -1479,11 +1632,12 @@ class PubServerChannel:
 
     def __setstate__(self, state):
         self.opts = state["opts"]
-        self.state = state["presence_events"]
+        self.presence_events = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
         self.ckminions = salt.utils.minions.CkMinions(self.opts)
         self.present = {}
+        self.aes_funcs = None
         self.master_key = salt.crypt.MasterKeys(self.opts)
 
     def close(self):
@@ -1525,6 +1679,13 @@ class PubServerChannel:
     def _publish_daemon(self, **kwargs):
         import salt.master
 
+        # Initialise OpenTelemetry under this daemon's own pid.  Spans +
+        # inject/extract helpers invoked from ``publish_payload`` and the
+        # topology forward path (``send_publish`` -> ``inject(body)``)
+        # short-circuit silently when ``is_enabled()`` is False, so without
+        # this call cross-process trace context propagation is a no-op in
+        # the forked daemon.
+        salt.utils.tracing.configure(self.opts)
         if self.opts["pub_server_niceness"] and not salt.utils.platform.is_windows():
             log.debug(
                 "setting Publish daemon niceness to %i",
@@ -1612,6 +1773,76 @@ class PubServerChannel:
 
     async def publish_payload(self, load, *args):
         load = salt.payload.loads(load)
+        # Topology ``C@`` scope stripping: on a topology-enabled
+        # master the publish load reaches the pub daemon with the
+        # operator-provided target (e.g. ``C@east and web-*``).
+        # The minion-side matcher cannot evaluate ``C@`` without a
+        # ``master_cluster_id`` grain, and even with the grain it
+        # is a wasted round-trip --- the router has already decided
+        # locality.  Strip the ``C@`` tokens before fan-out so the
+        # subscribing minions see a well-formed compound expression.
+        #
+        # Origin-side locality guard: when the target names ONE OR MORE
+        # clusters via ``C@`` and NONE of them is this master's local
+        # cluster, skip the local publish entirely.  Otherwise the
+        # stripped target (``C@west`` -> ``*`` by design, so the
+        # destination cluster matches all its minions) would fan the
+        # job out to this master's own minions too -- which is wrong
+        # on the origin side, since the operator explicitly scoped the
+        # publish to a non-local cluster.  ``strip_cluster_scope``'s
+        # ``*`` fallback is correct for the destination cluster
+        # (where the stripped load is forwarded), not for the origin.
+        if (
+            self.opts.get("topology_enabled")
+            and isinstance(load, dict)
+            and load.get("tgt_type") in ("compound", "compound_pillar_exact")
+        ):
+            try:
+                import salt.config.topology as _topology_config
+                import salt.topology.router as _topology_router
+
+                tgt = load.get("tgt")
+                destinations = _topology_router.extract_cluster_scope(
+                    tgt, nodegroups=self.opts.get("nodegroups")
+                )
+                # Lazy-load topology config to learn the local
+                # ``cluster_id``; ``opts["cluster_id"]`` is only set on
+                # 3008.x master-cluster masters, not on topology-only
+                # solo masters.
+                local_cluster_id = self.opts.get("cluster_id")
+                if not local_cluster_id:
+                    try:
+                        _cfg = _topology_config.load_topology_config(self.opts)
+                        local_cluster_id = _cfg.cluster_id
+                    except Exception:  # pylint: disable=broad-except
+                        log.debug(
+                            "topology: load_topology_config failed on publish_payload",
+                            exc_info=True,
+                        )
+                if (
+                    destinations is not None
+                    and local_cluster_id
+                    and local_cluster_id not in destinations
+                ):
+                    # Target names only non-local clusters -- the
+                    # topology forwarder (fired from
+                    # ``MasterPubServerChannel.publish_payload`` ->
+                    # ``router.on_publish``) handles the remote fan.
+                    # Skip the origin's local publish.
+                    log.debug(
+                        "topology: skipping origin-local fan-out for "
+                        "non-local target %r (local=%r, destinations=%r)",
+                        tgt,
+                        local_cluster_id,
+                        sorted(destinations),
+                    )
+                    return
+                load["tgt"] = _topology_router.strip_cluster_scope(tgt)
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: strip_cluster_scope failed on publish_payload",
+                    exc_info=True,
+                )
         unpacked_package = self.wrap_payload(load)
         try:
             payload = salt.payload.loads(unpacked_package["payload"])
@@ -1702,37 +1933,103 @@ class MasterPubServerChannel:
 
     @classmethod
     def factory(cls, opts, **kwargs):
-        if opts.get("cluster_id"):
-            # Cluster mode: Use TCP-based transport for peer communication while
-            # preserving normal local IPC behavior for internal processes.
-            port = opts["cluster_pool_port"]
+        if opts.get("cluster_id") and opts.get("cluster_peers"):
+            # 3008.x master cluster: Use TCP-based transport for peer
+            # communication while preserving normal local IPC behavior for
+            # internal processes.  A topology-only solo master sets
+            # ``cluster_id`` without ``cluster_peers`` and must fall into
+            # the ``else`` branch below -- otherwise on Windows the TCP
+            # ``pub_sock.bind(publish_port)`` collides with the IPC
+            # publisher's prior tornado bind on the same port (see
+            # ``channel/server.py:1796-1798`` for the Windows path
+            # fallback that pins both to ``publish_port``) and the main
+            # pub-daemon's ``started`` event never fires, causing
+            # ``master.py:1199`` to raise
+            # ``SaltMasterError: Publish server did not start``.
+            # Mirrors the same gate at ``_publish_daemon`` (line 3165).
             pull_path = os.path.join(opts["sock_dir"], "master_event_pull.ipc")
             pub_path = os.path.join(opts["sock_dir"], "master_event_pub.ipc")
+            # Default primary bind_host is the master's advertised
+            # ``interface``; the Windows override below pins the
+            # event-bus TCP pair to ``_ipc_loopback`` so local
+            # ``get_master_event()`` clients find the listener.
             bind_host = opts.get("interface", "127.0.0.1")
 
-            try:
-                transport = salt.transport.tcp.PublishServer(
-                    opts,
-                    pub_host=bind_host,
-                    pub_port=opts.get("publish_port", 4505),
-                    pub_path=pub_path,
-                    pull_host=bind_host,
-                    pull_port=port,
-                    pull_path=pull_path,
-                )
-            except OSError as exc:
-                if exc.errno == errno.EADDRINUSE:
-                    transport = salt.transport.tcp.PublishServer(
-                        opts,
-                        pub_host=bind_host,
-                        pub_port=opts.get("publish_port", 4505),
-                        pub_path=pub_path,
-                        pull_host=bind_host,
-                        pull_port=0,
-                        pull_path=pull_path,
-                    )
-                else:
-                    raise
+            # The primary ``MasterPubServerChannel.transport`` IS the
+            # master event bus.  On Linux clustered it binds the two
+            # Unix sockets ``master_event_pub.ipc`` /
+            # ``master_event_pull.ipc`` --- that pair is what
+            # ``get_master_event()`` / ``fire_event()`` /
+            # ``send_aes_key_event()`` / pytest_engine's start-event
+            # all talk to.
+            #
+            # Windows has no Unix sockets, so
+            # ``tornado.netutil.bind_unix_socket`` is unavailable.
+            # We null out the two IPC paths and let
+            # :meth:`PublishServer.publisher` fall through to its TCP
+            # ``pub_host``/``pub_port`` + ``pull_host``/``pull_port``
+            # branch.
+            #
+            # Historically this branch bound ``publish_port`` /
+            # ``cluster_pool_port`` --- but those are the
+            # *minion-facing publisher* and the *cluster peer pool*
+            # ports, not the event bus.  The regular
+            # ``PubServerChannel`` created at ``master.py:1262`` also
+            # binds ``publish_port``, so the two publishers raced the
+            # same TCP port; ZMQ bind() on the second one hung, the
+            # child's ``started`` event never fired, and
+            # ``Master.start()`` sat in ``chan.transport.started.wait(60)``
+            # until the factory killed it.  The ``pool_puller`` TCPPuller
+            # bound at ``_publish_daemon`` similarly already owns
+            # ``cluster_pool_port``, so the primary's pull socket
+            # racing it was the reason for the EADDRINUSE fallback
+            # to ``pull_port=0``.
+            #
+            # Fix: on Windows, bind the event-bus ports
+            # (``tcp_master_pub_port`` / ``tcp_master_pull_port``) which
+            # mirror the Linux Unix-socket role 1:1.  No port
+            # collision, event bus works, and
+            # ``send_aes_key_event()`` /
+            # pytest_engine's start-event complete immediately
+            # instead of timing out at 30s.
+            if salt.utils.platform.is_windows():
+                pub_path = None
+                pull_path = None
+                event_pub_port = int(opts["tcp_master_pub_port"])
+                event_pull_port = int(opts["tcp_master_pull_port"])
+                # ``salt.utils.event.SaltEvent.connect_pull`` /
+                # ``connect_pub`` route through
+                # ``salt.transport.ipc_publish_client`` and
+                # ``ipc_publish_server``, both of which hard-code
+                # ``_ipc_loopback(opts)`` for their host
+                # (``salt/transport/base.py`` ``_ipc_loopback``)
+                # --- on Windows that is literally ``127.0.0.1``, with
+                # no consultation of ``opts["interface"]``.  If we
+                # bind the primary event bus on peer 2's
+                # ``interface=127.0.0.2``, every in-process
+                # ``get_master_event()`` client inside peer 2's own
+                # ``EventPublisher`` / ``MainProcess`` / engine
+                # subprocesses still connects to 127.0.0.1 and gets
+                # ``StreamClosedError``.  Pin the event-bus pair to
+                # the same loopback literal ``_ipc_loopback`` uses so
+                # the clients find the listener.
+                bind_host = "::1" if opts.get("ipv6", False) else "127.0.0.1"
+            else:
+                # Ignored by ``PublishServer.publisher`` when
+                # ``pub_path`` / ``pull_path`` are set, but harmless
+                # to carry.
+                event_pub_port = opts.get("publish_port", 4505)
+                event_pull_port = opts["cluster_pool_port"]
+
+            transport = salt.transport.tcp.PublishServer(
+                opts,
+                pub_host=bind_host,
+                pub_port=event_pub_port,
+                pub_path=pub_path,
+                pull_host=bind_host,
+                pull_port=event_pull_port,
+                pull_path=pull_path,
+            )
         else:
             transport = salt.transport.ipc_publish_server("master", opts)
 
@@ -2143,7 +2440,7 @@ class MasterPubServerChannel:
         Wire shape:
 
         1. For each peer, emit a ``cluster/peer/collect-request``
-           event tagged with this master's interface as the
+           event tagged with this master's node-id as the
            ``requester`` and the channel list.
         2. The peer's ``publish_payload`` sees the event, opens an
            outbound state-sync session pointed back at the
@@ -2166,11 +2463,9 @@ class MasterPubServerChannel:
             self.opts,
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
-        requester = self.opts.get("interface")
+        requester = salt.cluster.node_id(self.opts)
         if requester is None:
-            log.warning(
-                "cluster.collect_from_peers: opts['interface'] not set; aborting"
-            )
+            log.warning("cluster.collect_from_peers: opts['id'] not set; aborting")
             return
         valid_channels = [
             ch
@@ -2550,11 +2845,11 @@ class MasterPubServerChannel:
             iter_root_chunks,
         )
 
-        pusher = self.pusher(peer_id)
         crypticle = salt.crypt.Crypticle(
             self.opts,
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
+        pusher = self.pusher(peer_id)
 
         async def send_channel(channel, chunk_iter):
             chunks = list(chunk_iter)
@@ -2616,6 +2911,8 @@ class MasterPubServerChannel:
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("state-sync session %s aborted unexpectedly", session_id)
+        finally:
+            pusher.close()
 
     def _apply_state_sync_chunk(self, chunk):
         """
@@ -2856,7 +3153,7 @@ class MasterPubServerChannel:
         """
         Return the path to the per-master join sentinel file.
 
-        The filename is namespaced by the master's interface address so that
+        The filename is namespaced by the master's node-id so that
         deployments which share ``cachedir`` between cluster members (and the
         cluster integration tests, which point every master at the same
         ``cluster_cache_path``) keep distinct sentinels — without that, the
@@ -2864,8 +3161,8 @@ class MasterPubServerChannel:
         master sees it on startup, takes the "rejoining" path, and skips
         the deterministic founding-voter election.
         """
-        interface = self.opts.get("interface") or "unknown"
-        return pathlib.Path(self.opts["cachedir"]) / f".cluster_joined.{interface}"
+        node_id = salt.cluster.node_id(self.opts) or "unknown"
+        return pathlib.Path(self.opts["cachedir"]) / f".cluster_joined.{node_id}"
 
     def _has_joined_cluster(self):
         """
@@ -2966,20 +3263,75 @@ class MasterPubServerChannel:
                 log.error("Unable to send aes key event")
 
     def __getstate__(self):
+        # Round-trip ``SMaster.secrets`` to the spawned EventPublisher so
+        # the child inherits ``cluster_aes`` / ``aes``.  Without this,
+        # Windows ``multiprocessing.spawn`` re-imports :mod:`salt.master`
+        # in the child with the empty-dict default and
+        # :meth:`ReqServerChannel.post_fork` (invoked from
+        # :func:`salt.topology.link_manager.start` ->
+        # ``_open_inbound_listener``) fails with ``KeyError('cluster_aes')``
+        # when it evaluates ``self.aes_key``.  The topology inbound REP
+        # socket then never binds and east<->west peer handshakes time
+        # out with "Message timed out", leaving ``C@peer`` compound
+        # publishes with no outbound route (nightly 41970401917).
+        import salt.master  # pylint: disable=import-outside-toplevel
+
         return {
             "opts": self.opts,
             "transport": self.transport,
+            "_secrets": salt.master.SMaster.secrets,
         }
 
     def __setstate__(self, state):
+        import salt.master  # pylint: disable=import-outside-toplevel
+
         self.opts = state["opts"]
         self.transport = state["transport"]
+        secrets = state.get("_secrets")
+        if secrets is not None:
+            salt.master.SMaster.secrets = secrets
+        # Re-initialise the instance attributes that ``__init__``
+        # sets but that aren't carried through the pickle envelope
+        # (Windows ``multiprocessing.spawn`` re-creates the object
+        # via ``cls.__new__(cls)`` + ``__setstate__`` without
+        # calling ``__init__``).  Without these, the publish-daemon
+        # subprocess crashes on first inbound ``cluster/peer/discover``
+        # payload with AttributeError on ``_discover_candidates`` /
+        # ``master_key`` / ``peer_keys``.
+        self.master_key = salt.crypt.MasterKeys(self.opts)
+        self.peer_keys = {}
+        # Alias to ``opts["cluster_peers"]`` -- mirrors __init__ so
+        # appends to ``self.cluster_peers`` from the discover/join
+        # paths propagate to the same list that downstream readers
+        # (``handle_pool_publish`` etc.) index via ``self.opts``.
+        self.cluster_peers = self.opts["cluster_peers"]
         self._discover_event = None
+        self._discover_token = None
+        self._discover_candidates = {}
         self._raft_dispatcher = None
         self._raft_service = None
 
     def close(self):
         self.transport.close()
+        # Topology shutdown hook.  Lazy-import so masters that have never
+        # enabled topology never pay the import cost.  The io_loop may
+        # already be closed by this point (close is a destructor-style
+        # method); run_until_complete handles that by raising, which we
+        # swallow after a debug log.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            io_loop = getattr(self, "io_loop", None)
+            try:
+                if io_loop is not None and not io_loop.asyncio_loop.is_closed():
+                    io_loop.run_sync(link_manager.stop)
+                else:
+                    # Fall back to a one-shot loop; stop() is idempotent.
+                    asyncio.run(link_manager.stop())
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology link_manager.stop raised during close",
+                    exc_info=True,
+                )
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -2989,6 +3341,20 @@ class MasterPubServerChannel:
 
         :param func process_manager: A ProcessManager, from salt.utils.process.ProcessManager
         """
+        # Topology pre_fork hook MUST run BEFORE ``process_manager.add_process``.
+        # ``ProcessManager.add_process`` calls ``process.start()`` synchronously,
+        # so forking the EventPublisher first would race the parent's
+        # ``_init_index_file`` call (both processes init the same mmap backing
+        # file, producing a partially-written file whose size does not match
+        # ``size*slot_size`` --- ``open_writer`` then fails with
+        # ``RuntimeError("failed to open topology breadcrumbs writer ... (did
+        # pre_create run?)")``).  Reserving the ``topology_link_port`` socket
+        # and finishing ``pre_create`` for the breadcrumb/registry MmapCaches
+        # in the parent before any fork guarantees the child inherits a fully
+        # materialised set of files.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            link_manager.pre_fork(self.opts, process_manager)
         if hasattr(self.transport, "publish_daemon"):
             proc_kwargs = kwargs.pop("kwargs", kwargs)
             process_manager.add_process(
@@ -3010,6 +3376,13 @@ class MasterPubServerChannel:
             setproctitle.setproctitle("EventPublisher")
         import salt.master  # pylint: disable=import-outside-toplevel
 
+        # Initialise OpenTelemetry under this daemon's own pid.  This is
+        # the process that runs ``publish_payload`` -> ``topology_router.
+        # on_publish`` -> ``PeerMasterLink.send_publish``; the inject()
+        # call that threads traceparent across peer-cluster forwards
+        # short-circuits silently when ``is_enabled()`` is False, so
+        # cross-cluster trace propagation breaks without this call.
+        salt.utils.tracing.configure(self.opts)
         if (
             self.opts.get("event_publisher_niceness")
             and not salt.utils.platform.is_windows()
@@ -3038,8 +3411,11 @@ class MasterPubServerChannel:
         # iterates ``self.pushers`` on every event.
         self.pushers = []
 
-        # Cluster-specific peer communication (separate from local IPC)
-        if self.opts.get("cluster_id"):
+        # Cluster-specific peer communication (separate from local IPC).
+        # Only used by 3008.x master-cluster peers; a topology-only master
+        # sets ``cluster_id`` without ``cluster_peers`` and does not need
+        # (and must not bind) the pool_puller port.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
             self.tcp_master_pool_port = self.opts["cluster_pool_port"]
             self.auth_errors = collections.defaultdict(collections.deque)
             self.peer_map = {}
@@ -3055,7 +3431,7 @@ class MasterPubServerChannel:
 
             # Set up the cluster pool puller for incoming peer events
             self.pool_puller = salt.transport.tcp.TCPPuller(
-                host=self.opts.get("interface", "127.0.0.1"),
+                host=ip_bracket(self.opts.get("interface", "127.0.0.1"), strip=True),
                 port=self.tcp_master_pool_port,
                 io_loop=self.io_loop,
                 payload_handler=self.handle_pool_publish,
@@ -3094,7 +3470,7 @@ class MasterPubServerChannel:
                 except Exception:  # pylint: disable=broad-except
                     log.exception("Failed to start Raft consensus service")
             else:
-                # Deterministic bootstrap: only the lowest interface address
+                # Deterministic bootstrap: only the master with lowest id
                 # in the configured cluster bootstraps as the founding
                 # voter.  Every other master comes up as a learner via the
                 # join-reply path.  This eliminates the race where several
@@ -3102,16 +3478,15 @@ class MasterPubServerChannel:
                 # join-replies and each one bootstraps its own single-member
                 # cluster, leaving the cluster with multiple disjoint
                 # leaders or — when join-replies land first — zero voters.
-                bootstrap_pool = sorted(
-                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
-                )
+                node_id = salt.cluster.node_id(self.opts)
+                bootstrap_pool = sorted({node_id, *self.opts.get("cluster_peers", [])})
                 aio_loop_deferred = salt.utils.asynchronous.aioloop(self.io_loop)
-                if bootstrap_pool and bootstrap_pool[0] == self.opts["interface"]:
+                if bootstrap_pool and bootstrap_pool[0] == node_id:
                     log.info(
                         "New node bootstrapping cluster %r as designated founder",
                         self.opts["cluster_id"],
                     )
-                    # The founder is the lowest-IP master and never runs
+                    # The founder is the lowest-id master and never runs
                     # discover (see ``salt.master.Master.start``), so no
                     # inbound join-reply can race this start-up.  Still
                     # delay by ``cluster_join_timeout`` before starting
@@ -3129,6 +3504,43 @@ class MasterPubServerChannel:
                         "New node joining cluster %r — waiting for join-reply to start Raft as learner",
                         self.opts["cluster_id"],
                     )
+        # Topology start hook: schedule link_manager.start on the io loop
+        # so outbound links come up alongside the publish daemon.  Lazy
+        # import keeps non-topology masters free of the dependency chain.
+        #
+        # link_manager.start is a pure ``async def`` asyncio coroutine, so
+        # it has to be scheduled on the loop's asyncio side -- not via
+        # ``self.io_loop.spawn_callback`` (tornado), which hands tornado a
+        # bare coroutine object and never actually drives the body.  The
+        # ``aio_loop.create_task`` pattern used here mirrors the publisher
+        # setup 100 lines above (``aio_loop.create_task(self.transport.
+        # publisher(...))``) and the Raft bootstrap below.
+        #
+        # Longer term: this whole daemon should run on a pure asyncio
+        # event loop end-to-end, with the tornado shim retired.  All of
+        # topology, Raft, the publisher, and the join-reply path are
+        # already ``async def`` on top of ``aioloop(self.io_loop)``; the
+        # only reason ``self.io_loop`` is still a tornado ``IOLoop`` is
+        # that ``PubServerChannel.publish_payload`` and the TCP transport
+        # callbacks were written against tornado.  Once those migrate,
+        # drop the ``aioloop`` adapter here and have ``_publish_daemon``
+        # own a plain ``asyncio.new_event_loop()`` directly.
+        if self.opts.get("topology_enabled"):
+            link_manager = importlib.import_module("salt.topology.link_manager")
+            aio_loop = salt.utils.asynchronous.aioloop(self.io_loop)
+            # Hand through ``self._raft_service``.  This is usually
+            # ``None`` at schedule time (the founder path defers Raft
+            # start via ``call_later(cluster_join_timeout)``; the
+            # learner path waits for a join-reply), but when the daemon
+            # resumes on an already-joined cluster the service is live
+            # above (line 3361) and the migration step inside
+            # ``link_manager.start`` can propose immediately instead of
+            # deferring.  ``promote_solo_to_clustered`` tolerates
+            # ``None`` with an INFO log (committed-log replay converges
+            # the state machine from disk in that case).
+            aio_loop.create_task(
+                link_manager.start(self.opts, self.io_loop, self._raft_service)
+            )
         # run forever
         try:
             self.io_loop.start()
@@ -3656,7 +4068,19 @@ class MasterPubServerChannel:
                         payload["peer_id"],
                     )
 
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list.
+                # ``self.cluster_peers`` is a reference to
+                # ``opts["cluster_peers"]`` (see ``__init__``), and a naive
+                # append on a join from a statically-configured peer would
+                # grow the list with a duplicate entry.  Any downstream code
+                # that iterates ``opts["cluster_peers"]`` positionally (the
+                # earlier zip-based shape of ``build_peer_pushers``) would then
+                # mis-key the Raft dispatcher's pusher table and silently
+                # drop inbound ``cluster/raft/*`` replies for the tail
+                # peer.  ``_add_pusher`` already dedups the pusher list by
+                # ``(pull_host, pull_port)``; mirror that here.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 self._add_pusher(self.pusher(payload["peer_id"]))
 
                 # Add the joining peer to our own Raft state as a learner.
@@ -3786,7 +4210,11 @@ class MasterPubServerChannel:
                         "payload": tosign,
                     },
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
                 if state_sync_session_id is not None:
                     asyncio.get_event_loop().create_task(
                         self._send_state_sync_chunks(
@@ -3846,7 +4274,11 @@ class MasterPubServerChannel:
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     tosign, algorithm=self.opts["publish_signing_algorithm"]
                 )
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list — see
+                # the matching guard in the join handler above for the
+                # pusher-table keying rationale.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
@@ -3918,7 +4350,11 @@ class MasterPubServerChannel:
                     salt.utils.event.tagify("discover-reply", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},
                 )
-                await self.pusher(payload["peer_id"]).publish(event_data)
+                reply_pusher = self.pusher(payload["peer_id"])
+                try:
+                    await reply_pusher.publish(event_data)
+                finally:
+                    reply_pusher.close()
             elif tag.startswith("cluster/peer"):
                 peer = data["peer_id"]
                 # Sibling masters key ``data["peers"]`` by the bare names
@@ -3930,8 +4366,17 @@ class MasterPubServerChannel:
                 if peer == master_id:
                     log.debug("Skip our own cluster peer event %s", tag)
                     return
-                aes = data["peers"][master_id]["aes"]
-                sig = data["peers"][master_id]["sig"]
+                entry = data["peers"].get(master_id) or {}
+                if "aes" not in entry:
+                    # The sender records an empty entry for a peer whose public
+                    # key it does not hold yet. It re-announces once the key
+                    # arrives, so skip this round.
+                    log.info(
+                        "Peer %s has no AES key for us yet, awaiting re-announce", peer
+                    )
+                    return
+                aes = entry["aes"]
+                sig = entry["sig"]
                 key_str = self.master_key.master_key.decrypt(
                     aes, algorithm=self.opts["cluster_encryption_algorithm"]
                 )
@@ -4132,3 +4577,29 @@ class MasterPubServerChannel:
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
                 )
+
+        # Topology fan-out hook.  Dispatch the decoded publish envelope
+        # to :func:`salt.topology.router.on_publish`, which decides which
+        # peer links (if any) the publish forwards to and emits per-link
+        # failure events on error.  Lazy import so masters without
+        # topology enabled never load the module.  ``importlib`` is used
+        # here instead of a plain ``import salt.topology.router`` so the
+        # ``salt`` name is not rebound as a function-local (which would
+        # shadow the module-level ``salt`` imports used earlier in this
+        # method).
+        if self.opts.get("topology_enabled"):
+            topology_router = importlib.import_module("salt.topology.router")
+            try:
+                decoded_load = _decode_data()
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "topology: unable to decode publish payload for %s",
+                    tag,
+                    exc_info=True,
+                )
+            else:
+                if isinstance(decoded_load, dict):
+                    try:
+                        await topology_router.on_publish(decoded_load, self.io_loop)
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception("topology: on_publish failed for %s", tag)

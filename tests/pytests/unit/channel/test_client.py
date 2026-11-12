@@ -114,6 +114,9 @@ class _StubAuth:
     def gen_token(self, clear_tok):  # pragma: no cover - unused
         return b""
 
+    def get_keys(self):  # pragma: no cover - the pillar path asks for these
+        return None
+
     async def authenticate(self):  # pragma: no cover - unused
         return None
 
@@ -505,3 +508,115 @@ async def test_request_lock_recovers_after_failure_or_queued_cancellation(
             return_exceptions=True,
         )
         channel.close()
+
+
+@pytest.mark.parametrize(
+    "payload,expected",
+    [
+        ({"enc": "clear", "load": {"ret": False, "cluster_retry": True}}, True),
+        ({"enc": "clear", "load": {"ret": False}}, False),
+        ({"enc": "aes", "load": {"cluster_retry": True}}, False),
+        ({"enc": "clear", "load": "not-a-dict"}, False),
+        ({}, False),
+        (b"\x81\xa3enc", False),
+        (None, False),
+    ],
+)
+def test_cluster_retry_predicate(payload, expected):
+    """
+    Regression test for issue #70563.
+
+    ``_cluster_retry`` must recognise the deferral and nothing else.
+    """
+    assert bool(salt.channel.client._cluster_retry(payload)) is expected
+
+
+async def test_crypted_transfer_waits_out_cluster_retry(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    A ``cluster_retry`` deferral must be retried, not decrypted.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    master = salt.crypt.Crypticle(minion_opts, key)
+    minion = salt.crypt.Crypticle(minion_opts, key)
+
+    # Retry immediately so the test does not sit on the real 10s default.
+    minion_opts["acceptance_wait_time"] = 0
+
+    class _DeferringTransport(_StubTransport):
+        def __init__(self):
+            super().__init__([])
+            self.call = 0
+
+        async def send(self, payload, timeout=None):
+            self.call += 1
+            if self.call == 1:
+                return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+            outer = (
+                salt.payload.loads(payload) if isinstance(payload, bytes) else payload
+            )
+            decrypted = master.loads(outer["load"])
+            return master.dumps({"ret": "real-reply"}, nonce=decrypted["nonce"])
+
+    transport = _DeferringTransport()
+    channel = _make_channel(
+        minion_opts, tmp_path, transport, _StubAuth(minion_opts, minion)
+    )
+
+    result = await channel._crypted_transfer({"cmd": "test"}, timeout=30)
+
+    assert result == {"ret": "real-reply"}
+    assert transport.call == 2, "the deferral must cost one extra round trip"
+
+
+async def test_crypted_transfer_cluster_retry_is_bounded(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    The wait is bounded by the timeout the caller already accepted. If a master
+    never becomes ready, the minion must raise an ``AuthenticationError``.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    minion = salt.crypt.Crypticle(minion_opts, key)
+    minion_opts["acceptance_wait_time"] = 0
+
+    class _AlwaysDeferringTransport(_StubTransport):
+        async def send(self, payload, timeout=None):
+            self.sent.append(payload)
+            return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
+    transport = _AlwaysDeferringTransport([])
+    channel = _make_channel(
+        minion_opts, tmp_path, transport, _StubAuth(minion_opts, minion)
+    )
+
+    with pytest.raises(salt.crypt.AuthenticationError, match="cluster is not ready"):
+        await channel._crypted_transfer({"cmd": "test"}, timeout=0)
+
+    assert transport.sent, "the request must be attempted at least once"
+
+
+async def test_pillar_path_says_why_the_cluster_deferred(minion_opts, tmp_path):
+    """
+    Regression test for issue #70563.
+
+    ``crypted_transfer_decode_dictentry`` must also raise an ``AuthenticationError``
+    when the master defers a pillar fetch with an informative message.
+    """
+    key = salt.crypt.Crypticle.generate_key_string()
+    minion = salt.crypt.Crypticle(minion_opts, key)
+
+    class _DeferringTransport(_StubTransport):
+        async def send(self, payload, timeout=None):
+            self.sent.append(payload)
+            return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
+    channel = _make_channel(
+        minion_opts, tmp_path, _DeferringTransport([]), _StubAuth(minion_opts, minion)
+    )
+
+    with pytest.raises(salt.crypt.AuthenticationError, match=r"\(cluster not ready\)"):
+        await channel.crypted_transfer_decode_dictentry(  # pylint: disable=E1121,E1123
+            {"cmd": "_pillar"}, dictkey="pillar", timeout=4, tries=1
+        )

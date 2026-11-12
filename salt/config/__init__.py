@@ -128,6 +128,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The fingerprint of the master key may be specified to increase security. Generate
         # a master fingerprint with `salt-key -F master`
         "master_finger": str,
+        # Cluster ID of the master this minion is currently connected to.
+        # Populated by the auth-response hook when
+        # ``topology_push_cluster_grain`` is enabled on the master side;
+        # exposed to the minion as a grain for targeting across a
+        # topology.  Empty string means "no cluster / standalone master".
+        "master_cluster_id": str,
         # Deprecated in 2019.2.0. Use 'random_master' instead.
         # Do not remove! Keep as an alias for usability.
         "master_shuffle": bool,
@@ -252,6 +258,75 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_min_voters": int,
         "cluster_demote_cooldown": float,
         "cluster_auto_replace_voters": bool,
+        # Master-topology opts (see rfcs/master-topology.md "New config
+        # options").  Grouped here next to cluster_* so the two feature
+        # surfaces live together.  ``topology_enabled`` is the master
+        # key; when False every runtime hook short-circuits.  See
+        # ``salt/topology/`` and ``salt/config/topology.py`` for how
+        # the other opts are consumed.
+        "topology_enabled": bool,
+        "topology_peers": list,
+        "topology_event_subscriptions": (type(None), list),
+        "topology_link_port": int,
+        "topology_summary_interval": int,
+        "topology_breadcrumb_grace": int,
+        "topology_breadcrumb_max_age": int,
+        "topology_push_cluster_grain": bool,
+        # Mirrors ``auto_accept`` but for cross-master MasterIdentityKey
+        # presentation during link setup (see trust-model section of the
+        # RFC).
+        "auto_accept_masters": bool,
+        # MmapCache sizing for breadcrumb / registry stores (see
+        # salt/utils/mmap_cache.py for shape semantics).
+        "topology_breadcrumb_cache_size": int,
+        "topology_breadcrumb_cache_key_size": int,
+        "topology_registry_cache_size": int,
+        "topology_registry_cache_key_size": int,
+        # Seconds a detaching master waits for in-flight work to drain
+        # before tearing down its links.
+        "topology_detach_quiesce": int,
+        # Grains the summary thread fans out alongside the periodic
+        # topology summary.  Empty list disables the extra fan-out.
+        "topology_summary_grains": list,
+        # topology/pub-ack + topology/pub-complete frame emission.  See
+        # doc/topics/master-topology/rfc-pub-ack-complete.md.  Default-on;
+        # peers running without the opt (or older code) simply don't send
+        # the frames and the originator falls back to the pre-RFC silent-
+        # inference behavior.  No breaking change in mixed deployments.
+        "topology_pub_ack": bool,
+        # Seconds a peer's local-return collector waits before giving up and
+        # emitting topology/pub-complete with its current returned/missed
+        # tallies.  Consumed by Phase 2's completion loop; reserved here
+        # so the config schema is stable across Phase 1/2 releases.
+        "topology_pub_complete_timeout": float,
+        # Phase 1.5: receiver-side emission of topology/pub-complete.  When
+        # True the inbound dispatcher spawns a bounded per-jid collector
+        # that watches salt/job/<jid>/ret/* and emits pub-complete when the
+        # ack'd minion set is drained (or when topology_pub_complete_timeout
+        # fires, whichever comes first).  Default-on; peers running without
+        # emission never fire the frame and the originator falls back to
+        # the pre-RFC silence-mode timeout.
+        "topology_pub_complete_enabled": bool,
+        # Upper bound on concurrent in-flight pub-complete collectors.  Caps
+        # memory under a publish flood; when exceeded new jids skip spawning
+        # with a WARNING log and the originator falls back to --timeout for
+        # those jids.  See RFC pub-ack-complete, Phase 1.5.
+        "topology_pub_complete_max_inflight": int,
+        # Grace window in seconds for pub-ack arrival before relying on
+        # syndic-style silent-inference fallback.  See RFC pub-ack-complete.
+        "topology_wait": float,
+        # Originator-side CLI consumption of topology/pub-ack +
+        # topology/pub-complete.  Default on: CLI exits the wait loop
+        # as soon as every ack'd peer has signaled pub-complete, instead
+        # of always waiting ``--timeout``.  Mixed-deployment safety: a
+        # peer running without ``topology_pub_ack``/``topology_pub_complete_enabled``
+        # never emits; its origin_cluster_id is absent from
+        # ``peers_acked`` and the generic ``--timeout`` branch catches
+        # the fallback -- no hang, no behavior regression vs. a silent
+        # syndic.  Operators can set this False to force the
+        # pre-RFC syndic-style silent-inference behavior.  See RFC
+        # pub-ack-complete, Phase 3 (default flipped 2026-11-04).
+        "topology_pub_ack_consumer": bool,
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -370,6 +445,15 @@ VALID_OPTS = immutabletypes.freeze(
         "multiprocessing": bool,
         # Maximum number of concurrently active processes at any given point in time
         "process_count_max": int,
+        # Opt-in memory-headroom guard for queue admission. Accepts a
+        # percentage string ("5%") or an absolute size ("5G", "500M", int
+        # bytes). None preserves the legacy 5%-of-system-RAM behavior.
+        "minion_memory_headroom": (str, int, type(None)),
+        # Optional explicit override for the reference "total memory" used
+        # by the headroom guard. Accepts int bytes or a size string. When
+        # unset the reference is auto-detected from cgroup v2 / v1 limits,
+        # falling back to system-wide RAM.
+        "minion_memory_max": (str, int, type(None)),
         # Whether or not the salt minion should run scheduled mine updates
         "mine_enabled": bool,
         # Whether or not scheduled mine updates should be accompanied by a job return for the job cache
@@ -597,6 +681,20 @@ VALID_OPTS = immutabletypes.freeze(
         # The port for the master to listen to returns on. The minion needs to connect to this port
         # to send returns.
         "ret_port": int,
+        # The port the master's ClientEventPublisher binds for authenticated
+        # event streaming to remote clients. The auth channel uses
+        # ``client_event_port + 1``.
+        "client_event_port": int,
+        # Hard cap on concurrent authenticated subscriber sessions tracked
+        # by :class:`ClientEventPublisher`.  Prevents an attacker holding
+        # a valid Salt token from exhausting server memory by opening
+        # unbounded sessions.
+        "client_event_max_sessions": int,
+        # Set by ``client_config()`` to signal the CLI dispatch layer which
+        # client implementation to use.  True when ``/etc/salt/client`` is
+        # loaded (RemoteClient path, PKI client identity); False when the
+        # legacy master-config fallback is used (LocalClient path).
+        "client_auth": bool,
         # The number of seconds to keep jobs around in the job cache on the master
         "keep_jobs_seconds": int,
         # If the returner supports `clean_old_jobs`, then at cleanup time,
@@ -746,6 +844,11 @@ VALID_OPTS = immutabletypes.freeze(
         "client_acl_verify": bool,
         "publisher_acl": dict,
         "publisher_acl_blacklist": dict,
+        # Remote CLI client access control lists. Maps client IDs to allowed resources.
+        # Empty dict (default) means no restrictions. Each client can specify allowed
+        # runners, wheel functions, minions, and execution modules.
+        "client_acl": dict,
+        "client_acl_blacklist": dict,
         "sudo_acl": bool,
         "external_auth": dict,
         "token_expire": int,
@@ -1116,6 +1219,12 @@ VALID_OPTS = immutabletypes.freeze(
         # The port to be used when checking if a master is connected to a
         # minion
         "remote_minions_port": int,
+        # Record when each authenticated minion was last seen so that presence
+        # detection also works for minions whose connecting address does not
+        # match the addresses in their grains (NAT, internet-facing minions)
+        "presence_id_tracking": bool,
+        # Seconds a minion is considered present after it was last seen
+        "presence_id_ttl": int,
         # pass renderer: Fetch secrets only for the template variables matching the prefix
         "pass_variable_prefix": str,
         # pass renderer: Whether to error out when unable to fetch a secret
@@ -1167,6 +1276,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "interface": "0.0.0.0",
         "master": "salt",
         "master_type": "str",
+        "master_cluster_id": "",
         "master_uri_format": "default",
         "source_interface_name": "",
         "source_address": "",
@@ -1333,6 +1443,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "autosign_timeout": 120,
         "multiprocessing": True,
         "process_count_max": -1,
+        "minion_memory_headroom": None,
+        "minion_memory_max": None,
         "mine_enabled": True,
         "mine_return_job": False,
         "mine_interval": 60,
@@ -1581,6 +1693,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sock_dir": os.path.join(salt.syspaths.SOCK_DIR, "master"),
         "sock_pool_size": 1,
         "ret_port": 4506,
+        "client_event_port": 4507,
+        "client_event_max_sessions": 1024,
+        "client_auth": False,
         "timeout": 5,
         "publish_timeout": 30,
         "keep_jobs": 24,
@@ -1724,6 +1839,23 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "client_acl_verify": True,
         "publisher_acl": {},
         "publisher_acl_blacklist": {},
+        # Remote CLI client access control lists
+        # Maps client IDs (from public key filenames) to their allowed resources
+        # Empty dict means no restrictions (all clients have full access)
+        # Example:
+        #   client_acl:
+        #     admin-workstation:
+        #       runners: ['*']
+        #       wheel: ['*']
+        #       minions: ['*']
+        #       modules: ['*']
+        #     read-only-client:
+        #       runners: ['test.*']
+        #       wheel: []
+        #       minions: ['web-*']
+        #       modules: ['test.ping', 'grains.items']
+        "client_acl": {},
+        "client_acl_blacklist": {},
         "sudo_acl": False,
         "external_auth": {},
         "token_expire": 43200,
@@ -1932,6 +2064,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "use_os_truststore": False,
         "detect_remote_minions": False,
         "remote_minions_port": 22,
+        "presence_id_tracking": False,
+        "presence_id_ttl": 600,
         "pass_variable_prefix": "",
         "pass_strict_fetch": False,
         "pass_gnupghome": "",
@@ -1953,6 +2087,28 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        # Master-topology defaults (see VALID_OPTS block for docs).
+        "topology_enabled": False,
+        "topology_peers": [],
+        "topology_event_subscriptions": None,
+        "topology_link_port": 4521,
+        "topology_summary_interval": 30,
+        "topology_breadcrumb_grace": 30,
+        "topology_breadcrumb_max_age": 600,
+        "topology_push_cluster_grain": True,
+        "auto_accept_masters": False,
+        "topology_breadcrumb_cache_size": 1_000_000,
+        "topology_breadcrumb_cache_key_size": 64,
+        "topology_registry_cache_size": 10_000,
+        "topology_registry_cache_key_size": 64,
+        "topology_detach_quiesce": 60,
+        "topology_summary_grains": [],
+        "topology_pub_ack": True,
+        "topology_pub_complete_timeout": 60.0,
+        "topology_pub_complete_enabled": True,
+        "topology_pub_complete_max_inflight": 1024,
+        "topology_wait": 2.0,
+        "topology_pub_ack_consumer": True,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
@@ -2034,6 +2190,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
                 ],
             },
         },
+        # XXX Create separate cli config file
+        "encryption_algorithm": "OAEP-SHA1",
+        "signing_algorithm": "PKCS1v15-SHA1",
     }
 )
 
@@ -2402,10 +2561,30 @@ def _append_domain(opts):
     return "{0[id]}.{0[append_domain]}".format(opts)
 
 
+# Cache of parsed configuration files keyed by path. Each entry is a
+# ``(cache_key, conf_opts)`` tuple where ``cache_key`` is the file's
+# ``(st_mtime_ns, st_size)``. The same configuration file is read many times
+# while a daemon starts up (see #59807); parsing it once and reusing the result
+# avoids that redundant disk I/O and YAML parsing. Callers always receive a deep
+# copy so mutating the returned dict cannot corrupt the cache, and a changed
+# file (different mtime or size, e.g. a reload) is re-read.
+_conf_file_cache = {}
+
+
 def _read_conf_file(path):
     """
     Read in a config file from a given path and process it into a dictionary
     """
+    try:
+        _stat = os.stat(path)
+        cache_key = (_stat.st_mtime_ns, _stat.st_size)
+    except OSError:
+        cache_key = None
+    if cache_key is not None:
+        cached = _conf_file_cache.get(path)
+        if cached is not None and cached[0] == cache_key:
+            return deepcopy(cached[1])
+
     log.debug("Reading configuration from %s", path)
     append_file_suffix_YAMLError = False
     with salt.utils.files.fopen(path, "r") as conf_file:
@@ -2443,6 +2622,13 @@ def _read_conf_file(path):
             conf_opts["id"] = str(conf_opts["id"])
         else:
             conf_opts["id"] = salt.utils.data.decode(conf_opts["id"])
+
+    # Cache the successful parse so repeated reads of the same unchanged file
+    # reuse it. The rename-on-YAMLError case is skipped: it has moved the file
+    # out from under ``path``, so the stat taken above no longer describes it.
+    if cache_key is not None and not append_file_suffix_YAMLError:
+        _conf_file_cache[path] = (cache_key, conf_opts)
+        return deepcopy(conf_opts)
     return conf_opts
 
 
@@ -4171,6 +4357,9 @@ def apply_minion_config(
     if overrides:
         opts.update(overrides)
 
+    if "grains" in opts and not isinstance(opts["grains"], dict):
+        opts["grains"] = {}
+
     if "environment" in opts:
         if opts["saltenv"] is not None:
             log.warning(
@@ -4314,7 +4503,12 @@ def _update_disabled_grains(opts):
     This function provides backwards compatibility for grain-specific options
     such as ``enable_fqdns_grains: False``
     """
-    grain_specific_option = re.compile(r"(?:enable_)?(?P<grain>[\w_]+)grains$")
+    # Only ``enable_<grain>_grains`` toggles are deprecated. The optional
+    # ``enable_`` in the previous regex incorrectly matched any option whose
+    # name happens to end in ``_grains`` (e.g. ``auth_events_pend_autosign_grains``,
+    # whose master-side default of ``False`` would then fire the warning on
+    # every config load and break tests that assert ``not ret.stderr``).
+    grain_specific_option = re.compile(r"^enable_(?P<grain>\w+)_grains$")
     if "disabled_grains" not in opts:
         opts["disabled_grains"] = []
 
@@ -4675,24 +4869,49 @@ def apply_master_config(overrides=None, defaults=None):
     return opts
 
 
-def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
+def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None, profile=None):
     """
-    Load Master configuration data
+    Load Client configuration data
 
     Usage:
 
     .. code-block:: python
 
         import salt.config
-        master_opts = salt.config.client_config('/etc/salt/master')
+        client_opts = salt.config.client_config('/etc/salt/client')
 
-    Returns a dictionary of the Salt Master configuration file with necessary
-    options needed to communicate with a locally-running Salt Master daemon.
-    This function searches for client specific configurations and adds them to
-    the data from the master configuration.
+    Returns a dictionary of configuration options for Salt CLI tools (salt,
+    salt-run, salt-key) to communicate with a Salt Master. Supports both
+    local (IPC socket) and remote (network) connections.
 
-    This is useful for master-side operations like
-    :py:class:`~salt.client.LocalClient`.
+    This function first checks for a dedicated client config file
+    (/etc/salt/client), then falls back to the master config for backwards
+    compatibility with local master usage.
+
+    Supports profiles for managing multiple masters:
+
+    .. code-block:: yaml
+
+        # /etc/salt/client
+        master: localhost
+        id: admin-laptop
+
+        profiles:
+          prod:
+            master: prod-salt.example.com
+            id: admin-laptop-prod
+          dev:
+            master: dev-salt.example.com
+            id: admin-laptop-dev
+
+    Args:
+        path: Path to config file (typically /etc/salt/client or /etc/salt/master)
+        env_var: Environment variable to override config path
+        defaults: Default options dictionary
+        profile: Profile name to use (e.g., 'prod', 'dev')
+
+    Returns:
+        OptsDict: Configuration dictionary
     """
     if defaults is None:
         defaults = DEFAULT_MASTER_OPTS.copy()
@@ -4712,9 +4931,114 @@ def client_config(path, env_var="SALT_CLIENT_CONFIG", defaults=None):
             "token_file", os.path.join(client_config_dir, "salt_token")
         )
     }
-    # Update options with the master configuration, either from the provided
-    # path, salt's defaults or provided defaults
-    opts.update(master_config(path, defaults=defaults))
+
+    # Check for dedicated client config first, fall back to master config
+    # This allows /etc/salt/client to configure remote masters while
+    # maintaining backwards compatibility with /etc/salt/master for local usage
+    config_dir = os.path.dirname(path)
+    client_config_path = os.path.join(config_dir, "client")
+
+    if os.path.isfile(client_config_path):
+        # Use dedicated client config.  Mark the opts so downstream dispatch
+        # (``salt`` / ``salt-run`` / ``salt-key``) selects the RemoteClient
+        # path without needing a user-facing flag.
+        opts.update(master_config(client_config_path, defaults=defaults))
+        opts["__role"] = "client"
+        # client_auth defaults to True for /etc/salt/client (PKI client
+        # identity).  Operators can opt into eauth-only mode by setting
+        # ``client_auth: False`` in their client config.
+        if "client_auth" not in opts:
+            opts["client_auth"] = True
+        # ``master_port`` is the minion-side spelling for "the port to
+        # reach the master on"; ``ret_port`` is the master-side spelling
+        # for "the port we listen on".  Clients talk TO a master, so
+        # operators configuring ``/etc/salt/client`` naturally reach for
+        # ``master_port`` (same muscle memory as ``/etc/salt/minion``).
+        # When the operator sets only ``master_port`` in the client
+        # config file (not ``ret_port``), honour it -- otherwise the
+        # sign-in handshake would silently fall back to the ``ret_port``
+        # master-side default and time out on the wrong port.  Re-parse
+        # the raw file keys instead of comparing loaded values because
+        # both options have the same ``4506`` default and would be
+        # indistinguishable post-merge.
+        try:
+            with salt.utils.files.fopen(client_config_path) as _fp:
+                _raw = salt.utils.yaml.safe_load(_fp) or {}
+        except Exception:  # pylint: disable=broad-except
+            _raw = {}
+        if isinstance(_raw, dict) and "master_port" in _raw and "ret_port" not in _raw:
+            opts["ret_port"] = int(_raw["master_port"])
+        # salt.crypt.Auth's AES-handshake path (``sign_in`` + helpers)
+        # reads a handful of minion-flavoured opts that master_config
+        # does not populate because the master process never signs in.
+        # Remote clients do sign in (that's how we get an authenticated
+        # AES session to carry eauth creds), so fill the missing keys
+        # with sensible minion-side defaults.  Operators can override
+        # any of these in /etc/salt/client.
+        _minion_auth_defaults = {
+            "acceptance_wait_time": 10,
+            "acceptance_wait_time_max": 0,
+            "auth_timeout": 60,
+            "auth_safemode": False,
+            "auth_tries": 7,
+            "auth_events": False,
+            "master_tries": 1,
+            "random_master": False,
+            "master_type": "str",
+            "master_shuffle": False,
+            "verify_master_pubkey_sign": False,
+            "always_verify_signature": False,
+            "master_sign_key_name": "master_sign",
+            "master_pubkey_signature": "master_pubkey_signature",
+            "master_finger": "",
+            "autosign_grains": [],
+        }
+        for key, value in _minion_auth_defaults.items():
+            opts.setdefault(key, value)
+        # ``master_config`` sets ``syndic_master`` to the string
+        # ``'masterofmasters'`` by default (truthy).  Without an
+        # explicit override :func:`salt.crypt.AsyncAuth.\
+        # handle_signin_response` would route the master-finger check
+        # through its ``syndic_finger`` branch; it falls back to
+        # ``master_finger`` so behavior is equivalent, but an operator
+        # who later sets ``syndic_finger`` in ``/etc/salt/client``
+        # would silently override ``master_finger``.  Pin the role so
+        # the finger check consistently takes the ``master_finger``
+        # path.  Not using ``setdefault`` because the master-config
+        # pass we just inherited already populated the key.
+        opts["syndic_master"] = False
+        config_used = client_config_path
+    else:
+        # Backwards-compatibility fallback: load the master config as a CLI
+        # client-config source.  Scheduled for removal in Salt 3011 -- users
+        # should create /etc/salt/client with ``master:`` and ``id:`` entries.
+        # LocalClient on the master host continues to use these opts
+        # (client_auth=False -> LocalClient path at the CLI dispatch).
+        # ``as _versions`` so this nested import doesn't shadow the
+        # module-level ``salt`` binding used elsewhere in this function.
+        from salt.utils import versions as _versions
+
+        _versions.warn_until(
+            3011,
+            "Loading the Salt master config as a CLI client-config source is "
+            "deprecated. Create /etc/salt/client with 'master:' and 'id:' "
+            "entries. This fallback will be removed in Salt {version}.",
+        )
+        opts.update(master_config(path, defaults=defaults))
+        opts["client_auth"] = False
+        config_used = path
+
+    # If profile is specified, load and apply profile settings
+    if profile:
+        profiles = opts.get("profiles", {})
+        if profile not in profiles:
+            raise salt.exceptions.SaltClientError(
+                f"Profile '{profile}' not found in {config_used}. "
+                f"Available profiles: {', '.join(profiles.keys()) if profiles else 'none'}"
+            )
+        # Apply profile settings, overlaying on base config
+        profile_opts = profiles[profile]
+        opts.update(profile_opts)
     # Update with the users salt dot file or with the environment variable
     saltrc_config = os.path.join(client_config_dir, saltrc_config_file)
     opts.update(load_config(saltrc_config, env_var, saltrc_config))

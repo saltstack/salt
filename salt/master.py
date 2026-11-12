@@ -30,8 +30,10 @@ import salt.cache
 import salt.channel.server
 import salt.client
 import salt.client.ssh.client
+import salt.cluster
 import salt.cluster.healthchecks
 import salt.cluster.ring_membership
+import salt.config.topology
 import salt.crypt
 import salt.daemons.masterapi
 import salt.defaults.exitcodes
@@ -91,6 +93,41 @@ except ImportError:
     HAS_RESOURCE = False
 
 log = logging.getLogger(__name__)
+
+
+def _topology_cluster_id_for_auth(opts):
+    """
+    Return the topology ``cluster_id`` string to publish in the auth
+    response, or ``""`` when the grain should not be pushed.
+
+    Gated on ``topology_enabled`` + ``topology_push_cluster_grain``
+    (the latter defaults to True per RFC).  The topology ``cluster_id``
+    comes from ``topology.conf`` --- it is deliberately distinct from
+    the 3008.x ``cluster_id`` master-cluster primitive, so we go
+    through :func:`salt.config.topology.load_topology_config`.
+
+    Cached per-opts after first call to avoid re-parsing topology.conf
+    on every minion auth.
+    """
+    if not opts.get("topology_enabled"):
+        return ""
+    if not opts.get("topology_push_cluster_grain", True):
+        return ""
+    cached = opts.get("_topology_cluster_id_cache")
+    if cached is not None:
+        return cached
+    try:
+        cfg = salt.config.topology.load_topology_config(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.debug(
+            "topology.conf unreadable during auth; skipping master_cluster_id grain",
+            exc_info=True,
+        )
+        opts["_topology_cluster_id_cache"] = ""
+        return ""
+    cluster_id = cfg.cluster_id if cfg.enabled else ""
+    opts["_topology_cluster_id_cache"] = cluster_id
+    return cluster_id
 
 
 class _ContextThreadPoolExecutor(concurrent.futures.ThreadPoolExecutor):
@@ -227,21 +264,22 @@ class SMaster:
     # on Windows since spawning processes on Windows requires pickling.
     # These methods are only used when pickling so will not be used on
     # non-Windows platforms.
+    #
+    # ``object`` has no ``__setstate__`` method, so the ``super()`` call
+    # pattern used elsewhere in Salt raises
+    # ``AttributeError: 'super' object has no attribute '__setstate__'``
+    # on Python 3.11+ Windows (where ``multiprocessing`` uses ``spawn``
+    # and must pickle/unpickle the master object).  Mirror the pickle
+    # default (``self.__dict__.update(state)``) by hand instead, and
+    # explicitly round-trip the class-level ``secrets`` attribute.
     def __setstate__(self, state):
-        super().__setstate__(state)
-        self.master_key = state["master_key"]
-        self.key = state["key"]
-        SMaster.secrets = state["secrets"]
+        secrets = state.pop("secrets", {})
+        self.__dict__.update(state)
+        SMaster.secrets = secrets
 
     def __getstate__(self):
-        state = super().__getstate__()
-        state.update(
-            {
-                "key": self.key,
-                "master_key": self.master_key,
-                "secrets": SMaster.secrets,
-            }
-        )
+        state = dict(self.__dict__)
+        state["secrets"] = SMaster.secrets
         return state
 
     def __prep_key(self):
@@ -317,9 +355,18 @@ class SMaster:
             )
 
         if event:
-            event.fire_event(
-                {"rotate_cluster_aes_key": True}, tag="rotate_cluster_aes_key"
-            )
+            # When this master owns the rotation, carry the freshly-generated
+            # key encrypted per-peer so cluster members running with
+            # ``cluster_isolated_filesystem: True`` can install the new key
+            # locally.  Without this, peers only re-read their own untouched
+            # ``cluster_pki_dir/.aes`` and keep the previous key, causing the
+            # cluster to diverge (saltstack/salt#70543).  The shared-filesystem
+            # case is a no-op: the peer still receives the event and will
+            # overwrite its (already-correct) local file with the same bytes.
+            payload = {"rotate_cluster_aes_key": True}
+            if owner and opts.get("cluster_id"):
+                payload["peers"] = cls._build_rotate_peer_payload(opts)
+            event.fire_event(payload, tag="rotate_cluster_aes_key")
 
         if publisher:
             publisher.send_aes_key_event()
@@ -329,13 +376,62 @@ class SMaster:
             log.debug("Pinging all connected minions due to key rotation")
             salt.utils.master.ping_all_connected_minions(opts)
 
+    @classmethod
+    def _build_rotate_peer_payload(cls, opts):
+        """
+        Build a ``{peer_id: encrypted_new_key}`` dict for the rotation event.
+
+        Each peer's pub key is loaded from
+        ``cluster_pki_dir/peers/<peer_id>.pub`` and used to RSA-encrypt the
+        freshly-generated cluster AES key.  Peers decrypt their own entry with
+        their private ``master.pem`` and persist the key to their local
+        ``.aes`` so isolated-filesystem clusters converge after a rotation.
+        """
+        peers = {}
+        new_key = cls.secrets["cluster_aes"]["secret"].value
+        if isinstance(new_key, str):
+            new_key = new_key.encode()
+        cluster_pki = pathlib.Path(opts["cluster_pki_dir"])
+        algorithm = opts.get("cluster_encryption_algorithm", "OAEP-SHA1")
+        for peer in opts.get("cluster_peers") or []:
+            peer_pub = cluster_pki / "peers" / f"{peer}.pub"
+            if not peer_pub.exists():
+                log.warning(
+                    "cluster rotate: peer pub key %s missing; peer %s will "
+                    "miss this rotation",
+                    peer_pub,
+                    peer,
+                )
+                continue
+            try:
+                pub = salt.crypt.PublicKey.from_file(peer_pub)
+                peers[peer] = pub.encrypt(new_key, algorithm=algorithm)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "cluster rotate: failed to encrypt new key for peer %s",
+                    peer,
+                )
+        return peers
+
     def populate_secrets(self):
         if self.opts["cluster_id"]:
             # Gate that request workers check before serving minion/CLI traffic.
-            # Cleared on start; set by RaftService once this node is a committed voter.
-            SMaster.secrets["cluster_ready"] = {
-                "event": multiprocessing.Event(),
-            }
+            # Cleared on start; set by RaftService once this node is a committed
+            # voter.  Only allocated when the master is actually in a Raft
+            # cluster: a topology-only master (``cluster_id`` set,
+            # ``cluster_peers`` empty) short-circuits
+            # ``should_serve_requests`` to True without consulting the Event
+            # (see ``salt/channel/server.py:85-98``), so the Event is dead
+            # code there -- and worse, embedding a ``multiprocessing.Event``
+            # in ``SMaster.secrets`` makes it unpickleable through
+            # ``MWorker.__getstate__`` on Windows ``multiprocessing.spawn``
+            # (SemLock handle isn't duplicated via plain pickle, only via
+            # ``Process(args=...)``), which crashes every spawned MWorker
+            # with exit 1 before logging is initialised.
+            if self.opts.get("cluster_peers"):
+                SMaster.secrets["cluster_ready"] = {
+                    "event": multiprocessing.Event(),
+                }
             # Setup the secrets here because the PubServerChannel may need
             # them as well.
             SMaster.secrets["cluster_aes"] = {
@@ -590,6 +686,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
 
         # There is no need to check key against publish_session if we're
         # already rotating.
+        rotate_via_publish_session = False
         if not to_rotate and self.opts.get("publish_session"):
             if self.opts.get("cluster_id", None):
                 keyfile = os.path.join(self.opts["cluster_pki_dir"], ".aes")
@@ -610,6 +707,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                         salt.crypt.read_dropfile(self.opts["cachedir"])
                         == self.opts["id"]
                     )
+                    rotate_via_publish_session = to_rotate
 
         if to_rotate:
             if self.opts.get("cluster_id", None):
@@ -618,6 +716,16 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
                 )
             else:
                 SMaster.rotate_secrets(self.opts, self.event, owner=True)
+            # The ``publish_session`` branch above creates ``.dfn`` to pick a
+            # leader-ish rotator but never removed it on completion.  The
+            # first branch of the next maintenance tick then sees the stale
+            # dropfile and rotates again — double rotation per
+            # ``publish_session`` tick (saltstack/salt#70543).
+            if rotate_via_publish_session:
+                try:
+                    os.remove(dfn)
+                except OSError:
+                    pass
 
     def handle_git_pillar(self):
         """
@@ -887,7 +995,7 @@ class Master(SMaster):
         """
         Create a salt master server instance
 
-        :param dict: The salt options
+        :param dict opts: The salt options
         """
         if zmq and ZMQ_VERSION_INFO < (3, 2):
             log.warning(
@@ -1006,20 +1114,39 @@ class Master(SMaster):
                             git_pillar = salt.utils.gitfs.GitPillar(
                                 new_opts,
                                 repo["git"],
-                                per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                                per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                                global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                             )
                         except salt.exceptions.FileserverConfigError as exc:
                             critical_errors.append(exc.strerror)
                 finally:
                     del new_opts
 
-        if self.opts.get("cluster_id") and not self.opts.get("cluster_peers"):
+        if (
+            self.opts.get("cluster_id")
+            and not self.opts.get("cluster_peers")
+            and not self.opts.get("topology_enabled")
+        ):
             critical_errors.append(
-                "cluster_id is set but cluster_peers is empty. "
-                "Every cluster member must have at least one peer configured. "
-                "Dynamic peer discovery is not supported."
+                "cluster_id is set but cluster_peers is empty and "
+                "topology_enabled is False.  cluster_id identifies this "
+                "master either as a 3008.x master-cluster peer (requires "
+                "cluster_peers) or as a topology-graph node (requires "
+                "topology_enabled)."
+            )
+
+        # Topology + syndic coexistence note (RFC "Syndic deprecation plan"):
+        # running both on the same master is permitted during the deprecation
+        # window but discouraged.  ``syndic_master`` has a sentinel default
+        # of ``"masterofmasters"`` meaning "unconfigured", so only log when
+        # the operator has set it to something else.
+        syndic_master = self.opts.get("syndic_master")
+        syndic_configured = syndic_master and syndic_master != "masterofmasters"
+        if self.opts.get("topology_enabled") and syndic_configured:
+            log.info(
+                "Master is configured with BOTH topology_enabled=True and "
+                "syndic_master=%r. This coexistence is permitted during the "
+                "syndic deprecation window; topology is the recommended "
+                "replacement. See the master-topology RFC.",
+                syndic_master,
             )
 
         if errors or critical_errors:
@@ -1112,7 +1239,7 @@ class Master(SMaster):
             # completed a join handshake and needs to run the discover->join
             # protocol so existing peers add it as a Raft learner.
             #
-            # The designated founder (lowest interface address among
+            # The designated founder (lowest node-id among
             # ``{self} ∪ cluster_peers``) skips discover entirely — it
             # bootstraps the cluster as the founding voter and waits for
             # everyone else to join.  Letting it discover would race the
@@ -1120,12 +1247,9 @@ class Master(SMaster):
             # the founder itself into a learner via an inbound join-reply,
             # leaving the cluster with zero voters.
             if self.opts.get("cluster_id") and self.opts.get("cluster_peers"):
-                bootstrap_pool = sorted(
-                    {self.opts["interface"], *self.opts.get("cluster_peers", [])}
-                )
-                is_founder = (
-                    bool(bootstrap_pool) and bootstrap_pool[0] == self.opts["interface"]
-                )
+                node_id = salt.cluster.node_id(self.opts)
+                bootstrap_pool = sorted({node_id, *self.opts.get("cluster_peers", [])})
+                is_founder = bool(bootstrap_pool) and bootstrap_pool[0] == node_id
                 if not ipc_publisher._has_joined_cluster() and not is_founder:
                     log.info("No cluster join sentinel — running cluster discover/join")
                     join_event = multiprocessing.Event()
@@ -1232,6 +1356,19 @@ class Master(SMaster):
             self.process_manager.add_process(
                 FileserverUpdate, args=(self.opts,), name="FileserverUpdate"
             )
+
+            # Start client event publisher if explicitly configured
+            # Only start when client_event_port is set to avoid port conflicts
+            if self.opts.get("client_event_port"):
+                log.info("Creating client event publisher process")
+                # Late import to avoid circular dependencies
+                from salt.utils import client_event
+
+                self.process_manager.add_process(
+                    client_event.ClientEventPublisher,
+                    args=(self.opts,),
+                    name="ClientEventPublisher",
+                )
 
             # Fire up SSDP discovery publisher
             if self.opts["discovery"]:
@@ -1444,11 +1581,73 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
             peer_id = data.pop("__peer_id", None)
             if peer_id:
                 log.debug("Rotating AES session key")
+                # Install the new cluster AES key locally before reload.
+                # Required when ``cluster_isolated_filesystem: True`` because
+                # the local ``cluster_pki_dir/.aes`` is never touched by the
+                # rotating peer; without this write the subsequent reload
+                # just re-reads the stale local file and keeps the old key
+                # (saltstack/salt#70543).  Harmless on shared-fs: the file
+                # already contains these bytes, so this is an idempotent
+                # overwrite.
+                self._install_rotated_cluster_aes(data)
                 SMaster.rotate_cluster_secret(
                     self.opts, owner=False, publisher=self.ipc_publisher
                 )
         else:
             log.trace("Ignore tag %s", tag)
+
+    def _install_rotated_cluster_aes(self, data):
+        """
+        Decrypt our per-peer rotation payload and write the new key to local
+        ``cluster_pki_dir/.aes``.
+
+        The rotating master encodes a ``{peer_id: encrypted_new_key}`` dict in
+        the event payload under ``peers`` (see
+        :meth:`SMaster._build_rotate_peer_payload`).  Look up our own entry
+        (keyed on the bare master id — ``apply_master_config`` may have
+        suffixed ``_master`` to ``opts["id"]``), decrypt with our master
+        private key, and write to local ``.aes``.  The subsequent
+        ``rotate_cluster_secret`` reload reads this file back and installs it
+        into shared memory.
+
+        No-op when the payload lacks a ``peers`` key (older rotating peer, or
+        non-isolated path): fall through to the historical shared-fs reload.
+        """
+        peers = data.get("peers") if isinstance(data, dict) else None
+        if not peers:
+            return
+        master_id = self.opts["id"].removesuffix("_master")
+        blob = peers.get(master_id)
+        if blob is None:
+            log.debug(
+                "cluster rotate: no payload entry for %s; skipping install",
+                master_id,
+            )
+            return
+        rsa_path = os.path.join(self.opts["pki_dir"], "master.pem")
+        try:
+            new_key = salt.crypt.PrivateKey.from_file(rsa_path).decrypt(
+                blob,
+                algorithm=self.opts.get("cluster_encryption_algorithm", "OAEP-SHA1"),
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("cluster rotate: failed to decrypt new key for %s", master_id)
+            return
+        aes_path = pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
+        aes_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            with salt.utils.files.set_umask(0o177):
+                tmp = aes_path.with_name(aes_path.name + ".new")
+                tmp.write_bytes(new_key)
+                os.rename(tmp, aes_path)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("cluster rotate: failed to persist new key to %s", aes_path)
+            return
+        log.info(
+            "cluster rotate: installed new cluster_aes (%d bytes) for %s",
+            len(new_key),
+            master_id,
+        )
 
     _PEER_KEY_STATE = {
         "accept": "accepted",
@@ -1498,7 +1697,7 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                 owner = ring.get_owner(key)
             except Exception:  # pylint: disable=broad-except
                 owner = None
-        if not owner or owner == self.opts.get("interface"):
+        if not owner or owner == salt.cluster.node_id(self.opts):
             # No reachable owner, or we ARE the owner (shouldn't
             # happen — owns_for would have returned True).  Drop
             # silently; ``drop_stats`` already counted this.
@@ -1718,7 +1917,7 @@ class RequestRouter:
                             import salt.crypt
 
                             crypticle = salt.crypt.Crypticle(self.opts, key)
-                            load = crypticle.decrypt(load)
+                            load = crypticle.loads(load)
                     elif enc == "pub":
                         # RSA encryption
                         import salt.crypt
@@ -2099,6 +2298,30 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             load = payload["load"]
             if key == "clear":
                 ret = await self._handle_clear(load)
+            elif self._is_client_bridge(load):
+                # Bridge: an AES-encrypted payload whose inner ``cmd`` is a
+                # ClearFuncs method AND whose authenticated sender id is a
+                # known client gets routed to ClearFuncs with the decrypted
+                # load intact.  The AES session proves PKI identity (the
+                # client went through the standard sign-in handshake using
+                # its ``client.pem``); routing to ClearFuncs lets eauth
+                # credentials inside the inner load drive publish/runner/
+                # wheel/token authorization the same way the master-local
+                # path does.  Without this bridge, remote clients would
+                # have to send credentials in plaintext over the clear
+                # channel just to reach the publish endpoint.
+                #
+                # ClearFuncs returns ``{"fun": "send_clear"}`` because its
+                # usual caller (salt-api, local salt CLI) talks on the
+                # clear channel.  Here the caller is on the AES channel,
+                # so flip the send mode to ``"send"`` -- the ReqServer
+                # will AES-encrypt the response under the sender's
+                # sign-in session key, preserving confidentiality on the
+                # return trip as well.
+                reply, req_opts = await self._handle_clear(load)
+                req_opts = dict(req_opts)
+                req_opts["fun"] = "send"
+                ret = (reply, req_opts)
             else:
                 ret = await self._handle_aes(load)
             return ret
@@ -2130,6 +2353,57 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             )
             self.stats = collections.defaultdict(lambda: {"mean": 0, "runs": 0})
             self.stat_clock = end
+
+    def _is_client_bridge(self, load):
+        """
+        Decide whether an AES-wrapped payload should route to ClearFuncs.
+
+        Returns True iff all four conditions hold:
+
+        1. ``load`` is a dict with a ``cmd`` field,
+        2. The ``cmd`` is one of :class:`ClearFuncs`'s exposed methods and
+           *not* one of :class:`AESFuncs`'s (so we don't shadow any
+           AES-native handler),
+        3. The payload carries an ``id`` -- which the ReqChannel-side AES
+           crypticle has already matched against the sender's authenticated
+           PKI identity via the standard sign-in session key, and
+        4. That id is present in the ``client_keys`` cache (the acceptance
+           namespace used by :class:`salt.key.ClientKey` / salt-key's
+           ``--client`` flows); plain minion ids live in ``keys`` and
+           deliberately don't satisfy this check.
+
+        The bridge is strictly additive: it never widens access for
+        minions and never affects clear-channel payloads, which continue
+        to flow through :meth:`_handle_clear` unchanged.
+        """
+        if not isinstance(load, dict):
+            return False
+        cmd = load.get("cmd")
+        if not isinstance(cmd, str):
+            return False
+        # Fall back to an empty tuple so that MWorker test fixtures which
+        # install a bare ``object()`` stub for ``clear_funcs`` (because
+        # their tests only exercise the AES path) don't blow up here --
+        # an empty expose_methods naturally fails the "cmd in" check and
+        # the bridge short-circuits, delegating to :meth:`_handle_aes`
+        # as that path would have before this bridge existed.
+        clear_methods = getattr(self.clear_funcs, "expose_methods", ())
+        aes_methods = getattr(self.aes_funcs, "expose_methods", ())
+        if cmd not in clear_methods:
+            return False
+        if cmd in aes_methods:
+            return False
+        sender_id = load.get("id")
+        if not sender_id:
+            return False
+        key_cache = getattr(self.aes_funcs, "key_cache", None)
+        if key_cache is None:
+            return False
+        try:
+            client_record = key_cache.fetch("client_keys", sender_id)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        return bool(client_record)
 
     async def _handle_clear(self, load):
         """
@@ -2184,7 +2458,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         """
         Process a command sent via an AES key
 
-        :param str load: Encrypted payload
+        :param str data: Encrypted payload
         :return: The result of passing the load to a function in AESFuncs corresponding to
                  the command specified in the load's 'cmd' key.
         """
@@ -2400,6 +2674,8 @@ class AESFuncs(TransportMethods):
         self.key_cache = salt.cache.Cache(
             self.opts, driver=self.opts["keys.cache_driver"]
         )
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(self.opts.get("client_acl", {}))
         # LTS default: sync AESFuncs path preserved; async is opt-in via
         # ``master_async_mworker``. When the flag is off (default on
         # 3008.x) shadow every ``async def`` handler with its pre-PR
@@ -2533,7 +2809,12 @@ class AESFuncs(TransportMethods):
         if not salt.utils.verify.valid_id(self.opts, id_):
             return False
 
+        # Try the minion keys bank first, then fall back to client_keys
+        # -- remote CLI clients share the AES channel but their public
+        # keys live under ``pki_dir/clients``.
         key = self.key_cache.fetch("keys", id_)
+        if not key:
+            key = self.key_cache.fetch("client_keys", id_)
 
         if not key:
             log.error("Unexpectedly got no pub key for %s", id_)
@@ -3157,6 +3438,86 @@ class AESFuncs(TransportMethods):
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
 
+        # Topology-return hand-off: detect via envelope origin (NOT by
+        # parsing ``load["jid"]``) so native Salt jid formats and
+        # ``unique_jid: True`` keep working.  When this return belongs to
+        # a publish that was originated by a foreign cluster, fire
+        # ``salt/topology/return/<origin>/<jid>`` so the publish daemon's
+        # topology event subscriber can forward it upstream.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=True)
+
+    def _maybe_fire_topology_return(self, load, *, async_path):
+        """
+        Shared helper for the async and sync ``_return`` paths.
+
+        Determines, from the envelope on ``load["topology"]``, whether an
+        incoming minion return needs upstream forwarding.  Checks the
+        breadcrumb MmapCache under ``opts["pki_dir"]/master/`` to confirm
+        this master actually forwarded the originating publish; if so,
+        fires a ``salt/topology/return/<origin>/<jid>`` event that the
+        publish daemon's topology subscriber picks up.
+
+        No action on any guard-clause miss.  Any exception during the
+        hand-off is logged and swallowed --- a storage/forwarding error
+        on the topology path must never fail the local return path.
+        """
+        try:
+            topology = load.get("topology") or {}
+            origin = topology.get("origin")
+            jid = load.get("jid")
+            if jid is None:
+                return
+            # Lazy imports so pre-topology deployments never pull in the
+            # topology package.
+            import salt.topology.breadcrumbs as _bc  # pylint: disable=import-outside-toplevel
+
+            # Minions do not echo ``load["topology"]`` back through the
+            # ``_return`` payload (the minion rebuilds ``load`` from the
+            # function result dict in :meth:`_prepare_return_pub`).  The
+            # breadcrumb table on this master records every jid that we
+            # forwarded from an inbound peer along with that peer's
+            # ``cluster_id`` -- which is the correct next hop for a
+            # return heading back toward origin.  Use the breadcrumb's
+            # link as the tag's routing slug when the envelope is
+            # missing; the publish daemon's subscriber only needs
+            # "where to send next" and will look up the breadcrumb
+            # itself anyway.
+            cache = _bc.open_reader(self.opts)
+            try:
+                inbound = _bc.lookup(cache, jid)
+            finally:
+                closer = getattr(cache, "close", None)
+                if closer is not None:
+                    try:
+                        closer()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
+            if inbound is None:
+                # No breadcrumb -- we did not forward this jid, so there
+                # is nothing to send upstream.  This also covers the
+                # locally-originated publish case (origin == self).
+                return
+            if not origin:
+                origin = inbound
+            if origin == self.opts.get("cluster_id"):
+                return
+            tag = f"salt/topology/return/{origin}/{jid}"
+            data = {"load": load}
+            if async_path and hasattr(self.event, "fire_event_async"):
+                # Schedule the async fire without awaiting --- the sync
+                # ``fire_event`` fallback keeps semantics identical even
+                # if an async loop isn't currently running the handler.
+                try:
+                    loop = asyncio.get_running_loop()
+                    loop.create_task(self.event.fire_event_async(data, tag))
+                    return
+                except RuntimeError:
+                    pass
+            self.event.fire_event(data, tag)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("topology: _return hand-off failed")
+
     async def _syndic_return(self, load):
         """
         Receive a syndic minion return and format it to look like returns from
@@ -3755,6 +4116,11 @@ class AESFuncs(TransportMethods):
         except salt.exceptions.SaltCacheError:
             log.error("Could not store job information for load: %s", load)
 
+        # Topology-return hand-off: envelope-based detection, breadcrumb
+        # gated.  See ``_maybe_fire_topology_return`` for details.
+        if self.opts.get("topology_enabled") and isinstance(load, dict):
+            self._maybe_fire_topology_return(load, async_path=False)
+
     def _sync_syndic_return(self, load):
         """Sync-shim body of ``_syndic_return`` (pre-PR verbatim)."""
         loads = load.get("load")
@@ -3924,6 +4290,30 @@ class AuthFuncs(TransportMethods):
         """
         Returns a session key for the given minion id.
         """
+        # Isolated-FS cluster masters cannot see each other's
+        # ``sessions/<minion>`` file.  Derive from ``cluster.pem``
+        # (master-only; distributed in join-reply, never leaves the
+        # cluster) salted by ``cluster_aes`` so every peer master
+        # agrees on the key while no minion can derive another
+        # minion's key.  ``cluster_aes`` as HKDF salt rotates the
+        # derived key in lockstep with cluster-wide aes rotation.
+        # See ``salt.crypt.Crypticle.derive_session_key``.
+        if self.opts.get("cluster_id") and self.opts.get("cluster_isolated_filesystem"):
+            cluster_aes = SMaster.secrets["cluster_aes"]["secret"].value
+            with self._sessions_lock:
+                cached = self.sessions.get(minion)
+            if cached is not None and cached[0] == cluster_aes:
+                return cached[1]
+            cluster_pem_bytes = (
+                pathlib.Path(self.opts["cluster_pki_dir"]) / "cluster.pem"
+            ).read_bytes()
+            key = salt.crypt.Crypticle.derive_session_key(
+                cluster_pem_bytes, cluster_aes, minion
+            )
+            with self._sessions_lock:
+                self.sessions[minion] = (cluster_aes, key)
+            return key
+
         now = time.time()
         path = pathlib.Path(self.opts["cachedir"]) / "sessions" / minion
         # Fast-path cache hit: single read of ``self.sessions[minion]``.
@@ -4059,6 +4449,16 @@ class AuthFuncs(TransportMethods):
         enc_algo = load.get("enc_algo", salt.crypt.OAEP_SHA1)
         sig_algo = load.get("sig_algo", salt.crypt.PKCS1v15_SHA1)
 
+        # Remote clients (``__role=client``) sign in with the same PKI
+        # handshake as minions but their public keys live in a parallel
+        # pki subtree (``pki_dir/clients*``) so they never show up as
+        # phantom minions in ``*`` globs or ``salt-key -L``.  The cache
+        # banks ``client_keys`` / ``client_denied_keys`` are mapped to
+        # those dirs by :mod:`salt.cache.localfs_key`.
+        is_client = load.get("role") == "client"
+        key_bank = "client_keys" if is_client else "keys"
+        denied_bank = "client_denied_keys" if is_client else "denied_keys"
+
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
             if sign_messages:
@@ -4071,8 +4471,9 @@ class AuthFuncs(TransportMethods):
         # remove any trailing whitespace
         load["pub"] = load["pub"].strip()
 
-        # 0 is default which should be 'unlimited'
-        if self.opts["max_minions"] > 0:
+        # 0 is default which should be 'unlimited' -- not applicable to
+        # client role; clients don't count against minion caps.
+        if not is_client and self.opts["max_minions"] > 0:
             # use the ConCache if enabled, else use the minion utils
             if self.cache_cli:
                 minions = self.cache_cli.get_cached()
@@ -4125,20 +4526,63 @@ class AuthFuncs(TransportMethods):
         # Check if key is configured to be auto-rejected/signed. These
         # helpers read/write the autoreject/autosign files on disk; offload
         # to the executor so the auth loop stays responsive under load.
-        auto_reject = await loop.run_in_executor(
-            None, self.auto_key.check_autoreject, load["id"]
+        # Autosign/autoreject files are minion-centric; clients must be
+        # accepted explicitly by an operator via the ``client_keys`` wheel.
+        if is_client:
+            auto_reject = False
+            auto_sign = False
+        else:
+            auto_reject = await loop.run_in_executor(
+                None, self.auto_key.check_autoreject, load["id"]
+            )
+            auto_sign = await loop.run_in_executor(
+                None,
+                self.auto_key.check_autosign,
+                load["id"],
+                load.get("autosign_grains", None),
+            )
+
+        # Cross-role collision check: an id that is already registered
+        # in the OTHER role's bank cannot re-register in this one.
+        # Without this, an attacker who learns the id of an accepted
+        # client could sign in with ``role: minion`` using their own
+        # keypair; the master would (with auto_accept) accept it under
+        # ``pki/master/minions/<id>``, and from then on AES-wrapped
+        # ClearFuncs cmds from the attacker would route through
+        # :meth:`_is_client_bridge` -- which keys off membership in
+        # ``client_keys`` and does not verify that the AES-session
+        # pubkey matches the stored client key.  The symmetric case
+        # (minion id reused as a client sign-in) is blocked for the
+        # same reason: clients can be targeted by other ``salt`` CLIs
+        # once registered, so letting a minion id squat in
+        # ``client_keys`` would be a trust-boundary violation.  Runs
+        # after max_minions / auto_key lookups so an unrelated newcomer
+        # that just happens to hit the pool cap still reports ``full``.
+        other_bank = "keys" if is_client else "client_keys"
+        collision = await loop.run_in_executor(
+            None, self.cache.fetch, other_bank, load["id"]
         )
-        auto_sign = await loop.run_in_executor(
-            None,
-            self.auto_key.check_autosign,
-            load["id"],
-            load.get("autosign_grains", None),
-        )
+        if collision:
+            other_role = "client" if other_bank == "client_keys" else "minion"
+            this_role = "client" if is_client else "minion"
+            log.error(
+                "Authentication request from %s with role=%s rejected: "
+                "id is already registered as a %s",
+                load["id"],
+                this_role,
+                other_role,
+            )
+            if sign_messages:
+                return await self._clear_signed(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
 
         # key will be a dict of str and state
         # state can be one of pending, rejected, accepted. The key-cache
         # fetch traverses disk-backed key state; offload to the executor.
-        key = await loop.run_in_executor(None, self.cache.fetch, "keys", load["id"])
+        key = await loop.run_in_executor(None, self.cache.fetch, key_bank, load["id"])
 
         # although keys should be always newline stripped in current state of auth.py
         # older salt versions  may have written pub-keys with trailing whitespace
@@ -4147,9 +4591,7 @@ class AuthFuncs(TransportMethods):
 
         # any number of keys can be denied for a given minion_id regardless of above
         denied = (
-            await loop.run_in_executor(
-                None, self.cache.fetch, "denied_keys", load["id"]
-            )
+            await loop.run_in_executor(None, self.cache.fetch, denied_bank, load["id"])
             or []
         )
 
@@ -4198,7 +4640,7 @@ class AuthFuncs(TransportMethods):
                 if load["pub"] not in denied:
                     denied.append(load["pub"])
                     await loop.run_in_executor(
-                        None, self.cache.store, "denied_keys", load["id"], denied
+                        None, self.cache.store, denied_bank, load["id"], denied
                     )
 
                 if self.opts.get("auth_events") is True:
@@ -4233,7 +4675,7 @@ class AuthFuncs(TransportMethods):
                 )
                 key = {"pub": load["pub"], "state": "rejected"}
                 await loop.run_in_executor(
-                    None, self.cache.store, "keys", load["id"], key
+                    None, self.cache.store, key_bank, load["id"], key
                 )
                 key_act = "reject"
                 key_result = False
@@ -4241,7 +4683,7 @@ class AuthFuncs(TransportMethods):
                 log.info("New public key for %s placed in pending", load["id"])
                 key = {"pub": load["pub"], "state": "pending"}
                 await loop.run_in_executor(
-                    None, self.cache.store, "keys", load["id"], key
+                    None, self.cache.store, key_bank, load["id"], key
                 )
                 key_act = "pend"
                 key_result = True
@@ -4283,7 +4725,7 @@ class AuthFuncs(TransportMethods):
                 # rejected dir.
                 key["state"] = "rejected"
                 await loop.run_in_executor(
-                    None, self.cache.store, "keys", load["id"], key
+                    None, self.cache.store, key_bank, load["id"], key
                 )
                 log.info(
                     "Pending public key for %s rejected via autoreject_file",
@@ -4328,7 +4770,7 @@ class AuthFuncs(TransportMethods):
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         await loop.run_in_executor(
-                            None, self.cache.store, "denied_keys", load["id"], denied
+                            None, self.cache.store, denied_bank, load["id"], denied
                         )
                     if self.opts.get("auth_events") is True:
                         eload = {
@@ -4398,7 +4840,7 @@ class AuthFuncs(TransportMethods):
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
                         await loop.run_in_executor(
-                            None, self.cache.store, "denied_keys", load["id"], denied
+                            None, self.cache.store, denied_bank, load["id"], denied
                         )
                     if self.opts.get("auth_events") is True:
                         eload = {
@@ -4455,13 +4897,15 @@ class AuthFuncs(TransportMethods):
         key_persisted = False
         if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
             key = {"pub": load["pub"], "state": "accepted"}
-            await loop.run_in_executor(None, self.cache.store, "keys", load["id"], key)
+            await loop.run_in_executor(
+                None, self.cache.store, key_bank, load["id"], key
+            )
             key_persisted = True
         elif self.opts["open_mode"]:
             if load["pub"] and (not key or load["pub"] != key["pub"]):
                 key = {"pub": load["pub"], "state": "accepted"}
                 await loop.run_in_executor(
-                    None, self.cache.store, "keys", load["id"], key
+                    None, self.cache.store, key_bank, load["id"], key
                 )
                 key_persisted = True
             elif not load["pub"]:
@@ -4520,6 +4964,10 @@ class AuthFuncs(TransportMethods):
             "pub_key": self.master_key.get_pub_str(),
             "publish_port": self.opts["publish_port"],
         }
+
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
 
         # sign the master's pubkey (if enabled) before it is
         # sent to the minion that was just authenticated
@@ -4664,6 +5112,12 @@ class AuthFuncs(TransportMethods):
         enc_algo = load.get("enc_algo", salt.crypt.OAEP_SHA1)
         sig_algo = load.get("sig_algo", salt.crypt.PKCS1v15_SHA1)
 
+        # See the matching comment in :meth:`_auth_impl` -- role=client
+        # routes to the ``client_keys`` cache banks (pki_dir/clients*).
+        is_client = load.get("role") == "client"
+        key_bank = "client_keys" if is_client else "keys"
+        denied_bank = "client_denied_keys" if is_client else "denied_keys"
+
         if not salt.utils.verify.valid_id(self.opts, load["id"]):
             log.info("Authentication request from invalid id %s", load["id"])
             if sign_messages:
@@ -4675,7 +5129,8 @@ class AuthFuncs(TransportMethods):
         log.info("Authentication request from %s", load["id"])
         load["pub"] = load["pub"].strip()
 
-        if self.opts["max_minions"] > 0:
+        # Clients don't count against ``max_minions``.
+        if not is_client and self.opts["max_minions"] > 0:
             if self.cache_cli:
                 minions = self.cache_cli.get_cached()
             else:
@@ -4719,17 +5174,50 @@ class AuthFuncs(TransportMethods):
                     else:
                         return {"enc": "clear", "load": {"ret": "full"}}
 
-        auto_reject = self.auto_key.check_autoreject(load["id"])
-        auto_sign = self.auto_key.check_autosign(
-            load["id"], load.get("autosign_grains", None)
-        )
+        # Clients must be accepted explicitly; the autosign/autoreject
+        # files are minion-centric and shouldn't gate client access.
+        if is_client:
+            auto_reject = False
+            auto_sign = False
+        else:
+            auto_reject = self.auto_key.check_autoreject(load["id"])
+            auto_sign = self.auto_key.check_autosign(
+                load["id"], load.get("autosign_grains", None)
+            )
 
-        key = self.cache.fetch("keys", load["id"])
+        # Cross-role collision check -- see :meth:`_auth_impl` for the
+        # rationale.  An id already registered in the other role's bank
+        # is rejected here before any key-state logic runs so a
+        # minion-flavoured sign-in can't shadow an accepted client id
+        # (or vice versa).  Placed after max_minions / auto_key so an
+        # unrelated newcomer that just happens to hit the pool cap still
+        # reports ``full`` rather than being masked by a collision check
+        # fed by a mock cache in unit tests.
+        other_bank = "keys" if is_client else "client_keys"
+        collision = self.cache.fetch(other_bank, load["id"])
+        if collision:
+            other_role = "client" if other_bank == "client_keys" else "minion"
+            this_role = "client" if is_client else "minion"
+            log.error(
+                "Authentication request from %s with role=%s rejected: "
+                "id is already registered as a %s",
+                load["id"],
+                this_role,
+                other_role,
+            )
+            if sign_messages:
+                return self._clear_signed_sync(
+                    {"ret": False, "nonce": load["nonce"]}, sig_algo
+                )
+            else:
+                return {"enc": "clear", "load": {"ret": False}}
+
+        key = self.cache.fetch(key_bank, load["id"])
 
         if key and "pub" in key:
             key["pub"] = key["pub"].strip()
 
-        denied = self.cache.fetch("denied_keys", load["id"]) or []
+        denied = self.cache.fetch(denied_bank, load["id"]) or []
 
         if self.opts["open_mode"]:
             pass
@@ -4768,7 +5256,7 @@ class AuthFuncs(TransportMethods):
                 )
                 if load["pub"] not in denied:
                     denied.append(load["pub"])
-                    self.cache.store("denied_keys", load["id"], denied)
+                    self.cache.store(denied_bank, load["id"], denied)
 
                 if self.opts.get("auth_events") is True:
                     eload = {
@@ -4798,13 +5286,13 @@ class AuthFuncs(TransportMethods):
                     "New public key for %s rejected via autoreject_file", load["id"]
                 )
                 key = {"pub": load["pub"], "state": "rejected"}
-                self.cache.store("keys", load["id"], key)
+                self.cache.store(key_bank, load["id"], key)
                 key_act = "reject"
                 key_result = False
             elif not auto_sign:
                 log.info("New public key for %s placed in pending", load["id"])
                 key = {"pub": load["pub"], "state": "pending"}
-                self.cache.store("keys", load["id"], key)
+                self.cache.store(key_bank, load["id"], key)
                 key_act = "pend"
                 key_result = True
             else:
@@ -4836,7 +5324,7 @@ class AuthFuncs(TransportMethods):
         elif key and key["state"] == "pending":
             if auto_reject:
                 key["state"] = "rejected"
-                self.cache.store("keys", load["id"], key)
+                self.cache.store(key_bank, load["id"], key)
                 log.info(
                     "Pending public key for %s rejected via autoreject_file",
                     load["id"],
@@ -4872,7 +5360,7 @@ class AuthFuncs(TransportMethods):
                     )
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
-                        self.cache.store("denied_keys", load["id"], denied)
+                        self.cache.store(denied_bank, load["id"], denied)
                     if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
@@ -4935,7 +5423,7 @@ class AuthFuncs(TransportMethods):
                     )
                     if load["pub"] not in denied:
                         denied.append(load["pub"])
-                        self.cache.store("denied_keys", load["id"], denied)
+                        self.cache.store(denied_bank, load["id"], denied)
                     if self.opts.get("auth_events") is True:
                         eload = {
                             "result": False,
@@ -4986,12 +5474,12 @@ class AuthFuncs(TransportMethods):
         key_persisted = False
         if (not key or key["state"] != "accepted") and not self.opts["open_mode"]:
             key = {"pub": load["pub"], "state": "accepted"}
-            self.cache.store("keys", load["id"], key)
+            self.cache.store(key_bank, load["id"], key)
             key_persisted = True
         elif self.opts["open_mode"]:
             if load["pub"] and (not key or load["pub"] != key["pub"]):
                 key = {"pub": load["pub"], "state": "accepted"}
-                self.cache.store("keys", load["id"], key)
+                self.cache.store(key_bank, load["id"], key)
                 key_persisted = True
             elif not load["pub"]:
                 log.error("Public key is empty: %s", load["id"])
@@ -5038,6 +5526,10 @@ class AuthFuncs(TransportMethods):
             "pub_key": self.master_key.get_pub_str(),
             "publish_port": self.opts["publish_port"],
         }
+
+        _topology_cluster_id = _topology_cluster_id_for_auth(self.opts)
+        if _topology_cluster_id:
+            ret["cluster_id"] = _topology_cluster_id
 
         if self.opts["master_sign_pubkey"]:
             if self.master_key.pubkey_signature:
@@ -5140,6 +5632,7 @@ class ClearFuncs(TransportMethods):
         "mk_token",
         "wheel",
         "runner",
+        "batch_adopt",
     )
     async_methods = (
         "publish",
@@ -5182,6 +5675,12 @@ class ClearFuncs(TransportMethods):
         # Make a masterapi object
         self.masterapi = salt.daemons.masterapi.LocalFuncs(opts, key)
         self.channels = []
+        # Initialize key cache for client authentication checking
+        self.key_cache = salt.cache.Cache(
+            self.opts, driver=self.opts["keys.cache_driver"]
+        )
+        # Make a client ACL object
+        self.client_acl = salt.acl.ClientACL(self.opts.get("client_acl", {}))
         # LTS default: sync ClearFuncs path preserved; async is opt-in via
         # ``master_async_mworker``. Restore the pre-PR ``async_methods``
         # tuple (only ``publish`` was async) and shadow the newly-added
@@ -5196,6 +5695,34 @@ class ClearFuncs(TransportMethods):
             self.mk_token = self._sync_mk_token
             self.get_token = self._sync_get_token
             self.ping = self._sync_ping
+
+    def _fire_event_on_running_loop(self, data, tag):
+        """
+        Fire an event without blocking the current ``asyncio`` loop.
+
+        ``SaltEvent.fire_event`` is synchronous and its underlying
+        ``self.pusher.publish`` goes through
+        :class:`salt.utils.asynchronous.SyncWrapper._wrap`.  When
+        ``_wrap`` detects a running loop in the caller, it spawns an
+        OS thread and ``thread.join()`` s --- blocking this coroutine
+        for the duration of the IPC write to
+        ``master_event_pull.ipc``.  On a hub master (e.g. the sandbox
+        ``topo-east`` where two peers connect inbound) the per-event
+        write latency amplifies the join overhead and
+        ``salt/job/<jid>/new`` arrival drifts behind
+        ``salt/job/<jid>/ret/*`` by multiple seconds.
+
+        Prefer :func:`asyncio.get_running_loop().create_task` with
+        :meth:`SaltEvent.fire_event_async` so the fire runs on the
+        caller's own loop with no thread spawn; fall back to the
+        synchronous path when no loop is running.
+        """
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.event.fire_event(data, tag)
+            return
+        loop.create_task(self.event.fire_event_async(data, tag))
 
     async def runner(self, clear_load):
         """
@@ -5214,7 +5741,22 @@ class ClearFuncs(TransportMethods):
 
         # Authorize
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # Pure-PKI remote client: fall through to the per-client ACL
+            # instead of the eauth ``auth_list`` matcher.  ``username``
+            # is the client_id (set in
+            # :meth:`salt.auth.LoadAuth.check_authentication`).
+            if not self.client_acl.client_can_run_runner(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'runner function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             runner_check = self.ckminions.runner_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5290,7 +5832,21 @@ class ClearFuncs(TransportMethods):
 
         # Authorize
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # Pure-PKI remote client: authorize via ``client_acl``'s
+            # dedicated wheel matcher.  See the matching note in
+            # :meth:`runner` for the broader rationale.
+            if not self.client_acl.client_can_run_wheel(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'wheel function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             wheel_check = self.ckminions.wheel_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5323,6 +5879,21 @@ class ClearFuncs(TransportMethods):
 
         # Authorized. Do the job!
         try:
+            # Strip AES-bridge protocol fields before we spread
+            # ``clear_load`` as kwargs into the wheel function.  When
+            # the request arrives via :meth:`_is_client_bridge`, the
+            # payload carries ``id`` / ``ts`` (AES channel protocol)
+            # and ``client_id`` (injected by
+            # :meth:`salt.wheel.RemoteWheelClient.master_call`).  None
+            # of these are valid kwargs for any wheel function; wheel
+            # signatures like ``def list_all_client()`` reject them
+            # via ``format_call`` with ``SaltInvocationError``.  Leave
+            # them in on the master-local path too — they're never
+            # present there, so popping with ``None`` default is a
+            # no-op, and doing it unconditionally keeps the dispatch
+            # predictable regardless of which auth_type won.
+            for _bridge_field in ("client_id", "id", "ts"):
+                clear_load.pop(_bridge_field, None)
             jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")
@@ -5416,12 +5987,92 @@ class ClearFuncs(TransportMethods):
             lambda: self._prep_jid(clear_load, {}),
             batch_load,
         )
-        asyncio.create_task(batch.start())
+        batch._create_task(batch.start())
 
         return {
             "enc": "clear",
             "load": {"jid": batch.batch_jid, "minions": minions, "missing": missing},
         }
+
+    def batch_adopt(self, clear_load):
+        """
+        Hand off an async-batch state blob built by a remote client.
+
+        Called by :class:`salt.client.RemoteClient.batch_adopt` after the
+        workstation has published the first sub-batch and composed a
+        BatchState dict.  Writes the state to the master's cachedir and
+        fires ``salt/batch/<jid>/new`` so :class:`BatchManager` adopts
+        the JID and takes over driving subsequent sub-batches.
+
+        Remote workstations cannot write to the master's ``cachedir``
+        or push on the master's IPC event bus directly, so this
+        endpoint is the narrow surface that bridges those two
+        master-local operations under eauth authorization.  Unlike a
+        general-purpose ``fire_event`` RPC, ``batch_adopt`` only ever
+        emits ``salt/batch/<jid>/new`` and only ever writes
+        ``.batch.p`` / ``batch_active.p`` -- the blast radius is a
+        single JID per call.
+
+        :param dict clear_load:
+            Must carry ``batch_jid`` (str) and ``state`` (dict), plus
+            standard eauth fields (``eauth``/``username``/``password``,
+            or ``token``).  ``state`` is a BatchState dict as returned
+            by :func:`salt.utils.batch_state.create_batch_state` with
+            ``driver="master"`` already set.
+        """
+        import salt.utils.batch_output
+        import salt.utils.batch_state
+
+        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(clear_load)
+        auth_check = self.loadauth.check_authentication(clear_load, auth_type, key=key)
+        error = auth_check.get("error")
+        if error:
+            return {"error": error}
+
+        # Authorize: adopting a batch is a wheel-ish master-side admin
+        # action; require ``@wheel`` on the eauth user's auth_list.
+        if auth_type != "user":
+            if not self.ckminions.wheel_check(
+                auth_check.get("auth_list", []),
+                "batch.adopt",
+                clear_load.get("kwarg", {}),
+            ):
+                return {
+                    "error": {
+                        "name": err_name,
+                        "message": (
+                            'Authentication failure of type "{}" occurred for '
+                            "user {}.".format(auth_type, auth_check.get("username"))
+                        ),
+                    }
+                }
+
+        batch_jid = clear_load.get("batch_jid")
+        state = clear_load.get("state")
+        if not batch_jid or not isinstance(state, dict):
+            return {
+                "error": {
+                    "name": "SaltInvocationError",
+                    "message": "batch_adopt requires 'batch_jid' and 'state'",
+                }
+            }
+
+        try:
+            salt.utils.batch_state.write_batch_state(batch_jid, state, self.opts)
+            salt.utils.batch_state.add_to_active_index(batch_jid, self.opts)
+            self.event.fire_event(
+                salt.utils.batch_output.new_payload(state),
+                salt.utils.batch_output.tag_new(batch_jid),
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            log.exception("batch_adopt failed for jid=%s", batch_jid)
+            return {
+                "error": {
+                    "name": exc.__class__.__name__,
+                    "message": str(exc),
+                }
+            }
+        return {"jid": batch_jid, "adopted": True}
 
     async def publish(self, clear_load):
         """
@@ -5464,14 +6115,35 @@ class ClearFuncs(TransportMethods):
 
         auth_key = clear_load.get("key", None)
 
-        # Check for external auth calls and authenticate
-        auth_type, err_name, key, sensitive_load_keys = self._prep_auth_info(extra)
+        # Check for external auth calls and authenticate.  ``want_stacked``
+        # flags when the same load carries BOTH user-key (PKI) AND
+        # eauth/token creds and ``stacked_auth: true`` is enabled on the
+        # master -- in that case we evaluate both axes and require both
+        # to authorize (handled in the is_client branch below).
+        (  # pylint: disable=unbalanced-tuple-unpacking
+            auth_type,
+            err_name,
+            key,
+            sensitive_load_keys,
+            stacked_possible,
+            secondary_auth_type,
+        ) = self._prep_auth_info(extra, want_stacked=True)
         if auth_type == "user":
             auth_check = self.loadauth.check_authentication(
                 clear_load, auth_type, key=key
             )
         else:
             auth_check = self.loadauth.check_authentication(extra, auth_type)
+
+        # When stacking is active, also run the secondary axis check so we
+        # have both an eauth ``auth_list`` and a user identity available
+        # when gating the request.  The secondary axis is always ``user``
+        # (see ``_prep_auth_info``); the primary is token or eauth.
+        secondary_auth_check = None
+        if stacked_possible and secondary_auth_type == "user":
+            secondary_auth_check = self.loadauth.check_authentication(
+                clear_load, "user", key=self.key
+            )
 
         # Setup authorization list
         syndic_auth_list = None
@@ -5499,12 +6171,173 @@ class ClearFuncs(TransportMethods):
                 }
             }
             if "jid" in clear_load:
-                self.event.fire_event(
+                self._fire_event_on_running_loop(
                     {**clear_load, **err}, tagify([clear_load["jid"], "error"], "job")
                 )
             return err
+
+        # Check if this is a client request (for client ACL enforcement).
+        # ``auth_check`` returns the identity under the generic key
+        # ``username`` because the auth system was built for human users;
+        # in the client-auth path that identity is actually a client_id.
+        # When stacking is active the user-key auth may have landed in
+        # ``secondary_auth_check`` instead, so look there first.
+        is_client = False
+        auth_identity = auth_check.get("username")
+        client_identity = None
+        if secondary_auth_check is not None and not secondary_auth_check.get("error"):
+            # Stacked mode: client identity comes from the user-key check.
+            client_identity = secondary_auth_check.get("username")
+            if client_identity:
+                try:
+                    client_key_entry = self.key_cache.fetch(
+                        "client_keys", client_identity
+                    )
+                    if client_key_entry:
+                        is_client = True
+                except Exception:  # pylint: disable=broad-except
+                    pass
+        elif auth_type == "user" and auth_identity:
+            try:
+                client_key_entry = self.key_cache.fetch("client_keys", auth_identity)
+                if client_key_entry:
+                    is_client = True
+                    client_identity = auth_identity
+            except Exception:  # pylint: disable=broad-except
+                # If we can't check, assume not a client
+                pass
+        elif auth_type == "client" and auth_identity:
+            # Pure-PKI remote client: ``auth_type == "client"`` already
+            # proved the client_keys membership during
+            # :meth:`check_authentication`, so we take the ACL branch
+            # unconditionally.
+            is_client = True
+            client_identity = auth_identity
+
+        # If this is a client, check client ACL for minion targeting and module execution
+        if is_client:
+            client_id = client_identity
+            # Check blacklist first (takes precedence)
+            client_acl_blacklist = self.opts.get("client_acl_blacklist", {})
+            if client_acl_blacklist and client_id in client_acl_blacklist:
+                blacklist_config = client_acl_blacklist[client_id]
+
+                # Check if function is blacklisted
+                if (
+                    "modules" in blacklist_config
+                    or "minion_functions" in blacklist_config
+                ):
+                    blacklist_modules = blacklist_config.get(
+                        "modules", blacklist_config.get("minion_functions", [])
+                    )
+                    if (
+                        blacklist_modules
+                        and salt.utils.stringutils.check_whitelist_blacklist(
+                            clear_load["fun"], blacklist=blacklist_modules
+                        )
+                    ):
+                        err = {
+                            "error": {
+                                "name": "ClientAuthorizationError",
+                                "message": (
+                                    f'Client "{client_id}" is blacklisted from executing '
+                                    f'function "{clear_load["fun"]}".'
+                                ),
+                            }
+                        }
+                        if "jid" in clear_load:
+                            self.event.fire_event(
+                                {**clear_load, **err},
+                                tagify([clear_load["jid"], "error"], "job"),
+                            )
+                        return err
+
+            # ClientACL decision (always evaluated for client requests).
+            client_decision = self.client_acl.client_can_publish(
+                client_id, minions, clear_load["fun"]
+            )
+
+            if stacked_possible and auth_type in ("token", "eauth"):
+                # Stacked mode: also require the human (eauth) axis to
+                # authorize via its auth_list.  Compose with the ClientACL
+                # decision; both must pass.
+                eauth_authorized = self.ckminions.auth_check(
+                    auth_list,
+                    clear_load["fun"],
+                    clear_load["arg"],
+                    clear_load["tgt"],
+                    clear_load.get("tgt_type", "glob"),
+                    minions=minions,
+                    whitelist=["saltutil.find_job"],
+                )
+                if isinstance(eauth_authorized, dict) and eauth_authorized.get("error"):
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": eauth_authorized["error"],
+                    }
+                elif eauth_authorized:
+                    eauth_decision = {"allowed": True, "error": None}
+                else:
+                    eauth_decision = {
+                        "allowed": False,
+                        "error": {
+                            "name": "AuthorizationError",
+                            "message": (
+                                f'User "{auth_identity}" is not authorized to '
+                                f'execute "{clear_load["fun"]}" on target '
+                                f'"{clear_load["tgt"]}".'
+                            ),
+                        },
+                    }
+                allowed, err_payload = salt.acl.stacked_authorize(
+                    client_decision, eauth_decision
+                )
+                acl_result = {
+                    "allowed": allowed,
+                    "error": err_payload,
+                }
+            else:
+                acl_result = client_decision
+
+            if not acl_result["allowed"]:
+                # ACL denied the request
+                log.warning(
+                    'Client "%s" denied: %s',
+                    client_id,
+                    acl_result["error"]["message"],
+                )
+                err = {"error": acl_result["error"]}
+                if "jid" in clear_load:
+                    self.event.fire_event(
+                        {**clear_load, **err},
+                        tagify([clear_load["jid"], "error"], "job"),
+                    )
+                return err
+
+            # Record both identities for logging/returners/audit.  In
+            # stacked mode, ``user`` is the human (eauth) and
+            # ``client_id`` is the workstation; in PKI-only mode both are
+            # the same client identity (preserved for backwards compat).
+            clear_load["client_id"] = client_id
+            if stacked_possible and auth_identity:
+                clear_load["user"] = auth_identity
+            else:
+                clear_load["user"] = client_id
+            log.info(
+                'Client "%s" (user "%s") authorized to execute "%s" on '
+                'target "%s" (%d minions)',
+                client_id,
+                clear_load["user"],
+                clear_load["fun"],
+                clear_load["tgt"],
+                len(minions),
+            )
+
         # All Token, Eauth, and non-root users must pass the authorization check
-        if auth_type != "user" or (auth_type == "user" and auth_list):
+        # (Skip this check for clients since they use client ACL above)
+        if not is_client and (
+            auth_type != "user" or (auth_type == "user" and auth_list)
+        ):
             # Authorize the request
             authorized = self.ckminions.auth_check(
                 auth_list,
@@ -5538,7 +6371,7 @@ class ClearFuncs(TransportMethods):
                     }
                 }
                 if "jid" in clear_load:
-                    self.event.fire_event(
+                    self._fire_event_on_running_loop(
                         {**clear_load, **err},
                         tagify([clear_load["jid"], "error"], "job"),
                     )
@@ -5558,18 +6391,37 @@ class ClearFuncs(TransportMethods):
         if not self.opts.get("order_masters"):
             # Check for no minions
             if not minions:
-                return {
-                    "enc": "clear",
-                    "load": {
-                        "jid": None,
-                        "minions": minions,
-                        "error": (
-                            "Master could not resolve minions for target {}".format(
-                                clear_load["tgt"]
-                            )
-                        ),
-                    },
-                }
+                # Topology forward-only exception: when
+                # ``topology_enabled`` is set and the target contains
+                # ``C@`` scopes that name clusters OTHER than this
+                # master's own topology ``cluster_id``, the publish
+                # must still flow through
+                # :meth:`MasterPubServerChannel.publish_payload` ->
+                # :func:`salt.topology.router.on_publish` so the
+                # topology router can forward it to the named peer
+                # cluster(s).  Short-circuiting here on the empty
+                # local-match would drop the publish before it ever
+                # reaches the router.
+                #
+                # A target like ``nonexistent-minion`` (no topology
+                # scope) still errors out below --- the forward-only
+                # path is only taken when at least one ``C@`` scope
+                # names a non-local cluster.
+                if not self._topology_forward_only_target(
+                    clear_load["tgt"], clear_load.get("tgt_type", "glob")
+                ):
+                    return {
+                        "enc": "clear",
+                        "load": {
+                            "jid": None,
+                            "minions": minions,
+                            "error": (
+                                "Master could not resolve minions for target {}".format(
+                                    clear_load["tgt"]
+                                )
+                            ),
+                        },
+                    }
         if extra.get("batch", None) and batch_async_required(self.opts, minions, extra):
             return await self.publish_batch(clear_load, minions, missing)
 
@@ -5588,7 +6440,9 @@ class ClearFuncs(TransportMethods):
         # Send it!
         # Copy the payload when firing event for now since it's adding a
         # __pub_stamp field.
-        self.event.fire_event(payload.copy(), tagify([jid, "publish"], "job"))
+        self._fire_event_on_running_loop(
+            payload.copy(), tagify([jid, "publish"], "job")
+        )
         # An alternative to copy may be to pop it
         # payload.pop("_stamp")
         self._send_ssh_pub(payload, ssh_minions=ssh_minions)
@@ -5599,23 +6453,201 @@ class ClearFuncs(TransportMethods):
             "load": {"jid": clear_load["jid"], "minions": minions, "missing": missing},
         }
 
-    def _prep_auth_info(self, clear_load):
+    def _is_known_client(self, client_id):
+        """
+        Return True if ``client_id`` has an accepted entry in the
+        master's ``client_keys`` cache.
+
+        Used by :meth:`_prep_auth_info` to recognise pure-PKI remote
+        clients as a first-class auth axis.  Mirrors the acceptance
+        check that :meth:`_is_client_bridge` runs before the payload
+        is routed to ClearFuncs; the two have to agree or the bridge
+        would route a request we'd then reject.
+        """
+        if not client_id:
+            return False
+        try:
+            record = self.key_cache.fetch("client_keys", client_id)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        if not record:
+            return False
+        return record.get("state") == "accepted"
+
+    def _topology_forward_only_target(self, tgt, tgt_type):
+        """
+        Return ``True`` when a publish with no local-match minions
+        should still be allowed through for topology-level
+        forwarding to one or more peer clusters.
+
+        Two widening cases, both gated on ``topology_enabled``:
+
+        1. **Compound ``C@`` scope to peer cluster(s)**: the target
+           carries at least one ``C@`` scope naming a cluster
+           OTHER than this master's own topology ``cluster_id``.
+           :func:`salt.topology.router.on_publish` fans the publish
+           to the named peers; the origin's empty local-match is
+           expected.
+
+        2. **Bare target on topology-enabled master**: a glob /
+           list / pcre target that resolved to zero local minions
+           at this master.  The target may name a minion that
+           lives on an adjacent peer cluster whose minion ids
+           this master has no way to pre-enumerate (the summary
+           gossip carries aggregate counts + histograms, not the
+           minion-id manifest; see
+           :class:`salt.topology.summary.ClusterSummary`).  The
+           publish is widened to flood-forward so the peer
+           cluster(s) whose local matcher resolves the target can
+           publish and return.  Per-publish amplification is
+           bounded by:
+
+           * jid-keyed breadcrumb + path authentication in
+             :meth:`TopologyRouter.forward_publish` --- each hop
+             forwards a given jid exactly once.
+           * mesh dedup via the authenticated path --- no cycle
+             re-propagates.
+           * every peer's local matcher independently decides
+             whether to publish; genuinely-nonexistent target
+             ids simply match nothing everywhere and the client
+             reports timeout, not a lingering flood.
+
+           Trade-off: a mistyped glob (``salt east-sub-minionx
+           test.ping``) now cross-cluster-floods instead of
+           returning "could not resolve minions."  The
+           alternative (summary-driven minion-id resolution)
+           would require wire-level changes to
+           :class:`ClusterSummary` that break its size-bounding
+           invariant; see follow-up ``bug-003`` in the agents
+           report.
+
+        For non-topology masters this always returns ``False``;
+        the legacy "no minions matched" error fires as before.
+        """
+        if not self.opts.get("topology_enabled"):
+            return False
+        try:
+            # Local import keeps non-topology masters out of this path.
+            import salt.topology.router as topology_router
+        except ImportError:
+            return False
+
+        if tgt_type in ("compound", "compound_pillar_exact", "nodegroup"):
+            # Case 1: compound target with ``C@`` scoping.
+            try:
+                destinations = topology_router.extract_cluster_scope(tgt)
+            except Exception:  # pylint: disable=broad-except
+                return False
+            if destinations is None:
+                # Flood (either no C@ at all, or a ``not`` makes extraction
+                # conservative-flood).  Fall through to the bare-target
+                # case below so the publish still forwards --- a compound
+                # target like ``not C@east and web-*`` from topo-east
+                # might legitimately resolve on a peer cluster.
+                pass
+            else:
+                local_cluster_id = _topology_cluster_id_for_auth(self.opts)
+                # Any destination not equal to our local cluster_id
+                # implies a peer-cluster forward opportunity.
+                # ``local_cluster_id`` may be ``""`` on a master whose
+                # topology config has no ``cluster_id`` --- in that case
+                # every named destination is "someone else" and the
+                # forward is still worth attempting.
+                remote = {c for c in destinations if c and c != local_cluster_id}
+                return bool(remote)
+
+        # Case 2: bare target (glob / list / pcre) under topology.
+        # No cluster scope to inspect --- let the publish forward and
+        # rely on peer-cluster local matchers to resolve.  See the
+        # docstring above for the bound-and-trade-off discussion.
+        return True
+
+    def _prep_auth_info(self, clear_load, want_stacked=False):
+        """
+        Pick the primary auth_type for ``clear_load``.
+
+        Default return (``want_stacked=False``): the historical 4-tuple
+        ``(auth_type, err_name, key, sensitive_load_keys)`` with priority
+        ``token > eauth > user``.
+
+        When ``want_stacked=True`` the return is extended to a 6-tuple
+        ``(..., stacked_possible, secondary_auth_type)``.  ``stacked_possible``
+        is True when ``stacked_auth`` is enabled on the master opts AND
+        the load carries both a user ``key`` AND either ``token``/``eauth``
+        credentials.  ``secondary_auth_type`` names the non-primary axis
+        in that case, or is ``None``.
+
+        Only the publish/runner/wheel dispatchers that implement the
+        two-axis authorization need the extended form; everyone else can
+        keep unpacking four values.
+        """
         sensitive_load_keys = []
         key = None
-        if "token" in clear_load:
+        # ``LocalClient._prep_pub`` always injects ``key=self.key``, so
+        # ``"key" in clear_load`` is True even for a remote workstation
+        # that has no real master key (``self.key == ""``).  Only count
+        # the user axis as present when the field carries a non-empty
+        # value, otherwise a pure-PKI remote client is misclassified
+        # as a failed master-user login.
+        raw_user_key = clear_load.get("key")
+        has_user = bool(raw_user_key)
+        has_token = "token" in clear_load
+        has_eauth = "eauth" in clear_load
+        # Pure-PKI remote clients send ``client_id`` (set by
+        # :meth:`salt.client.RemoteClient.pub`) and rely on the sender
+        # already being proven by the AES-handshake PKI session (gated
+        # by :meth:`_is_client_bridge` before this path is reached).
+        # Treat them as a first-class auth axis so publish/runner/wheel
+        # don't fall back to ``user`` and reject the empty master key.
+        client_id = clear_load.get("client_id")
+        has_client = bool(client_id) and self._is_known_client(client_id)
+        if has_token:
             auth_type = "token"
             err_name = "TokenAuthenticationError"
             sensitive_load_keys = ["token"]
-        elif "eauth" in clear_load:
+        elif has_eauth:
             auth_type = "eauth"
             err_name = "EauthAuthenticationError"
             sensitive_load_keys = ["username", "password"]
+        elif has_user:
+            auth_type = "user"
+            err_name = "UserAuthenticationError"
+            key = self.key
+        elif has_client:
+            auth_type = "client"
+            err_name = "ClientAuthenticationError"
         else:
+            # Keep the historical "user" fallback for callers that pass
+            # no credentials at all; ``authenticate_key`` will produce
+            # the standard failure message.
             auth_type = "user"
             err_name = "UserAuthenticationError"
             key = self.key
 
-        return auth_type, err_name, key, sensitive_load_keys
+        if not want_stacked:
+            return auth_type, err_name, key, sensitive_load_keys
+
+        stacked_possible = False
+        secondary_auth_type = None
+        if self.opts.get("stacked_auth") and has_user and (has_token or has_eauth):
+            stacked_possible = True
+            # Primary is whatever was picked above; user is the secondary.
+            # The exclusive priority above prefers token/eauth over user,
+            # so when stacking is on and both are present the user axis
+            # becomes the secondary.
+            secondary_auth_type = "user"
+            # Mark the user-key field sensitive alongside the primary
+            # axis's secrets so logging strips both.
+            sensitive_load_keys = list(sensitive_load_keys) + ["key"]
+
+        return (
+            auth_type,
+            err_name,
+            key,
+            sensitive_load_keys,
+            stacked_possible,
+            secondary_auth_type,
+        )
 
     def _prep_jid(self, clear_load, extra):
         """
@@ -5691,7 +6723,9 @@ class ClearFuncs(TransportMethods):
         }
 
         # Announce the job on the event bus
-        self.event.fire_event(new_job_load, tagify([clear_load["jid"], "new"], "job"))
+        self._fire_event_on_running_loop(
+            new_job_load, tagify([clear_load["jid"], "new"], "job")
+        )
 
         if self.opts["ext_job_cache"]:
             fstr = "{}.save_load".format(self.opts["ext_job_cache"])
@@ -5705,7 +6739,7 @@ class ClearFuncs(TransportMethods):
 
                 # Check if 'minions' is included in returner's save_load arg_spec.
                 # This may be missing in custom returners, which we should warn about.
-                if "minions" not in arg_spec.args:
+                if "minions" not in arg_spec.namedargs:
                     log.critical(
                         "The specified returner used for the external job cache "
                         "'%s' does not have a 'minions' kwarg in the returner's "
@@ -5733,7 +6767,7 @@ class ClearFuncs(TransportMethods):
         # always write out to the master job caches
         try:
             fstr = "{}.save_load".format(self.opts["master_job_cache"])
-            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions)
+            self.mminion.returners[fstr](clear_load["jid"], clear_load, minions=minions)
         except KeyError:
             log.critical(
                 "The specified returner used for the master job cache "
@@ -5851,7 +6885,20 @@ class ClearFuncs(TransportMethods):
             return {"error": error}
 
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # See the matching comment in :meth:`runner` async: pure-PKI
+            # client authorizes through ``client_acl``, not ``auth_list``.
+            if not self.client_acl.client_can_run_runner(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'runner function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             runner_check = self.ckminions.runner_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5906,7 +6953,19 @@ class ClearFuncs(TransportMethods):
             return {"error": error}
 
         username = auth_check.get("username")
-        if auth_type != "user":
+        if auth_type == "client":
+            # See the matching comment in :meth:`wheel` async.
+            if not self.client_acl.client_can_run_wheel(username, clear_load["fun"]):
+                return {
+                    "error": {
+                        "name": "ClientAuthorizationError",
+                        "message": (
+                            f'Client "{username}" is not authorized to run '
+                            f'wheel function "{clear_load["fun"]}".'
+                        ),
+                    }
+                }
+        elif auth_type != "user":
             wheel_check = self.ckminions.wheel_check(
                 auth_check.get("auth_list", []),
                 clear_load["fun"],
@@ -5936,6 +6995,11 @@ class ClearFuncs(TransportMethods):
                 username = salt.utils.user.get_user()
 
         try:
+            # Strip AES-bridge protocol fields before we spread
+            # ``clear_load`` as kwargs into the wheel function; see
+            # :meth:`wheel` async above for the full rationale.
+            for _bridge_field in ("client_id", "id", "ts"):
+                clear_load.pop(_bridge_field, None)
             jid = salt.utils.jid.gen_jid(self.opts)
             fun = clear_load.pop("fun")
             tag = tagify(jid, prefix="wheel")

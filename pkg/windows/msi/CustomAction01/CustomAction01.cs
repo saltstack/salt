@@ -14,6 +14,54 @@ using System.Collections.Generic;
 namespace MinionConfigurationExtension {
     public class MinionConfiguration : WixExtension {
 
+        [CustomAction]
+        public static ActionResult InstallLocalRequirements_DECAC(Session session) {
+            try {
+                string configDir = session.CustomActionData["CONFDIR"];
+                string requirements = Path.Combine(configDir, "local-requirements.txt");
+                if (!File.Exists(requirements)) {
+                    return ActionResult.Success;
+                }
+                string installDir = session.CustomActionData["INSTALLDIR"];
+                string saltPip = Path.Combine(installDir, "salt-pip.exe");
+                if (!File.Exists(saltPip)) {
+                    saltPip = Path.Combine(Path.Combine(installDir, "Scripts"), "salt-pip.exe");
+                }
+                session.Log("Installing Salt local requirements before service startup: " + requirements);
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.FileName = saltPip;
+                startInfo.Arguments = "install --requirement \"" + requirements + "\"";
+                startInfo.UseShellExecute = false;
+                startInfo.CreateNoWindow = true;
+                startInfo.EnvironmentVariables["SALT_CONFIG_DIR"] = configDir;
+                // Let pip write diagnostics to the MSI log without buffering
+                // both stdout and stderr pipes (which can deadlock).
+                startInfo.RedirectStandardOutput = true;
+                startInfo.RedirectStandardError = true;
+                using (Process process = new Process()) {
+                    process.StartInfo = startInfo;
+                    process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs args) {
+                        if (args.Data != null) session.Log(args.Data);
+                    };
+                    process.ErrorDataReceived += delegate(object sender, DataReceivedEventArgs args) {
+                        if (args.Data != null) session.Log(args.Data);
+                    };
+                    process.Start();
+                    process.BeginOutputReadLine();
+                    process.BeginErrorReadLine();
+                    process.WaitForExit();
+                    if (process.ExitCode != 0) {
+                        session.Log("Salt local requirements installation failed (exit " + process.ExitCode + "); service startup will not proceed.");
+                        return ActionResult.Failure;
+                    }
+                }
+                return ActionResult.Success;
+            } catch (Exception ex) {
+                session.Log("Salt local requirements installation failed: " + ex.Message);
+                return ActionResult.Failure;
+            }
+        }
+
 
         [CustomAction]
         public static ActionResult ReadConfig_IMCAC(Session session) {

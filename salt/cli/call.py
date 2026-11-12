@@ -136,16 +136,18 @@ class SaltCall(salt.utils.parsers.SaltCallOptionParser):
             if v
         }
         trace_ctx = salt.utils.tracing.extract(env_carrier)
-        with salt.utils.tracing.start_span(
-            (
-                f"salt-call.{self.config.get('fun', '')}"
-                if self.config.get("fun")
-                else "salt-call"
-            ),
-            attributes={"salt.fun": self.config.get("fun", "")},
-            context=trace_ctx,
-        ):
-            try:
+        # shutdown() must run *after* the span's __exit__ so span.end()
+        # happens before provider.shutdown() tears down BatchSpanProcessor.
+        try:
+            with salt.utils.tracing.start_span(
+                (
+                    f"salt-call.{self.config.get('fun', '')}"
+                    if self.config.get("fun")
+                    else "salt-call"
+                ),
+                attributes={"salt.fun": self.config.get("fun", "")},
+                context=trace_ctx,
+            ):
                 caller.run()
-            finally:
-                salt.utils.tracing.shutdown()
+        finally:
+            salt.utils.tracing.shutdown()

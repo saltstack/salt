@@ -1219,6 +1219,29 @@ Section -Post
         ${LogMsg} "https://github.com/GsNSIS/EnVar#error-codes"
     ${EndIf}
 
+    # Apply optional dependencies with the newly installed runtime before
+    # .onInstSuccess can start the minion. Respect a custom RootDir.
+    ${If} ${FileExists} "$RootDir\conf\local-requirements.txt"
+        ${LogMsg} "Installing Salt local requirements before service startup"
+        StrCpy $R0 "$INSTDIR\salt-pip.exe"
+        ${IfNot} ${FileExists} "$R0"
+            StrCpy $R0 "$INSTDIR\Scripts\salt-pip.exe"
+        ${EndIf}
+        System::Call 'kernel32::SetEnvironmentVariable(t "SALT_CONFIG_DIR", t "$RootDir\conf") i.r1'
+        ClearErrors
+        ExecWait '"$R0" install --requirement "$RootDir\conf\local-requirements.txt"' $0
+        ${If} ${Errors}
+            ${LogMsg} "Failed to launch salt-pip for local requirements"
+            SetErrorLevel 1
+            Abort "Failed to launch salt-pip for local requirements"
+        ${EndIf}
+        ${If} $0 != 0
+            ${LogMsg} "Salt local requirements installation failed (exit $0); minion will not be started"
+            SetErrorLevel 1
+            Abort "Salt local requirements installation failed. See the installer log."
+        ${EndIf}
+    ${EndIf}
+
 SectionEnd
 
 

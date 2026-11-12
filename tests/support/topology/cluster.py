@@ -1,0 +1,826 @@
+"""
+Reusable ``TopologyCluster`` wrapper for the master-topology
+functional test harness.
+
+A :class:`TopologyCluster` represents one logical master in the
+topology graph.  It is either:
+
+* a single standalone master (``peer_count=1``), or
+* an N-member 3008.x master cluster (``peer_count>=2``).
+
+Either way, the wrapper exposes the semantic operations topology
+tests reach for: ``accept_peer``, ``revoke_peer``, ``config_peer``,
+``inspect_registry``, ``inspect_breadcrumbs``, and ``terminate``.
+
+The wrapper is deliberately thin:
+
+* It sets ``topology_enabled`` / ``topology_link_port`` /
+  ``cluster_id`` / ``topology_peers`` directly in each master's
+  opts (topology config lives in the master config, same shape as
+  any other master opt).
+* It generates (and keeps on disk) a per-cluster ``master_identity.pub``
+  stand-in so ``accept_peer`` has something to copy.  Per-file
+  implementation teams will swap this out for a real
+  :func:`salt.topology.registry.set_identity_pub` once that lands.
+* ``inspect_registry`` and ``inspect_breadcrumbs`` read from the
+  on-disk harness state (the ``masters/`` dir and
+  ``topology_registry.mmap`` if it exists).  Teams who later wire
+  the real mmap caches may replace these methods, but tests built
+  against this shape keep working.
+
+See the sibling ``tests/pytests/integration/cluster/conftest.py``
+for the 3008.x master-cluster primitives this harness builds on.
+"""
+
+import logging
+import os
+import pathlib
+import subprocess
+import tempfile
+
+from pytestshellutils.utils import ports
+
+import salt.utils.platform
+
+log = logging.getLogger(__name__)
+
+
+def _make_short_root_dir():
+    """
+    Return a path for a master's ``root_dir`` that is both short enough
+    to keep AF_UNIX socket paths under the 108-byte Linux limit AND on
+    a filesystem with enough free space to host dozens of masters per
+    test session.
+
+    - On GitHub-Actions runners (the ``GITHUB_WORKSPACE`` env var is
+      set), ``/__w/salt/salt`` (an overlay fs with ~99 GB free on arm
+      and x86 nightly runners) is preferred over ``/tmp`` (a 7.9 GB
+      tmpfs that saturates after ~40 masters even with bulk cleanup).
+    - Locally, ``tempfile.gettempdir()`` is fine --- dev disks are
+      big, cleanup is per-test, and the path is short enough to keep
+      AF_UNIX paths safe.
+
+    The caller is responsible for ``shutil.rmtree``-ing the directory
+    once the master has terminated.
+    """
+    gh_workspace = os.environ.get("GITHUB_WORKSPACE")
+    base = gh_workspace if gh_workspace and os.path.isdir(gh_workspace) else None
+    return tempfile.mkdtemp(prefix="r", dir=base)
+
+
+# Harness-generated identity-key placeholder.  Each cluster gets its
+# own ``master_identity.pub`` byte string so ``accept_peer`` copies
+# are distinguishable.  Keep this far away from a real crypto path:
+# behavior tests that need a real identity key will materialize one
+# via ``salt.crypt`` once the implementation lands.
+_HARNESS_IDENTITY_PREFIX = b"-----BEGIN HARNESS IDENTITY PLACEHOLDER-----\n"
+_HARNESS_IDENTITY_SUFFIX = b"\n-----END HARNESS IDENTITY PLACEHOLDER-----\n"
+
+
+def _make_harness_identity(cluster_id):
+    """Return deterministic placeholder public-key bytes for *cluster_id*."""
+    return (
+        _HARNESS_IDENTITY_PREFIX + cluster_id.encode("utf-8") + _HARNESS_IDENTITY_SUFFIX
+    )
+
+
+def _ensure_lo_alias(addr):
+    """
+    Ensure ``addr`` (a 127.0.0.0/8 loopback alias) is bound so the
+    multi-peer cluster harness's per-peer addresses are reachable.
+
+    * Linux: kernel binds the whole 127.0.0.0/8 range automatically.
+      No-op.
+    * BSD / macOS: ``lo0`` only carries 127.0.0.1 by default; each
+      additional alias is a one-off ``ifconfig`` call.
+    * Windows: ``Loopback Pseudo-Interface 1`` only carries
+      127.0.0.1 by default.  Without the alias, 127.0.0.2+
+      connections fail with ``StreamClosedError`` and the Raft
+      peers never form a cluster.  Requires admin, which the
+      GitHub Actions Windows runner has by default.  Idempotent:
+      re-adding an existing alias is a no-op that netsh reports
+      as an error we swallow.
+
+    Mirrors the pattern used in
+    ``tests/pytests/integration/cluster/conftest.py``.
+    """
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", addr, "up"])
+    elif salt.utils.platform.is_windows():
+        # netsh needs the interface name.  On the GitHub Actions
+        # Windows runners this is "Loopback Pseudo-Interface 1".
+        # We swallow non-zero exits because "The object already
+        # exists" is a normal re-run condition and the follow-up
+        # test code will surface any real connectivity problem.
+        subprocess.run(
+            [
+                "netsh",
+                "interface",
+                "ipv4",
+                "add",
+                "address",
+                "Loopback Pseudo-Interface 1",
+                addr,
+                "255.0.0.0",
+            ],
+            check=False,
+            capture_output=True,
+        )
+
+
+class TopologyCluster:
+    """
+    Harness wrapper around one logical master in a topology graph.
+
+    :param cluster_id: Topology cluster_id (``east``, ``west``, ...).
+    :param masters: List of started
+        :class:`saltfactories.daemons.master.SaltMaster` instances
+        belonging to this logical master.  List has length 1 for a
+        standalone master, >1 for a 3008.x cluster.
+    :param pki_root: Path containing the per-master pki_dir(s).  The
+        ``masters/`` directory inside this path is where
+        :meth:`accept_peer` drops peer identity keys.
+    :param identity_pub: This cluster's placeholder identity public
+        key bytes.  Copied into peers' ``masters/`` dirs by
+        :meth:`accept_peer`.
+    """
+
+    def __init__(self, cluster_id, masters, pki_root, identity_pub):
+        self.cluster_id = cluster_id
+        self.masters = list(masters)
+        self.pki_root = pathlib.Path(pki_root)
+        self.identity_pub = identity_pub
+        self._contexts = []
+        self._terminated = False
+        #: Lazily generated real-crypto identity keypair bytes
+        #: ``(pub_pem, priv_pem)``.  Populated by
+        #: :meth:`ensure_identity_key`; copied over by
+        #: :meth:`accept_peer`.  Separate from the deterministic
+        #: ``identity_pub`` placeholder bytes so scenarios that assert on
+        #: the placeholder shape keep working while scenarios that need
+        #: to drive the real ``topology/_master_auth`` handshake get
+        #: real RSA bytes under ``pki_dir/master/master_identity.pub``.
+        self._real_identity_pub = None
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    @property
+    def masters_pki_dir(self):
+        """
+        Return the ``<pki_dir>/masters/`` directory where
+        :meth:`accept_peer` drops accepted peer identity keys.
+
+        For a 3008.x cluster this reads from the shared
+        ``cluster_pki_dir``; for a solo master, from the master's
+        own ``pki_dir``.
+        """
+        # Each cluster has one shared masters/ directory because key
+        # acceptance is a cluster-wide fact.  For a solo master it's
+        # just the master's pki_dir/master/masters path.
+        master = self.masters[0]
+        pki_dir = pathlib.Path(master.config["pki_dir"])
+        masters_dir = pki_dir / "masters"
+        masters_dir.mkdir(parents=True, exist_ok=True)
+        return masters_dir
+
+    def is_running(self):
+        """True if every underlying salt-master factory reports running."""
+        if self._terminated:
+            return False
+        return all(m.is_running() for m in self.masters)
+
+    def terminate(self):
+        """
+        Stop every underlying salt-master.  Idempotent.
+
+        The fixtures also run their own exit-stack cleanup via
+        ``factory.started()`` --- :meth:`terminate` is for tests that
+        need to assert "cluster is down" without exiting the fixture.
+        """
+        if self._terminated:
+            return
+        for master in self.masters:
+            try:
+                master.terminate()
+            except (OSError, RuntimeError) as exc:  # pragma: no cover
+                log.warning("terminate(%s): %s", master.id, exc)
+        self._terminated = True
+
+    def restart(self, start_timeout=120):
+        """
+        Stop and restart every underlying salt-master in place.
+
+        Tests that mutate on-disk state the master only reads at
+        boot call this after the mutation so the next boot picks up
+        the new config.  The fixture's exit-stack still owns the
+        final teardown via the original ``factory.started()``
+        context (which calls :meth:`terminate` on exit; idempotent
+        once the final restart's termination also runs).
+
+        :param start_timeout: Per-master start timeout in seconds.
+        """
+        for master in self.masters:
+            try:
+                master.terminate()
+            except (OSError, RuntimeError) as exc:  # pragma: no cover
+                log.warning("restart terminate(%s): %s", master.id, exc)
+        for master in self.masters:
+            master.start(start_timeout=start_timeout)
+        self._terminated = False
+
+    # ------------------------------------------------------------------
+    # Peer acceptance (``salt-key -a --master`` simulation)
+    # ------------------------------------------------------------------
+
+    def identity_key_paths(self):
+        """
+        Return ``(pub_path, priv_path)`` for this cluster's
+        ``master_identity`` keypair under
+        ``<pki_dir>/master/master_identity.{pub,pem}``.
+        """
+        master = self.masters[0]
+        pki_dir = pathlib.Path(master.config["pki_dir"]) / "master"
+        return (
+            pki_dir / "master_identity.pub",
+            pki_dir / "master_identity.pem",
+        )
+
+    def ensure_identity_key(self):
+        """
+        Generate and persist a real
+        :class:`salt.crypt.MasterIdentityKey` keypair for this
+        cluster under ``<pki_dir>/master/master_identity.{pub,pem}``.
+
+        Idempotent: a second call reuses the on-disk keypair.
+        Returns the pub-key PEM bytes --- the same bytes
+        :meth:`accept_peer` copies into a peer's ``masters/`` dir.
+        """
+        import salt.crypt  # local import to keep harness lazy
+
+        pub_path, _priv_path = self.identity_key_paths()
+        master = self.masters[0]
+        opts = {
+            "pki_dir": master.config["pki_dir"],
+            "hash_type": master.config.get("hash_type", "sha256"),
+            "keysize": master.config.get("keysize", 2048),
+        }
+        key = salt.crypt.MasterIdentityKey(opts)
+        if not key.exists():
+            pub_pem, priv_pem = key.generate()
+            key.write(pub_pem, priv_pem)
+        pub_bytes, _priv_bytes = key.load()
+        self._real_identity_pub = pub_bytes
+        # Keep ``identity_pub`` pointing at the real bytes too so
+        # callers that previously consumed the placeholder see the
+        # real key once ``ensure_identity_key`` has run.  Scenarios
+        # that still want the placeholder shape bypass this helper.
+        self.identity_pub = pub_bytes
+        # Mirror onto cluster peers (3008.x master cluster) so every
+        # peer in the logical cluster has the same identity key on
+        # disk.
+        for peer in self.masters[1:]:
+            peer_pki = pathlib.Path(peer.config["pki_dir"]) / "master"
+            peer_pki.mkdir(parents=True, exist_ok=True)
+            (peer_pki / "master_identity.pub").write_bytes(pub_bytes)
+            os.chmod(str(peer_pki / "master_identity.pub"), 0o444)
+        return pub_bytes
+
+    def accept_peer(self, other):
+        """
+        Place *other*'s identity pub in this cluster's ``masters/``
+        directory --- simulates ``salt-key -a <other.cluster_id> --master``.
+
+        If the peer has already generated a real
+        :class:`salt.crypt.MasterIdentityKey` on disk (via
+        :meth:`ensure_identity_key`), the real pub-key PEM is copied
+        over.  Otherwise, the placeholder bytes assigned at
+        construction time are written --- preserves the behaviour
+        the existing core/failure scenario tests depend on.
+
+        :param other: Another :class:`TopologyCluster`.
+        """
+        if not isinstance(other, TopologyCluster):
+            raise TypeError(f"accept_peer expects TopologyCluster, got {type(other)!r}")
+        other_pub_path, _ = other.identity_key_paths()
+        if other_pub_path.is_file():
+            pub_bytes = other_pub_path.read_bytes()
+        else:
+            pub_bytes = other.identity_pub
+        target = self.masters_pki_dir / f"{other.cluster_id}.pub"
+        target.write_bytes(pub_bytes)
+        os.chmod(target, 0o644)
+
+    def revoke_peer(self, other):
+        """
+        Remove *other*'s identity pub from this cluster's ``masters/``
+        directory.  Idempotent.
+        """
+        if not isinstance(other, TopologyCluster):
+            raise TypeError(f"revoke_peer expects TopologyCluster, got {type(other)!r}")
+        target = self.masters_pki_dir / f"{other.cluster_id}.pub"
+        if target.exists():
+            target.unlink()
+
+    # ------------------------------------------------------------------
+    # Config-time peering (``topology_peers:`` in master opts)
+    # ------------------------------------------------------------------
+
+    def config_peer(self, other, host=None, port=None):
+        """
+        Add *other* to this cluster's ``topology_peers`` entry in
+        every member's on-disk master config file.
+
+        Tests that need the running master to pick up the new peer
+        follow this call with :meth:`restart`; the factory re-reads
+        the config file on startup.  :meth:`master_opts` also
+        re-reads the file so in-process router/link_manager runs
+        built via that method see the new peer immediately.
+
+        :param host: Override the peer host.  Defaults to the peer's
+            own ``interface`` opt.
+        :param port: Override the peer port.  Defaults to the peer's
+            own ``topology_link_port``.
+        """
+        if not isinstance(other, TopologyCluster):
+            raise TypeError(f"config_peer expects TopologyCluster, got {type(other)!r}")
+        host = host or other.masters[0].config.get("interface", "127.0.0.1")
+        port = port or other.masters[0].config["topology_link_port"]
+        entry = {"host": host, "port": int(port)}
+
+        import yaml  # local import keeps the module header lean
+
+        for master in self.masters:
+            config_file = pathlib.Path(master.config_file)
+            with config_file.open(encoding="utf-8") as fh:
+                data = yaml.safe_load(fh) or {}
+            data.setdefault("cluster_id", self.cluster_id)
+            peers = list(data.get("topology_peers") or [])
+            if entry not in peers:
+                peers.append(entry)
+            data["topology_peers"] = peers
+            with config_file.open("w", encoding="utf-8") as fh:
+                yaml.safe_dump(data, fh, default_flow_style=False, sort_keys=False)
+
+    # ------------------------------------------------------------------
+    # Inspection (harness-level, swap for real-cache reads later)
+    # ------------------------------------------------------------------
+
+    def inspect_registry(self):
+        """
+        Return a snapshot of this cluster's registry state.
+
+        Harness-level reading from disk --- the ``masters/`` dir for
+        accepted peers, and ``master_identity.pub`` for the identity
+        half.  Per-file implementation teams who land the real
+        :mod:`salt.topology.registry` MmapCache may extend this to
+        read the mmap instead; existing callers see the same keys
+        (``identity``, ``peers``).
+        """
+        peers = []
+        masters_dir = self.masters_pki_dir
+        if masters_dir.is_dir():
+            for entry in sorted(masters_dir.iterdir()):
+                if entry.suffix == ".pub":
+                    peers.append(entry.stem)
+        return {
+            "identity": self.identity_pub,
+            "cluster_id": self.cluster_id,
+            "peers": peers,
+        }
+
+    def inspect_breadcrumbs(self, peer_index=0):
+        """
+        Return the list of breadcrumb entries visible on disk.
+
+        Reads the real :mod:`salt.topology.breadcrumbs` MmapCache
+        when it exists and returns a list of
+        ``{"jid": str, "link_cluster_id": str, "expiry_at": float}``
+        dicts for every non-expired entry.  Returns ``[]`` when the
+        file has not yet been materialised (either the publish
+        daemon hasn't started or no publishes have been forwarded).
+        """
+        crumbs = []
+        master = self.masters[peer_index]
+        pki_dir = pathlib.Path(master.config["pki_dir"])
+        mmap_path = pki_dir / "master" / "topology_breadcrumbs.mmap"
+        if not mmap_path.exists():
+            return crumbs
+        # Open a reader against the real breadcrumbs cache and
+        # decode each live entry's msgpack payload.
+        import salt.topology.breadcrumbs as breadcrumbs_mod
+
+        opts = {
+            "pki_dir": str(pki_dir),
+            "topology_breadcrumb_cache_size": master.config.get(
+                "topology_breadcrumb_cache_size", 1_000_000
+            ),
+            "topology_breadcrumb_cache_key_size": master.config.get(
+                "topology_breadcrumb_cache_key_size", 64
+            ),
+        }
+        reader = breadcrumbs_mod.open_reader(opts)
+        try:
+            for key, raw in reader.list_items():
+                decoded = breadcrumbs_mod._decode(  # pylint: disable=protected-access
+                    raw
+                )
+                if decoded is None:
+                    continue
+                crumbs.append(
+                    {
+                        "jid": key,
+                        "link_cluster_id": decoded.get("link_cluster_id"),
+                        "expiry_at": decoded.get("expiry_at"),
+                    }
+                )
+        finally:
+            reader.close()
+        return crumbs
+
+    def breadcrumb_mmap_paths(self, peer_index=0):
+        """
+        Return the on-disk paths of the breadcrumbs MmapCache files
+        as a dict with keys ``index``, ``heap``, ``roster``,
+        ``lock``.
+
+        Lets scenario tests assert "the cache file persists on disk"
+        across a publish-daemon restart --- the file is written
+        before :meth:`terminate` and still exists afterward because
+        MmapCache lifetime is tied to on-disk files, not the
+        process.
+        """
+        master = self.masters[peer_index]
+        pki_dir = pathlib.Path(master.config["pki_dir"])
+        base = pki_dir / "master" / "topology_breadcrumbs.mmap"
+        return {
+            "index": base,
+            "heap": pathlib.Path(str(base) + ".heap"),
+            "roster": pathlib.Path(str(base) + ".roster"),
+            "lock": pathlib.Path(str(base) + ".lock"),
+        }
+
+    def master_opts(self, peer_index=0):
+        """
+        Return the opts dict needed to drive
+        :mod:`salt.topology.link_manager` /
+        :mod:`salt.topology.registry` /
+        :mod:`salt.topology.breadcrumbs` against this cluster's
+        on-disk state.
+
+        Pulls values from the running config of the Nth peer so an
+        in-process link_manager.start uses the same pki_dir /
+        topology_link_port / peer list as the harness-managed
+        daemon.  Scenario tests that drive topology lifecycle
+        in-process (publish daemon restart, startup ordering) use
+        this to point module-level writers at the right disk.
+
+        :param peer_index: Index into ``self.masters`` to source opts
+            from.  Defaults to 0 (the leader-like first peer); set
+            to another index to point an in-process publish daemon
+            at a non-primary peer in a 3008.x master cluster.
+        """
+        if peer_index < 0 or peer_index >= len(self.masters):
+            raise IndexError(
+                f"peer_index {peer_index} out of range for cluster with "
+                f"{len(self.masters)} peer(s)"
+            )
+        master = self.masters[peer_index]
+        # Mirror the running master's config sizing so the writer we
+        # open here lines up byte-for-byte with any MmapCache files
+        # the salt-master's own ``pre_fork`` already materialised.
+        # A size mismatch between pre-created files and the writer
+        # produces a cache that silently drops writes to the
+        # out-of-range slots.
+        # Re-read the on-disk master config for ``topology_peers`` so
+        # any :meth:`config_peer` edits since the master started are
+        # visible to in-process router/link_manager builds driven
+        # from these opts.  salt-factories' ``master.config`` is an
+        # immutable snapshot taken at write-time and does not reflect
+        # subsequent file edits.
+        import yaml  # local import keeps the module header lean
+
+        config_file = pathlib.Path(master.config_file)
+        try:
+            with config_file.open(encoding="utf-8") as fh:
+                _on_disk = yaml.safe_load(fh) or {}
+        except OSError:
+            _on_disk = {}
+        _peers = list(_on_disk.get("topology_peers") or [])
+        _event_subs = _on_disk.get(
+            "topology_event_subscriptions",
+            master.config.get("topology_event_subscriptions"),
+        )
+        return {
+            "pki_dir": master.config["pki_dir"],
+            "cluster_id": self.cluster_id,
+            "interface": master.config.get("interface", "127.0.0.1"),
+            "topology_enabled": True,
+            "topology_link_port": master.config["topology_link_port"],
+            "topology_peers": _peers,
+            "topology_event_subscriptions": _event_subs,
+            "topology_registry_cache_size": master.config.get(
+                "topology_registry_cache_size", 10_000
+            ),
+            "topology_registry_cache_key_size": master.config.get(
+                "topology_registry_cache_key_size", 64
+            ),
+            "topology_breadcrumb_cache_size": master.config.get(
+                "topology_breadcrumb_cache_size", 1_000_000
+            ),
+            "topology_breadcrumb_cache_key_size": master.config.get(
+                "topology_breadcrumb_cache_key_size", 64
+            ),
+            "topology_breadcrumb_grace": master.config.get(
+                "topology_breadcrumb_grace", 2
+            ),
+            "topology_breadcrumb_max_age": master.config.get(
+                "topology_breadcrumb_max_age", 60
+            ),
+            "topology_detach_quiesce": master.config.get("topology_detach_quiesce", 1),
+        }
+
+    def start_publish_daemon(self, raft_service=None, peer_index=0):
+        """
+        Drive :func:`salt.topology.link_manager.start` in-process
+        against this cluster's pki_dir.
+
+        Simulates the publish-daemon post-fork hook that will wire
+        the topology subsystem once Phase 5 integration lands in
+        :class:`salt.channel.server.MasterPubServerChannel`.
+        Returns the ``(loop, opts)`` pair so the caller can drive
+        follow-on operations (``_handle_master_auth``, forced
+        ``stop``, etc.) on the same loop.
+
+        The caller is responsible for calling :meth:`stop_publish_daemon`
+        (or driving ``link_manager.stop`` on the returned loop) at
+        the end of the scenario.  Idempotent-ish: if ``link_manager``
+        is already started, a WARNING is logged and the existing
+        state is reused.
+
+        :param peer_index: In a 3008.x master cluster, which peer's
+            opts to drive the in-process publish daemon against.
+            Defaults to 0 (the first peer); scenario tests that
+            exercise non-primary-peer inbound paths pass an
+            explicit index.
+        """
+        import asyncio
+
+        import salt.topology.link_manager as link_manager
+
+        opts = self.master_opts(peer_index=peer_index)
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(link_manager.start(opts, loop, raft_service))
+        return loop, opts
+
+    def stop_publish_daemon(self, loop, peer_index=0):
+        """
+        Drive :func:`salt.topology.link_manager.stop` on *loop*.
+
+        Mirrors :meth:`start_publish_daemon`.  Idempotent: a second
+        ``stop_publish_daemon`` with the same loop is a no-op after
+        the first because ``link_manager.stop`` resets module state
+        to its post-import defaults.
+
+        :param peer_index: Accepted for symmetry with
+            :meth:`start_publish_daemon`; module state is global so
+            the actual stop is peer-agnostic, but accepting the
+            same keyword lets scenario tests document which peer's
+            daemon they intend to tear down.
+        """
+        import salt.topology.link_manager as link_manager
+
+        _ = peer_index  # peer_index documented at the call site only
+        try:
+            loop.run_until_complete(link_manager.stop())
+        finally:
+            loop.close()
+
+
+def make_single_master(
+    salt_factories,
+    tmp_path,
+    cluster_id,
+    opts_overrides=None,
+    transport="zeromq",
+):
+    """
+    Spin up one standalone master configured for topology (opts set
+    inline; stub code remains inert).
+
+    :returns: ``(factory, pki_root, identity_pub)`` --- caller drives
+        ``factory.started()``.
+    """
+    opts_overrides = dict(opts_overrides or {})
+    link_port = ports.get_unused_localhost_port()
+    pki_root = pathlib.Path(tmp_path) / f"{cluster_id}-pki"
+    pki_root.mkdir(parents=True, exist_ok=True)
+    # Route the master's writable state (logs, cache, run, token_dir,
+    # keys) under a SHORT ``root_dir`` outside the salt-factories
+    # default (``/tmp/stsuite/<master-id>_<N>/``), which is
+    # session-scoped and accumulates across every test that spins up
+    # a ``topology-<cluster_id>`` master.  The accumulation exhausts
+    # the runner disk on the functional CI shards.
+    #
+    # The root_dir is deliberately NOT under pytest's ``tmp_path``
+    # because that prefix alone
+    # (``/tmp/pytest-of-<user>/pytest-<n>/<nodeid>/``) is 60-80 chars,
+    # and ``root_dir`` propagates into every relative opt via
+    # ``salt.config.prepend_root_dir`` --- notably ``sock_dir`` which
+    # ends up holding unix sockets ``master_event_pub.ipc`` /
+    # ``master_event_pull.ipc`` / ``publish_pull.ipc``.  AF_UNIX
+    # sun_path is 108 bytes on Linux, so anything built from a long
+    # root_dir overflows it and raises ``OSError: AF_UNIX path too
+    # long`` at ``tornado.netutil.bind_unix_socket`` fork time.
+    #
+    # Caller is responsible for ``shutil.rmtree``-ing ``root_dir``
+    # after the factory has been terminated.  This function returns
+    # it as the last element of its tuple for that reason.
+    root_dir = pathlib.Path(_make_short_root_dir())
+
+    base_overrides = {
+        "open_mode": True,
+        "root_dir": str(root_dir),
+        "pki_dir": str(pki_root),
+        "topology_enabled": True,
+        "cluster_id": cluster_id,
+        "topology_peers": [],
+        "topology_link_port": link_port,
+        "topology_breadcrumb_grace": 2,
+        "topology_breadcrumb_max_age": 60,
+        "topology_detach_quiesce": 1,
+        # FIPS-safe RSA algorithms.  Salt's defaults (``OAEP-SHA1`` /
+        # ``PKCS1v15-SHA1``) trip ``_enforce_fips`` at
+        # ``salt/crypt.py`` under FIPS-mode CI shards and cause the
+        # master-minion handshake to silently retry past the test's
+        # 90s pytest-timeout.  SHA224 variants are valid on both FIPS
+        # and non-FIPS runners.
+        "encryption_algorithm": "OAEP-SHA224",
+        "signing_algorithm": "PKCS1v15-SHA224",
+        "publish_signing_algorithm": "PKCS1v15-SHA224",
+        "cluster_encryption_algorithm": "OAEP-SHA224",
+        "log_granular_levels": {
+            "salt": "info",
+        },
+    }
+    base_overrides.update(opts_overrides)
+    # ``cluster_id`` + no ``cluster_peers`` + topology disabled
+    # fails master pre-flight (see :func:`salt.master.Master._pre_flight`).
+    # Callers that explicitly disable topology get the pre-topology
+    # layout: no cluster_id, no topology_peers.
+    if not base_overrides.get("topology_enabled"):
+        base_overrides.pop("cluster_id", None)
+        base_overrides.pop("topology_peers", None)
+
+    factory = salt_factories.salt_master_daemon(
+        f"topology-{cluster_id}",
+        defaults={"open_mode": True, "transport": transport},
+        overrides=base_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+    identity_pub = _make_harness_identity(cluster_id)
+    # The caller is responsible for driving ``factory.started()``
+    # and for ``shutil.rmtree``-ing ``root_dir`` once the factory
+    # has been terminated.
+    return factory, pki_root, identity_pub, root_dir
+
+
+def make_cluster(
+    salt_factories,
+    tmp_path,
+    cluster_id,
+    peer_count,
+    opts_overrides=None,
+    transport="zeromq",
+):
+    """
+    Spin up an N-member 3008.x master cluster configured for
+    topology.  Each cluster peer gets ``cluster_id`` and an empty
+    ``topology_peers`` inline in its own master opts; later
+    :meth:`TopologyCluster.config_peer` calls append to each
+    peer's ``topology_peers`` list.
+
+    :returns: ``(factories, pki_root, identity_pub, root_dirs)``.
+        Caller drives ``factory.started()`` for each factory AND
+        ``shutil.rmtree``'s every path in ``root_dirs`` after
+        termination so the per-master state tree (logs, cache,
+        sockets) does not accumulate across the session.
+    """
+    if peer_count < 1:
+        raise ValueError("peer_count must be >= 1")
+    if peer_count == 1:
+        factory, pki_root, identity_pub, root_dir = make_single_master(
+            salt_factories, tmp_path, cluster_id, opts_overrides, transport
+        )
+        return [factory], pki_root, identity_pub, [root_dir]
+
+    # Multi-peer: use the loopback-alias pattern from the existing
+    # cluster conftest.
+    opts_overrides = dict(opts_overrides or {})
+    link_port = ports.get_unused_localhost_port()
+    ret_port = ports.get_unused_localhost_port()
+    pub_port = ports.get_unused_localhost_port()
+    # 3008.x master clusters bind an IPC pool-puller on
+    # ``cluster_pool_port`` per peer.  The default (4520) collides
+    # when two independent clusters share the loopback alias set
+    # (127.0.0.1..N), so pick a fresh port per cluster and let the
+    # caller override if they need a stable value.
+    cluster_pool_port = ports.get_unused_localhost_port()
+    cluster_shared = pathlib.Path(tmp_path) / f"{cluster_id}-shared"
+    cluster_shared.mkdir(parents=True, exist_ok=True)
+    cluster_pki = cluster_shared / "pki"
+    cluster_pki.mkdir(parents=True, exist_ok=True)
+    (cluster_pki / "peers").mkdir(exist_ok=True)
+    cluster_cache = cluster_shared / "cache"
+    cluster_cache.mkdir(parents=True, exist_ok=True)
+
+    # Pick N distinct loopback addrs: 127.0.0.1..127.0.0.N.
+    addrs = [f"127.0.0.{i + 1}" for i in range(peer_count)]
+
+    factories = []
+    root_dirs = []
+    identity_pub = _make_harness_identity(cluster_id)
+    for addr in addrs:
+        _ensure_lo_alias(addr)
+        own_pki = pathlib.Path(tmp_path) / f"{cluster_id}-{addr}-pki"
+        own_pki.mkdir(parents=True, exist_ok=True)
+        # Short per-peer root (via ``_make_short_root_dir``) so
+        # sock_dir (derived from root_dir via
+        # ``salt.config.prepend_root_dir``) stays within the 108-byte
+        # AF_UNIX limit on Linux AND on a filesystem with enough free
+        # space to host dozens of masters per session.  See the
+        # identical rationale in ``make_single_master``.  Caller
+        # cleans up all returned root_dirs.
+        own_root = pathlib.Path(_make_short_root_dir())
+
+        # Master IPC event bus ports (tcp_master_pub_port /
+        # tcp_master_pull_port / tcp_master_publish_pull /
+        # tcp_master_workers) default to 4512-4515 and MUST be
+        # distinct per peer: ``salt.transport.base._ipc_loopback``
+        # hardcodes ``127.0.0.1`` and ignores ``opts["interface"]``,
+        # so without unique ports every peer would try to bind the
+        # same four ports on 127.0.0.1 and masters 2..N would
+        # silently lose the bind (Windows: EADDRINUSE; the first
+        # peer's event bus services all three masters' clients,
+        # which means peer N's own pytest_engine never sees peer
+        # N's start event and the factory times out).
+        tcp_master_pub_port = ports.get_unused_localhost_port()
+        tcp_master_pull_port = ports.get_unused_localhost_port()
+        tcp_master_publish_pull = ports.get_unused_localhost_port()
+        tcp_master_workers = ports.get_unused_localhost_port()
+
+        peers = [a for a in addrs if a != addr]
+        overrides = {
+            "open_mode": True,
+            "interface": addr,
+            "root_dir": str(own_root),
+            "pki_dir": str(own_pki),
+            # One ``cluster_id`` serves both features: it names the
+            # Raft master cluster AND identifies this logical node
+            # in the topology graph.
+            "cluster_id": cluster_id,
+            "cluster_peers": peers,
+            "cluster_pki_dir": str(cluster_pki),
+            "cache_dir": str(cluster_cache),
+            "ret_port": ret_port,
+            "publish_port": pub_port,
+            "cluster_pool_port": cluster_pool_port,
+            "tcp_master_pub_port": tcp_master_pub_port,
+            "tcp_master_pull_port": tcp_master_pull_port,
+            "tcp_master_publish_pull": tcp_master_publish_pull,
+            "tcp_master_workers": tcp_master_workers,
+            "topology_enabled": True,
+            "topology_link_port": link_port,
+            "topology_peers": [],
+            "topology_breadcrumb_grace": 2,
+            "topology_breadcrumb_max_age": 60,
+            "topology_detach_quiesce": 1,
+            # FIPS-safe RSA algorithms.  Salt's defaults
+            # (``OAEP-SHA1`` / ``PKCS1v15-SHA1``) trip
+            # ``_enforce_fips`` at ``salt/crypt.py`` under FIPS-mode
+            # CI shards: ``send_aes_key_event`` fails master startup
+            # when ``cluster_encryption_algorithm`` carries SHA1, and
+            # master<->minion auth silently retries past
+            # pytest-timeout when ``encryption_algorithm`` /
+            # ``signing_algorithm`` carry SHA1.  SHA224 variants are
+            # valid on both FIPS and non-FIPS runners.
+            "encryption_algorithm": "OAEP-SHA224",
+            "signing_algorithm": "PKCS1v15-SHA224",
+            "cluster_encryption_algorithm": "OAEP-SHA224",
+            "publish_signing_algorithm": "PKCS1v15-SHA224",
+            "log_granular_levels": {
+                "salt": "info",
+            },
+        }
+        overrides.update(opts_overrides)
+        factory = salt_factories.salt_master_daemon(
+            addr,
+            defaults={"open_mode": True, "transport": transport},
+            overrides=overrides,
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        )
+        factories.append(factory)
+        root_dirs.append(own_root)
+
+    return factories, cluster_pki, identity_pub, root_dirs

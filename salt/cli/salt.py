@@ -39,17 +39,19 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             if self.config.get("fun")
             else "salt.cli"
         )
-        with salt.utils.tracing.start_span(
-            span_name,
-            attributes={
-                "salt.cli.tgt": str(self.config.get("tgt", "")),
-                "salt.cli.fun": self.config.get("fun", ""),
-            },
-        ):
-            try:
+        # shutdown() must run *after* the span's __exit__ so span.end()
+        # happens before provider.shutdown() tears down BatchSpanProcessor.
+        try:
+            with salt.utils.tracing.start_span(
+                span_name,
+                attributes={
+                    "salt.cli.tgt": str(self.config.get("tgt", "")),
+                    "salt.cli.fun": self.config.get("fun", ""),
+                },
+            ):
                 self._run()
-            finally:
-                salt.utils.tracing.shutdown()
+        finally:
+            salt.utils.tracing.shutdown()
 
     def _run(self):
         import salt.client
@@ -59,11 +61,30 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             # if the CLI process is run with the -a flag
             skip_perm_errors = self.options.eauth != ""
 
-            self.local_client = salt.client.get_local_client(
-                self.get_config_file_path(),
-                skip_perm_errors=skip_perm_errors,
-                auto_reconnect=True,
-            )
+            # Config decides which client to use.  ``client_config()`` sets
+            # ``__role=client`` when ``/etc/salt/client`` is loaded (remote
+            # workstation), leaves it at ``master`` otherwise.  Any
+            # client-role invocation goes through RemoteClient regardless
+            # of whether the operator is authenticating via PKI
+            # (``client_auth: True``) or eauth creds (``client_auth: False``
+            # + ``eauth: ...``) -- RemoteClient's publish payload carries
+            # whichever credentials the operator provided.
+            profile = self.config.get("profile")
+
+            if self.config.get("__role") == "client":
+                self.client = salt.client.get_remote_client(
+                    self.get_config_file_path(),
+                    skip_perm_errors=skip_perm_errors,
+                    auto_reconnect=True,
+                    profile=profile,
+                )
+            else:
+                self.client = salt.client.get_local_client(
+                    self.get_config_file_path(),
+                    skip_perm_errors=skip_perm_errors,
+                    auto_reconnect=True,
+                    profile=profile,
+                )
         except SaltClientError as exc:
             self.exit(2, f"{exc}\n")
             return
@@ -82,7 +103,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             return
 
         if self.options.timeout <= 0:
-            self.options.timeout = self.local_client.opts["timeout"]
+            self.options.timeout = self.client.opts["timeout"]
 
         kwargs = {
             "tgt": self.config["tgt"],
@@ -122,7 +143,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
                 try:
                     self._run_batch()
                 finally:
-                    self.local_client.destroy()
+                    self.client.destroy()
                 return
 
         if getattr(self.options, "return"):
@@ -151,30 +172,33 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             kwargs["start_event"] = True
 
         # If using eauth and a token hasn't already been loaded into
-        # kwargs, prompt the user to enter auth credentials
+        # kwargs, prompt the user to enter auth credentials.  When the
+        # CLI is running as a remote client (``__role=client``), always
+        # mint a token so the RemoteClient's event subscriber can
+        # authenticate on the token path (no client.pem needed).
         if "token" not in kwargs and "key" not in kwargs and self.options.eauth:
-            # This is expensive. Don't do it unless we need to.
             import salt.auth
 
             resolver = salt.auth.Resolver(self.config)
             res = resolver.cli(self.options.eauth)
-            if self.options.mktoken and res:
-                tok = resolver.token_cli(self.options.eauth, res)
-                if tok:
-                    kwargs["token"] = tok.get("token", "")
             if not res:
                 sys.stderr.write("ERROR: Authentication failed\n")
                 sys.exit(2)
+            is_remote_client = self.config.get("__role") == "client"
+            if self.options.mktoken or is_remote_client:
+                tok = resolver.token_cli(self.options.eauth, res)
+                if tok and tok.get("token"):
+                    kwargs["token"] = tok["token"]
             kwargs.update(res)
             kwargs["eauth"] = self.options.eauth
 
         if self.config["async"]:
-            jid = self.local_client.cmd_async(**kwargs)
+            jid = self.client.cmd_async(**kwargs)
             salt.utils.stringutils.print_cli(f"Executed command with job ID: {jid}")
             return
 
         # local will be None when there was an error
-        if not self.local_client:
+        if not self.client:
             return
 
         retcodes = []
@@ -182,11 +206,11 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         try:
             if self.options.subset:
-                cmd_func = self.local_client.cmd_subset
+                cmd_func = self.client.cmd_subset
                 kwargs["subset"] = self.options.subset
                 kwargs["cli"] = True
             else:
-                cmd_func = self.local_client.cmd_cli
+                cmd_func = self.client.cmd_cli
 
             if self.options.progress:
                 kwargs["progress"] = True
@@ -205,7 +229,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             elif self.config["fun"] == "sys.doc":
                 ret = {}
                 out = ""
-                for full_ret in self.local_client.cmd_cli(**kwargs):
+                for full_ret in self.client.cmd_cli(**kwargs):
                     ret_, out, retcode = self._format_ret(full_ret)
                     ret.update(ret_)
                 self._output_ret(ret, out, retcode=retcode)
@@ -242,19 +266,34 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
         except (
             AuthenticationError,
             AuthorizationError,
-            SaltInvocationError,
             EauthAuthenticationError,
-            SaltClientError,
         ) as exc:
             self._output_ret(str(exc), "", retcode=1)
+            # Non-zero exit matches the batch-mode auth-failure path
+            # (``_run_batch`` -> ``sys.exit(2)`` after ``resolver.cli``
+            # returns False) and the behavior documented at
+            # ``doc/topics/return_codes/index.rst``.  Before this call,
+            # ``_output_ret`` printed the error text, but then the
+            # function would fall through to the ``finally`` block and
+            # return normally, giving the shell rc=0 for an obvious
+            # auth / authz failure.
+            #
+            # Scoped to auth / authz exceptions only.  ``SaltInvocationError``
+            # (e.g. unknown nodegroup, bad target syntax) and
+            # ``SaltClientError`` (transport / timeout) kept their
+            # historical rc=0 so this PR doesn't accidentally re-flag
+            # callers that already handle those as soft failures.
+            sys.exit(salt.defaults.exitcodes.EX_GENERIC)
+        except (SaltInvocationError, SaltClientError) as exc:
+            self._output_ret(str(exc), "", retcode=1)
         finally:
-            self.local_client.destroy()
+            self.client.destroy()
 
     def _preview_target(self):
         """
         Return a list of minions from a given target
         """
-        return self.local_client.gather_minions(
+        return self.client.gather_minions(
             self.config["tgt"], self.selected_target_option or "glob"
         )
 
@@ -395,7 +434,7 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
 
         pub_kwargs = dict(eauth or {})
         try:
-            self.local_client.run_job(
+            self.client.run_job(
                 tgt=list(initial),
                 fun=self.config["fun"],
                 arg=list(self.config.get("arg") or []),
@@ -421,28 +460,49 @@ class SaltCMD(salt.utils.parsers.SaltCMDOptionParser):
             state["active"][m] = now
         state["last_progress"] = now
 
-        salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
-        salt.utils.batch_state.add_to_active_index(batch_jid, self.config)
+        # Remote CLI (``__role=client``) cannot write to the master's
+        # ``cachedir`` or push on its IPC event bus; hand the state
+        # blob to :meth:`salt.master.ClearFuncs.batch_adopt` instead,
+        # which performs both operations server-side under eauth
+        # authorization.  See the matching ``RemoteClient.batch_adopt``
+        # client-side wrapper -- it routes via the standard AES bridge.
+        if self.config.get("__role") == "client":
+            try:
+                self.client.batch_adopt(batch_jid, state, **(eauth or {}))
+            except (
+                AuthenticationError,
+                AuthorizationError,
+                EauthAuthenticationError,
+                SaltClientError,
+                SaltInvocationError,
+            ) as exc:
+                sys.stderr.write(f"ERROR: {exc}\n")
+                sys.exit(2)
+        else:
+            salt.utils.batch_state.write_batch_state(batch_jid, state, self.config)
+            salt.utils.batch_state.add_to_active_index(batch_jid, self.config)
 
-        try:
-            with salt.utils.event.get_master_event(
-                self.config, self.config["sock_dir"], listen=False
-            ) as event:
-                event.fire_event(
-                    salt.utils.batch_output.new_payload(state),
-                    salt.utils.batch_output.tag_new(batch_jid),
+            try:
+                with salt.utils.event.get_master_event(
+                    self.config, self.config["sock_dir"], listen=False
+                ) as event:
+                    event.fire_event(
+                        salt.utils.batch_output.new_payload(state),
+                        salt.utils.batch_output.tag_new(batch_jid),
+                    )
+            except Exception:  # pylint: disable=broad-except
+                # Non-fatal — BatchManager's _tick() reconciliation
+                # will pick this batch up from the active index
+                # within one loop interval.  Log the failure so
+                # operators see it.
+                import logging
+
+                logging.getLogger(__name__).exception(
+                    "Failed to fire salt/batch/%s/new; BatchManager "
+                    "will adopt via active-index reconciliation on "
+                    "its next tick",
+                    batch_jid,
                 )
-        except Exception:  # pylint: disable=broad-except
-            # Non-fatal — BatchManager's _tick() reconciliation will
-            # pick this batch up from the active index within one
-            # loop interval.  Log the failure so operators see it.
-            import logging
-
-            logging.getLogger(__name__).exception(
-                "Failed to fire salt/batch/%s/new; BatchManager will adopt "
-                "via active-index reconciliation on its next tick",
-                batch_jid,
-            )
 
         salt.utils.stringutils.print_cli(
             f"Executed batch command with job ID: {batch_jid}"

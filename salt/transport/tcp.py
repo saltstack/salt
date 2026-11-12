@@ -348,7 +348,14 @@ class PublishClient(salt.transport.base.PublishClient):
         # ``Task was destroyed but it is pending!`` on stderr (#68998).
         pending = []
         if self.on_recv_task is not None:
-            self.on_recv_task.cancel()
+            try:
+                self.on_recv_task.cancel()
+            except RuntimeError:
+                # The task's loop is already closed (e.g. a minion
+                # destroy()'d after its io_loop was closed by a failed
+                # reconnect). Nothing left to cancel gracefully. See
+                # #70178.
+                pass
             pending.append(self.on_recv_task)
             self.on_recv_task = None
 
@@ -358,10 +365,20 @@ class PublishClient(salt.transport.base.PublishClient):
         stream = self._stream
         self._stream = None
         if stream is not None:
-            stream.close()
+            try:
+                stream.close()
+            except RuntimeError:
+                # tornado's IOStream.close() resolves its pending read
+                # future via the loop (e.g. call_soon), which raises if
+                # that loop is already closed. See #70178.
+                pass
 
         if self._read_task is not None and not self._read_task.done():
-            self._read_task.cancel()
+            try:
+                self._read_task.cancel()
+            except RuntimeError:
+                # See #70178.
+                pass
             pending.append(self._read_task)
         self._read_task = None
 
@@ -644,7 +661,15 @@ class PublishClient(salt.transport.base.PublishClient):
         """
         if self.on_recv_task:
             old_task = self.on_recv_task
-            old_task.cancel()
+            try:
+                if not old_task.done():
+                    old_task.cancel()
+            except RuntimeError:
+                # The task's loop is already closed (e.g. a minion
+                # destroy()'d after its io_loop was closed by a failed
+                # reconnect). Nothing left to cancel gracefully. See
+                # #70178.
+                pass
             _drain_cancelled_tasks(self.io_loop, [old_task])
         if callback is None:
             self.on_recv_task = None
@@ -853,7 +878,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         else:
             if cert:
                 name = salt.transport.base.common_name(cert)
-                log.error("Request client cert %r", name)
+                log.debug("Request client cert %r", name)
         payload = self.decode_payload(payload)
         reply = await self.message_handler(payload)
         # XXX Handle StreamClosedError
@@ -1060,15 +1085,27 @@ class Subscriber:
             return
         self._closing = True
         if not self.stream.closed():
-            self.stream.close()
-            if self._read_until_future is not None and self._read_until_future.done():
-                # This will prevent this message from showing up:
-                # '[ERROR   ] Future exception was never retrieved:
-                # StreamClosedError'
-                # This happens because the logic is always waiting to read
-                # the next message and the associated read future is marked
-                # 'StreamClosedError' when the stream is closed.
-                self._read_until_future.exception()
+            try:
+                self.stream.close()
+                if (
+                    self._read_until_future is not None
+                    and self._read_until_future.done()
+                ):
+                    # This will prevent this message from showing up:
+                    # '[ERROR   ] Future exception was never retrieved:
+                    # StreamClosedError'
+                    # This happens because the logic is always waiting to read
+                    # the next message and the associated read future is marked
+                    # 'StreamClosedError' when the stream is closed.
+                    self._read_until_future.exception()
+            except RuntimeError:
+                # tornado's IOStream.close() resolves its pending read
+                # future via the loop (e.g. call_soon), which raises if
+                # that loop is already closed -- e.g. a minion
+                # destroy()'d after its io_loop was closed by a failed
+                # reconnect. Nothing left to signal gracefully. See
+                # #70178.
+                pass
 
     # pylint: disable=W1701
     def __del__(self):
@@ -1128,7 +1165,11 @@ class PubServer(tornado.tcpserver.TCPServer):
             return
         self._closing = True
         for _, task in self._writers.values():
-            task.cancel()
+            try:
+                task.cancel()
+            except RuntimeError:
+                # See #70178.
+                pass
         self._writers.clear()
         for client in list(self.clients):
             client.close()
@@ -2279,6 +2320,16 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
     # pylint: enable=W1701
 
 
+def _socket_family(host):
+    """
+    Return the address family to open a connection to *host* with.
+    """
+    try:
+        return socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)[0][0]
+    except socket.gaierror:
+        return socket.AF_INET6 if ":" in (host or "") else socket.AF_INET
+
+
 class _TCPPubServerPublisher:
     """
     Client half of the local publish channel used for the Salt event bus.
@@ -2370,7 +2421,7 @@ class _TCPPubServerPublisher:
             sock_addr = self.path
             log.debug("Publisher connecting to %s", self.path)
         else:
-            sock_type = socket.AF_INET6 if ":" in (self.host or "") else socket.AF_INET
+            sock_type = _socket_family(self.host)
             sock_addr = (self.host, self.port)
             log.debug("Publisher connecting to %s:%s", self.host, self.port)
 
@@ -2896,17 +2947,25 @@ class RequestClient(salt.transport.base.RequestClient):
         if self._closing:
             return
         self._closing = True
+        # Cancelling the reader can prevent it from propagating StreamClosedError
+        # to Salt's reply futures. Resolve them here so requests cannot hang.
+        pending = list(self.send_future_map.values())
+        self.send_future_map.clear()
+        for future in pending:
+            if not future.done():
+                future.set_exception(tornado.iostream.StreamClosedError())
         if self._stream is not None:
             self._stream.close()
             self._stream = None
         if self.task is not None:
-            self.task.cancel()
-            # Wait for the task to finish via asyncio
-            group = asyncio.gather(self.task)
             try:
+                self.task.cancel()
+                # Wait for the task to finish via asyncio
+                group = asyncio.gather(self.task)
                 self.task.get_loop().run_until_complete(group)
             except RuntimeError:
-                # Ignore event loop was already running message
+                # Ignore event loop was already running/closed message.
+                # See #70178.
                 pass
             self.task = None
 

@@ -10,6 +10,7 @@ returner modules
     :toctree:
     :template: autosummary.rst.tmpl
 
+    etcd_return
     highstate_return
     local
     local_cache

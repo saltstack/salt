@@ -720,6 +720,34 @@ class LoadAuth:
                 if not auth_list:
                     ret["error"] = {"name": "UserAuthenticationError", "message": msg}
                     return ret
+        elif auth_type == "client":
+            # Pure-PKI remote client.  The sender's identity was proven
+            # at the AES-handshake layer (sign-in rotated an AES session
+            # key using the stored ``client_keys/<client_id>`` pubkey),
+            # and :meth:`salt.master.MWorker._is_client_bridge` gated
+            # routing on membership in that same cache.  By the time
+            # this branch runs, the client is authenticated; the only
+            # remaining question is authorization, which is handled by
+            # the ``client_acl`` matching that publish/runner/wheel
+            # perform downstream when they see ``auth_type == "client"``.
+            client_id = load.get("client_id")
+            if not client_id:
+                ret["error"] = {
+                    "name": "ClientAuthenticationError",
+                    "message": (
+                        'Authentication failure of type "client" occurred: '
+                        "payload missing client_id"
+                    ),
+                }
+                return ret
+            # Expose the client id to callers using the standard
+            # ``username`` key so is_client / client_acl gating paths
+            # that already consume ``auth_check["username"]`` work
+            # without further branching.
+            ret["username"] = client_id
+            # ``auth_list`` stays empty here; the dispatcher's is_client
+            # branch loads the client-specific ACL out of ``client_acl``
+            # on master opts.
         else:
             ret["error"] = {
                 "name": "SaltInvocationError",
@@ -743,12 +771,27 @@ class Resolver:
         self.auth = salt.loader.auth(opts)
 
     def _send_token_request(self, load):
+        # Remote clients (``__role=client``) carry username/password to the
+        # master's ``mk_token`` endpoint on this channel.  Use ``crypt="aes"``
+        # so the credentials travel encrypted under the PKI handshake
+        # session key; the master bridges the AES-wrapped ``mk_token`` cmd
+        # to :meth:`ClearFuncs.mk_token` after verifying the sender is a
+        # known client (see :meth:`salt.master.MWorker._handle_payload_inner`).
+        # Master-local callers (salt-api, etc.) stay on ``crypt="clear"``
+        # because that's a trusted loopback IPC path.
+        is_remote_client = self.opts.get("__role") == "client"
+        if is_remote_client:
+            master = self.opts.get("master", "localhost")
+            crypt = "aes"
+        else:
+            master = self.opts["interface"]
+            crypt = "clear"
         master_uri = "tcp://{}:{}".format(
-            salt.utils.network.ip_bracket(self.opts["interface"]),
+            salt.utils.network.ip_bracket(master),
             str(self.opts["ret_port"]),
         )
         with salt.channel.client.ReqChannel.factory(
-            self.opts, crypt="clear", master_uri=master_uri
+            self.opts, crypt=crypt, master_uri=master_uri
         ) as channel:
             return channel.send(load)
 
@@ -775,17 +818,17 @@ class Resolver:
             )
             return ret
 
-        args = salt.utils.args.arg_lookup(self.auth[fstr])
-        for arg in args["args"]:
+        aspec = salt.utils.args.get_function_argspec(self.auth[fstr])
+        for arg in aspec.allreq:
             if arg in self.opts:
                 ret[arg] = self.opts[arg]
             elif arg.startswith("pass"):
                 ret[arg] = getpass.getpass(f"{arg}: ")
             else:
                 ret[arg] = input(f"{arg}: ")
-        for kwarg, default in list(args["kwargs"].items()):
+        for kwarg, default in aspec.alldefaults.items():
             if kwarg in self.opts:
-                ret["kwarg"] = self.opts[kwarg]
+                ret[kwarg] = self.opts[kwarg]
             else:
                 ret[kwarg] = input(f"{kwarg} [{default}]: ")
 

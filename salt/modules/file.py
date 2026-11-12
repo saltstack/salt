@@ -8,6 +8,7 @@ group, mode, and data
 # some time in the future
 
 
+import codecs
 import datetime
 import errno
 import fnmatch
@@ -1586,9 +1587,58 @@ def comment(path, regex, char="#", backup=".bak"):
     return comment_line(path=path, regex=regex, char=char, cmnt=True, backup=backup)
 
 
+def _comment_line_write(path, temp_file, bufsize, regex, match_line, char, cmnt):
+    """
+    Rewrite ``path`` from its copy ``temp_file`` for :py:func:`comment_line`,
+    commenting or uncommenting the lines that match ``regex``.
+    """
+    try:
+        # Open the file in write mode
+        mode = "w"
+        with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
+            try:
+                # Open the temp file in read mode
+                with salt.utils.files.fopen(
+                    temp_file, mode="rb", buffering=bufsize
+                ) as r_file:
+                    # Loop through each line of the file and look for a match
+                    for line in r_file:
+                        line = salt.utils.stringutils.to_unicode(line)
+                        try:
+                            # Is it in this line
+                            if re.match(regex, match_line(line)):
+                                # Write the new line
+                                if cmnt:
+                                    wline = f"{char}{line}"
+                                else:
+                                    wline = line.lstrip(char)
+                            else:
+                                # Write the existing line (no change)
+                                wline = line
+                            wline = salt.utils.stringutils.to_str(wline)
+                            w_file.write(wline)
+                        except OSError as exc:
+                            raise CommandExecutionError(
+                                "Unable to write file '{}'. Contents may "
+                                "be truncated. Temporary file contains copy "
+                                "at '{}'. "
+                                "Exception: {}".format(path, temp_file, exc)
+                            )
+            except OSError as exc:
+                raise CommandExecutionError(f"Exception: {exc}")
+    except OSError as exc:
+        raise CommandExecutionError(f"Exception: {exc}")
+
+
 def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     r"""
     Comment or Uncomment a line in a text file.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
 
     :param path: string
         The full path to the text file.
@@ -1643,6 +1693,9 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
             char, regex.lstrip("^").rstrip("$"), "$" if regex.endswith("$") else ""
         )
 
+    # Lines keep their line ending, make sure ``$`` matches CRLF terminated lines
+    match_line = _line_matcher(regex)
+
     # Load the real path to the file
     path = os.path.realpath(os.path.expanduser(path))
 
@@ -1651,7 +1704,8 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
         raise SaltInvocationError(f"File not found: {path}")
 
     # Make sure it is a text file
-    if not __utils__["files.is_text"](path):
+    encoding = _detect_bom_encoding(path)
+    if not __utils__["files.is_text"](path) and encoding in (None, "UTF-8"):
         raise SaltInvocationError(
             f"Cannot perform string replacements on a binary file: {path}"
         )
@@ -1664,27 +1718,43 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     new_file = []
     # Buffer size for fopen
     bufsize = os.path.getsize(path)
-    try:
-        # Use a read-only handle to open the file
-        with salt.utils.files.fopen(path, mode="rb", buffering=bufsize) as r_file:
-            # Loop through each line of the file and look for a match
-            for line in r_file:
-                # Is it in this line
-                line = salt.utils.stringutils.to_unicode(line)
-                if re.match(regex, line):
-                    # Load lines into dictionaries, set found to True
-                    orig_file.append(line)
-                    if cmnt:
-                        new_file.append(f"{char}{line}")
-                    else:
-                        new_file.append(line.lstrip(char))
-                    found = True
-    except OSError as exc:
-        raise CommandExecutionError(f"Unable to open file '{path}'. Exception: {exc}")
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        new_lines = []
+        for line in text.splitlines(True):
+            if re.match(regex, match_line(line)):
+                orig_file.append(line)
+                line = f"{char}{line}" if cmnt else line.lstrip(char)
+                new_file.append(line)
+                found = True
+            new_lines.append(line)
+    else:
+        try:
+            # Use a read-only handle to open the file
+            with salt.utils.files.fopen(path, mode="rb", buffering=bufsize) as r_file:
+                # Loop through each line of the file and look for a match
+                for line in r_file:
+                    # Is it in this line
+                    line = salt.utils.stringutils.to_unicode(line)
+                    if re.match(regex, match_line(line)):
+                        # Load lines into dictionaries, set found to True
+                        orig_file.append(line)
+                        if cmnt:
+                            new_file.append(f"{char}{line}")
+                        else:
+                            new_file.append(line.lstrip(char))
+                        found = True
+        except OSError as exc:
+            raise CommandExecutionError(
+                f"Unable to open file '{path}'. Exception: {exc}"
+            )
 
     # We've searched the whole file. If we didn't find anything, return False
     if not found:
         return False
+
+    if encoding:
+        data = _encode_bom_text(bom, "".join(new_lines), encoding)
 
     if not salt.utils.platform.is_windows():
         pre_user = get_user(path)
@@ -1697,42 +1767,18 @@ def comment_line(path, regex, char="#", cmnt=True, backup=".bak"):
     except OSError as exc:
         raise CommandExecutionError(f"Exception: {exc}")
 
-    try:
-        # Open the file in write mode
-        mode = "w"
-        with salt.utils.files.fopen(path, mode=mode, buffering=bufsize) as w_file:
-            try:
-                # Open the temp file in read mode
-                with salt.utils.files.fopen(
-                    temp_file, mode="rb", buffering=bufsize
-                ) as r_file:
-                    # Loop through each line of the file and look for a match
-                    for line in r_file:
-                        line = salt.utils.stringutils.to_unicode(line)
-                        try:
-                            # Is it in this line
-                            if re.match(regex, line):
-                                # Write the new line
-                                if cmnt:
-                                    wline = f"{char}{line}"
-                                else:
-                                    wline = line.lstrip(char)
-                            else:
-                                # Write the existing line (no change)
-                                wline = line
-                            wline = salt.utils.stringutils.to_str(wline)
-                            w_file.write(wline)
-                        except OSError as exc:
-                            raise CommandExecutionError(
-                                "Unable to write file '{}'. Contents may "
-                                "be truncated. Temporary file contains copy "
-                                "at '{}'. "
-                                "Exception: {}".format(path, temp_file, exc)
-                            )
-            except OSError as exc:
-                raise CommandExecutionError(f"Exception: {exc}")
-    except OSError as exc:
-        raise CommandExecutionError(f"Exception: {exc}")
+    if encoding:
+        try:
+            with salt.utils.files.fopen(path, mode="wb") as w_file:
+                w_file.write(data)
+        except OSError as exc:
+            raise CommandExecutionError(
+                "Unable to write file '{}'. Contents may be truncated. "
+                "Temporary file contains copy at '{}'. "
+                "Exception: {}".format(path, temp_file, exc)
+            )
+    else:
+        _comment_line_write(path, temp_file, bufsize, regex, match_line, char, cmnt)
 
     if backup:
         # Move the backup file to the original directory
@@ -1860,7 +1906,12 @@ def _regex_to_static(src, regex):
 
     try:
         compiled = re.compile(regex, re.DOTALL)
-        src = [line for line in src if compiled.search(line) or line.count(regex)]
+        match_line = _line_matcher(regex)
+        src = [
+            line
+            for line in src
+            if compiled.search(match_line(line)) or line.count(regex)
+        ]
     except Exception as ex:  # pylint: disable=broad-except
         raise CommandExecutionError(f"{_get_error_message(ex)}: '{regex}'")
 
@@ -1916,6 +1967,179 @@ def _set_line_eol(src, line):
     """
     line_ending = _get_eol(src) or os.linesep
     return line.rstrip() + line_ending
+
+
+# How much of the beginning of a file is read to detect its line endings
+_EOL_PROBE_SIZE = 65536
+
+# Matches a carriage return, either literally or as a regular expression or
+# template escape (``\r``, ``\x0d``, ``\015``, ``\u000d``).
+_CR_RE = re.compile(r"\r|\\r|\\x0[dD]|\\015|\\u000[dD]|\\N\{CARRIAGE RETURN\}")
+
+
+def _eol_aware(pattern, *repls):
+    """
+    Return ``True`` if matching can safely treat ``\\r\\n`` as ``\\n``.
+
+    Python's :py:mod:`re` only treats ``\\n`` as a line boundary. In a file with
+    CRLF line endings ``.`` and ``\\s`` match the ``\\r`` and ``$`` does not
+    match before ``\\r\\n``. :py:func:`_subn_eol_aware` hides the ``\\r`` from the
+    pattern, which is only correct when neither the pattern nor the
+    replacement text refers to a carriage return explicitly. A literal
+    ``\\r\\n`` pair in a replacement is fine, since it is normalized as well.
+    """
+    # Never fail on undecodable bytes, a replacement character is enough here
+    if _CR_RE.search(salt.utils.stringutils.to_unicode(pattern, errors="replace")):
+        return False
+    for repl in repls:
+        if repl is None:
+            continue
+        repl = salt.utils.stringutils.to_unicode(
+            repl if isinstance(repl, (str, bytes)) else str(repl), errors="replace"
+        )
+        if _CR_RE.search(repl.replace("\r\n", "\n")):
+            return False
+    return True
+
+
+def _lf_line(line):
+    """
+    Return ``line`` with a trailing ``\\r\\n`` replaced by ``\\n``, so a regular
+    expression using ``$`` matches a CRLF terminated line like an LF
+    terminated one. Only meant for matching; write the original line back.
+    """
+    if line.endswith("\r\n"):
+        return line[:-2] + "\n"
+    return line
+
+
+def _line_matcher(regex):
+    """
+    Return the function used to prepare lines for matching against ``regex``:
+    :py:func:`_lf_line`, unless the expression refers to a carriage return
+    explicitly.
+    """
+    if _eol_aware(regex):
+        return _lf_line
+    return lambda line: line
+
+
+def _detect_eol(data, default=os.linesep):
+    """
+    Return the line ending used by the first line of ``data`` (``str``,
+    ``bytes`` or ``mmap``) as a ``str``, falling back to ``default`` when
+    ``data`` does not contain a line ending. This mirrors the detection done
+    by :py:func:`blockreplace`.
+    """
+    if isinstance(data, str):
+        lf, cr = "\n", "\r"
+    else:
+        lf, cr = b"\n", b"\r"
+    idx = data.find(lf, 0)
+    if idx == -1:
+        return default
+    if idx > 0 and data[idx - 1 : idx] == cr:
+        return "\r\n"
+    return "\n"
+
+
+def _lf_view(data, eol_aware=True):
+    """
+    Return ``(data, is_crlf)``.
+
+    If ``data`` (``str``, ``bytes`` or ``mmap``) only uses CRLF line endings
+    and ``eol_aware`` is true, return a copy with the line endings normalized
+    to ``\\n`` and ``True``. Otherwise return ``data`` unchanged and ``False``.
+    Files with mixed line endings are never normalized, since they could not
+    be restored faithfully.
+    """
+    if not eol_aware:
+        return data, False
+    if isinstance(data, str):
+        crlf, lf = "\r\n", "\n"
+    else:
+        crlf, lf = b"\r\n", b"\n"
+    if data.find(crlf, 0) == -1:
+        return data, False
+    if not isinstance(data, str):
+        # Materialize mmap objects, which do not support count() or replace()
+        data = bytes(data)
+    if data.count(lf) != data.count(crlf):
+        return data, False
+    return data.replace(crlf, lf), True
+
+
+def _detect_bom_encoding(path):
+    """
+    Return the codec for a file that starts with a UTF-8, UTF-16 or UTF-32 byte
+    order mark, otherwise ``None``. UTF-16 and UTF-32 files contain null bytes,
+    so the text check treats them as binary.
+    """
+    return salt.utils.files.get_bom_encoding(path)
+
+
+def _split_bom(text):
+    """
+    Return ``(bom, text)`` with a leading ``U+FEFF`` split off, so the byte
+    order mark is not matched or edited and can be written back unchanged.
+    """
+    if text.startswith("\ufeff"):
+        return "\ufeff", text[1:]
+    return "", text
+
+
+def _read_bom_text(path, encoding):
+    """
+    Read ``path`` with ``encoding`` (as returned by
+    :py:func:`_detect_bom_encoding`) and return ``(bom, text)``. Line endings
+    are not translated. A file that does not decode is reported as binary.
+    """
+    try:
+        with salt.utils.files.fopen(path, "rb") as fp_:
+            data = fp_.read()
+    except OSError as exc:
+        raise CommandExecutionError(f"Unable to open file '{path}'. Exception: {exc}")
+    try:
+        text = data.decode(encoding)
+    except UnicodeDecodeError:
+        raise SaltInvocationError(
+            f"Cannot perform string replacements on a binary file: {path}"
+        )
+    return _split_bom(text)
+
+
+def _encode_bom_text(bom, text, encoding):
+    """
+    Encode ``text`` for a file read with :py:func:`_read_bom_text`. Encode
+    before opening the file for writing, so a failure leaves it untouched.
+    """
+    try:
+        return (bom + text).encode(encoding)
+    except UnicodeEncodeError as exc:
+        raise CommandExecutionError(f"Unable to encode text as {encoding}: {exc}")
+
+
+def _subn_eol_aware(
+    cpattern, repl, data, count=0, backslash_literal=False, eol_aware=True
+):
+    """
+    Wrapper around :py:func:`re.subn` that makes CRLF files behave like LF
+    files, so that ``.*`` does not swallow the ``\\r`` and ``$`` matches at the
+    end of a CRLF terminated line. The result keeps the line endings of
+    ``data``. See :py:func:`_eol_aware` and :py:func:`_lf_view`.
+    """
+    data, crlf = _lf_view(data, eol_aware)
+    is_str = isinstance(data, str)
+    if crlf:
+        repl = repl.replace("\r\n", "\n") if is_str else repl.replace(b"\r\n", b"\n")
+    if backslash_literal:
+        repl = repl.replace("\\", "\\\\") if is_str else repl.replace(b"\\", b"\\\\")
+    result, nrepl = re.subn(cpattern, repl, data, count=count)
+    if crlf:
+        result = (
+            result.replace("\n", "\r\n") if is_str else result.replace(b"\n", b"\r\n")
+        )
+    return result, nrepl
 
 
 def _set_line(
@@ -2130,6 +2354,14 @@ def line(
     .. versionadded:: 2015.8.0
 
     Line-focused editing of a file.
+
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+        Other files are written back as UTF-8, the encoding they are read with,
+        instead of the system locale's encoding.
 
     .. note::
 
@@ -2398,8 +2630,17 @@ def line(
     if before is None and after is None and not match:
         match = content
 
-    with salt.utils.files.fopen(path, mode="r") as fp_:
-        body = salt.utils.data.decode_list(fp_.readlines())
+    bom = ""
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        body = text.splitlines(True)
+    else:
+        with salt.utils.files.fopen(path, mode="r") as fp_:
+            body = salt.utils.data.decode_list(fp_.readlines())
+    orig_body = list(body)
+    # Used for new lines that have no neighbor with a line ending to copy
+    file_eol = _detect_eol("".join(body))
     body_before = hashlib.sha256(
         salt.utils.stringutils.to_bytes("".join(body))
     ).hexdigest()
@@ -2426,8 +2667,15 @@ def line(
     if body:
         for idx, line in enumerate(body):
             if not _get_eol(line) and idx + 1 < len(body):
-                prev = idx and idx - 1 or 1
-                body[idx] = _set_line_eol(body[prev], line)
+                # Take the line ending from the previous line, or from the next
+                # one for the first line. (``idx and idx - 1 or 1`` used to
+                # pick the line itself for the second line, which has no line
+                # ending yet, and so fell back to ``os.linesep``.)
+                prev = idx - 1 if idx > 0 else 1
+                # The neighbor can be the empty placeholder for the end of the
+                # file, use the file's line ending then
+                src = body[prev] if _get_eol(body[prev]) else file_eol
+                body[idx] = _set_line_eol(src, line)
         # We do not need empty line at the end anymore
         if "" == body[-1]:
             body.pop()
@@ -2457,17 +2705,21 @@ def line(
 
     if changed:
         if show_changes:
-            with salt.utils.files.fopen(path, "r") as fp_:
-                path_content = salt.utils.data.decode_list(fp_.read().splitlines(True))
-            changes_diff = __utils__["stringutils.get_diff"](path_content, body)
+            changes_diff = __utils__["stringutils.get_diff"](orig_body, body)
         if __opts__["test"] is False:
             fh_ = None
             try:
-                # Make sure we match the file mode from salt.utils.files.fopen
-                mode = "w"
                 body = salt.utils.data.decode_list(body, to_str=True)
-                fh_ = salt.utils.atomicfile.atomic_open(path, mode)
-                fh_.writelines(body)
+                # Encode the way the file was decoded, not with the system
+                # locale that atomic_open uses in text mode
+                file_encoding = encoding or __salt_system_encoding__
+                data = [
+                    _encode_bom_text("", line, file_encoding)
+                    for line in [bom, *body]
+                    if line
+                ]
+                fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+                fh_.writelines(data)
             finally:
                 if fh_:
                     fh_.close()
@@ -2612,6 +2864,22 @@ def replace(
 
         Example: ``encoding=utf-16``
 
+        .. versionchanged:: 3008.5
+
+            Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark
+            (BOM) are detected automatically, and the BOM and byte order are
+            preserved.
+            ``encoding`` is only required for multi-byte files without a BOM.
+
+    .. note::
+        A file that uses ``\\r\\n`` line endings for every line is matched as if
+        it used ``\\n``, so ``.*`` does not consume the carriage return and
+        ``$`` matches at the end of a line. The line endings of the file are
+        preserved, and text appended or prepended with ``append_if_not_found``
+        or ``prepend_if_not_found`` uses them. This does not apply when the
+        pattern or ``repl`` refers to a carriage return explicitly (for example
+        ``\\r``), or when the file has mixed line endings.
+
     If an equal sign (``=``) appears in an argument to a Salt command it is
     interpreted as a keyword argument in the format ``key=val``. That
     processing can be bypassed in order to pass an equal sign through to the
@@ -2643,10 +2911,19 @@ def replace(
         else:
             raise SaltInvocationError(f"File not found: {path}")
 
-    if encoding is None and not __utils__["files.is_text"](path):
-        raise SaltInvocationError(
-            f"Cannot perform string replacements on a binary file: {path}"
-        )
+    detected_encoding = False
+    if encoding is None:
+        bom_encoding = _detect_bom_encoding(path)
+        if not __utils__["files.is_text"](path):
+            if bom_encoding in (None, "UTF-8"):
+                raise SaltInvocationError(
+                    f"Cannot perform string replacements on a binary file: {path}"
+                )
+            encoding = bom_encoding
+            detected_encoding = True
+        elif bom_encoding == "UTF-8":
+            # Decode the file so the BOM is kept out of the text being matched
+            encoding = bom_encoding
 
     if search_only and (append_if_not_found or prepend_if_not_found):
         raise SaltInvocationError(
@@ -2680,15 +2957,32 @@ def replace(
             raise CommandExecutionError(
                 f"Unable to open file '{path}'. Exception: {exc}"
             )
+        except UnicodeDecodeError as exc:
+            if detected_encoding:
+                raise SaltInvocationError(
+                    f"Cannot perform string replacements on a binary file: {path}"
+                )
+            raise CommandExecutionError(
+                f"Unable to decode file '{path}' as {encoding}. Exception: {exc}"
+            )
+
+        # The BOM codecs keep the byte order mark as U+FEFF. Keep it out
+        # of the text being matched and write it back unchanged.
+        bom, orig_contents = _split_bom(orig_contents)
+
+        eol_aware = _eol_aware(pattern, repl_str, not_found_content)
 
         if search_only:
-            return bool(re.search(cpattern, orig_contents))
+            lf_contents, _ = _lf_view(orig_contents, eol_aware)
+            return bool(re.search(cpattern, lf_contents))
 
-        result, nrepl = re.subn(
+        result, nrepl = _subn_eol_aware(
             cpattern,
-            repl_str.replace("\\", "\\\\") if backslash_literal else repl_str,
+            repl_str,
             orig_contents,
             count,
+            backslash_literal=backslash_literal,
+            eol_aware=eol_aware,
         )
 
         found = nrepl > 0
@@ -2715,7 +3009,7 @@ def replace(
                     path, mode="w", encoding=encoding
                 ) as w_file:
                     try:
-                        w_file.write(result)
+                        w_file.write(bom + result)
                     except OSError as exc:
                         raise CommandExecutionError(
                             "Unable to write file '{}'. Contents may be "
@@ -2727,12 +3021,14 @@ def replace(
 
         if not found and (append_if_not_found or prepend_if_not_found):
             nfc = str(not_found_content) if not_found_content is not None else repl_str
+            # Follow the line endings already used by the file
+            eol = _detect_eol(orig_contents)
             if prepend_if_not_found:
-                new_file.insert(0, nfc + os.linesep)
+                new_file.insert(0, nfc + eol)
             else:
-                if new_file and not new_file[-1].endswith(os.linesep):
-                    new_file[-1] += os.linesep
-                new_file.append(nfc + os.linesep)
+                if new_file and not new_file[-1].endswith("\n"):
+                    new_file[-1] += eol
+                new_file.append(nfc + eol)
             has_changes = True
             if not dry_run:
                 try:
@@ -2745,6 +3041,7 @@ def replace(
                     with salt.utils.files.fopen(
                         path, mode="w", encoding=encoding
                     ) as fh_:
+                        fh_.write(bom)
                         fh_.writelines(new_file)
                 except OSError as exc:
                     raise CommandExecutionError(f"Exception: {exc}")
@@ -2808,6 +3105,10 @@ def replace(
         pre_group = get_group(path)
         pre_mode = salt.utils.files.normalize_mode(get_mode(path))
 
+    # Decide before repl is converted to bytes whether CRLF files can be
+    # matched as if they used LF line endings
+    eol_aware = _eol_aware(pattern, repl, not_found_content)
+
     # Avoid TypeErrors by forcing repl to be bytearray related to mmap
     # Replacement text may contains integer: 123 for example
     repl = salt.utils.stringutils.to_bytes(str(repl))
@@ -2816,6 +3117,7 @@ def replace(
 
     found = False
     temp_file = None
+    file_eol = os.linesep
     content = (
         salt.utils.stringutils.to_unicode(not_found_content)
         if not_found_content and (prepend_if_not_found or append_if_not_found)
@@ -2836,16 +3138,20 @@ def replace(
                 r_data = b"".join(r_file)
             if search_only:
                 # Just search; bail as early as a match is found
-                if re.search(cpattern, r_data):
+                lf_data, _ = _lf_view(r_data, eol_aware)
+                if re.search(cpattern, lf_data):
                     return True  # `with` block handles file closure
                 else:
                     return False
             else:
-                result, nrepl = re.subn(
+                file_eol = _detect_eol(r_data)
+                result, nrepl = _subn_eol_aware(
                     cpattern,
-                    repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
+                    repl,
                     r_data,
                     count,
+                    backslash_literal=backslash_literal,
+                    eol_aware=eol_aware,
                 )
 
                 # found anything? (even if no change)
@@ -2900,11 +3206,13 @@ def replace(
                         temp_file, mode="r", buffering=bufsize
                     ) as r_file:
                         r_data = mmap.mmap(r_file.fileno(), 0, access=mmap.ACCESS_READ)
-                        result, nrepl = re.subn(
+                        result, nrepl = _subn_eol_aware(
                             cpattern,
-                            repl.replace(b"\\", b"\\\\") if backslash_literal else repl,
+                            repl,
                             r_data,
                             count,
+                            backslash_literal=backslash_literal,
+                            eol_aware=eol_aware,
                         )
                         try:
                             w_file.write(salt.utils.stringutils.to_str(result))
@@ -2926,21 +3234,17 @@ def replace(
     if not found and (append_if_not_found or prepend_if_not_found):
         if not_found_content is None:
             not_found_content = repl
+        # Follow the line endings already used by the file
+        eol = salt.utils.stringutils.to_bytes(file_eol)
         if prepend_if_not_found:
-            new_file.insert(
-                0, not_found_content + salt.utils.stringutils.to_bytes(os.linesep)
-            )
+            new_file.insert(0, not_found_content + eol)
         else:
             # append_if_not_found
             # Make sure we have a newline at the end of the file
             if 0 != len(new_file):
-                if not new_file[-1].endswith(
-                    salt.utils.stringutils.to_bytes(os.linesep)
-                ):
-                    new_file[-1] += salt.utils.stringutils.to_bytes(os.linesep)
-            new_file.append(
-                not_found_content + salt.utils.stringutils.to_bytes(os.linesep)
-            )
+                if not new_file[-1].endswith(b"\n"):
+                    new_file[-1] += eol
+            new_file.append(not_found_content + eol)
         has_changes = True
         if not dry_run:
             try:
@@ -3030,6 +3334,11 @@ def blockreplace(
 
     A block of content delimited by comments can help you manage several lines
     entries without worrying about old entries removal.
+
+    .. versionchanged:: 3008.5
+
+        A byte order mark (BOM) at the start of the file is preserved, and a
+        block prepended to the file is inserted after it.
 
     .. note::
 
@@ -3204,12 +3513,19 @@ def blockreplace(
     # We do not use in-place editing to avoid file attrs modifications when
     # no changes are required and to avoid any file access on a partially
     # written file.
+    bom = ""
     try:
         with salt.utils.files.fopen(
             path, "r", encoding=file_encoding, newline=""
         ) as fi_file:
             for line in fi_file:
                 write_line_to_new_file = True
+
+                if not orig_file:
+                    # Endian specific codecs and UTF-8 keep the byte order
+                    # mark as U+FEFF. Keep it out of the lines being matched
+                    # and write it back unchanged.
+                    bom, line = _split_bom(line)
 
                 if linesep is None:
                     # Auto-detect line separator
@@ -3251,6 +3567,10 @@ def blockreplace(
 
     except OSError as exc:
         raise CommandExecutionError(f"Failed to read from {path}: {exc}")
+    except UnicodeDecodeError:
+        raise SaltInvocationError(
+            f"Cannot perform string replacements on a binary file: {path}"
+        )
     finally:
         if linesep is None:
             # If the file was empty, we will not have set linesep yet. Assume
@@ -3367,6 +3687,8 @@ def blockreplace(
         # write new content in the file while avoiding partial reads
         try:
             fh_ = salt.utils.atomicfile.atomic_open(path, "wb")
+            if bom:
+                fh_.write(salt.utils.stringutils.to_bytes(bom, encoding=file_encoding))
             for line in new_file:
                 fh_.write(salt.utils.stringutils.to_bytes(line, encoding=file_encoding))
         finally:
@@ -3579,13 +3901,14 @@ def contains_regex(path, regex, lchar=""):
     if not os.path.exists(path):
         return False
 
+    match_line = _line_matcher(regex)
     try:
         with salt.utils.files.fopen(path, "r") as target:
             for line in target:
                 line = salt.utils.stringutils.to_unicode(line)
                 if lchar:
                     line = line.lstrip(lchar)
-                if re.search(regex, line):
+                if re.search(regex, match_line(line)):
                     return True
             return False
     except OSError:
@@ -3626,11 +3949,23 @@ def append(path, *args, **kwargs):
 
     Append text to the end of a file
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+
     path
         path to file
 
     `*args`
         strings to append to file
+
+    .. note::
+        Each string is terminated with the line ending used by the first line
+        of the file (``\\r\\n`` or ``\\n``), falling back to the system's line
+        ending when the file has no line ending yet. Line endings inside a
+        string are written as given.
 
     CLI Example:
 
@@ -3663,12 +3998,50 @@ def append(path, *args, **kwargs):
         else:
             args = [kwargs["args"]]
 
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        bom_size = len("\ufeff".encode(encoding))
+        # One code unit: 1 byte in UTF-8, 2 in UTF-16 and 4 in UTF-32
+        newline = "\n".encode(encoding)
+        try:
+            with salt.utils.files.fopen(path, "rb") as ofile:
+                head = ofile.read(_EOL_PROBE_SIZE)
+                size = ofile.seek(0, os.SEEK_END)
+                ofile.seek(size - len(newline))
+                tail = ofile.read()
+        except OSError as exc:
+            raise CommandExecutionError(
+                f"Unable to open file '{path}'. Exception: {exc}"
+            )
+        try:
+            # The probe can end in the middle of a character
+            text = codecs.getincrementaldecoder(encoding)().decode(
+                head, final=len(head) == size
+            )
+        except UnicodeDecodeError:
+            text = None
+        if text is None or size % len(newline):
+            raise SaltInvocationError(
+                f"Cannot perform string replacements on a binary file: {path}"
+            )
+        linesep = _detect_eol(text)
+        needs_eol = size > bom_size and tail != newline
+        data = linesep if needs_eol else ""
+        data += "".join(f"{new_line}{linesep}" for new_line in args)
+        # The BOM codecs do not add a second byte order mark
+        data = _encode_bom_text("", data, encoding)
+        with salt.utils.files.fopen(path, "ab") as ofile:
+            ofile.write(data)
+        return f'Wrote {len(args)} lines to "{path}"'
+
     # Make sure we have a newline at the end of the file. Do this in binary
     # mode so SEEK_END with nonzero offset will work.
     with salt.utils.files.fopen(path, "rb+") as ofile:
-        linesep = salt.utils.stringutils.to_bytes(os.linesep)
+        # Follow the line endings already used by the file, falling back to
+        # the system's when it has none yet
+        linesep = _detect_eol(ofile.read(_EOL_PROBE_SIZE))
         try:
-            ofile.seek(-len(linesep), os.SEEK_END)
+            ofile.seek(-1, os.SEEK_END)
         except OSError as exc:
             if exc.errno in (errno.EINVAL, errno.ESPIPE):
                 # Empty file, simply append lines at the beginning of the file
@@ -3676,14 +4049,14 @@ def append(path, *args, **kwargs):
             else:
                 raise
         else:
-            if ofile.read(len(linesep)) != linesep:
+            if ofile.read(1) != b"\n":
                 ofile.seek(0, os.SEEK_END)
-                ofile.write(linesep)
+                ofile.write(salt.utils.stringutils.to_bytes(linesep))
 
     # Append lines in text mode
     with salt.utils.files.fopen(path, "a") as ofile:
         for new_line in args:
-            ofile.write(salt.utils.stringutils.to_str(f"{new_line}{os.linesep}"))
+            ofile.write(salt.utils.stringutils.to_str(f"{new_line}{linesep}"))
 
     return f'Wrote {len(args)} lines to "{path}"'
 
@@ -3694,11 +4067,24 @@ def prepend(path, *args, **kwargs):
 
     Prepend text to the beginning of a file
 
+    .. versionchanged:: 3008.5
+
+        Files that start with a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+        are read and written in that encoding, and the BOM and byte order are
+        preserved.
+        The text is inserted after the BOM.
+
     path
         path to file
 
     `*args`
         strings to prepend to the file
+
+    .. note::
+        Each string is terminated with the line ending used by the first line
+        of the file (``\\r\\n`` or ``\\n``), falling back to ``\\n`` when the
+        file has no line ending yet. Line endings inside a string are written
+        as given.
 
     CLI Example:
 
@@ -3729,6 +4115,16 @@ def prepend(path, *args, **kwargs):
         else:
             args = [kwargs["args"]]
 
+    encoding = _detect_bom_encoding(path)
+    if encoding:
+        bom, text = _read_bom_text(path, encoding)
+        eol = _detect_eol(text, default="\n")
+        preface = "".join(f"{line}{eol}" for line in args)
+        data = _encode_bom_text(bom, preface + text, encoding)
+        with salt.utils.files.fopen(path, "wb") as ofile:
+            ofile.write(data)
+        return f'Prepended {len(args)} lines to "{path}"'
+
     try:
         with salt.utils.files.fopen(path) as fhr:
             contents = [
@@ -3737,9 +4133,11 @@ def prepend(path, *args, **kwargs):
     except OSError:
         contents = []
 
+    # Follow the line endings already used by the file
+    eol = _detect_eol(contents[0] if contents else "", default="\n")
     preface = []
     for line in args:
-        preface.append(f"{line}\n")
+        preface.append(f"{line}{eol}")
 
     with salt.utils.files.fopen(path, "w") as ofile:
         contents = preface + contents
@@ -3758,6 +4156,15 @@ def write(path, *args, **kwargs):
 
     `*args`
         strings to write to the file
+
+    .. note::
+        Every string is terminated with ``\\n`` on all platforms, regardless of
+        the line endings of the file being overwritten. Unlike
+        :py:func:`file.append <salt.modules.file.append>` and
+        :py:func:`file.prepend <salt.modules.file.prepend>`, which add to
+        existing content and follow its line endings, this function replaces
+        the whole file and writes the strings as given. To write ``\\r\\n``
+        line endings, include them in the strings.
 
     CLI Example:
 
@@ -3787,6 +4194,10 @@ def write(path, *args, **kwargs):
         else:
             args = [kwargs["args"]]
 
+    # Intentionally always terminate with "\n", unlike append and prepend. The
+    # existing file is replaced, so there is nothing to stay consistent with,
+    # and the caller's content is written as given. See the note in the
+    # docstring before changing this.
     contents = []
     for line in args:
         contents.append(f"{line}\n")

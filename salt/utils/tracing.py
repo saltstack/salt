@@ -285,6 +285,12 @@ def shutdown():
         _tracer = None
         _last_pid = None
     if provider is not None:
+        # Flush before shutdown so an incorrectly-ordered caller (span
+        # still open when shutdown() fires) doesn't lose queued spans.
+        try:
+            provider.force_flush(timeout_millis=5000)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("tracing provider force_flush raised", exc_info=True)
         try:
             provider.shutdown()
         except Exception:  # pylint: disable=broad-except

@@ -21,6 +21,27 @@ set -e
 case "$1" in
     configure)
         /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
+
+        # Restore optional dependencies with the NEW runtime before the
+        # dependent daemon packages reach their service-start hooks. In
+        # particular, a Python minor upgrade selects a new extras directory.
+        if [ -f /etc/salt/local-requirements.txt ]; then
+            if [ -f /etc/default/salt-setup ]; then
+                . /etc/default/salt-setup
+            fi
+            if [ -f /etc/sysconfig/salt-minion-setup ]; then
+                . /etc/sysconfig/salt-minion-setup
+            fi
+            if [ -n "$SALT_EXTRAS_DIR" ]; then
+                export SALT_EXTRAS_DIR
+            fi
+            echo "Installing Salt local requirements before service startup"
+            if ! SALT_CONFIG_DIR=/etc/salt /opt/saltstack/salt/salt-pip install \
+                --requirement /etc/salt/local-requirements.txt; then
+                echo "Salt local requirements installation failed; salt-common remains unconfigured. Fix /etc/salt/local-requirements.txt or the package source and retry configuration." >&2
+                exit 1
+            fi
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

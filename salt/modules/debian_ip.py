@@ -1,9 +1,10 @@
 """
-The networking module for Debian-based distros
+The networking module for Debian- and BusyBox-based distros
 
 References:
 
 * http://www.debian.org/doc/manuals/debian-reference/ch05.en.html
+* https://www.busybox.net/downloads/BusyBox.html
 """
 
 import functools
@@ -40,15 +41,15 @@ __virtualname__ = "ip"
 
 def __virtual__():
     """
-    Confine this module to Debian-based distros that manage networking with
-    ifupdown (``/etc/network/interfaces``).
+    Confine this module to Debian- and Alpine-based distros that manage
+    networking with ifupdown (``/etc/network/interfaces``).
 
     On netplan-based systems (Ubuntu 18.04+ and Debian where netplan is the
     active renderer) the :py:mod:`netplan_ip <salt.modules.netplan_ip>`
     provider claims the ``ip`` virtual instead, because writing
     ``/etc/network/interfaces`` there has no effect (issue #62219).
     """
-    if __grains__["os_family"] != "Debian":
+    if __grains__["os_family"] not in ("Debian", "Alpine"):
         return (
             False,
             "The debian_ip module could not be loaded: unsupported OS family",

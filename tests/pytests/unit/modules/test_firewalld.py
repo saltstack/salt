@@ -5,6 +5,7 @@
 import pytest
 
 import salt.modules.firewalld as firewalld
+from salt.exceptions import CommandExecutionError
 from tests.support.helpers import dedent
 from tests.support.mock import MagicMock, patch
 
@@ -432,3 +433,135 @@ def test_remove_rich_rule():
             )
             == "success"
         )
+
+
+def test_get_target():
+    """
+    Test getting a zone's target
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="default"):
+        assert firewalld.get_target("public") == "default"
+
+
+def test_set_target():
+    """
+    Test setting a zone's target
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="success"):
+        assert firewalld.set_target("public", "DROP") == "success"
+
+
+def test_get_ipsets():
+    """
+    Test listing predefined ipsets
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="myipset1 myipset2"):
+        assert firewalld.get_ipsets() == ["myipset1", "myipset2"]
+
+
+def test_get_ipsets_empty():
+    """
+    Test listing ipsets when none exist
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value=""):
+        assert firewalld.get_ipsets() == []
+
+
+def test_new_ipset():
+    """
+    Test creating a new ipset
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="success"):
+        assert firewalld.new_ipset("myipset", "hash:net") == "success"
+
+
+def test_new_ipset_with_reload():
+    """
+    Test creating a new ipset triggers a reload when restart=True
+    """
+    with patch.object(firewalld, "__firewall_cmd", side_effect=["success", "success"]):
+        result = firewalld.new_ipset("myipset", "hash:net", restart=True)
+        assert result == "success"
+
+
+def test_delete_ipset():
+    """
+    Test deleting an existing ipset without reload
+    """
+    with patch.object(firewalld, "__mgmt", return_value="success"):
+        with patch.object(firewalld, "__firewall_cmd", return_value="success"):
+            assert firewalld.delete_ipset("myipset", restart=True) == "success"
+
+    with patch.object(firewalld, "__mgmt", return_value="A"):
+        assert firewalld.delete_ipset("myipset", restart=False) == "A"
+
+
+def test_add_ipset_entry():
+    """
+    Test adding an entry to an ipset
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="success"):
+        assert firewalld.add_ipset_entry("myipset", "10.0.0.1/32") == "success"
+
+
+def test_remove_ipset_entry():
+    """
+    Test removing an entry from an ipset
+    """
+    with patch.object(firewalld, "__firewall_cmd", return_value="success"):
+        assert firewalld.remove_ipset_entry("myipset", "10.0.0.1/32") == "success"
+
+
+def test_info_ipset():
+    """
+    Test parsing ipset information
+    """
+    firewall_cmd_ret = dedent(
+        """\
+        myipset
+          type: hash:net
+          options: family=inet
+          entries: 1.1.1.1/32 8.8.8.8/32
+        """
+    )
+    expected = {
+        "myipset": {
+            "type": ["hash:net"],
+            "options": {"family": "inet"},
+            "entries": ["1.1.1.1/32", "8.8.8.8/32"],
+        }
+    }
+    with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
+        assert firewalld.info_ipset("myipset") == expected
+
+
+def test_info_ipset_ignores_indented_key_lines_and_flag_options():
+    """
+    Indented ``type:``/``options:`` lines must not be treated as ipset names
+    and options without ``=`` must not raise.
+    """
+    firewall_cmd_ret = dedent(
+        """\
+        myipset
+          type: hash:net
+          options: family=inet timeout
+          entries:
+        """
+    )
+    expected = {
+        "myipset": {
+            "type": ["hash:net"],
+            "options": {"family": "inet", "timeout": ""},
+            "entries": [],
+        }
+    }
+    with patch.object(firewalld, "__firewall_cmd", return_value=firewall_cmd_ret):
+        assert firewalld.info_ipset("myipset") == expected
+
+
+def test_new_ipset_invalid_family():
+    """
+    Test that an invalid family raises a CommandExecutionError
+    """
+    with pytest.raises(CommandExecutionError):
+        firewalld.new_ipset("myipset", "hash:net", family="ipv4")

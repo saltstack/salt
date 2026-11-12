@@ -15,7 +15,14 @@ import pytest
 import xxhash
 
 import salt.utils.files
-from salt.utils.mmap_cache import _CRC_FMT, _CRC_SIZE, _ROSTER_ENTRY_SIZE, MmapCache
+from salt.utils.mmap_cache import (
+    _CRC_FMT,
+    _CRC_SIZE,
+    _ROSTER_ENTRY_SIZE,
+    _TYPE_TAG_SIZE,
+    _TYPE_TAG_STR,
+    MmapCache,
+)
 
 _SIZE = 200
 _KEY_SIZE = 32
@@ -162,10 +169,11 @@ def test_verify_checksums_false_skips_crc(cache_path):
         verify_checksums=False,
     )
     c.put("k", "hello")
-    # Heap should contain raw bytes only — no checksum prefix
+    # Heap record: [TYPE_TAG(1)][VALUE] when checksums are disabled.  Tag
+    # is _TYPE_TAG_STR because the value was passed to put() as str.
     with salt.utils.files.fopen(cache_path + ".heap", "rb") as f:
         raw = f.read()
-    assert raw == b"hello"
+    assert raw == bytes((_TYPE_TAG_STR,)) + b"hello"
     assert c.get("k") == "hello"
     c.close()
 
@@ -181,11 +189,12 @@ def test_verify_checksums_true_stores_crc_prefix(cache_path):
     c.put("k", "hello")
     with salt.utils.files.fopen(cache_path + ".heap", "rb") as f:
         raw = f.read()
-    # First 8 bytes are XXH3-64 LE, next bytes are the value
-    assert len(raw) == _CRC_SIZE + len(b"hello")
+    # Record layout: [XXH3-64 LE: 8 bytes][TYPE_TAG: 1 byte][VALUE: N bytes]
+    assert len(raw) == _CRC_SIZE + _TYPE_TAG_SIZE + len(b"hello")
     stored_digest = struct.unpack_from(_CRC_FMT, raw, 0)[0]
     assert stored_digest == xxhash.xxh3_64_intdigest(b"hello")
-    assert raw[_CRC_SIZE:] == b"hello"
+    assert raw[_CRC_SIZE] == _TYPE_TAG_STR
+    assert raw[_CRC_SIZE + _TYPE_TAG_SIZE :] == b"hello"
     c.close()
 
 
@@ -216,12 +225,16 @@ def test_get_returns_none_on_crc_corruption(cache_path, caplog):
     c.put("k", "important_data")
     c.close()
 
-    # Corrupt the heap: flip a byte in the value region (after the checksum)
+    # Corrupt the heap: flip a byte in the value region.  Layout is
+    # [CRC 8][TAG 1][VALUE N] so the first VALUE byte sits at offset
+    # _CRC_SIZE + _TYPE_TAG_SIZE.  The CRC is computed over the VALUE
+    # only, so corrupting any value byte makes the digest mismatch.
     heap_path = cache_path + ".heap"
     with salt.utils.files.fopen(heap_path, "r+b") as f:
-        f.seek(_CRC_SIZE)
+        value_offset = _CRC_SIZE + _TYPE_TAG_SIZE
+        f.seek(value_offset)
         b = f.read(1)
-        f.seek(_CRC_SIZE)
+        f.seek(value_offset)
         f.write(bytes([b[0] ^ 0xFF]))
 
     c2 = MmapCache(
@@ -330,7 +343,8 @@ def test_inplace_overwrite_crc_consistent(cache_path):
 
 
 def test_checksums_disabled_no_crc_overhead(cache_path):
-    """With checksums disabled, heap size equals the raw value size."""
+    """With checksums disabled, heap size equals the raw value plus the
+    single-byte type tag (which is written in both checksum modes)."""
     c = MmapCache(
         cache_path,
         size=_SIZE,
@@ -341,7 +355,7 @@ def test_checksums_disabled_no_crc_overhead(cache_path):
     value = "x" * 100
     c.put("k", value)
     heap_size = os.path.getsize(cache_path + ".heap")
-    assert heap_size == len(value.encode())
+    assert heap_size == _TYPE_TAG_SIZE + len(value.encode())
     c.close()
 
 
@@ -375,8 +389,8 @@ def test_atomic_rebuild_respects_verify_checksums(cache_path):
 
     heap_path = cache_path + ".heap"
     heap_size = os.path.getsize(heap_path)
-    # Each value has an 8-byte XXH3-64 prefix
-    expected = sum(_CRC_SIZE + len(v.encode()) for _, v in data)
+    # Each record is [CRC 8][TAG 1][VALUE]
+    expected = sum(_CRC_SIZE + _TYPE_TAG_SIZE + len(v.encode()) for _, v in data)
     assert heap_size == expected
 
     for key, expected_val in data:

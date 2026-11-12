@@ -56,6 +56,7 @@ try:
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
     HAS_CRYPTOGRAPHY = True
 except ImportError:
@@ -834,7 +835,13 @@ class MasterKeys(dict):
             path = f"{self.opts['keys.cache_driver']}:master_keys/{self.master_id}.pub"
 
         if force or not cache.contains("master_keys", f"{name}.pem"):
-            log.info("Generating key-pair for %s", path)
+            log.warning(
+                "Generating new master key-pair for %s. Any minion that "
+                "previously cached this master's public key will reject "
+                "the new key as a MITM attempt until its "
+                "minion_master.pub is deleted and the minion restarts.",
+                path,
+            )
             (priv, pub) = gen_keys(
                 keysize or self.opts["keysize"],
                 passphrase,
@@ -1014,6 +1021,144 @@ class MasterKeys(dict):
             return key
 
 
+class MasterIdentityKey:
+    """
+    The topology master-identity keypair.
+
+    Thin reader/writer for the keypair used by master-topology
+    handshakes.  Separate from the master's existing ``master.pub``
+    /``master.pem`` (which signs publishes to minions):
+
+    * On a non-clustered master, generated lazily on first
+      ``topology_enabled`` start and persisted to
+      ``pki_dir/master/master_identity.{pub,pem}``.
+    * On a clustered master, the keypair is written at Raft
+      bootstrap time via the ``MASTER_IDENTITY_KEY`` log entry;
+      local persistence happens inside the Raft state-machine's
+      apply handler.  Any peer in the cluster can present the key
+      during peer-master handshakes.
+
+    This class is a pure reader/writer: lifecycle (first-generate,
+    rotation, replication) is owned by ``TopologyStateMachine``.
+    """
+
+    PUB_NAME = "master_identity.pub"
+    PRIV_NAME = "master_identity.pem"
+    PUB_MODE = 0o444
+    PRIV_MODE = 0o400
+
+    def __init__(self, opts):
+        if not opts.get("pki_dir"):
+            raise ValueError("MasterIdentityKey requires opts['pki_dir']")
+        self.opts = opts
+        self._pki_dir = os.path.join(opts["pki_dir"], "master")
+        self.pub_path = os.path.join(self._pki_dir, self.PUB_NAME)
+        self.priv_path = os.path.join(self._pki_dir, self.PRIV_NAME)
+
+    def exists(self):
+        """Return True iff both the pub and priv files are on disk."""
+        return os.path.isfile(self.pub_path) and os.path.isfile(self.priv_path)
+
+    def load(self):
+        """
+        Return ``(pub_pem, priv_pem)`` as bytes.
+
+        Raises ``FileNotFoundError`` (via ``open``) when either file
+        is absent; callers should guard with :meth:`exists` or catch.
+        """
+        with salt.utils.files.fopen(self.pub_path, "rb") as fp:
+            pub_pem = fp.read()
+        with salt.utils.files.fopen(self.priv_path, "rb") as fp:
+            priv_pem = fp.read()
+        return pub_pem, priv_pem
+
+    def write(self, pub_pem, priv_pem):
+        """
+        Persist the keypair with strict permissions (0400 priv,
+        0444 pub).  Idempotent: if the on-disk content already
+        matches, neither file is re-written and mtimes are preserved.
+        """
+        if not isinstance(pub_pem, bytes) or not isinstance(priv_pem, bytes):
+            raise TypeError("pub_pem and priv_pem must be bytes")
+        if not os.path.isdir(self._pki_dir):
+            os.makedirs(self._pki_dir, exist_ok=True)
+        if not os.access(self._pki_dir, os.W_OK):
+            raise OSError(
+                'Write access denied to "{}" for user "{}".'.format(
+                    os.path.abspath(self._pki_dir), getpass.getuser()
+                )
+            )
+        self._write_if_changed(self.priv_path, priv_pem, self.PRIV_MODE)
+        self._write_if_changed(self.pub_path, pub_pem, self.PUB_MODE)
+
+    @staticmethod
+    def _write_if_changed(path, data, mode):
+        """
+        Write ``data`` to ``path`` with ``mode`` unless the existing
+        file already contains the same bytes with the same mode.  The
+        file is created with a restrictive umask so bytes-on-disk
+        never widen past ``mode`` even for an instant.
+        """
+        if os.path.isfile(path):
+            try:
+                with salt.utils.files.fopen(path, "rb") as fp:
+                    existing = fp.read()
+            except OSError:
+                existing = None
+            if existing == data:
+                current_mode = stat.S_IMODE(os.stat(path).st_mode)
+                if current_mode == mode:
+                    return
+                os.chmod(path, mode)
+                return
+            # The private key is written 0400 and would otherwise be
+            # unopenable for writing on rotation; remove it first so
+            # the open() below can create a fresh file with a
+            # restrictive umask.
+            #
+            # Windows semantics: a 0400 file is read-only in NTFS and
+            # ``os.unlink`` raises ``PermissionError``.  Clear the
+            # read-only attribute first so the unlink succeeds and
+            # the subsequent write does not blow up with
+            # ``[Errno 13] Permission denied`` / ``[WinError 5]``.
+            try:
+                os.chmod(path, 0o600)
+            except OSError:
+                pass
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+        with salt.utils.files.set_umask(0o277):
+            with salt.utils.files.fopen(path, "wb") as fp:
+                fp.write(data)
+        os.chmod(path, mode)
+
+    def fingerprint(self):
+        """
+        Return the public-key fingerprint using ``opts["hash_type"]``
+        (default ``sha256``).  Returns an empty string if the key is
+        not yet on disk, matching :func:`salt.utils.crypt.pem_finger`.
+        """
+        sum_type = self.opts.get("hash_type", "sha256")
+        return salt.utils.crypt.pem_finger(path=self.pub_path, sum_type=sum_type)
+
+    def generate(self, key_size=None):
+        """
+        Generate a fresh RSA keypair and return ``(pub_pem, priv_pem)``
+        as bytes.  Does NOT write to disk; the caller (or
+        :class:`TopologyStateMachine`) is responsible for persistence.
+
+        ``key_size`` defaults to ``opts["keysize"]`` or 2048.
+        """
+        bits = key_size or self.opts.get("keysize") or 2048
+        priv_str, pub_str = gen_keys(bits)
+        return (
+            salt.utils.stringutils.to_bytes(pub_str),
+            salt.utils.stringutils.to_bytes(priv_str),
+        )
+
+
 def _auth_singleton_key(opts):
     keypath = os.path.join(opts["pki_dir"], "minion.pem")
     keytime = "0"
@@ -1108,8 +1253,23 @@ class AsyncAuth:
         self.opts = opts
         self.token = salt.utils.stringutils.to_bytes(Crypticle.generate_key_string())
         self.cache = salt.cache.Cache(opts, driver=opts["keys.cache_driver"])
-        self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
-        self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+        # Determine paths based on role
+        if self.opts.get("__role") == "client":
+            # Remote CLI client
+            self.pub_path = os.path.join(self.opts["pki_dir"], "client.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "client.pem")
+            self.mpub = "client_master.pub"
+        elif self.opts["__role"] == "syndic":
+            # Syndic (master of masters)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "syndic_master.pub"
+        else:
+            # Regular minion (default)
+            self.pub_path = os.path.join(self.opts["pki_dir"], "minion.pub")
+            self.rsa_path = os.path.join(self.opts["pki_dir"], "minion.pem")
+            self.mpub = "minion_master.pub"
+
         self._private_key = None
         # Initialize ``_creds`` so ``_authenticate`` can safely check it even
         # when a sibling ``AsyncAuth`` populates ``creds_map`` between our
@@ -1119,10 +1279,6 @@ class AsyncAuth:
         # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
         # issue #67947).
         self._creds = None
-        if self.opts["__role"] == "syndic":
-            self.mpub = "syndic_master.pub"
-        else:
-            self.mpub = "minion_master.pub"
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         if io_loop is None:
@@ -1308,7 +1464,25 @@ class AsyncAuth:
                     error = SaltClientError(
                         "Attempt to authenticate with the salt master failed"
                     )
-                self._authenticate_future.set_exception(error)
+                # Guard against a double-set on ``_authenticate_future``.
+                # A stale coroutine (e.g. one racing against a sibling
+                # ``authenticate()`` call that replaced the future, or one
+                # finishing after ``invalidate()`` dropped the attribute and
+                # a new task was scheduled) would otherwise raise
+                # ``asyncio.exceptions.InvalidStateError`` here, propagate
+                # out of this task as an unhandled coroutine exception, and
+                # leave the minion wedged in an un-authenticated state until
+                # the process is restarted.
+                if not self._authenticate_future.done():
+                    self._authenticate_future.set_exception(error)
+                else:
+                    log.debug(
+                        "%s _authenticate_future already resolved; "
+                        "dropping redundant set_exception(%r). A sibling "
+                        "authenticate() call will schedule the next retry.",
+                        self,
+                        error,
+                    )
             else:
                 key = self.__key(self.opts)
                 new_aes, changed_aes, changed_session = False, False, False
@@ -1331,9 +1505,21 @@ class AsyncAuth:
                     self._crypticle = Crypticle(self.opts, creds["aes"])
                     self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-                self._authenticate_future.set_result(
-                    True
-                )  # mark the sign-in as complete
+                # Guard against a double-set for the same reasons documented
+                # on the exception branch above.  A stale winner finishing
+                # against an already-resolved future would otherwise raise
+                # ``InvalidStateError`` and bubble out as an unhandled
+                # coroutine exception.
+                if not self._authenticate_future.done():
+                    self._authenticate_future.set_result(
+                        True
+                    )  # mark the sign-in as complete
+                else:
+                    log.debug(
+                        "%s _authenticate_future already resolved before "
+                        "set_result; a sibling authenticate() won the race.",
+                        self,
+                    )
                 # Notify the bus about creds change.
                 # Fire synchronously on the role's event bus (no io_loop) so the
                 # IPC publish completes before the `with` block tears the event
@@ -1520,7 +1706,7 @@ class AsyncAuth:
             if syndic_finger:
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != syndic_finger
                 ):
@@ -1529,13 +1715,24 @@ class AsyncAuth:
             if self.opts.get("master_finger", False):
                 if (
                     salt.utils.crypt.pem_finger(
-                        m_pub_fn, sum_type=self.opts["hash_type"]
+                        path=m_pub_fn, sum_type=self.opts["hash_type"]
                     )
                     != self.opts["master_finger"]
                 ):
                     self._finger_fail(self.opts["master_finger"], m_pub_fn)
 
         auth["publish_port"] = payload["publish_port"]
+        # Lift ``cluster_id`` from the auth response whenever the master
+        # publishes it.  The master's ``_topology_cluster_id_for_auth``
+        # already gates on ``topology_enabled`` + ``topology_push_cluster_grain``
+        # (both master-side opts).  Gating a second time on the MINION's
+        # opts is wrong: ``topology_enabled`` and ``topology_push_cluster_grain``
+        # are master-side knobs with no minion-side config schema entries,
+        # so they are always falsy on a minion --- the grain never
+        # arrives.  Downstream ``_store_master_cluster_id`` is additive,
+        # so lifting an absent field is a no-op.
+        if "cluster_id" in payload:
+            auth["cluster_id"] = payload["cluster_id"]
         return auth
 
     def get_keys(self):
@@ -1554,12 +1751,27 @@ class AsyncAuth:
                 log.info("Generating keys: %s", self.opts["pki_dir"])
                 (priv, pub) = gen_keys(self.opts["keysize"])
 
+                # Determine cache keys based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                    cache_key_pub = "client.pub"
+                else:
+                    # minion/syndic use minion keys
+                    cache_key_priv = "minion.pem"
+                    cache_key_pub = "minion.pub"
+
                 # the cache bank is called master keys but the codepath is shared
-                # on master/minion for interacting with pki
-                self.cache.store("master_keys", "minion.pem", priv)
-                self.cache.store("master_keys", "minion.pub", pub)
+                # on master/minion/client for interacting with pki
+                self.cache.store("master_keys", cache_key_priv, priv)
+                self.cache.store("master_keys", cache_key_pub, pub)
             else:
-                priv = self.cache.fetch("master_keys", "minion.pem")
+                # Determine cache key based on role
+                if self.opts.get("__role") == "client":
+                    cache_key_priv = "client.pem"
+                else:
+                    cache_key_priv = "minion.pem"
+
+                priv = self.cache.fetch("master_keys", cache_key_priv)
 
             self._private_key = PrivateKey.from_str(priv, None)
         return self._private_key
@@ -1594,6 +1806,8 @@ class AsyncAuth:
         payload["nonce"] = uuid.uuid4().hex
         payload["enc_algo"] = self.opts["encryption_algorithm"]
         payload["sig_algo"] = self.opts["signing_algorithm"]
+        # Include role to distinguish clients from minions
+        payload["role"] = self.opts.get("__role", "minion")
         if "autosign_grains" in self.opts:
             autosign_grains = {}
             for grain in self.opts["autosign_grains"]:
@@ -1897,16 +2111,58 @@ class AsyncAuth:
                 return self.extract_aes(payload, master_pub=False)
 
     def _finger_fail(self, finger, master_key):
-        log.critical(
-            "The specified fingerprint in the master configuration "
-            "file:\n%s\nDoes not match the authenticating master's "
-            "key:\n%s\nVerify that the configured fingerprint "
-            "matches the fingerprint of the correct master and that "
-            "this minion is not subject to a man-in-the-middle attack.",
-            finger,
-            salt.utils.crypt.pem_finger(master_key, sum_type=self.opts["hash_type"]),
+        actual = salt.utils.crypt.pem_finger(
+            master_key, sum_type=self.opts["hash_type"]
         )
-        sys.exit(42)
+        role = self.opts.get("__role", "minion")
+        # Point the operator at the right file.  ``conf_file`` is the
+        # per-role conf path (``/etc/salt/minion`` or
+        # ``/etc/salt/client``); fall back to the role default if the
+        # opt isn't populated.
+        default_conf = "/etc/salt/client" if role == "client" else "/etc/salt/minion"
+        conf_file = self.opts.get("conf_file") or default_conf
+        # The opt name differs when the sign-in is going through the
+        # syndic branch (see :meth:`handle_signin_response`); report
+        # whichever opt the operator actually set.
+        opt_key = "syndic_finger" if self.opts.get("syndic_master") else "master_finger"
+        # A length mismatch on the two fingerprint strings almost
+        # always means the configured value was produced with a
+        # different hash algorithm than the local ``hash_type`` opt.
+        # Call that out explicitly -- otherwise the error looks
+        # identical to a real MITM and the operator panics.
+        hash_type = self.opts.get("hash_type", "sha256")
+        hash_hint = ""
+        if len(finger.replace(":", "")) != len(actual.replace(":", "")):
+            hash_hint = (
+                "\nFingerprint lengths differ, which usually indicates a hash "
+                "algorithm mismatch.  This %s is using hash_type=%r; "
+                "regenerate the fingerprint with the same algorithm "
+                "(e.g. ``salt-key -F master`` on a master with "
+                "matching hash_type)." % (role, hash_type)
+            )
+        log.critical(
+            "The fingerprint configured as '%s' in %s:\n%s\n"
+            "does not match the authenticating master's key:\n%s\n"
+            "Verify that the configured fingerprint matches the correct "
+            "master's pubkey and that this %s is not subject to a "
+            "man-in-the-middle attack.%s",
+            opt_key,
+            conf_file,
+            finger,
+            actual,
+            role,
+            hash_hint,
+        )
+        # Raise rather than ``sys.exit`` so the error propagates
+        # cleanly through the AsyncAuth retry loop (caught as
+        # ``SaltClientError`` by ``_authenticate``) instead of
+        # terminating the process from inside an asyncio Task --
+        # which triggers a "Task exception was never retrieved"
+        # traceback that drowns out the critical diagnostic above.
+        raise SaltClientError(
+            "master fingerprint mismatch: configured {}={} does not match "
+            "the master's pubkey fingerprint {}".format(opt_key, finger, actual)
+        )
 
 
 # TODO: remove, we should just return a sync wrapper of AsyncAuth
@@ -2135,6 +2391,47 @@ class Crypticle:
         b64key = b64key.decode("utf-8")
         # Return data must be a base64-encoded string, not a unicode type
         return b64key.replace("\n", "")
+
+    @classmethod
+    def derive_session_key(
+        cls, cluster_pem_bytes, cluster_aes, minion_id, key_size=192
+    ):
+        """
+        Derive a per-minion session key from the cluster RSA private key
+        (``cluster.pem``) via HKDF-SHA256, with ``cluster_aes`` used as the
+        HKDF salt so a cluster-wide aes rotation rotates every derived
+        session key.
+
+        ``cluster.pem`` is distributed master-to-master via
+        ``cluster/peer/join-reply`` and never appears in a minion auth
+        reply, so minions cannot derive each other's session keys even
+        though they all share ``cluster_aes`` (which they receive in
+        order to decrypt publish-channel broadcasts).  Every peer master
+        has ``cluster.pem`` plus the current ``cluster_aes``, so each one
+        derives an identical session key for the same minion without any
+        replication of the per-minion ``sessions/<minion>`` file.
+
+        Returns the same base64-encoded shape as
+        :meth:`generate_key_string` so callers can feed it to
+        ``Crypticle(opts, key_string)`` unchanged.
+        """
+        if not isinstance(cluster_aes, bytes):
+            cluster_aes = salt.utils.stringutils.to_bytes(cluster_aes)
+        if not isinstance(cluster_pem_bytes, bytes):
+            cluster_pem_bytes = salt.utils.stringutils.to_bytes(cluster_pem_bytes)
+        # SHA-256 of cluster.pem compacts the IKM to 32 bytes with no
+        # security loss and avoids feeding a multi-kilobyte PEM into
+        # HKDF-Extract on every cache miss.
+        ikm = hashlib.sha256(cluster_pem_bytes).digest()
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=key_size // 8 + cls.SIG_SIZE,
+            salt=cluster_aes,
+            info=b"salt-cluster-session-key/"
+            + salt.utils.stringutils.to_bytes(minion_id),
+        )
+        key = hkdf.derive(ikm)
+        return base64.b64encode(key).decode("utf-8").replace("\n", "")
 
     @classmethod
     def write_key(cls, path, key_size=192):

@@ -233,6 +233,11 @@ IMCAC - Immediate Custom Action - It's immediate
       <Custom Action="WriteConfig_CADH"          Before="WriteConfig_DECAC"        >NOT Installed</Custom>
       <Custom Action="WriteConfig_DECAC"         After="WriteIniValues"            >NOT Installed</Custom>
 
+      <!-- Apply local requirements after files/config are installed, even
+           when START_MINION is disabled. Failure prevents StartServices. -->
+      <Custom Action="InstallLocalRequirements_CADH" Before="InstallLocalRequirements_DECAC">NOT (REMOVE ~= "ALL")</Custom>
+      <Custom Action="InstallLocalRequirements_DECAC" Before="StartServices">NOT (REMOVE ~= "ALL")</Custom>
+
       <!-- Optionally start the service  -->
       <!-- https://learn.microsoft.com/en-us/windows/win32/msi/suggested-installexecutesequence -->
       <StartServices Sequence="5900">START_MINION</StartServices>
@@ -250,6 +255,7 @@ IMCAC - Immediate Custom Action - It's immediate
 
     <!-- Declare Immediate (*_IMCAC) and Deferred (*_DECAC) Custom Actions. -->
     <!-- These are the entry points into the DLL -->
+    <CustomAction Id="InstallLocalRequirements_DECAC" BinaryKey="MinionConfigExt" DllEntry="InstallLocalRequirements_DECAC" Execute="deferred" Return="check" Impersonate="no" />
     <CustomAction Id="ReadConfig_IMCAC"          BinaryKey="MinionConfigExt" DllEntry="ReadConfig_IMCAC"       Execute="firstSequence" />
     <CustomAction Id="remove_NSIS_IMCAC"         BinaryKey="MinionConfigExt" DllEntry="remove_NSIS_IMCAC"     Execute="immediate" Return="check" Impersonate="no" />
     <CustomAction Id="MoveInsecureConfig_DECAC"  BinaryKey="MinionConfigExt" DllEntry="MoveInsecureConfig_DECAC" Execute="deferred" Return="check" Impersonate="no" />
@@ -265,6 +271,7 @@ IMCAC - Immediate Custom Action - It's immediate
     <!-- Custom Action Data Helper for deferred custom actions  -->
     <!-- master and id must be named like in YAML configuration -->
     <!-- Send all this stuff down to the sandbox -->
+    <CustomAction Id="InstallLocalRequirements_CADH" Property="InstallLocalRequirements_DECAC" Value="INSTALLDIR=[INSTALLDIR];CONFDIR=[CONFDIR];" />
     <CustomAction Id="WriteConfig_CADH"  Property="WriteConfig_DECAC"  Value="master=[MASTER];id=[MINION_ID];MOVE_CONF=[MOVE_CONF];sourcedir=[SOURCEDIR];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];CONFDIR=[CONFDIR];config_type=[CONFIG_TYPE];MINION_CONFIG=[MINION_CONFIG];custom_config=[CUSTOM_CONFIG];" />
     <CustomAction Id="DeleteConfig_CADH"  Property="DeleteConfig_DECAC"  Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />
     <CustomAction Id="DeleteConfig2_CADH" Property="DeleteConfig2_DECAC" Value="CLEAN_INSTALL=[CLEAN_INSTALL];REMOVE_CONFIG=[REMOVE_CONFIG];INSTALLDIR=[INSTALLDIR];ROOTDIR=[ROOTDIR];UPGRADINGPRODUCTCODE=[UPGRADINGPRODUCTCODE];" />

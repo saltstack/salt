@@ -190,6 +190,35 @@ def test_master_keys_with_cluster_id(tmp_path, master_opts):
     store_mock.assert_has_calls(expected_calls, any_order=False)
 
 
+def test_find_or_create_keys_warns_on_regen(tmp_path, master_opts, caplog):
+    """
+    ``MasterKeys.find_or_create_keys`` must log at WARNING (not INFO)
+    when it generates a new keypair, so operators who did not request
+    a key rotation have a visible signal: every minion that cached the
+    previous master pubkey will reject the new one with the "master
+    key has changed" CRITICAL and refuse to re-auth until its
+    ``minion_master.pub`` is cleared.
+    """
+    import logging
+
+    master_opts["pki_dir"] = str(tmp_path)
+    assert master_opts["cluster_id"] is None
+
+    with caplog.at_level(logging.WARNING, logger="salt.crypt"):
+        salt.crypt.MasterKeys(master_opts, autocreate=True)
+
+    gen_warnings = [
+        rec
+        for rec in caplog.records
+        if rec.levelno == logging.WARNING
+        and "Generating new master key-pair" in rec.getMessage()
+    ]
+    assert gen_warnings, [rec.getMessage() for rec in caplog.records]
+    message = gen_warnings[0].getMessage()
+    assert "minion_master.pub" in message
+    assert "MITM" in message
+
+
 def test_pwdata_decrypt():
     key_string = dedent(
         """

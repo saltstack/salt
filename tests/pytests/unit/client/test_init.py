@@ -1,7 +1,8 @@
 import pytest
 
 import salt.client
-from salt.exceptions import SaltInvocationError
+from salt.exceptions import SaltClientError, SaltInvocationError
+from tests.support.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -335,3 +336,100 @@ def test_prep_pub_ext_job_cache_existing(master_opts):
         "user": local_client.salt_user,
     }
     assert result == expected
+
+
+# ---------------------------------------------------------------------------
+# LocalClient.pub / pub_async cluster_retry handling
+#
+# Clustered masters return ``{"enc": "clear", "load": {"ret": False,
+# "cluster_retry": True}}`` while Raft is still forming / not a committed
+# voter.  No ``jid`` key in the load, so the plain return at
+# ``salt/client/__init__.py:2162`` (and the pub_async twin) would
+# ``KeyError: 'jid'`` -- which ``cmd_async`` then re-raises as the
+# useless ``SaltClientError: 'jid'``.  Observed on the 24-master
+# clustered sandbox while Raft leadership churned.  The LocalClient
+# publish path has never understood ``cluster_retry`` -- only the
+# minion-side ``AsyncReqChannel._crypted_transfer`` does (see
+# ``salt/channel/client.py:253-266``).
+# ---------------------------------------------------------------------------
+
+
+def _cluster_retry_payload():
+    """Mirror the shape produced by ``ReqServerChannel.handle_message``
+    at ``salt/channel/server.py:452`` when ``_cluster_is_ready()`` is
+    False."""
+    return {"enc": "clear", "load": {"ret": False, "cluster_retry": True}}
+
+
+def test_pub_raises_clean_error_on_cluster_retry(local_client):
+    """``LocalClient.pub`` must raise ``SaltClientError`` with a clear
+    message when the master replies with the ``cluster_retry`` sentinel
+    instead of ``KeyError: 'jid'``."""
+    # ``ipc_mode: tcp`` skips the publish_pull.ipc existence check at
+    # the top of ``pub()`` so the test can focus on the payload path.
+    local_client.opts["ipc_mode"] = "tcp"
+    local_client.opts["interface"] = "127.0.0.1"
+    local_client.opts["ret_port"] = 4506
+
+    channel_cm = MagicMock()
+    channel_cm.__enter__.return_value.send.return_value = _cluster_retry_payload()
+
+    with patch.object(
+        salt.client.LocalClient, "_prep_pub", return_value={"cmd": "publish"}
+    ), patch(
+        "salt.channel.client.ReqChannel.factory", return_value=channel_cm
+    ), patch.object(
+        local_client.event, "connect_pub", return_value=True
+    ):
+        with pytest.raises(SaltClientError, match="cluster consensus still forming"):
+            local_client.pub(
+                tgt="*",
+                fun="test.ping",
+                arg=(),
+                tgt_type="glob",
+                ret="",
+                jid="",
+                timeout=5,
+            )
+
+
+def test_remote_client_pub_raises_clean_error_on_cluster_retry(
+    master_opts, monkeypatch
+):
+    """``RemoteClient.pub`` must raise ``SaltClientError`` with a clear
+    message when a clustered master replies with the ``cluster_retry``
+    sentinel, same as :class:`LocalClient`.
+
+    Pre-fix the plain return at the end of ``RemoteClient.pub`` would
+    ``KeyError: 'jid'`` on the sentinel's load, and the caller would
+    wrap that as ``SaltClientError: 'jid'`` -- useless to a remote
+    operator trying to understand why their publish failed.
+    """
+    # Avoid the real ClientEventSubscriber / network event setup --
+    # the test is for the pub-reply sentinel path, not event wiring.
+    monkeypatch.setattr(
+        salt.client.RemoteClient,
+        "_setup_network_events",
+        lambda self, listen: None,
+    )
+    master_opts["master"] = "127.0.0.1"
+    master_opts["ret_port"] = 4506
+    remote = salt.client.RemoteClient(mopts=master_opts)
+    remote._use_network_events = False
+
+    channel_cm = MagicMock()
+    channel_cm.__enter__.return_value.send.return_value = _cluster_retry_payload()
+
+    with patch.object(
+        salt.client.LocalClient, "_prep_pub", return_value={"cmd": "publish"}
+    ), patch("salt.channel.client.ReqChannel.factory", return_value=channel_cm):
+        with pytest.raises(SaltClientError, match="cluster consensus still forming"):
+            remote.pub(
+                tgt="*",
+                fun="test.ping",
+                arg=(),
+                tgt_type="glob",
+                ret="",
+                jid="",
+                timeout=5,
+            )

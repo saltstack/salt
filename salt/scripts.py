@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import traceback
+import warnings
 from random import randint
 
 import salt.defaults.exitcodes
@@ -47,7 +48,7 @@ def _handle_signals(client, signum, sigframe):
     if signum == signal.SIGINT:
         exit_msg = "\nExiting gracefully on Ctrl-c"
         try:
-            jid = client.local_client.pub_data["jid"]
+            jid = client.client.pub_data["jid"]
             exit_msg += (
                 "\n"
                 "This job's jid is: {0}\n"
@@ -463,6 +464,12 @@ def salt_syndic():
     """
     Start the salt syndic.
     """
+    warnings.warn(
+        "The salt-syndic daemon is deprecated and will be removed in a future release. "
+        "Use master topology (topology_enabled: True) for cross-site job delegation.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     _pin_multiprocessing_fork()
 
     import salt.utils.process
@@ -758,6 +765,12 @@ def _pip_environment(
         new_env["PIP_NO_INDEX"] = "1"
     if disable_version_check:
         new_env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    # Suppress pip's periodic "A new release of pip is available" check by
+    # default (#70024). The onedir bundles a packager-pinned pip, so the
+    # outbound HTTPS round-trip is pure noise (and a proxy-config gotcha;
+    # cf. #69910). ``setdefault`` so operators can opt back in by exporting
+    # ``PIP_DISABLE_PIP_VERSION_CHECK=0`` before invoking salt-pip.
+    new_env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
     if not allow_find_links:
         new_env.pop("PIP_FIND_LINKS", None)
     return new_env

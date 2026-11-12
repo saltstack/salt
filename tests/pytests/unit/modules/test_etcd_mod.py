@@ -220,20 +220,16 @@ def test_auth(auth_opts):
     when both are present in opts.
     """
     with patch("salt.utils.etcd_util.HAS_ETCD_V3", True), patch(
-        "etcd3.Client"
-    ) as mock_etcd3_client:
-        mock_client_instance = MagicMock()
-        mock_etcd3_client.return_value = mock_client_instance
-
+        "salt.utils.etcd_util._client_class"
+    ) as client_class:
         client = etcd_util.EtcdClientV3(auth_opts, has_etcd_opts=True)
 
         assert client.xargs.get("username") == "root"
         assert client.xargs.get("password") == "Passw0rd"
-        # Credentials must be forwarded to the underlying etcd3.Client call
-        mock_etcd3_client.assert_called_once_with(
+        # Credentials must be forwarded to the etcd3gw client
+        client_class.return_value.assert_called_once_with(
             host="127.0.0.1",
             port=2379,
             username="root",
             password="Passw0rd",
-            verify=None,  # no TLS configured
         )

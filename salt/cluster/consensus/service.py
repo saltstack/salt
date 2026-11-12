@@ -36,6 +36,7 @@ Usage (inside ``_publish_daemon``)
 
 import logging
 
+import salt.cluster
 from salt.cluster.consensus.peer import RaftDispatcher, SaltPeer
 from salt.cluster.consensus.raft import AsyncTimeoutScheduler, Node
 from salt.cluster.consensus.raft.log import (
@@ -57,6 +58,33 @@ log = logging.getLogger(__name__)
 # follower election timeout floor (~0.15 s per gettimeout defaults).
 _HEARTBEAT_INTERVAL = 0.05
 
+# Rolling-upgrade protocol-version gate (RFC
+# ``rfcs/master-topology.md`` --- "Rolling-upgrade protocol-version
+# gate").  Topology-aware peers advertise this version at Raft join
+# time; pre-topology peers implicitly advertise 0 (no field in their
+# join payload).  Every ``MASTER_*`` propose site is gated on the
+# cluster-wide minimum being ``>= TOPOLOGY_PROTOCOL_VERSION``.
+TOPOLOGY_PROTOCOL_VERSION = 1
+
+
+class MixedVersionClusterError(RuntimeError):
+    """
+    Raised when a ``MASTER_*`` propose is attempted on a cluster where
+    one or more voters still advertise the pre-topology protocol
+    version.
+
+    The message names the laggard voter(s) so operators know which
+    peer to upgrade first.  :mod:`salt.key` catches this and surfaces
+    a clean operator-visible error from ``salt-key -a --master``;
+    :mod:`salt.topology.link_manager` catches it from its
+    ``_master_auth`` propose path and logs a WARNING with the same
+    information.
+
+    No partial state: the propose has not reached the Raft log, so
+    the apply handler never runs and no on-disk ``masters_pre/`` ->
+    ``masters/`` rename is attempted.
+    """
+
 
 class RaftService:
     """
@@ -64,10 +92,10 @@ class RaftService:
 
     :param opts:         Salt master opts dict.
     :param loop:         The *asyncio* event loop running in this process.
-    :param peer_pushers: ``dict[peer_addr, PublishServer]`` - the pushers
+    :param peer_pushers: ``dict[peer_id, PublishServer]`` - the pushers
                          ``_publish_daemon`` already created, keyed by the
-                         peer's interface address (``opts["cluster_peers"]``
-                         entry).
+                         peer's node-id (its ``opts["cluster_peers"]``
+                         entry; see :func:`salt.cluster.node_id`).
     """
 
     def __init__(self, opts, loop, peer_pushers, voting=True, on_ready=None):
@@ -75,12 +103,23 @@ class RaftService:
         self.loop = loop
         self._peer_pushers = dict(peer_pushers)  # addr -> PublishServer (mutable copy)
         self._on_ready = on_ready
+        # Local master's advertised protocol version.  Pre-topology
+        # peers never set this attribute, so they implicitly advertise
+        # version 0 (``MembershipStateMachine.PROTOCOL_VERSION_PRE_TOPOLOGY``)
+        # in their CONFIG join payloads.  Topology-aware peers --- this
+        # branch --- default to ``TOPOLOGY_PROTOCOL_VERSION``.  Operators
+        # can override via ``opts["cluster_protocol_version"]`` for
+        # staged rollout testing; the gate still enforces that every
+        # voter advertise at least ``TOPOLOGY_PROTOCOL_VERSION`` before
+        # a ``MASTER_*`` propose succeeds.
+        self.protocol_version = int(
+            opts.get("cluster_protocol_version", TOPOLOGY_PROTOCOL_VERSION)
+        )
 
-        # Use the interface address as the Raft node-id so it matches the
-        # keys in cluster_peers and the peer_pushers dict.  opts["id"] is
-        # the hostname which remote masters do not share; the interface
-        # address is the consistent cluster-wide identity.
-        node_id = opts["interface"]
+        # The Raft node-id has to match the keys in cluster_peers and the
+        # peer_pushers dict, which is exactly the identity the peer handshake
+        # exchanges as ``peer_id``.
+        node_id = salt.cluster.node_id(opts)
         storage = SaltStorage(node_id, opts)
         # voting=False means this node joined dynamically and must wait for a
         # CONFIG entry from the leader before participating in elections.
@@ -189,14 +228,48 @@ class RaftService:
         # for addresses that appear in CONFIG entries (covers learner->voter path).
         self._node.register_peer_factory(self._make_peer)
 
-        # peer_pushers is keyed by interface address, matching the
-        # callback_node field written into RPC envelopes.  Hand the
+        # peer_pushers is keyed by node-id, matching the callback_node
+        # field written into RPC envelopes.  Hand the
         # dispatcher the full ``_nodes`` dict so that inbound RPCs are
         # routed by ``raft_group_id``; passing ``self._nodes``
         # (instead of a bare ``self._node``) means subsequent
         # ``register_ring_node`` calls are visible to the dispatcher
         # without extra plumbing.
         self._dispatcher = RaftDispatcher(self._nodes, node_id, self._peer_pushers)
+
+        # Readiness is sticky across RaftService restarts.  The primary
+        # recovery path is ``Log.__init__`` loading the persisted
+        # ``commit_index`` from ``state.p`` and this call to
+        # ``apply_entries`` driving every registered state machine —
+        # membership, ring registry, routing, and the application SM —
+        # through the on-disk committed suffix.  Every registration
+        # (``ring_registry_sm``, ``routing_sm``) has completed above, so
+        # the replay fans out to all of them atomically.
+        #
+        # Raft safety (§5.4) forbids a newly-elected leader from
+        # committing CONFIG entries written in prior terms via
+        # ``advance_commit_index`` — that rule is about CLIENT-VISIBILITY
+        # of still-uncommitted entries, not local durability.  Entries
+        # that this node already persisted at a known-good
+        # ``commit_index`` are safe to re-apply (the SMs are idempotent
+        # under ``_applied_config_index`` / ``_applied_index`` guards).
+        if self._node.log.commit_index > self._node.log.last_applied:
+            log.info(
+                "RaftService: replaying committed suffix on startup "
+                "(commit_index=%s, last_applied=%s)",
+                self._node.log.commit_index,
+                self._node.log.last_applied,
+            )
+            self._node.apply_entries()
+
+        # Defence-in-depth seed for state records written before
+        # ``commit_index`` persistence was added.  On a cleanly
+        # upgraded node ``apply_entries`` above has already populated
+        # ``membership_sm`` and the seed early-returns at the
+        # ``current_voters()`` guard.  On a mixed-vintage state file
+        # (pre-upgrade ``state.p``), the seed is the recovery path that
+        # keeps the cluster-ready gate from latching closed.
+        self._seed_membership_from_log()
 
         # If Node started from a saved snapshot the membership SM was
         # restored before this on_change wiring existed, so the cluster-
@@ -251,6 +324,84 @@ class RaftService:
             )
             self._on_ready()
             self._on_ready = None  # fire only once
+
+    def _seed_membership_from_log(self):
+        """
+        Populate ``membership_sm`` from the latest CONFIG entry on disk
+        so ``reconcile_membership`` sees the restored voter view.
+
+        Defence-in-depth path kept for state files written before
+        ``commit_index`` persistence was added.  On a cleanly upgraded node
+        ``Log.__init__`` restores ``commit_index`` from ``state.p`` and
+        ``RaftService.__init__`` drives ``apply_entries`` directly —
+        making this seed a no-op because the SM is already populated
+        (``current_voters()`` guard below).  When a master upgrades
+        with an on-disk state file that pre-dates commit_index
+        persistence, this seed is the fallback that keeps the
+        cluster-ready gate from latching closed.
+
+        Only the latest on-disk CONFIG index is applied — the SM is a
+        pure store (last write wins) and newer AppendEntries will
+        converge any stale view.  ``on_change`` is stashed during the
+        seed so ``reconcile_membership`` remains the single call site
+        that drives ``_on_membership_change``.  A no-op when the log
+        is empty, when no CONFIG is present, or when the SM has
+        already been populated by a snapshot restore / replay.
+        """
+        if self._node.log is None or not self._node.log.entries:
+            return
+        if self._node.membership_sm.current_voters():
+            return
+        # Bound the seed by ``commit_index`` when it's persisted.
+        # Applying an *uncommitted* CONFIG (an entry the leader wrote
+        # but never committed, e.g. after a late crash pre-commit)
+        # would pin ``_applied_config_index`` above ``commit_index``
+        # and later suppress a legitimately-committed CONFIG at the
+        # same index arriving from a new leader.  A state file
+        # written before commit_index persistence reads ``-1`` from
+        # ``load_state`` — in that case fall back to the historical
+        # "latest on-disk CONFIG" behaviour, which is safe because a
+        # cluster that was previously up had its CONFIG entries
+        # committed before they reached disk via normal AppendEntries.
+        commit_bound = self._node.log.commit_index
+        latest_config = None
+        for entry in self._node.log.entries:
+            if entry.type != LogEntryType.CONFIG:
+                continue
+            if commit_bound >= 0 and entry.index > commit_bound:
+                continue
+            latest_config = entry
+        if latest_config is None:
+            return
+        cmd = latest_config.cmd
+        if isinstance(cmd, (bytes, bytearray, memoryview)):
+            try:
+                import json  # pylint: disable=import-outside-toplevel
+
+                cmd = json.loads(bytes(cmd).decode("utf-8"))
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "RaftService: could not decode on-disk CONFIG entry at index %s",
+                    latest_config.index,
+                )
+                return
+        log.info(
+            "RaftService: seeding membership_sm from on-disk CONFIG at index %s",
+            latest_config.index,
+        )
+        # Suppress on_change for the seed apply; reconcile_membership
+        # (called right after this) is the single site that fans out
+        # to _on_membership_change / on_config_change.  Also bump
+        # Node._applied_config_index so a future AppendEntries carrying
+        # an older CONFIG cannot downgrade this restored view.
+        saved_on_change = self._node.membership_sm.on_change
+        self._node.membership_sm.on_change = None
+        try:
+            self._node.membership_sm.apply(cmd, index=latest_config.index)
+        finally:
+            self._node.membership_sm.on_change = saved_on_change
+        if latest_config.index > self._node._applied_config_index:
+            self._node._applied_config_index = latest_config.index
 
     def _on_ring_registry_change(self, ring_id, founding_voters, status):
         """
@@ -563,6 +714,126 @@ class RaftService:
         cmd = {"ring_id": ring_id, "status": RING_STATUS_DESTROYED}
         self._node.log_add(cmd, entry_type=LogEntryType.RING_REGISTRY)
 
+    # ------------------------------------------------------------------
+    # Rolling-upgrade protocol-version gate (RFC master-topology.md)
+    # ------------------------------------------------------------------
+
+    def _min_cluster_protocol_version(self):
+        """
+        Return the minimum advertised protocol version across the
+        committed voter set of the cluster Raft group.
+
+        Delegates to :meth:`MembershipStateMachine.min_protocol_version`,
+        which treats voters with no advertisement as pre-topology (0).
+        Learners are excluded: a laggard learner cannot block a
+        ``MASTER_*`` commit because learners don't count toward quorum.
+        """
+        return self._node.membership_sm.min_protocol_version()
+
+    def _laggard_voters(self):
+        """Return the sorted list of voters below ``TOPOLOGY_PROTOCOL_VERSION``."""
+        return self._node.membership_sm.laggard_voters(TOPOLOGY_PROTOCOL_VERSION)
+
+    def _enforce_topology_protocol_gate(self, operation):
+        """
+        Raise :class:`MixedVersionClusterError` if any current voter
+        advertises below :data:`TOPOLOGY_PROTOCOL_VERSION`.
+
+        Called by every ``MASTER_*`` propose site before touching the
+        Raft log.  *operation* names the operator-visible action
+        (e.g. ``"accept"``, ``"revoke"``) so the error message can
+        tell the operator which salt-key command tripped the gate.
+        """
+        min_version = self._min_cluster_protocol_version()
+        if min_version >= TOPOLOGY_PROTOCOL_VERSION:
+            return
+        laggards = self._laggard_voters()
+        raise MixedVersionClusterError(
+            f"cannot {operation} peer master: cluster peer(s) still "
+            f"advertise pre-topology protocol version "
+            f"(min={min_version}, required={TOPOLOGY_PROTOCOL_VERSION}); "
+            f"finish rolling upgrade first (laggards: {laggards})"
+        )
+
+    def propose_peer_attach(
+        self,
+        cluster_id,
+        public_key,
+        endpoints=(),
+        attached_at=0.0,
+        **kwargs,
+    ):
+        """
+        Propose a ``MASTER_PEER_ATTACH`` entry on the cluster Raft log.
+
+        Gated: :class:`MixedVersionClusterError` is raised before the
+        propose is attempted if any current voter still advertises the
+        pre-topology protocol version.  The caller
+        (:mod:`salt.key.Key.accept_master` and
+        :mod:`salt.topology.link_manager`) is expected to surface the
+        error cleanly to the operator; no on-disk state is mutated
+        when the gate trips.
+        """
+        self._enforce_topology_protocol_gate("accept")
+        cmd = {
+            "type": LogEntryType.MASTER_PEER_ATTACH,
+            "cluster_id": cluster_id,
+            "public_key": public_key,
+            "endpoints": tuple(endpoints),
+            "attached_at": float(attached_at),
+        }
+        cmd.update(kwargs)
+        self._node.log_add(cmd, entry_type=LogEntryType.MASTER_PEER_ATTACH)
+
+    def propose_peer_detach(self, cluster_id, reason="revoked", **kwargs):
+        """
+        Propose a ``MASTER_PEER_DETACH`` entry on the cluster Raft log.
+
+        Gated by :data:`TOPOLOGY_PROTOCOL_VERSION`, same contract as
+        :meth:`propose_peer_attach`.
+        """
+        self._enforce_topology_protocol_gate("revoke")
+        cmd = {
+            "type": LogEntryType.MASTER_PEER_DETACH,
+            "cluster_id": cluster_id,
+            "reason": reason,
+        }
+        cmd.update(kwargs)
+        self._node.log_add(cmd, entry_type=LogEntryType.MASTER_PEER_DETACH)
+
+    def _build_protocol_versions_map(self, extra_entry=None, voters=(), learners=()):
+        """
+        Build the ``protocol_versions`` dict to attach to a CONFIG entry.
+
+        Starts from the committed per-node versions already recorded in
+        the :class:`MembershipStateMachine` (so the entry doesn't drop
+        laggards' versions and silently relax the gate).  Pins the
+        local master's version to :attr:`protocol_version`.  If
+        *extra_entry* is a ``(node_id, version)`` tuple with a
+        non-``None`` version, that entry is added too --- used by
+        :meth:`notify_peer_joined` to record a learner's advertised
+        version in the same CONFIG that registers them.
+
+        Only entries whose node_id appears in *voters* or *learners*
+        are kept, mirroring the SM's own pruning on apply.
+        """
+        current = set(voters) | set(learners)
+        merged = {
+            node_id: version
+            for node_id, version in self._node.membership_sm.protocol_versions().items()
+            if node_id in current
+        }
+        if self._node.node_id in current:
+            merged[self._node.node_id] = self.protocol_version
+        if extra_entry is not None:
+            node_id, version = extra_entry
+            if node_id in current and version is not None:
+                try:
+                    merged[node_id] = int(version)
+                except (TypeError, ValueError):
+                    pass
+        return merged
+
     def propose_route(self, data_type, ring_id):
         """
         Propose a ``ROUTE`` entry mapping *data_type* to *ring_id*.
@@ -623,7 +894,7 @@ class RaftService:
         return SaltPeer(
             addr,
             pusher,
-            self.opts["interface"],
+            salt.cluster.node_id(self.opts),
             voting=voting,
             raft_group_id=raft_group_id,
         )
@@ -875,7 +1146,7 @@ class RaftService:
         log.info("RaftService: operator-requested promotion of %s", peer_id)
         return self._node.propose_voter_promotion_to_replace(peer_id)
 
-    def notify_peer_joined(self, peer_addr):
+    def notify_peer_joined(self, peer_addr, peer_protocol_version=None):
         """
         Called when a new master completes the Salt cluster join handshake.
 
@@ -889,9 +1160,15 @@ class RaftService:
         list so it will receive ``AppendEntries`` from whichever node
         eventually becomes leader.
 
-        :param peer_addr: The joining master's interface address - the same
-                          value used as ``join_peer_id`` in the
+        :param peer_addr: The joining master's node-id - the same value
+                          used as ``join_peer_id`` in the
                           ``cluster/peer/join-notify`` envelope.
+        :param peer_protocol_version: Protocol version the joiner
+                          advertised at Raft join time.  ``None`` (the
+                          default) means "no advertisement", which the
+                          :class:`MembershipStateMachine` treats as the
+                          pre-topology version.  Topology-aware peers
+                          pass :data:`TOPOLOGY_PROTOCOL_VERSION`.
         """
         node_id = self._node.node_id
         if peer_addr == node_id:
@@ -969,9 +1246,22 @@ class RaftService:
                 peer_addr in current_voters_sm or peer_addr in current_learners_sm
             )
             if not already_known and peer_addr in learners:
+                # Carry forward every already-advertised protocol
+                # version so a learner-registration CONFIG does not
+                # silently drop earlier voters' versions.  The joining
+                # peer's version comes from the kwarg; absent means
+                # pre-topology.
                 try:
                     self._node.log_add(
-                        {"voters": voters, "learners": learners},
+                        {
+                            "voters": voters,
+                            "learners": learners,
+                            "protocol_versions": self._build_protocol_versions_map(
+                                extra_entry=(peer_addr, peer_protocol_version),
+                                voters=voters,
+                                learners=learners,
+                            ),
+                        },
                         entry_type=LogEntryType.CONFIG,
                     )
                 except Exception:  # pylint: disable=broad-except
@@ -1085,12 +1375,12 @@ class RaftService:
 
         if ring_id == "cluster":
             # Deterministic bootstrap pool: sorted set of
-            # {this node} ∪ peer addresses.  Every prospective
+            # {this node} ∪ peer node-ids.  Every prospective
             # founder runs this code, but only the deterministic
-            # founder (lowest interface in the pool; see
-            # ``salt/master.py:920`` and
-            # ``salt/channel/server.py:2101``) actually writes the
-            # CONFIG.
+            # founder (lowest node-id in the pool; see
+            # ``salt.master.Master.start`` and
+            # ``MasterPubServerChannel._publish_daemon``) actually
+            # writes the CONFIG.
             bootstrap_pool = sorted({node.node_id, *[p.node_id for p in node.peers]})
         else:
             # Per-ring founders come from the registry entry on the
@@ -1119,9 +1409,18 @@ class RaftService:
             voters,
             learners,
         )
+        # Founding CONFIG only knows this master's advertised version;
+        # other founders will overwrite their own entries when their
+        # Raft join lands.  Absent entries map to pre-topology on the
+        # SM side, so a mixed-version bootstrap defaults closed.
+        protocol_versions = {node.node_id: self.protocol_version}
         try:
             node.log_add(
-                {"voters": voters, "learners": learners},
+                {
+                    "voters": voters,
+                    "learners": learners,
+                    "protocol_versions": protocol_versions,
+                },
                 entry_type=LogEntryType.CONFIG,
             )
         except Exception:  # pylint: disable=broad-except
@@ -1131,15 +1430,38 @@ class RaftService:
 def build_peer_pushers(opts, pushers_list):
     """
     Convert the flat ``pushers`` list from ``_publish_daemon`` into the
-    ``dict[addr, PublishServer]`` that ``RaftService`` expects.
+    ``dict[peer_id, PublishServer]`` that ``RaftService`` expects.
 
-    ``_publish_daemon`` builds ``self.pushers`` as a plain list of
-    ``PublishServer`` objects in the same order as
-    ``opts["cluster_peers"]``.  This helper pairs them back up.
+    Keys the dict by each pusher's own ``pull_host`` attribute (set
+    from the ``cluster_peers`` entry when the pusher was constructed in
+    ``_publish_daemon``).  Using ``pull_host`` directly — rather than
+    ``zip``-ing against ``opts["cluster_peers"]`` — is resilient to two
+    classes of desync that silently broke the Raft dispatcher's pusher
+    table:
 
-    :param opts:          Salt master opts.
+    * ``self.pushers`` is deduplicated by ``_add_pusher``; join /
+      discover handlers append to ``self.cluster_peers`` without a
+      dedup check, so ``opts["cluster_peers"]`` can carry a duplicate
+      entry while ``self.pushers`` does not.  A ``zip`` then truncates
+      and the tail entry of ``cluster_peers`` gets no pusher — inbound
+      Raft RPCs from that peer log ``no pusher for <peer_id>, dropping
+      <tag> reply`` and pre-vote / append-entries replies are lost.
+    * ``cluster_peers`` entries can carry an explicit ``host:port``
+      suffix (``peer.rsplit(":", 1)`` branch in ``_publish_daemon``)
+      while the pusher's ``pull_host`` is just ``host``.  A ``zip``
+      produces ``"host:port"`` as the pusher-table key while the
+      dispatcher looks up ``"host"`` (the sender's ``callback_node`` =
+      its ``node_id``), which never matches.
+
+    Mirrors ``_start_raft_as_learner``'s already-robust pattern
+    (``{p.pull_host: p for p in self.pushers}``), unifying all three
+    pusher-dict construction sites on the same keying strategy.
+
+    :param opts:          Salt master opts (unused; kept for API
+                          compatibility with the earlier zip-based shape).
     :param pushers_list:  ``self.pushers`` from ``_publish_daemon``.
-    :returns:             ``{peer_addr: PublishServer}``
+    :returns:             ``{peer_id: PublishServer}``
     """
-    peers = opts.get("cluster_peers", [])
-    return dict(zip(peers, pushers_list))
+    # ``opts`` is intentionally ignored: pull_host is authoritative.
+    del opts  # noqa: F841 - kept for API compatibility
+    return {p.pull_host: p for p in pushers_list}

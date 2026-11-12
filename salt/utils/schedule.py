@@ -800,6 +800,11 @@ class Schedule:
 
         data_returner = data.get("returner", None)
 
+        # Only created for master-role jobs, and only once the function has
+        # been validated. Initialize here so the ``finally`` cleanup below can
+        # run even if the job fails before the event is created.
+        namespaced_event = None
+
         # Salt-internal scheduled jobs use the ``__``-prefix convention on
         # their schedule key (``__mine_interval``, ``__master_alive_*``,
         # ``__master_failback``, ``__ping_master``) -- see
@@ -1004,8 +1009,11 @@ class Schedule:
                     finally:
                         event.destroy()
 
-            if self.opts["__role"] == "master":
-                namespaced_event.destroy()
+            if namespaced_event is not None:
+                try:
+                    namespaced_event.destroy()
+                except Exception:  # pylint: disable=broad-except
+                    log.exception("Unhandled exception destroying namespaced event")
 
             if not self.standalone:
                 log.debug("schedule.handle_func: Removing %s", proc_fn)

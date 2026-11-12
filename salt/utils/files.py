@@ -217,21 +217,24 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     if backup_mode == "master" or backup_mode == "both" and bkroot:
         # TODO, backup to master
         pass
-    # Get current file stats to they can be replicated after the new file is
-    # moved to the destination path.
-    fstat = None
-    # We must check for platform availability first, or use a conditional import
-    # salt.utils.platform is available, but if this function is called early, it might fail?
-    # Actually, the error says 'salt' variable is used before assignment.
-    # This means 'import salt.utils.platform' is likely missing or 'salt' is not in scope.
-    # But this file starts with 'import salt.utils.platform'.
-    # Ah, 'import salt.utils.platform' is NOT at the top level of this file in the provided context?
-    # Let me check the imports.
+    # Get current file stats so they can be applied to the temp file BEFORE
+    # it is moved to the destination path. This eliminates a race condition
+    # where inotify-based services (e.g. nscd) detect the new file with
+    # mkstemp's default 0600 permissions before chown/chmod can restore
+    # them, causing "Permission denied" on inotify re-watch.
     if not salt.utils.platform.is_windows():
         try:
             fstat = os.stat(dest)
         except OSError:
-            pass
+            # dest does not exist yet; nothing to preserve
+            fstat = None
+        if fstat is not None:
+            try:
+                os.chown(tgt, fstat.st_uid, fstat.st_gid)
+                os.chmod(tgt, fstat.st_mode)
+            except OSError:
+                __clean_tmp(tgt)
+                raise
 
     # The move could fail if the dest has xattr protections, so delete the
     # temp file in this case
@@ -240,10 +243,6 @@ def copyfile(source, dest, backup_mode="", cachedir=""):
     except Exception:  # pylint: disable=broad-except
         __clean_tmp(tgt)
         raise
-
-    if fstat is not None:
-        os.chown(dest, fstat.st_uid, fstat.st_gid)
-        os.chmod(dest, fstat.st_mode)
     # If SELINUX is available run a restorecon on the file
     rcon = salt.utils.path.which("restorecon")
     if rcon:
@@ -980,6 +979,43 @@ def case_insensitive_filesystem(path=None):
     """
     with tempfile.NamedTemporaryFile(prefix="TmP", dir=path, delete=True) as tmp_file:
         return os.path.exists(tmp_file.name.lower())
+
+
+def get_bom_encoding(path):
+    """
+    Return the codec named by a UTF-8, UTF-16 or UTF-32 byte order mark (BOM)
+    at the start of a file, otherwise ``None``.
+
+    UTF-16 and UTF-32 files contain null bytes, so :py:func:`is_text` treats
+    them as binary. The codecs returned keep the BOM as ``U+FEFF`` when
+    decoding and never add one when encoding.
+
+    .. versionadded:: 3008.5
+
+    Args:
+
+        path (str): The path to the file to check
+
+    Returns:
+        str: ``UTF-32-LE``, ``UTF-32-BE``, ``UTF-16-LE``, ``UTF-16-BE``,
+        ``UTF-8`` or ``None``
+    """
+    try:
+        with fopen(path, "rb") as fp_:
+            data = fp_.read(4)
+    except OSError:
+        return None
+    # The UTF-32-LE BOM starts with the UTF-16-LE BOM, so check UTF-32 first
+    for encoding, bom in (
+        ("UTF-32-LE", codecs.BOM_UTF32_LE),
+        ("UTF-32-BE", codecs.BOM_UTF32_BE),
+        ("UTF-16-LE", codecs.BOM_UTF16_LE),
+        ("UTF-16-BE", codecs.BOM_UTF16_BE),
+        ("UTF-8", codecs.BOM_UTF8),
+    ):
+        if data.startswith(bom):
+            return encoding
+    return None
 
 
 def get_encoding(path):

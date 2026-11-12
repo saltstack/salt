@@ -8,6 +8,20 @@ setup.py:
   - pytests.scenarios.setup.test_man
   - pytests.scenarios.setup.test_install
 
+salt/__init__.py:
+  - pytests.unit.test_nacl_importer
+
+salt/(modules|runners|pillar|renderers|utils)/nacl\.py:
+  - pytests.unit.modules.test_nacl
+  - pytests.unit.runners.test_nacl
+  - pytests.unit.pillar.test_nacl
+  - pytests.unit.renderers.test_nacl
+  - pytests.unit.utils.test_nacl
+  - pytests.unit.utils.test_nacl_permissions
+  - pytests.unit.test_nacl_files
+  - pytests.integration.runners.test_nacl
+  - pytests.integration.pillar.test_nacl
+
 salt/_logging/(impl|handlers).py:
   - pytests.integration._logging.test_jid_logging
   - pytests.integration._logging.test_multiple_processes_logging
@@ -117,8 +131,45 @@ salt/cache/*:
   - pytests.functional.cache.test_mysql
   - pytests.functional.cache.test_redis
 
+salt/utils/etcd_util.py:
+  - pytests.unit.utils.test_etcd_util
+  - pytests.functional.utils.test_etcd_util
+  - pytests.unit.modules.test_etcd_mod
+  - pytests.functional.modules.test_etcd_mod
+  - pytests.unit.states.test_etcd_mod
+  - pytests.functional.states.test_etcd_mod
+  - pytests.unit.cache.test_etcd3_cache
+  - pytests.functional.cache.test_etcd3
+  - pytests.integration.cache.test_etcd3_cache
+  - pytests.unit.sdb.test_etcd_db
+  - pytests.functional.sdb.test_etcd_db
+  - pytests.integration.sdb.test_etcd_db
+  - pytests.unit.pillar.test_etcd_pillar
+  - pytests.functional.pillar.test_etcd_pillar
+  - pytests.unit.returners.test_etcd_return
+  - pytests.functional.returners.test_etcd_return
+  - pytests.integration.returners.test_etcd_return
+
+salt/returners/etcd_return.py:
+  - pytests.unit.returners.test_etcd_return
+  - pytests.functional.returners.test_etcd_return
+  - pytests.integration.returners.test_etcd_return
+
+salt/sdb/etcd_db.py:
+  - pytests.unit.sdb.test_etcd_db
+  - pytests.functional.sdb.test_etcd_db
+  - pytests.integration.sdb.test_etcd_db
+
+salt/pillar/etcd_pillar.py:
+  - pytests.unit.pillar.test_etcd_pillar
+  - pytests.functional.pillar.test_etcd_pillar
+
 salt/cli/*:
   - integration.shell.test_arguments
+
+salt/cli/batch_async.py:
+  - pytests.integration.cli.test_batch_async
+  - pytests.unit.cli.test_batch_async
 
 salt/cli/call.py:
   - pytests.integration.cli.test_salt_call
@@ -163,11 +214,15 @@ salt/proxy/*:
 
 salt/state.py:
   - pytests.functional.modules.state.test_jinja_filters
+  - pytests.integration.states.test_arg_kinds
   - integration.states.test_compiler
   - integration.states.test_handle_error
   - integration.states.test_handle_iorder
   - integration.states.test_match
   - integration.states.test_renderers
+
+salt/states/module.py:
+  - pytests.integration.states.test_arg_kinds
 
 salt/utils/decorators/*:
   - integration.modules.test_decorators
@@ -176,9 +231,20 @@ salt/(utils|renderers)/jinja\.py:
   - pytests.functional.modules.state.test_jinja_filters
   - integration.states.test_renderers
 
+salt/utils/(args|functools)\.py:
+  - pytests.integration.modules.test_arg_kinds
+  - pytests.integration.states.test_arg_kinds
+
 salt/utils/metrics.py:
   - pytests.functional.utils.test_metrics_otlp_instances
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
   - pytests.unit.utils.test_metrics
+  - pytests.unit.utils.test_metrics_prometheus
+
+salt/utils/metrics_prometheus.py:
+  - pytests.functional.utils.test_metrics_prometheus_multiprocess
+  - pytests.unit.utils.test_metrics
+  - pytests.unit.utils.test_metrics_prometheus
 
 salt/utils/channel.py:
   - pytests.unit.utils.test_channel
@@ -238,6 +304,7 @@ salt/minion.py:
   - pytests.functional.pillar.test_top
   - pytests.functional.pillar.test_gpg
   - pytests.integration.modules.test_pillar
+  - pytests.unit.utils.test_metrics_prometheus
 
 salt/modules/*_sysctl.py:
   - pytests.unit.states.test_sysctl
@@ -329,6 +396,7 @@ salt/channel/client.py:
   - pytests.functional.channel.test_client
 
 salt/(minion\.py|channel/.+|transport/.+):
+  - pytests.functional.utils.test_asynchronous
   - pytests.scenarios.multimaster.test_multimaster
   - pytests.scenarios.multimaster.test_offline_master
   - pytests.scenarios.multimaster.beacons.test_inotify
@@ -341,6 +409,9 @@ salt/transport/tcp.py:
   - pytests.unit.transport.test_tcp
   - pytests.functional.transport.tcp.test_pub_server
   - pytests.functional.transport.tcp.test_async_publisher
+
+salt/crypt.py:
+  - pytests.functional.utils.test_asynchronous
 
 tests/support/mock.py:
   - unit.test_mock
