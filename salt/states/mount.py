@@ -1145,6 +1145,10 @@ def fstab_present(
     fs_file
         Mount point (target) for the filesystem.
 
+        Spaces and tabs in ``name``, ``fs_file`` and ``fs_mntops`` are escaped
+        automatically (as ``\\040`` and ``\\011``) when the entry is written, so
+        write them as plain characters.
+
     fs_vfstype
         The type of the filesystem (e.g. ext4, xfs, btrfs, ...)
 

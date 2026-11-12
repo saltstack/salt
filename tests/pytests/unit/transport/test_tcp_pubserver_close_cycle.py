@@ -210,3 +210,50 @@ async def test_discard_on_close_pops_writers_entry_and_cancels_drainer(
         assert subscriber._read_task is None
     finally:
         server.close()
+
+
+async def test_close_does_not_leave_pending_drain_tasks(master_opts, io_loop):
+    """
+    Regression for the ``Task was destroyed but it is pending!`` warnings
+    observed on salt-minion SIGTERM teardown::
+
+        Task was destroyed but it is pending!
+        task: <Task pending name='...' coro=<PubServer._drain_loop() ...>>
+
+    ``PubServer.close()`` cancels every drain-loop task in ``_writers``,
+    but because it is a sync call it did not drive the event loop long
+    enough for the cancellation to be delivered -- the tasks stayed in
+    the ``cancelling`` state and asyncio printed the GC warning when the
+    loop was torn down.
+
+    After the fix, ``close()`` routes cancelled drain tasks through
+    ``_drain_cancelled_tasks``, which suppresses the pending-destroy GC
+    warning (by clearing ``task._log_destroy_pending``) when it cannot
+    drive the loop synchronously.
+    """
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop)
+    stream = _EOFStream()
+    subscriber = salt.transport.tcp.Subscriber(stream, "drain-client")
+    server.clients.add(subscriber)
+
+    # Prime the drainer so there is a live _drain_loop Task to cancel.
+    queue, drain_task = server._get_or_create_drainer(subscriber)
+    assert not drain_task.done()
+
+    # close() is called from within the running loop (SIGTERM handler
+    # path on live minions), so _drain_cancelled_tasks falls through to
+    # the ``_log_destroy_pending = False`` branch.
+    server.close()
+
+    # The task is cancelled, but the cancellation may not yet have been
+    # delivered to the coroutine.  The important assertion is that the
+    # GC-warning flag has been suppressed so the user doesn't see
+    # "Task was destroyed but it is pending!" on process exit.
+    assert drain_task.cancelled() or drain_task._log_destroy_pending is False, (
+        "PubServer.close() left the drain-loop Task in a state that would "
+        "trigger ``Task was destroyed but it is pending!`` on loop teardown"
+    )
+
+    # Give the loop a turn so the cancellation is delivered cleanly for
+    # the rest of the test suite.
+    await asyncio.sleep(0)

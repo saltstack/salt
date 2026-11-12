@@ -4,12 +4,14 @@ Tests for the SyndicManager and Syndic classes in minion.py
 
 import asyncio
 import collections
+import logging
 
 import pytest
 
+import salt.crypt
 import salt.exceptions
 import salt.minion
-from tests.support.mock import MagicMock, call
+from tests.support.mock import MagicMock, call, patch
 
 
 def _syndic_manager(opts=None):
@@ -321,6 +323,168 @@ def test_return_pub_syndic_exception_is_retried():
         syndic_manager.pub_futures["master1"][0].exception(),
         salt.exceptions.SaltClientError,
     )
+
+
+def test_cluster_not_ready_detector_matches_deadline_message():
+    """
+    ``AsyncReqChannel._crypted_transfer`` raises
+    ``AuthenticationError("master cluster is not ready")`` when its retry
+    loop runs past the deadline — a different, non-suffixed message than
+    the pillar path uses.  The detector must recognize both so non-pillar
+    callers get the same quiet-retry treatment (follow-up to #70727).
+    """
+    from salt.channel.client import (
+        CLUSTER_NOT_READY_DEADLINE_MESSAGE,
+        CLUSTER_NOT_READY_SUFFIX,
+        _is_cluster_not_ready_message,
+    )
+
+    # Deadline-exceeded form (generic transfer path).
+    assert _is_cluster_not_ready_message(CLUSTER_NOT_READY_DEADLINE_MESSAGE) is True
+    # Suffix form (pillar dictentry path — pre-existing contract).
+    assert (
+        _is_cluster_not_ready_message(
+            "Master did not return a session key for pillar request"
+            + CLUSTER_NOT_READY_SUFFIX
+        )
+        is True
+    )
+    # Near-misses must not match — a plain "cluster" word is not enough.
+    assert _is_cluster_not_ready_message("the cluster is not ready for you") is False
+    assert _is_cluster_not_ready_message("master cluster is not ready now") is False
+
+
+async def test_connect_syndic_cluster_not_ready_is_quiet(caplog):
+    """
+    Regression test for the non-pillar follow-up to #70727.
+
+    ``SyndicManager._connect_syndic``'s connect loop drives the same
+    pillar-fetch path as ``MinionManager._connect_minion`` (via
+    ``connect_master`` → ``_post_master_init`` → ``compile_pillar``) and
+    therefore inherits the ``cluster_retry`` ``__cause__`` chain Alpha
+    built.  When the cause carries the cluster-not-ready sentinel, the
+    loop must log a single ``INFO`` retry notice — not the alarming
+    ``ERROR`` + "Is the master at %s responding?" line.
+    """
+    from salt.channel.client import CLUSTER_NOT_READY_SUFFIX
+
+    opts = {
+        "conf_file": "conf/minion",
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "syndic_failover": "ordered",
+        "syndic_retries": 3,
+        "master": "cluster-master-1",
+    }
+    sm = salt.minion.SyndicManager(opts)
+    sm.max_auth_wait = 0
+    sm.auth_wait = 0
+    sm.SYNDIC_CONNECT_TIMEOUT = 1
+
+    auth_exc = salt.crypt.AuthenticationError(
+        "Master did not return a session key for pillar request"
+        + CLUSTER_NOT_READY_SUFFIX
+    )
+    chained = salt.exceptions.SaltClientError("Exception getting pillar.")
+    chained.__cause__ = auth_exc
+
+    class _SyndicStub:
+        calls = 0
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def connect_master(self, failed=False):
+            _SyndicStub.calls += 1
+            if _SyndicStub.calls == 1:
+                raise chained
+            return True
+
+        def tune_in_no_block(self):
+            return None
+
+        def fire_master_syndic_start(self):
+            return None
+
+    with patch.object(salt.minion, "Syndic", _SyndicStub):
+        with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+            await sm._connect_syndic(opts)
+
+    assert _SyndicStub.calls == 2
+
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up syndic" in r.getMessage()
+    ]
+    assert error_records == [], (
+        "cluster-not-ready retry should not log the syndic bringing-up ERROR; "
+        f"got {[r.getMessage() for r in error_records]}"
+    )
+
+    info_records = [
+        r
+        for r in caplog.records
+        if r.levelno == logging.INFO
+        and "is still catching up (cluster not ready)" in r.getMessage()
+    ]
+    assert len(info_records) == 1, (
+        "cluster-not-ready retry should log exactly one INFO notice; "
+        f"got {[r.getMessage() for r in info_records]}"
+    )
+
+
+async def test_connect_syndic_non_cluster_salt_client_error_still_logs_error(caplog):
+    """
+    Non-cluster ``SaltClientError`` on the syndic connect loop must keep
+    the existing ERROR path — the quieting is scoped strictly to the
+    cluster-not-ready sentinel.
+    """
+    opts = {
+        "conf_file": "conf/minion",
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "syndic_failover": "ordered",
+        "syndic_retries": 3,
+        "master": "unreachable-master",
+    }
+    sm = salt.minion.SyndicManager(opts)
+    sm.max_auth_wait = 0
+    sm.auth_wait = 0
+    sm.SYNDIC_CONNECT_TIMEOUT = 1
+
+    class _SyndicStub:
+        calls = 0
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def connect_master(self, failed=False):
+            _SyndicStub.calls += 1
+            if _SyndicStub.calls == 1:
+                # Bare SaltClientError with no cluster-not-ready __cause__ —
+                # the "master is down" case operators must still see.
+                raise salt.exceptions.SaltClientError("boom, no cause")
+            return True
+
+        def tune_in_no_block(self):
+            return None
+
+        def fire_master_syndic_start(self):
+            return None
+
+    with patch.object(salt.minion, "Syndic", _SyndicStub):
+        with caplog.at_level(logging.DEBUG, logger="salt.minion"):
+            await sm._connect_syndic(opts)
+
+    error_records = [
+        r
+        for r in caplog.records
+        if r.levelno >= logging.ERROR
+        and "Error while bringing up syndic" in r.getMessage()
+    ]
+    assert len(error_records) == 1
 
 
 def test_mark_master_dead_schedules_reconnect():

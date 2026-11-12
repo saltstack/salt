@@ -26,3 +26,11 @@ Receiving security announcements
 For receiving security announcements, see the ``SECURITY.md`` file linked
 above. Notifications are sent to the ``salt-packagers``, ``salt-users`` and
 ``salt-announce`` mailing lists.
+
+Security operational guidance
+=============================
+
+.. toctree::
+    :maxdepth: 1
+
+    threat-model

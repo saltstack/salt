@@ -33,6 +33,8 @@ jobs:
 
     env:
       PRE_COMMIT_COLOR: always
+      # Local hooks compare with HEAD; PR checks compare with the target branch.
+      RUFF_BASE_REF: ${{ github.event.pull_request.base.sha || github.sha }}
 
     steps:
 
@@ -50,6 +52,11 @@ jobs:
           git config --global --add safe.directory "$(pwd)"
 
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Fetch Ruff comparison base
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin "$RUFF_BASE_REF"
+
       - uses: ./.github/actions/setup-actionlint
         with:
           cache-seed: ${{ inputs.cache-seed }}

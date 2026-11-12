@@ -3050,7 +3050,10 @@ class MasterPubServerChannel:
                     "sig": self.master_key.master_key.encrypt(digest),
                 }
             else:
-                log.warning("Peer key missing %r", peer_pub)
+                # A missing peer key is the expected transient state
+                # before cluster key exchange has completed; the next
+                # line schedules the fetch, so this is INFO, not WARNING.
+                log.info("Peer key missing %r", peer_pub)
                 # request peer key
                 data["peers"][peer] = {}
         with salt.utils.event.get_master_event(
@@ -3754,7 +3757,19 @@ class MasterPubServerChannel:
                         payload["peer_id"],
                     )
 
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list.
+                # ``self.cluster_peers`` is a reference to
+                # ``opts["cluster_peers"]`` (see ``__init__``), and a naive
+                # append on a join from a statically-configured peer would
+                # grow the list with a duplicate entry.  Any downstream code
+                # that iterates ``opts["cluster_peers"]`` positionally (the
+                # pre-BUG-030 shape of ``build_peer_pushers``) would then
+                # mis-key the Raft dispatcher's pusher table and silently
+                # drop inbound ``cluster/raft/*`` replies for the tail
+                # peer.  ``_add_pusher`` already dedups the pusher list by
+                # ``(pull_host, pull_port)``; mirror that here.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 self._add_pusher(self.pusher(payload["peer_id"]))
 
                 # Add the joining peer to our own Raft state as a learner.
@@ -3774,6 +3789,18 @@ class MasterPubServerChannel:
                         )
 
                 for pusher in self.pushers:
+                    # Don't send join-notify to the joiner itself; it
+                    # will receive the authoritative ``cluster_aes`` via
+                    # the join-reply below.  Sending at this point would
+                    # be encrypted with the ``cluster_aes`` the joiner
+                    # has not yet installed, producing a cosmetic but
+                    # noisy ``AuthenticationError`` in the joiner's log
+                    # ~80ms before the join-reply arrives.  The joiner
+                    # is added to ``self.pushers`` a few lines above
+                    # specifically so later broadcasts reach it; this
+                    # single-event skip is the narrowest fix.
+                    if pusher.pull_host == payload["peer_id"]:
+                        continue
                     # XXX Send new peer id and public key to other nodes
                     # XXX This needs to be able to be validated by receiveing peers
                     # XXX Send other nodes pub (and aes?) keys to new node
@@ -3948,7 +3975,11 @@ class MasterPubServerChannel:
                 sig = salt.crypt.PrivateKeyString(self.private_key()).sign(
                     tosign, algorithm=self.opts["publish_signing_algorithm"]
                 )
-                self.cluster_peers.append(payload["peer_id"])
+                # Dedup against the statically-configured peer list — see
+                # the matching guard in the join handler above for the
+                # BUG-030 rationale.
+                if payload["peer_id"] not in self.cluster_peers:
+                    self.cluster_peers.append(payload["peer_id"])
                 event_data = salt.utils.event.SaltEvent.pack(
                     salt.utils.event.tagify("join", "peer", "cluster"),
                     {"sig": sig, "payload": tosign},

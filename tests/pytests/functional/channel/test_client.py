@@ -26,6 +26,11 @@ async def test_async_pub_channel_connect_cb(minion_opts):
         mock.__aexit__ = AsyncMock(return_value=None)
 
         with patch("salt.channel.client.AsyncReqChannel.factory", return_value=mock):
+            # pylint: disable=not-callable
+            # pylint cannot resolve the return type through the
+            # AsyncPubChannel.factory classmethod and flags
+            # ``connect_callback`` as a non-callable attribute. It's an
+            # ``async def`` method on the concrete subclass.
             await channel.connect_callback(None)
             mock.send.assert_called_once()
             mock.__aexit__.assert_called_once()
