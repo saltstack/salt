@@ -4,7 +4,7 @@ import pytest
 
 import salt.modules.systemd_service as systemd
 import salt.utils.systemd
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, ServiceNotFoundError
 from tests.support.mock import MagicMock, patch
 
 
@@ -815,3 +815,24 @@ def test_systemctl_cmd_with_scope_and_systemd_run_not_found():
                     match="systemd-run is required.*but it was not found.*",
                 ):
                     systemd._systemctl_cmd("status", "sshd", systemd_scope=True)
+
+
+def test_check_available_unknown_version_missing_unit_localized_output():
+    """
+    With an undetectable systemd version and output that can't be parsed
+    (e.g. localized), exit status 4 still means the unit does not exist.
+    """
+    status = {"retcode": 4, "stdout": "Unit x.service konnte nicht gefunden werden."}
+    with patch.object(systemd, "offline", MagicMock(return_value=False)), patch.object(
+        systemd, "_systemctl_status", MagicMock(return_value=status)
+    ), patch.object(salt.utils.systemd, "version", MagicMock(return_value=None)):
+        assert systemd._check_available("x") is False
+
+
+def test_check_available_unknown_version_unparsable_output_raises():
+    status = {"retcode": 1, "stdout": "garbage"}
+    with patch.object(systemd, "offline", MagicMock(return_value=False)), patch.object(
+        systemd, "_systemctl_status", MagicMock(return_value=status)
+    ), patch.object(salt.utils.systemd, "version", MagicMock(return_value=None)):
+        with pytest.raises(ServiceNotFoundError):
+            systemd._check_available("x")
