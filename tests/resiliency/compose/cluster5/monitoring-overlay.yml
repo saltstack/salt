@@ -91,7 +91,11 @@ services:
     networks:
       - salt-net
 
+# Do NOT declare ``salt-net`` as ``external`` here.  See the matching
+# comment in ``tests/resiliency/compose/cluster3/monitoring-overlay.yml``
+# -- marking the network external preempts the base cluster-5node
+# compose's create-network definition when both files are merged via
+# ``-f base.yml -f overlay.yml``, and docker compose then refuses to
+# start because it can't find a pre-existing ``cluster-5node_salt-net``.
 networks:
-  salt-net:
-    external: true
-    name: cluster-5node_salt-net
+  salt-net: {}
