@@ -77,7 +77,15 @@ services:
     networks:
       - salt-net
 
+# Do NOT declare ``salt-net`` as ``external`` here.  When this overlay
+# is composed on top of the base cluster-3node docker-compose.yml via
+# ``-f base.yml -f overlay.yml``, compose MERGES the network stanzas:
+# marking it external in the overlay would preempt the base compose's
+# create-network definition and compose would then refuse to start
+# because it can't find a pre-existing ``cluster-3node_salt-net``.
+# Letting the merged config create the network naturally (via the
+# base compose's unqualified ``networks: salt-net:``) means the
+# prometheus + cadvisor services added here just join the same
+# bridge the master + minion services join.
 networks:
-  salt-net:
-    external: true
-    name: cluster-3node_salt-net
+  salt-net: {}
