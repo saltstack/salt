@@ -4040,7 +4040,7 @@ class BaseHighState:
         try:
             merge_attr = f"_merge_tops_{merging_strategy}"
             merge_func = getattr(self, merge_attr)
-            if not hasattr(merge_func, "__call__"):
+            if not callable(merge_func):
                 msg = f"'{merge_attr}' is not callable"
                 log.error(msg)
                 raise TypeError(msg)

@@ -1,9 +1,10 @@
 import os.path
+import zipfile
 
 import pytest
 
 import salt.modules.archive as archive
-from salt.exceptions import CommandNotFoundError
+from salt.exceptions import CommandExecutionError, CommandNotFoundError
 from tests.support.mock import MagicMock, patch
 
 
@@ -658,3 +659,20 @@ def test_trim_files():
             ):
                 ret = archive.unrar(source, tmp_dir, trim_output=test_trim_opts)
                 assert ret == test_expected
+
+
+def test_list_unsupported_archive_format():
+    cache_file = MagicMock(return_value="/tmp/archive.bogus")
+    with patch.dict(archive.__salt__, {"cp.cache_file": cache_file}):
+        with pytest.raises(CommandExecutionError, match="Unsupported archive format"):
+            archive.list_("archive.bogus", archive_format="bogus")
+
+
+def test_list_zip(tmp_path):
+    zip_path = tmp_path / "archive.zip"
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("dir/file.txt", "content")
+    cache_file = MagicMock(return_value=str(zip_path))
+    with patch.dict(archive.__salt__, {"cp.cache_file": cache_file}):
+        ret = archive.list_(str(zip_path), archive_format="zip")
+    assert "dir/file.txt" in ret

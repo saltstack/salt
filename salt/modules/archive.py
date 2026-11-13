@@ -372,7 +372,7 @@ def list_(
             archive_format = guessed_format
 
         func = locals().get("_list_" + archive_format)
-        if not hasattr(func, "__call__"):
+        if not callable(func):
             _unsupported_format(archive_format)
 
         args = (options,) if archive_format == "tar" else ()
