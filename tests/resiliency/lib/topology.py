@@ -824,13 +824,23 @@ class Topology:
     # ------------------------------------------------------------------
 
     def wait_initial_auth(self, timeout: int = 300) -> bool:
-        """Wait up to ``timeout`` s for every minion id in
-        ``spec.minion_ids`` to be visible as an accepted key on AT
-        LEAST ONE master in ``spec.masters``.
+        """Wait up to ``timeout`` s for every minion in
+        ``spec.minion_ids`` to (a) be visible as an accepted key on at
+        least one master AND (b) actually answer ``test.ping`` as
+        ``True`` from at least one master.
 
-        Returns ``True`` on success, ``False`` on timeout.  The fixture
-        layer decides whether to call :func:`pytest.fail` or record a
-        setup error -- this helper never raises.
+        Returns ``True`` only once BOTH conditions hold for EVERY
+        minion.  A key being accepted is not sufficient: the minion
+        may still be loading grains / syncing modules / allocating
+        worker processes, during which its RSS is climbing and
+        ``test.ping`` times out.  Returning before that quiesces
+        causes the first baseline phase to trip the RSS-slope leak
+        check as a false positive and reports a wholly-vaporware
+        reconnect failure.
+
+        Returns ``False`` on timeout.  The fixture layer decides
+        whether to call :func:`pytest.fail` or record a setup error --
+        this helper never raises.
 
         Iterating all masters (not just ``primary_master``) matters on
         multimaster topologies where the minion elects a master via
@@ -843,22 +853,28 @@ class Topology:
         masters = tuple(self.spec.masters)
 
         while time.monotonic() < deadline:
-            seen: set[str] = set()
+            # Gate 1: every expected id is an accepted key on some
+            # master.  Cheap -- one salt-key -L per master.
+            keys_seen: set[str] = set()
             for m in masters:
                 for mid in self.salt_key_accepted_on(m):
                     if mid in expected:
-                        seen.add(mid)
-            if expected.issubset(seen):
-                # Final gate: at least one master answers test.ping on
-                # at least one minion.  On hot-hot both do; on failover
-                # only the elected master does.  Either is fine.
-                for m in masters:
-                    pings = self.salt_ping_all(m, timeout=10)
-                    if any(pings.values()):
-                        return True
-                # Keys registered + at least one master; good enough
-                # for scenarios to start (they'll retry ping).
+                        keys_seen.add(mid)
+            if not expected.issubset(keys_seen):
+                time.sleep(5)
+                continue
+
+            # Gate 2: every expected id answers test.ping=True on at
+            # least one master.  The real synchronisation gate.
+            ping_seen: set[str] = set()
+            for m in masters:
+                pings = self.salt_ping_all(m, timeout=10)
+                for mid, ok in pings.items():
+                    if ok and mid in expected:
+                        ping_seen.add(mid)
+            if expected.issubset(ping_seen):
                 return True
+
             time.sleep(5)
 
         return False
