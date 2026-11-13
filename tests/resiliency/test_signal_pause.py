@@ -19,8 +19,6 @@ analyzer):
     signal_rolling_sigstop_cluster    test_signal_rolling_sigstop_cluster
 """
 
-# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
-
 from __future__ import annotations
 
 import os
@@ -34,6 +32,8 @@ from tests.resiliency.durations import (
     TIER_STANDARD_SEC,
 )
 from tests.resiliency.lib.injectors import sigstopped_container
+
+# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
 
 
 def _int_env(name: str, default: int) -> int:

@@ -17,8 +17,6 @@ No side effects at import time; ``Topology`` instances assume the
 compose stack is already up (that's the fixture's job).
 """
 
-# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
-
 from __future__ import annotations
 
 import json
@@ -286,6 +284,16 @@ class Topology:
     Does NOT bring up or tear down compose -- that's the topology
     fixture's job.  This object wraps the running stack for scenarios
     to sample, assert and docker-shell against.
+
+    Scenario helpers (used by test_master_overload.py and related
+    phases that need async-job bookkeeping):
+
+    * :py:meth:`issue_async_job` -- ``salt --async <target> <fn>`` on
+      the primary master; parses and returns the JID.
+    * :py:meth:`wait_for_job_returns` -- polls
+      ``salt-run jobs.lookup_jid`` on every master until every
+      expected minion id appears in the returns map or the timeout
+      expires.  Never raises; the caller decides pass/fail.
     """
 
     def __init__(self, spec: TopologySpec):
@@ -490,6 +498,135 @@ class Topology:
         if not isinstance(data, dict):
             return {}
         return {str(k): bool(v) for k, v in data.items()}
+
+    # ------------------------------------------------------------------
+    # Async-job helpers (scenario-side: overload / backpressure phases)
+    # ------------------------------------------------------------------
+
+    def issue_async_job(
+        self,
+        salt_target: str = "*",
+        function: str = "test.ping",
+        args: list[str] | None = None,
+        timeout: int = 30,
+    ) -> str:
+        """Issue ``salt --async <target> <function> [args]`` on the primary
+        master and return the JID.
+
+        Raises :class:`RuntimeError` if no JID is captured within
+        ``timeout``.  The JID is parsed from stdout; salt prints it on
+        a line like ``Executed command with job ID: <jid>``.  If
+        ``--out=json`` would be preferable for stdout stability the
+        caller should build a bespoke invocation; the default here
+        matches the human-readable ``salt --async`` CLI.
+        """
+        primary = self.spec.primary_master
+        argv = [
+            "docker",
+            "exec",
+            primary,
+            "salt",
+            "--async",
+            salt_target,
+            function,
+        ]
+        if args:
+            argv.extend(args)
+
+        proc = subprocess.run(
+            argv,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        stdout = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        # Match "Executed command with job ID: <jid>" OR a bare JID
+        # line (some salt versions print only the number).
+        for line in stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            marker = "Executed command with job ID:"
+            if marker in line:
+                after = line.split(marker, 1)[1].strip()
+                if after:
+                    return after.split()[0]
+            # Bare numeric JID (20-digit YYYYMMDDHHMMSSuuuuuu).
+            if line.isdigit() and len(line) >= 16:
+                return line
+        raise RuntimeError(
+            f"issue_async_job: no JID captured within {timeout}s "
+            f"(target={salt_target!r} fn={function!r} rc={proc.returncode}): "
+            f"{stdout.strip()[:400]}"
+        )
+
+    def wait_for_job_returns(
+        self,
+        jid: str,
+        expected_minion_ids: list[str] | None = None,
+        timeout: int = 300,
+        poll_interval: float = 2.0,
+    ) -> tuple[list[str], list[str]]:
+        """Poll ``salt-run jobs.lookup_jid <jid>`` on every master until
+        every id in ``expected_minion_ids`` appears in the returns
+        map, or until ``timeout`` seconds elapse.
+
+        Returns ``(returned, missing)`` -- lists of minion ids.  Never
+        raises; the caller decides whether a timeout is a pass
+        (acceptable slowness) or a fail (dropped return).
+
+        Default for ``expected_minion_ids`` is
+        ``self.spec.minion_ids``.  A minion counts as "returned" the
+        moment ANY master in ``spec.masters`` reports it in the
+        returns map -- Salt cluster masters duplicate returns across
+        peers, so iterating is correct.
+        """
+        expected = list(
+            expected_minion_ids
+            if expected_minion_ids is not None
+            else self.spec.minion_ids
+        )
+        if not expected:
+            return ([], [])
+
+        masters = tuple(self.spec.masters)
+        deadline = time.monotonic() + timeout
+        returned: set[str] = set()
+
+        while time.monotonic() < deadline:
+            for m in masters:
+                proc = self._run(
+                    [
+                        "docker",
+                        "exec",
+                        m,
+                        "salt-run",
+                        "--out=json",
+                        "jobs.lookup_jid",
+                        jid,
+                    ],
+                    check=False,
+                    timeout=30,
+                )
+                stdout = (proc.stdout or "").strip()
+                if not stdout:
+                    continue
+                try:
+                    data = json.loads(stdout)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(data, dict):
+                    continue
+                for mid in data.keys():
+                    if mid in expected:
+                        returned.add(str(mid))
+            if returned.issuperset(expected):
+                return (sorted(returned), [])
+            time.sleep(poll_interval)
+
+        missing = [mid for mid in expected if mid not in returned]
+        return (sorted(returned), missing)
 
     # ------------------------------------------------------------------
     # assert_reconnect

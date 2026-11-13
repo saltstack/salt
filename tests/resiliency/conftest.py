@@ -28,8 +28,6 @@ Scenarios stash per-test result data on their pytest ``item`` via
 writes a single JSONL row per test to ``$RESILIENCY_WORKDIR/results.jsonl``.
 """
 
-# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
-
 from __future__ import annotations
 
 import datetime as _dt
@@ -42,6 +40,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
+
 
 # Lazy import: ``lib.topology`` is produced by a parallel agent; we need
 # the names ``load_topology`` and ``Topology`` only at fixture-time.
@@ -243,7 +244,7 @@ def _compose_cmd(spec, *args: str) -> list[str]:
 
 def _launch_exporters(topo_name: str, spec, workdir: Path) -> None:
     """Topology-specific fd_exporter startup -- mirrors run_resiliency.sh."""
-    log = (workdir / "exporters.log").open("a")
+    log = (workdir / "exporters.log").open("a", encoding="utf-8")
     try:
         if topo_name in ("single", "cluster3", "cluster5", "syndic"):
             script = HERE / "compose" / topo_name / "start_exporters.sh"
@@ -277,7 +278,7 @@ def _launch_exporters(topo_name: str, spec, workdir: Path) -> None:
 
 def _snapshot_compose_logs(spec, workdir: Path) -> None:
     """``docker compose ... logs > compose.log``.  Best-effort."""
-    with (workdir / "compose.log").open("w") as fh:
+    with (workdir / "compose.log").open("w", encoding="utf-8") as fh:
         subprocess.run(
             _compose_cmd(spec, "ps"),
             stdout=fh,
@@ -382,7 +383,7 @@ def topology(request):
 
     # --- compose up ----------------------------------------------------
     up_log_path = workdir / "compose-up.log"
-    with up_log_path.open("w") as fh:
+    with up_log_path.open("w", encoding="utf-8") as fh:
         rc = subprocess.run(
             _compose_cmd(spec, "up", "-d", "--build"),
             stdout=fh,
@@ -457,7 +458,7 @@ def workload(topology, request):
     env = os.environ.copy()
     env["MASTER"] = topology.spec.primary_master
 
-    log_fh = log_path.open("w")
+    log_fh = log_path.open("w", encoding="utf-8")
     proc = subprocess.Popen(
         [str(script)],
         stdin=subprocess.DEVNULL,
@@ -621,7 +622,7 @@ def _analyze_resiliency_summary(results_file: Path) -> str:
     if not results_file.exists():
         return f"[resiliency] no results at {results_file}"
     records: list[dict[str, Any]] = []
-    with results_file.open(encoding="utf-8") as fh:
+    with results_file.open() as fh:
         for line in fh:
             line = line.strip()
             if not line:
