@@ -179,7 +179,7 @@ class RemotePillarMixin:
         extra_data = {}
         if "pass_to_ext_pillars" in opts:
             if not isinstance(opts["pass_to_ext_pillars"], list):
-                log.exception("'pass_to_ext_pillars' config is malformed.")
+                log.error("'pass_to_ext_pillars' config is malformed.")
                 raise SaltClientError("'pass_to_ext_pillars' config is malformed.")
             for key in opts["pass_to_ext_pillars"]:
                 salt.utils.dictupdate.update(
