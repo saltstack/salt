@@ -1439,6 +1439,47 @@ class TestCheckPriorRunningStates:
         assert len(result) == 1
         assert result[0]["jid"] == "20260718005609000000"
 
+    def test_check_prior_running_states_waiting_job_blocks_only_younger(self, tmp_path):
+        """
+        Regression test for issue #70580.
+
+        A running state.* job that is itself waiting in ``_wait()`` (the
+        ``queue=<int>`` path) has a PID, but also a queue flag file named
+        after its JID. It must block only jobs with a higher JID, otherwise
+        two waiting jobs block each other forever once a third run exists.
+        """
+        opts = {"cachedir": str(tmp_path)}
+        queue_dir = salt.utils.state.state_queue_dir(opts)
+        os.makedirs(queue_dir)
+        older, newer = "20260718005609000000", "20260718005611000000"
+        for jid in (older, newer):
+            with salt.utils.files.fopen(os.path.join(queue_dir, jid), "w") as fp_:
+                fp_.write("12345")
+        active_jobs = [
+            {"jid": older, "fun": "state.apply", "pid": 111},
+            {"jid": newer, "fun": "state.apply", "pid": 222},
+        ]
+
+        # The oldest waiting job is not blocked by the younger one...
+        result = salt.utils.state.check_prior_running_states(opts, older, active_jobs)
+        assert result == []
+
+        # ...while the younger one still waits on the older one.
+        result = salt.utils.state.check_prior_running_states(opts, newer, active_jobs)
+        assert [job["jid"] for job in result] == [older]
+
+    def test_check_prior_running_states_running_job_without_flag_blocks(self, tmp_path):
+        """
+        A running job with no queue flag is actually executing and must
+        still block regardless of JID order (issue #69825).
+        """
+        opts = {"cachedir": str(tmp_path)}
+        active_jobs = [{"jid": "20260718005611000000", "fun": "state.apply", "pid": 7}]
+        result = salt.utils.state.check_prior_running_states(
+            opts, "20260718005610000000", active_jobs
+        )
+        assert len(result) == 1
+
 
 @pytest.mark.usefixtures("mocked_tcp_pub_client")
 @pytest.mark.parametrize("exc", [KeyboardInterrupt, SystemExit])

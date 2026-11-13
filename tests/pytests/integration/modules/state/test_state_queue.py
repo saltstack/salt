@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 
 import pytest
@@ -277,3 +278,143 @@ def test_state_queue_true(salt_cli, salt_minion, quick_sls):
             f for f in files if f.startswith("queued_") and f.endswith(".p")
         ]
         assert len(queued_files) == 0, f"Unexpected queued files found: {queued_files}"
+
+
+@pytest.fixture(scope="module")
+def stamp_script(tmp_path_factory):
+    """
+    A script that records its own start and end time, so a test can measure
+    whether two state runs overlapped instead of inferring it from sleeps.
+
+    Usage: ``stamp.py <log> <label> <hold_seconds>``. Each line appended to
+    ``<log>`` is ``<label> start|end <epoch>``.
+    """
+    base = tmp_path_factory.mktemp("queue_int")
+    script = base / "stamp.py"
+    with salt.utils.files.fopen(script, "w", encoding="utf-8") as fp_:
+        fp_.write(
+            "import sys, time\n"
+            "log, label, hold = sys.argv[1], sys.argv[2], float(sys.argv[3])\n"
+            "def stamp(tag):\n"
+            "    with open(log, 'a') as fp:\n"
+            "        fp.write(f'{label} {tag} {time.time()}\\n')\n"
+            "stamp('start')\n"
+            "time.sleep(hold)\n"
+            "stamp('end')\n"
+        )
+    return script, base / "stamp.log"
+
+
+def _read_stamps(log):
+    """
+    Return ``{label: {"start": float, "end": float}}`` from a stamp log.
+    """
+    stamps = {}
+    if not log.exists():
+        return stamps
+    with salt.utils.files.fopen(log, "r") as fp_:
+        for line in fp_:
+            label, tag, when = line.split()
+            stamps.setdefault(label, {})[tag] = float(when)
+    return stamps
+
+
+def _assert_no_overlap(intervals):
+    """
+    Assert that no two ``(start, end)`` intervals overlap, i.e. the state
+    runs executed strictly one at a time.
+    """
+    assert (
+        intervals and len(intervals) > 1
+    ), "Overlap cannot be determined. Less than 2 tuples are available for comparison."
+
+    # Sort intervals by start time
+    sorted_intervals = sorted(intervals)
+
+    for i in range(len(sorted_intervals) - 1):
+        curr_end = sorted_intervals[i][1]
+        next_start = sorted_intervals[i + 1][0]
+
+        assert (
+            curr_end <= next_start
+        ), f"Two state runs overlapped. Job 1 interval: {i}. Job 2 interval: {i + 1}"
+
+
+@pytest.mark.slow_test
+def test_queue_int_three_concurrent_runs_do_not_deadlock_70580(
+    salt_cli, salt_minion, stamp_script
+):
+    """
+    Regression test for #70580.
+
+    Three state runs started at once with ``queue=<int>`` must run one at a
+    time, in JID order. Since #69826 a run waiting in ``state._wait()`` was
+    treated like a running one, so once the first run finished the two
+    waiting runs blocked each other forever.
+
+    The first run holds the slot for 6s so that all three are dispatched
+    while it is still running. Two concurrent runs never reproduced the bug;
+    it needs at least three.
+    """
+    script, log = stamp_script
+    labels = ("a", "b", "c")
+    state_queue_dir = salt.utils.state.state_queue_dir(salt_minion.config)
+    if log.exists():
+        log.unlink()
+
+    jids = []
+    try:
+        for label in labels:
+            ret = salt_cli.run(
+                "state.single",
+                "cmd.run",
+                f"name={sys.executable} {script} {log} {label} 6",
+                "queue=10",
+                "--async",
+                minion_tgt=salt_minion.id,
+            )
+            assert ret.returncode == 0, f"async dispatch failed: {ret}"
+            jid = ret.stdout.strip().split()[-1]
+            assert jid.isdigit(), f"unexpected async stdout: {ret.stdout!r}"
+            jids.append(jid)
+            # Dispatch about a second apart, as in the report. Runs arriving
+            # within milliseconds hit a separate race: each new job
+            # subprocess removes queue.lock as "stale" in Minion.__init__,
+            # even when a live job holds it. That is not what this test is
+            # about. The first run holds the slot for 6s, so all three still
+            # overlap.
+            time.sleep(1)
+
+        # Serial execution needs ~18s; allow generous headroom, but stay under
+        # the 90s per-test pytest timeout so the diagnostic below can fire. A
+        # deadlock leaves the second and third runs waiting forever.
+        deadline = time.time() + 60
+        while time.time() < deadline:
+            stamps = _read_stamps(log)
+            if len(stamps) == len(labels) and all("end" in s for s in stamps.values()):
+                break
+            time.sleep(1)
+        else:
+            running = salt_cli.run("saltutil.running", minion_tgt=salt_minion.id)
+            pytest.fail(
+                "queue=<int> runs did not all complete (deadlock, #70580). "
+                f"stamps={_read_stamps(log)} running={running.stdout}"
+            )
+
+        _assert_no_overlap([(s["start"], s["end"]) for s in stamps.values()])
+
+        # Waiting runs must clean up their queue flag files (named by JID).
+        if os.path.exists(state_queue_dir):
+            leftover = [f for f in os.listdir(state_queue_dir) if f.isdigit()]
+            assert not leftover, f"queue flag files left behind: {leftover}"
+    finally:
+        # Do not leak deadlocked runs into later tests.
+        for jid in jids:
+            salt_cli.run("saltutil.kill_job", jid, minion_tgt=salt_minion.id)
+        if os.path.exists(state_queue_dir):
+            for fn in os.listdir(state_queue_dir):
+                if fn.isdigit():
+                    try:
+                        os.remove(os.path.join(state_queue_dir, fn))
+                    except OSError:
+                        pass
