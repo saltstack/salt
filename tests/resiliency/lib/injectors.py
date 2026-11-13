@@ -37,9 +37,6 @@ from collections.abc import Iterator
 
 import pytest
 
-# typing: use PEP604 unions / list[...] directly -- no typing-module imports needed
-
-
 log = logging.getLogger("resiliency.injector")
 
 

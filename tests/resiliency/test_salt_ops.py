@@ -33,6 +33,8 @@ Destructive-adjacent phase safety:
     file and SIGHUPs the master.
 """
 
+# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
+
 from __future__ import annotations
 
 import os
@@ -41,11 +43,6 @@ import time
 import pytest
 
 from tests.resiliency.durations import PACING_INTER_PHASE_SEC, TIER_STANDARD_SEC
-
-# pylint: disable=broad-exception-caught
-# Resiliency tests catch broad Exception in cleanup paths deliberately;
-# a test-cleanup failure must never mask the real test verdict.
-
 
 # ---------------------------------------------------------------------------
 # Env knobs (preserve bash defaults from salt_ops.sh)

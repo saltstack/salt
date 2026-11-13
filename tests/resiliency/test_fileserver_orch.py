@@ -53,9 +53,7 @@ from tests.resiliency.durations import (
 )
 from tests.resiliency.lib.injectors import disconnected_from_network, remounted_readonly
 
-# pylint: disable=broad-exception-caught
-# Resiliency tests catch broad Exception in cleanup paths deliberately;
-# a test-cleanup failure must never mask the real test verdict.
+# pylint: disable=broad-exception-caught  # Resiliency: test cleanup catches Exception deliberately to avoid masking the real verdict
 
 
 # ---------------------------------------------------------------------------
