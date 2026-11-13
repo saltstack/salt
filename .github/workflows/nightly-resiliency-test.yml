@@ -144,6 +144,27 @@ jobs:
           mkdir -p "$PROM_DATA_DIR"
           sudo chown -R 65534:65534 "$PROM_DATA_DIR"
 
+      - name: Set up Python
+        # Same pattern as .github/workflows/doc-linkcheck.yml.  The
+        # resiliency wrapper (run_resiliency.sh) auto-picks ``pytest``
+        # from $PATH; setup-python puts the pinned interpreter on PATH.
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements/static/ci/py3.14/linux.lock
+
+      - name: Install test dependencies
+        # Reuse the project's existing locked Linux test-env list so
+        # pytest + its transitive deps match the versions the main CI
+        # resolves.  The wrapper's ``-p no:system-statistics -p
+        # no:salt-factories`` flags disable the plugins from this lock
+        # that would double-register with the resiliency suite's own
+        # fixtures.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/static/ci/py3.14/linux.lock
+
       - name: Start environment
         # Hand off to the resiliency orchestrator.  ``timeout`` is
         # applied here (not inside the script) so a wedged topology --
