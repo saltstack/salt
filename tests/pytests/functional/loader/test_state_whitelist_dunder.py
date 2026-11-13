@@ -212,3 +212,96 @@ def test_states_module_helper_routes_through_wire_salt(wl_loaders):
         assert "cmd.run" not in wire_salt
     finally:
         salt.loader.context.loader_ctxvar.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# End-to-end: the user-facing dichotomy for "exec module not in
+# whitelist_modules" — SLS-directed dispatch is gated, trusted shipped
+# state code is not.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def wl_state(wl_opts, tmp_path):
+    """A real :class:`salt.state.State` under the narrow whitelist."""
+    import salt.state
+
+    opts = wl_opts.copy()
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    # Shipped states like ``cmd.run`` read ``__grains__['shell']`` /
+    # ``['os']`` during argument-prep; populate enough for the
+    # end-to-end dispatch to reach ``__salt__['cmd.run_all']``.
+    opts.setdefault("grains", {})
+    opts["grains"].setdefault("shell", "/bin/sh")
+    opts["grains"].setdefault("os", "Linux")
+    opts["grains"].setdefault("os_family", "Linux")
+    return salt.state.State(opts)
+
+
+def test_module_run_rejects_non_whitelisted_exec(wl_state):
+    """
+    SLS-authored ``module.run: - cmd.run`` must fail cleanly when ``cmd``
+    is not in ``whitelist_modules`` -- the wire-filtered loader rejects
+    the name and ``module.run`` surfaces an "is not available" comment
+    with ``result: False``.
+    """
+    high = {
+        "attempt_cmd_run": {
+            "module": [{"name": "cmd.run"}, "run"],
+            "__sls__": "example",
+            "__env__": "base",
+        }
+    }
+    ret = wl_state.call_high(high)
+    assert isinstance(ret, dict), ret
+    chunk = next(iter(ret.values()))
+    assert chunk["result"] is False, chunk
+    assert "cmd.run" in chunk["comment"]
+    assert "is not available" in chunk["comment"]
+    assert not chunk["changes"]
+
+
+def test_module_run_allows_whitelisted_exec(wl_state):
+    """
+    Counterpart to the gating test: ``module.run`` of a *whitelisted*
+    exec function (``test.ping``) succeeds.  Proves the whitelist is the
+    discriminator, not an unrelated ``module.run`` breakage.
+    """
+    high = {
+        "attempt_test_ping": {
+            "module": [{"name": "test.ping"}, "run"],
+            "__sls__": "example",
+            "__env__": "base",
+        }
+    }
+    ret = wl_state.call_high(high)
+    assert isinstance(ret, dict), ret
+    chunk = next(iter(ret.values()))
+    assert chunk["result"] is True, chunk
+
+
+@pytest.mark.skip_on_windows(reason="/bin/true is POSIX-only")
+def test_shipped_state_reaches_non_whitelisted_exec(wl_state):
+    """
+    A shipped state's internal ``__salt__[...]`` dispatch is *not* gated
+    by ``whitelist_modules``.  The ``cmd.run`` state calls
+    ``__salt__['cmd.run_all']`` even though ``cmd`` is deliberately
+    absent from the fixture's whitelist -- the two-loader model gives
+    state modules the unfiltered inner loader as ``__salt__`` so trusted
+    shipped code composes freely.
+    """
+    high = {
+        "run_true": {
+            "cmd": [{"name": "/bin/true"}, "run"],
+            "__sls__": "example",
+            "__env__": "base",
+        }
+    }
+    ret = wl_state.call_high(high)
+    assert isinstance(ret, dict), ret
+    chunk = next(iter(ret.values()))
+    assert chunk["result"] is True, chunk
+    # Comment must not mention the whitelist -- the gate did not fire.
+    assert "Unavailable function" not in chunk["comment"]
+    assert "whitelist_modules" not in chunk["comment"]
