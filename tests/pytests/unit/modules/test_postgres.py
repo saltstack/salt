@@ -1924,6 +1924,186 @@ def test_has_privileges_on_table(get_test_privileges_list_table_csv):
         assert ret is True
 
 
+def _relations_csv(*relations):
+    """
+    The csv psql prints for the name, owner and ACL of the relations of a schema
+    """
+    lines = ["name,owner,acl"]
+    lines.extend(f'{name},{owner},"{acl}"' for name, owner, acl in relations)
+    return "\n".join(lines) + "\n"
+
+
+def _has_privileges_all(responses, *args, **kwargs):
+    """
+    Run postgres.has_privileges() against canned psql output and return its
+    result together with the mock that stood in for psql
+    """
+    run_psql = Mock(side_effect=[{"retcode": 0, "stdout": out} for out in responses])
+    with patch("salt.modules.postgres._run_psql", run_psql), patch(
+        "salt.utils.path.which", MagicMock(return_value="/usr/bin/pgsql")
+    ):
+        ret = postgres.has_privileges(
+            *args,
+            maintenance_db="db_name",
+            runas="user",
+            host="testhost",
+            port="testport",
+            user="testuser",
+            password="testpassword",
+            **kwargs,
+        )
+    return ret, run_psql
+
+
+def test_has_privileges_all_tables_reads_the_schema_once_70291():
+    """
+    object_name ALL has to be looked up as every table of the schema. It used to
+    be looked up as a table literally named ALL, so the grants that
+    privileges_grant() had made were never found and the state granted again on
+    every run.
+    """
+    csv = _relations_csv(
+        ("t1", "owner", "{reader=r/owner}"),
+        ("t2", "owner", "{owner=arwdDxtm/owner,reader=r/owner}"),
+    )
+    ret, run_psql = _has_privileges_all([csv], "reader", "ALL", "table", "SELECT")
+    assert ret is True
+    # One query for the whole schema, not two psql calls per table.
+    assert run_psql.call_count == 1
+    sql = " ".join(run_psql.call_args[0][0])
+    assert "nspname = 'public'" in sql
+    assert "relkind in ('r', 'v')" in sql
+    assert "relname = 'ALL'" not in sql
+
+
+def test_has_privileges_all_tables_is_case_insensitive_70291():
+    """
+    privileges_grant() accepts any case for ALL, so the check must too
+    """
+    csv = _relations_csv(("t1", "owner", "{reader=r/owner}"))
+    ret, _ = _has_privileges_all([csv], "reader", "all", "table", "SELECT")
+    assert ret is True
+
+
+def test_has_privileges_all_tables_uses_prepend_70291():
+    csv = _relations_csv(("t1", "owner", "{reader=r/owner}"))
+    ret, run_psql = _has_privileges_all(
+        [csv], "reader", "ALL", "table", "SELECT", prepend="app"
+    )
+    assert ret is True
+    assert "nspname = 'app'" in " ".join(run_psql.call_args[0][0])
+
+
+def test_has_privileges_all_tables_one_table_without_grant_70291():
+    """
+    A table that was created after the grant has no entry for the role, so the
+    next run must grant again
+    """
+    csv = _relations_csv(
+        ("t1", "owner", "{reader=r/owner}"),
+        ("t2", "owner", "{owner=arwdDxtm/owner}"),
+    )
+    ret, _ = _has_privileges_all([csv], "reader", "ALL", "table", "SELECT")
+    assert ret is False
+
+
+def test_has_privileges_all_tables_without_any_acl_70291():
+    """
+    A table with no explicit ACL (relacl is NULL) grants nothing to the role
+    """
+    csv = _relations_csv(("t1", "owner", ""))
+    ret, _ = _has_privileges_all([csv], "reader", "ALL", "table", "SELECT")
+    assert ret is False
+
+
+def test_has_privileges_all_tables_owner_needs_no_grant_70291():
+    csv = _relations_csv(("t1", "reader", ""), ("t2", "reader", "{reader=r/reader}"))
+    ret, _ = _has_privileges_all([csv], "reader", "ALL", "table", "SELECT")
+    assert ret is True
+
+
+def test_has_privileges_all_tables_missing_privilege_70291():
+    csv = _relations_csv(("t1", "owner", "{reader=r/owner}"))
+    ret, _ = _has_privileges_all([csv], "reader", "ALL", "table", "SELECT,INSERT")
+    assert ret is False
+
+
+def test_has_privileges_all_tables_with_all_privileges_70291():
+    """
+    privileges=ALL on every table means every table privilege
+    """
+    full = _relations_csv(("t1", "owner", "{reader=arwdDxtm/owner}"))
+    ret, _ = _has_privileges_all([full], "reader", "ALL", "table", "ALL")
+    assert ret is True
+
+    partial = _relations_csv(
+        ("t1", "owner", "{reader=arwdDxtm/owner}"),
+        ("t2", "owner", "{reader=r/owner}"),
+    )
+    ret, _ = _has_privileges_all([partial], "reader", "ALL", "table", "ALL")
+    assert ret is False
+
+
+def test_has_privileges_all_tables_grant_option_70291():
+    csv = _relations_csv(("t1", "owner", "{reader=a*r*w*d*D*x*t*m*/owner}"))
+    ret, _ = _has_privileges_all(
+        [csv], "reader", "ALL", "table", "ALL", grant_option=True
+    )
+    assert ret is True
+
+    csv = _relations_csv(("t1", "owner", "{reader=r*/owner}"))
+    ret, _ = _has_privileges_all(
+        [csv], "reader", "ALL", "table", "ALL", grant_option=True
+    )
+    assert ret is False
+
+
+def test_has_privileges_all_sequences_70291():
+    csv = _relations_csv(
+        ("s1", "owner", "{reader=U/owner}"),
+        ("s2", "owner", "{reader=U/owner}"),
+    )
+    ret, run_psql = _has_privileges_all([csv], "reader", "ALL", "sequence", "USAGE")
+    assert ret is True
+    assert run_psql.call_count == 1
+    assert "relkind in ('S')" in " ".join(run_psql.call_args[0][0])
+
+    csv = _relations_csv(
+        ("s1", "owner", "{reader=U/owner}"),
+        ("s2", "owner", "{owner=rwU/owner}"),
+    )
+    ret, _ = _has_privileges_all([csv], "reader", "ALL", "sequence", "USAGE")
+    assert ret is False
+
+
+def test_has_privileges_all_in_an_empty_schema_70291():
+    """
+    An empty schema has nothing to grant, but a schema that does not exist must
+    still reach the grant so the error is reported
+    """
+    no_relations = "name,owner,acl\n"
+    ret, run_psql = _has_privileges_all(
+        [no_relations, "name\nowner\n"], "reader", "ALL", "table", "SELECT"
+    )
+    assert ret is True
+    # The second call asked who owns the schema.
+    assert run_psql.call_count == 2
+
+    ret, _ = _has_privileges_all(
+        [no_relations, "name\n"], "reader", "ALL", "table", "SELECT"
+    )
+    assert ret is False
+
+
+def test_parse_acl_70291():
+    assert postgres._parse_acl("{=r/owner,reader=a*r/owner,junk}") == {
+        "public": {"SELECT": False},
+        "reader": {"INSERT": True, "SELECT": False},
+    }
+    assert postgres._parse_acl("{}") == {}
+    assert postgres._parse_acl("") == {}
+
+
 def test_has_privileges_on_group(get_test_privileges_list_group_csv):
     """
     Test privilege checks on group

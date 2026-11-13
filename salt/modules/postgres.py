@@ -3066,6 +3066,28 @@ def _process_priv_part(perms):
     return _tmp
 
 
+def _parse_acl(acl):
+    """
+    Parse a PostgreSQL ACL string, such as ``{role=arwd/owner,=r/owner}``, into
+    a dict of role -> {privilege: grant option}. The empty role is ``public``.
+    """
+    ret = {}
+    for part in acl.strip("{}").split(","):
+        if not part:
+            # Empty ACL (e.g. after all privileges were revoked)
+            continue
+        perms_part, _, _grantor = part.partition("/")
+        if "=" not in perms_part:
+            # Malformed ACL entry; skip instead of crashing
+            log.debug("Skipping malformed ACL entry: %s", part)
+            continue
+        rolename, _, perms = perms_part.partition("=")
+        if rolename == "":
+            rolename = "public"
+        ret[rolename] = _process_priv_part(perms)
+    return ret
+
+
 def privileges_list(
     name,
     object_type,
@@ -3145,23 +3167,7 @@ def privileges_list(
 
     for row in rows:
         if object_type != "group":
-            result = row["name"]
-            result = result.strip("{}")
-            parts = result.split(",")
-            for part in parts:
-                if not part:
-                    # Empty ACL (e.g. after all privileges were revoked)
-                    continue
-                perms_part, _, _grantor = part.partition("/")
-                if "=" not in perms_part:
-                    # Malformed ACL entry; skip instead of crashing
-                    log.debug("Skipping malformed ACL entry: %s", part)
-                    continue
-                rolename, _, perms = perms_part.partition("=")
-                if rolename == "":
-                    rolename = "public"
-                _tmp = _process_priv_part(perms)
-                ret[rolename] = _tmp
+            ret.update(_parse_acl(row["name"]))
         else:
             if row["admin_option"] == "t":
                 admin_option = True
@@ -3171,6 +3177,65 @@ def privileges_list(
             ret[row["rolname"]] = admin_option
 
     return ret
+
+
+def _acl_grants(name, object_type, _privs, grant_option, acl):
+    """
+    Tell whether a role, which has an entry in a parsed ACL, holds the privileges
+    that has_privileges() was asked about. ``acl`` comes from _parse_acl() or
+    privileges_list().
+    """
+    _perms = _PRIVILEGE_TYPE_MAP[object_type]
+    if grant_option:
+        perms = {_PRIVILEGES_MAP[perm]: True for perm in _perms}
+        return perms == acl[name]
+    perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
+    if "ALL" in _privs:
+        return sorted(perms) == sorted(acl[name])
+    return set(_privs).issubset(set(acl[name]))
+
+
+def _list_schema_relation_acls(
+    object_type,
+    prepend="public",
+    maintenance_db=None,
+    user=None,
+    host=None,
+    port=None,
+    password=None,
+    runas=None,
+):
+    """
+    Return the name, owner and ACL of every table (or sequence) in a schema, in
+    one query, so that checking a whole schema does not cost one psql call per
+    object. The relation kinds are the ones _make_privileges_list_query() uses.
+    """
+    relkinds = "'r', 'v'" if object_type == "table" else "'S'"
+    query = (
+        " ".join(
+            [
+                "SELECT relname AS name, rolname AS owner, relacl AS acl",
+                "FROM pg_catalog.pg_class c",
+                "JOIN pg_catalog.pg_namespace n",
+                "ON n.oid = c.relnamespace",
+                "JOIN pg_catalog.pg_roles r",
+                "ON r.oid = c.relowner",
+                "WHERE nspname = '{0}'",
+                "AND relkind in ({1})",
+                "ORDER BY relname",
+            ]
+        )
+    ).format(prepend, relkinds)
+
+    return psql_query(
+        query,
+        runas=runas,
+        host=host,
+        user=user,
+        port=port,
+        maintenance_db=maintenance_db,
+        password=password,
+    )
 
 
 def has_privileges(
@@ -3203,7 +3268,10 @@ def has_privileges(
        Name of the role whose privileges should be checked on object_type
 
     object_name
-       Name of the object on which the check is to be performed
+       Name of the object on which the check is to be performed.
+       'ALL' may be used for objects of type 'table' or 'sequence': the check
+       then passes only if the role has the privileges on every object of that
+       type in the schema given by ``prepend``.
 
     object_type
        The object type, which can be one of the following:
@@ -3263,6 +3331,33 @@ def has_privileges(
 
     _validate_privileges(object_type, _privs, privileges)
 
+    if object_type in ("table", "sequence") and object_name.upper() == "ALL":
+        # privileges_grant() grants on every table or sequence of the schema
+        # for 'ALL', so the check has to look at every one of them. Looking for
+        # a relation literally named 'ALL' never finds the existing grants.
+        conn = {
+            "maintenance_db": maintenance_db,
+            "user": user,
+            "host": host,
+            "port": port,
+            "password": password,
+            "runas": runas,
+        }
+        relations = _list_schema_relation_acls(object_type, prepend=prepend, **conn)
+        if not relations:
+            # Nothing to check. A schema that does not exist must still fail
+            # in the grant instead of reading as "already set".
+            return _get_object_owner(prepend, "schema", **conn) is not None
+        for relation in relations:
+            if relation["owner"] == name:
+                continue
+            acl = _parse_acl(relation["acl"])
+            if name not in acl or not _acl_grants(
+                name, object_type, _privs, grant_option, acl
+            ):
+                return False
+        return True
+
     if object_type != "group":
         owner = _get_object_owner(
             object_name,
@@ -3297,18 +3392,7 @@ def has_privileges(
             else:
                 retval = True
             return retval
-        else:
-            _perms = _PRIVILEGE_TYPE_MAP[object_type]
-            if grant_option:
-                perms = {_PRIVILEGES_MAP[perm]: True for perm in _perms}
-                retval = perms == _privileges[name]
-            else:
-                perms = [_PRIVILEGES_MAP[perm] for perm in _perms]
-                if "ALL" in _privs:
-                    retval = sorted(perms) == sorted(_privileges[name])
-                else:
-                    retval = set(_privs).issubset(set(_privileges[name]))
-            return retval
+        return _acl_grants(name, object_type, _privs, grant_option, _privileges)
 
     return False
 

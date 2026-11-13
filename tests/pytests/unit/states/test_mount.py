@@ -634,6 +634,42 @@ def test_mounted_multiple_mounts():
                     assert mount.mounted(name2, device2, fstype2, opts=[]) == ret
 
 
+def test_mounted_noauto_does_not_force_remount():
+    """
+    noauto is an fstab-only option that never shows up in the active mount
+    options, so it must not trigger a remount
+    """
+    name = "/mnt/storage"
+    device = "/dev/sdb1"
+    fstype = "ext4"
+    mock_mnt = MagicMock(
+        return_value={name: {"device": device, "opts": ["rw"], "superopts": []}}
+    )
+    with patch.dict(mount.__grains__, {"os": "CentOS"}), patch.dict(
+        mount.__opts__, {"test": True}
+    ), patch.dict(
+        mount.__salt__,
+        {
+            "mount.active": mock_mnt,
+            "mount.read_mount_cache": MagicMock(return_value={}),
+            "mount.write_mount_cache": MagicMock(return_value=True),
+        },
+    ), patch.object(
+        os.path, "exists", MagicMock(return_value=True)
+    ):
+        ret = mount.mounted(name, device, fstype, opts=["rw", "noauto"], persist=False)
+        # an option that really changed next to noauto must still be detected
+        ret_changed = mount.mounted(
+            name, device, fstype, opts=["rw", "noauto", "nodev"], persist=False
+        )
+    assert ret["result"] is True
+    assert ret["comment"] == "Target was already mounted"
+    assert not ret["changes"]
+    assert ret_changed["result"] is None
+    assert "nodev" in ret_changed["comment"]
+    assert "noauto" not in ret_changed["comment"]
+
+
 def test__convert_to_fast_none():
     """
     Test the device name conversor
