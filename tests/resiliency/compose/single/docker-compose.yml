@@ -33,7 +33,15 @@ services:
     <<: *salt-common
     container_name: rs-single-salt-master
     hostname: salt-master
-    command: ["sh", "-c", "salt-master -d && salt-api"]
+    # Run salt-master in FOREGROUND (no ``-d``) so its log goes to
+    # docker stdout -- otherwise we can't see auth events / startup
+    # errors / pub-server binding in the CI job log.  salt-api is
+    # dropped: the resiliency suite doesn't use the REST API and
+    # salt-api was masking the real master log by being the
+    # foreground process.  ``-l info`` is enough to see
+    # "Authentication request from <minion>" + publish-channel
+    # binding + MWorker-pool startup.
+    command: ["salt-master", "-l", "info"]
     volumes:
       - ../../../../salt:/app/salt
       - ../../../monitoring/master.conf:/etc/salt/master:ro
