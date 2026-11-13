@@ -40,7 +40,7 @@ SALT_REQUEST_CHANNEL_TIMEOUT = _env_int("SALT_REQUEST_CHANNEL_TIMEOUT", 60)
 #   STANDARD      90    3x keepalive; reconnect state machine fully engaged
 #   DEEPREC       300   5 min; multiple auth_timeout retries
 #   BACKOFF       600   10 min; exponential-backoff caps
-#   ACCUM         1800  30 min; UBMVCFOPS-19586 concurrent-auth race floor
+#   ACCUM         1800  30 min; the long-outage concurrent-auth race floor
 #   MARATHON      3600  1 h; #70772 fix target
 #   UPGRADE       7200  2 h; real-world upgrade-window scale
 TIER_SUBKEEPALIVE_SEC = _env_int("TIER_SUBKEEPALIVE_SEC", 25)
