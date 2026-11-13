@@ -61,10 +61,36 @@ async def _null_callback(*args, **kwargs):
     pass
 
 
-def _get_socket(opts):
-    family = socket.AF_INET
-    if opts.get("ipv6", False):
-        family = socket.AF_INET6
+def _normalize_bind_host(host):
+    """
+    Strip ZeroMQ-style brackets from an IP literal (master startup adds
+    them to ``interface`` for ZeroMQ URIs; see salt/cli/daemons.py).
+    Anything that is not an IP literal (e.g. a hostname) is returned
+    unchanged so it can still be resolved by name.
+    """
+    if host is None:
+        return None
+    try:
+        return ip_bracket(host, strip=True)
+    except ValueError:
+        return host
+
+
+def _get_socket(opts, host=None):
+    """
+    Return a TCP socket for binding or connecting to *host*.
+
+    When *host* is given, the address family is derived from the actual
+    address (after stripping ZeroMQ-style brackets added at startup), so
+    an IPv4 literal does not end up on an AF_INET6 socket when ``ipv6`` is
+    enabled.  Without *host*, the family follows the ``ipv6`` config flag.
+    """
+    if host is not None:
+        family = _socket_family(_normalize_bind_host(host))
+    else:
+        family = socket.AF_INET
+        if opts.get("ipv6", False):
+            family = socket.AF_INET6
     return socket.socket(family, socket.SOCK_STREAM)
 
 
@@ -232,7 +258,7 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
         """
         Start the load balancer
         """
-        self._socket = _get_socket(self.opts)
+        self._socket = _get_socket(self.opts, self.opts["interface"])
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(self._socket, self.opts)
         self._socket.setblocking(1)
@@ -814,7 +840,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     self._socket.bind(ipc_path)
                     os.chmod(ipc_path, 0o600)
             else:
-                self._socket = _get_socket(self.opts)
+                self._socket = _get_socket(self.opts, self.opts["interface"])
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 _set_tcp_keepalive(self._socket, self.opts)
                 self._socket.setblocking(0)
@@ -873,7 +899,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 )
             else:
                 if salt.utils.platform.is_windows():
-                    self._socket = _get_socket(self.opts)
+                    self._socket = _get_socket(self.opts, self.opts["interface"])
                     self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     _set_tcp_keepalive(self._socket, self.opts)
                     self._socket.setblocking(0)
@@ -2316,11 +2342,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pub_port,
                 self.ssl,
             )
-            sock = _get_socket(self.opts)
+            # The master startup brackets IPv6 ``interface`` values for
+            # ZeroMQ URIs (salt/cli/daemons.py); normalize before binding
+            # and let the address family follow the actual address.
+            pub_host = _normalize_bind_host(self.pub_host)
+            sock = _get_socket(self.opts, pub_host)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(sock, self.opts)
             sock.setblocking(0)
-            sock.bind((self.pub_host, self.pub_port))
+            sock.bind((pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
         self.pub_server.add_socket(sock)
