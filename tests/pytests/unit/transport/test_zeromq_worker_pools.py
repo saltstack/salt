@@ -2,7 +2,9 @@
 Unit tests for ZeroMQ worker pool functionality
 """
 
+import ast
 import inspect
+import textwrap
 
 import pytest
 from pytestshellutils.utils import ports
@@ -63,6 +65,35 @@ class TestWorkerPoolCodeStructure:
             f"BEFORE 'salt.utils.files.fopen' at line {fopen_usage_line}. "
             f"Otherwise Python will treat 'salt' as a local variable and "
             f"raise UnboundLocalError."
+        )
+
+    def test_zmq_device_pooled_imports_before_every_use_of_salt(self):
+        """
+        ``import salt.master`` makes ``salt`` a local name in the whole
+        function, so no use of ``salt`` may come before it. A use before the
+        import raises UnboundLocalError, for example when
+        ``mworker_queue_niceness`` is set.
+        """
+        source = textwrap.dedent(
+            inspect.getsource(salt.transport.zeromq.RequestServer.zmq_device_pooled)
+        )
+        function = ast.parse(source).body[0]
+        import_lines = [
+            node.lineno
+            for node in ast.walk(function)
+            if isinstance(node, ast.Import)
+            and any(alias.name == "salt.master" for alias in node.names)
+        ]
+        assert import_lines, "Expected 'import salt.master' in zmq_device_pooled"
+        uses = [
+            node.lineno
+            for node in ast.walk(function)
+            if isinstance(node, ast.Name) and node.id == "salt"
+        ]
+        assert uses
+        assert min(import_lines) <= min(uses), (
+            f"'salt' is used at line {min(uses)}, before 'import salt.master' "
+            f"at line {min(import_lines)}"
         )
 
     def test_zmq_device_pooled_has_worker_pools_param(self):

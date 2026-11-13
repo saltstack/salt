@@ -619,6 +619,10 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
         :param dict worker_pools: Dict mapping pool_name to pool configuration
         :param dict secrets: Master secrets for payload decryption
         """
+        # Import first: this makes ``salt`` a local name for the whole function,
+        # so every use of ``salt`` below must come after this line.
+        import salt.master
+
         self.__setup_signals()
         context = zmq.Context(
             sum(p.get("worker_count", 1) for p in worker_pools.values())
@@ -683,8 +687,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             self.pool_workers[pool_name] = dealer_socket
 
         # Initialize request router for command classification
-        import salt.master
-
         router = salt.master.RequestRouter(
             self.opts, secrets=secrets or getattr(self, "secrets", None)
         )
