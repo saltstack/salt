@@ -3312,7 +3312,7 @@ def script(
                 "cache_error": True,
             }
     if not salt.utils.platform.is_windows():
-        os.chmod(path, 320)
+        os.chmod(path, 0o500)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if args:
