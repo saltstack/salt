@@ -5578,7 +5578,7 @@ def check_perms(
 
     # Mode changes if needed
     if mode is not None:
-        if not __opts__["test"] is True:
+        if __opts__["test"] is not True:
             # File is a symlink, ignore the mode setting
             # if follow_symlinks is False
             if not (is_link and not follow_symlinks):

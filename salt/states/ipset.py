@@ -258,7 +258,7 @@ def absent(name, entry=None, entries=None, family="ipv4", **kwargs):
         _entry = " ".join([entry, entry_opts]).strip()
 
         log.debug("_entry %s", _entry)
-        if not __salt__["ipset.check"](kwargs["set_name"], _entry, family) is True:
+        if __salt__["ipset.check"](kwargs["set_name"], _entry, family) is not True:
             ret["result"] = True
             ret[
                 "comment"
