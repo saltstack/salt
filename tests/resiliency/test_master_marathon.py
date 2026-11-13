@@ -4,7 +4,7 @@ These phases hold the master unreachable for 30 minutes to 2 hours while
 the workload hammers it.  They catch long-outage auth-race bugs that
 short faults never reproduce -- specifically the
 ``AsyncAuth._authenticate`` ``InvalidStateError`` class fixed in
-upstream PR saltstack/salt#70772 (Broadcom Jira UBMVCFOPS-19586).
+upstream PR saltstack/salt#70772 (Broadcom Jira the long-outage).
 
 All phases are gated behind ``@pytest.mark.marathon`` which the resiliency
 conftest skips unless ``--marathon`` was passed.  The 120-minute phase
@@ -153,7 +153,7 @@ def test_marathon_outage_120m(topology, workload, request):
 @pytest.mark.marathon
 def test_marathon_flap_during_auth_wave(topology, workload, request):
     """marathon_flap_during_auth_wave -- the specific recipe that
-    reproduces UBMVCFOPS-19586 inside minutes: fire concurrent
+    reproduces the long-outage inside minutes: fire concurrent
     auth-triggering calls (``saltutil.sync_all`` + ``test.ping``) from
     each minion while the master flaps.
 
