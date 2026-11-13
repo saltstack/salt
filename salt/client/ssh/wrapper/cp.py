@@ -1086,6 +1086,7 @@ class SSHCpClient(salt.fileclient.FSClient):
         source_hash=None,
         verify_ssl=True,
         use_etag=False,
+        http_params=None,
     ):
         url_data = urllib.parse.urlparse(url)
         if url_data.scheme in ("file", ""):
@@ -1110,6 +1111,7 @@ class SSHCpClient(salt.fileclient.FSClient):
             source_hash=source_hash,
             verify_ssl=verify_ssl,
             use_etag=use_etag,
+            http_params=http_params,
         )
         if not cached:
             return cached
