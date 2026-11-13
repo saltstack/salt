@@ -508,6 +508,7 @@ def query(
         headers = {}
 
     attempts = 0
+    last_error = None
     while attempts < AWS_MAX_RETRIES:
         log.debug("AWS Request: %s", requesturl)
         log.trace("AWS Request Parameters: %s", params_with_headers)
@@ -523,6 +524,8 @@ def query(
             result.raise_for_status()
             break
         except requests.exceptions.HTTPError as exc:
+            # "exc" is unbound once this block ends, keep it for the else clause
+            last_error = exc
             root = ET.fromstring(exc.response.content)
             data = xml.to_dict(root)
 
@@ -553,8 +556,8 @@ def query(
     else:
         log.error(
             "AWS Response Status Code and Error: [%s %s] %s",
-            exc.response.status_code,
-            exc,
+            last_error.response.status_code,
+            last_error,
             data,
         )
         if return_url is True:
