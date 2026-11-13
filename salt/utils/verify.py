@@ -307,7 +307,7 @@ def verify_env(
         if isinstance(pki_dir, str):
             if dir_ == pki_dir:
                 smode = stat.S_IMODE(mode.st_mode)
-                if smode != 448 and smode != 488:
+                if smode != 0o700 and smode != 0o750:
                     if os.access(dir_, os.W_OK):
                         os.chmod(dir_, 0o700)
                     else:
@@ -317,7 +317,7 @@ def verify_env(
         else:
             if dir_ in pki_dir:
                 smode = stat.S_IMODE(mode.st_mode)
-                if smode != 448 and smode != 488:
+                if smode != 0o700 and smode != 0o750:
                     if os.access(dir_, os.W_OK):
                         os.chmod(dir_, 0o700)
                     else:

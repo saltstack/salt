@@ -161,6 +161,25 @@ def test_verify_env(tmp_path):
     assert dir_stat.st_mode & stat.S_IRWXO == 5
 
 
+@pytest.mark.skip_on_windows(reason="No verify_env Windows")
+@pytest.mark.parametrize("pki_dir_as_list", [False, True])
+@pytest.mark.parametrize(
+    "start_mode,expected_mode",
+    [
+        (0o755, 0o700),  # anything else is made private
+        (0o700, 0o700),
+        (0o750, 0o750),  # a group may read the pki dir
+    ],
+)
+def test_verify_env_pki_dir_mode(tmp_path, start_mode, expected_mode, pki_dir_as_list):
+    pki_dir = tmp_path / "pki"
+    pki_dir.mkdir()
+    pki_dir.chmod(start_mode)
+    pki = [str(pki_dir)] if pki_dir_as_list else str(pki_dir)
+    salt.utils.verify.verify_env([str(pki_dir)], getpass.getuser(), pki_dir=pki)
+    assert stat.S_IMODE(os.stat(pki_dir).st_mode) == expected_mode
+
+
 @pytest.mark.requires_network(only_local_network=True)
 def test_verify_socket():
     assert salt.utils.verify.verify_socket("", 18000, 18001)
