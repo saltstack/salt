@@ -41,11 +41,16 @@ def mock_pip_versions_cmds(*args, **kwargs):
                 pip_args = cmd[i + 1 :]
         if pip_args is None:
             return False
-        if pip_args[0] == "--use-deprecated=legacy-resolver":
+        # Skip any leading pip-level flags before the subcommand (e.g.
+        # ``--disable-pip-version-check``, ``--use-deprecated=legacy-resolver``).
+        while pip_args and pip_args[0].startswith("-"):
             pip_args = pip_args[1:]
+        if not pip_args:
+            return False
         if (
             pip_args[:2] == ["index", "versions"]
             or pip_args[0] == "install"
+            and len(pip_args) > 1
             and pip_args[1].endswith("==versions")
         ):
             return True
@@ -211,8 +216,26 @@ def test_list_available_packages_with_index_url(pip, pip_version, tmp_path):
                 reason="'pip==9.0.3' is not available on Py >= 3.10",
             ),
         ),
-        "pip<20.0",
-        "pip<21.0",
+        pytest.param(
+            "pip<20.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason=(
+                    "'pip<20.0' depends on the removed 'distutils' stdlib"
+                    " module on Py >= 3.12"
+                ),
+            ),
+        ),
+        pytest.param(
+            "pip<21.0",
+            marks=pytest.mark.skipif(
+                sys.version_info >= (3, 12),
+                reason=(
+                    "'pip<21.0' depends on the removed 'distutils' stdlib"
+                    " module on Py >= 3.12"
+                ),
+            ),
+        ),
         "pip>=21.0",
     ),
 )
