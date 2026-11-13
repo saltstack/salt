@@ -217,10 +217,6 @@ def verify_files(files, user):
             )
             raise SaltSystemExit(msg=msg)
 
-        except OSError as err:  # pylint: disable=duplicate-except
-            msg = f'Failed to create path "{fn_}" - {err}'
-            raise SaltSystemExit(msg=msg)
-
         stats = os.stat(fn_)
         if uid != stats.st_uid:
             try:

@@ -64,7 +64,7 @@ def _read_alternative_link_directly(name, path):
             return contents.splitlines(True)[1].rstrip("\n")
     except OSError:
         log.error("alternatives: %s does not exist", name)
-    except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
+    except IndexError as exc:
         log.error(
             "alternatives: unable to get master link for %s. Exception: %s",
             name,
