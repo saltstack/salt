@@ -1503,7 +1503,23 @@ class AsyncPillar(Pillar):
 
 
 class PillarCache(Pillar):
-    """Cache compiled pillar separately from the minion snapshots used for targeting."""
+    """
+    Return a cached pillar if it exists, otherwise cache it.
+
+    Compiled pillars are stored in the ``pillar_compile`` cache bank, using
+    ``pillar.cache_driver`` when configured. Each entry is keyed by minion id,
+    plus the pillarenv when one is set, so every minion/pillarenv combination
+    has its own compiled pillar:
+
+    ```
+    {'minion_1': {'pillar_key_1': 'pillar_val_1'},
+     'minion_1:dev': {'pillar_key_1': 'pillar_val_2'}}
+    ```
+
+    This cache is separate from the pillar snapshot in the ``pillar`` bank
+    that pillar targeting reads. The master writes that snapshot itself when
+    a minion fetches its pillar.
+    """
 
     def __init__(
         self,
