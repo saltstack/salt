@@ -69,7 +69,9 @@ class PoolReqServer(salt.utils.process.SignalHandlingProcess):
         from salt.utils.channel import iter_transport_opts
 
         frontend_channel = None
-        for transport, opts in iter_transport_opts(self.config):
+        for transport, opts in iter_transport_opts(
+            self.config, salt.master.SMaster.secrets
+        ):
             frontend_channel = salt.channel.server.ReqServerChannel.factory(opts)
             frontend_channel.pre_fork(self.process_manager)
             break
@@ -80,7 +82,9 @@ class PoolReqServer(salt.utils.process.SignalHandlingProcess):
             pool_opts = self.config.copy()
             pool_opts["pool_name"] = pool_name
 
-            for transport, opts in iter_transport_opts(pool_opts):
+            for transport, opts in iter_transport_opts(
+                pool_opts, salt.master.SMaster.secrets
+            ):
                 chan = salt.channel.server.ReqServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager)
                 pool_channels[pool_name] = chan
