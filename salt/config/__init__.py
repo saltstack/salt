@@ -2320,7 +2320,7 @@ def _validate_opts(opts):
             }
 
             # Is this a single type (not a tuple of types)?
-            if hasattr(VALID_OPTS[key], "__call__"):
+            if callable(VALID_OPTS[key]):
                 # This config option has a single defined type
                 try:
                     # This will try to evaluate the specified value type
