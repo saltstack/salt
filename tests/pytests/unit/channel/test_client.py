@@ -7,6 +7,7 @@ import salt.channel.client
 import salt.crypt
 import salt.exceptions
 import salt.payload
+from tests.support.mock import AsyncMock, MagicMock
 
 
 def test_async_methods():
@@ -153,6 +154,23 @@ async def test_async_pub_channel_decode_payload_drops_undecrypted_payload():
     payload = {"enc": "aes", "load": b"ciphertext"}
 
     assert await channel._decode_payload(payload) is None
+
+
+@pytest.mark.parametrize("metaproxy", ["proxy", "deltaproxy"])
+async def test_send_id_identifies_deltaproxy(metaproxy):
+    """The publisher must know which subscribers dispatch jobs to children."""
+    channel = object.__new__(salt.channel.client.AsyncPubChannel)
+    channel.opts = {"id": "controller", "metaproxy": metaproxy}
+    channel.auth = MagicMock()
+    channel.auth.authenticated = True
+    channel.auth.crypticle.dumps.return_value = b"encrypted"
+    channel.transport = MagicMock()
+    channel.transport.send = AsyncMock()
+    await channel.send_id(b"token", False)
+    load = channel.auth.crypticle.dumps.call_args.args[0]
+    assert load["id"] == "controller"
+    assert load["tok"] == b"token"
+    assert load.get("deltaproxy", False) is (metaproxy == "deltaproxy")
 
 
 class _StubTransport:

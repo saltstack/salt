@@ -1388,6 +1388,7 @@ class Subscriber:
         # per-connection 1 MiB msgpack ``Unpacker`` buffer.
         self._read_task = None
         self.id_ = None
+        self.deltaproxy = False
         self._creator_pid = os.getpid()
 
     def close(self):
@@ -1882,11 +1883,17 @@ class PubServer(tornado.tcpserver.TCPServer):
             payload = salt.transport.frame.frame_msg(package)
         to_remove = []
         if topic_list:
+            sent_clients = set()
             for topic in topic_list:
                 sent = False
                 for client in list(self.clients):
-                    if topic == client.id_:
-                        if self._submit_write(client, payload, to_remove):
+                    # DeltaProxy children have no subscription of their own.
+                    # Forward to their controller for local target matching.
+                    if topic == client.id_ or client.deltaproxy:
+                        if client in sent_clients:
+                            sent = True
+                        elif self._submit_write(client, payload, to_remove):
+                            sent_clients.add(client)
                             sent = True
                 if not sent:
                     log.debug("Publish target %s not connected %r", topic, self.clients)

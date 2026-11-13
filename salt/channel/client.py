@@ -664,6 +664,9 @@ class AsyncPubChannel:
         and retry the method.
         """
         load = {"id": self.opts["id"], "tok": tok}
+        if self.opts.get("metaproxy") == "deltaproxy":
+            # Children share this subscription and match their targets locally.
+            load["deltaproxy"] = True
 
         async def _do_transfer():
             msg = self._package_load(self.auth.crypticle.dumps(load))

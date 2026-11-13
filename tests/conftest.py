@@ -257,9 +257,9 @@ def pytest_addoption(parser):
     test_selection_group.addoption(
         "--transport",
         default="zeromq",
-        choices=("zeromq", "tcp"),
+        choices=("zeromq", "tcp", "ws"),
         help=(
-            "Select which transport to run the integration tests with, zeromq or tcp."
+            "Select which transport to run the integration tests with: zeromq, tcp, or ws."
             " Default: %(default)s"
         ),
     )
