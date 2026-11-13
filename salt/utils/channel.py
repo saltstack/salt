@@ -1,12 +1,18 @@
 import copy
 
-import salt.master
 
-
-def iter_transport_opts(opts):
+def iter_transport_opts(opts, secrets=None):
     """
     Yield transport, opts for all master configured transports
+
+    ``secrets`` is the master's shared secrets (``SMaster.secrets``). It is
+    passed in, instead of being read from ``salt.master``, because
+    ``salt.master`` imports this module. If it is not given, the secrets
+    already in ``opts`` are kept.
     """
+    if secrets is None:
+        secrets = opts.get("secrets")
+
     transports = set()
     # Never deepcopy secrets: SMaster.secrets holds SynchronizedString objects
     # (multiprocessing sharedctypes) that Python 3.14 refuses to deepcopy outside
@@ -21,14 +27,14 @@ def iter_transport_opts(opts):
         t_opts.update(opts_overrides)
         t_opts["transport"] = transport
         # Ensure secrets are available
-        t_opts["secrets"] = salt.master.SMaster.secrets
+        t_opts["secrets"] = secrets
         transports.add(transport)
         yield transport, t_opts
 
     transport = opts_nosecrets.get("transport", "zeromq")
     if transport not in transports:
         t_opts = copy.deepcopy(opts_nosecrets)
-        t_opts["secrets"] = salt.master.SMaster.secrets
+        t_opts["secrets"] = secrets
         yield transport, t_opts
 
 
