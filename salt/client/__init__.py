@@ -1870,7 +1870,7 @@ class LocalClient:
             return_count = return_count + 1
             if progress:
                 for id_, min_ret in ret.items():
-                    if not min_ret.get("failed") is True:
+                    if min_ret.get("failed") is not True:
                         yield {
                             "minion_count": len(minions),
                             "return_count": return_count,

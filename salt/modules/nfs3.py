@@ -44,7 +44,7 @@ def list_exports(exports="/etc/exports"):
             comps = line.split()
 
             # Handle the case where the same path is given twice
-            if not comps[0] in ret:
+            if comps[0] not in ret:
                 ret[comps[0]] = []
 
             newshares = []

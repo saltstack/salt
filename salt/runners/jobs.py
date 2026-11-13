@@ -75,7 +75,7 @@ def active(display_progress=False):
         if not isinstance(data, list):
             continue
         for job in data:
-            if not job["jid"] in ret:
+            if job["jid"] not in ret:
                 ret[job["jid"]] = _format_jid_instance(job["jid"], job)
                 ret[job["jid"]].update(
                     {"Running": [{minion: job.get("pid", None)}], "Returned": []}

@@ -906,7 +906,7 @@ class CkMinions:
                             log.error('Invalid beginning operator after "(": %s', word)
                             return {"minions": [], "missing": []}
                         if word == "not":
-                            if not results[-1] in ("&", "|", "("):
+                            if results[-1] not in ("&", "|", "("):
                                 results.append("&")
                             results.append("(")
                             results.append("set(all_minions())")

@@ -712,7 +712,7 @@ def delete(name, table="filter", family="ipv4", **kwargs):
         full=True, family=family, command="D", **kwargs
     )
 
-    if not __salt__["iptables.check"](table, kwargs["chain"], rule, family) is True:
+    if __salt__["iptables.check"](table, kwargs["chain"], rule, family) is not True:
         if "position" not in kwargs:
             ret["result"] = True
             ret["comment"] = "iptables rule for {} already absent for {} ({})".format(
