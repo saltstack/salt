@@ -406,12 +406,18 @@ def topology(request):
 
     # --- wait for initial auth ----------------------------------------
     topology_handle = Topology(spec)
+    auth_ok = False
     try:
-        topology_handle.wait_initial_auth(300)
+        auth_ok = topology_handle.wait_initial_auth(300)
     except Exception as exc:  # noqa: BLE001 -- surface + record anything
         _record_setup_error_row(
             "topology_setup",
-            f"wait_initial_auth failed: {exc}",
+            f"wait_initial_auth crashed: {exc}",
+        )
+    if not auth_ok:
+        _record_setup_error_row(
+            "topology_setup",
+            "wait_initial_auth(300) did not confirm every minion is ping-reachable",
         )
         _snapshot_compose_logs(spec, workdir)
         if not config.getoption("--no-cleanup"):
@@ -422,9 +428,28 @@ def topology(request):
                 check=False,
             )
         pytest.fail(
-            f"wait_initial_auth(300) timed out for topology={topo_name!r}: {exc}",
+            f"wait_initial_auth(300) timed out for topology={topo_name!r}",
             pytrace=False,
         )
+
+    # --- warm-up window -----------------------------------------------
+    # salt-minion continues to grow its RSS for 30-60s after the first
+    # successful test.ping as it finishes module-sync, grain cache
+    # population, and worker pre-fork.  Baseline tests fire right away
+    # and their per-minute RSS-slope leak check trips as a false
+    # positive if we yield the topology while that ramp is still in
+    # flight.  Pause ``RESILIENCY_WARMUP_SEC`` (default 60s) after
+    # wait_initial_auth returns so the first measurement captures a
+    # settled baseline, not startup growth.
+    warmup_sec = int(os.environ.get("RESILIENCY_WARMUP_SEC", "60"))
+    if warmup_sec > 0:
+        print(
+            f"[resiliency] warm-up: sleeping {warmup_sec}s after "
+            f"wait_initial_auth so minion RSS/FD settles before the "
+            f"first baseline measurement",
+            flush=True,
+        )
+        time.sleep(warmup_sec)
 
     try:
         yield topology_handle

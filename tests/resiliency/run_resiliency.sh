@@ -81,6 +81,11 @@ PYTEST_ARGS=(
     -p no:system-statistics
     -p no:salt-factories
     "--topology=${TOPOLOGY}"
+    # ``-v`` emits one flushed line per test (``test_X::test_Y PASSED``)
+    # instead of dot-per-test batched per module.  Essential for GHA log
+    # progress visibility -- marathon runs would otherwise show nothing
+    # for 90+ min between dot batches.
+    -v
     -ra
 )
 
