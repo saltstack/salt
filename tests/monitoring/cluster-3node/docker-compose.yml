@@ -1,0 +1,241 @@
+# 3-master cluster + haproxy LB + 1 scale minion monitoring stack.
+#
+# Ring-mode test-harness sequencing:
+#
+#   The minion container used to start immediately after haproxy was up,
+#   which fired an auto-register BEFORE the operator had a chance to
+#   create the ``resource_index`` ring.  That contaminated all 3 masters
+#   with 30K+ replicate-fallback SRNs that the later ring-dispatched
+#   register could not prune (they'd been written this window, so the
+#   terminal scope=dummy prune saw them as "live").
+#
+#   The ``c3-ring-setup`` shim below runs after all 3 masters are up,
+#   invokes the three ring runners against master-1, and exits.  The
+#   minion waits on ``service_completed_successfully`` so its first
+#   auto-register goes through the ring, not the broadcast fallback.
+#   This makes ``sum=200000 exact`` the stable ring-mode invariant
+#   out of the box.
+#
+# Path parameterization:
+#
+#   The ``SALT_SRC`` env var points at the salt source directory whose
+#   ``salt/`` package should be bind-mounted into the containers.  The
+#   default resolves to the repo containing this compose file (via
+#   ``../../..``) so a plain ``docker compose up -d`` works from this
+#   directory.  Verifiers running against a worktree override
+#   ``SALT_SRC`` to that worktree's root.
+
+x-master-common: &master-common
+  build:
+    context: ${SALT_SRC:-../../..}
+    dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
+  image: cluster-3node-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  volumes:
+    - ${SALT_SRC:-../../..}/salt:/app/salt
+    - ./srv/salt:/srv/salt
+    - cluster-pki:/etc/salt/cluster-pki
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - salt-net
+
+services:
+  salt-master-1:
+    <<: *master-common
+    container_name: c3-salt-master-1
+    hostname: salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.11
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-1.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-1-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+
+  salt-master-2:
+    <<: *master-common
+    container_name: c3-salt-master-2
+    hostname: salt-master-2
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.12
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-2.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-2-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+
+  salt-master-3:
+    <<: *master-common
+    container_name: c3-salt-master-3
+    hostname: salt-master-3
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.13
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-3.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-3-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+
+  salt-haproxy:
+    image: haproxy:2.8
+    container_name: c3-salt-haproxy
+    hostname: salt-haproxy
+    depends_on:
+      - salt-master-1
+      - salt-master-2
+      - salt-master-3
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.14
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+
+  # Ring sequencing shim.  Runs AFTER all 3 masters + haproxy are up.
+  # Invokes cluster.ring_create / route_set / ring_set against master-1
+  # (which fans out to the Raft leader via cluster/peer/multi-ring-request
+  # so it works regardless of which master is leader), waits for the
+  # ring to become active, then exits 0.  The minion ``depends_on:
+  # service_completed_successfully`` this service, so its first
+  # auto-register fires only after the ring is live.
+  #
+  # One-shot: restart policy is "no" and the container exits as soon as
+  # ``ring-setup.sh`` returns.  ``docker compose up -d`` still returns
+  # after this exits successfully.
+  c3-ring-setup-disabled:
+    <<: *master-common
+    container_name: c3-ring-setup
+    hostname: c3-ring-setup
+    depends_on:
+      - salt-master-1
+      - salt-master-2
+      - salt-master-3
+      - salt-haproxy
+    restart: "no"
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-1.conf:/etc/salt/master
+      - ./ring-setup.sh:/usr/local/bin/ring-setup.sh:ro
+      - cluster-pki:/etc/salt/cluster-pki
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: ["/bin/bash"]
+    command: ["/usr/local/bin/ring-setup.sh"]
+
+  salt-minion-1:
+    <<: *master-common
+    container_name: c3-salt-minion-1
+    hostname: salt-minion-1
+    depends_on:
+      c3-ring-setup-disabled:
+        condition: service_completed_successfully
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.21
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./minion-1.conf:/etc/salt/minion
+      - minion-1-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+
+  salt-minion-2:
+    <<: *master-common
+    container_name: c3-salt-minion-2
+    hostname: salt-minion-2
+    depends_on:
+      c3-ring-setup-disabled:
+        condition: service_completed_successfully
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.22
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./minion-2.conf:/etc/salt/minion
+      - minion-2-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+
+  salt-minion-3:
+    <<: *master-common
+    container_name: c3-salt-minion-3
+    hostname: salt-minion-3
+    depends_on:
+      c3-ring-setup-disabled:
+        condition: service_completed_successfully
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.23
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./minion-3.conf:/etc/salt/minion
+      - minion-3-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+
+  salt-minion-4:
+    <<: *master-common
+    container_name: c3-salt-minion-4
+    hostname: salt-minion-4
+    depends_on:
+      c3-ring-setup-disabled:
+        condition: service_completed_successfully
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.24
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./minion-4.conf:/etc/salt/minion
+      - minion-4-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+
+  salt-minion-5:
+    <<: *master-common
+    container_name: c3-salt-minion-5
+    hostname: salt-minion-5
+    depends_on:
+      c3-ring-setup-disabled:
+        condition: service_completed_successfully
+    networks:
+      salt-net:
+        ipv4_address: 10.77.1.25
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./minion-5.conf:/etc/salt/minion
+      - minion-5-cache:/var/cache/salt/minion
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+
+networks:
+  salt-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.1.0/24
+
+volumes:
+  cluster-pki:
+  master-1-cache:
+  master-2-cache:
+  master-3-cache:
+  minion-1-cache:
+  minion-2-cache:
+  minion-3-cache:
+  minion-4-cache:
+  minion-5-cache:
