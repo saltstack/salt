@@ -1764,6 +1764,352 @@
       ],
       "title": "API Resource Usage (FDs & Processes)",
       "type": "timeseries"
+    },
+    {
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 131
+      },
+      "id": 500,
+      "title": "Salt Metrics (only with metrics.enabled and exporter prometheus)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 132
+      },
+      "id": 501,
+      "targets": [
+        {
+          "expr": "rate(salt_master_requests_handled_total[1m])",
+          "legendFormat": "{{cmd}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Requests Handled (per second, by cmd)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 132
+      },
+      "id": 502,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, cmd) (rate(salt_master_requests_duration_milliseconds_bucket[2m])))",
+          "legendFormat": "{{cmd}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Request Latency p95 (by cmd)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 132
+      },
+      "id": 503,
+      "targets": [
+        {
+          "expr": "sum(rate(salt_jobs_published_total[1m]))",
+          "legendFormat": "published",
+          "refId": "A"
+        },
+        {
+          "expr": "sum by (success) (rate(salt_jobs_completed_total[1m]))",
+          "legendFormat": "completed success={{success}}",
+          "refId": "B"
+        }
+      ],
+      "title": "Salt Jobs Published and Completed (per second)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 139
+      },
+      "id": 504,
+      "targets": [
+        {
+          "expr": "rate(salt_auth_attempts_total[1m])",
+          "legendFormat": "{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Auth Attempts (per second, by result)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 139
+      },
+      "id": 505,
+      "targets": [
+        {
+          "expr": "rate(salt_events_fired_total[1m])",
+          "legendFormat": "{{tag_prefix}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Events Fired (per second, by tag_prefix)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ops"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 139
+      },
+      "id": 506,
+      "targets": [
+        {
+          "expr": "rate(salt_returners_calls_total[1m])",
+          "legendFormat": "{{returner}} {{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Returner Calls (per second)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 146
+      },
+      "id": 507,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, fun) (rate(salt_job_duration_milliseconds_bucket[2m])))",
+          "legendFormat": "{{fun}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Job Duration p95 (by fun)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 146
+      },
+      "id": 508,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, fun) (rate(salt_minion_exec_duration_milliseconds_bucket[2m])))",
+          "legendFormat": "{{fun}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Minion Exec Duration p95 (by fun)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 146
+      },
+      "id": 509,
+      "targets": [
+        {
+          "expr": "salt_master_connected_minions_count",
+          "legendFormat": "connected minions",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Connected Minions",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "none"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 153
+      },
+      "id": 510,
+      "targets": [
+        {
+          "expr": "salt_master_workers_queue_depth",
+          "legendFormat": "{{pool}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt MWorker Queue Depth (in flight)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "Prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short"
+        }
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 153
+      },
+      "id": 511,
+      "targets": [
+        {
+          "expr": "salt_process_open_fds",
+          "legendFormat": "open FDs",
+          "refId": "A"
+        }
+      ],
+      "title": "Salt Open FDs (salt.process.open_fds)",
+      "type": "timeseries"
     }
   ],
   "refresh": "10s",

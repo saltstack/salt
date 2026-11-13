@@ -48,6 +48,49 @@ versions.
   Pull Requests that fix broken or failing tests should be created against the
   oldest supported branch where the issue occurs.
 
+Incremental Ruff Checks (3008 and Later)
+========================================
+
+Ruff runs alongside pylint in pre-commit and CI. Black remains the formatter.
+The rules cover correctness problems only: all pyflakes checks (unused
+imports, undefined names, redefined names, and so on), common bugbear checks
+such as mutable argument defaults and loop variables captured by nested
+functions, comparisons to ``None``, ``True`` and ``False``, bare ``except``,
+dropped asyncio tasks, pylint error checks, and unused local variables outside
+``tests/``. Use ``_`` for a value you do not need. Star imports are not
+checked. Names Salt injects into modules, such as
+``__salt__`` and ``__opts__``, are not reported as undefined. The list is in
+``pyproject.toml`` and must match ``additional-builtins`` in ``.pylintrc``.
+This check does not enforce style or type annotations, and does not replace
+mypy.
+
+Only new violations are blocking. CI compares with the pull request's target
+commit using the same Ruff version and configuration on both revisions.
+Existing violations on unchanged lines are allowed, even when other edits move
+those lines. Git-detected renames preserve their baseline. Changed or new lines
+must meet the enabled rules. Removing a use of an import can introduce an error on
+an unchanged import line, which is also reported. ``salt/ext`` and ``templates``
+are excluded. There is no requirement to clean up an entire existing file.
+
+For staged changes, run::
+
+    pre-commit run ruff-incremental
+
+To check all changes on a branch, including committed changes, first fetch the
+target branch and then run::
+
+    RUFF_BASE_REF=$(git merge-base HEAD origin/3008.x) pre-commit run ruff-incremental --all-files
+
+The hook's regression tests also run when its script, configuration, or tests
+change; they use an isolated environment with Ruff and pytest.
+
+The default local baseline is ``HEAD``. For direct use, install the version of
+Ruff pinned in ``.pre-commit-config.yaml`` and run
+``python tools/precommit/ruff.py --base-ref <commit>``. The incremental check
+never fixes files automatically. A missing comparison commit or a Ruff failure
+fails the check rather than silently skipping it. Non-PR CI runs compare with
+their checked-out commit and do not require historical lint cleanup.
+
 Setting Up Your Salt Development Environment
 ============================================
 
