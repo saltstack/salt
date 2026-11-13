@@ -47,6 +47,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -161,6 +162,10 @@ def reauth_master_opts(pki_root, reauth_minion_id, ret_port):
             "zmq_monitor": False,
             "master_stats": False,
             "ping_on_rotate": False,
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
         }
     )
     # Pre-accept the minion key.
@@ -185,8 +190,9 @@ def reauth_minion_opts(pki_root, reauth_master_opts, reauth_minion_id, ret_port)
         "__role": "minion",
         "transport": "zeromq",
         "keysize": 4096,
-        "encryption_algorithm": salt.crypt.OAEP_SHA1,
-        "signing_algorithm": salt.crypt.PKCS1v15_SHA1,
+        "encryption_algorithm": ("OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"),
+        "signing_algorithm": ("PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"),
+        "fips_mode": FIPS_TESTRUN,
         "master_port": ret_port,
         "master_ip": "127.0.0.1",
         "verify_master_pubkey_sign": False,

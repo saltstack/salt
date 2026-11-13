@@ -56,6 +56,7 @@ import salt.utils.files
 import salt.utils.platform
 import salt.utils.process
 import salt.utils.stringutils
+from tests.conftest import FIPS_TESTRUN
 
 log = logging.getLogger(__name__)
 
@@ -170,6 +171,10 @@ def cancel_master_opts(auth_pki_dir, free_port):
             "con_cache": False,
             "zmq_monitor": False,
             "permissive_pki_access": True,
+            "fips_mode": FIPS_TESTRUN,
+            "publish_signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
         }
     )
     (auth_pki_dir / "sock").mkdir(exist_ok=True)
@@ -194,8 +199,11 @@ def cancel_minion_opts(auth_pki_dir, cancel_master_opts, free_port):
             "__role": "minion",
             "transport": "zeromq",
             "keysize": 2048,
-            "encryption_algorithm": salt.crypt.OAEP_SHA1,
-            "signing_algorithm": salt.crypt.PKCS1v15_SHA1,
+            "encryption_algorithm": ("OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"),
+            "signing_algorithm": (
+                "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+            ),
+            "fips_mode": FIPS_TESTRUN,
             "master_port": free_port,
             "master_ip": "127.0.0.1",
             "acceptance_wait_time": 1,
