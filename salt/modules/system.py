@@ -206,7 +206,7 @@ def _swclock_to_hwclock():
     """
     res = __salt__["cmd.run_all"](["hwclock", "--systohc"], python_shell=False)
     if res["retcode"] != 0:
-        log.warn(
+        log.warning(
             "hwclock failed to set hardware clock from software clock: %s",
             res["stderr"],
         )

@@ -90,7 +90,7 @@ def _load_state(opts, resource_id):
         state = _initial_state(resource_id)
         _save_state(opts, resource_id, state)
     except Exception as exc:  # pylint: disable=broad-except
-        log.exception("Failed to load state: %s", exc, exc_info=True)
+        log.exception("Failed to load state: %s", exc)
         state = _initial_state(resource_id)
         _save_state(opts, resource_id, state)
     log.warning(
