@@ -1,12 +1,13 @@
 import copy
 
-import salt.master
-
 
 def iter_transport_opts(opts):
     """
     Yield transport, opts for all master configured transports
     """
+    # salt.master imports this module, so it cannot be imported at the top
+    import salt.master  # pylint: disable=import-outside-toplevel
+
     transports = set()
     # Never deepcopy secrets: SMaster.secrets holds SynchronizedString objects
     # (multiprocessing sharedctypes) that Python 3.14 refuses to deepcopy outside
