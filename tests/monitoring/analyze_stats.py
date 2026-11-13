@@ -23,12 +23,35 @@ PROM_URL = "http://127.0.0.1:19090"
 # margin.  Override with ``STRESS_WARMUP_SECONDS`` if that needs tuning.
 WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", 10 * 60))
 
-# Master RSS slope (bytes/sec) above which the run fails.  Master RSS is not
-# flat even without a leak: it oscillates by a few hundred MB with a period
-# of about 6 minutes, so the fit over a window of a few periods keeps some
-# noise.  Two 30m runs measured about 13 and 7 KB/sec after the warm-up, so
-# the limit is 15 KB/sec (it was 10 KB/sec).
-MASTER_RSS_SLOPE_LIMIT = 15 * 1024
+# Master RSS slope (bytes/sec) above which the run fails.  The limit falls
+# with the length of the run.  Master RSS is not flat even without a leak: it
+# keeps filling for a long time after the warm-up (caches, worker heaps), so
+# the slope of a short window is much higher than that of a long one.  On
+# this branch the measured slopes after the warm-up were:
+#
+#   run length   slopes (KB/sec)             limit (KB/sec)
+#   30m          11.1, 13.1, 18.7            25
+#   1h           14.5, 15.0, 16.2, 17.5      25
+#   1.5h         8.4, 11.0                   15
+#   2h           6.5, 7.0, 7.5               10
+#   3h           5.6                         8
+#   5.5h         2.1                         4
+#
+# Each limit is about 1.3 times the highest slope seen for that length.  The
+# limit between two lengths is interpolated.  Runs shorter than the first
+# length use the first limit, longer than the last use the last.  Without
+# ``STRESS_START_EPOCH`` the run length is unknown and the first limit is
+# used.  A limit may need a new look if the slopes measured on the
+# saltstack/salt runners move away from these.
+MASTER_RSS_SLOPE_LIMITS = (
+    # (run length in minutes, limit in bytes/sec)
+    (30, 25 * 1024),
+    (60, 25 * 1024),
+    (90, 15 * 1024),
+    (120, 10 * 1024),
+    (180, 8 * 1024),
+    (330, 4 * 1024),
+)
 
 # Tail: the newest TAIL_SECONDS of data are ignored too.  The last samples
 # of a run are taken while the stress is being stopped and prometheus is
@@ -69,6 +92,25 @@ def get_elapsed_seconds():
         return int(time.time() - float(start))
     except ValueError:
         return None
+
+
+def get_master_rss_slope_limit():
+    """
+    Master RSS slope limit (bytes/sec) for the length of this run, see
+    ``MASTER_RSS_SLOPE_LIMITS``.
+    """
+    elapsed = get_elapsed_seconds()
+    points = MASTER_RSS_SLOPE_LIMITS
+    if elapsed is None:
+        return points[0][1]
+    minutes = elapsed / 60
+    if minutes <= points[0][0]:
+        return points[0][1]
+    for (low, low_limit), (high, high_limit) in zip(points, points[1:]):
+        if minutes <= high:
+            share = (minutes - low) / (high - low)
+            return low_limit + (high_limit - low_limit) * share
+    return points[-1][1]
 
 
 def get_slope_window():
@@ -186,7 +228,9 @@ def main():
 
     # Thresholds
     # Memory: a slope above the limit after the warm-up might indicate a real leak
-    if master_rss_slope > MASTER_RSS_SLOPE_LIMIT:
+    rss_limit = get_master_rss_slope_limit()
+    print(f"Master RSS slope limit for this run length: {rss_limit:.2f} bytes/sec")
+    if master_rss_slope > rss_limit:
         print("FAIL: Master memory leak detected!")
         failed = True
 
