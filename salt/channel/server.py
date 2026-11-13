@@ -5127,7 +5127,9 @@ class MasterPubServerChannel:
             # ``_run_delegate_cache_write`` which picks between
             # N-of-N replicate (encrypted peer-publish) and 1-of-N
             # ring delegation based on the payload's ``write_kind``.
-            asyncio.create_task(self._run_delegate_cache_write(_decode_data()))
+            asyncio.create_task(  # noqa: RUF006
+                self._run_delegate_cache_write(_decode_data())
+            )
             return
         if tag == "cluster/runner/delegate_resource_register_write":
             # Cross-master resource-registry replication: the
@@ -5136,7 +5138,7 @@ class MasterPubServerChannel:
             # carries ``{minion_id, resources, originating_master}``
             # and is fanned out N-of-N to every peer master via an
             # encrypted ``cluster/peer/delegate-resource-register-write``.
-            asyncio.create_task(
+            asyncio.create_task(  # noqa: RUF006
                 self._run_delegate_resource_register_write(_decode_data())
             )
             return
