@@ -471,7 +471,24 @@ class Topology:
         """Run ``salt --out=json '*' test.ping`` on ``master``.
 
         Returns ``{minion_id: bool}``.  Returns ``{}`` on any failure
-        (timeout, non-zero exit, unparseable JSON).
+        (timeout, non-zero exit, no parseable output).
+
+        Salt's ``--out=json`` output for a multi-minion call is a
+        STREAM of JSON objects (one per minion as returns arrive),
+        NOT a single JSON object::
+
+            {"minion-1": true}
+            {"minion-2": true}
+
+        OR it may emit a single wrapping dict::
+
+            {"minion-1": true, "minion-2": true}
+
+        Supports both: try single-parse first, fall back to
+        ``raw_decode`` streaming over the concatenated blob.  Previous
+        single-parse implementation returned ``{}`` on the
+        multi-object form and caused ``wait_initial_auth`` to time
+        out at 300s even though all minions had answered.
         """
         proc = self._run(
             [
@@ -489,15 +506,38 @@ class Topology:
             # print and flush before we bail.
             timeout=timeout + 15,
         )
-        if not proc.stdout.strip():
+        stdout = proc.stdout.strip()
+        if not stdout:
             return {}
+
+        # Fast path: output is a single wrapping dict.
         try:
-            data = json.loads(proc.stdout)
+            data = json.loads(stdout)
+            if isinstance(data, dict):
+                return {str(k): bool(v) for k, v in data.items()}
         except json.JSONDecodeError:
-            return {}
-        if not isinstance(data, dict):
-            return {}
-        return {str(k): bool(v) for k, v in data.items()}
+            pass
+
+        # Streaming path: one JSON object per minion, concatenated.
+        decoder = json.JSONDecoder()
+        idx = 0
+        out: dict[str, bool] = {}
+        while idx < len(stdout):
+            # Skip whitespace between objects.
+            while idx < len(stdout) and stdout[idx].isspace():
+                idx += 1
+            if idx >= len(stdout):
+                break
+            try:
+                obj, end = decoder.raw_decode(stdout, idx)
+            except json.JSONDecodeError:
+                # Give up on the rest; return what we parsed.
+                break
+            idx = end
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    out[str(k)] = bool(v)
+        return out
 
     # ------------------------------------------------------------------
     # Async-job helpers (scenario-side: overload / backpressure phases)
