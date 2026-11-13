@@ -276,6 +276,17 @@ VALID_OPTS = immutabletypes.freeze(
         # to restore the pre-gate "always fan out" behaviour (e.g.
         # for diagnosis of a stuck handshake).
         "cluster_cache_replicate_require_joined": bool,
+        # Max pending replication events buffered per peer while that
+        # peer is still un-joined.  Oldest entries are dropped once the
+        # cap is exceeded (with a coalesced WARN).  Protects the publish
+        # daemon's RSS when a peer stays un-joined for a long time
+        # during a slow bootstrap.
+        "cluster_cache_replicate_pending_max_events": int,
+        # TTL (seconds) for an entry in the per-peer pending-replication
+        # queue.  Entries older than this are dropped at enqueue + at
+        # flush time with a coalesced INFO/WARN, independent of the
+        # per-peer cap.
+        "cluster_cache_replicate_pending_ttl": float,
         # Join-time catch-up for replicate-mode cache banks.  When True
         # (the default when ``cluster_cache_replication`` is True) a
         # newly-joining master receives every replicate-mode bank's
@@ -2088,6 +2099,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_cache_routing": {},
         "cluster_cache_replicate_batch_size": 1024,
         "cluster_cache_replicate_require_joined": True,
+        "cluster_cache_replicate_pending_max_events": 10000,
+        "cluster_cache_replicate_pending_ttl": 300.0,
         # Join-time cache-bank catch-up default -- resolved in
         # ``apply_master_config`` to match ``cluster_cache_replication``.
         "cluster_state_sync_cache_banks": None,

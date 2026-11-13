@@ -550,3 +550,45 @@ def test_rejoining_master_catches_up(
         f"bank_sync:grains channel is the only path that could have "
         f"carried this key."
     )
+
+
+def test_live_write_during_join_window_reaches_late_joiner(
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+    cluster_master_4_isolated,
+):
+    """
+    Regression for the Arm64 bootstrap-race failures on PR #70773
+    (``test_grain_targeting_works_from_any_backend`` /
+    ``test_resource_registry_replicates``).
+
+    A cluster write landing AFTER master_4's state-sync snapshot but
+    (potentially) BEFORE master_4 appears in master_1's
+    ``_discover_replies`` must still reach master_4 via the sender-side
+    pending-replication queue (``_cluster_replicator.enqueue_pending``
+    + ``flush_pending_for_peer``).
+
+    This test can't force the exact race window (that needs Arm64 timing
+    pressure) but it does exercise the queue+flush path by issuing a
+    bank write AFTER master_4 fixtures yield (so handshake is likely
+    complete, but any live write still has to traverse the sender-gate
+    and either fan out directly or go through the queue).  On a passing
+    fix the write arrives on master_4 within the deadline either way.
+    """
+    sentinel_key = "live-write-after-join"
+    sentinel_val = {"written_by": "master_1", "stage": "post-join-live"}
+    _store_on_master(cluster_master_1_isolated, "grains", sentinel_key, sentinel_val)
+    got = _wait_for_fetch(
+        cluster_master_4_isolated,
+        "grains",
+        sentinel_key,
+        predicate=lambda v: v == sentinel_val,
+        timeout=60,
+    )
+    assert got == sentinel_val, (
+        f"live write after master_4 joined did not reach master_4; "
+        f"got {got!r}.  Expected the sender-side fan-out (and the "
+        f"pending-queue fallback if the handshake was still in "
+        f"flight) to deliver."
+    )

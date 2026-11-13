@@ -2264,12 +2264,20 @@ class MasterPubServerChannel:
 
         discover_replies = getattr(self, "_discover_replies", None) or set()
         peer_keys = getattr(self, "peer_keys", None) or {}
+        pending_event = _crep.PendingEvent(
+            kind="cache",
+            event=event,
+            tag="cluster/peer/delegate-cache-write",
+            bank=bank,
+            key=label,
+        )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,
             discover_replies,
             peer_keys,
             self.opts,
             context="delegate-cache-write",
+            pending_event=pending_event,
         )
         for pusher in targets:
             try:
@@ -2357,12 +2365,19 @@ class MasterPubServerChannel:
 
         discover_replies = getattr(self, "_discover_replies", None) or set()
         peer_keys = getattr(self, "peer_keys", None) or {}
+        pending_event = _crep.PendingEvent(
+            kind="resource",
+            event=event,
+            tag="cluster/peer/delegate-resource-register-write",
+            minion_id=minion_id,
+        )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,
             discover_replies,
             peer_keys,
             self.opts,
             context="delegate-resource-register-write",
+            pending_event=pending_event,
         )
         for pusher in targets:
             try:
@@ -3990,6 +4005,51 @@ class MasterPubServerChannel:
                 self._raft_service.stop()
             self.close()
 
+    def _schedule_pending_flush(self, peer_id):
+        """
+        Schedule a drain of the sender-side pending-replication queue
+        for ``peer_id``.
+
+        Invoked from ``handle_pool_publish`` when a peer transitions
+        to a joined state via either the ``cluster/peer/discover-reply``
+        or the ``cluster/peer/<master_id>`` AES-key-broadcast handler.
+        The queue holds pre-encrypted ``delegate-cache-write`` /
+        ``delegate-resource-register-write`` events that
+        :func:`salt.cache._cluster_replicator.filter_joined_pushers`
+        enqueued while the peer was still un-joined.
+
+        The actual drain is awaited on the running asyncio loop so a
+        slow pusher does not block the handle_pool_publish coroutine
+        (we schedule a task; the coroutine returns immediately).  If
+        the flush fails mid-way, surviving entries are re-enqueued at
+        the queue head by :func:`flush_pending_for_peer` and a later
+        call will retry them.
+
+        Idempotent: calling with an empty queue is a no-op.  Calling
+        twice in rapid succession (discover-reply followed by AES-key
+        broadcast) is safe: the second call finds an empty queue.
+        """
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        pushers = list(self.pushers)
+        opts = self.opts
+        depth = _crep.pending_queue_depth(peer_id)
+        if not depth:
+            return
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            log.exception(
+                "cluster-cache-replication: no event loop for pending flush "
+                "to %s (depth=%d); entries remain queued",
+                peer_id,
+                depth,
+            )
+            return
+        loop.create_task(  # noqa: RUF006
+            _crep.flush_pending_for_peer(peer_id, pushers, opts=opts)
+        )
+
     def _signal_cluster_ready(self):
         """
         Set the ``cluster_ready`` event in ``SMaster.secrets`` so that request
@@ -4856,6 +4916,12 @@ class MasterPubServerChannel:
                 if not hasattr(self, "_discover_replies"):
                     self._discover_replies = set()
                 self._discover_replies.add(payload["peer_id"])
+                # Peer just transitioned to joined -- flush any
+                # replication events that were deferred while we
+                # were waiting for this handshake.  See
+                # :func:`salt.cache._cluster_replicator.enqueue_pending`
+                # for the sender-side queue.
+                self._schedule_pending_flush(payload["peer_id"])
                 key = salt.crypt.PublicKeyString(payload["pub"])
                 self._discover_token = self.gen_token()
                 tosign = salt.payload.package(
@@ -5012,6 +5078,7 @@ class MasterPubServerChannel:
                     if self.peer_keys[peer] != key_str:
                         self.peer_keys[peer] = key_str
                         self.send_aes_key_event()
+                        self._schedule_pending_flush(peer)
                         while self.auth_errors[peer]:
                             key, data = self.auth_errors[peer].popleft()
                             peer_id, parsed_tag = self.parse_cluster_tag(tag)
@@ -5030,6 +5097,10 @@ class MasterPubServerChannel:
                 else:
                     self.peer_keys[peer] = key_str
                     self.send_aes_key_event()
+                    # Peer just transitioned to joined via the AES-key
+                    # broadcast path (sibling signal to discover-reply).
+                    # Flush any replication events deferred by the gate.
+                    self._schedule_pending_flush(peer)
                     while self.auth_errors[peer]:
                         key, data = self.auth_errors[peer].popleft()
                         peer_id, parsed_tag = self.parse_cluster_tag(tag)

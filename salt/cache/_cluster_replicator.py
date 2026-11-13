@@ -11,7 +11,9 @@ or a Cache object.  ``Cache.store`` and ``Cache.store_many`` emit via
 """
 
 import atexit
+import collections
 import concurrent.futures
+import dataclasses
 import hashlib
 import logging
 import os
@@ -152,7 +154,14 @@ def _log_skip(peer_host, context, reason):
             )
 
 
-def filter_joined_pushers(pushers, discover_replies, peer_keys, opts, context=None):
+def filter_joined_pushers(
+    pushers,
+    discover_replies,
+    peer_keys,
+    opts,
+    context=None,
+    pending_event=None,
+):
     """
     Filter ``pushers`` down to peers that have completed the cluster
     handshake.
@@ -163,14 +172,18 @@ def filter_joined_pushers(pushers, discover_replies, peer_keys, opts, context=No
     been installed cannot decrypt the event and would log a loud
     ``Failed to decrypt`` on receive; skipping them here converts the
     silent-loss failure mode into a WARN on the sender side and lets
-    the join-time state-sync stream catch them up.
+    the sender-side pending queue replay the write when the peer
+    completes its handshake.
 
-    Catch-up guarantee: a peer that joined after this check executed
-    but before the fan-out arrived will NOT receive this specific
-    write; they catch up via the state-sync primitives streamed in
-    the ``join-reply`` handler (see
-    :mod:`salt.cluster.state_sync`) and via subsequent writes that
-    see the peer as joined.  No write is silently dropped.
+    Catch-up guarantee: a peer skipped by this gate is still delivered
+    the event via the per-peer pending queue -- see
+    :func:`enqueue_pending` + :func:`flush_pending_for_peer`.  The
+    join-time state-sync stream (see :mod:`salt.cluster.state_sync`)
+    additionally ships whatever the peer had already missed when it
+    started its handshake.  The two mechanisms are redundant: the
+    pending queue covers live writes during the join window; the
+    state-sync covers the pre-join snapshot.  Either alone would be
+    sufficient; both together close the race.
 
     :param pushers:          Iterable of ``Pusher`` objects (each
                              exposes ``pull_host``).
@@ -184,6 +197,16 @@ def filter_joined_pushers(pushers, discover_replies, peer_keys, opts, context=No
     :param context:          Short human-readable label (e.g.
                              ``"delegate-cache-write"``) used only in
                              the skip-log; may be ``None``.
+    :param pending_event:    Optional :class:`PendingEvent` capturing
+                             the pre-encrypted payload to be replayed
+                             when a skipped peer finishes its
+                             handshake.  When supplied, every skipped
+                             pusher receives a per-peer enqueue (see
+                             :func:`enqueue_pending`).  ``None``
+                             restores the "skip + warn, no replay"
+                             behaviour (used by legacy call sites and
+                             the unit tests that exercise the gate in
+                             isolation).
     :returns:                ``(kept, skipped)`` -- two lists of
                              pushers.  Callers that want pre-gate
                              semantics can ignore ``skipped``; today
@@ -205,7 +228,304 @@ def filter_joined_pushers(pushers, discover_replies, peer_keys, opts, context=No
             _log_skip(
                 host, context or "cache-replicate", "peer has not completed handshake"
             )
+            if pending_event is not None and host:
+                enqueue_pending(host, pending_event, opts=opts)
     return kept, skipped
+
+
+# ---------------------------------------------------------------------------
+# Sender-side pending-queue (replay on handshake completion)
+# ---------------------------------------------------------------------------
+#
+# When :func:`filter_joined_pushers` skips a peer, the pre-encrypted
+# event is captured in a per-peer FIFO queue keyed on the peer's
+# ``pull_host``.  When the peer later transitions to joined (either
+# via ``cluster/peer/discover-reply`` or the ``cluster/peer/<master>``
+# AES-key broadcast populating ``peer_keys``), the publish daemon
+# calls :func:`flush_pending_for_peer` and the queue is drained in
+# FIFO order against the peer's live pusher.
+#
+# Invariant: every successful ``publish_cache_write`` /
+# ``publish_resource_register_write`` call results in each peer that
+# was a member of ``cluster_peers`` at call time either receiving the
+# event, or receiving the event once that peer transitions to joined,
+# or being observed to have left the cluster (``drop_pending_for_peer``).
+#
+# Memory bound (per peer):
+#   * cap by count:  ``cluster_cache_replicate_pending_max_events``
+#                    (default 10_000).  Oldest dropped on overflow.
+#   * cap by age:    ``cluster_cache_replicate_pending_ttl``
+#                    (default 300s).  Expired entries dropped at
+#                    enqueue and at flush.
+#
+# The event is enqueued pre-encrypted with the current ``cluster_aes``.
+# Peers that complete their handshake install the same ``cluster_aes``
+# in their ``join-reply``, so a replayed event remains decryptable.
+#
+# Per-queue lock granularity is a single module-level ``threading.Lock``
+# guarding ``_PENDING_QUEUES``.  Each per-peer deque is manipulated only
+# while the lock is held; no deque is handed out to callers.
+
+DEFAULT_PENDING_MAX_EVENTS = 10_000
+DEFAULT_PENDING_TTL_SECONDS = 300.0
+
+# Grace window for an overflow/TTL log to be emitted at most once per
+# peer within this interval (prevents spam during a prolonged join).
+_PENDING_LOG_INTERVAL = 5.0
+
+
+@dataclasses.dataclass(frozen=True)
+class PendingEvent:
+    """
+    One deferred replication event awaiting a peer's handshake.
+
+    The ``event`` bytes are the pre-packed, ``cluster_aes``-encrypted
+    payload that would have been passed to ``pusher.publish(...)``;
+    enqueuing stores the exact bytes so the flush path is a trivial
+    publish without re-encrypting.
+
+    ``kind`` is a short string ("cache", "resource") used only for
+    log attribution.  ``tag`` is the salt event tag the payload was
+    packed under (useful for diagnostics).  ``bank``/``key``/
+    ``minion_id`` are optional human-readable attribution fields --
+    they are NOT used by the flush path, only by the skip/drop logs.
+    """
+
+    kind: str
+    event: bytes
+    tag: str
+    bank: str | None = None
+    key: str | None = None
+    minion_id: str | None = None
+    enqueued_at: float = dataclasses.field(default_factory=time.monotonic)
+
+
+_PENDING_QUEUES: dict[str, "collections.deque[PendingEvent]"] = {}
+_PENDING_LOCK = threading.Lock()
+_PENDING_LOG_LAST: dict[str, float] = {}
+
+
+def _pending_max_events(opts):
+    if not isinstance(opts, dict):
+        return DEFAULT_PENDING_MAX_EVENTS
+    try:
+        val = int(opts.get("cluster_cache_replicate_pending_max_events") or 0)
+    except (TypeError, ValueError):
+        return DEFAULT_PENDING_MAX_EVENTS
+    return val if val > 0 else DEFAULT_PENDING_MAX_EVENTS
+
+
+def _pending_ttl_seconds(opts):
+    if not isinstance(opts, dict):
+        return DEFAULT_PENDING_TTL_SECONDS
+    try:
+        val = float(opts.get("cluster_cache_replicate_pending_ttl") or 0.0)
+    except (TypeError, ValueError):
+        return DEFAULT_PENDING_TTL_SECONDS
+    return val if val > 0.0 else DEFAULT_PENDING_TTL_SECONDS
+
+
+def _log_pending_overflow(peer_host, reason, dropped_count, queue_len):
+    """Emit a coalesced INFO/WARN when the pending queue drops entries."""
+    now = time.monotonic()
+    emit = False
+    with _PENDING_LOCK:
+        last = _PENDING_LOG_LAST.get(peer_host, 0.0)
+        if now - last >= _PENDING_LOG_INTERVAL:
+            _PENDING_LOG_LAST[peer_host] = now
+            emit = True
+    if not emit:
+        return
+    log.warning(
+        "cluster-cache-replication: pending queue for %s dropped %d "
+        "entries (%s); queue now holds %d entries",
+        peer_host,
+        dropped_count,
+        reason,
+        queue_len,
+    )
+
+
+def enqueue_pending(peer_host, event, opts=None):
+    """
+    Append ``event`` to the per-peer pending queue for ``peer_host``.
+
+    Enforces per-peer cap and TTL at enqueue time.  Thread-safe.
+    Returns the queue depth after enqueue.
+
+    :param peer_host: Peer's ``pull_host`` (bare host or ``host:port``).
+    :param event:     A :class:`PendingEvent`.
+    :param opts:      Master opts dict (optional; controls cap + TTL).
+    """
+    if not peer_host or event is None:
+        return 0
+    cap = _pending_max_events(opts)
+    ttl = _pending_ttl_seconds(opts)
+    now = time.monotonic()
+    dropped_overflow = 0
+    dropped_ttl = 0
+    with _PENDING_LOCK:
+        queue = _PENDING_QUEUES.get(peer_host)
+        if queue is None:
+            queue = collections.deque()
+            _PENDING_QUEUES[peer_host] = queue
+        # Evict expired head entries first.
+        while queue and now - queue[0].enqueued_at > ttl:
+            queue.popleft()
+            dropped_ttl += 1
+        queue.append(event)
+        # Then enforce the per-peer cap by evicting the oldest.
+        while len(queue) > cap:
+            queue.popleft()
+            dropped_overflow += 1
+        depth = len(queue)
+    if dropped_ttl:
+        _log_pending_overflow(peer_host, "ttl expired", dropped_ttl, depth)
+    if dropped_overflow:
+        _log_pending_overflow(peer_host, "queue cap exceeded", dropped_overflow, depth)
+    return depth
+
+
+def drop_pending_for_peer(peer_host):
+    """
+    Discard every pending entry for ``peer_host``.
+
+    Called by the publish daemon when a peer is observed to have left
+    the cluster (not currently wired; retained as the correctness-
+    preserving escape hatch for the pending-queue growth invariant).
+    """
+    if not peer_host:
+        return 0
+    with _PENDING_LOCK:
+        queue = _PENDING_QUEUES.pop(peer_host, None)
+    if queue is None:
+        return 0
+    return len(queue)
+
+
+def pending_queue_depth(peer_host=None):
+    """
+    Return the depth of the pending queue for ``peer_host`` (or the
+    sum of all queues when ``peer_host`` is ``None``).
+
+    Thread-safe; used by tests and operator telemetry.
+    """
+    with _PENDING_LOCK:
+        if peer_host is None:
+            return sum(len(q) for q in _PENDING_QUEUES.values())
+        queue = _PENDING_QUEUES.get(peer_host)
+        return len(queue) if queue is not None else 0
+
+
+def drain_pending_for_peer(peer_host, opts=None):
+    """
+    Atomically remove and return the list of pending events for
+    ``peer_host``, filtering out any that have exceeded their TTL.
+
+    The caller is responsible for publishing the drained events.  If
+    publication fails for an entry, the caller should :func:`enqueue_pending`
+    it back (preserving FIFO order via sequential re-enqueue is still
+    FIFO because this function returns the full prefix).
+
+    :returns: list of :class:`PendingEvent` in FIFO order.
+    """
+    if not peer_host:
+        return []
+    ttl = _pending_ttl_seconds(opts)
+    now = time.monotonic()
+    dropped_ttl = 0
+    with _PENDING_LOCK:
+        queue = _PENDING_QUEUES.pop(peer_host, None)
+    if queue is None:
+        return []
+    survivors = []
+    for entry in queue:
+        if now - entry.enqueued_at > ttl:
+            dropped_ttl += 1
+            continue
+        survivors.append(entry)
+    if dropped_ttl:
+        _log_pending_overflow(peer_host, "ttl expired at drain", dropped_ttl, 0)
+    return survivors
+
+
+async def flush_pending_for_peer(peer_host, pushers, opts=None):
+    """
+    Drain the pending queue for ``peer_host`` and publish each entry
+    through the matching pusher (bare-host or ``host:port`` match).
+
+    Replays run in FIFO order.  On publish error for an entry, the
+    remaining un-flushed events are re-enqueued at the front via
+    :func:`enqueue_pending` (preserves ordering), and the method
+    returns early; the next flush attempt will retry.
+
+    :param peer_host: Peer's ``pull_host``.
+    :param pushers:   Iterable of ``Pusher`` objects.
+    :param opts:      Master opts dict (for TTL re-check).
+    :returns:         Count of events successfully flushed.
+    """
+    if not peer_host:
+        return 0
+    bare = peer_host.rsplit(":", 1)[0] if ":" in peer_host else peer_host
+    target = None
+    for pusher in pushers or ():
+        host = getattr(pusher, "pull_host", None)
+        if host == peer_host or host == bare:
+            target = pusher
+            break
+        # Reverse case: the caller gave us a bare host and the pusher
+        # carries ``host:port``.
+        if host and ":" in host and host.rsplit(":", 1)[0] == peer_host:
+            target = pusher
+            break
+    if target is None:
+        # No matching pusher yet; leave the queue in place for a later
+        # flush attempt.  (Common during the first few ms after a join
+        # where the pusher dict is still being populated.)
+        return 0
+    entries = drain_pending_for_peer(peer_host, opts=opts)
+    if not entries:
+        return 0
+    log.info(
+        "cluster-cache-replication: flushing %d pending event(s) to %s",
+        len(entries),
+        peer_host,
+    )
+    flushed = 0
+    for idx, entry in enumerate(entries):
+        try:
+            await target.publish(entry.event)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "cluster-cache-replication: pending-flush publish failed to %s "
+                "(entry kind=%s tag=%s bank=%s key=%s minion_id=%s); "
+                "re-queueing %d remaining entries",
+                peer_host,
+                entry.kind,
+                entry.tag,
+                entry.bank,
+                entry.key,
+                entry.minion_id,
+                len(entries) - idx,
+            )
+            # Re-enqueue the failed entry + all remaining entries.
+            with _PENDING_LOCK:
+                queue = _PENDING_QUEUES.setdefault(peer_host, collections.deque())
+                # Preserve order: push the failing entry and remaining
+                # entries to the LEFT, so the queue head still carries
+                # the oldest unflushed event.
+                for remainder in reversed(entries[idx:]):
+                    queue.appendleft(remainder)
+            return flushed
+        flushed += 1
+    return flushed
+
+
+def _reset_pending_state():
+    """Test-only: clear all pending queues + logs."""
+    with _PENDING_LOCK:
+        _PENDING_QUEUES.clear()
+        _PENDING_LOG_LAST.clear()
 
 
 def secret_fingerprint(secret):
