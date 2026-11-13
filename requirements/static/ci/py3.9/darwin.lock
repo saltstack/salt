@@ -9,7 +9,6 @@ aiohttp==3.13.5
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   etcd3-py
 aiosignal==1.4.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
@@ -35,6 +34,7 @@ attrs==23.2.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   aiohttp
+    #   hypothesis
     #   jsonschema
     #   pytest-salt-factories
     #   pytest-shell-utilities
@@ -109,7 +109,6 @@ cryptography==46.0.7
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
-    #   etcd3-py
     #   moto
     #   paramiko
     #   pyopenssl
@@ -125,17 +124,15 @@ distro==1.9.0
     #   -r requirements/base.txt
     #   pytest-skip-markers
 dnspython==2.7.0
-    # via
-    #   -r requirements/static/ci/common.txt
-    #   python-etcd
+    # via -r requirements/static/ci/common.txt
 docker==7.2.0
     # via -r requirements/pytest.txt
 durationpy==0.11
     # via kubernetes
-etcd3-py==0.1.6
-    # via -r requirements/static/ci/common.txt
 exceptiongroup==1.3.1
-    # via pytest
+    # via
+    #   hypothesis
+    #   pytest
 filelock==3.19.1
     # via
     #   -c requirements/constraints.txt
@@ -170,11 +167,12 @@ googleapis-common-protos==1.75.0
     #   opentelemetry-exporter-otlp-proto-http
 hglib==2.6.2
     # via -r requirements/static/ci/darwin.txt
+hypothesis==6.130.13
+    # via -r requirements/pytest.txt
 idna==3.20
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
-    #   etcd3-py
     #   requests
     #   trustme
     #   yarl
@@ -402,6 +400,8 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg2-binary==2.9.12
+    # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
     # via pytest-benchmark
 pyasn1==0.6.5
@@ -443,7 +443,6 @@ pyopenssl==26.2.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   -r requirements/base.txt
-    #   etcd3-py
 pyparsing==3.3.3
     # via junos-eznc
 pyserial==3.5
@@ -505,8 +504,6 @@ python-discovery==1.6.1
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   virtualenv
-python-etcd==0.4.5
-    # via -r requirements/static/ci/common.txt
 python-gnupg==0.5.7
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
@@ -541,7 +538,6 @@ requests==2.32.5
     #   -r requirements/base.txt
     #   apache-libcloud
     #   docker
-    #   etcd3-py
     #   kubernetes
     #   moto
     #   napalm
@@ -577,8 +573,6 @@ scp==0.16.2
     #   junos-eznc
     #   napalm
     #   netmiko
-semantic-version==2.10.0
-    # via etcd3-py
 setproctitle==1.3.8
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
@@ -590,7 +584,6 @@ shellingham==1.5.4
 six==1.17.0
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
-    #   etcd3-py
     #   junit-xml
     #   junos-eznc
     #   kubernetes
@@ -602,6 +595,8 @@ smmap==5.0.3
     # via
     #   -c requirements/static/pkg/py3.9/darwin.lock
     #   gitdb
+sortedcontainers==2.4.0
+    # via hypothesis
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -671,7 +666,6 @@ urllib3==1.26.20
     #   botocore
     #   docker
     #   kubernetes
-    #   python-etcd
     #   requests
     #   responses
 vcert==0.9.1
