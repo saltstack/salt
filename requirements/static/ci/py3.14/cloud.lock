@@ -857,7 +857,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -c requirements/static/pkg/py3.14/linux.lock
