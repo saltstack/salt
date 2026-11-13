@@ -8,7 +8,7 @@ import salt.modules.restartcheck as restartcheck
 import salt.modules.system as system
 import salt.modules.systemd_service as service
 import salt.utils.path
-from tests.support.mock import ANY, MagicMock, create_autospec, patch
+from tests.support.mock import ANY, MagicMock, call, create_autospec, patch
 from tests.support.paths import SALT_CODE_DIR
 
 
@@ -310,6 +310,41 @@ def test_kernel_versions_redhat():
     )
     with patch.dict(restartcheck.__salt__, {"cmd.run": mock}):
         assert restartcheck._kernel_versions_redhat() == ["3.10.0-862.el7.x86_64"]
+
+
+def test_kernel_versions_debian_queries_the_full_package_name():
+    """
+    The package name must not lose trailing characters that also appear in
+    the word "install" (here the "s" of "aws").
+    """
+    mock = MagicMock(
+        side_effect=[
+            "linux-image-5.15.0-1052-aws\t\t\t\tinstall",
+            "  Installed: 5.15.0-1052.57",
+        ]
+    )
+    with patch.dict(restartcheck.__grains__, {"os": "Debian"}):
+        with patch.dict(restartcheck.__salt__, {"cmd.run": mock}):
+            assert restartcheck._kernel_versions_debian() == ["5.15.0-1052.57"]
+    assert mock.call_args_list[1] == call(
+        "apt-cache policy linux-image-5.15.0-1052-aws"
+    )
+
+
+def test_kernel_versions_redhat_realtime_kernel():
+    """
+    Only the "kernel-" prefix is removed, not every leading character of the
+    set "kernel-" (the "r" of "rt" must stay).
+    """
+    mock = MagicMock(
+        return_value=(
+            "kernel-rt-4.18.0-513.5.1.rt7.307.el8_9.x86_64  Thu Nov 2 10:00:00 2023"
+        )
+    )
+    with patch.dict(restartcheck.__salt__, {"cmd.run": mock}):
+        assert restartcheck._kernel_versions_redhat() == [
+            "rt-4.18.0-513.5.1.rt7.307.el8_9.x86_64"
+        ]
 
 
 def test_valid_deleted_file_deleted():
