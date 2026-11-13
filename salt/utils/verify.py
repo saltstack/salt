@@ -309,7 +309,7 @@ def verify_env(
                 smode = stat.S_IMODE(mode.st_mode)
                 if smode != 448 and smode != 488:
                     if os.access(dir_, os.W_OK):
-                        os.chmod(dir_, 448)
+                        os.chmod(dir_, 0o700)
                     else:
                         log.critical(
                             'Unable to securely set the permissions of "%s".', dir_
@@ -319,7 +319,7 @@ def verify_env(
                 smode = stat.S_IMODE(mode.st_mode)
                 if smode != 448 and smode != 488:
                     if os.access(dir_, os.W_OK):
-                        os.chmod(dir_, 448)
+                        os.chmod(dir_, 0o700)
                     else:
                         log.critical(
                             'Unable to securely set the permissions of "%s".', dir_

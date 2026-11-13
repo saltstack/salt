@@ -744,7 +744,7 @@ def set_auth_key(
             if not salt.utils.platform.is_windows():
                 if os.geteuid() == 0:
                     os.chown(dpath, uinfo["uid"], uinfo["gid"])
-                os.chmod(dpath, 448)
+                os.chmod(dpath, 0o700)
             # If SELINUX is available run a restorecon on the file
             rcon = salt.utils.path.which("restorecon")
             if rcon:
@@ -776,7 +776,7 @@ def set_auth_key(
             if not salt.utils.platform.is_windows():
                 if os.geteuid() == 0:
                     os.chown(fconfig, uinfo["uid"], uinfo["gid"])
-                os.chmod(fconfig, 384)
+                os.chmod(fconfig, 0o600)
             # If SELINUX is available run a restorecon on the file
             rcon = salt.utils.path.which("restorecon")
             if rcon:
