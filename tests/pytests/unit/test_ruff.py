@@ -290,3 +290,102 @@ def test_unused_local_variable_is_allowed_in_tests(repo: Path) -> None:
     write(repo, "tests/test_new.py", "def test_f(g):\n    ret = g()\n")
     result = check(repo)
     assert result.returncode == 0, result.stderr + result.stdout
+
+
+# One example per rule that has no violation in the code base today.
+NEW_RULE_CASES = [
+    ("B002", "def f(n):\n    return ++n\n"),
+    ("B003", "import os\n\nos.environ = {}\n"),
+    ("B012", "def f():\n    try:\n        pass\n    finally:\n        return 1\n"),
+    ("B013", "try:\n    pass\nexcept (ValueError,):\n    pass\n"),
+    ("B014", "try:\n    pass\nexcept (ValueError, ValueError):\n    pass\n"),
+    ("B016", 'def f():\n    raise "error"\n'),
+    (
+        "B019",
+        "import functools\n\n\nclass A:\n    @functools.lru_cache\n    def m(self):\n        return 1\n",
+    ),
+    ("B021", 'def f(x):\n    f"""doc {x}"""\n'),
+    ("B022", "import contextlib\n\nwith contextlib.suppress():\n    pass\n"),
+    ("B029", "try:\n    pass\nexcept ():\n    pass\n"),
+    ("B030", "try:\n    pass\nexcept 1:\n    pass\n"),
+    (
+        "B031",
+        "import itertools\n\nfor _, g in itertools.groupby([1, 2]):\n    a = list(g)\n    b = list(g)\n    print(a, b)\n",
+    ),
+    ("B032", 'd = {}\nd["a"]: 1\n'),
+    ("B033", "s = {1, 2, 1}\n"),
+    ("B035", 'd = {"k": v for v in range(3)}\n'),
+    ("PLW0127", "def f(x):\n    x = x\n    return x\n"),
+    ("PLW0128", "a, a = 1, 2\n"),
+    ("PLW0131", "(a := 1)\n"),
+    ("PLW0133", 'def f():\n    ValueError("x")\n'),
+    ("PLW0177", 'def f(x):\n    return x == float("nan")\n'),
+    ("PLW0211", "class A:\n    @staticmethod\n    def m(self):\n        pass\n"),
+    ("PLW0245", "class A:\n    def m(self):\n        super.m()\n"),
+    ("PLW0604", "global x\nx = 1\n"),
+    ("PLW0642", "class A:\n    def m(self):\n        self = 1\n"),
+    ("PLW0711", "try:\n    pass\nexcept ValueError or TypeError:\n    pass\n"),
+    ("PLW1501", 'def f(p):\n    return open(p, "rz")\n'),
+    ("PLW1507", "import copy\nimport os\n\nenv = copy.copy(os.environ)\n"),
+    ("PLW2101", "import threading\n\nwith threading.Lock():\n    pass\n"),
+    ("PGH003", "x = 1  # type: ignore\n"),
+    ("PGH005", "def test_f(m):\n    assert m.called_once_with(1)\n"),
+    ("LOG001", 'import logging\n\nlog = logging.Logger("x")\n'),
+    (
+        "LOG007",
+        'import logging\n\nlog = logging.getLogger()\ntry:\n    pass\nexcept Exception:\n    log.exception("x", exc_info=False)\n',
+    ),
+    (
+        "LOG014",
+        'import logging\n\nlog = logging.getLogger()\nlog.warning("x", exc_info=True)\n',
+    ),
+    (
+        "G101",
+        'import logging\n\nlog = logging.getLogger()\nlog.info("x", extra={"name": 1})\n',
+    ),
+    ("YTT101", "import sys\n\nv = sys.version[:3]\n"),
+    ("YTT102", "import sys\n\nv = sys.version[2]\n"),
+    ("YTT103", 'import sys\n\nv = sys.version > "3.9"\n'),
+    ("YTT201", "import sys\n\nv = sys.version_info[0] == 3\n"),
+    ("YTT202", "import six\n\nv = six.PY3\n"),
+    ("YTT301", "import sys\n\nv = sys.version[0]\n"),
+    ("YTT302", 'import sys\n\nv = sys.version >= "3"\n'),
+    ("YTT303", "import sys\n\nv = sys.version[:1]\n"),
+    (
+        "RUF008",
+        "from dataclasses import dataclass\n\n\n@dataclass\nclass A:\n    x: list = []\n",
+    ),
+    (
+        "RUF009",
+        "from dataclasses import dataclass\n\n\ndef make():\n    return []\n\n\n@dataclass\nclass A:\n    x: list = make()\n",
+    ),
+    ("RUF016", 'def f():\n    return [1, 2, 3]["a"]\n'),
+    ("RUF018", "def f(g):\n    assert (x := g())\n    return x\n"),
+    ("RUF024", 'd = dict.fromkeys(["a"], [])\n'),
+    (
+        "RUF026",
+        "from collections import defaultdict\n\nd = defaultdict(default_factory=list)\n",
+    ),
+    (
+        "RUF033",
+        "from dataclasses import dataclass\n\n\n@dataclass\nclass A:\n    x: int\n\n    def __post_init__(self, y=1):\n        pass\n",
+    ),
+    ("RUF060", "x = 1 in []\n"),
+    ("RUF068", '__all__ = ["a", "a"]\n'),
+]
+
+
+@pytest.mark.parametrize(("code", "source"), NEW_RULE_CASES, ids=lambda v: v[:7])
+def test_rules_without_existing_violations(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
+def test_module_importing_itself_is_reported(repo: Path) -> None:
+    write(repo, "pkg/__init__.py", "")
+    write(repo, "pkg/mod.py", "import pkg.mod\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "PLW0406" in result.stdout
