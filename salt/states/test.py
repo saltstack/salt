@@ -377,7 +377,7 @@ def _check_key_type(key_str, key_type=None):
 
     Can't check for None.
     """
-    value = __salt__["pillar.get"](key_str, None)
+    value = __salt__["pillar.get"](key_str, None, unmask=True)
     if value is None:
         return None
     elif key_type is not None and not isinstance(value, key_type):
