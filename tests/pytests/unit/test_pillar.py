@@ -19,7 +19,7 @@ import salt.exceptions
 import salt.fileclient
 import salt.utils.stringutils
 from salt.utils.files import fopen
-from tests.support.mock import ANY, MagicMock, call, patch
+from tests.support.mock import ANY, AsyncMock, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 log = logging.getLogger(__name__)
@@ -1266,6 +1266,7 @@ def test_pillar_send_extra_minion_data_from_config(tmp_pki, grains):
             "saltenv": "fake_env",
             "pillarenv": "fake_pillar_env",
             "pillar_override": {},
+            "snapshot": False,
             "extra_minion_data": {"path_to_add": "fake_data"},
         },
         dictkey="pillar",
@@ -1345,7 +1346,9 @@ def test_compile_pillar_cache(master_opts):
     ):
         # Run once for pillarenv base
         pillar.compile_pillar()
-        expected_cache = {("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}]}
+        expected_cache = {
+            ("pillar_compile", "mocked_minion:base"): [ANY, 3600, {"foo": "bar"}]
+        }
         assert pillar.cache.storage == expected_cache
 
         # Run a second time for pillarenv base
@@ -1358,8 +1361,8 @@ def test_compile_pillar_cache(master_opts):
         # Run once for pillarenv dev
         pillar.compile_pillar()
         expected_cache = {
-            ("pillar", "mocked_minion:base"): [ANY, None, {"foo": "bar"}],
-            ("pillar", "mocked_minion:dev"): [ANY, None, {"foo": "baz"}],
+            ("pillar_compile", "mocked_minion:base"): [ANY, 3600, {"foo": "bar"}],
+            ("pillar_compile", "mocked_minion:dev"): [ANY, 3600, {"foo": "baz"}],
         }
         assert pillar.cache.storage == expected_cache
 
@@ -1402,18 +1405,18 @@ def test_compile_pillar_disk_cache(master_opts, grains):
         pillar.compile_pillar()
 
         expected_fetches = [
-            call("pillar", "mocked_minion:base"),
-            call("pillar", "mocked_minion:base"),
-            call("pillar", "mocked_minion:dev"),
-            call("pillar", "mocked_minion:dev"),
+            call("pillar_compile", "mocked_minion:base"),
+            call("pillar_compile", "mocked_minion:base"),
+            call("pillar_compile", "mocked_minion:dev"),
+            call("pillar_compile", "mocked_minion:dev"),
         ]
 
         # Assert all calls match the pattern
         fetch_mock.assert_has_calls(expected_fetches, any_order=False)
 
         expected_stores = [
-            call("pillar", "mocked_minion:base", {"foo": "bar"}),
-            call("pillar", "mocked_minion:dev", {"foo": "baz"}),
+            call("pillar_compile", "mocked_minion:base", {"foo": "bar"}, expires=3600),
+            call("pillar_compile", "mocked_minion:dev", {"foo": "baz"}, expires=3600),
         ]
 
         # Assert all calls match the pattern
@@ -1510,3 +1513,57 @@ def test_pillar_functions_masterless_id_unchanged():
         opts = _min_pillar_opts(id="myminion")
         pillar = salt.pillar.Pillar(opts, {"os": "Ubuntu"}, "myminion", "base")
         assert pillar.functions.opts["id"] == "myminion"
+
+
+@pytest.mark.parametrize("snapshot", [False, True])
+def test_remote_pillar_sends_snapshot_flag(minion_opts, snapshot):
+    minion_opts["file_client"] = "remote"
+    channel = MagicMock(crypted_transfer_decode_dictentry=MagicMock(return_value={}))
+    with patch("salt.channel.client.ReqChannel.factory", return_value=channel):
+        pillar = salt.pillar.get_pillar(
+            minion_opts, {}, "minion", "base", snapshot=snapshot
+        )
+        pillar.compile_pillar()
+    load = channel.crypted_transfer_decode_dictentry.call_args.args[0]
+    assert load["snapshot"] is snapshot
+
+
+async def test_async_remote_pillar_sends_snapshot_flag(minion_opts):
+    minion_opts["file_client"] = "remote"
+    channel = MagicMock(
+        crypted_transfer_decode_dictentry=AsyncMock(return_value={}),
+        close_async=AsyncMock(),
+    )
+    with patch("salt.channel.client.AsyncReqChannel.factory", return_value=channel):
+        pillar = salt.pillar.get_async_pillar(
+            minion_opts, {}, "minion", "base", snapshot=True
+        )
+        await pillar.compile_pillar()
+        await pillar.aclose()
+    load = channel.crypted_transfer_decode_dictentry.call_args.args[0]
+    assert load["snapshot"] is True
+
+
+@pytest.mark.parametrize(
+    "load, expected",
+    [
+        ({}, True),
+        ({"snapshot": True}, True),
+        ({"snapshot": False}, False),
+        ({"snapshot": True, "pillar_override": {}}, True),
+        ({"snapshot": True, "pillar_override": {"a": 1}}, False),
+        ({"pillar_override": {"a": 1}}, False),
+    ],
+)
+def test_update_minion_snapshot(load, expected):
+    assert salt.pillar.update_minion_snapshot(load) is expected
+
+
+def test_get_pillar_local_ignores_snapshot(minion_opts):
+    """
+    Only the remote pillar sends the flag; local compilation must not choke
+    on it.
+    """
+    minion_opts["file_client"] = "local"
+    pillar = salt.pillar.get_pillar(minion_opts, {}, "minion", "base", snapshot=True)
+    assert isinstance(pillar, salt.pillar.Pillar)

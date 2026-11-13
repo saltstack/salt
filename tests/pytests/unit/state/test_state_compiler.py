@@ -1415,3 +1415,25 @@ def test_module_refresh_typeerror(minion_opts, caplog):
             "Error encountered during module reload. Modules were not reloaded."
             in caplog.text
         )
+
+
+@pytest.mark.parametrize(
+    "override, overridden, snapshot",
+    [
+        (None, False, True),
+        ({"a": 1}, False, False),
+        (None, True, False),
+    ],
+)
+def test_gather_pillar_snapshot_flag(minion_opts, override, overridden, snapshot):
+    """
+    Only a run with the configured pillarenv and no pillar override may update
+    the pillar the master uses for targeting.
+    """
+    minion_opts["file_client"] = "local"
+    if overridden:
+        minion_opts["__pillarenv_overridden"] = True
+    fake_state = MagicMock(opts=minion_opts, _pillar_override=override)
+    with patch("salt.pillar.get_pillar") as get_pillar:
+        salt.state.State._gather_pillar(fake_state)
+    assert get_pillar.call_args.kwargs["snapshot"] is snapshot
