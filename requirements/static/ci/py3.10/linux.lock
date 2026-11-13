@@ -378,6 +378,7 @@ packaging==26.3
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
+    #   -r requirements/pytest.txt
     #   ansible-core
     #   pytest
     #   virtualenv
