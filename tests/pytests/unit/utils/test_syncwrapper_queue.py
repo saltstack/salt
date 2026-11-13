@@ -82,8 +82,9 @@ class OrphanWorker:
         async def consume():
             await asyncio.wait_for(asyncio.Queue().get(), timeout=60)
 
-        asyncio.create_task(consume())
+        consumer = asyncio.create_task(consume())
         await asyncio.sleep(0)
+        assert not consumer.done()
         return True
 
 
@@ -101,7 +102,8 @@ async def test_task_factory_restored_after_dispatch_error():
         async_methods = ["fail"]
 
         async def fail(self):
-            asyncio.create_task(asyncio.sleep(60))
+            sleeper = asyncio.create_task(asyncio.sleep(60))
+            assert not sleeper.done()
             raise ValueError("wrapped call failed")
 
     def task_factory(loop, coro, **kwargs):
