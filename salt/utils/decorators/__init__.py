@@ -648,17 +648,13 @@ class _WithDeprecated(_DeprecationDecorator):
             in self._globals.get("__pillar__").get(self.CFG_USE_DEPRECATED, list())
             or (
                 self._policy == self.OPT_IN
-                and not (
-                    func_path
-                    in self._globals.get("__opts__", {}).get(
-                        self.CFG_USE_SUPERSEDED, list()
-                    )
+                and func_path
+                not in self._globals.get("__opts__", {}).get(
+                    self.CFG_USE_SUPERSEDED, list()
                 )
-                and not (
-                    func_path
-                    in self._globals.get("__pillar__", {}).get(
-                        self.CFG_USE_SUPERSEDED, list()
-                    )
+                and func_path
+                not in self._globals.get("__pillar__", {}).get(
+                    self.CFG_USE_SUPERSEDED, list()
                 )
             ),
             func_path,

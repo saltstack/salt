@@ -892,7 +892,7 @@ def file_dict(*packages, **kwargs):
             errors.append(line)
         else:
             comps = line.split()
-            if not comps[0] in ret:
+            if comps[0] not in ret:
                 ret[comps[0]] = []
             ret[comps[0]].append(" ".join(comps[1:]))
     return {"errors": errors, "packages": ret}

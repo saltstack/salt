@@ -2329,7 +2329,7 @@ def _get_key_from_id(keydir, keyid):
     """
     Find and return the key file from the keyid.
     """
-    if not len(keyid) in (8, 16):
+    if len(keyid) not in (8, 16):
         log.error("The keyid needs to be either 8 or 16 characters")
         return False
     for file in os.listdir(str(keydir)):
