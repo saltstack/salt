@@ -597,6 +597,11 @@ class RequestHandler(object):
         for k, v in kwargs.items():
             if k == 'max_age':
                 k = 'max-age'
+                # Normalize through int() so that a non-int max_age (which
+                # could smuggle extra cookie attributes past the validation
+                # above) is rejected instead of being written to the header
+                # verbatim.
+                v = str(int(v))
 
             # skip falsy values for httponly and secure flags because
             # SimpleCookie sets them regardless
