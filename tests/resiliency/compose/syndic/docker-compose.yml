@@ -49,6 +49,9 @@ services:
       - ${SALT_SRC:-../../../..}/salt:/app/salt
       - ./master-mom.conf:/etc/salt/master:ro
       - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      # file_roots default; mount shared tree so overload file-server
+      # scenario finds salt://heavy/...
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt:/srv/salt:ro
       - mom-pki:/etc/salt/pki/master
       - mom-cache:/var/cache/salt/master
       - /etc/localtime:/etc/localtime:ro
@@ -67,6 +70,7 @@ services:
       - ${SALT_SRC:-../../../..}/salt:/app/salt
       - ./master-sub.conf:/etc/salt/master:ro
       - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - ${SALT_SRC:-../../../..}/tests/monitoring/srv/salt:/srv/salt:ro
       - sub-pki:/etc/salt/pki/master
       - sub-cache:/var/cache/salt/master
       - sub-syndic-pki:/etc/salt/pki/minion
