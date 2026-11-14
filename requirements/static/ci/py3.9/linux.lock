@@ -168,7 +168,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
@@ -431,7 +431,7 @@ psutil==5.9.8
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   -r requirements/base.txt
