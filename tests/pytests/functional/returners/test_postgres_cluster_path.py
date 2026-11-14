@@ -21,7 +21,7 @@ import pytest
 import salt.returners.postgres as postgres
 
 docker = pytest.importorskip("docker")
-psycopg2 = pytest.importorskip("psycopg2")
+psycopg2 = pytest.importorskip("psycopg2", exc_type=ImportError)
 
 log = logging.getLogger(__name__)
 
