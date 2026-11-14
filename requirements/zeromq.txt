@@ -5,5 +5,5 @@
 # EINVAL/EAGAIN) on ordinary RequestClient send/recv, breaking every
 # Windows integration/package test. Scope the cap to non-Windows so
 # Windows always gets a pyzmq without that abort.
-pyzmq>=25.1.2,<26; python_version < "3.13" and sys_platform != "win32"
-pyzmq>=27.1.0; python_version >= "3.13" or sys_platform == "win32"
+pyzmq>=27.3.0,<28; python_version < "3.13" and sys_platform != "win32"
+pyzmq>=27.3.0; python_version >= "3.13" or sys_platform == "win32"
