@@ -10,9 +10,7 @@ wheel >= 0.47.0
 # Host-side pre-commit hooks (uv-resolved) still pick the latest
 # setuptools; this floor only relaxes what the onedir-bundled pip is
 # allowed to use.
-# 84.1.0 fixes GHSA-xmj3-9gf7-h52w but drops Python 3.9, which stays on 82.x.
-setuptools >= 82.0.1 ; python_version < "3.10"
-setuptools >= 84.1.0 ; python_version >= "3.10"
+setuptools >= 82.0.1
 pip == 26.0.1
 markdown-it-py < 3.0.0; python_version == "3.9"
 # myst-docutils 4.x (the latest supporting Python 3.10) requires
