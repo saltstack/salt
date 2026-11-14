@@ -2118,7 +2118,7 @@ class _HandlerDelegate(httputil.HTTPMessageDelegate):
         self.handler_kwargs = handler_kwargs or {}
         self.path_args = path_args or []
         self.path_kwargs = path_kwargs or {}
-        self.chunks = []
+        self.chunks = bytearray()
         self.stream_request_body = _has_stream_request_body(self.handler_class)
 
     def headers_received(self, start_line, headers):
@@ -2130,13 +2130,13 @@ class _HandlerDelegate(httputil.HTTPMessageDelegate):
         if self.stream_request_body:
             return self.handler.data_received(data)
         else:
-            self.chunks.append(data)
+            self.chunks += data
 
     def finish(self):
         if self.stream_request_body:
             self.request.body.set_result(None)
         else:
-            self.request.body = b''.join(self.chunks)
+            self.request.body = bytes(self.chunks)
             self.request._parse_body()
             self.execute()
 
