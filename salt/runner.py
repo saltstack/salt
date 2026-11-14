@@ -329,6 +329,8 @@ class Runner(RunnerClient):
             self.print_docs()
         else:
             low = {"fun": self.opts["fun"]}
+            # Only set (and used) when neither client_auth nor eauth is in use.
+            user = None
             try:
                 # Allocate a jid
                 async_pub = self._gen_async_pub(jid=self.opts.get("jid"))
