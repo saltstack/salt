@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.5
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -160,7 +160,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   gitpython
-gitpython==3.1.62
+gitpython==3.2.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -278,12 +278,12 @@ more-itertools==11.1.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.2.1
+msgpack==1.2.4
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==7.1.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -334,7 +334,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -546,7 +546,7 @@ typing-extensions==4.14.1
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   -r requirements/base.txt
@@ -585,7 +585,7 @@ yamllint==1.32.0
     # via -r requirements/static/ci/darwin.txt
 yamlordereddictloader==0.4.0
     # via junos-eznc
-yarl==1.20.1
+yarl==1.25.1
     # via
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   aiohttp
