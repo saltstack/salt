@@ -84,9 +84,23 @@ wait_ring_active() {
     return 1
 }
 
+runners_available() {
+    # ``cluster.ring_create`` is part of the cache-replicate WIP
+    # branch; vanilla 3008.x doesn't ship it.  Probe once and bail
+    # cleanly when it's missing so the compose service exits 0 and
+    # the downstream minions unblock.
+    salt-run --config-dir=/etc/salt -d 2>/dev/null | grep -q '^cluster\.ring_create'
+}
+
 main() {
     log "waiting for master ${MASTER_HOST}..."
     wait_for_master
+
+    if ! runners_available; then
+        log "cluster.ring_create runner not available on this salt build;"
+        log "skipping ring setup (compose service exits 0; minions proceed)."
+        exit 0
+    fi
 
     log "creating ring '${RING_NAME}'"
     create_ring
