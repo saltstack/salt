@@ -4,7 +4,7 @@ aiohappyeyeballs==2.6.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   aiohttp
-aiohttp==3.14.3
+aiohttp==3.14.5
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -110,7 +110,7 @@ cryptography==48.0.1
     #   pyspnego
     #   requests-ntlm
     #   trustme
-distlib==0.4.0
+distlib==0.4.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   virtualenv
@@ -131,7 +131,7 @@ durationpy==0.10
     # via kubernetes
 etcd3-py==0.1.6
     # via -r requirements/static/ci/common.txt
-filelock==3.29.1
+filelock==4.2.10
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -152,7 +152,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   gitpython
-gitpython==3.1.62
+gitpython==3.2.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -261,12 +261,12 @@ more-itertools==10.8.0
     #   jaraco-text
 moto==5.2.2
     # via -r requirements/static/ci/common.txt
-msgpack==1.2.1
+msgpack==1.2.4
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==7.2.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -274,11 +274,12 @@ multidict==6.7.1
     #   yarl
 oauthlib==3.3.1
     # via requests-oauthlib
-packaging==24.0
+packaging==26.3
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
     #   pytest
+    #   virtualenv
 passlib==1.7.4
     # via -r requirements/static/ci/common.txt
 patch==1.16
@@ -288,7 +289,6 @@ pathspec==1.0.3
 platformdirs==4.9.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
-    #   python-discovery
     #   virtualenv
 pluggy==1.6.0
     # via pytest
@@ -308,7 +308,7 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -393,7 +393,7 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   kubernetes
     #   tempora
-python-discovery==1.4.0
+python-discovery==1.9.5
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   virtualenv
@@ -526,7 +526,7 @@ tzdata==2026.2
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -536,7 +536,7 @@ urllib3==2.7.0
     #   python-etcd
     #   requests
     #   responses
-virtualenv==21.4.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   -r requirements/base.txt
@@ -569,7 +569,7 @@ xmltodict==1.0.4
     #   pywinrm
 yamllint==1.38.0
     # via -r requirements/static/ci/windows.txt
-yarl==1.23.0
+yarl==1.25.1
     # via
     #   -c requirements/static/pkg/py3.13/windows.lock
     #   aiohttp
