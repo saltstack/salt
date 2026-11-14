@@ -490,22 +490,31 @@ class Topology:
         multi-object form and caused ``wait_initial_auth`` to time
         out at 300s even though all minions had answered.
         """
-        proc = self._run(
-            [
-                "docker",
-                "exec",
-                master,
-                "salt",
-                "--out=json",
-                f"--timeout={timeout}",
-                "*",
-                "test.ping",
-            ],
-            check=False,
-            # Give subprocess a bit over the salt timeout to let it
-            # print and flush before we bail.
-            timeout=timeout + 15,
-        )
+        try:
+            proc = self._run(
+                [
+                    "docker",
+                    "exec",
+                    master,
+                    "salt",
+                    "--out=json",
+                    f"--timeout={timeout}",
+                    "*",
+                    "test.ping",
+                ],
+                check=False,
+                # Give subprocess a bit over the salt timeout to let it
+                # print and flush before we bail.
+                timeout=timeout + 15,
+            )
+        except subprocess.TimeoutExpired:
+            # Subprocess wall-clock exceeded -- common on the syndic
+            # topology where ``salt '*' test.ping`` on the MoM has to
+            # round-trip through the syndic and its downstream
+            # minions.  Don't crash wait_initial_auth's outer loop --
+            # return empty so the caller falls through to the next
+            # master or next poll iteration.
+            return {}
         stdout = proc.stdout.strip()
         if not stdout:
             return {}
