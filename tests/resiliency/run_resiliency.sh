@@ -10,9 +10,7 @@
 # Usage:
 #   TOPOLOGY=single ./run_resiliency.sh                           # full battery on single
 #   TOPOLOGY=cluster3 SCENARIOS="baseline master_restart" ...     # subset
-#   TOPOLOGY=multimaster-failover MARATHON_ENABLED=1 ...          # opt-in marathon
-#   TOPOLOGY=multimaster-failover MARATHON_ENABLED=1 \
-#     MARATHON_120M=1 ...                                          # include 2h phase
+#   TOPOLOGY=multimaster-failover MARATHON_ENABLED=0 ...          # opt-out of marathon
 #
 # Env:
 #   TOPOLOGY              required: single|cluster3|cluster5|
@@ -20,8 +18,7 @@
 #   SCENARIOS             optional: space-separated list of scenario-file
 #                                   stems to run.  Default: full battery.
 #                                   Each stem maps to test_<stem>.py.
-#   MARATHON_ENABLED      0 (default) | 1 to include master_marathon phases
-#   MARATHON_120M         0 (default) | 1 to include the 2-hour phase
+#   MARATHON_ENABLED      1 (default) | 0 to skip master_marathon phases
 #   RESILIENCY_WORKDIR    results dir (default: results/<utc-timestamp>)
 #   PROMETHEUS_URL        override prometheus endpoint (default per topology)
 #   PYTEST_EXTRA_ARGS     appended to the pytest command line verbatim
@@ -44,9 +41,8 @@ mkdir -p "$RESILIENCY_WORKDIR"
 export RESILIENCY_WORKDIR
 export RESULTS_FILE="${RESILIENCY_WORKDIR}/results.jsonl"
 
-: "${MARATHON_ENABLED:=0}"
-: "${MARATHON_120M:=0}"
-export MARATHON_ENABLED MARATHON_120M
+: "${MARATHON_ENABLED:=1}"
+export MARATHON_ENABLED
 
 printf '[run_resiliency] TOPOLOGY=%s workdir=%s marathon=%s\n' \
     "$TOPOLOGY" "$RESILIENCY_WORKDIR" "$MARATHON_ENABLED"

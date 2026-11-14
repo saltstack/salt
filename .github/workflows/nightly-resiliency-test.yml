@@ -35,12 +35,7 @@ on:
         default: 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon'
         type: string
       marathon_enabled:
-        description: Run master_marathon phases (30m + 60m master outages). Defaults ON for nightly; flip to false for a fast dispatch.
-        required: false
-        default: true
-        type: boolean
-      marathon_120m:
-        description: Also run the 2-hour marathon_outage_120m phase (requires marathon_enabled=true). Defaults ON for nightly; adds ~2h per topology.
+        description: Run master_marathon phases (30m + 60m + 2h master outages). Defaults ON for nightly; flip to false for a fast dispatch.
         required: false
         default: true
         type: boolean
@@ -178,33 +173,27 @@ jobs:
           # Default to true on scheduled triggers (``github.event.inputs``
           # is empty on schedule events, so the workflow_dispatch
           # ``default:`` never applies there).  The nightly cron runs
-          # the full battery including marathon + 120m; a developer
-          # can still flip either off via workflow_dispatch.
+          # the full battery including the 2-hour master outage.
           MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'true' }}
-          MARATHON_120M_INPUT: ${{ github.event.inputs.marathon_120m || 'true' }}
         run: |
           cd tests/resiliency
-          # Pick the outer timeout from the marathon opt-ins so an
-          # ordinary nightly can't burn 6h, and a weekly marathon run
-          # has room for the 2h phase.
-          if [ "$MARATHON_120M_INPUT" = "true" ]; then
+          # Marathon ON runs the full battery (30m + 60m + 2h outages +
+          # workload) which can take ~5.5h; cap at 6h, the GHA ceiling.
+          # Marathon OFF is a fast dispatch (~1h).
+          if [ "$MARATHON_ENABLED_INPUT" = "true" ]; then
             outer_timeout=6h
-          elif [ "$MARATHON_ENABLED_INPUT" = "true" ]; then
-            outer_timeout=5h
           else
             outer_timeout=1h
           fi
-          echo "Resolved outer_timeout=${outer_timeout} (marathon=${MARATHON_ENABLED_INPUT} 120m=${MARATHON_120M_INPUT})"
+          echo "Resolved outer_timeout=${outer_timeout} (marathon=${MARATHON_ENABLED_INPUT})"
           # ``1`` / ``0`` match the master_marathon.sh env contract.
           marathon_enabled=0; [ "$MARATHON_ENABLED_INPUT" = "true" ] && marathon_enabled=1
-          marathon_120m=0;    [ "$MARATHON_120M_INPUT"    = "true" ] && marathon_120m=1
           timeout "$outer_timeout" env \
             TOPOLOGY=${{ matrix.topology }} \
             DURATION=${{ github.event.inputs.duration || '0.5h' }} \
             SCENARIOS="${{ github.event.inputs.scenarios || 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon' }}" \
             PROMETHEUS_URL="http://127.0.0.1:${PROM_PORT}" \
             MARATHON_ENABLED="$marathon_enabled" \
-            MARATHON_120M="$marathon_120m" \
             ./run_resiliency.sh
 
       - name: Analyze Results
