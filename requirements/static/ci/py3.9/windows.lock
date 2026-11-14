@@ -162,6 +162,8 @@ googleapis-common-protos==1.75.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.2.5
+    # via sqlalchemy
 hypothesis==6.130.13
     # via -r requirements/pytest.txt
 idna==3.18
@@ -358,6 +360,10 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.2.13
+    # via -r requirements/static/ci/common.txt
+psycopg-binary==3.2.13
+    # via psycopg
 py-cpuinfo==9.0.0
     # via pytest-benchmark
 pyasn1==0.6.4
@@ -553,6 +559,8 @@ smmap==5.0.2
     #   gitdb
 sortedcontainers==2.4.0
     # via hypothesis
+sqlalchemy==2.0.57
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 sspilib==0.5.0
@@ -598,11 +606,15 @@ typing-extensions==4.15.0
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   psycopg
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   referencing
+    #   sqlalchemy
     #   virtualenv
+tzdata==2026.6
+    # via psycopg
 urllib3==1.26.20
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock

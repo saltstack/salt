@@ -55,7 +55,7 @@ def ext_pillar(minion_id, pillar, pillar_name=None):
     nodegroups_minion_is_in = []
     ckminions = None
     for nodegroup_name in all_nodegroups.keys():
-        ckminions = ckminions or CkMinions(__opts__)
+        ckminions = ckminions or CkMinions.factory(__opts__)
         _res = ckminions.check_minions(all_nodegroups[nodegroup_name], "compound")
         match = _res["minions"]
 

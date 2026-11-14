@@ -526,6 +526,14 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.3.9
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/static/ci/common.txt
+psycopg-binary==3.3.9
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   psycopg
 psycopg2-binary==2.9.12
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -796,6 +804,10 @@ sortedcontainers==2.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   hypothesis
+sqlalchemy==2.1.8
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
@@ -861,8 +873,10 @@ typing-extensions==4.14.1
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   psycopg
     #   pyopenssl
     #   pytest-system-statistics
+    #   sqlalchemy
 urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
