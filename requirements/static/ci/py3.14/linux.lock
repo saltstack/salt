@@ -160,7 +160,7 @@ gitdb==4.0.12
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -303,7 +303,7 @@ msgpack==1.2.4
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.0
+multidict==7.2.1
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -412,7 +412,7 @@ psutil==7.2.2
     #   pytest-system-statistics
 py-cpuinfo==9.0.0
     # via pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt
@@ -631,7 +631,7 @@ timelib==0.3.0
     #   -r requirements/base.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.10
+tornado==6.6.1
     # via
     #   -c requirements/static/pkg/py3.14/linux.lock
     #   -r requirements/base.txt

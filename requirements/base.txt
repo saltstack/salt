@@ -29,7 +29,7 @@ cryptography>=50.0.0; python_version >= '3.10'
 distro>=1.9.0
 frozenlist>=1.8.0; python_version < '3.11'
 frozenlist>=1.5.0; python_version >= '3.11'
-gitpython>=3.1.62
+gitpython>=3.2.1
 idna>=3.18
 immutables>=0.21; python_version < '3.7'
 # importlib-metadata 9.x drops py3.9 support. Cap on py3.9, allow 8.7+ on
@@ -56,7 +56,9 @@ msgpack>=1.2.3 ; python_version >= '3.10'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
-multidict>=6.6.0
+# multidict 6.8 drops Python 3.9; 6.9.1 fixes PYSEC-2026-4244.
+multidict>=6.6.0 ; python_version < '3.10'
+multidict>=6.9.1 ; python_version >= '3.10'
 # opentelemetry 1.43.0 (and exporter-prometheus 0.64b0) drop Python 3.9; keep
 # the last 3.9-compatible releases there and let py>=3.10 float forward.
 opentelemetry-api>=1.41.1,<1.43.0; python_version < '3.10'
@@ -77,7 +79,7 @@ xxhash>=3.7.0; python_version >= '3.10'
 packaging>=26.3
 psutil<6.0.0; python_version <= '3.9'
 psutil>=5.0.0; python_version >= '3.10'
-pyasn1>=0.6.4
+pyasn1>=0.6.5
 pycparser>=2.23,<3.0; python_version < '3.10'
 pycparser>=3.0; python_version >= '3.10'
 # pymssql 2.3.12+ dropped win32 (32-bit Windows) wheels; 3008.x still
@@ -101,9 +103,18 @@ requests>=2.32.5; python_version < '3.10'
 requests>=2.33.1 ; python_version >= '3.10' and python_version < '3.11'
 requests>=2.34.2 ; python_version >= '3.11'
 setproctitle>=1.3.7
+# setuptools 84.1.0 fixes GHSA-xmj3-9gf7-h52w but drops Python 3.9. The floor
+# lives here and not in constraints.txt: constraints.txt also constrains PEP 517
+# build environments, and some sdists (charset-normalizer) pin
+# ``setuptools<84.1`` there, which fails the onedir build with
+# ResolutionImpossible.
+setuptools>=84.1.0; python_version >= '3.10'
 timelib>=0.3.0; python_version < '3.11'
 timelib>=0.3.0; python_version >= '3.11'
-tornado>=6.5.10
+# tornado 6.6 drops Python 3.9 and 3.10; 6.6.1 fixes CVE-2026-115927, CVE-2026-116577,
+# CVE-2026-116578 and CVE-2026-126347.
+tornado>=6.5.10; python_version < '3.11'
+tornado>=6.6.1; python_version >= '3.11'
 truststore>=0.10.0; python_version >= "3.10"
 # Python 3.9 stays on urllib3 1.26.x because botocore on py3.9 hard
 # requires urllib3 < 2 and Salt 3008.x still ships py3.9 lockfiles.

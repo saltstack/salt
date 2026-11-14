@@ -58,7 +58,7 @@ frozenlist==1.8.0
     #   aiosignal
 gitdb==4.0.12
     # via gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via -r requirements/base.txt
 googleapis-common-protos==1.75.0
     # via opentelemetry-exporter-otlp-proto-http
@@ -110,7 +110,7 @@ more-itertools==11.1.0
     #   jaraco-text
 msgpack==1.2.4
     # via -r requirements/base.txt
-multidict==6.7.1
+multidict==7.1.0
     # via
     #   -r requirements/base.txt
     #   aiohttp
@@ -166,7 +166,7 @@ protobuf==7.36.2
     #   opentelemetry-proto
 psutil==7.2.2
     # via -r requirements/base.txt
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via -r requirements/base.txt
 pycparser==3.0
     # via
@@ -204,9 +204,10 @@ rich==15.0.0
     # via typer
 setproctitle==1.3.7
     # via -r requirements/base.txt
-setuptools==84.0.0
+setuptools==84.2.1
     # via
     #   -c requirements/constraints.txt
+    #   -r requirements/base.txt
     #   zc-lockfile
 shellingham==1.5.4
     # via typer
