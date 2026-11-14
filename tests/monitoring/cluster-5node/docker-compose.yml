@@ -1,0 +1,171 @@
+x-master-common: &master-common
+  build:
+    context: ../../..
+    dockerfile: tests/monitoring/cluster-5node/Dockerfile.salt
+  image: cluster-5node-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
+  volumes:
+    - ${SALT_SRC:-../../..}/salt:/app/salt
+    - ./srv/salt:/srv/salt
+    - cluster-pki:/etc/salt/cluster-pki
+    - /etc/localtime:/etc/localtime:ro
+
+x-minion-common: &minion-common
+  image: cluster-5node-salt:latest
+  entrypoint: ["/usr/bin/tini", "--"]
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
+  volumes:
+    - ${SALT_SRC:-../../..}/salt:/app/salt
+    - ./minion.conf:/etc/salt/minion
+    - /etc/localtime:/etc/localtime:ro
+  networks:
+    - salt-net
+  depends_on:
+    - salt-master-1
+    - salt-master-2
+    - salt-master-3
+    - salt-master-4
+    - salt-master-5
+
+services:
+  salt-master-1:
+    <<: *master-common
+    container_name: c5-salt-master-1
+    hostname: salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.0.11
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-1.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-1-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-master-2:
+    <<: *master-common
+    container_name: c5-salt-master-2
+    hostname: salt-master-2
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.0.12
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-2.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-2-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-master-3:
+    <<: *master-common
+    container_name: c5-salt-master-3
+    hostname: salt-master-3
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.0.13
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-3.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-3-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-master-4:
+    <<: *master-common
+    container_name: c5-salt-master-4
+    hostname: salt-master-4
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.0.14
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-4.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-4-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-master-5:
+    <<: *master-common
+    container_name: c5-salt-master-5
+    hostname: salt-master-5
+    depends_on:
+      - salt-master-1
+    networks:
+      salt-net:
+        ipv4_address: 10.77.0.15
+    volumes:
+      - ${SALT_SRC:-../../..}/salt:/app/salt
+      - ./srv/salt:/srv/salt
+      - ./master-5.conf:/etc/salt/master
+      - cluster-pki:/etc/salt/cluster-pki
+      - master-5-cache:/var/cache/salt/master
+      - /etc/localtime:/etc/localtime:ro
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
+
+  salt-minion-1:
+    <<: *minion-common
+    container_name: c5-salt-minion-1
+    hostname: salt-minion-1
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  salt-minion-2:
+    <<: *minion-common
+    container_name: c5-salt-minion-2
+    hostname: salt-minion-2
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  salt-minion-3:
+    <<: *minion-common
+    container_name: c5-salt-minion-3
+    hostname: salt-minion-3
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  salt-minion-4:
+    <<: *minion-common
+    container_name: c5-salt-minion-4
+    hostname: salt-minion-4
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+  salt-minion-5:
+    <<: *minion-common
+    container_name: c5-salt-minion-5
+    hostname: salt-minion-5
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
+
+networks:
+  salt-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.77.0.0/24
+
+volumes:
+  cluster-pki:
+  master-1-cache:
+  master-2-cache:
+  master-3-cache:
+  master-4-cache:
+  master-5-cache:

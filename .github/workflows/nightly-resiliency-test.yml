@@ -1,0 +1,372 @@
+name: Nightly Resiliency Test
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # 3 AM UTC (offset from nightly-stress-test.yml's 2 AM)
+  workflow_dispatch:
+    inputs:
+      topology:
+        description: Resiliency topology to exercise (``all`` expands the matrix)
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'single'
+          - 'cluster3'
+          - 'cluster5'
+          - 'multimaster-failover'
+          - 'multimaster-hothot'
+          - 'syndic'
+      duration:
+        description: Workload duration (not total runtime; ``timeout 1h`` caps the orchestrator)
+        required: true
+        default: '0.5h'
+        type: choice
+        options:
+          - '10m'
+          - '0.5h'
+          - '1h'
+          - '1.5h'
+          - '2h'
+      scenarios:
+        description: Space-separated subset of all scenarios (default = full battery)
+        required: false
+        default: 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon'
+        type: string
+      marathon_enabled:
+        description: Run master_marathon phases (30m + 60m + 2h master outages). Defaults ON for nightly; flip to false for a fast dispatch.
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  resolve-matrix:
+    # ``all`` fan-out: expand the single workflow_dispatch input (or the
+    # schedule default) into the four-topology matrix consumed by
+    # ``resiliency-test``.  Scheduled runs always expand to ``all``; a
+    # single-topology dispatch produces a 1-entry matrix.
+    runs-on: ubuntu-latest
+    if: vars.SKIP_NIGHTLY_RESILIENCY_TEST != 'true'
+    outputs:
+      topologies: ${{ steps.pick.outputs.topologies }}
+    steps:
+      - id: pick
+        env:
+          INPUT_TOPOLOGY: ${{ github.event.inputs.topology || 'all' }}
+        run: |
+          case "$INPUT_TOPOLOGY" in
+            all)
+              echo 'topologies=["single","cluster3","cluster5","multimaster-failover","multimaster-hothot","syndic"]' >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "topologies=[\"$INPUT_TOPOLOGY\"]" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
+
+  resiliency-test:
+    needs: resolve-matrix
+    runs-on: ubuntu-latest
+    # Repo-level opt-out, mirrors nightly-stress-test.yml.  Set
+    # ``SKIP_NIGHTLY_RESILIENCY_TEST=true`` on repos where this shouldn't
+    # run (e.g. saltstack/salt -- resiliency CI cost belongs on the
+    # salt-nightlies fork).
+    if: vars.SKIP_NIGHTLY_RESILIENCY_TEST != 'true'
+    # ``contents: write`` lets the ``Publish panels to
+    # resiliency-snapshots branch`` step push rendered PNGs to an orphan
+    # branch so the step summary can embed them via
+    # raw.githubusercontent.com URLs.
+    permissions:
+      contents: write
+    strategy:
+      # Don't let one flaky topology cancel the others -- each is an
+      # independent diagnostic.
+      fail-fast: false
+      matrix:
+        topology: ${{ fromJSON(needs.resolve-matrix.outputs.topologies) }}
+    env:
+      # multimaster compose stacks publish prometheus on :19091 instead
+      # of the :19090 the single/cluster3 stacks use.  The analyzer,
+      # render_panels.py (via PROM_URL), and the standalone ``Analyze
+      # Results`` step all read this value, so centralize it here.
+      PROM_PORT: ${{ (startsWith(matrix.topology, 'multimaster') && '19091') || (matrix.topology == 'syndic' && '19092') || (matrix.topology == 'cluster5' && '19093') || '19090' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ matrix.topology }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-${{ matrix.topology }}-
+            ${{ runner.os }}-buildx-
+
+      - name: Prepare prometheus_data dir
+        # prometheus runs as nobody (uid 65534) and writes /prometheus;
+        # without pre-creating the bind-mount source with that ownership
+        # docker auto-creates it root-owned and prometheus fails with
+        # "permission denied", surfacing downstream as a bare
+        # ConnectionRefusedError against the analyzer URL.  Same pattern
+        # as nightly-stress-test.yml's "Build and Start Environment"
+        # step, but the path varies per topology so switch on it here.
+        run: |
+          case "${{ matrix.topology }}" in
+            single)
+              PROM_DATA_DIR=tests/resiliency/compose/single/prometheus_data
+              ;;
+            cluster3)
+              PROM_DATA_DIR=tests/monitoring/cluster-3node/prometheus_data
+              ;;
+            cluster5)
+              PROM_DATA_DIR=tests/monitoring/cluster-5node/prometheus_data
+              ;;
+            multimaster-failover|multimaster-hothot)
+              PROM_DATA_DIR=tests/resiliency/compose/multimaster/prometheus_data
+              ;;
+            syndic)
+              PROM_DATA_DIR=tests/resiliency/compose/syndic/prometheus_data
+              ;;
+            *)
+              echo "unknown topology: ${{ matrix.topology }}" >&2
+              exit 2
+              ;;
+          esac
+          echo "PROM_DATA_DIR=${PROM_DATA_DIR}" >> "$GITHUB_ENV"
+          mkdir -p "$PROM_DATA_DIR"
+          sudo chown -R 65534:65534 "$PROM_DATA_DIR"
+
+      - name: Set up Python
+        # Same pattern as .github/workflows/doc-linkcheck.yml.  The
+        # resiliency wrapper (run_resiliency.sh) auto-picks ``pytest``
+        # from $PATH; setup-python puts the pinned interpreter on PATH.
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements/static/ci/py3.14/linux.lock
+
+      - name: Install test dependencies
+        # Reuse the project's existing locked Linux test-env list so
+        # pytest + its transitive deps match the versions the main CI
+        # resolves.  The wrapper's ``-p no:system-statistics -p
+        # no:salt-factories`` flags disable the plugins from this lock
+        # that would double-register with the resiliency suite's own
+        # fixtures.
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/static/ci/py3.14/linux.lock
+
+      - name: Start environment
+        # Hand off to the resiliency orchestrator.  ``timeout`` is
+        # applied here (not inside the script) so a wedged topology --
+        # setsid workload stuck in a zombie wait, a hung
+        # ``docker compose up``, prometheus failing to report ready --
+        # can't eat the full 6h runner budget.  The workload DURATION is
+        # a knob inside the orchestrator.  Normal runs use 1h; a
+        # marathon-enabled run expands to 5h (120m phase alone is 2h)
+        # and 120m-enabled to 6h (hard GHA ceiling).
+        env:
+          # Default to true on scheduled triggers (``github.event.inputs``
+          # is empty on schedule events, so the workflow_dispatch
+          # ``default:`` never applies there).  The nightly cron runs
+          # the full battery including the 2-hour master outage.
+          MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'true' }}
+        run: |
+          cd tests/resiliency
+          # Marathon ON runs the full battery (30m + 60m + 2h outages +
+          # workload) which can take ~5.5h; cap at 6h, the GHA ceiling.
+          # Marathon OFF is a fast dispatch (~1h).
+          if [ "$MARATHON_ENABLED_INPUT" = "true" ]; then
+            outer_timeout=6h
+          else
+            outer_timeout=1h
+          fi
+          echo "Resolved outer_timeout=${outer_timeout} (marathon=${MARATHON_ENABLED_INPUT})"
+          # ``1`` / ``0`` match the master_marathon.sh env contract.
+          marathon_enabled=0; [ "$MARATHON_ENABLED_INPUT" = "true" ] && marathon_enabled=1
+          timeout "$outer_timeout" env \
+            TOPOLOGY=${{ matrix.topology }} \
+            DURATION=${{ github.event.inputs.duration || '0.5h' }} \
+            SCENARIOS="${{ github.event.inputs.scenarios || 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon' }}" \
+            PROMETHEUS_URL="http://127.0.0.1:${PROM_PORT}" \
+            MARATHON_ENABLED="$marathon_enabled" \
+            ./run_resiliency.sh
+
+      - name: Analyze Results
+        # The orchestrator already invokes analyze_resiliency.py and
+        # exits with its return code, but a ``timeout`` or a trapped
+        # EXIT handler can swallow the real verdict.  Re-run the
+        # analyzer here against the most-recent results.jsonl so the
+        # job's exit code is an idempotent check and the step logs
+        # carry the verdict table independently.
+        if: always()
+        run: |
+          # Pick the newest results dir written by this run.  The
+          # orchestrator writes results/<utc-timestamp>/results.jsonl
+          # where ``utc-timestamp`` is ``YYYYMMDDTHHMMSSZ`` — strictly
+          # lexically sortable, so ``sort | tail -1`` is equivalent
+          # to an mtime-sort without triggering shellcheck SC2012.
+          results_file=$(find tests/resiliency/results -mindepth 2 -maxdepth 2 \
+                             -name results.jsonl 2>/dev/null \
+                         | sort | tail -1)
+          if [ -z "$results_file" ]; then
+            echo "no results.jsonl found -- orchestrator likely never reached analyze step"
+            exit 0
+          fi
+          python3 tests/resiliency/analyze_resiliency.py \
+            --results "$results_file" \
+            --topology "${{ matrix.topology }}" \
+            --prometheus-url "http://127.0.0.1:${PROM_PORT}" \
+            --ci
+
+      - name: Render Dashboard Panels
+        # Render BEFORE Snapshot Metrics stops prometheus so the range
+        # queries still return data.  render_panels.py reads PROM_URL
+        # (not PROMETHEUS_URL) from the environment, so pass it through
+        # explicitly; multimaster swaps :19090 for :19091.
+        # Mirrors nightly-stress-test.yml's render step.
+        if: always()
+        run: |
+          python3 -m pip install --quiet matplotlib
+          PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
+          PROM_URL="http://127.0.0.1:${PROM_PORT}" \
+            python3 tests/monitoring/render_panels.py
+
+      - name: Snapshot Metrics
+        if: always()
+        run: |
+          # Stop prometheus to ensure the TSDB WAL is flushed before we
+          # tar the data directory.  The orchestrator may already have
+          # stopped it; ``|| true`` so a double-stop isn't a failure.
+          case "${{ matrix.topology }}" in
+            single)
+              compose_args="-f tests/resiliency/compose/single/docker-compose.yml -p resiliency-single"
+              ;;
+            cluster3)
+              compose_args="-f tests/monitoring/cluster-3node/docker-compose.yml -f tests/resiliency/compose/cluster3/monitoring-overlay.yml -p cluster-3node"
+              ;;
+            cluster5)
+              compose_args="-f tests/monitoring/cluster-5node/docker-compose.yml -f tests/resiliency/compose/cluster5/monitoring-overlay.yml -p cluster-5node"
+              ;;
+            multimaster-failover)
+              compose_args="-f tests/resiliency/compose/multimaster/docker-compose.yml -f tests/resiliency/compose/multimaster/docker-compose.failover.yml -p resiliency-multimaster"
+              ;;
+            multimaster-hothot)
+              compose_args="-f tests/resiliency/compose/multimaster/docker-compose.yml -f tests/resiliency/compose/multimaster/docker-compose.hothot.yml -p resiliency-multimaster"
+              ;;
+            syndic)
+              compose_args="-f tests/resiliency/compose/syndic/docker-compose.yml -p resiliency-syndic"
+              ;;
+          esac
+          # shellcheck disable=SC2086  # intentional word-split of compose_args
+          docker compose $compose_args stop prometheus || true
+          sudo tar -czf prometheus-data.tar.gz "$PROM_DATA_DIR"
+
+      - name: Collect Logs on Failure
+        if: failure()
+        run: |
+          mkdir -p artifacts
+          # Containers vary per topology.  List them, grep by project
+          # name, dump each.
+          case "${{ matrix.topology }}" in
+            single)              project=resiliency-single       ;;
+            cluster3)            project=cluster-3node           ;;
+            cluster5)            project=cluster-5node           ;;
+            multimaster-*)       project=resiliency-multimaster  ;;
+            syndic)              project=resiliency-syndic       ;;
+          esac
+          for c in $(docker ps -a --filter "label=com.docker.compose.project=${project}" --format '{{.Names}}'); do
+            docker logs "$c" > "artifacts/${c}.log" 2>&1 || true
+          done
+          # Pull the per-run orchestrator artefacts (results.jsonl,
+          # analysis.txt, compose.log, per-scenario logs) under
+          # artifacts/ so they live alongside the container logs in the
+          # uploaded bundle.
+          cp -r tests/resiliency/results artifacts/results 2>/dev/null || true
+
+      - name: Upload Artifacts
+        id: upload-artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resiliency-${{ matrix.topology }}-${{ github.run_id }}
+          path: |
+            artifacts/
+            prometheus-data.tar.gz
+            tests/resiliency/results/
+
+      - name: Publish panels to resiliency-snapshots branch
+        # GitHub's step-summary sanitizer strips ``data:`` URIs but
+        # allows real ``https:`` image URLs, so push rendered PNGs to a
+        # dedicated ``resiliency-snapshots`` orphan branch and let the
+        # summary embed them via ``raw.githubusercontent.com``.  Pruned
+        # 14 days back so the branch stays small.  Skipped silently
+        # when no PNGs exist (e.g. early-stage failures).
+        id: publish-snapshots
+        if: always() && hashFiles('artifacts/panels/*.png') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          BRANCH=resiliency-snapshots
+          RUN_DIR="runs/${{ github.run_id }}/${{ matrix.topology }}"
+
+          if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
+            git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
+          else
+            git clone --depth=1 "$REPO_URL" snaps
+            cd snaps
+            git switch --orphan "$BRANCH"
+            git rm -rf . >/dev/null 2>&1 || true
+            cd ..
+          fi
+
+          mkdir -p "snaps/$RUN_DIR"
+          cp artifacts/panels/*.png "snaps/$RUN_DIR/"
+
+          cd snaps
+          # Drop any run directory older than 14 days so the branch
+          # never accumulates unbounded.
+          find runs -mindepth 1 -maxdepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null || true
+
+          git config user.email "actions@github.com"
+          git config user.name  "github-actions[bot]"
+          git add -A
+          if ! git commit -m "Resiliency run ${{ github.run_id }} / ${{ matrix.topology }}"; then
+            echo "nothing to commit"
+          else
+            # Tiny retry loop in case two topologies in the matrix push
+            # concurrently.
+            for attempt in 1 2 3; do
+              if git push origin "$BRANCH"; then
+                break
+              fi
+              echo "push attempt $attempt failed; rebasing"
+              git fetch origin "$BRANCH"
+              git rebase "origin/$BRANCH"
+            done
+          fi
+
+          URL_PREFIX="https://raw.githubusercontent.com/${{ github.repository }}/${BRANCH}/${RUN_DIR}/"
+          echo "url-prefix=${URL_PREFIX}" >> "$GITHUB_OUTPUT"
+          echo "Published panels under ${URL_PREFIX}"
+
+      - name: Panel Summary
+        # Build the workflow step summary from the PNGs the Render step
+        # already produced; by this point prometheus is stopped so
+        # re-querying would return no data.  ``--image-url-prefix``
+        # points at the resiliency-snapshots branch so each panel
+        # renders inline; without it the summary falls back to listing
+        # the artifact bundle.
+        if: always()
+        run: |
+          PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
+            python3 tests/monitoring/render_panels.py --summary --from-existing \
+              --artifact-name resiliency-${{ matrix.topology }}-${{ github.run_id }} \
+              --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
+              --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"

@@ -1,0 +1,27 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: multimaster
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          cluster: multimaster
+
+  # fd_exporter.py is launched inside each master by the orchestrator
+  # (``docker exec -d <c> python3 /srv/fd_exporter.py``) and listens on
+  # 0.0.0.0:8002.  Service hostnames resolve over salt-net.
+  - job_name: 'salt-masters'
+    static_configs:
+      - targets:
+          - 'mm-salt-master-a:8002'
+          - 'mm-salt-master-b:8002'
+        labels:
+          cluster: multimaster

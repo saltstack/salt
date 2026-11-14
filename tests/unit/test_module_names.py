@@ -21,6 +21,13 @@ EXCLUDED_DIRS = [
     os.path.join(
         "tests", "pytests", "scenarios", "master_unavailable_wedge", "wedge_beacons"
     ),
+    # The resiliency suite ships library modules (``lib/topology.py``,
+    # ``lib/injectors.py``, ``lib/metrics.py``, ``durations.py``,
+    # ``analyze_resiliency.py``) alongside its ``test_*.py`` tests.
+    # Those library modules are explicitly non-test code; the suite is
+    # runnable only via its own ``pytest.ini`` entry point and is
+    # ``norecursedirs``'d from normal CI collection.
+    os.path.join("tests", "resiliency"),
     os.path.join("tests", "support"),
     os.path.join("tests", "unit", "files"),
     os.path.join("tests", "unit", "modules", "inspectlib"),
