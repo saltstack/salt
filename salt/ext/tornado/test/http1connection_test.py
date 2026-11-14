@@ -1,14 +1,17 @@
 # pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
+import logging
 import socket
 
+from salt.ext.tornado import gen
 from salt.ext.tornado.http1connection import HTTP1Connection
 from salt.ext.tornado.httputil import HTTPMessageDelegate
 from salt.ext.tornado.iostream import IOStream
 from salt.ext.tornado.locks import Event
+from salt.ext.tornado.log import gen_log
 from salt.ext.tornado.netutil import add_accept_handler
-from salt.ext.tornado.testing import AsyncTestCase, bind_unused_port, gen_test
+from salt.ext.tornado.testing import AsyncTestCase, ExpectLog, bind_unused_port, gen_test
 
 
 class HTTP1ConnectionTest(AsyncTestCase):
@@ -67,6 +70,58 @@ class HTTP1ConnectionTest(AsyncTestCase):
         # The delegate finished normally, so it must not also be told the
         # connection closed on it.
         self.assertEqual(len(close_count), 0)
+
+    @gen_test
+    def test_chunked_body_tiny_chunks(self):
+        # A body made of many tiny chunks is coalesced into a few
+        # data_received calls, and reading it yields to the IOLoop
+        # periodically even though all of the data is already available.
+        conn = HTTP1Connection(self.client_stream, True)
+        num_chunks = 5000
+        yield self.server_stream.write(
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n" +
+            b"1\r\nx\r\n" * num_chunks +
+            b"0\r\n\r\n")
+        self.server_stream.close()
+        # Give the data time to arrive so that the body can be read
+        # without waiting for the network.
+        yield gen.sleep(0.1)
+
+        body = []
+        ticks = [0]
+        done = [False]
+        io_loop = self.io_loop
+
+        # Count IOLoop iterations while the body is being read.
+        def tick():
+            if not done[0]:
+                ticks[0] += 1
+                io_loop.add_callback(tick)
+
+        class Delegate(HTTPMessageDelegate):
+            def headers_received(self, start_line, headers):
+                io_loop.add_callback(tick)
+
+            def data_received(self, data):
+                body.append(data)
+
+            def finish(self):
+                done[0] = True
+
+        yield conn.read_response(Delegate())
+        self.assertEqual(b"".join(body), b"x" * num_chunks)
+        self.assertLess(len(body), 10)
+        self.assertGreater(ticks[0], 10)
+
+    @gen_test
+    def test_chunked_body_bad_chunk_terminator(self):
+        conn = HTTP1Connection(self.client_stream, True)
+        self.server_stream.write(
+            b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n"
+            b"3\r\nfooXX0\r\n\r\n")
+        with ExpectLog(gen_log, ".*improperly terminated chunk"):
+            result = yield conn.read_response(HTTPMessageDelegate())
+        self.assertIs(result, False)
 
     @gen_test
     def test_http10_no_content_length(self):
