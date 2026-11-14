@@ -4,7 +4,7 @@
 
 
 from __future__ import absolute_import, division, print_function
-from salt.ext.tornado.httputil import url_concat, parse_multipart_form_data, HTTPHeaders, format_timestamp, HTTPServerRequest, parse_request_start_line, parse_cookie, parse_body_arguments, HTTPInputError
+from salt.ext.tornado.httputil import url_concat, parse_multipart_form_data, HTTPHeaders, format_timestamp, HTTPServerRequest, parse_request_start_line, parse_cookie, parse_body_arguments, HTTPInputError, _DEFAULT_URLENCODED_CONFIG
 from salt.ext.tornado.escape import utf8, native_str
 from salt.ext.tornado.log import gen_log
 from salt.ext.tornado.testing import ExpectLog
@@ -443,6 +443,21 @@ class HTTPServerRequestTest(unittest.TestCase):
     def test_body_is_a_byte_string(self):
         requets = HTTPServerRequest(uri='/')
         self.assertIsInstance(requets.body, bytes)
+
+    def test_query_arguments_within_limit(self):
+        n = _DEFAULT_URLENCODED_CONFIG.max_arguments
+        uri = "/?" + "&".join("a=%d" % i for i in range(n))
+        request = HTTPServerRequest(uri=uri)
+        self.assertEqual(len(request.arguments["a"]), n)
+
+    def test_max_query_arguments(self):
+        # The query string is subject to the same limit on the number of
+        # arguments as a urlencoded body.
+        n = _DEFAULT_URLENCODED_CONFIG.max_arguments + 1
+        uri = "/?" + "&".join("a=%d" % i for i in range(n))
+        with self.assertRaises(HTTPInputError) as cm:
+            HTTPServerRequest(uri=uri)
+        self.assertIn("Max number of fields exceeded", str(cm.exception))
 
 
 class ParseRequestStartLineTest(unittest.TestCase):
