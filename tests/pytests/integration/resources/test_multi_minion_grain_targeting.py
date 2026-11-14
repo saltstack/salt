@@ -61,18 +61,21 @@ def test_grain_targeting_unique_resource_id_picks_correct_minion(
     salt_minion, salt_minion_2, salt_cli
 ):
     """
-    The ``resource_id`` grain is unique per resource. Targeting
-    ``resource_id:dummy-05`` must hit only the resource on minion-2;
-    minion-1 has no ``dummy-05``. This proves the master picks the
-    right SRN out of the union and dispatches to the owning minion.
+    The ``resource_id`` grain is unique per resource. Targeting an id
+    that exists only on minion-2 must dispatch only to minion-2;
+    minion-1's dummy ids use a different prefix so they can never
+    match.  This proves the master picks the right SRN out of the
+    union and dispatches to the owning minion.
     """
-    ret = salt_cli.run("-G", "test.ping", minion_tgt="resource_id:dummy-05")
+    # Pick a resource id that lives on minion-2 only.
+    target_id = DUMMY_RESOURCES_2[-1]
+    ret = salt_cli.run("-G", "test.ping", minion_tgt=f"resource_id:{target_id}")
     assert ret.returncode == 0, ret
 
     # Salt-factories may unwrap a single-key envelope when only one id
     # responds. Accept both shapes.
     if isinstance(ret.data, dict):
-        assert ret.data.get("dummy-05") is True
+        assert ret.data.get(target_id) is True
         # No minion-1-owned resource may appear.
         for rid in DUMMY_RESOURCES:
             assert (

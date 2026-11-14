@@ -71,7 +71,24 @@ def store(bank, key, data, cachedir):
                 f"The cache directory, {outdir}, could not be created: {exc}"
             )
 
-    tmpfh, tmpfname = tempfile.mkstemp(dir=base)
+    # Stage the write in a sibling tmp directory so concurrent ``list_``
+    # callers never observe in-flight ``tmpXXXXXXXX`` files in the bank
+    # directory.  Cluster cache replication (cluster_isolated_filesystem
+    # = True) can race an in-process ``cache.list(bank)`` against a
+    # daemon-side ``cache.store(bank, ...)`` fan-out from a peer master;
+    # with ``mkstemp(dir=base)`` the listdir call caught the tmpfile
+    # before ``atomic_rename`` completed.  Keeping the staging dir under
+    # ``cachedir`` preserves the same-filesystem invariant that
+    # ``atomic_rename`` relies on.
+    tmpdir = salt.utils.path.join(cachedir, ".localfs_tmp")
+    try:
+        os.makedirs(tmpdir)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise SaltCacheError(
+                f"The cache tmp directory, {tmpdir}, could not be created: {exc}"
+            )
+    tmpfh, tmpfname = tempfile.mkstemp(dir=tmpdir)
     os.close(tmpfh)
     try:
         with salt.utils.files.fopen(tmpfname, "w+b") as fh_:

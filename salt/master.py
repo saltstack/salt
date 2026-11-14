@@ -2894,56 +2894,179 @@ class AESFuncs(TransportMethods):
         # cache (:conf_master:`minion_data_cache`). Registration must always run
         # when minions report inventory; otherwise bare-id / T@ targeting breaks
         # silently while still returning success to the minion.
-        n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+        #
+        # Two cross-master register paths depending on ring configuration:
+        #
+        # * Standalone or broadcast (no ``resource_index`` ring configured):
+        #   write the full set locally here, fire a single broadcast
+        #   replication event; every peer applies the full set on arrival.
+        #
+        # * Ring-routed (operator ran ``salt-run cluster.ring_create
+        #   resource_index`` + ``cluster.route_set resource_index ring``):
+        #   the ring state only lives in the publish-daemon process (its
+        #   per-ring Raft groups aren't visible across the MWorker fork
+        #   boundary -- see ``salt/cluster/ring_membership.py`` module
+        #   docstring).  To avoid a double-write of peer-owned SRNs,
+        #   skip the local MWorker write entirely when the cluster is
+        #   healthy and defer both the local-owner shard write and the
+        #   peer fan-out to ``_run_delegate_resource_register_write``
+        #   in the publish daemon, which has ring access.
+        opts = self.opts or {}
+        cluster_mode = bool(
+            opts.get("cluster_id")
+            and opts.get("cluster_isolated_filesystem")
+            and opts.get("cluster_cache_replication") is not False
         )
-        log.debug(
-            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
-            load["id"],
-            list(load["resources"].keys()),
-            n_put,
-            n_del,
-        )
+        # Chunked-register metadata: the minion-side register loop ships
+        # resource inventory in per-type chunks tagged with
+        # ``chunk_rtype`` / ``chunk_index`` / ``chunk_final``.  Only the
+        # terminal chunk per type triggers the stale-SRN prune; mid-stream
+        # chunks ``put_many`` without a delete-diff so an earlier chunk
+        # of the same window is never prematurely pruned.  Legacy single-
+        # shot callers that omit these fields fall through to ``__all__``
+        # scope with ``chunk_final=True`` -- identical semantics to the
+        # pre-chunk code path.
+        chunk_rtype = load.get("chunk_rtype")
+        chunk_final = load.get("chunk_final", True)
+        chunk_index = load.get("chunk_index")
+        chunk_scope = chunk_rtype if chunk_rtype else "__all__"
+        if not cluster_mode:
+            n_put, n_del = salt.utils.minions.update_resource_index_chunk(
+                self.opts,
+                load["id"],
+                load["resources"],
+                chunk_final,
+                chunk_scope=chunk_scope,
+                chunk_index=chunk_index,
+            )
+            log.debug(
+                "Registered resources for minion '%s' scope=%s final=%s: "
+                "%s (put=%d, deleted=%d)",
+                load["id"],
+                chunk_scope,
+                chunk_final,
+                list(load["resources"].keys()),
+                n_put,
+                n_del,
+            )
+        else:
+            log.debug(
+                "resource-registry: deferring local + peer register for "
+                "minion '%s' scope=%s final=%s to publish-daemon via "
+                "replication event",
+                load["id"],
+                chunk_scope,
+                chunk_final,
+            )
+        # Cross-master replication: fire a cluster-runner event the publish
+        # daemon intercepts.  ``_run_delegate_resource_register_write``
+        # consults ``ring_membership.get_ring("resource_index")`` and
+        # either partitions by owner (ring-routed) or fans to every peer
+        # (broadcast fallback).  In cluster mode the daemon also owns
+        # the local-shard write so the MWorker here doesn't double-write.
+        # ``chunk_final`` + ``chunk_scope`` + ``chunk_index`` are
+        # propagated through the event so peers (and the local
+        # publish-daemon writer) honor the same chunk-aggregation
+        # semantics and the out-of-order gap check.
+        if cluster_mode:
+            try:
+                from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+                    fire_resource_register_write,
+                )
+
+                fire_resource_register_write(
+                    opts,
+                    load["id"],
+                    load["resources"],
+                    chunk_final=chunk_final,
+                    chunk_scope=chunk_scope,
+                    chunk_index=chunk_index,
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "resource-replicate: failed to fan out register for %s",
+                    load["id"],
+                )
         fire_event = False
         # Persist per-resource grains in the ``resource_grains`` cache bank
         # so ``salt -G '<key>:<value>' …`` can match resources alongside
-        # minions. Stale entries (resource removed from this minion since
-        # last registration) are flushed first so a shrinking inventory
-        # doesn't leave ghost entries.
+        # minions.  The ghost-entry flush (SRNs that disappeared from a
+        # shrinking inventory) only runs on the terminal chunk of the
+        # window -- mid-stream flushes would wipe grains stored by the
+        # chunk-N-1 handler for SRNs present only in chunk N.
         if self.opts.get("minion_data_cache", False):
             resource_grains = load.get("resource_grains") or {}
             try:
                 cache = self.masterapi.cache
+                # Always store this chunk's grains (additive).  Use
+                # ``store_many`` so the whole chunk fires a single batched
+                # ``delegate-cache-write`` event (bounded by
+                # ``cluster_cache_replicate_batch_size``) instead of one
+                # event per SR.
                 current_srns = set(resource_grains.keys())
-                # Walk existing entries and drop ones tied to this minion
-                # that aren't in the new payload. Owner identification piggy
-                # backs on the registry: each SRN is owned by exactly one
-                # minion at a time.
-                for srn in list(
-                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
-                ):
-                    rtype, _, rid = srn.partition(":")
-                    if not rid:
+                batch = []
+                for srn, gdict in resource_grains.items():
+                    if not isinstance(gdict, dict):
                         continue
-                    if srn in current_srns:
-                        continue
-                    owners = self.ckminions.registry.get_managing_minions_for_srn(
-                        rtype, rid
+                    # Enforce the ``resource_id`` convention structurally:
+                    # the id portion of the bank key is authoritative, so
+                    # any grain whose module omitted or diverged on
+                    # ``resource_id`` is normalised here.  Grain targeting's
+                    # ``resource_id:<glob>`` fast path relies on this
+                    # invariant to skip the per-match fetch.
+                    _rtype, _sep, _rid = srn.partition(":")
+                    if _sep and _rid:
+                        gdict["resource_id"] = _rid
+                    batch.append((srn, gdict))
+                if batch:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        batch,
                     )
-                    if load["id"] in owners or not owners:
+                if chunk_final:
+                    # Terminal chunk: by this point
+                    # ``register_minion_chunk`` has already committed the
+                    # full window's SRNs to the registry, so the registry
+                    # authoritatively knows which SRNs ``load["id"]``
+                    # owns right now.  Flush any ``resource_grains`` SRN
+                    # of a type this window scoped that the registry
+                    # shows as orphaned (no minion owns it).  SRNs still
+                    # owned by anyone -- this minion included -- are
+                    # kept.
+                    for srn in list(
+                        cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK)
+                        or []
+                    ):
+                        rtype, _, rid = srn.partition(":")
+                        if not rid:
+                            continue
+                        if chunk_scope != "__all__" and rtype != chunk_scope:
+                            # Scoped terminal chunk: only prune SRNs of
+                            # the type this window is replacing.
+                            continue
+                        if srn in current_srns:
+                            # Just stored by this terminal chunk -- keep.
+                            continue
+                        owners = self.ckminions.registry.get_managing_minions_for_srn(
+                            rtype, rid
+                        )
+                        if owners:
+                            # Still owned by someone (incl. this minion
+                            # -- an earlier chunk of the current window).
+                            continue
+                        # No owner in the registry -- orphan, safe to
+                        # flush.
                         try:
                             cache.flush(
-                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
+                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                                srn,
                             )
                         except Exception as exc:  # pylint: disable=broad-except
-                            log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
+                            log.debug(
+                                "resource_grains flush %s failed: %s",
+                                srn,
+                                exc,
+                            )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "Failed to persist resource_grains for minion '%s': %s",
@@ -2952,8 +3075,10 @@ class AESFuncs(TransportMethods):
                 )
             # Signal the caller to fire the cache-refresh event on the
             # async event bus. ``_pillar`` fires the analogous event when
-            # ordinary minion grains are refreshed in the cache.
-            if self.opts.get("minion_data_cache_events") is True:
+            # ordinary minion grains are refreshed in the cache. Only
+            # fire on terminal chunks to avoid burst-firing N refresh
+            # events for an N-chunk register.
+            if chunk_final and self.opts.get("minion_data_cache_events") is True:
                 fire_event = True
         return True, fire_event, load["id"] if fire_event else None
 
@@ -3655,57 +3780,129 @@ class AESFuncs(TransportMethods):
         return self.masterapi._mine_flush(load, skip_verify=True)
 
     def _sync_register_resources(self, load):
-        """Sync-shim body of ``_register_resources`` (pre-PR verbatim)."""
+        """Sync-shim body of ``_register_resources``.
+
+        Chunk-aggregation parity: carries the same ``chunk_rtype`` /
+        ``chunk_final`` plumbing as :meth:`__register_resources_sync` so
+        the MWorker-sync entry point doesn't under-aggregate multi-chunk
+        registers (which would prune earlier chunks mid-stream).
+        """
         load = self._AESFuncs__verify_load(load, ("id", "resources"))
         if load is False:
             return {}
-        n_put, n_del = salt.utils.minions.update_resource_index(
-            self.opts, load["id"], load["resources"]
+        opts = self.opts or {}
+        cluster_mode = bool(
+            opts.get("cluster_id")
+            and opts.get("cluster_isolated_filesystem")
+            and opts.get("cluster_cache_replication") is not False
         )
-        log.debug(
-            "Registered resources for minion '%s': %s (put=%d, deleted=%d)",
-            load["id"],
-            list(load["resources"].keys()),
-            n_put,
-            n_del,
-        )
+        chunk_rtype = load.get("chunk_rtype")
+        chunk_final = load.get("chunk_final", True)
+        chunk_index = load.get("chunk_index")
+        chunk_scope = chunk_rtype if chunk_rtype else "__all__"
+        if not cluster_mode:
+            n_put, n_del = salt.utils.minions.update_resource_index_chunk(
+                self.opts,
+                load["id"],
+                load["resources"],
+                chunk_final,
+                chunk_scope=chunk_scope,
+                chunk_index=chunk_index,
+            )
+            log.debug(
+                "Registered resources for minion '%s' scope=%s final=%s: "
+                "%s (put=%d, deleted=%d)",
+                load["id"],
+                chunk_scope,
+                chunk_final,
+                list(load["resources"].keys()),
+                n_put,
+                n_del,
+            )
+        else:
+            log.debug(
+                "resource-registry: deferring local + peer register for "
+                "minion '%s' scope=%s final=%s to publish-daemon via "
+                "replication event",
+                load["id"],
+                chunk_scope,
+                chunk_final,
+            )
+            try:
+                from salt.cache._cluster_replicator import (  # pylint: disable=import-outside-toplevel
+                    fire_resource_register_write,
+                )
+
+                fire_resource_register_write(
+                    opts,
+                    load["id"],
+                    load["resources"],
+                    chunk_final=chunk_final,
+                    chunk_scope=chunk_scope,
+                    chunk_index=chunk_index,
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "resource-replicate: failed to fan out register for %s",
+                    load["id"],
+                )
         if self.opts.get("minion_data_cache", False):
             resource_grains = load.get("resource_grains") or {}
             try:
                 cache = self.masterapi.cache
                 current_srns = set(resource_grains.keys())
-                for srn in list(
-                    cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK) or []
-                ):
-                    rtype, _, rid = srn.partition(":")
-                    if not rid:
+                batch = []
+                for srn, gdict in resource_grains.items():
+                    if not isinstance(gdict, dict):
                         continue
-                    if srn in current_srns:
-                        continue
-                    owners = self.ckminions.registry.get_managing_minions_for_srn(
-                        rtype, rid
+                    # Enforce the ``resource_id`` convention structurally:
+                    # the id portion of the bank key is authoritative, so
+                    # any grain whose module omitted or diverged on
+                    # ``resource_id`` is normalised here.  Grain targeting's
+                    # ``resource_id:<glob>`` fast path relies on this
+                    # invariant to skip the per-match fetch.
+                    _rtype, _sep, _rid = srn.partition(":")
+                    if _sep and _rid:
+                        gdict["resource_id"] = _rid
+                    batch.append((srn, gdict))
+                if batch:
+                    cache.store_many(
+                        salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                        batch,
                     )
-                    if load["id"] in owners or not owners:
+                if chunk_final:
+                    # Terminal chunk: see __register_resources_sync for
+                    # the matching narrative -- orphans only, scoped.
+                    for srn in list(
+                        cache.list(salt.utils.resource_registry.RESOURCE_GRAINS_BANK)
+                        or []
+                    ):
+                        rtype, _, rid = srn.partition(":")
+                        if not rid:
+                            continue
+                        if chunk_scope != "__all__" and rtype != chunk_scope:
+                            continue
+                        if srn in current_srns:
+                            continue
+                        owners = self.ckminions.registry.get_managing_minions_for_srn(
+                            rtype, rid
+                        )
+                        if owners:
+                            continue
                         try:
                             cache.flush(
-                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK, srn
+                                salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
+                                srn,
                             )
                         except Exception as exc:  # pylint: disable=broad-except
                             log.debug("resource_grains flush %s failed: %s", srn, exc)
-                for srn, gdict in resource_grains.items():
-                    if isinstance(gdict, dict):
-                        cache.store(
-                            salt.utils.resource_registry.RESOURCE_GRAINS_BANK,
-                            srn,
-                            gdict,
-                        )
             except Exception as exc:  # pylint: disable=broad-except
                 log.warning(
                     "Failed to persist resource_grains for minion '%s': %s",
                     load["id"],
                     exc,
                 )
-            if self.opts.get("minion_data_cache_events") is True:
+            if chunk_final and self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(
                     {"Resource cache refresh": load["id"]},
                     tagify(load["id"], "refresh", "resource"),

@@ -120,6 +120,500 @@ def test_register_minion_diff_removes_stale(registry):
     assert registry.has_resource("m1", "vm", "v1") is False
 
 
+# ---------------------------------------------------------------------------
+# Chunked-register correctness: regression tests for the
+# multi-chunk-prune-cascade bug fixed in the pre-Phase-3 fixer pass.
+# Precedent: a 200K register fired as 20 x 10K chunks was persisting
+# only 10K entries because every chunk's receipt was running the
+# diff-against-previous delete pass, pruning every earlier chunk of
+# the same window.
+# ---------------------------------------------------------------------------
+
+
+def test_register_minion_chunk_multi_chunk_persists_all_chunks(registry):
+    """Three non-final chunks + one final chunk all persist, nothing pruned."""
+    # Chunk 1: additive put, no delete
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"dummy": ["d1", "d2"]}, chunk_final=False, chunk_scope="dummy"
+    )
+    assert (n_put, n_del) == (2, 0)
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d1",
+        "d2",
+    ]
+
+    # Chunk 2: additive put, STILL no delete -- the previous chunk's
+    # entries must survive.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"dummy": ["d3", "d4"]}, chunk_final=False, chunk_scope="dummy"
+    )
+    assert (n_put, n_del) == (2, 0)
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+    ]
+
+    # Chunk 3 (terminal): put + delete pass.  Union of chunks 1+2+3
+    # is {d1..d5} and nothing else; no prior inventory to prune, so
+    # n_del must be 0 and ALL five entries must land.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"dummy": ["d5"]}, chunk_final=True, chunk_scope="dummy"
+    )
+    assert (n_put, n_del) == (1, 0)
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d1",
+        "d2",
+        "d3",
+        "d4",
+        "d5",
+    ]
+
+
+def test_register_minion_chunk_terminal_prunes_removed_srns(registry):
+    """Terminal chunk correctly prunes SRNs no longer in the new window."""
+    # Prime with 3 SRNs via single-shot register.
+    registry.register_minion("m1", {"dummy": ["d1", "d2", "d3"]})
+    # Chunked re-register with a smaller set spread across two chunks.
+    registry.register_minion_chunk(
+        "m1", {"dummy": ["d1"]}, chunk_final=False, chunk_scope="dummy"
+    )
+    # Mid-stream: d2 and d3 are STILL present (not pruned yet).
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d1",
+        "d2",
+        "d3",
+    ]
+    # Terminal chunk commits the new window; d2 + d3 are now stale.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"dummy": ["d4"]}, chunk_final=True, chunk_scope="dummy"
+    )
+    assert n_put == 1
+    assert n_del == 2
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d1",
+        "d4",
+    ]
+
+
+def test_register_minion_chunk_scope_does_not_prune_other_types(registry):
+    """A per-type chunked window must not wipe the minion's other types."""
+    registry.register_minion("m1", {"dummy": ["d1"], "ssh": ["host-1", "host-2"]})
+    # Re-register the ssh type only, via a single terminal chunk.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"ssh": ["host-1"]}, chunk_final=True, chunk_scope="ssh"
+    )
+    # ssh:host-2 pruned (stale within scope), dummy:d1 untouched.
+    assert n_del == 1
+    rs = registry.get_resources_for_minion("m1")
+    assert sorted(rs.get("ssh", [])) == ["host-1"]
+    assert sorted(rs.get("dummy", [])) == ["d1"]
+
+
+def test_register_minion_chunk_all_scope_prunes_everything_not_in_window(
+    registry,
+):
+    """``chunk_scope='__all__'`` matches legacy single-shot full-replace."""
+    registry.register_minion("m1", {"dummy": ["d1"], "ssh": ["h1"]})
+    # One-shot terminal chunk replacing entire inventory.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1", {"dummy": ["d2"]}, chunk_final=True, chunk_scope="__all__"
+    )
+    # ssh:h1 and dummy:d1 both pruned.
+    assert n_del == 2
+    rs = registry.get_resources_for_minion("m1")
+    assert sorted(rs.get("dummy", [])) == ["d2"]
+    assert "ssh" not in rs
+
+
+def test_register_minion_chunk_pending_state_cleared_after_terminal(registry):
+    """The accumulator doesn't leak minion state across windows."""
+    registry.register_minion_chunk(
+        "m1", {"dummy": ["d1"]}, chunk_final=False, chunk_scope="dummy"
+    )
+    registry.register_minion_chunk(
+        "m1", {"dummy": ["d2"]}, chunk_final=True, chunk_scope="dummy"
+    )
+    # After terminal commit, ``_pending_registers`` for m1 must be empty
+    # (or the key gone entirely).
+    pending = registry._pending_registers.get("m1")
+    assert not pending, f"terminal chunk must clear its window; got {pending!r}"
+
+
+def test_register_minion_chunk_many_chunks_simulating_200k_shape(registry):
+    """
+    Simulate the exact failure mode the production bug hit: a large
+    inventory split into N chunks must persist (sum of chunks) entries,
+    not just the last chunk.
+    """
+    chunk_size = 50
+    total = 500  # 10 chunks of 50 each
+    rids = [f"d{i:04d}" for i in range(total)]
+    for idx in range(0, total, chunk_size):
+        slice_ = rids[idx : idx + chunk_size]
+        is_final = idx + chunk_size >= total
+        registry.register_minion_chunk(
+            "m1",
+            {"dummy": slice_},
+            chunk_final=is_final,
+            chunk_scope="dummy",
+        )
+    got = sorted(registry.get_resources_for_minion("m1").get("dummy", []))
+    assert len(got) == total, (
+        f"{total} entries sent across chunks but only {len(got)} persisted; "
+        "multi-chunk aggregation is broken"
+    )
+    assert got[0] == "d0000"
+    assert got[-1] == f"d{total - 1:04d}"
+
+
+def test_register_minion_chunk_out_of_order_final_defers_prune(registry):
+    """
+    Regression for the peer-side chunk reordering race (Phase-3 reviewer
+    finding #14): the publish daemon dispatches each incoming
+    ``cluster/peer/delegate-resource-register-write`` event into the
+    default ThreadPoolExecutor via ``run_in_executor(None, ...)``.  The
+    executor is NOT FIFO, so a fast ``chunk_final=True`` can land before
+    earlier non-final chunks finish.  Pre-fix, the terminal prune ran
+    against the incomplete pending window and wiped the valid SRNs the
+    slow non-final chunk was about to re-insert.
+
+    This test feeds the chunks to the registry in reverse order
+    (3-final, 2, 1, 0) and asserts:
+
+    1. The terminal chunk does NOT run the prune immediately -- it
+       detects the gap via ``chunk_index`` and buffers.
+    2. The missing non-final chunks land and accumulate normally.
+    3. When the final gap closes (chunk 0 arrives), the deferred prune
+       fires and all SRNs from every chunk survive.
+
+    Pre-fix behavior: the 3-final chunk would call ``delete_many`` on
+    every SRN in the registry (because the window's "committed" set
+    only contained its own 1 SRN) and the later chunks would still
+    insert but the prune cascade would have wiped prior state.
+    """
+    # Seed with 2 previously-registered SRNs that must survive the
+    # chunked re-register (they belong to a type outside the scope).
+    registry.register_minion("m1", {"ssh": ["h-old"], "dummy": ["d-old"]})
+
+    # Build the window: 4 chunks total (indexes 0..3) carrying d0..d3.
+    # Scope == "dummy" so the prune at the end should remove d-old but
+    # NOT h-old.
+    chunks = [
+        (0, {"dummy": ["d0"]}, False),
+        (1, {"dummy": ["d1"]}, False),
+        (2, {"dummy": ["d2"]}, False),
+        (3, {"dummy": ["d3"]}, True),
+    ]
+
+    # Deliver out-of-order: final first, then 2, then 1, then 0.
+    arrival_order = [3, 2, 1, 0]
+    delivered_by_index = {idx: payload for idx, payload, final in chunks}
+    final_by_index = {idx: final for idx, _payload, final in chunks}
+
+    # First delivery: the terminal chunk (index 3).  Pre-fix would have
+    # pruned d-old AND all 4 dummy-SRNs (no d0/d1/d2 in the committed
+    # set because they haven't arrived).  Post-fix: the gap check sees
+    # seen_indexes={3} but needs {0,1,2,3}, so no prune runs.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1",
+        delivered_by_index[3],
+        chunk_final=final_by_index[3],
+        chunk_scope="dummy",
+        chunk_index=3,
+    )
+    assert n_put == 1
+    assert n_del == 0, (
+        "Out-of-order terminal must NOT prune -- the window's earlier "
+        "chunks have not arrived yet (seen_indexes={3}, need {0,1,2,3})"
+    )
+    # d-old must still be present because the prune was deferred.
+    assert "d-old" in registry.get_resources_for_minion("m1").get("dummy", [])
+    # Pending state is still live; the registry remembers the deferred
+    # final so a later arrival of the missing indices can promote it.
+    pending = registry._pending_registers.get("m1", {}).get("dummy")
+    assert pending is not None, "pending window must survive the deferred final"
+    assert pending["final_pending"] == 3
+
+    # Deliver the remaining chunks in reverse (2, 1, 0).  None of them
+    # is final; the gap check on arrival of chunk 0 (closing the
+    # sequence) promotes the deferred final into a prune pass.
+    for idx in (2, 1):
+        n_put, n_del = registry.register_minion_chunk(
+            "m1",
+            delivered_by_index[idx],
+            chunk_final=final_by_index[idx],
+            chunk_scope="dummy",
+            chunk_index=idx,
+        )
+        assert n_put == 1
+        assert n_del == 0, (
+            f"intermediate chunk index={idx} must not fire the prune "
+            "while the window still has a gap"
+        )
+
+    # Final gap-closing chunk (index 0).  The gap check now sees
+    # {0,1,2,3} == expected, so the deferred prune fires.  d-old was
+    # not in the committed set (it's old scope=dummy state), so it is
+    # the only thing pruned; d0..d3 all survive; h-old is outside the
+    # scope and is untouched.
+    n_put, n_del = registry.register_minion_chunk(
+        "m1",
+        delivered_by_index[0],
+        chunk_final=final_by_index[0],
+        chunk_scope="dummy",
+        chunk_index=0,
+    )
+    assert n_put == 1
+    assert n_del == 1, f"deferred prune should remove exactly d-old; got n_del={n_del}"
+
+    # Final state: d0..d3 all present, d-old pruned, h-old preserved.
+    final_state = registry.get_resources_for_minion("m1")
+    assert sorted(final_state.get("dummy", [])) == ["d0", "d1", "d2", "d3"]
+    assert sorted(final_state.get("ssh", [])) == ["h-old"]
+    # Pending window must be fully cleared.
+    assert "m1" not in registry._pending_registers
+
+
+def test_register_minion_chunk_final_prune_runs_once(registry):
+    """
+    Once the deferred prune fires it must NOT re-fire on duplicate
+    terminal deliveries (bus bounce-back shape).  The pending state is
+    cleared when the prune commits so a second terminal arrival only
+    runs an additive put (and any new gap check is self-contained to
+    the new post-commit window).
+    """
+    registry.register_minion("m1", {"dummy": ["d-stale"]})
+    registry.register_minion_chunk(
+        "m1",
+        {"dummy": ["d0"]},
+        chunk_final=False,
+        chunk_scope="dummy",
+        chunk_index=0,
+    )
+    n_put, n_del = registry.register_minion_chunk(
+        "m1",
+        {"dummy": ["d1"]},
+        chunk_final=True,
+        chunk_scope="dummy",
+        chunk_index=1,
+    )
+    assert n_del == 1  # d-stale pruned
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d0",
+        "d1",
+    ]
+    # Duplicate final -- pending window was cleared by the commit above;
+    # the duplicate opens a fresh single-chunk window with
+    # ``seen_indexes={1}`` but ``final_index=1`` requires ``{0,1}``, so
+    # the deferred-prune gap check defers (no spurious delete of d0).
+    # The additive ``put_many`` still runs (idempotent re-insert of d1).
+    n_put, n_del = registry.register_minion_chunk(
+        "m1",
+        {"dummy": ["d1"]},
+        chunk_final=True,
+        chunk_scope="dummy",
+        chunk_index=1,
+    )
+    assert n_del == 0, (
+        "duplicate terminal arrival must not spuriously prune through "
+        "a gap check -- the window is fresh and incomplete"
+    )
+    # d0 and d1 both remain -- no spurious prune cascaded through the
+    # duplicate.
+    assert sorted(registry.get_resources_for_minion("m1").get("dummy", [])) == [
+        "d0",
+        "d1",
+    ]
+
+
+def test_register_minion_chunk_concurrent_apply_no_srn_loss(registry):
+    """
+    Thread-contention regression: multiple threads applying chunks for
+    the same ``(minion_id, scope)`` must not race the ``_pending_registers``
+    mutation + prune.  Pre-fix (no lock), concurrent threads could
+    interleave a terminal-prune against another thread's half-committed
+    pending set and drop valid SRNs.
+    """
+    total_chunks = 8
+    chunk_size = 20
+    all_rids = set()
+    for ci in range(total_chunks):
+        for ri in range(chunk_size):
+            all_rids.add(f"c{ci:02d}-r{ri:02d}")
+
+    def apply_chunk(ci):
+        rids = [f"c{ci:02d}-r{ri:02d}" for ri in range(chunk_size)]
+        registry.register_minion_chunk(
+            "m1",
+            {"dummy": rids},
+            chunk_final=(ci == total_chunks - 1),
+            chunk_scope="dummy",
+            chunk_index=ci,
+        )
+
+    # Fan the chunks out across threads in reverse order so the final
+    # (highest-index) chunk is highly likely to try to prune before
+    # all non-final chunks finish.
+    threads = []
+    for ci in reversed(range(total_chunks)):
+        t = threading.Thread(target=apply_chunk, args=(ci,))
+        threads.append(t)
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    got = set(registry.get_resources_for_minion("m1").get("dummy", []))
+    missing = all_rids - got
+    assert not missing, (
+        f"Concurrent out-of-order register dropped {len(missing)} SRNs "
+        f"(sample: {sorted(missing)[:5]})"
+    )
+
+
+def test_register_minion_chunk_pending_ttl_evicts_abandoned_window(tmp_path, caplog):
+    """
+    Regression for Phase-3 reviewer concern #3: the pending-register
+    window for a minion that ships non-final chunks and then crashes
+    (never sends ``chunk_final=True``) must not linger forever.
+
+    Shape:
+    1. Minion-A ships chunks 0 and 1 (both non-final) for scope ``dummy``.
+       Its window lives in ``_pending_registers``.
+    2. We synthesise a crash by rewinding minion-A's
+       ``last_activity_ts`` to be older than the TTL.
+    3. Minion-B then arrives with a non-final chunk for its own
+       scope -- the sweep on the write path must evict minion-A's
+       abandoned window and emit a WARNING naming the (minion, scope).
+    4. Minion-A's pending window must be gone after the sweep;
+       minion-B's new window must be intact.
+    """
+    import logging as _logging
+    import time as _time
+
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+        # Small TTL so the rewind is unambiguous; no real sleep
+        # required (we rewind the activity timestamp instead).
+        "cluster_resource_register_pending_ttl": 10.0,
+    }
+    registry = rr.ResourceRegistry(opts, cache=_FakeCache())
+    try:
+        # Minion A: non-final chunks only (simulates crash before final).
+        registry.register_minion_chunk(
+            "minion-a",
+            {"dummy": ["d0"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=0,
+        )
+        registry.register_minion_chunk(
+            "minion-a",
+            {"dummy": ["d1"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=1,
+        )
+        assert "minion-a" in registry._pending_registers
+        scope_state = registry._pending_registers["minion-a"]["dummy"]
+        assert scope_state["keys"] == {"dummy:d0", "dummy:d1"}
+        assert scope_state["created_ts"] is not None
+        assert scope_state["last_activity_ts"] is not None
+
+        # Rewind the last-activity timestamp past the TTL to simulate
+        # a crashed minion.  Using monotonic subtraction keeps the
+        # test fully deterministic (no real sleep, no flakiness).
+        scope_state["last_activity_ts"] = _time.monotonic() - 60.0
+
+        # Minion B's new chunk triggers the sweep.
+        with caplog.at_level(_logging.WARNING, logger="salt.utils.resource_registry"):
+            registry.register_minion_chunk(
+                "minion-b",
+                {"dummy": ["b0"]},
+                chunk_final=False,
+                chunk_scope="dummy",
+                chunk_index=0,
+            )
+
+        # Minion A's entry must be evicted; minion B's must be live.
+        assert "minion-a" not in registry._pending_registers, (
+            "Abandoned pending window for minion-a should be evicted by the "
+            "TTL sweep on the next chunk-arrival write path"
+        )
+        assert "minion-b" in registry._pending_registers
+        assert registry._pending_registers["minion-b"]["dummy"]["keys"] == {"dummy:b0"}
+
+        # The eviction must be logged at WARNING naming the minion
+        # and scope so operators can identify the crash-loop source.
+        eviction_records = [
+            rec
+            for rec in caplog.records
+            if "evicting stale pending-register window" in rec.getMessage()
+        ]
+        assert eviction_records, (
+            "Stale-window eviction must emit a WARNING log; got: "
+            f"{[r.getMessage() for r in caplog.records]}"
+        )
+        msg = eviction_records[0].getMessage()
+        assert "minion=minion-a" in msg
+        assert "scope=dummy" in msg
+    finally:
+        registry.close()
+
+
+def test_register_minion_chunk_pending_ttl_does_not_evict_active_window(tmp_path):
+    """
+    Negative counterpart to the eviction test: a window that keeps
+    receiving chunks must have its ``last_activity_ts`` refreshed so
+    the TTL sweep never evicts it mid-register.  Protects against a
+    false-positive eviction that would otherwise drop a slow-but-
+    active 200K-register window at the TTL boundary.
+    """
+    import time as _time
+
+    opts = {
+        "cachedir": str(tmp_path),
+        "resource_index_primary_capacity": _TEST_PRIMARY_CAPACITY,
+        "resource_index_primary_slot_size": _TEST_PRIMARY_SLOT_SIZE,
+        "cluster_resource_register_pending_ttl": 10.0,
+    }
+    registry = rr.ResourceRegistry(opts, cache=_FakeCache())
+    try:
+        # Seed a window far in the past relative to the TTL.
+        registry.register_minion_chunk(
+            "minion-slow",
+            {"dummy": ["s0"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=0,
+        )
+        state = registry._pending_registers["minion-slow"]["dummy"]
+        state["last_activity_ts"] = _time.monotonic() - 9.5  # still inside TTL
+
+        # Next chunk arrives: must NOT be evicted (TTL is 10s, age is
+        # ~9.5s, strictly less than the TTL).  The chunk's own
+        # arrival must update ``last_activity_ts`` so subsequent
+        # chunks also survive.
+        registry.register_minion_chunk(
+            "minion-slow",
+            {"dummy": ["s1"]},
+            chunk_final=False,
+            chunk_scope="dummy",
+            chunk_index=1,
+        )
+        assert "minion-slow" in registry._pending_registers
+        state = registry._pending_registers["minion-slow"]["dummy"]
+        assert state["keys"] == {"dummy:s0", "dummy:s1"}
+        # Fresh activity stamp -- well within the current monotonic reading.
+        assert _time.monotonic() - state["last_activity_ts"] < 1.0
+    finally:
+        registry.close()
+
+
 def test_cross_type_collisions_are_not_ambiguous(registry):
     """Composite SRN keys: same bare id on different types resolves distinctly."""
     registry.register_minion("m1", {"ssh": ["web-01"]})

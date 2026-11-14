@@ -186,7 +186,7 @@ VALID_OPTS = immutabletypes.freeze(
         # total cap across the pool is
         # ``master_mworker_max_inflight * worker_threads``.  Coroutines
         # blocked on the semaphore create natural TCP / ZMQ backpressure
-        # — no error return, no dropped requests.
+        # -- no error return, no dropped requests.
         "master_mworker_max_inflight": int,
         # The key fingerprint of the higher-level master for the syndic to verify it is talking to the
         # intended master
@@ -230,9 +230,86 @@ VALID_OPTS = immutabletypes.freeze(
         # and can be sync'd as opaque blobs) and joining masters request a
         # bulk state-sync from an existing peer before becoming Raft voters.
         "cluster_isolated_filesystem": bool,
+        # Master switch for cross-master cache replication at the
+        # ``salt.cache.Cache`` facade.  When True (the default when
+        # ``cluster_id`` is set and ``cluster_isolated_filesystem`` is True)
+        # every ``cache.store()`` and ``cache.store_many()`` call fans
+        # out the write to every peer master in the cluster so each
+        # peer's local cachedir converges on the same state.  Peers
+        # with a shared filesystem (``cluster_isolated_filesystem:
+        # False``) don't need the fan-out -- they already see each
+        # other's writes on disk / in mmap.
+        "cluster_cache_replication": (bool, type(None)),
+        # Per-bank routing mode for cache writes on a clustered master.
+        # The value is a dict ``{bank_name: "ring" | "replicate" |
+        # "none"}``.  Banks (or bank prefixes -- longest-prefix match
+        # on ``/``) that aren't listed default to ``"replicate"``
+        # (N-of-N fan-out to every peer).  ``"ring"`` delegates the
+        # write to the HashRing owner (today's
+        # ``cluster/peer/delegate-write`` path -- 1-of-N).  ``"none"``
+        # skips replication entirely and is used for banks that own
+        # their own replication transport (Raft log, state-sync
+        # chunks).  The default-merged entries ``{"jobs": "ring",
+        # "cluster/consensus": "none", "cluster/state_sync": "none"}``
+        # preserve today's job-return behaviour and keep Raft/state-sync
+        # out of the cache-facade fan-out.
+        "cluster_cache_routing": dict,
+        # Maximum number of ``(key, data)`` pairs packed into a single
+        # ``cluster/runner/delegate_cache_write`` event for
+        # ``cache.store_many`` batched replication.  Larger batches
+        # amortise the per-event cost but bloat the msgpack payload;
+        # 1024 fits comfortably under typical bus payload budgets for
+        # grain-shaped records and keeps catch-up latency bounded when
+        # a peer is behind.
+        "cluster_cache_replicate_batch_size": int,
+        # Sender-side handshake gate on cross-master cache replication.
+        # When True (the default) the publish daemon consults its
+        # ``_discover_replies`` / ``peer_keys`` state before fanning a
+        # ``delegate-cache-write`` / ``delegate-resource-register-write``
+        # out to a peer; peers that have not completed the cluster
+        # discover/join handshake are skipped (they catch up via the
+        # join-time state-sync stream + subsequent write churn).  Without
+        # this gate a bootstrap-race on slow runners causes the sender
+        # to ship cluster_aes-encrypted events to peers that haven't
+        # installed cluster_aes yet; the receiver's decrypt fails
+        # loudly but the write is lost.  Operators can set this False
+        # to restore the pre-gate "always fan out" behaviour (e.g.
+        # for diagnosis of a stuck handshake).
+        "cluster_cache_replicate_require_joined": bool,
+        # Max pending replication events buffered per peer while that
+        # peer is still un-joined.  Oldest entries are dropped once the
+        # cap is exceeded (with a coalesced WARN).  Protects the publish
+        # daemon's RSS when a peer stays un-joined for a long time
+        # during a slow bootstrap.
+        "cluster_cache_replicate_pending_max_events": int,
+        # TTL (seconds) for an entry in the per-peer pending-replication
+        # queue.  Entries older than this are dropped at enqueue + at
+        # flush time with a coalesced INFO/WARN, independent of the
+        # per-peer cap.
+        "cluster_cache_replicate_pending_ttl": float,
+        # Join-time catch-up for replicate-mode cache banks.  When True
+        # (the default when ``cluster_cache_replication`` is True) a
+        # newly-joining master receives every replicate-mode bank's
+        # current contents as chunked state-sync-chunk events before
+        # it applies live delegate-cache-write deltas, so writes that
+        # landed before the join aren't stale on the new peer.
+        # Operators can set this False to accept eventual-consistency
+        # catch-up through natural write churn.  ``None`` is the
+        # "unset" sentinel resolved in ``apply_master_config``.
+        "cluster_state_sync_cache_banks": (bool, type(None)),
+        # TTL (seconds) for abandoned pending-register windows on the
+        # master.  Chunked-register payloads from a minion that crashes
+        # mid-stream (sends chunks ``0..k`` then never sends
+        # ``chunk_final=True``) accumulate per
+        # ``(minion_id, chunk_scope)`` -- bounded by
+        # ``N_minions * N_types`` live entries but unbounded if the
+        # minion crash-loops.  The master sweeps on every chunk arrival
+        # and drops windows with no activity for longer than this TTL,
+        # logging a WARNING naming the minion.
+        "cluster_resource_register_pending_ttl": (int, float),
         # Maximum number of in-memory Raft log entries before the log
         # compacts into a snapshot.  ``None`` (the default) disables
-        # compaction — fine for small clusters but unbounded growth at
+        # compaction -- fine for small clusters but unbounded growth at
         # scale.  Setting to a positive integer triggers
         # ``Log.snapshot()`` whenever the log reaches the threshold;
         # the snapshot envelope (``raft.snapshot.v1``) carries every
@@ -245,7 +322,7 @@ VALID_OPTS = immutabletypes.freeze(
         # late joiners that arrive after the cap is hit stay as
         # non-voting learners indefinitely.  Learners still receive
         # log replication and cluster events, so they remain useful
-        # for handling minion traffic — they just don't count toward
+        # for handling minion traffic -- they just don't count toward
         # election or commit quorum.
         "cluster_max_voters": (type(None), int),
         # Auto-replacement of failed voters (Ongaro thesis §6.4 single-server
@@ -264,6 +341,18 @@ VALID_OPTS = immutabletypes.freeze(
         "cluster_min_voters": int,
         "cluster_demote_cooldown": float,
         "cluster_auto_replace_voters": bool,
+        # Periodic retry controls for ``cluster/peer/discover``.  The initial
+        # fire-and-forget discover event in ``salt.master.Master.start`` can
+        # be lost silently if the peer's pool-puller is not yet bound on
+        # port ``cluster_pool_port`` when the event is forwarded.  A non-
+        # founder joining the cluster installs a ``PeriodicCallback`` in
+        # ``MasterPubServerChannel._schedule_discover_retry`` that re-sends
+        # discover every ``cluster_join_discover_retry_interval`` seconds
+        # for peers whose AES key has not yet arrived; the retry cancels
+        # itself as soon as every peer has replied or after
+        # ``cluster_join_discover_retry_timeout`` seconds have elapsed.
+        "cluster_join_discover_retry_interval": (int, float),
+        "cluster_join_discover_retry_timeout": (int, float),
         # Use a module function to determine the unique identifier. If this is
         # set and 'id' is not set, it will allow invocation of a module function
         # to determine the value of 'id'. For simple invocations without function
@@ -541,8 +630,6 @@ VALID_OPTS = immutabletypes.freeze(
         "return_retry_tries": int,
         # Configures amount of retries for Syndic to Master of Masters
         "syndic_retries": int,
-        # Top-level pillar key for per-type resource configuration (default: resources)
-        "resource_pillar_key": str,
         # Specify one or more returners in which all events will be sent to. Requires that the returners
         # in question have an event_return(event) function!
         "event_return": (list, str),
@@ -820,6 +907,23 @@ VALID_OPTS = immutabletypes.freeze(
         # cachedir under the name of the minion and used to predetermine what minions are expected to
         # reply from executions.
         "minion_data_cache": bool,
+        # Opt-in switch for the persistent mmap-backed grain trie
+        # index (Mission 4).  When ``True`` the master builds a
+        # scalar-leaf-level index of every grain dict in
+        # ``resource_grains`` and uses it to answer arbitrary
+        # ``<path>:<value>`` grain-target predicates without walking
+        # the bank.  See :mod:`salt.utils.mmap_trie_index`.
+        "enable_grain_trie_index": bool,
+        # Per-``(path, value)`` sr_key list cap for the trie index.
+        # Buckets that exceed this size are replaced with a sentinel
+        # that forces that specific predicate to fall back to the
+        # slow path, bounding on-disk size and query cost.
+        "grain_trie_max_list_size": int,
+        # Streaming-build accumulator threshold for the trie.  The
+        # builder flushes when the aggregate number of pending
+        # sr_keys across all buckets reaches this value, keeping
+        # peak builder RAM bounded.
+        "grain_trie_build_batch_size": int,
         # The number of seconds between AES key rotations on the master
         "publish_session": int,
         # Defines a salt reactor. See https://docs.saltproject.io/en/latest/topics/reactor/
@@ -1420,7 +1524,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "return_retry_timer": 5,
         "return_retry_timer_max": 10,
         "return_retry_tries": 3,
-        "resource_pillar_key": "resources",
         "syndic_retries": 3,
         "random_reauth_delay": 10,
         "winrepo_source_dir": "salt://win/repo-ng/",
@@ -1791,6 +1894,9 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "master_job_cache": "local_cache",
         "job_cache_store_endtime": False,
         "minion_data_cache": True,
+        "enable_grain_trie_index": False,
+        "grain_trie_max_list_size": 100000,
+        "grain_trie_build_batch_size": 1024,
         "enforce_mine_cache": False,
         "ipc_mode": _DFLT_IPC_MODE,
         "ipc_write_buffer": _DFLT_IPC_WBUFFER,
@@ -1976,6 +2082,34 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_pub_fingerprint": None,
         "cluster_secret": None,
         "cluster_isolated_filesystem": False,
+        # ``cluster_cache_replication`` default is resolved in
+        # ``apply_master_config`` because it depends on whether
+        # ``cluster_id`` is configured and whether the deployment is
+        # using an isolated per-master filesystem.  Keep the raw
+        # default here as False (non-clustered masters).
+        # ``None`` is the "unset" sentinel.  ``apply_master_config``
+        # resolves it to True when ``cluster_id`` AND
+        # ``cluster_isolated_filesystem`` are set, else False.
+        # Operators can force True/False explicitly in the master
+        # config.
+        "cluster_cache_replication": None,
+        # Per-bank routing dict; ``"jobs": "ring"`` default is merged
+        # in ``apply_master_config`` so operator overrides can still
+        # expand or override it.  See ``cluster_cache_replication``.
+        "cluster_cache_routing": {},
+        "cluster_cache_replicate_batch_size": 1024,
+        "cluster_cache_replicate_require_joined": True,
+        "cluster_cache_replicate_pending_max_events": 10000,
+        "cluster_cache_replicate_pending_ttl": 300.0,
+        # Join-time cache-bank catch-up default -- resolved in
+        # ``apply_master_config`` to match ``cluster_cache_replication``.
+        "cluster_state_sync_cache_banks": None,
+        # Default pending-register-window TTL mirrors the module
+        # constant :data:`salt.utils.resource_registry.DEFAULT_PENDING_REGISTERS_TTL`
+        # (300 s / 5 min).  Operators sizing clusters with larger
+        # 200K+ registers can increase this if normal per-minion
+        # windows approach the default.
+        "cluster_resource_register_pending_ttl": 300.0,
         "cluster_max_log_size": None,
         "cluster_max_voters": None,
         "cluster_voter_health_check_interval": 1.0,
@@ -1983,6 +2117,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "cluster_min_voters": 3,
         "cluster_demote_cooldown": 60.0,
         "cluster_auto_replace_voters": False,
+        "cluster_join_discover_retry_interval": 2,
+        "cluster_join_discover_retry_timeout": 60,
         "features": {},
         "publish_signing_algorithm": "PKCS1v15-SHA1",
         "cluster_encryption_algorithm": "OAEP-SHA1",
@@ -4452,6 +4588,57 @@ def master_config(
     return salt.utils.optsdict.OptsDict.from_dict(opts, name="master_config")
 
 
+#: Built-in per-bank cache routing defaults.  Operator-supplied entries
+#: in ``cluster_cache_routing`` win over these; banks absent from both
+#: default to ``"replicate"`` at the call site.  ``"jobs"`` is pinned to
+#: ``"ring"`` so today's single-owner job-return behaviour is preserved
+#: on upgrade (backward compat).
+#:
+#: The lookup uses longest-prefix match on the ``/``-delimited bank name
+#: (``salt/cache/__init__.py:_resolve_bank_routing``), so these keys
+#: match any compound bank below them -- e.g. ``jobs`` catches
+#: ``jobs/loads``, ``jobs/returns/<jid>``, and ``cluster/consensus``
+#: catches both ``cluster/consensus/<node>/cluster`` and
+#: ``cluster/consensus/<node>/cluster/log`` which Raft writes to.
+#:
+#: ``"none"`` means "skip replication entirely" -- used for banks whose
+#: contents are already replicated by a dedicated transport (Raft log
+#: for ``cluster/consensus``, state-sync chunking for
+#: ``cluster/state_sync``) and MUST NOT be fanned out via the cache
+#: facade, since the peer's handler would overwrite its own authoritative
+#: copy with another master's state.
+_CLUSTER_CACHE_ROUTING_DEFAULTS = {
+    "jobs": "ring",
+    "cluster/consensus": "none",
+    "cluster/state_sync": "none",
+}
+
+
+def get_cluster_cache_routing(opts):
+    """
+    Return the effective per-bank cache routing for this master.
+
+    Merges operator-supplied ``opts["cluster_cache_routing"]`` with the
+    built-in defaults.  Operator entries win; built-in entries from
+    ``_CLUSTER_CACHE_ROUTING_DEFAULTS`` (``jobs``, ``cluster/consensus``,
+    ``cluster/state_sync``) are injected only when the operator has not
+    supplied an entry for the same key.  ``"none"`` entries must survive
+    the merge since they are the opt-out marker for banks that own their
+    own replication transport.
+
+    Banks absent from the result default to ``"replicate"`` at the read
+    site (``salt/cache/__init__.py:_resolve_bank_routing`` -- longest-
+    prefix match).
+
+    :param opts: Master opts dict.
+    :returns:    Dict of ``{bank_prefix: "ring"|"replicate"|"none"}``.
+    """
+    merged = dict(opts.get("cluster_cache_routing") or {})
+    for _bank, _mode in _CLUSTER_CACHE_ROUTING_DEFAULTS.items():
+        merged.setdefault(_bank, _mode)
+    return merged
+
+
 def apply_master_config(overrides=None, defaults=None):
     """
     Returns master configurations dict.
@@ -4608,6 +4795,33 @@ def apply_master_config(overrides=None, defaults=None):
         if opts.get("cluster_pki_dir", None):
             log.warning("Cluster pki dir defined without a cluster_id, ignoring.")
             opts["cluster_pki_dir"] = None
+
+    # Resolve cache-replication defaults.  The raw DEFAULT_MASTER_OPTS
+    # value is False (non-clustered masters never fan out); flip the
+    # default to True on clustered masters running with an isolated
+    # per-member filesystem, since that's where peers can't see each
+    # other's writes through the cachedir.  Operators can still force
+    # False explicitly in the master config.
+    if (
+        "cluster_cache_replication" not in opts
+        or opts["cluster_cache_replication"] is None
+    ):
+        opts["cluster_cache_replication"] = bool(
+            opts.get("cluster_id") and opts.get("cluster_isolated_filesystem")
+        )
+    # Join-time cache-bank catch-up follows the same master-switch --
+    # enabled when replication is on, operator can force False to
+    # opt out of the join-time bandwidth.
+    if (
+        "cluster_state_sync_cache_banks" not in opts
+        or opts["cluster_state_sync_cache_banks"] is None
+    ):
+        opts["cluster_state_sync_cache_banks"] = bool(
+            opts.get("cluster_cache_replication")
+        )
+    # Merge the default per-bank routing map via the public resolver so
+    # the merge rule has a single source of truth.
+    opts["cluster_cache_routing"] = get_cluster_cache_routing(opts)
 
     # Enabling open mode requires that the value be set to True, and
     # nothing else!

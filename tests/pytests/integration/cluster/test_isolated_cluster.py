@@ -600,6 +600,44 @@ def test_isolated_sync_roots_runner_file_only(
     operator who only wanted SLS updates doesn't accidentally fan out
     secret pillar data.
     """
+    # Wait for every peer to finish its join-time state-sync before the
+    # test writes the pillar sentinel.  The ``cluster_master_*_isolated``
+    # fixtures only barrier on the master daemon start, not on cluster
+    # convergence -- so a slow CI runner can have master_2's join-reply
+    # (which triggers a full pillar_roots state-sync from master_1 at
+    # ``_send_state_sync_chunks``, see ``salt/channel/server.py:3171``)
+    # still in flight when the test writes ``file_only_pillar.sls`` into
+    # master_1's pillar-tree.  Without this barrier the join sync would
+    # ship the pillar sentinel alongside the legitimate join content,
+    # masquerading as a ``sync_roots roots=file`` filter leak.  See the
+    # CI flake in run 42790718166 (attempt 4 FAILED, attempt 5 PASSED).
+    cluster_masters = (
+        cluster_master_1_isolated,
+        cluster_master_2_isolated,
+        cluster_master_3_isolated,
+    )
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        if all(
+            (pathlib.Path(m.config["cachedir"]) / "health" / "ready").is_file()
+            for m in cluster_masters
+        ):
+            break
+        time.sleep(0.5)
+    else:
+        pytest.fail(
+            "cluster peers did not reach readiness within 30s; "
+            "cannot fairly assert the roots=file filter without a "
+            "stable join baseline"
+        )
+    # Belt-and-braces: once ready sentinels are present, give the
+    # join-reply's asynchronous state-sync chunks a brief grace
+    # period to drain.  The receiver's on_complete runs
+    # ``_start_raft_as_learner`` which does NOT write a visible
+    # sentinel, so a short settle is the cheapest way to avoid the
+    # final-chunk race.
+    time.sleep(2)
+
     src_file_root = pathlib.Path(
         cluster_master_1_isolated.config["file_roots"]["base"][0]
     )

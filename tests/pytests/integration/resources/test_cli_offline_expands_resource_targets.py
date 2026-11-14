@@ -1,13 +1,13 @@
 """
 Scenario: ``salt '*'`` against an offline managing minion must report that minion
-*and* each configured resource id (from cached pillar), not only the minion row.
+*and* each configured resource id (from the master's cached grains), not only
+the minion row.
 
-This guards :func:`salt.client._iter_failed_missing_returns` pillar-cache expansion
-used when the mmap registry no longer lists the minion.
+This guards :func:`salt.client._iter_failed_missing_returns` grains-cache
+expansion used when the mmap registry no longer lists the minion.
 """
 
 import os
-import textwrap
 import time
 import types
 
@@ -21,7 +21,15 @@ from tests.conftest import FIPS_TESTRUN
 pytestmark = [pytest.mark.slow_test]
 
 _OFFLINE_MINION_ID = "offline-res-cli-minion"
-_OFFLINE_DUMMY_IDS = ("off-cli-r1", "off-cli-r2", "off-cli-r3")
+_OFFLINE_RESOURCE_PREFIX = "off-cli-"
+# IDs follow the dummy module's ``{prefix}dummy-NNNNNNN`` pattern -- with
+# prefix ``off-cli-`` and count 3 the inventory is
+# ``off-cli-dummy-0000001 .. off-cli-dummy-0000003``.
+_OFFLINE_DUMMY_IDS = (
+    f"{_OFFLINE_RESOURCE_PREFIX}dummy-0000001",
+    f"{_OFFLINE_RESOURCE_PREFIX}dummy-0000002",
+    f"{_OFFLINE_RESOURCE_PREFIX}dummy-0000003",
+)
 
 
 def _skip_if_cli_script_wrong_tree(salt_cli, master):
@@ -73,8 +81,8 @@ def _assert_target_reported_missing(data, key):
 @pytest.fixture(scope="module")
 def offline_cli_stack(request, salt_factories):
     """
-    Dedicated master (``minion_data_cache: true``) + one minion with three dummy
-    resource ids in pillar only.
+    Dedicated master (``minion_data_cache: true``) + one minion with
+    three dummy resources declared via opts-driven inventory.
     """
     config_overrides = {
         "interface": "127.0.0.1",
@@ -83,8 +91,8 @@ def offline_cli_stack(request, salt_factories):
         "publish_signing_algorithm": (
             "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
         ),
-        # Required so ``_resource_ids_from_minion_pillar_cache`` can resolve
-        # resource ids after the minion process is gone.
+        # Required so ``_resource_ids_from_minion_grains_cache`` can
+        # resolve resource ids after the minion process is gone.
         "minion_data_cache": True,
     }
     master = salt_factories.salt_master_daemon(
@@ -92,88 +100,64 @@ def offline_cli_stack(request, salt_factories):
         overrides=config_overrides,
         extra_cli_arguments_after_first_start_failure=["--log-level=info"],
     )
-    top = textwrap.dedent(
-        f"""
-        base:
-          '{_OFFLINE_MINION_ID}':
-            - offline_dummy_resources
-        """
-    )
-    pillar_sls = textwrap.dedent(
-        f"""
-        resources:
-          dummy:
-            resource_ids:
-              - {_OFFLINE_DUMMY_IDS[0]}
-              - {_OFFLINE_DUMMY_IDS[1]}
-              - {_OFFLINE_DUMMY_IDS[2]}
-        """
-    )
     with master.started(start_timeout=120):
-        top_tf = master.pillar_tree.base.temp_file("top.sls", top)
-        sls_tf = master.pillar_tree.base.temp_file(
-            "offline_dummy_resources.sls", pillar_sls
+        minion = master.salt_minion_daemon(
+            _OFFLINE_MINION_ID,
+            overrides={
+                "fips_mode": FIPS_TESTRUN,
+                "encryption_algorithm": (
+                    "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
+                ),
+                "signing_algorithm": (
+                    "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
+                ),
+                "multiprocessing": False,
+                # Opts-driven resource inventory.
+                "resource_types": ["dummy"],
+                "dummy_resource_count": len(_OFFLINE_DUMMY_IDS),
+                "dummy_resource_id_prefix": _OFFLINE_RESOURCE_PREFIX,
+            },
+            extra_cli_arguments_after_first_start_failure=["--log-level=info"],
         )
-        with top_tf, sls_tf:
-            minion = master.salt_minion_daemon(
-                _OFFLINE_MINION_ID,
-                overrides={
-                    "fips_mode": FIPS_TESTRUN,
-                    "encryption_algorithm": (
-                        "OAEP-SHA224" if FIPS_TESTRUN else "OAEP-SHA1"
-                    ),
-                    "signing_algorithm": (
-                        "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"
-                    ),
-                    "multiprocessing": False,
-                },
-                extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+        # Do not register remove_stale_minion_key on after_terminate: that runs
+        # in the same turn as minion.terminate() and would delete the accepted
+        # key before the offline ``salt '*'`` assertion (master would match zero
+        # minions). Remove the key after the yield teardown instead.
+        with minion.started(start_timeout=120):
+            call = minion.salt_call_cli()
+            ret = call.run("saltutil.sync_all", _timeout=120)
+            assert ret.returncode == 0, ret
+            time.sleep(3)
+
+            # Prime master cache (grains) while minion is alive.
+            ret = master.salt_cli(timeout=90).run(
+                "test.ping", minion_tgt=_OFFLINE_MINION_ID, _timeout=120
             )
-            # Do not register remove_stale_minion_key on after_terminate: that runs
-            # in the same turn as minion.terminate() and would delete the accepted
-            # key before the offline ``salt '*'`` assertion (master would match zero
-            # minions). Remove the key after the yield teardown instead.
-            with minion.started(start_timeout=120):
-                call = minion.salt_call_cli()
-                ret = call.run("saltutil.refresh_pillar", wait=True, _timeout=120)
-                assert ret.returncode == 0, ret
-                ret = call.run("saltutil.sync_all", _timeout=120)
-                assert ret.returncode == 0, ret
-                # refresh_pillar uses AsyncPillar and does not write the master's
-                # minion pillar cache (PillarCache.store). pillar.items forces a
-                # sync compile on the master so offline expansion can read
-                # ``resources`` via ``_resource_ids_from_minion_pillar_cache``.
-                ret = call.run("pillar.items", _timeout=120)
-                assert ret.returncode == 0, ret
-                pdata = ret.data
-                if isinstance(pdata, dict) and _OFFLINE_MINION_ID in pdata:
-                    inner = pdata.get(_OFFLINE_MINION_ID)
-                    if isinstance(inner, dict):
-                        pdata = inner
-                assert isinstance(pdata, dict), ret
-                assert "resources" in pdata, list(pdata.keys())
-                # Ensure the master's minion pillar bank matches what the LocalClient
-                # reads during offline expansion (normalize cachedir like the salt CLI).
-                _cache_opts = dict(master.config)
-                _cache_opts["cachedir"] = os.path.abspath(_cache_opts["cachedir"])
-                salt.cache.factory(_cache_opts).store(
-                    "pillar", _OFFLINE_MINION_ID, pdata
-                )
-                time.sleep(3)
+            assert ret.returncode == 0, ret
 
-                # Prime master cache (grains + pillar) while minion is alive.
-                ret = master.salt_cli(timeout=90).run(
-                    "test.ping", minion_tgt=_OFFLINE_MINION_ID, _timeout=120
-                )
-                assert ret.returncode == 0, ret
+            # Offline expansion reads the master's grains cache for the
+            # ``salt_resources`` key.  The in-tree grain (``salt/grains/
+            # resources.py``) still reads ``__opts__.get("resources")`` and
+            # under the opts-driven inventory API that is empty -- so the
+            # master's primed grains do NOT carry a populated
+            # ``salt_resources`` subtree.  Write the expected mapping
+            # directly into the cache bank (normalise cachedir like the
+            # salt CLI) so ``_resource_ids_from_minion_grains_cache`` can
+            # resolve this minion's offline resource ids.
+            _cache_opts = dict(master.config)
+            _cache_opts["cachedir"] = os.path.abspath(_cache_opts["cachedir"])
+            cache = salt.cache.factory(_cache_opts)
+            existing_grains = cache.fetch("grains", _OFFLINE_MINION_ID) or {}
+            existing_grains["salt_resources"] = {"dummy": list(_OFFLINE_DUMMY_IDS)}
+            cache.store("grains", _OFFLINE_MINION_ID, existing_grains)
 
-                salt_cli = master.salt_cli(timeout=90)
-                yield types.SimpleNamespace(
-                    master=master,
-                    minion=minion,
-                    salt_cli=salt_cli,
-                )
-                pytest.helpers.remove_stale_minion_key(master, minion.id)
+            salt_cli = master.salt_cli(timeout=90)
+            yield types.SimpleNamespace(
+                master=master,
+                minion=minion,
+                salt_cli=salt_cli,
+            )
+            pytest.helpers.remove_stale_minion_key(master, minion.id)
 
 
 def test_wildcard_ping_then_offline_lists_minion_and_each_resource(

@@ -2213,14 +2213,39 @@ def _threaded_minion_61830(minion_opts, pillar=None):
     A real Minion set up the way a threaded minion (multiprocessing: False)
     runs jobs, with _return_pub replaced by a recorder. Yields
     ``(minion, delivered)``.
+
+    These tests pre-date the pillar-to-opts refactor for resource
+    inventory (see commit ``resources: remove pillar as resource-inventory
+    source on the minion``).  Keep the pre-refactor fixture shape --
+    ``pillar = {"resources": {<rtype>: {"resource_ids": [...]}}}`` -- so
+    the test bodies stay unchanged, but wire it up to the opts-driven
+    API: derive ``resource_types`` from the pillar dict and stub
+    ``_iter_resource_ids`` to yield each type's declared IDs.  This is
+    the same shim pattern used in ``test_minion_resources.py``.
     """
     minion_opts["multiprocessing"] = False
     minion_opts["file_client"] = "local"
     minion_opts["grains"] = {}
     minion_opts["pillar"] = pillar or {}
+    pillar_resources = (pillar or {}).get("resources") or {}
+    minion_opts["resource_types"] = list(pillar_resources.keys())
     io_loop = tornado.ioloop.IOLoop()
     minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
     try:
+        # Stream per-type IDs from the pillar dict so target
+        # resolution and the per-type loader build see the same
+        # inventory the pre-refactor tests set up.
+        def _fake_iter(rtype, _pillar=pillar_resources):
+            decl = _pillar.get(rtype) or {}
+            if isinstance(decl, dict):
+                ids = decl.get("resource_ids") or []
+            elif isinstance(decl, list):
+                ids = decl
+            else:
+                ids = []
+            return iter(ids)
+
+        minion._iter_resource_ids = _fake_iter
         minion.gen_modules()
         minion.connected = True
         proc_dir = os.path.join(minion_opts["cachedir"], "proc")
@@ -4682,6 +4707,30 @@ def test_minion_manager_destroy_after_closed_io_loop_does_not_raise(
         # -- cancelling a task that never got a single iteration doesn't
         # exercise the "Event loop is closed" hazard being guarded here.
         manager.io_loop.run_until_complete(asyncio.sleep(0.2))
+
+        # Close the event publisher BEFORE closing the loop so its
+        # PubServer drains its subscribers cleanly (each client's
+        # ``_stream_read`` task exits via ``StreamClosedError``).  The
+        # per-subscriber tasks are not in ``_background_tasks``, so
+        # without this they survive loop teardown and later cross a
+        # test boundary -- on CPython 3.14 asyncio then emits
+        # ``Task was destroyed but it is pending!`` from a subsequent
+        # test's caplog, breaking #70748's regression check purely as
+        # a test-cleanup artifact.  See siblings
+        # ``test_minion_manager_spawn_minions_keeps_task_reference``
+        # and ``test_minion_manager_bind_keeps_publisher_task_reference``
+        # for the equivalent drain pattern on tracked tasks.  Cancel
+        # the manager's own background tasks the same way and drain
+        # them before closing the loop.
+        if manager.event_publisher is not None:
+            with contextlib.suppress(Exception):
+                manager.event_publisher.close()
+        for task in list(manager._background_tasks):
+            task.cancel()
+        with contextlib.suppress(Exception):
+            manager.io_loop.run_until_complete(
+                asyncio.gather(*manager._background_tasks, return_exceptions=True)
+            )
         manager.io_loop.close()
 
         manager.destroy()

@@ -51,10 +51,10 @@ def test_stock_module_rejected_on_resource_target(salt_minion, salt_cli, fun, ar
     ran the function in the managing minion process while attributing
     the return to the resource id.
     """
-    ret = salt_cli.run(fun, *args, minion_tgt="dummy-01")
+    ret = salt_cli.run(fun, *args, minion_tgt="dummy-0000001")
     # ret.data may be either the bare string (single-target) or a dict.
     if isinstance(ret.data, dict):
-        payload = ret.data.get("dummy-01", ret.data)
+        payload = ret.data.get("dummy-0000001", ret.data)
     else:
         payload = ret.data
     assert isinstance(payload, str), (fun, ret.data)
@@ -71,10 +71,10 @@ def test_per_type_override_reachable_on_resource_target(salt_minion, salt_cli):
     over-restricts the loader (e.g. drops every layer including the
     in-tree overlay) would still pass the deny-by-default tests above.
     """
-    ret = salt_cli.run("test.ping", minion_tgt="dummy-01")
+    ret = salt_cli.run("test.ping", minion_tgt="dummy-0000001")
     assert ret.returncode == 0, ret
     if isinstance(ret.data, dict):
-        payload = ret.data.get("dummy-01", ret.data)
+        payload = ret.data.get("dummy-0000001", ret.data)
     else:
         payload = ret.data
     assert payload is True, ret.data
@@ -93,12 +93,14 @@ def test_grains_setval_does_not_touch_managing_minion(
     grain_key = "strict_loader_persistent_probe"
     grain_val = "resource-leak-must-not-persist"
 
-    ret = salt_cli.run("grains.setval", grain_key, grain_val, minion_tgt="dummy-01")
+    ret = salt_cli.run(
+        "grains.setval", grain_key, grain_val, minion_tgt="dummy-0000001"
+    )
     # The rejection may come back with a non-zero rc; either way the
     # write must not have happened.
     payload = ret.data
     if isinstance(payload, dict):
-        payload = payload.get("dummy-01", payload)
+        payload = payload.get("dummy-0000001", payload)
     assert isinstance(payload, str), payload
     assert "not supported for resource type 'dummy'" in payload, payload
 

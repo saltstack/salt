@@ -1,5 +1,27 @@
 """
-Helpers for Salt resource minions: configurable pillar key and lookups.
+Helpers for Salt resource minions.
+
+Resource inventory is declared on the minion via a top-level minion opt
+``resource_types`` (list of type names) plus whatever per-type opts each
+module needs (e.g. ``dummy_resource_count`` for the dummy module).  Pillar
+is **not** the source of resource inventory -- holding a 200K-resource
+grain dict in ``opts["pillar"]["resources"]`` violates the minion memory
+ceiling (see ``feedback-no-resource-data-in-pillar`` and
+``feedback-minion-never-holds-full-resource-set``).
+
+Resource module ``discover(opts)`` contract::
+
+    discover(opts) -> Iterable[str]
+
+        Yield bare resource IDs this minion manages for a given type.
+        MAY be a generator; the register loop consumes it exactly once.
+        Implementations SHOULD NOT buffer the full set in memory when
+        the source is sequential/countable.
+
+        The caller (minion ``_register_resources_with_master``) is
+        responsible for chunking.  A single call to ``discover()``
+        returns one iterable for the full inventory; chunking happens
+        at the register-loop level.
 """
 
 import logging
@@ -7,44 +29,32 @@ import logging
 log = logging.getLogger(__name__)
 
 
-def resource_pillar_key(opts):
+def enabled_resource_types(opts):
     """
-    Return the top-level pillar key used for per-type resource configuration.
+    Return the list of resource types this minion is configured to load.
 
-    Configured by minion option ``resource_pillar_key`` (default ``resources``).
-    Empty values are rejected with a warning and treated as ``"resources"``.
+    Configured by the minion option ``resource_types`` -- a list of
+    strings.  Empty / missing / wrong-shape values yield an empty list
+    (minion manages no resources).
     """
-    key = opts.get("resource_pillar_key", "resources")
-    if not key:
+    types = opts.get("resource_types") or []
+    if not isinstance(types, list):
         log.warning(
-            "resource_pillar_key is empty; using default 'resources'. "
-            "Set resource_pillar_key to a non-empty string in the minion config."
+            "resource_types must be a list; got %r -- treating as empty",
+            type(types).__name__,
         )
-        key = "resources"
-    return key
-
-
-def pillar_resources_tree(opts):
-    """
-    Return the merged pillar mapping under the configured resource pillar key.
-
-    If the key is absent, returns ``{}`` (same as an empty declaration).
-    Non-dict values are treated as empty.
-    """
-    key = resource_pillar_key(opts)
-    pillar = opts.get("pillar", {})
-    if key not in pillar:
-        return {}
-    pr = pillar.get(key)
-    return pr if isinstance(pr, dict) else {}
+        return []
+    return [t for t in types if isinstance(t, str) and t]
 
 
 def bare_resource_ids_from_decl(decl):
     """
-    Flatten ``salt_resources`` / pillar ``resources`` subtree mappings to bare IDs.
+    Flatten ``salt_resources`` grains-subtree mappings to bare IDs.
 
     Supports ``{rtype: [id, ...]}`` (post-discovery) and
-    ``{rtype: {"resource_ids": [...]}}`` (pillar-shaped) layouts.
+    ``{rtype: {"resource_ids": [...]}}`` (legacy-shaped) layouts.
+    Used by the grains-cache fallback in
+    :func:`bare_resource_id_in_minion_data_cache`.
     """
     if not isinstance(decl, dict):
         return []
@@ -61,50 +71,29 @@ def bare_resource_ids_from_decl(decl):
 
 def bare_resource_id_in_minion_data_cache(opts, resource_id, cache=None):
     """
-    Return ``True`` if ``resource_id`` appears in any cached minion pillar /
+    Return ``True`` if ``resource_id`` appears in any cached minion
     grains snapshot on the master.
 
-    Used when the mmap resource registry has not yet recorded the ID (or was
-    cleared) but :conf_master:`minion_data_cache` still holds pillar/grains
-    from the last sync — so ``salt m2-dummy2 state.apply`` / ``test.ping``
-    style targeting can still resolve.
+    Used when the mmap resource registry has not yet recorded the ID (or
+    was cleared) but :conf_master:`minion_data_cache` still holds grains
+    from the last sync -- so ``salt m2-dummy2 state.apply`` /
+    ``test.ping`` style targeting can still resolve for offline minions.
+
+    The pillar-reading branch of this helper was removed when pillar
+    stopped being the source of resource inventory; the grains-cache
+    branch (``salt_resources`` grain) remains as the only fallback.
 
     :param cache:
-        Optional :class:`salt.cache.Cache` from the caller (e.g. ``CkMinions``
-        already constructs one). Pillar entries may live under a separate
-        backend when :conf_master:`pillar.cache_driver` is set; that driver is
-        always used for ``bank="pillar"`` reads. Grains use ``cache`` (or a
-        newly created default cache handle when ``cache`` is omitted).
+        Optional :class:`salt.cache.Cache` from the caller (e.g.
+        :class:`salt.utils.minions.CkMinions` already constructs one).
+        A new default cache is created when ``cache`` is omitted.
     """
     if not opts.get("minion_data_cache") or not resource_id:
         return False
     try:
-        import salt.cache
+        import salt.cache  # noqa: PLC0415
 
         grains_cache = cache if cache is not None else salt.cache.factory(opts)
-        pillar_driver = opts.get("pillar.cache_driver")
-        pillar_cache = (
-            salt.cache.factory(opts, driver=pillar_driver)
-            if pillar_driver
-            else grains_cache
-        )
-        rk = resource_pillar_key(opts)
-        try:
-            p_keys = pillar_cache.list("pillar")
-        except Exception:  # pylint: disable=broad-except
-            p_keys = []
-        for mid in p_keys:
-            try:
-                data = pillar_cache.fetch("pillar", mid) or {}
-            except Exception:  # pylint: disable=broad-except
-                continue
-            if not isinstance(data, dict):
-                continue
-            subtree = data.get(rk)
-            ids = bare_resource_ids_from_decl(subtree)
-            if resource_id in ids:
-                return True
-
         try:
             g_keys = grains_cache.list("grains")
         except Exception:  # pylint: disable=broad-except
