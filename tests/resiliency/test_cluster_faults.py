@@ -151,7 +151,7 @@ def _wait_container_running(container: str, timeout: int = 120) -> bool:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_peer_sigstop_standard(topology, workload, request):
     """cluster_peer_sigstop_standard -- SIGSTOP a non-primary peer for
     ``PEER_SIGSTOP_SEC`` (TIER_STANDARD_SEC), then SIGCONT.  3x keepalive
@@ -185,7 +185,7 @@ def test_cluster_peer_sigstop_standard(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_peer_sigstop_backoff(topology, workload, request):
     """cluster_peer_sigstop_backoff -- SIGSTOP a non-primary peer for
     ``PEER_SIGSTOP_BACKOFF_SEC`` (TIER_BACKOFF_SEC).  Uses a wider
@@ -220,7 +220,7 @@ def test_cluster_peer_sigstop_backoff(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_peer_unreachable(topology, workload, request):
     """cluster_peer_unreachable -- docker-network-disconnect a non-primary
     peer for ``PEER_UNREACHABLE_SEC`` (TIER_BACKOFF_SEC), then reconnect.
@@ -253,7 +253,7 @@ def test_cluster_peer_unreachable(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_aes_rotation_under_load(topology, workload, request):
     """cluster_aes_rotation_under_load -- trigger an AES rotation on the
     primary master by writing a ``.dfn`` dropfile and wait for the
@@ -439,7 +439,7 @@ def test_cluster_haproxy_backend_flap(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_split_brain_simulate(topology, workload, request):
     """cluster_split_brain_simulate -- disconnect PRIMARY_MASTER so the
     remaining 2 masters form a 2-of-3 quorum; haproxy steers minion
@@ -479,7 +479,7 @@ def test_cluster_split_brain_simulate(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.topology("cluster3")
+@pytest.mark.topology("cluster3", "cluster5")
 def test_cluster_rolling_restart_with_traffic(
     topology,
     workload,
