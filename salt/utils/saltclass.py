@@ -327,7 +327,8 @@ def expand_classes_in_order(minion_dict, salt_data, seen_classes, classes_to_exp
             # Merge newly found pillars into existing ones
             new_pillars = klass_dict[klass].get("pillars", {})
             if new_pillars:
-                dict_merge(salt_data["__pillar__"], new_pillars)
+                # dict_merge alters its source, and the final merge needs it intact
+                dict_merge(salt_data["__pillar__"], copy.deepcopy(new_pillars))
 
             if "classes" in klass_dict[klass]:
                 nested_classes = expand_classes_in_order(
