@@ -262,9 +262,16 @@ def test_baseline_rapid_ping_burst(topology, request):
     failures = 0
     master = topology.spec.primary_master
 
+    first_fail_stdout = ""
+    first_fail_stderr = ""
+    first_fail_rc = 0
     while time.monotonic() < deadline:
         attempts += 1
-        rc = subprocess.run(
+        # Capture stdout/stderr so the first failure has a visible
+        # salt error signature; without this we only knew "rc!=0 N
+        # times" and could not tell publish-refused from minion-
+        # didn't-return.
+        proc = subprocess.run(
             [
                 "docker",
                 "exec",
@@ -275,12 +282,17 @@ def test_baseline_rapid_ping_burst(topology, request):
                 "*",
                 "test.ping",
             ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
             check=False,
-        ).returncode
+        )
+        rc = proc.returncode
         if rc != 0:
             failures += 1
+            if not first_fail_stderr and not first_fail_stdout:
+                first_fail_rc = rc
+                first_fail_stdout = (proc.stdout or "")[:400]
+                first_fail_stderr = (proc.stderr or "")[:400]
         time.sleep(sleep_frac)
 
     after = topology.sample_minions()
@@ -288,6 +300,12 @@ def test_baseline_rapid_ping_burst(topology, request):
     fd_delta = delta.fds
     rss_delta_kb = delta.rss_kb
     notes = f"attempts={attempts} failures={failures}"
+    if failures > 0:
+        notes += (
+            f" first_rc={first_fail_rc}"
+            f" first_stdout={first_fail_stdout!r}"
+            f" first_stderr={first_fail_stderr!r}"
+        )
 
     if failures > 0 or fd_delta > 0:
         stash_result(
