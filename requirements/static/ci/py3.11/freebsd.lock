@@ -670,7 +670,7 @@ timelib==0.3.0
     #   -r requirements/static/pkg/freebsd.txt
 toml==0.10.2
     # via -r requirements/static/ci/common.txt
-tornado==6.5.10
+tornado==6.6.1
     # via
     #   -c requirements/static/pkg/py3.11/freebsd.lock
     #   -r requirements/base.txt

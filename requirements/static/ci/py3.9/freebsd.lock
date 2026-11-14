@@ -994,7 +994,11 @@ toml==0.10.2
     # via -r requirements/static/ci/common.txt
 tomli==2.5.0 ; python_full_version < '3.11'
     # via pytest
-tornado==6.5.10
+tornado==6.5.10 ; python_full_version < '3.11'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+tornado==6.6.1 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
