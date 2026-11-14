@@ -15,7 +15,7 @@ import pytest
 import salt.returners.pgjsonb as pgjsonb
 
 docker = pytest.importorskip("docker")
-psycopg2 = pytest.importorskip("psycopg2")
+psycopg2 = pytest.importorskip("psycopg2", exc_type=ImportError)
 import psycopg2.extras  # isort:skip  pylint: disable=3rd-party-module-not-gated
 
 log = logging.getLogger(__name__)
