@@ -815,6 +815,64 @@ class MaxBufferSizeTest(AsyncHTTPTestCase):
         self.assertEqual(response.body, b'a' * 1024 * 100)
 
 
+class MaxBodySizeUntilCloseTest(AsyncHTTPTestCase):
+    """Responses without Content-Length or Transfer-Encoding are read until
+    the connection closes; ``max_body_size`` must still be enforced there.
+    """
+
+    def get_app(self):
+        # Not a full Application, but works as an HTTPServer callback. Detach
+        # the stream to emulate an HTTP/1.0 server that signals the end of
+        # the body by closing the connection.
+        def respond(request):
+            stream = request.connection.detach()
+            stream.write(b"HTTP/1.0 200 OK\r\n\r\n" + b"a" * (1024 * 100))
+            stream.close()
+
+        return respond
+
+    def get_http_client(self):
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop,
+                                     max_body_size=1024 * 64)
+
+    def test_large_body_until_close(self):
+        # The body exceeds max_body_size, so this must be reported as an
+        # error rather than silently returning an over-large body.
+        with ExpectLog(gen_log, "Malformed HTTP message from None: Body too long"):
+            response = self.fetch("/large")
+        self.assertEqual(response.code, 599)
+        self.assertIsNotNone(response.error)
+
+
+class MaxBufferSizeUntilCloseTest(AsyncHTTPTestCase):
+    """A read-until-close body that overflows the stream's read buffer must
+    not be silently truncated.
+    """
+
+    def get_app(self):
+        def respond(request):
+            stream = request.connection.detach()
+            stream.write(b"HTTP/1.0 200 OK\r\n\r\n" + b"a" * (1024 * 100))
+            stream.close()
+
+        return respond
+
+    def get_http_client(self):
+        # 100KB body with a 64KB buffer. max_body_size is large enough to
+        # allow the body; it is the buffer that overflows.
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop,
+                                     max_body_size=1024 * 1024,
+                                     max_buffer_size=1024 * 64)
+
+    def test_large_body_until_close(self):
+        # The body fits within max_body_size, so it must be delivered in
+        # full: the stream's read buffer limit applies to a single read, not
+        # to the total size of the body.
+        response = self.fetch("/large")
+        response.rethrow()
+        self.assertEqual(response.body, b"a" * (1024 * 100))
+
+
 class ChunkedWithContentLengthTest(AsyncHTTPTestCase):
     def get_app(self):
 

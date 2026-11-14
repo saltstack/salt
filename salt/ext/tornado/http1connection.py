@@ -617,10 +617,26 @@ class HTTP1Connection(httputil.HTTPConnection):
 
     @gen.coroutine
     def _read_body_until_close(self, delegate):
-        body = yield self.stream.read_until_close()
-        if not self._write_finished or self.is_client:
-            with _ExceptionLoggingContext(app_log):
-                delegate.data_received(body)
+        # The body is terminated by the connection closing, so there is no
+        # length known in advance. Read incrementally so that max_body_size
+        # is enforced before an over-large body has been buffered, and so
+        # that the body is not limited by the stream's read buffer size.
+        total_size = 0
+        while True:
+            try:
+                body = yield self.stream.read_bytes(
+                    self.params.chunk_size, partial=True)
+            except iostream.StreamClosedError:
+                # The connection closing is the normal end of this body.
+                return
+            total_size += len(body)
+            if total_size > self._max_body_size:
+                raise httputil.HTTPInputError("Body too long")
+            if not self._write_finished or self.is_client:
+                with _ExceptionLoggingContext(app_log):
+                    ret = delegate.data_received(body)
+                    if ret is not None:
+                        yield ret
 
 
 class _GzipMessageDelegate(httputil.HTTPMessageDelegate):
