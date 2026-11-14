@@ -350,11 +350,16 @@ VALID_OPTS = immutabletypes.freeze(
         "disable_modules": list,
         # Refuse to load these returners
         "disable_returners": list,
-        # Tell the loader to only load modules in this list
+        # Tell the loader to only load modules in this list.  Entries are
+        # either a bare module name (``cmd`` -- every public function of
+        # the module is allowed) or a function-scoped ``module.func``
+        # (``cmd.run`` -- only that function).  A ``module.func`` entry
+        # always narrows: ``[cmd, cmd.run]`` allows only ``cmd.run``.
         "whitelist_modules": list,
         # State-loader counterpart to ``whitelist_modules``.  When set,
-        # only state modules whose name is in this list are loadable; an
-        # SLS that references any other state module fails compile with
+        # only state modules (or specific state functions, using the
+        # ``state.func`` form) whose name is in this list are loadable;
+        # an SLS that references a disallowed state fails compile with
         # ``State '<mod>.<fun>' was not found in SLS ...``.
         "whitelist_state_modules": list,
         # A list of additional directories to search for salt modules in
