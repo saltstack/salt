@@ -141,7 +141,6 @@ class HTTPHeaders(MutableMapping):
     def __init__(self, *args, **kwargs):
         self._dict = {}  # type: typing.Dict[str, str]
         self._as_list = {}  # type: typing.Dict[str, typing.List[str]]
-        self._last_key = None
         if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], HTTPHeaders):
             # Copy constructor
             for k, v in args[0].get_all():
@@ -156,7 +155,6 @@ class HTTPHeaders(MutableMapping):
         # type: (str, str) -> None
         """Adds a new value for the given key."""
         norm_name = _normalized_headers[name]
-        self._last_key = norm_name
         if norm_name in self:
             self._dict[norm_name] = (
                 native_str(self[norm_name]) + "," + native_str(value)
@@ -190,13 +188,13 @@ class HTTPHeaders(MutableMapping):
         'text/html'
         """
         if line[0].isspace():
-            # continuation of a multi-line header
-            new_part = " " + line.lstrip(HTTP_WHITESPACE)
-            self._as_list[self._last_key][-1] += new_part
-            self._dict[self._last_key] += new_part
-        else:
-            name, value = line.split(":", 1)
-            self.add(name, value.strip(HTTP_WHITESPACE))
+            # Line folding ("obsolete line folding", RFC 9112 section 5.2) is
+            # no longer supported: it adds complexity and a risk of DoS via
+            # quadratic performance on malicious data.
+            raise HTTPInputError(
+                "header line cannot start with whitespace, folding not supported")
+        name, value = line.split(":", 1)
+        self.add(name, value.strip(HTTP_WHITESPACE))
 
     @classmethod
     def parse(cls, headers):
@@ -380,7 +378,15 @@ class HTTPServerRequest(object):
         self._finish_time = None
 
         self.path, sep, self.query = uri.partition("?")
-        self.arguments = parse_qs_bytes(self.query, keep_blank_values=True)
+        try:
+            # The query string is bounded by max_header_size, but parsing is
+            # expensive enough per field to be worth limiting. Use the same
+            # limit as a urlencoded body.
+            self.arguments = parse_qs_bytes(
+                self.query, keep_blank_values=True,
+                max_num_fields=_DEFAULT_URLENCODED_CONFIG.max_arguments)
+        except Exception as e:
+            raise HTTPInputError("Invalid query string: %s" % e) from e
         self.query_arguments = copy.deepcopy(self.arguments)
         self.body_arguments = {}
 
@@ -758,13 +764,47 @@ class ParseMultipartConfig:
         self.max_part_header_size = max_part_header_size
 
 
+class ParseUrlEncodedConfig:
+    """Configures the parsing of ``application/x-www-form-urlencoded`` request
+    bodies.
+
+    Its primary purpose is to place limits on the size and complexity of
+    request messages to avoid potential denial-of-service attacks.
+    """
+
+    def __init__(self, max_arguments=1000):
+        # The maximum number of arguments accepted in a urlencoded request.
+        # Each ``<input>`` element in an HTML form corresponds to at least
+        # one argument. The default is the same as php and node.js.
+        self.max_arguments = max_arguments
+
+
+class ParseBodyConfig:
+    """Configures the parsing of request bodies."""
+
+    def __init__(self, multipart=None, urlencoded=None):
+        self.multipart = multipart or ParseMultipartConfig()
+        self.urlencoded = urlencoded or ParseUrlEncodedConfig()
+
+
 _DEFAULT_MULTIPART_CONFIG = ParseMultipartConfig()
+_DEFAULT_URLENCODED_CONFIG = ParseUrlEncodedConfig()
 
 
 def set_parse_body_config(config):
-    """Sets the global default configuration for parsing request bodies."""
-    global _DEFAULT_MULTIPART_CONFIG
-    _DEFAULT_MULTIPART_CONFIG = config
+    """Sets the global default configuration for parsing request bodies.
+
+    ``config`` may be a `ParseBodyConfig`, or a `ParseMultipartConfig` or
+    `ParseUrlEncodedConfig` to replace only that part of the configuration.
+    """
+    global _DEFAULT_MULTIPART_CONFIG, _DEFAULT_URLENCODED_CONFIG
+    if isinstance(config, ParseBodyConfig):
+        _DEFAULT_MULTIPART_CONFIG = config.multipart
+        _DEFAULT_URLENCODED_CONFIG = config.urlencoded
+    elif isinstance(config, ParseUrlEncodedConfig):
+        _DEFAULT_URLENCODED_CONFIG = config
+    else:
+        _DEFAULT_MULTIPART_CONFIG = config
 
 
 def parse_body_arguments(content_type, body, arguments, files, headers=None):
@@ -781,7 +821,9 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
         return
     if content_type.startswith("application/x-www-form-urlencoded"):
         try:
-            uri_arguments = parse_qs_bytes(native_str(body), keep_blank_values=True)
+            uri_arguments = parse_qs_bytes(
+                native_str(body), keep_blank_values=True,
+                max_num_fields=_DEFAULT_URLENCODED_CONFIG.max_arguments)
         except Exception as e:
             raise HTTPInputError("Invalid x-www-form-urlencoded body: %s" % e) from e
         for name, values in uri_arguments.items():

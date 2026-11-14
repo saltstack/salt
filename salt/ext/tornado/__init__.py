@@ -28,6 +28,10 @@ from __future__ import absolute_import, division, print_function
 # number has been incremented)
 
 
-# The bundled version is 4.5.3 and has been patched for CVEs up to 6.5.5
-version = "6.5.5"
-version_info = (6, 5, 5, 0)
+# The bundled code is based on Tornado 4.5.3 (its API is still that of 4.5.3)
+# and has had the security fixes made in Tornado releases up to 6.6.1
+# backported to it. The version below reports the release those fixes are
+# current with, so that scanners and the ``Server`` header describe the
+# security status of the code accurately.
+version = "6.6.1"
+version_info = (6, 6, 1, 0)

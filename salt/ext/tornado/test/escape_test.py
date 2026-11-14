@@ -5,9 +5,11 @@
 from __future__ import absolute_import, division, print_function
 import salt.ext.tornado.escape
 
-from salt.ext.tornado.escape import utf8, xhtml_escape, xhtml_unescape, url_escape, url_unescape, to_unicode, json_decode, json_encode, squeeze, recursive_unicode
+from salt.ext.tornado.escape import utf8, xhtml_escape, xhtml_unescape, url_escape, url_unescape, to_unicode, json_decode, json_encode, squeeze, recursive_unicode, parse_qs_bytes, _unquote_to_bytes
 from salt.ext.tornado.util import unicode_type
 from salt.ext.tornado.test.util import unittest
+
+import urllib.parse
 
 linkify_tests = [
     # (input, linkify_kwargs, expected_output)
@@ -244,3 +246,74 @@ class EscapeTestCase(unittest.TestCase):
         self.assertEqual(recursive_unicode(tests['list']), [u"foo", u"bar"])
         self.assertEqual(recursive_unicode(tests['tuple']), (u"foo", u"bar"))
         self.assertEqual(recursive_unicode(tests['bytes']), u"foo")
+
+    def test_unquote_to_bytes(self):
+        # Cases where binascii.a2b_qp, which _unquote_to_bytes uses, differs
+        # from percent-decoding.
+        for data in [
+            b"",
+            b"a=b",
+            b"%41%3d%3D%25",
+            b"%%41",
+            b"%%%",
+            b"%zz%4",
+            b"%",
+            b"a%",
+            b"%\r\nb",
+            b"%\rb\nc",
+            b"%\n",
+            b"=%41=",
+            b"a \r\n%20\t",
+            bytes(range(256)),
+        ]:
+            self.assertEqual(_unquote_to_bytes(data),
+                             urllib.parse.unquote_to_bytes(data), data)
+
+    def test_parse_qs_bytes(self):
+        self.assertEqual(
+            parse_qs_bytes(b"a=1&b=%41+%2B&a=2&&c&d=", keep_blank_values=True),
+            {"a": [b"1", b"2"], "b": [b"A +"], "c": [b""], "d": [b""]})
+        self.assertEqual(parse_qs_bytes("%E9=%E9"), {"\xe9": [b"\xe9"]})
+        self.assertEqual(parse_qs_bytes(b"c&d=", keep_blank_values=False), {})
+        with self.assertRaises(ValueError):
+            parse_qs_bytes(b"a=1&&b=2", strict_parsing=True)
+        with self.assertRaises(ValueError):
+            parse_qs_bytes(b"a=1&b=2", max_num_fields=1)
+
+    def test_parse_qs_bytes_matches_stdlib(self):
+        pieces = [b"%", b"=", b"&", b"+", b"a", b"2", b"5", b"3", b"D", b"d",
+                  b"f", b"g", b"\r", b"\n", b" ", b"\x00", b"\xff", b"%41",
+                  b"%3d", b"%25", b"%e9"]
+        import random
+        rng = random.Random(0)
+        for _ in range(2000):
+            qs = b"".join(rng.choice(pieces) for _ in range(rng.randint(0, 30)))
+            keep_blank = rng.random() < 0.5
+            strict = rng.random() < 0.5
+            if not qs and strict:
+                # urllib.parse raised ValueError for an empty string with
+                # strict_parsing before Python 3.11.
+                continue
+
+            def parse(f):
+                try:
+                    return f()
+                except ValueError:
+                    return "ValueError"
+
+            expected = parse(lambda: dict(
+                (k, [v.encode("latin1") for v in vs])
+                for k, vs in urllib.parse.parse_qs(
+                    qs.decode("latin1"), keep_blank, strict,
+                    encoding="latin1").items()))
+            self.assertEqual(
+                parse(lambda: parse_qs_bytes(qs, keep_blank, strict)),
+                expected, (qs, keep_blank, strict))
+
+    def test_unquote_memory(self):
+        # The standard library's unquote creates an object per %. Just check
+        # that a large escaped body is handled and decoded correctly.
+        data = b"%41" * 100000
+        self.assertEqual(parse_qs_bytes(b"a=" + data)["a"], [b"A" * 100000])
+        data = b"%" * 300000
+        self.assertEqual(parse_qs_bytes(b"a=" + data)["a"], [b"%" * 300000])

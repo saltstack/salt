@@ -15,6 +15,7 @@ import sys
 from salt.ext.tornado.escape import to_unicode, url_escape
 from salt.ext.tornado import gen
 from salt.ext.tornado.httpclient import AsyncHTTPClient
+from salt.ext.tornado.http1connection import _MAX_1XX_RESPONSES
 from salt.ext.tornado.httputil import HTTPHeaders, ResponseStartLine
 from salt.ext.tornado.ioloop import IOLoop
 from salt.ext.tornado.log import gen_log
@@ -588,6 +589,47 @@ class HTTP100ContinueTestCase(AsyncHTTPTestCase):
         self.assertEqual(res.body, b'A')
 
 
+class HTTP1xxLimitTestCase(AsyncHTTPTestCase):
+    """A server may send informational (1xx) responses before the real one,
+    but only a small number of them.
+    """
+
+    def get_app(self):
+        # Not a full Application, but works as an HTTPServer callback
+        def respond(request):
+            self.http1 = request.version.startswith('HTTP/1.')
+            if not self.http1:
+                request.connection.write_headers(
+                    ResponseStartLine('', 200, 'OK'), HTTPHeaders())
+                request.connection.finish()
+                return
+            num_1xx = int(request.arguments['num'][-1])
+            stream = request.connection.detach()
+            stream.write(b"HTTP/1.1 100 CONTINUE\r\n\r\n" * num_1xx)
+            stream.write(b"HTTP/1.1 200 OK\r\nContent-Length: 1\r\n\r\nA")
+            stream.close()
+
+        return respond
+
+    def test_1xx_within_limit(self):
+        # A handful of 1xx responses is allowed.
+        res = self.fetch('/?num=%d' % _MAX_1XX_RESPONSES)
+        if not self.http1:
+            self.skipTest("requires HTTP/1.x")
+        self.assertEqual(res.body, b'A')
+
+    def test_too_many_1xx(self):
+        # Each 1xx response is processed recursively, so an unbounded number
+        # of them would exhaust the stack. Past the limit this must be
+        # reported as an error instead.
+        with ExpectLog(gen_log,
+                       "Malformed HTTP message from None: Too many 1xx responses"):
+            res = self.fetch('/?num=%d' % (_MAX_1XX_RESPONSES + 1))
+        if not self.http1:
+            self.skipTest("requires HTTP/1.x")
+        self.assertEqual(res.code, 599)
+
+
 class HTTP204NoContentTestCase(AsyncHTTPTestCase):
     def respond_204(self, request):
         self.http1 = request.version.startswith('HTTP/1.')
@@ -813,6 +855,64 @@ class MaxBufferSizeTest(AsyncHTTPTestCase):
         response = self.fetch('/large')
         response.rethrow()
         self.assertEqual(response.body, b'a' * 1024 * 100)
+
+
+class MaxBodySizeUntilCloseTest(AsyncHTTPTestCase):
+    """Responses without Content-Length or Transfer-Encoding are read until
+    the connection closes; ``max_body_size`` must still be enforced there.
+    """
+
+    def get_app(self):
+        # Not a full Application, but works as an HTTPServer callback. Detach
+        # the stream to emulate an HTTP/1.0 server that signals the end of
+        # the body by closing the connection.
+        def respond(request):
+            stream = request.connection.detach()
+            stream.write(b"HTTP/1.0 200 OK\r\n\r\n" + b"a" * (1024 * 100))
+            stream.close()
+
+        return respond
+
+    def get_http_client(self):
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop,
+                                     max_body_size=1024 * 64)
+
+    def test_large_body_until_close(self):
+        # The body exceeds max_body_size, so this must be reported as an
+        # error rather than silently returning an over-large body.
+        with ExpectLog(gen_log, "Malformed HTTP message from None: Body too long"):
+            response = self.fetch("/large")
+        self.assertEqual(response.code, 599)
+        self.assertIsNotNone(response.error)
+
+
+class MaxBufferSizeUntilCloseTest(AsyncHTTPTestCase):
+    """A read-until-close body that overflows the stream's read buffer must
+    not be silently truncated.
+    """
+
+    def get_app(self):
+        def respond(request):
+            stream = request.connection.detach()
+            stream.write(b"HTTP/1.0 200 OK\r\n\r\n" + b"a" * (1024 * 100))
+            stream.close()
+
+        return respond
+
+    def get_http_client(self):
+        # 100KB body with a 64KB buffer. max_body_size is large enough to
+        # allow the body; it is the buffer that overflows.
+        return SimpleAsyncHTTPClient(io_loop=self.io_loop,
+                                     max_body_size=1024 * 1024,
+                                     max_buffer_size=1024 * 64)
+
+    def test_large_body_until_close(self):
+        # The body fits within max_body_size, so it must be delivered in
+        # full: the stream's read buffer limit applies to a single read, not
+        # to the total size of the body.
+        response = self.fetch("/large")
+        response.rethrow()
+        self.assertEqual(response.body, b"a" * (1024 * 100))
 
 
 class ChunkedWithContentLengthTest(AsyncHTTPTestCase):

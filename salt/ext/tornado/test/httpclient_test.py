@@ -384,8 +384,13 @@ Transfer-Encoding: chunked
                     (resp.body, value, container))
 
     def test_multi_line_headers(self):
-        # Multi-line http headers are rare but rfc-allowed
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec4.html#sec4.2
+        # Line folding is an obsolete way of representing headers split across
+        # multiple lines.
+        # https://www.rfc-editor.org/info/rfc9112/#section-5.2
+        #
+        # simple_httpclient rejects them while libcurl still accepts them.
+        # Either outcome is acceptable here; what matters is that the client
+        # doesn't hang and doesn't misparse the header.
         sock, port = bind_unused_port()
         with closing(sock):
             def write_response(stream, request_data):
@@ -404,9 +409,16 @@ X-XSS-Protection: 1;
                                   functools.partial(write_response, stream))
             netutil.add_accept_handler(sock, accept_callback, self.io_loop)
             self.http_client.fetch("http://127.0.0.1:%d/" % port, self.stop)
-            resp = self.wait()
-            resp.rethrow()
-            self.assertEqual(resp.headers['X-XSS-Protection'], "1; mode=block")
+            with ExpectLog(gen_log, "Malformed HTTP message.*folding",
+                           required=False):
+                resp = self.wait()
+            if resp.code == 599:
+                # Folding was rejected.
+                self.assertIsNotNone(resp.error)
+            else:
+                resp.rethrow()
+                self.assertEqual(resp.headers['X-XSS-Protection'],
+                                 "1; mode=block")
             self.io_loop.remove_handler(sock.fileno())
 
     def test_304_with_content_length(self):

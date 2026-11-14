@@ -214,7 +214,7 @@ class _CallableAdapter(httputil.HTTPMessageDelegate):
         self.request_callback = request_callback
         self.request = None
         self.delegate = None
-        self._chunks = []
+        self._chunks = bytearray()
 
     def headers_received(self, start_line, headers):
         self.request = httputil.HTTPServerRequest(
@@ -222,10 +222,10 @@ class _CallableAdapter(httputil.HTTPMessageDelegate):
             headers=headers)
 
     def data_received(self, chunk):
-        self._chunks.append(chunk)
+        self._chunks += chunk
 
     def finish(self):
-        self.request.body = b''.join(self._chunks)
+        self.request.body = bytes(self._chunks)
         self.request._parse_body()
         self.request_callback(self.request)
 

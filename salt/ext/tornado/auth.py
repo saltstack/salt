@@ -73,6 +73,7 @@ import binascii
 import functools
 import hashlib
 import hmac
+import re
 import time
 import uuid
 
@@ -239,7 +240,8 @@ class OpenIdMixin(object):
         return args
 
     def _on_authentication_verified(self, future, response):
-        if response.error or b"is_valid:true" not in response.body:
+        if (response.error or
+                re.search(br"(?m)^is_valid:true$", response.body) is None):
             future.set_exception(AuthError(
                 "Invalid OpenID response: %s" % (response.error or
                                                  response.body)))
