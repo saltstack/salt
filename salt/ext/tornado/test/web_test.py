@@ -1494,6 +1494,71 @@ class StaticFileSymlinkedRootTest(WebTestCase):
         self.assertEqual(response.body, b"inside")
 
 
+class StaticFileVersionTest(unittest.TestCase):
+    """``static_url`` and ``get_version`` must not read outside of the static
+    directory, and must bound the work they do.
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir)
+        self.root = os.path.join(self.tmpdir, "static")
+        os.mkdir(self.root)
+        with open(os.path.join(self.root, "inside.txt"), "w") as f:
+            f.write("inside")
+        with open(os.path.join(self.tmpdir, "outside.txt"), "w") as f:
+            f.write("outside")
+        self.settings = {"static_path": self.root}
+
+        class Handler(StaticFileHandler):
+            pass
+
+        # Use a private subclass so that the version cache and the limits
+        # changed by the tests do not leak into other tests.
+        self.handler = Handler
+        self.addCleanup(Handler.reset)
+
+    def test_get_version(self):
+        self.assertIsNotNone(self.handler.get_version(self.settings, "inside.txt"))
+
+    def test_get_absolute_path_outside_root(self):
+        with self.assertRaises(HTTPError) as cm:
+            self.handler.get_absolute_path(self.root, "../outside.txt")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_get_version_outside_root(self):
+        with self.assertRaises(HTTPError) as cm:
+            self.handler.get_version(self.settings, "../outside.txt")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_get_version_directory(self):
+        os.mkdir(os.path.join(self.root, "dir"))
+        with ExpectLog(gen_log, ".*Could not open static file"):
+            self.assertIsNone(self.handler.get_version(self.settings, "dir"))
+
+    @unittest.skipIf(not hasattr(os, "mkfifo"), "os.mkfifo not available")
+    def test_get_version_fifo(self):
+        # Opening a FIFO would block until there is a writer.
+        os.mkfifo(os.path.join(self.root, "fifo"))
+        with ExpectLog(gen_log, ".*Could not open static file"):
+            self.assertIsNone(self.handler.get_version(self.settings, "fifo"))
+
+    def test_get_content_version_too_large(self):
+        self.handler.MAX_VERSION_CONTENT_SIZE = 4
+        with ExpectLog(gen_log, ".*MAX_VERSION_CONTENT_SIZE"):
+            self.assertIsNone(self.handler.get_version(self.settings, "inside.txt"))
+
+    def test_version_cache_is_bounded(self):
+        self.handler.MAX_CACHED_VERSIONS = 2
+        for name in ("a.txt", "b.txt", "c.txt"):
+            with open(os.path.join(self.root, name), "w") as f:
+                f.write(name)
+            self.assertIsNotNone(self.handler.get_version(self.settings, name))
+        self.assertEqual(len(self.handler._static_hashes), 2)
+        self.assertNotIn(os.path.join(self.root, "a.txt"),
+                         self.handler._static_hashes)
+
+
 class StaticDefaultFilenameTest(WebTestCase):
     def get_app_kwargs(self):
         return dict(static_path=relpath('static'),

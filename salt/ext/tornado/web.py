@@ -2405,6 +2405,14 @@ class StaticFileHandler(RequestHandler):
     # StaticFileHandler with their own initialize() that does not call ours.
     allowed_symlink_directory = None
 
+    # Content larger than this is not hashed by get_content_version (and so
+    # gets no version in static_url), because the hash is computed
+    # synchronously and would block the event loop for a long time.
+    MAX_VERSION_CONTENT_SIZE = 64 * 1024 * 1024
+
+    # The maximum number of entries in the cache of static file versions.
+    MAX_CACHED_VERSIONS = 10000
+
     def initialize(self, path, default_filename=None,
                    allowed_symlink_directory=None):
         self.root = path
@@ -2565,9 +2573,19 @@ class StaticFileHandler(RequestHandler):
         as long as they are unique and understood by the subclass's
         overridden `get_content`.
 
+        Raises `HTTPError` (403) if ``path`` leads outside of ``root`` (as
+        written, e.g. with ``../``; symlinks are checked later by
+        `validate_absolute_path`). This check is also what keeps
+        `get_version` (and therefore `~RequestHandler.static_url`) from
+        reading files outside of the static directory.
+
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Paths outside of ``root`` now raise `HTTPError`.
         """
         abspath = os.path.abspath(os.path.join(root, path))
+        cls._check_in_root(root, abspath, path)
         return abspath
 
     def validate_absolute_path(self, root, absolute_path):
@@ -2590,23 +2608,7 @@ class StaticFileHandler(RequestHandler):
 
         .. versionadded:: 3.1
         """
-        # os.path.abspath strips a trailing /.
-        # We must add it back to `root` so that we only match files
-        # in a directory named `root` instead of files starting with
-        # that prefix.
-        root = os.path.abspath(root)
-        if not root.endswith(os.path.sep):
-            # abspath always removes a trailing slash, except when
-            # root is '/'. This is an unusual case, but several projects
-            # have independently discovered this technique to disable
-            # Tornado's path validation and (hopefully) do their own,
-            # so we need to support it.
-            root += os.path.sep
-        # The trailing slash also needs to be temporarily added back
-        # the requested path so a request to root/ will match.
-        if not (absolute_path + os.path.sep).startswith(root):
-            raise HTTPError(403, "%s is not in root static directory",
-                            self.path)
+        root = self._check_in_root(root, absolute_path, self.path)
         # Symlinks may point anywhere inside allowed_symlink_directory, which
         # defaults to the directory being served. Normalize it to a list so
         # that _resolve_symlink_target has only one shape to deal with.
@@ -2655,6 +2657,51 @@ class StaticFileHandler(RequestHandler):
         if not os.path.isfile(absolute_path):
             raise HTTPError(403, "%s is not a file", self.path)
         return absolute_path
+
+    @staticmethod
+    def _stat_regular_file(absolute_path, path_message):
+        """Stats ``absolute_path`` and checks that it is a regular file.
+
+        Raises `HTTPError` (404) if the path cannot be stat'ed, or (403) if
+        it is anything other than a regular file. Directories, devices (such
+        as ``/dev/zero``), FIFOs and sockets must never be read: some of them
+        never end, and opening a FIFO blocks until there is a writer.
+        ``path_message`` is used only to build the error message.
+        """
+        try:
+            stat_result = os.stat(absolute_path)
+        except OSError:
+            raise HTTPError(404)
+        if not stat.S_ISREG(stat_result.st_mode):
+            raise HTTPError(403, "%s is not a file", path_message)
+        return stat_result
+
+    @staticmethod
+    def _check_in_root(root, absolute_path, path_message):
+        """Checks that ``absolute_path`` (as written) is inside ``root``.
+
+        Returns the normalized root, with a trailing separator. Raises
+        `HTTPError` (403) if the path is outside of it. ``path_message``
+        is used only to build the error message.
+        """
+        # os.path.abspath strips a trailing /.
+        # We must add it back to `root` so that we only match files
+        # in a directory named `root` instead of files starting with
+        # that prefix.
+        root = os.path.abspath(root)
+        if not root.endswith(os.path.sep):
+            # abspath always removes a trailing slash, except when
+            # root is '/'. This is an unusual case, but several projects
+            # have independently discovered this technique to disable
+            # Tornado's path validation and (hopefully) do their own,
+            # so we need to support it.
+            root += os.path.sep
+        # The trailing slash also needs to be temporarily added back
+        # the requested path so a request to root/ will match.
+        if not (absolute_path + os.path.sep).startswith(root):
+            raise HTTPError(403, "%s is not in root static directory",
+                            path_message)
+        return root
 
     @staticmethod
     def _resolve_symlink_target(absolute_path, allowed_symlink_directories,
@@ -2716,7 +2763,14 @@ class StaticFileHandler(RequestHandler):
         as it helps reduce memory fragmentation.
 
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Raises `HTTPError` if ``abspath`` is not a regular file.
         """
+        # validate_absolute_path has already checked this when serving a
+        # request, but get_content_version (for static_url) reaches this
+        # method with nothing but get_absolute_path in between.
+        cls._stat_regular_file(abspath, abspath)
         with open(abspath, "rb") as file:
             if start is not None:
                 file.seek(start)
@@ -2745,15 +2799,33 @@ class StaticFileHandler(RequestHandler):
         This class method may be overridden by subclasses.  The
         default implementation is a hash of the file's contents.
 
+        The hash is computed synchronously, so content larger than
+        `MAX_VERSION_CONTENT_SIZE` is not hashed (and gets no version)
+        rather than blocking the event loop for a long time.
+
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Content larger than `MAX_VERSION_CONTENT_SIZE` raises `ValueError`.
         """
         data = cls.get_content(abspath)
+        chunks = [data] if isinstance(data, bytes) else data
         hasher = hashlib.md5()
-        if isinstance(data, bytes):
-            hasher.update(data)
-        else:
-            for chunk in data:
+        size = 0
+        try:
+            for chunk in chunks:
+                size += len(chunk)
+                if size > cls.MAX_VERSION_CONTENT_SIZE:
+                    raise ValueError(
+                        "content is larger than MAX_VERSION_CONTENT_SIZE "
+                        "(%d bytes)" % cls.MAX_VERSION_CONTENT_SIZE)
                 hasher.update(chunk)
+        finally:
+            # Close the file now, rather than when the generator is
+            # collected, if we stopped early.
+            close = getattr(chunks, "close", None)
+            if close is not None:
+                close()
         return hasher.hexdigest()
 
     def _stat(self):
@@ -2877,6 +2949,11 @@ class StaticFileHandler(RequestHandler):
         The returned value should be a string, or ``None`` if no version
         could be determined.
 
+        As with `~RequestHandler.static_url`, ``path`` should name a known
+        static file and should not be derived from untrusted input. Versions
+        are cached (up to `MAX_CACHED_VERSIONS` entries) until ``reset`` is
+        called.
+
         .. versionchanged:: 3.1
            This method was previously recommended for subclasses to override;
            `get_content_version` is now preferred as it allows the base
@@ -2889,16 +2966,20 @@ class StaticFileHandler(RequestHandler):
     def _get_cached_version(cls, abs_path):
         with cls._lock:
             hashes = cls._static_hashes
-            if abs_path not in hashes:
+            if abs_path in hashes:
+                # Move the entry to the end to mark it as most recently used.
+                hsh = hashes[abs_path] = hashes.pop(abs_path)
+            else:
                 try:
-                    hashes[abs_path] = cls.get_content_version(abs_path)
-                except Exception:
-                    gen_log.error("Could not open static file %r", abs_path)
-                    hashes[abs_path] = None
-            hsh = hashes.get(abs_path)
-            if hsh:
-                return hsh
-        return None
+                    hsh = cls.get_content_version(abs_path)
+                except Exception as e:
+                    gen_log.error("Could not open static file %r: %s",
+                                  abs_path, e)
+                    hsh = None
+                while hashes and len(hashes) >= cls.MAX_CACHED_VERSIONS:
+                    del hashes[next(iter(hashes))]
+                hashes[abs_path] = hsh
+            return hsh or None
 
 
 class FallbackHandler(RequestHandler):
