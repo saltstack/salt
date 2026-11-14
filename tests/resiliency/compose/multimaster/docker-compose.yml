@@ -25,6 +25,11 @@ x-master-common: &master-common
     dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
   image: cluster-3node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
   networks:
     - salt-net
 

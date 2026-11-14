@@ -22,6 +22,20 @@ x-salt-common: &salt-common
     dockerfile: tests/monitoring/Dockerfile.salt
   image: resiliency-single-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  # Added kernel capabilities let the fault injectors actually fire
+  # on a vanilla ubuntu-latest GHA runner.  Without these, ~15 phases
+  # pytest.skip at setup with "CAP_SYS_TIME unavailable" /
+  # "iptables -I rejected (missing NET_ADMIN?)" /
+  # "prlimit --nofile unavailable" / etc.
+  #   NET_ADMIN:    tc netem + iptables REJECT + ip link set + ifb
+  #   SYS_TIME:     date -s / hwclock for test_clock_*
+  #   SYS_RESOURCE: prlimit for test_resource_fd_squeeze
+  #   SYS_NICE:     cpu throttle scheduler-priority tweaks
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
   volumes:
     - ../../../../salt:/app/salt
     - /etc/localtime:/etc/localtime:ro
@@ -45,8 +59,10 @@ services:
     volumes:
       - ../../../../salt:/app/salt
       - ../../../monitoring/master.conf:/etc/salt/master:ro
+      - ./master.d.conf:/etc/salt/master.d/resiliency.conf:ro
       - ./minion.conf:/etc/salt/minion:ro
-      - ../../../monitoring/srv/salt:/srv/salt:ro
+      - ../../../monitoring/srv/salt:/srv/salt:rw
+      - ./pillar:/srv/pillar:rw
       - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
       - /etc/localtime:/etc/localtime:ro
     networks:

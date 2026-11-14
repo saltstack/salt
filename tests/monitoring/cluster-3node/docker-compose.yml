@@ -31,6 +31,14 @@ x-master-common: &master-common
     dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
   image: cluster-3node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  # Kernel capabilities for the resiliency suite's fault injectors
+  # (tc/iptables, clock skew, prlimit, scheduler priority).  Safe
+  # for stress-test / monitoring reuse.
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
   volumes:
     - ${SALT_SRC:-../../..}/salt:/app/salt
     - ./srv/salt:/srv/salt
