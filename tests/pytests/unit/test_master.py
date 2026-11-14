@@ -4,10 +4,13 @@ import collections
 import os
 import pathlib
 import stat
+import tempfile
 import threading
 import time
 
 import pytest
+import zmq
+from pytestshellutils.utils import ports
 
 import salt.channel.client
 import salt.config
@@ -15,6 +18,7 @@ import salt.crypt
 import salt.exceptions
 import salt.master
 import salt.serializers.msgpack
+import salt.transport.zeromq
 import salt.utils.cache
 import salt.utils.files
 import salt.utils.platform
@@ -1879,6 +1883,67 @@ async def test_collect__auth_to_master_stats():
         assert mworker.stats["_auth"]["mean"] < 0.04
         handle_aes_mock.assert_not_called()
         handle_clear_mock.assert_not_called()
+
+
+@pytest.mark.parametrize("ipc_mode", ["ipc", "tcp"])
+def test_legacy_mworker_reaches_zmq_device(master_opts, ipc_mode):
+    """
+    With ``worker_pools_enabled: False``, an MWorker must connect to the
+    socket that the legacy ``zmq_device`` binds, on real zmq sockets.
+
+    Regression test for https://github.com/saltstack/salt/issues/69912
+    """
+    with tempfile.TemporaryDirectory(dir="/tmp") as sock_dir:
+        master_opts.update(
+            {
+                "worker_pools_enabled": False,
+                "worker_pools": {"default": {"worker_count": 1, "commands": ["*"]}},
+                "interface": "127.0.0.1",
+                "ret_port": ports.get_unused_localhost_port(),
+                "ipc_mode": ipc_mode,
+                "tcp_master_workers": ports.get_unused_localhost_port(),
+                "sock_dir": sock_dir,
+            }
+        )
+        transport = salt.transport.zeromq.RequestServer(master_opts)
+
+        async def handler(payload):
+            return payload
+
+        class Channel:
+            # Forwards like ReqServerChannel.post_fork, minus the master keys.
+            def post_fork(self, _payload_handler, io_loop, **kwargs):
+                transport.post_fork(handler, io_loop, **kwargs)
+
+        mworker = salt.master.MWorker(master_opts, {}, {}, [Channel()])
+        assert mworker.pool_name == "default"
+        replies = []
+
+        def round_trip(_device, _clients, workers):
+            # Stands in for the QUEUE loop: one request through the bound socket.
+            workers.setsockopt(zmq.SNDTIMEO, 3000)
+            try:
+                workers.send_multipart([b"", transport.encode_payload("ping")])
+                if workers.poll(3000):
+                    replies.append(workers.recv_multipart()[-1])
+            except zmq.Again:
+                pass
+            finally:
+                mworker.io_loop.call_soon_threadsafe(mworker.io_loop.stop)
+            raise KeyboardInterrupt
+
+        server = salt.transport.zeromq.RequestServer(master_opts)
+        worker_thread = threading.Thread(target=mworker._MWorker__bind, daemon=True)
+        with patch("salt.master.ClearFuncs"), patch("salt.master.AESFuncs"), patch(
+            "salt.transport.zeromq.zmq.device", side_effect=round_trip
+        ), patch.object(server, "_RequestServer__setup_signals"):
+            worker_thread.start()
+            server.zmq_device()
+            worker_thread.join(10)
+        transport.close()
+
+    assert not worker_thread.is_alive()
+    assert [transport.decode_payload(reply) for reply in replies] == ["ping"]
 
 
 # ---------------------------------------------------------------------------
