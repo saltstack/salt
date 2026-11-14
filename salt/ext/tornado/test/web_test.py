@@ -250,6 +250,19 @@ class CookieTest(WebTestCase):
                             )
 
                     try:
+                        self.set_cookie("foo", "bar", DoMaIn="example" + char + ".com")
+                        self.write(
+                            "Didn't get expected exception for char %r in DoMaIn\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute DoMaIn" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in DoMaIn: %s\n"
+                                % (char, e)
+                            )
+
+                    try:
                         self.set_cookie("foo", "bar", path="/" + char)
                         self.write(
                             "Didn't get expected exception for char %r in path\n"

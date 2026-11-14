@@ -571,6 +571,14 @@ class RequestHandler(object):
                     "Invalid cookie attribute %s=%r for cookie %r"
                     % (attr_name, attr_value, name)
                 )
+        for k, v in kwargs.items():
+            # Also check for disallowed characters in the deprecated kwargs
+            # (such as mixed-case attribute names).
+            if re.search(r"[\x00-\x20\x3b\x7f]", str(v)):
+                raise Cookie.CookieError(
+                    "Invalid cookie attribute %s=%r for cookie %r"
+                    % (k, v, name)
+                )
         if not hasattr(self, "_new_cookie"):
             self._new_cookie = Cookie.SimpleCookie()
         if name in self._new_cookie:
