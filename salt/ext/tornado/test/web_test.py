@@ -29,6 +29,10 @@ import re
 import shutil
 import socket
 import tempfile
+try:
+    from unittest import mock
+except ImportError:  # pragma: no cover
+    import mock
 
 if PY3:
     import urllib.parse as urllib_parse  # py3
@@ -1557,6 +1561,35 @@ class StaticFileVersionTest(unittest.TestCase):
         self.assertEqual(len(self.handler._static_hashes), 2)
         self.assertNotIn(os.path.join(self.root, "a.txt"),
                          self.handler._static_hashes)
+
+
+class StaticFileAlternateDataStreamTest(unittest.TestCase):
+    """On Windows, ``file.txt:name`` names an NTFS alternate data stream of
+    ``file.txt``. Streams are not files in the static directory and must not
+    be served, nor read by ``get_version``.
+    """
+
+    def test_colon_rejected_on_windows(self):
+        root = os.path.abspath("static")
+        with mock.patch.object(os, "name", "nt"):
+            with self.assertRaises(HTTPError) as cm:
+                StaticFileHandler._check_in_root(
+                    root, os.path.join(root, "public.txt:secret"), "x")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_colon_allowed_on_posix(self):
+        # A colon is an ordinary character in a posix file name.
+        root = os.path.abspath("static")
+        with mock.patch.object(os, "name", "posix"):
+            StaticFileHandler._check_in_root(
+                root, os.path.join(root, "a:b.txt"), "x")
+
+    def test_colon_in_root_allowed_on_windows(self):
+        # The root itself contains the drive letter's colon.
+        root = os.path.abspath("static") + os.path.sep + "c:dir"
+        with mock.patch.object(os, "name", "nt"):
+            StaticFileHandler._check_in_root(
+                os.path.dirname(root), os.path.join(os.path.dirname(root), "x.txt"), "x")
 
 
 class StaticDefaultFilenameTest(WebTestCase):
