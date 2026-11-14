@@ -1120,6 +1120,21 @@ class AsyncAuth:
         # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
         # issue #67947).
         self._creds = None
+        # Per-caller sign-in bookkeeping.  See :meth:`authenticate` for the
+        # design rationale; the short version is that each caller gets its
+        # own Future and ``_sign_in_task`` is the shared in-flight task
+        # that fans results out to the ``_waiters`` set.  ``_last_result``
+        # carries the cached outcome across ``authenticate()`` calls:
+        # ``None`` means "no completed sign-in", ``(True,)`` means the last
+        # sign-in succeeded (equivalent to the old
+        # ``_authenticate_future.done() and exception() is None`` check).
+        # Failures are *not* cached -- a subsequent ``authenticate()`` call
+        # spawns a fresh sign-in task, matching the pre-refactor behavior
+        # where the retry wiring in ``authenticate()`` saw a done-with-
+        # exception future and allocated a new one.
+        self._sign_in_task = None
+        self._waiters = set()
+        self._last_result = None
         if self.opts["__role"] == "syndic":
             self.mpub = "syndic_master.pub"
         else:
@@ -1139,8 +1154,7 @@ class AsyncAuth:
             self._creds = creds
             self._crypticle = Crypticle(self.opts, creds["aes"])
             self._session_crypticle = Crypticle(self.opts, creds["session"])
-            self._authenticate_future = tornado.concurrent.Future()
-            self._authenticate_future.set_result(True)
+            self._last_result = (True,)
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -1170,45 +1184,191 @@ class AsyncAuth:
     @property
     def authenticated(self):
         return (
-            hasattr(self, "_authenticate_future")
-            and self._authenticate_future.done()
-            and self._authenticate_future.exception() is None
+            self._last_result is not None
+            and len(self._last_result) == 1
+            and self._last_result[0] is True
         )
 
     def invalidate(self):
         if self.authenticated:
-            del self._authenticate_future
+            self._last_result = None
             key = self.__key(self.opts)
             if key in AsyncAuth.creds_map:
                 del AsyncAuth.creds_map[key]
 
     def authenticate(self, callback=None):
         """
-        Ask for this client to reconnect to the origin
+        Return a Future that resolves to ``True`` when a sign-in with the
+        master completes, or raises the sign-in error on failure.
 
-        This function will de-dupe all calls here and return a *single* future
-        for the sign-in-- whis way callers can all assume there aren't others
+        Each call returns a **fresh** Future owned by the caller.  Multiple
+        concurrent callers share a single in-flight sign-in task
+        (``self._sign_in_task``); when that task completes, its outcome --
+        including unexpected exceptions like ``OSError`` that would
+        otherwise escape ``_authenticate`` as an unhandled task exception
+        -- is fanned out to every registered waiter.
+
+        This replaces the previous design in which every caller shared one
+        ``_authenticate_future`` attribute.  That design conflated "the
+        handle to await the sign-in result" with "the flag marking a
+        sign-in in progress"; a stale coroutine reaching its tail could
+        hit a future already resolved by a sibling and raise
+        ``asyncio.exceptions.InvalidStateError``, killing the task and
+        wedging the minion in a non-authenticated state until process
+        restart.  It also silently hung every waiter
+        when ``_authenticate`` raised anything outside the handled sign-in
+        failure branches (issue #70642), and leaked the sign-in task's
+        request channel when all waiters gave up.
+
+        Cancellation semantics:
+
+        - A caller cancelling its returned future only removes itself from
+          ``_waiters``; the sign-in task and other waiters are untouched.
+        - When ``_waiters`` drains to empty while a sign-in is still in
+          flight, that sign-in task is cancelled so it does not hold its
+          request channel open indefinitely.
         """
-        # if an auth is in flight-- and not done-- just pass that back as the future to wait on
-        if (
-            hasattr(self, "_authenticate_future")
-            and not self._authenticate_future.done()
-        ):
-            future = self._authenticate_future
-        else:
-            future = tornado.concurrent.Future()
-            self._authenticate_future = future
-            self.io_loop.create_task(self._authenticate())
+        # Every call spawns a fresh sign-in if one is not already in
+        # flight -- callers that want to skip the network roundtrip gate
+        # on ``self.authenticated`` themselves (see ``channel/client.py``).
+        # Direct callers (tests, re-auth paths) rely on ``authenticate()``
+        # always re-running ``sign_in`` so master-side key rotations are
+        # picked up.
+        future = tornado.concurrent.Future()
+        self._waiters.add(future)
+        future.add_done_callback(self._on_waiter_done)
+
+        if self._sign_in_task is None:
+            # Spawn only on ``_sign_in_task is None`` -- intentionally
+            # *not* ``or self._sign_in_task.done()``.  Asyncio schedules
+            # a task's done-callbacks via ``loop.call_soon``, not
+            # synchronously when the task finishes, so there is a real
+            # window where ``_sign_in_task.done()`` is True but
+            # ``_on_sign_in_done`` has not run yet.  A new caller
+            # entering that window under a ``.done()``-based guard
+            # would spawn a *second* sign-in task while the first's
+            # done-callback is still queued; the queued callback would
+            # then observe ``self._sign_in_task is not task`` and
+            # short-circuit without fanning out, leaving the old
+            # waiters to be resolved only by the redundant second
+            # sign-in -- an unnecessary master roundtrip per concurrent
+            # caller.  ``_sign_in_task`` is cleared to ``None`` on all
+            # teardown paths (``_on_sign_in_done`` on normal completion,
+            # ``_on_waiter_done`` on last-waiter cancel), so ``is None``
+            # alone is the correct "can spawn" predicate.
+            #
+            # A forced re-auth (for example after a caller hits
+            # ``AuthenticationError`` because the master rotated its
+            # key) also enters this branch with ``_last_result`` still
+            # holding the previous ``(True,)``.  Clear it before
+            # spawning so ``authenticated`` flips to False for the
+            # duration of the re-auth -- otherwise other callers
+            # observing the ``if not self.auth.authenticated: await
+            # self.auth.authenticate()`` gate in ``channel/client.py``
+            # would skip the wait, send with the stale key, hit
+            # ``AuthenticationError``, and bounce back into another
+            # forced re-auth.
+            self._last_result = None
+            self._sign_in_task = self.io_loop.create_task(self._authenticate())
+            self._sign_in_task.add_done_callback(self._on_sign_in_done)
 
         if callback is not None:
-
-            def handle_future(future):
-                response = future.result()
-                self.io_loop.call_soon(callback, response)
-
-            future.add_done_callback(handle_future)
+            self._wire_authenticate_callback(future, callback)
 
         return future
+
+    def _wire_authenticate_callback(self, future, callback):
+        """
+        Attach the user-supplied ``authenticate(callback=...)`` hook.
+
+        Preserves the pre-refactor semantics: ``callback`` is invoked
+        (via ``call_soon``) only on successful sign-in; on failure,
+        ``future.result()`` raises and the exception propagates out of
+        the done-callback, which tornado logs.
+        """
+
+        def handle_future(fut):
+            response = fut.result()
+            self.io_loop.call_soon(callback, response)
+
+        future.add_done_callback(handle_future)
+
+    def _on_waiter_done(self, future):
+        """
+        Done-callback attached to every caller future.  Removes the caller
+        from the waiter set and, if the set drained to empty while a
+        sign-in is still in flight, cancels the sign-in so it does not
+        hold its request channel open with no one waiting for the result.
+
+        ``Task.cancel()`` is cooperative: the task stays ``done() is
+        False`` until it next hits an await point and the
+        ``CancelledError`` propagates.  Clear ``_sign_in_task`` (and
+        ``_last_result``) *before* requesting the cancellation so a
+        fresh ``authenticate()`` call arriving during that window
+        starts over with a new task instead of latching onto the
+        doomed one -- its ``_on_sign_in_done`` short-circuits without
+        fanning out, so any caller that registered as a waiter on the
+        cancelled task would otherwise wait forever.
+        """
+        self._waiters.discard(future)
+        if (
+            not self._waiters
+            and self._sign_in_task is not None
+            and not self._sign_in_task.done()
+        ):
+            task = self._sign_in_task
+            self._sign_in_task = None
+            self._last_result = None
+            task.cancel()
+
+    def _on_sign_in_done(self, task):
+        """
+        Done-callback attached to ``_sign_in_task``.  Snapshots the waiter
+        set and clears sign-in state atomically before fanning the result
+        out, so a late-arriving ``authenticate()`` call that runs after
+        this callback returns spawns a fresh sign-in task instead of
+        latching onto the just-completed one.
+
+        If this task was superseded -- ``_on_waiter_done`` cleared
+        ``_sign_in_task`` during the pending-cancel window, or a later
+        ``authenticate()`` installed a fresh task -- return without
+        touching instance state.  The current owner of
+        ``_sign_in_task`` manages its own ``_waiters`` and
+        ``_last_result``; a stale callback must not clobber them.
+
+        A cancelled task is the "last waiter cancelled me" path -- callers
+        already cancelled their own futures so there is nothing to fan
+        out.  Any other exception (including ``OSError`` and other
+        unexpected errors that previously escaped ``_authenticate`` as
+        unhandled task exceptions) is set on every waiter so no caller
+        hangs indefinitely.
+        """
+        if self._sign_in_task is not task:
+            return
+        waiters = self._waiters
+        self._waiters = set()
+        self._sign_in_task = None
+
+        if task.cancelled():
+            self._last_result = None
+            return
+
+        exc = task.exception()
+        if exc is None:
+            self._last_result = (True,)
+            for waiter in waiters:
+                if not waiter.done():
+                    waiter.set_result(True)
+        else:
+            # Failure is *not* cached: ``_last_result`` stays ``None`` so
+            # the next ``authenticate()`` call spawns a fresh sign-in,
+            # matching the pre-refactor behavior where a done-with-
+            # exception ``_authenticate_future`` caused the retry wiring
+            # to allocate a new one.
+            self._last_result = None
+            for waiter in waiters:
+                if not waiter.done():
+                    waiter.set_exception(exc)
 
     async def _authenticate(self):
         """
@@ -1309,55 +1469,52 @@ class AsyncAuth:
                     error = SaltClientError(
                         "Attempt to authenticate with the salt master failed"
                     )
-                self._authenticate_future.set_exception(error)
+                raise error
+            key = self.__key(self.opts)
+            new_aes, changed_aes, changed_session = False, False, False
+            # ``self._creds is None`` covers the first-authentication case
+            # even when a sibling ``AsyncAuth`` for the same key raced us
+            # into ``creds_map``. See issue #67947.
+            if key not in AsyncAuth.creds_map or self._creds is None:
+                new_aes = True
+                log.debug("%s Got new master aes key.", self)
             else:
-                key = self.__key(self.opts)
-                new_aes, changed_aes, changed_session = False, False, False
-                # ``self._creds is None`` covers the first-authentication case
-                # even when a sibling ``AsyncAuth`` for the same key raced us
-                # into ``creds_map``. See issue #67947.
-                if key not in AsyncAuth.creds_map or self._creds is None:
-                    new_aes = True
-                    log.debug("%s Got new master aes key.", self)
-                else:
-                    if self._creds["aes"] != creds["aes"]:
-                        changed_aes = True
-                        log.debug("%s The master's aes key has changed.", self)
-                    if self._creds["session"] != creds["session"]:
-                        changed_session = True
-                        log.debug("%s The master's session key has changed.", self)
-                if new_aes or changed_aes or changed_session:
-                    AsyncAuth.creds_map[key] = creds
-                    self._creds = creds
-                    self._crypticle = Crypticle(self.opts, creds["aes"])
-                    self._session_crypticle = Crypticle(self.opts, creds["session"])
+                if self._creds["aes"] != creds["aes"]:
+                    changed_aes = True
+                    log.debug("%s The master's aes key has changed.", self)
+                if self._creds["session"] != creds["session"]:
+                    changed_session = True
+                    log.debug("%s The master's session key has changed.", self)
+            if new_aes or changed_aes or changed_session:
+                AsyncAuth.creds_map[key] = creds
+                self._creds = creds
+                self._crypticle = Crypticle(self.opts, creds["aes"])
+                self._session_crypticle = Crypticle(self.opts, creds["session"])
 
-                self._authenticate_future.set_result(
-                    True
-                )  # mark the sign-in as complete
-                # Notify the bus about creds change.
-                # Fire synchronously on the role's event bus (no io_loop) so the
-                # IPC publish completes before the `with` block tears the event
-                # session down. When fired via fire_event_async with io_loop set,
-                # the publish runs on the *calling* (sub)process io_loop and the
-                # parent minion's handle_event consumer can miss the
-                # salt/auth/creds update before the next master publish arrives,
-                # which gets silently dropped at AES decrypt because creds_map
-                # still holds the previous key (observed on macOS integration
-                # zeromq tests during state.apply-driven re-auth).
-                if self.opts.get("auth_events") is True:
-                    with salt.utils.event.get_event(
-                        self.opts.get("__role"),
-                        opts=self.opts,
-                        listen=False,
-                    ) as event:
-                        try:
-                            event.fire_event(
-                                {"key": key, "creds": creds},
-                                salt.utils.event.tagify(prefix="auth", suffix="creds"),
-                            )
-                        except Exception as exc:  # pylint: disable=broad-except
-                            log.error("Error firing auth creds event: %s", exc)
+            # Notify the bus about creds change.
+            # Fire synchronously on the role's event bus (no io_loop) so the
+            # IPC publish completes before the `with` block tears the event
+            # session down. When fired via fire_event_async with io_loop set,
+            # the publish runs on the *calling* (sub)process io_loop and the
+            # parent minion's handle_event consumer can miss the
+            # salt/auth/creds update before the next master publish arrives,
+            # which gets silently dropped at AES decrypt because creds_map
+            # still holds the previous key (observed on macOS integration
+            # zeromq tests during state.apply-driven re-auth).
+            if self.opts.get("auth_events") is True:
+                with salt.utils.event.get_event(
+                    self.opts.get("__role"),
+                    opts=self.opts,
+                    listen=False,
+                ) as event:
+                    try:
+                        event.fire_event(
+                            {"key": key, "creds": creds},
+                            salt.utils.event.tagify(prefix="auth", suffix="creds"),
+                        )
+                    except Exception as exc:  # pylint: disable=broad-except
+                        log.error("Error firing auth creds event: %s", exc)
+            return True
 
     async def sign_in(self, timeout=60, safe=True, tries=1, channel=None):
         """
