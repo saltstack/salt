@@ -2,6 +2,7 @@
 # pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
+import gzip
 from hashlib import md5
 
 from salt.ext.tornado.escape import utf8
@@ -175,3 +176,64 @@ class CurlHTTPClientReuseProxyAuthTestCase(AsyncHTTPTestCase):
             proxy_port=self.get_http_port(),
         )
         self.assertEqual(response.body, b"no proxy auth")
+
+
+class BombHandler(RequestHandler):
+    def get(self):
+        # A "decompression bomb": a small response that expands to far more
+        # than max_body_size once libcurl has decompressed it.
+        self.set_header("Content-Encoding", "gzip")
+        self.write(gzip.compress(b"\0" * (4 * 1024 * 1024)))
+
+
+class SizeHandler(RequestHandler):
+    def get(self):
+        size = int(self.get_argument("size"))
+        self.set_header("Content-Encoding", "gzip")
+        self.write(gzip.compress(b"a" * size))
+
+
+@unittest.skipIf(pycurl is None, "pycurl module not present")
+class CurlMaxBodySizeTest(AsyncHTTPTestCase):
+    """``max_body_size`` is measured against the decompressed size, and
+    applies to responses with and without a ``streaming_callback``.
+    """
+
+    def get_app(self):
+        return Application([("/bomb", BombHandler), ("/size", SizeHandler)])
+
+    def get_http_client(self):
+        # max_clients=1 forces handle reuse between the tests.
+        return CurlAsyncHTTPClient(
+            self.io_loop, force_instance=True,
+            defaults=dict(allow_ipv6=False, decompress_response=True),
+            max_clients=1, max_body_size=1024 * 1024)
+
+    def test_bomb_is_refused(self):
+        response = self.fetch("/bomb")
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+
+    def test_bomb_is_refused_when_streaming(self):
+        chunks = []
+        response = self.fetch("/bomb", streaming_callback=chunks.append)
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+        self.assertLessEqual(sum(len(c) for c in chunks), 1024 * 1024)
+
+    def test_exactly_max_body_size_is_accepted(self):
+        response = self.fetch("/size?size=%d" % (1024 * 1024))
+        response.rethrow()
+        self.assertEqual(len(response.body), 1024 * 1024)
+
+    def test_one_byte_over_max_body_size_is_refused(self):
+        response = self.fetch("/size?size=%d" % (1024 * 1024 + 1))
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+
+    def test_streaming_delivers_everything_before_response(self):
+        chunks = []
+        response = self.fetch("/size?size=%d" % (512 * 1024),
+                              streaming_callback=chunks.append)
+        response.rethrow()
+        self.assertEqual(sum(len(c) for c in chunks), 512 * 1024)
