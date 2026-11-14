@@ -3093,6 +3093,9 @@ class DecoratorTest(WebTestCase):
 
         return [("/removeslash/", RemoveSlashHandler),
                 ("/addslash", AddSlashHandler),
+                # Catch-all routes can see paths that start with two slashes.
+                (r"/+rem.*", RemoveSlashHandler),
+                (r"/+add.*", AddSlashHandler),
                 ]
 
     def test_removeslash(self):
@@ -3112,6 +3115,19 @@ class DecoratorTest(WebTestCase):
         response = self.fetch("/addslash?foo=bar", follow_redirects=False)
         self.assertEqual(response.code, 301)
         self.assertEqual(response.headers['Location'], "/addslash/?foo=bar")
+
+    def test_no_protocol_relative_redirect(self):
+        # Redirecting to //example.com would be an open redirect.
+        for path in [
+            "//add.example.com",
+            "///add.example.com",
+            "//rem.example.com/",
+            "//rem.example.com//",
+            "///rem.example.com/x/",
+        ]:
+            with ExpectLog(gen_log, ".*cannot redirect path"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 403, path)
 
 
 @wsgi_safe
@@ -3244,7 +3260,11 @@ class RedirectHandlerTest(WebTestCase):
     def get_handlers(self):
         return [
             ('/src', WebRedirectHandler, {'url': '/dst'}),
-            (r'/(.*?)/(.*?)/(.*)', WebRedirectHandler, {'url': '/{1}/{0}/{2}'})]
+            (r'/(.*)/target', WebRedirectHandler, {'url': '/{0}/destination'}),
+            (r'/(.*?)/(.*?)/(.*)', WebRedirectHandler, {'url': '/{1}/{0}/{2}'}),
+            (r'/hostless/(.*)', WebRedirectHandler, {'url': 'https://{0}'}),
+            (r'/schemeonly/(.*)', WebRedirectHandler, {'url': 'https:{0}'}),
+            (r'/any/(.*)', WebRedirectHandler, {'url': '/{0}'})]
 
     def test_basic_redirect(self):
         response = self.fetch('/src', follow_redirects=False)
@@ -3255,3 +3275,62 @@ class RedirectHandlerTest(WebTestCase):
         response = self.fetch('/a/b/c', follow_redirects=False)
         self.assertEqual(response.code, 301)
         self.assertEqual(response.headers['Location'], '/b/a/c')
+
+    def test_substitution_cannot_change_netloc(self):
+        # With a url of "/{1}/{0}/{2}" a request for "/a//c" would redirect to
+        # "//a/c", which a browser treats as a protocol-relative URL naming
+        # the host "a".
+        for path in [
+            "/a/%5Cexample.com/b",
+            "/a/%09/example.com/b",
+            "/a///example.com/b",
+            "/a////example.com/b",
+            "/a/%2F%2F%5Cexample.com/b",
+            "/a//b",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_substitution_after_first_slash(self):
+        # The substitution comes right after the first slash, so it can add a
+        # second slash (or more) but that must not reject ordinary values.
+        for path, location in [
+            ("/ok/target", "/ok/destination"),
+            ("/a/b/target", "/a/b/destination"),
+        ]:
+            response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 301, path)
+            self.assertEqual(response.headers["Location"], location)
+        for path in [
+            "/%2Fevil.com/target",
+            "/%2F%2Fevil.com/target",
+            "/%5C%5Cevil.com/target",
+            "/%09//evil.com/target",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_invalid_characters(self):
+        # These would otherwise be a 500 error from set_header.
+        for path in ["/any/%0Afoo", "/any/a%00b"]:
+            with ExpectLog(gen_log, ".*Redirect URL (contains invalid|cannot)"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_substitution_in_host(self):
+        # Substitutions cannot supply the host, even with extra slashes
+        # (which urlsplit and browsers disagree about).
+        for path in [
+            "/hostless/evil.com",
+            "/hostless//evil.com",
+            "/schemeonly/evil.com",
+            "/schemeonly////evil.com",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
