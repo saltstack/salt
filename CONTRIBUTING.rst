@@ -61,9 +61,12 @@ dropped asyncio tasks, pylint error checks, and unused local variables outside
 of bug patterns that do not occur in the code base today, such as ``return``
 in ``finally``, exceptions that are created but not raised, ``lru_cache`` on
 methods, and comparisons of ``sys.version`` with strings. The full list is in
-``pyproject.toml``. Star imports are not checked. Names Salt injects into modules, such as
-``__salt__`` and ``__opts__``, are not reported as undefined. The list is in
-``pyproject.toml`` and must match ``additional-builtins`` in ``.pylintrc``.
+``pyproject.toml``. A further group covers patterns that still occur in a few
+places, such as ``logger.warn()``, ``datetime.utcnow()``, and
+``logger.exception()`` outside an ``except`` block. Star imports are not
+checked. Names Salt injects into modules, such as ``__salt__`` and
+``__opts__``, are not reported as undefined. The list is in ``pyproject.toml``
+and must match ``additional-builtins`` in ``.pylintrc``.
 This check does not enforce style or type annotations, and does not replace
 mypy.
 
