@@ -2375,17 +2375,41 @@ class StaticFileHandler(RequestHandler):
     `get_content_size`, `get_modified_time`, `get_absolute_path`, and
     `validate_absolute_path`.
 
+    Symlinks are not followed out of the directory being served: if a path
+    resolves to a location outside it, the request is rejected with a 403
+    error. Deployments that deliberately serve content through symlinks
+    pointing elsewhere can set the ``allowed_symlink_directory`` initializer
+    argument to a directory (or a list of directories) containing all of the
+    intended targets. It defaults to the ``path`` argument.
+
     .. versionchanged:: 3.1
        Many of the methods for subclasses were added in Tornado 3.1.
+
+    .. versionchanged:: 6.5.9
+       Symlinks pointing outside the served directory are no longer
+       followed, and the ``allowed_symlink_directory`` argument was added
+       to configure this.
+
+    .. versionchanged:: 6.5.10
+       ``allowed_symlink_directory`` may now be a list of directories.
     """
     CACHE_MAX_AGE = 86400 * 365 * 10  # 10 years
 
     _static_hashes = {}  # type: typing.Dict
     _lock = threading.Lock()  # protects _static_hashes
 
-    def initialize(self, path, default_filename=None):
+    # A single directory or a list of them. None means "not set", in which
+    # case the symlink check falls back to the directory being served. The
+    # default lives on the class, not in initialize(), because this attribute
+    # was introduced in a security patch and some projects subclass
+    # StaticFileHandler with their own initialize() that does not call ours.
+    allowed_symlink_directory = None
+
+    def initialize(self, path, default_filename=None,
+                   allowed_symlink_directory=None):
         self.root = path
         self.default_filename = default_filename
+        self.allowed_symlink_directory = allowed_symlink_directory
 
     @classmethod
     def reset(cls):
@@ -2583,6 +2607,22 @@ class StaticFileHandler(RequestHandler):
         if not (absolute_path + os.path.sep).startswith(root):
             raise HTTPError(403, "%s is not in root static directory",
                             self.path)
+        # Symlinks may point anywhere inside allowed_symlink_directory, which
+        # defaults to the directory being served. Normalize it to a list so
+        # that _resolve_symlink_target has only one shape to deal with.
+        allowed_symlink_directories = self.allowed_symlink_directory or root
+        if isinstance(allowed_symlink_directories, str):
+            allowed_symlink_directories = [allowed_symlink_directories]
+        # The check above is on the path as written, which is cheap and
+        # rejects traversal without touching the filesystem. Resolve
+        # symlinks only once it has passed, so that the remaining checks -
+        # and the path this method returns - refer to the file that will
+        # actually be opened rather than to the link. The two checks cannot
+        # be merged: the one above must stay on the unresolved path, because
+        # allowed_symlink_directory may be wider than the root and would
+        # then let a ../ traversal through.
+        absolute_path = self._resolve_symlink_target(
+            absolute_path, allowed_symlink_directories, self.path)
         if (os.path.isdir(absolute_path) and
                 self.default_filename is not None):
             # need to look at the request.path here for when path is empty
@@ -2601,11 +2641,65 @@ class StaticFileHandler(RequestHandler):
                 self.redirect(self.request.path + "/", permanent=True)
                 return
             absolute_path = os.path.join(absolute_path, self.default_filename)
+            # The default filename may be a symlink even when the directory
+            # containing it is not. Resolving here rather than deferring a
+            # single resolution until after this block is deliberate: the
+            # isdir() above, and the redirect it can trigger, must not run
+            # on a path that has already escaped, or the difference between
+            # a redirect and a 403 would reveal whether an out-of-bounds
+            # directory exists.
+            absolute_path = self._resolve_symlink_target(
+                absolute_path, allowed_symlink_directories, self.path)
         if not os.path.exists(absolute_path):
             raise HTTPError(404)
         if not os.path.isfile(absolute_path):
             raise HTTPError(403, "%s is not a file", self.path)
         return absolute_path
+
+    @staticmethod
+    def _resolve_symlink_target(absolute_path, allowed_symlink_directories,
+                                path_message):
+        """Resolves symlinks in ``absolute_path`` and validates the result.
+
+        The path checks in `validate_absolute_path` operate on the path as
+        written, which says nothing about where a symlink points: a symlink
+        inside the static directory can name any file on the system. The
+        resolved path must therefore stay inside one of
+        ``allowed_symlink_directories`` (always a list). ``path_message`` is
+        used only to build the error message.
+
+        Raises `HTTPError` (403) if the resolved path escapes all of those
+        directories.
+
+        Note that this is a check against the state of the filesystem at
+        one moment: a path that is replaced by a symlink after this returns
+        but before the file is opened would not be caught. This check is not
+        a substitute for filesystem permissions on a directory that
+        untrusted users can write to.
+        """
+        # A path that does not exist resolves to itself, which the caller
+        # then reports as a 404.
+        resolved_path = os.path.realpath(absolute_path)
+        for allowed_symlink_directory in allowed_symlink_directories:
+            # realpath() is applied to the allowed directory as well, because
+            # it may itself be reached through a symlink (a static directory
+            # of /var/www that links to /srv/www, say). Comparing a resolved
+            # path against an unresolved directory would reject every request.
+            allowed_directory = os.path.realpath(allowed_symlink_directory)
+            if not allowed_directory.endswith(os.path.sep):
+                # The separator must not be doubled when the directory is
+                # the filesystem root.
+                allowed_directory += os.path.sep
+            # The trailing separator lets the allowed directory itself match,
+            # as well as anything beneath it. This is reachable because the
+            # path may still be a directory at this point (when
+            # default_filename is set).
+            if (resolved_path + os.path.sep).startswith(allowed_directory):
+                return resolved_path
+        # Deliberately the same error as the check on the path as written,
+        # so that a caller cannot tell which way a path left the served
+        # directory.
+        raise HTTPError(403, "%s is not in root static directory", path_message)
 
     @classmethod
     def get_content(cls, abspath, start=None, end=None):
