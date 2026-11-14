@@ -4,6 +4,11 @@ x-master-common: &master-common
     dockerfile: tests/monitoring/cluster-5node/Dockerfile.salt
   image: cluster-5node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
   volumes:
     - ${SALT_SRC:-../../..}/salt:/app/salt
     - ./srv/salt:/srv/salt
@@ -13,6 +18,11 @@ x-master-common: &master-common
 x-minion-common: &minion-common
   image: cluster-5node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  cap_add:
+    - NET_ADMIN
+    - SYS_TIME
+    - SYS_RESOURCE
+    - SYS_NICE
   volumes:
     - ${SALT_SRC:-../../..}/salt:/app/salt
     - ./minion.conf:/etc/salt/minion
