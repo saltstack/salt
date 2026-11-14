@@ -283,29 +283,31 @@ Foo
 
 
 class HTTPHeadersTest(unittest.TestCase):
-    def test_multi_line(self):
-        # Lines beginning with whitespace are appended to the previous line
-        # with any leading whitespace replaced by a single space.
-        # Note that while multi-line headers are a part of the HTTP spec,
-        # their use is strongly discouraged.
-        data = """\
-Foo: bar
- baz
-Asdf: qwer
-\tzxcv
-Foo: even
-     more
-     lines
-""".replace("\n", "\r\n")
-        headers = HTTPHeaders.parse(data)
-        self.assertEqual(headers["asdf"], "qwer zxcv")
-        self.assertEqual(headers.get_list("asdf"), ["qwer zxcv"])
-        self.assertEqual(headers["Foo"], "bar baz,even more lines")
-        self.assertEqual(headers.get_list("foo"), ["bar baz", "even more lines"])
-        self.assertEqual(sorted(list(headers.get_all())),
-                         [("Asdf", "qwer zxcv"),
-                          ("Foo", "bar baz"),
-                          ("Foo", "even more lines")])
+    def test_folding_rejected(self):
+        # Folded continuation lines are not supported.
+        data = "Foo: bar\r\n\tasdf"
+        with self.assertRaises(HTTPInputError):
+            HTTPHeaders.parse(data)
+        # A first line that starts with whitespace is a continuation with
+        # nothing to continue.
+        data = " Foo: bar"
+        with self.assertRaises(HTTPInputError):
+            HTTPHeaders.parse(data)
+
+    def test_parse_line_raw_lines(self):
+        # Header callbacks (for example the one salt.fileclient passes to the
+        # http client) hand raw lines to parse_line, including the line
+        # ending and the empty line that ends the header block.
+        h = HTTPHeaders()
+        h.parse_line("Content-Type: text/html\r\n")
+        h.parse_line("X-Test: a\n")
+        h.parse_line("\r\n")
+        h.parse_line("\n")
+        h.parse_line("")
+        self.assertEqual(sorted(h.items()), [("Content-Type", "text/html"), ("X-Test", "a")])
+        # A folded continuation line is still rejected.
+        with self.assertRaises(HTTPInputError):
+            h.parse_line("\tmore\r\n")
 
     def test_unicode_newlines(self):
         # Ensure that only \r\n is recognized as a header separator, and not

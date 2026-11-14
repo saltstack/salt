@@ -274,6 +274,11 @@ class HTTP1Connection(httputil.HTTPConnection):
         except httputil.HTTPInputError as e:
             gen_log.info("Malformed HTTP message from %s: %s",
                          self.context, e)
+            if self.is_client and not need_delegate_close:
+                # The error came before headers_received, so the delegate
+                # doesn't know about this message yet. Tell it the
+                # connection is closed so a client request doesn't hang.
+                need_delegate_close = True
             self.close()
             raise gen.Return(False)
         finally:
