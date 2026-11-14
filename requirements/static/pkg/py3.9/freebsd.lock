@@ -376,7 +376,7 @@ setuptools==82.0.1 ; python_full_version < '3.10'
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile
-setuptools==84.0.0 ; python_full_version >= '3.10'
+setuptools==84.2.1 ; python_full_version >= '3.10'
     # via
     #   -c requirements/constraints.txt
     #   zc-lockfile

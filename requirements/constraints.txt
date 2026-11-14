@@ -8,7 +8,9 @@ wheel >= 0.48.0
 # earlier yarl / PEP 517 build-env conflict is no longer reproducible with
 # our current pip and yarl versions -- 3007.x's lock resolves cleanly to
 # setuptools 84.x with the same >=78.1.1 floor.
-setuptools >= 82.0.1
+# 84.1.0 fixes GHSA-xmj3-9gf7-h52w but drops Python 3.9, which stays on 82.x.
+setuptools >= 82.0.1 ; python_version < "3.10"
+setuptools >= 84.1.0 ; python_version >= "3.10"
 # Cap setuptools-scm < 11 in PEP 517 build envs. 10.1.1 (2026-06-22) split
 # version inference out into the ``vcs-versioning`` package; that path raises
 # ``LookupError: setuptools-scm was unable to detect version`` for source
