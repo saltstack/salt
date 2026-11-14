@@ -69,7 +69,14 @@ PACING_ROLLING_SEC = _env_int("PACING_ROLLING_SEC", 60)
 
 
 # Leak thresholds (shared with the bash suite's lib/common.sh).
+#
+# The leak-fail rule is "fd_delta > 0 OR rss_delta_kb > LEAK_BULK_RSS_KB"
+# AND "rss_per_min > RSS_LEAK_KB_PER_MIN".  fd accumulation is the
+# primary leak signature; the bulk-RSS guard catches ``fd_delta == 0``
+# cases where ~10 MB+ is retained in a single phase (typical of
+# auth-state or event-cache growth after a long-outage marathon).
 RSS_LEAK_KB_PER_MIN = _env_int("RSS_LEAK_KB_PER_MIN", 200)
+LEAK_BULK_RSS_KB = _env_int("LEAK_BULK_RSS_KB", 5000)
 MASTER_FD_LEAK_PER_MIN = _env_int("MASTER_FD_LEAK_PER_MIN", 30)
 # Bytes/sec threshold used by the prometheus master-RSS slope check.
 MASTER_RSS_LEAK_BYTES_PER_SEC = _env_int("MASTER_RSS_LEAK_BYTES_PER_SEC", 10240)

@@ -33,6 +33,7 @@ from pathlib import Path
 import pytest
 
 from tests.resiliency.durations import (
+    LEAK_BULK_RSS_KB,
     PING_TIMEOUT_SEC,
     RECOVER_STANDARD_SEC,
     RSS_LEAK_KB_PER_MIN,
@@ -793,20 +794,33 @@ class Topology:
                     elapsed = 60
                 rss_per_min = rss_delta_kb * 60 // elapsed
 
-                if rss_per_min > RSS_LEAK_KB_PER_MIN:
+                # Leak gate: slope alone is not a leak signature.  A
+                # fault scenario that runs 25 s can legitimately grow
+                # several MB of working set as minions repopulate
+                # caches.  Only fail when there is also a *retention*
+                # signal -- either fd count accumulated (progressive
+                # leak) or absolute growth is large (bulk retention).
+                # Values below those gates record RECOVERED and let
+                # the analyzer flag trends across runs instead.
+                leak_fd = fd_delta > 0
+                leak_bulk = rss_delta_kb > LEAK_BULK_RSS_KB
+                if rss_per_min > RSS_LEAK_KB_PER_MIN and (leak_fd or leak_bulk):
+                    reason = "fd_accumulation" if leak_fd else "bulk_rss_retention"
                     leak_notes = (
                         f"rss_kb_per_min={rss_per_min} "
-                        f"threshold={RSS_LEAK_KB_PER_MIN}"
+                        f"threshold={RSS_LEAK_KB_PER_MIN} "
+                        f"reason={reason}"
                     )
                     full_notes = f"{notes}; {leak_notes}" if notes else leak_notes
                     log.error(
                         "LEAK %r recovered after %ds via %s but RSS grew "
-                        "%d KB/min > %d KB/min",
+                        "%d KB/min > %d KB/min (reason=%s)",
                         scenario,
                         reconnect_s,
                         last_master,
                         rss_per_min,
                         RSS_LEAK_KB_PER_MIN,
+                        reason,
                     )
                     self._stash_result(
                         item,
@@ -824,7 +838,8 @@ class Topology:
                         f"{scenario}: recovered after {reconnect_s}s but "
                         f"RSS slope {rss_per_min} KB/min exceeds "
                         f"threshold {RSS_LEAK_KB_PER_MIN} KB/min "
-                        f"(fd_delta={fd_delta} rss_delta_kb={rss_delta_kb})"
+                        f"(fd_delta={fd_delta} rss_delta_kb={rss_delta_kb} "
+                        f"reason={reason})"
                     )
 
                 log.info(
