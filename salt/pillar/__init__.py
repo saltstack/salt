@@ -1464,6 +1464,10 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
+    async def aclose(self):
+        """Async-aware teardown."""
+        self.destroy()
+
     async def compile_pillar(
         self, ext=True
     ):  # pylint: disable=invalid-overridden-method
