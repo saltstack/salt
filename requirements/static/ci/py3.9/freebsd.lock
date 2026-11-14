@@ -481,7 +481,19 @@ msgpack==1.2.4 ; python_full_version >= '3.10'
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==6.7.1 ; python_full_version < '3.10'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   aiohttp
+    #   yarl
+multidict==7.1.0 ; python_full_version == '3.10.*'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
+    #   aiohttp
+    #   yarl
+multidict==7.2.1 ; python_full_version >= '3.11'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt
