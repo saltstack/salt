@@ -188,7 +188,7 @@ msgpack==1.2.4
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
-multidict==6.7.0
+multidict==7.2.1
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt

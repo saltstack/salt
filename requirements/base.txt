@@ -58,7 +58,9 @@ msgpack>=1.2.3 ; python_version >= '3.10'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
-multidict>=6.6.0
+# multidict 6.8 drops Python 3.9; 6.9.1 fixes PYSEC-2026-4244.
+multidict>=6.6.0 ; python_version < '3.10'
+multidict>=6.9.1 ; python_version >= '3.10'
 # opentelemetry 1.43.0 (and exporter-prometheus 0.64b0) drop Python 3.9; keep
 # the last 3.9-compatible releases there and let py>=3.10 float forward.
 opentelemetry-api>=1.41.1,<1.43.0; python_version < '3.10'

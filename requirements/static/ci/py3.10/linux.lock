@@ -325,7 +325,7 @@ msgpack==1.2.4
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==7.1.0
     # via
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   -r requirements/base.txt
