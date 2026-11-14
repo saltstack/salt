@@ -704,14 +704,11 @@ class ProcessManager:
                 # Check again after sleep - in async mode, exit if no processes
                 if not self._process_map:
                     break
-            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait.
+            # Any OSError ends the loop. This includes EINTR from time.sleep() on
+            # Windows. IOError used to be handled separately to re-raise the other
+            # errors, but IOError is an alias of OSError in Python 3.
             except OSError:
-                break
-            except OSError as exc:  # pylint: disable=duplicate-except
-                # IOError with errno of EINTR (4) may be raised
-                # when using time.sleep() on Windows.
-                if exc.errno != errno.EINTR:
-                    raise
                 break
 
     def check_children(self):
