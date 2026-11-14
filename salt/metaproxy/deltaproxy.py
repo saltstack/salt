@@ -574,8 +574,13 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
     # Create this after modules are synced to ensure
     # any custom modules, eg. custom proxy modules
     # are avaiable.
+    # Proxy modules keep device connections in globals, so they need the
+    # same per-sub-proxy namespace as the execution modules. See #70760.
     _proxy_minion.proxy = salt.loader.proxy(
-        proxyopts, utils=main_utils, context=proxy_context
+        proxyopts,
+        utils=main_utils,
+        context=proxy_context,
+        loaded_base_name=_proxy_minion.loaded_base_name,
     )
 
     _proxy_minion.functions.pack["__proxy__"] = _proxy_minion.proxy
