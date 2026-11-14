@@ -316,6 +316,22 @@ class SMaster:
                 )
             )
 
+        # Invalidate every pending replication queue: queued events are
+        # pre-encrypted with the previous ``cluster_aes`` and will fail
+        # to decrypt on every peer after the rotation.  Forwarding them
+        # would produce ``Failed to decrypt`` spam plus silent-loss on
+        # the receiver side.  See reviewer I-1 in
+        # ``agents/reports/followup-bootstrap-race-reviewer.md``.
+        try:
+            import salt.cache._cluster_replicator as _crep
+
+            _crep.drop_all_pending(reason="cluster_aes rotation")
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "cluster-cache-replication: failed to drop pending queues "
+                "after rotate_cluster_secret"
+            )
+
         if event:
             # When this master owns the rotation, carry the freshly-generated
             # key encrypted per-peer so cluster members running with

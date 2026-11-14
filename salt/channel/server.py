@@ -4475,6 +4475,9 @@ class MasterPubServerChannel:
                             algorithm=self.opts["cluster_encryption_algorithm"],
                         )
                         new_cluster_aes = salted[len(token) :]
+                        prev_cluster_aes = salt.master.SMaster.secrets["cluster_aes"][
+                            "secret"
+                        ].value
                         with salt.master.SMaster.secrets["cluster_aes"][
                             "secret"
                         ].get_lock():
@@ -4492,6 +4495,28 @@ class MasterPubServerChannel:
                             "Installed cluster_aes from join-reply (%d bytes)",
                             len(new_cluster_aes),
                         )
+                        # A (re)joining master boots with a randomly
+                        # generated local ``cluster_aes`` (own ``.aes``
+                        # file).  Any writes fired between startup and
+                        # this install were queued pre-encrypted with
+                        # that fresh key; peers only know the cluster's
+                        # actual ``cluster_aes`` and cannot decrypt
+                        # those bytes.  Drop the pending queues on every
+                        # key *change* so no replay silently loses on
+                        # the receiver side.  See reviewer I-1 in
+                        # ``followup-bootstrap-race-reviewer.md``.
+                        if prev_cluster_aes != new_cluster_aes:
+                            try:
+                                import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+                                _crep.drop_all_pending(
+                                    reason="cluster_aes install from join-reply"
+                                )
+                            except Exception:  # pylint: disable=broad-except
+                                log.exception(
+                                    "cluster-cache-replication: failed to drop "
+                                    "pending queues after join-reply install"
+                                )
                     except Exception:  # pylint: disable=broad-except
                         log.exception("Failed to install cluster_aes from join-reply")
                 # Install the cluster RSA key pair (private + public) from

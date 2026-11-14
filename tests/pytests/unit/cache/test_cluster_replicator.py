@@ -689,3 +689,221 @@ def test_double_flush_is_idempotent(opts):
     assert first == 1
     assert second == 0
     assert target.published == [b"once"]
+
+
+# ---------------------------------------------------------------------------
+# drop_all_pending -- cluster_aes change invalidates every queued event
+# ---------------------------------------------------------------------------
+#
+# Two call sites install a new ``cluster_aes`` locally:
+#
+# 1. :meth:`SMaster.rotate_cluster_secret` -- operator-triggered or
+#    scheduled rotation.
+# 2. The ``cluster/peer/join-reply`` handler in
+#    :mod:`salt.channel.server` -- a (re)joining master learns the
+#    cluster's existing key for the first time, replacing the fresh
+#    random key the master generated at boot.
+#
+# In both cases every pre-encrypted entry in the per-peer pending
+# queues is stale: it was packed with the *previous* ``cluster_aes``
+# value and will fail to decrypt on the receiver side.  Forwarding
+# would produce ``Failed to decrypt`` noise + silent-loss on peers;
+# the only correctness-preserving option is to drop the queues.
+# ``drop_all_pending()`` is the public API that performs the drop,
+# emits a single WARN, and returns the aggregate count dropped so
+# the caller (or a test) can assert the side effect.
+
+
+def test_drop_all_pending_clears_every_peer_queue(opts, caplog):
+    """
+    ``drop_all_pending`` removes every pending entry across every peer
+    queue, returns the aggregate count, and emits a WARN naming the
+    reason.
+    """
+    _crep.enqueue_pending("peer-a", _make_event(event=b"a1"), opts=opts)
+    _crep.enqueue_pending("peer-a", _make_event(event=b"a2"), opts=opts)
+    _crep.enqueue_pending("peer-b", _make_event(event=b"b1"), opts=opts)
+    assert _crep.pending_queue_depth() == 3
+
+    with caplog.at_level(logging.WARNING, logger="salt.cache._cluster_replicator"):
+        dropped = _crep.drop_all_pending(reason="cluster_aes rotation")
+
+    assert dropped == 3
+    assert _crep.pending_queue_depth() == 0
+    assert _crep.pending_queue_depth("peer-a") == 0
+    assert _crep.pending_queue_depth("peer-b") == 0
+    # One WARN with the reason + aggregate count.
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert "dropped 3 pending event(s)" in msg
+    assert "cluster_aes rotation" in msg
+    assert "2 peer queue(s)" in msg
+
+
+def test_drop_all_pending_empty_is_silent_noop():
+    """Empty-state drop returns 0 and does not WARN."""
+    import logging as _logging
+
+    _crep._reset_pending_state()
+    # Use a fresh caplog-like capture — can't use the fixture here because
+    # the WARN is only emitted if `total > 0`.
+    handler = _logging.getLogger("salt.cache._cluster_replicator")
+    records = []
+
+    class _Capture(_logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    cap = _Capture()
+    handler.addHandler(cap)
+    try:
+        dropped = _crep.drop_all_pending(reason="noop")
+    finally:
+        handler.removeHandler(cap)
+    assert dropped == 0
+    warn_records = [r for r in records if r.levelno >= _logging.WARNING]
+    assert warn_records == []
+
+
+def test_drop_all_pending_simulates_rotation_mid_flight(opts):
+    """
+    Reviewer I-1 scenario: write W1 is enqueued while peer P is
+    un-joined (encrypted with cluster_aes_v1).  Operator rotates
+    cluster_aes before P joins.  ``drop_all_pending()`` fires from
+    ``rotate_cluster_secret`` and the stale pre-encrypted event
+    never ships to P.
+    """
+    # t=0: enqueue W1 (peer P not yet joined).
+    _crep.enqueue_pending(
+        "peer-P",
+        _make_event(event=b"w1-encrypted-with-aes-v1"),
+        opts=opts,
+    )
+    assert _crep.pending_queue_depth("peer-P") == 1
+
+    # t=5s: operator rotates cluster_aes; drop_all_pending fires.
+    dropped = _crep.drop_all_pending(reason="cluster_aes rotation")
+    assert dropped == 1
+    assert _crep.pending_queue_depth("peer-P") == 0
+
+    # t=10s: P joins, flush is scheduled.  The queue is empty so
+    # nothing stale is replayed.
+    target = _FakeAsyncPusher("peer-P")
+
+    async def _run():
+        return await _crep.flush_pending_for_peer("peer-P", [target], opts=opts)
+
+    flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 0
+    assert target.published == []
+
+
+def test_drop_all_pending_simulates_join_reply_initial_install(opts):
+    """
+    A (re)joining master boots, fires a few writes while its local
+    ``cluster_aes`` is still the freshly generated one, then the
+    ``join-reply`` handler installs the cluster's real key and fires
+    ``drop_all_pending``.  All enqueued entries disappear.
+    """
+    # Master boots -> writes W1..W3 before its cluster_aes gets
+    # replaced via join-reply.  Each write is encrypted with the
+    # master's fresh random key (modeled by opaque bytes here).
+    for i in range(3):
+        _crep.enqueue_pending(
+            "peer-X",
+            _make_event(event=f"stale-{i}".encode()),
+            opts=opts,
+        )
+        _crep.enqueue_pending(
+            "peer-Y",
+            _make_event(event=f"stale-{i}".encode()),
+            opts=opts,
+        )
+    assert _crep.pending_queue_depth() == 6
+
+    dropped = _crep.drop_all_pending(reason="cluster_aes install from join-reply")
+    assert dropped == 6
+    assert _crep.pending_queue_depth() == 0
+
+
+def test_drop_all_pending_concurrent_with_enqueue(opts):
+    """
+    Enqueue + drop running from different threads must not leave a
+    partial-queue state.  The queue end-state is deterministic: the
+    drop either sees the queue before or after each enqueue, never
+    midway through a single operation.
+
+    ``enqueue_pending`` holds ``_PENDING_LOCK`` for the entire
+    insertion + cap/TTL eviction sequence; ``drop_all_pending`` holds
+    the same lock for the clear.  Both operations are atomic with
+    respect to each other.
+    """
+    import threading
+
+    stop = threading.Event()
+    enqueue_errors = []
+    drop_errors = []
+
+    def _enqueue_loop():
+        try:
+            n = 0
+            while not stop.is_set():
+                _crep.enqueue_pending(
+                    "peer-concurrent",
+                    _make_event(event=f"evt-{n}".encode()),
+                    opts=opts,
+                )
+                n += 1
+        except Exception as exc:  # pylint: disable=broad-except
+            enqueue_errors.append(exc)
+
+    def _drop_loop():
+        try:
+            while not stop.is_set():
+                _crep.drop_all_pending(reason="concurrent test")
+        except Exception as exc:  # pylint: disable=broad-except
+            drop_errors.append(exc)
+
+    enq_thread = threading.Thread(target=_enqueue_loop)
+    drop_thread = threading.Thread(target=_drop_loop)
+    enq_thread.start()
+    drop_thread.start()
+    # Run both loops for a short window.
+    time.sleep(0.2)
+    stop.set()
+    enq_thread.join(timeout=5)
+    drop_thread.join(timeout=5)
+
+    assert enqueue_errors == []
+    assert drop_errors == []
+    # Final drop sweeps anything the enqueue loop managed to append
+    # after the last drop.
+    final = _crep.drop_all_pending(reason="final sweep")
+    assert final >= 0
+    assert _crep.pending_queue_depth() == 0
+
+
+def test_drop_all_pending_resets_log_coalesce_state(opts, caplog):
+    """
+    The per-peer log-coalesce timers in ``_PENDING_LOG_LAST`` are
+    cleared along with the queues.  Post-drop, the next legitimate
+    overflow logs immediately instead of being suppressed by a
+    pre-drop coalesce window.
+    """
+    # Trigger a cap-overflow WARN so ``_PENDING_LOG_LAST`` has an
+    # entry for peer-C.
+    tight_opts = {**opts, "cluster_cache_replicate_pending_max_events": 1}
+    _crep.enqueue_pending("peer-C", _make_event(event=b"first"), opts=tight_opts)
+    _crep.enqueue_pending("peer-C", _make_event(event=b"evict-first"), opts=tight_opts)
+    assert _crep._PENDING_LOG_LAST.get("peer-C") is not None
+
+    _crep.drop_all_pending(reason="reset check")
+    # Timer is cleared after a drop.
+    assert "peer-C" not in _crep._PENDING_LOG_LAST
+
+    # A fresh overflow now logs immediately.
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="salt.cache._cluster_replicator"):
+        _crep.enqueue_pending("peer-C", _make_event(event=b"a"), opts=tight_opts)
+        _crep.enqueue_pending("peer-C", _make_event(event=b"b"), opts=tight_opts)
+    # The second enqueue evicts the first; a WARN should appear.
+    assert any("queue cap exceeded" in r.getMessage() for r in caplog.records)

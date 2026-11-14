@@ -411,6 +411,54 @@ def drop_pending_for_peer(peer_host):
     return len(queue)
 
 
+def drop_all_pending(reason="cluster_aes changed"):
+    """
+    Discard every pending entry across every peer and return the total
+    number of entries dropped.
+
+    Called whenever the local ``cluster_aes`` is replaced: either on
+    operator-triggered rotation (:meth:`SMaster.rotate_cluster_secret`)
+    or on the initial install reached via ``cluster/peer/join-reply``
+    when a (re)joining master learns the cluster's existing key.  In
+    both cases every queued pre-encrypted event in ``_PENDING_QUEUES``
+    was packed with the *previous* ``cluster_aes`` value and will fail
+    to decrypt on any peer -- the receiver logs a loud
+    ``Failed to decrypt`` and the write is silently lost.  Dropping
+    the queue is the only correctness-preserving option: the entries
+    cannot be re-encrypted (the plaintext is not retained) and
+    forwarding them produces log-noise plus silent-loss.
+
+    The caller is expected to log the context (rotation vs. initial
+    sync) at the call site.  This function emits a single WARN that
+    names the ``reason`` and the aggregate drop count so an operator
+    forensics walk-back can confirm the invalidation fired.
+
+    :param reason: Short human string for the audit log; defaults to
+                   a generic ``"cluster_aes changed"``.
+    :returns:      Total count of pending events dropped (sum across
+                   every peer queue).  ``0`` when no queues were
+                   populated.
+    """
+    with _PENDING_LOCK:
+        total = sum(len(q) for q in _PENDING_QUEUES.values())
+        peer_count = len(_PENDING_QUEUES)
+        _PENDING_QUEUES.clear()
+        # Reset per-peer coalesced-log timers so the next legitimate
+        # overflow (post-rotation) logs immediately instead of being
+        # suppressed by a pre-rotation window.
+        _PENDING_LOG_LAST.clear()
+    if total:
+        log.warning(
+            "cluster-cache-replication: dropped %d pending event(s) across "
+            "%d peer queue(s) (%s); entries were encrypted with a stale "
+            "cluster_aes and cannot be replayed",
+            total,
+            peer_count,
+            reason,
+        )
+    return total
+
+
 def pending_queue_depth(peer_host=None):
     """
     Return the depth of the pending queue for ``peer_host`` (or the
