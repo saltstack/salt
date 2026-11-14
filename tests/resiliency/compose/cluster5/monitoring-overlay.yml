@@ -62,8 +62,8 @@ services:
     hostname: prometheus
     restart: unless-stopped
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./prometheus_data:/prometheus
+      - ../../../resiliency/compose/cluster5/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../../resiliency/compose/cluster5/prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
