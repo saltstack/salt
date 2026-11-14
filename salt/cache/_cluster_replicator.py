@@ -50,9 +50,17 @@ log = logging.getLogger(__name__)
 #   * subsequent writes on the originator will see the peer as joined
 #     and fan out normally.
 #
-# So the gate never silently drops data on the floor -- it just defers
-# the write to the peer's catch-up stream, which is the design-intended
-# path for pre-handshake writes.
+# So the gate defers the write to the peer's catch-up stream, which is
+# the design-intended path for pre-handshake writes.  The pending queue
+# is bounded (``cluster_cache_replicate_pending_max_events``, default
+# 10_000 per peer) and TTL-expired
+# (``cluster_cache_replicate_pending_ttl``, default 300s): queued events
+# past the cap evict oldest-first with a coalesced WARN per peer, and
+# TTL-expired events are dropped on next enqueue.  In sustained-burst or
+# long-un-joined conditions that bound can be reached, so this is NOT a
+# zero-loss contract -- it is a short-window catch-up for the common
+# ``peer joining in <few seconds>`` case.  Operators seeing sustained
+# skip-logs should investigate why a peer is not completing handshake.
 #
 # API shape: the publish daemon holds the authoritative ``_discover_replies``
 # + ``peer_keys`` sets; it passes them into :func:`filter_joined_pushers`
