@@ -224,6 +224,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
                         # _process_queue() is called from
                         # _finish_pending_requests the exceptions have
                         # nowhere to go.
+                        curl.reset()
                         self._free_list.append(curl)
                         callback(HTTPResponse(
                             request=request,
@@ -239,7 +240,6 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
         info = curl.info
         curl.info = None
         self._multi.remove_handle(curl)
-        self._free_list.append(curl)
         buffer = info["buffer"]
         if curl_error:
             error = CurlError(curl_error, curl_message)
@@ -272,21 +272,25 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
                 time_info=time_info))
         except Exception:
             self.handle_callback_exception(info["callback"])
+        # Fully reset the curl object so that no options (including client
+        # certificates and proxy credentials) leak into the next request.
+        curl.reset()
+        self._free_list.append(curl)
 
     def handle_callback_exception(self, callback):
         self.io_loop.handle_callback_exception(callback)
 
     def _curl_create(self):
-        curl = pycurl.Curl()
+        return pycurl.Curl()
+
+    def _curl_setup_request(self, curl, request, buffer, headers):
         if curl_log.isEnabledFor(logging.DEBUG):
             curl.setopt(pycurl.VERBOSE, 1)
             curl.setopt(pycurl.DEBUGFUNCTION, self._curl_debug)
         if hasattr(pycurl, 'PROTOCOLS'):  # PROTOCOLS first appeared in pycurl 7.19.5 (2014-07-12)
             curl.setopt(pycurl.PROTOCOLS, pycurl.PROTO_HTTP | pycurl.PROTO_HTTPS)
             curl.setopt(pycurl.REDIR_PROTOCOLS, pycurl.PROTO_HTTP | pycurl.PROTO_HTTPS)
-        return curl
 
-    def _curl_setup_request(self, curl, request, buffer, headers):
         curl.setopt(pycurl.URL, native_str(request.url))
 
         # libcurl's magic "Expect: 100-continue" behavior causes delays
