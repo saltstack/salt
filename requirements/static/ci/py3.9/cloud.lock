@@ -222,6 +222,10 @@ googleapis-common-protos==1.75.0
     #   -c requirements/static/ci/py3.9/linux.lock
     #   -c requirements/static/pkg/py3.9/linux.lock
     #   opentelemetry-exporter-otlp-proto-http
+greenlet==3.2.5
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   sqlalchemy
 hypothesis==6.130.13
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -545,6 +549,14 @@ psutil==5.9.8
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.2.13
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/static/ci/common.txt
+psycopg-binary==3.2.13
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   psycopg
 psycopg2-binary==2.9.12
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -845,6 +857,10 @@ sortedcontainers==2.4.0
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
     #   hypothesis
+sqlalchemy==2.0.57
+    # via
+    #   -c requirements/static/ci/py3.9/linux.lock
+    #   -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.9/linux.lock
@@ -924,10 +940,12 @@ typing-extensions==4.14.1
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   psycopg
     #   pyopenssl
     #   pytest-shell-utilities
     #   pytest-system-statistics
     #   referencing
+    #   sqlalchemy
     #   virtualenv
 urllib3==1.26.20
     # via
