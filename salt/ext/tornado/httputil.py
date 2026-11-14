@@ -141,7 +141,6 @@ class HTTPHeaders(MutableMapping):
     def __init__(self, *args, **kwargs):
         self._dict = {}  # type: typing.Dict[str, str]
         self._as_list = {}  # type: typing.Dict[str, typing.List[str]]
-        self._last_key = None
         if len(args) == 1 and len(kwargs) == 0 and isinstance(args[0], HTTPHeaders):
             # Copy constructor
             for k, v in args[0].get_all():
@@ -156,7 +155,6 @@ class HTTPHeaders(MutableMapping):
         # type: (str, str) -> None
         """Adds a new value for the given key."""
         norm_name = _normalized_headers[name]
-        self._last_key = norm_name
         if norm_name in self:
             self._dict[norm_name] = (
                 native_str(self[norm_name]) + "," + native_str(value)
@@ -190,13 +188,13 @@ class HTTPHeaders(MutableMapping):
         'text/html'
         """
         if line[0].isspace():
-            # continuation of a multi-line header
-            new_part = " " + line.lstrip(HTTP_WHITESPACE)
-            self._as_list[self._last_key][-1] += new_part
-            self._dict[self._last_key] += new_part
-        else:
-            name, value = line.split(":", 1)
-            self.add(name, value.strip(HTTP_WHITESPACE))
+            # Line folding ("obsolete line folding", RFC 9112 section 5.2) is
+            # no longer supported: it adds complexity and a risk of DoS via
+            # quadratic performance on malicious data.
+            raise HTTPInputError(
+                "header line cannot start with whitespace, folding not supported")
+        name, value = line.split(":", 1)
+        self.add(name, value.strip(HTTP_WHITESPACE))
 
     @classmethod
     def parse(cls, headers):
