@@ -4,7 +4,7 @@
 
 
 from __future__ import absolute_import, division, print_function
-from salt.ext.tornado.httputil import url_concat, parse_multipart_form_data, HTTPHeaders, format_timestamp, HTTPServerRequest, parse_request_start_line, parse_cookie
+from salt.ext.tornado.httputil import url_concat, parse_multipart_form_data, HTTPHeaders, format_timestamp, HTTPServerRequest, parse_request_start_line, parse_cookie, parse_body_arguments, HTTPInputError
 from salt.ext.tornado.escape import utf8, native_str
 from salt.ext.tornado.log import gen_log
 from salt.ext.tornado.testing import ExpectLog
@@ -101,6 +101,23 @@ class TestUrlConcat(unittest.TestCase):
             dict(y='y'),
         )
         self.assertEqual(url, "https://localhost/path?y=y")
+
+
+class UrlEncodedDataTest(unittest.TestCase):
+    def test_urlencoded_data(self):
+        data = b"a=1&b=2&a=3"
+        args, files = {}, {}
+        parse_body_arguments("application/x-www-form-urlencoded", data, args, files)
+        self.assertEqual(args["a"], [b"1", b"3"])
+        self.assertEqual(args["b"], [b"2"])
+        self.assertEqual(files, {})
+
+    def test_max_arguments(self):
+        data = b"".join(b"a=1&" for _ in range(1001))
+        args, files = {}, {}
+        with self.assertRaises(HTTPInputError) as cm:
+            parse_body_arguments("application/x-www-form-urlencoded", data, args, files)
+        self.assertIn("Max number of fields exceeded", str(cm.exception))
 
 
 class MultipartFormDataTest(unittest.TestCase):

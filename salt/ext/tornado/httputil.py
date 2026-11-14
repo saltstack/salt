@@ -758,13 +758,47 @@ class ParseMultipartConfig:
         self.max_part_header_size = max_part_header_size
 
 
+class ParseUrlEncodedConfig:
+    """Configures the parsing of ``application/x-www-form-urlencoded`` request
+    bodies.
+
+    Its primary purpose is to place limits on the size and complexity of
+    request messages to avoid potential denial-of-service attacks.
+    """
+
+    def __init__(self, max_arguments=1000):
+        # The maximum number of arguments accepted in a urlencoded request.
+        # Each ``<input>`` element in an HTML form corresponds to at least
+        # one argument. The default is the same as php and node.js.
+        self.max_arguments = max_arguments
+
+
+class ParseBodyConfig:
+    """Configures the parsing of request bodies."""
+
+    def __init__(self, multipart=None, urlencoded=None):
+        self.multipart = multipart or ParseMultipartConfig()
+        self.urlencoded = urlencoded or ParseUrlEncodedConfig()
+
+
 _DEFAULT_MULTIPART_CONFIG = ParseMultipartConfig()
+_DEFAULT_URLENCODED_CONFIG = ParseUrlEncodedConfig()
 
 
 def set_parse_body_config(config):
-    """Sets the global default configuration for parsing request bodies."""
-    global _DEFAULT_MULTIPART_CONFIG
-    _DEFAULT_MULTIPART_CONFIG = config
+    """Sets the global default configuration for parsing request bodies.
+
+    ``config`` may be a `ParseBodyConfig`, or a `ParseMultipartConfig` or
+    `ParseUrlEncodedConfig` to replace only that part of the configuration.
+    """
+    global _DEFAULT_MULTIPART_CONFIG, _DEFAULT_URLENCODED_CONFIG
+    if isinstance(config, ParseBodyConfig):
+        _DEFAULT_MULTIPART_CONFIG = config.multipart
+        _DEFAULT_URLENCODED_CONFIG = config.urlencoded
+    elif isinstance(config, ParseUrlEncodedConfig):
+        _DEFAULT_URLENCODED_CONFIG = config
+    else:
+        _DEFAULT_MULTIPART_CONFIG = config
 
 
 def parse_body_arguments(content_type, body, arguments, files, headers=None):
@@ -781,7 +815,9 @@ def parse_body_arguments(content_type, body, arguments, files, headers=None):
         return
     if content_type.startswith("application/x-www-form-urlencoded"):
         try:
-            uri_arguments = parse_qs_bytes(native_str(body), keep_blank_values=True)
+            uri_arguments = parse_qs_bytes(
+                native_str(body), keep_blank_values=True,
+                max_num_fields=_DEFAULT_URLENCODED_CONFIG.max_arguments)
         except Exception as e:
             raise HTTPInputError("Invalid x-www-form-urlencoded body: %s" % e) from e
         for name, values in uri_arguments.items():

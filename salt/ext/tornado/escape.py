@@ -164,18 +164,23 @@ else:
                        else urllib_parse.unquote)
             return unquote(to_basestring(value), encoding=encoding)
 
-    def parse_qs_bytes(qs, keep_blank_values=False, strict_parsing=False):
+    def parse_qs_bytes(qs, keep_blank_values=False, strict_parsing=False,
+                       max_num_fields=None):
         """Parses a query string like urlparse.parse_qs, but returns the
         values as byte strings.
 
         Keys still become type str (interpreted as latin1 in python3!)
         because it's too painful to keep them as byte strings in
         python3 and in practice they're nearly always ascii anyway.
+
+        ``ValueError`` is raised if ``max_num_fields`` is given and the
+        number of fields exceeds it.
         """
         # This is gross, but python3 doesn't give us another way.
         # Latin1 is the universal donor of character encodings.
         result = _parse_qs(qs, keep_blank_values, strict_parsing,
-                           encoding='latin1', errors='strict')
+                           encoding='latin1', errors='strict',
+                           max_num_fields=max_num_fields)
         encoded = {}
         for k, v in result.items():
             encoded[k] = [i.encode('latin1') for i in v]
