@@ -25,7 +25,6 @@ rows stay compatible with the analyzer):
 Env knobs (defaults preserved from baseline.sh):
 
     BASELINE_IDLE_SHORT_SEC      TIER_DEEPREC_SEC (300)
-    BASELINE_LONG_IDLE           0   (set to 1 to enable the long-idle test)
     BASELINE_IDLE_LONG_SEC       TIER_ACCUM_SEC (1800)
     BASELINE_WORKLOAD_SEC        TIER_BACKOFF_SEC (600)
     BASELINE_BURST_SEC           TIER_STANDARD_SEC (90)
@@ -110,22 +109,15 @@ def test_baseline_idle_short(topology, request):
 
 
 # ---------------------------------------------------------------------------
-# Phase 2: long idle (opt-in)
+# Phase 2: long idle
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.skipif(
-    os.environ.get("BASELINE_LONG_IDLE") != "1",
-    reason="BASELINE_LONG_IDLE=0 (set to 1 to opt in; 30-min runtime)",
-)
 def test_baseline_idle_long(topology, request):
-    """baseline_idle_1800s -- 30 min idle; opt-in via BASELINE_LONG_IDLE=1.
+    """baseline_idle_1800s -- 30 min idle, always runs.
 
-    Skipped by default (conftest's hook maps the pytest skip to
-    results.jsonl outcome="skipped_for_topology" iff the topology
-    marker triggered it; a plain skipif here is treated as
-    scenario-not-invoked, matching the bash behavior of recording a
-    setup_error only when the flag was set and setup failed).
+    Catches the slow-leak floor the 5-min idle can't detect: an
+    fd/RSS trend that only emerges past the 10-min mark.
     """
     label = "baseline_idle_long"
     before = topology.sample_minions()

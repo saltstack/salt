@@ -109,19 +109,14 @@ def test_marathon_outage_60m(topology, workload, request):
 
 
 # ---------------------------------------------------------------------------
-# Phase 3: 2-hour outage (extra env opt-in)
+# Phase 3: 2-hour outage
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.marathon
-@pytest.mark.skipif(
-    os.environ.get("MARATHON_120M") != "1",
-    reason="MARATHON_120M=0 (set to 1 to opt in on top of --marathon)",
-)
 def test_marathon_outage_120m(topology, workload, request):
-    """marathon_outage_120m -- 2-hour outage.  Requires both
-    ``--marathon`` and ``MARATHON_120M=1`` so the default marathon run
-    doesn't cost 3.5 h by itself.
+    """marathon_outage_120m -- 2-hour outage.  Gated by ``--marathon``
+    like its 30m/60m siblings.
     """
     label = "marathon_outage_120m"
     hold = TIER_UPGRADE_SEC
