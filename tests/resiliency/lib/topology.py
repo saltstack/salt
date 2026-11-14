@@ -23,6 +23,10 @@ import json
 import logging
 import subprocess
 import time
+from concurrent.futures import (  # pylint: disable=no-name-in-module
+    ThreadPoolExecutor,
+    as_completed,
+)
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,6 +39,12 @@ from tests.resiliency.durations import (
 )
 
 log = logging.getLogger("resiliency.topology")
+
+# pylint: disable=broad-exception-caught
+# The parallel master-poll in assert_reconnect deliberately absorbs any
+# single-master probe failure so the remaining peers still have a shot
+# at covering the expected set; a precise exception taxonomy would just
+# turn test flakes into harness crashes.
 
 
 # ---------------------------------------------------------------------------
@@ -723,24 +733,52 @@ class Topology:
 
         while time.monotonic() < deadline:
             attempts += 1
-            # Try each master in turn; first one whose output covers
-            # the full expected set wins.
+            # Poll every master concurrently; first one whose output
+            # covers the full expected set wins.  Serial iteration cost
+            # salt --timeout + subprocess-wrap per master, which on
+            # cluster5 (5 masters) blew the budget for tight-window
+            # tests before the first master even answered.
+            #
+            # Tighten the per-call salt timeout to fit the remaining
+            # window so a slow master can't eat the whole budget: use
+            # the smaller of PING_TIMEOUT_SEC and the remaining-window
+            # / 2, floored at 5s so a healthy master still has time to
+            # publish + collect.
+            remaining = max(5.0, deadline - time.monotonic())
+            per_master_timeout = max(5, min(PING_TIMEOUT_SEC, int(remaining // 2)))
             success = False
-            for m in masters:
-                pings = self.salt_ping_all(m)
-                missing_this_master = [
-                    mid for mid in expected if not pings.get(mid, False)
-                ]
-                if not missing_this_master:
-                    missing = []
-                    success = True
-                    last_master = m
-                    break
-                # Track the smallest miss-set we've seen on this
-                # attempt so the final failure record is informative.
-                if len(missing_this_master) < len(missing):
-                    missing = missing_this_master
-                    last_master = m
+            with ThreadPoolExecutor(max_workers=max(1, len(masters))) as pool:
+                futures = {
+                    pool.submit(self.salt_ping_all, m, per_master_timeout): m
+                    for m in masters
+                }
+                for fut in as_completed(futures):
+                    m = futures[fut]
+                    try:
+                        pings = fut.result()
+                    except (
+                        Exception
+                    ):  # pylint: disable=broad-exception-caught  # noqa: BLE001
+                        # A failed probe on one master must not halt
+                        # the sweep -- the remaining peers may cover
+                        # the expected set.
+                        pings = {}
+                    missing_this_master = [
+                        mid for mid in expected if not pings.get(mid, False)
+                    ]
+                    if not missing_this_master:
+                        missing = []
+                        success = True
+                        last_master = m
+                        # Don't cancel outstanding futures: letting
+                        # them finish is cheaper than a poisoned
+                        # subprocess we may not have cleaned up.
+                        break
+                    # Track the smallest miss-set this sweep so the
+                    # failure record is informative.
+                    if len(missing_this_master) < len(missing):
+                        missing = missing_this_master
+                        last_master = m
             if success:
                 reconnect_s = int(time.monotonic() - start)
                 after = self.sample_minions()
