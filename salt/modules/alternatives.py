@@ -62,9 +62,9 @@ def _read_alternative_link_directly(name, path):
         with salt.utils.files.fopen(os.path.join(path, name), "rb") as r_file:
             contents = salt.utils.stringutils.to_unicode(r_file.read())
             return contents.splitlines(True)[1].rstrip("\n")
-    except OSError:
+    except FileNotFoundError:
         log.error("alternatives: %s does not exist", name)
-    except (OSError, IndexError) as exc:  # pylint: disable=duplicate-except
+    except (OSError, IndexError) as exc:
         log.error(
             "alternatives: unable to get master link for %s. Exception: %s",
             name,
