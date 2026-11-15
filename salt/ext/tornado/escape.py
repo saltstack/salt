@@ -23,6 +23,7 @@ have crept in over time.
 
 from __future__ import absolute_import, division, print_function
 
+import binascii
 import json
 import re
 
@@ -164,22 +165,77 @@ else:
                        else urllib_parse.unquote)
             return unquote(to_basestring(value), encoding=encoding)
 
-    def parse_qs_bytes(qs, keep_blank_values=False, strict_parsing=False):
+    # Swaps % and = so that binascii.a2b_qp, which decodes =XX in C, can
+    # decode percent escapes.
+    _PERCENT_EQUALS_SWAP = bytes.maketrans(b"%=", b"=%")
+
+    def _unquote_to_bytes(data):
+        """Equivalent to `urllib.parse.unquote_to_bytes`, but fast.
+
+        The standard library's version creates an object for every ``%`` in
+        its input, which makes large escaped bodies cost many times their
+        size in memory and microseconds per byte. This does the work in a few
+        passes over the data in C.
+        """
+        if b"%" not in data:
+            return data
+        # After the swap, escapes are =XX and literal = signs are %, which
+        # a2b_qp passes through. a2b_qp also passes through = that is not
+        # followed by two hex digits (an invalid escape), and the final swap
+        # turns those back into %.
+        data = data.translate(_PERCENT_EQUALS_SWAP)
+        # Escapes that decode to % or = would be swapped too, so exchange
+        # them first. Each token is three bytes with = only at the start, so
+        # these replacements can't create or break other tokens; =3d is free
+        # to use as a placeholder once it has been normalized away.
+        data = (data.replace(b"=3d", b"=3D")
+                .replace(b"=25", b"=3d")
+                .replace(b"=3D", b"=25")
+                .replace(b"=3d", b"=3D"))
+        # a2b_qp decodes == as =, consuming both. The first = of a pair is
+        # always an invalid escape, so make it explicit. Two passes are
+        # needed because replace() doesn't see the pair formed where two
+        # matches meet.
+        data = data.replace(b"==", b"=3D=").replace(b"==", b"=3D=")
+        # a2b_qp treats = before a line break or at the end as a soft line
+        # break and drops it (after =\r, everything up to the next \n).
+        # Those are invalid escapes too.
+        data = data.replace(b"=\n", b"=3D\n").replace(b"=\r", b"=3D\r")
+        if data.endswith(b"="):
+            data += b"3D"
+        return binascii.a2b_qp(data).translate(_PERCENT_EQUALS_SWAP)
+
+    def parse_qs_bytes(qs, keep_blank_values=False, strict_parsing=False,
+                       max_num_fields=None):
         """Parses a query string like urlparse.parse_qs, but returns the
         values as byte strings.
 
         Keys still become type str (interpreted as latin1 in python3!)
         because it's too painful to keep them as byte strings in
         python3 and in practice they're nearly always ascii anyway.
+
+        ``ValueError`` is raised if ``max_num_fields`` is given and the
+        number of fields exceeds it.
         """
-        # This is gross, but python3 doesn't give us another way.
-        # Latin1 is the universal donor of character encodings.
-        result = _parse_qs(qs, keep_blank_values, strict_parsing,
-                           encoding='latin1', errors='strict')
-        encoded = {}
-        for k, v in result.items():
-            encoded[k] = [i.encode('latin1') for i in v]
-        return encoded
+        # This follows urllib.parse.parse_qsl, with a faster unquote.
+        if isinstance(qs, unicode_type):
+            qs = qs.encode("latin1")
+        result = {}
+        if not qs:
+            return result
+        if max_num_fields is not None and 1 + qs.count(b"&") > max_num_fields:
+            raise ValueError("Max number of fields exceeded")
+        for field in qs.split(b"&"):
+            if not field and not strict_parsing:
+                continue
+            name, has_eq, value = field.partition(b"=")
+            if not has_eq and strict_parsing:
+                raise ValueError("bad query field: %r" % (field,))
+            if value or keep_blank_values:
+                key = _unquote_to_bytes(name.replace(b"+", b" ")).decode("latin1")
+                result.setdefault(key, []).append(
+                    _unquote_to_bytes(value.replace(b"+", b" ")))
+        return result
 
 
 _UTF8_TYPES = (bytes, type(None))

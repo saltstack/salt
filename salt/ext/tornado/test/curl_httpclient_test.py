@@ -2,6 +2,7 @@
 # pylint: skip-file
 from __future__ import absolute_import, division, print_function
 
+import gzip
 from hashlib import md5
 
 from salt.ext.tornado.escape import utf8
@@ -133,3 +134,106 @@ class CurlHTTPClientTestCase(AsyncHTTPTestCase):
         for i in range(5):
             response = self.fetch(u'/ユニコード')
             self.assertIsNot(response.error, None)
+
+
+class ProxyAuthEchoHandler(RequestHandler):
+    def get(self):
+        if self.request.headers.get("Proxy-Authorization", None) is not None:
+            self.write("proxy auth: %s" % self.request.headers["Proxy-Authorization"])
+        else:
+            self.write("no proxy auth")
+
+
+@unittest.skipIf(pycurl is None, "pycurl module not present")
+class CurlHTTPClientReuseProxyAuthTestCase(AsyncHTTPTestCase):
+    def get_app(self):
+        # Note that we don't properly support proxy-style requests, but it works
+        # well enough for this test if we start the url matcher with a wildcard.
+        return Application([(".*/proxy_auth", ProxyAuthEchoHandler)])
+
+    def get_http_client(self):
+        # max_clients=1 forces us to reuse curl "easy handles". This is a
+        # regression test for a bug in which proxy credentials were not cleared
+        # between requests.
+        return CurlAsyncHTTPClient(
+            self.io_loop, force_instance=True,
+            defaults=dict(allow_ipv6=False), max_clients=1)
+
+    def test_reuse_proxy_credentials(self):
+        # Proxy credentials used on one request should not be automatically
+        # reused by another request.
+        response = self.fetch(
+            "/proxy_auth",
+            proxy_host="127.0.0.1",
+            proxy_port=self.get_http_port(),
+            proxy_username="foo",
+            proxy_password="bar",
+        )
+        self.assertEqual(response.body, b"proxy auth: Basic Zm9vOmJhcg==")
+        response = self.fetch(
+            "/proxy_auth",
+            proxy_host="127.0.0.1",
+            proxy_port=self.get_http_port(),
+        )
+        self.assertEqual(response.body, b"no proxy auth")
+
+
+class BombHandler(RequestHandler):
+    def get(self):
+        # A "decompression bomb": a small response that expands to far more
+        # than max_body_size once libcurl has decompressed it.
+        self.set_header("Content-Encoding", "gzip")
+        self.write(gzip.compress(b"\0" * (4 * 1024 * 1024)))
+
+
+class SizeHandler(RequestHandler):
+    def get(self):
+        size = int(self.get_argument("size"))
+        self.set_header("Content-Encoding", "gzip")
+        self.write(gzip.compress(b"a" * size))
+
+
+@unittest.skipIf(pycurl is None, "pycurl module not present")
+class CurlMaxBodySizeTest(AsyncHTTPTestCase):
+    """``max_body_size`` is measured against the decompressed size, and
+    applies to responses with and without a ``streaming_callback``.
+    """
+
+    def get_app(self):
+        return Application([("/bomb", BombHandler), ("/size", SizeHandler)])
+
+    def get_http_client(self):
+        # max_clients=1 forces handle reuse between the tests.
+        return CurlAsyncHTTPClient(
+            self.io_loop, force_instance=True,
+            defaults=dict(allow_ipv6=False, decompress_response=True),
+            max_clients=1, max_body_size=1024 * 1024)
+
+    def test_bomb_is_refused(self):
+        response = self.fetch("/bomb")
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+
+    def test_bomb_is_refused_when_streaming(self):
+        chunks = []
+        response = self.fetch("/bomb", streaming_callback=chunks.append)
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+        self.assertLessEqual(sum(len(c) for c in chunks), 1024 * 1024)
+
+    def test_exactly_max_body_size_is_accepted(self):
+        response = self.fetch("/size?size=%d" % (1024 * 1024))
+        response.rethrow()
+        self.assertEqual(len(response.body), 1024 * 1024)
+
+    def test_one_byte_over_max_body_size_is_refused(self):
+        response = self.fetch("/size?size=%d" % (1024 * 1024 + 1))
+        self.assertEqual(response.code, 599)
+        self.assertIn("max_body_size", str(response.error))
+
+    def test_streaming_delivers_everything_before_response(self):
+        chunks = []
+        response = self.fetch("/size?size=%d" % (512 * 1024),
+                              streaming_callback=chunks.append)
+        response.rethrow()
+        self.assertEqual(sum(len(c) for c in chunks), 512 * 1024)

@@ -26,7 +26,13 @@ import itertools
 import logging
 import os
 import re
+import shutil
 import socket
+import tempfile
+try:
+    from unittest import mock
+except ImportError:  # pragma: no cover
+    import mock
 
 if PY3:
     import urllib.parse as urllib_parse  # py3
@@ -250,6 +256,19 @@ class CookieTest(WebTestCase):
                             )
 
                     try:
+                        self.set_cookie("foo", "bar", DoMaIn="example" + char + ".com")
+                        self.write(
+                            "Didn't get expected exception for char %r in DoMaIn\n"
+                            % (char,)
+                        )
+                    except CookieError as e:
+                        if "Invalid cookie attribute DoMaIn" not in str(e):
+                            self.write(
+                                "unexpected exception for char %r in DoMaIn: %s\n"
+                                % (char, e)
+                            )
+
+                    try:
                         self.set_cookie("foo", "bar", path="/" + char)
                         self.write(
                             "Didn't get expected exception for char %r in path\n"
@@ -287,6 +306,18 @@ class CookieTest(WebTestCase):
             def get(self):
                 self.set_cookie("foo", "bar", max_age=10)
 
+        class SetCookieMaxAgeSanitizedHandler(RequestHandler):
+            def get(self):
+                # A non-int max_age (e.g. an attacker-controlled string
+                # containing cookie attributes) is rejected instead of being
+                # written into the Set-Cookie header verbatim. The value must
+                # get past the character checks in set_cookie so that it is
+                # the int() normalization that rejects it.
+                try:
+                    self.set_cookie("foo", "bar", max_age="10,Path=/evil")
+                except ValueError:
+                    self.set_status(400)
+
         class SetCookieExpiresDaysHandler(RequestHandler):
             def get(self):
                 self.set_cookie("foo", "bar", expires_days=10)
@@ -305,6 +336,7 @@ class CookieTest(WebTestCase):
                 ("/forbidden_char", SetCookieForbiddenCharHandler),
                 ("/set_overwrite", SetCookieOverwriteHandler),
                 ("/set_max_age", SetCookieMaxAgeHandler),
+                ("/set_max_age_sanitized", SetCookieMaxAgeSanitizedHandler),
                 ("/set_expires_days", SetCookieExpiresDaysHandler),
                 ("/set_falsy_flags", SetCookieFalsyFlags)
                 ]
@@ -372,6 +404,15 @@ class CookieTest(WebTestCase):
         headers = response.headers.get_list("Set-Cookie")
         self.assertEqual(sorted(headers),
                          ["foo=bar; Max-Age=10; Path=/"])
+
+    def test_set_cookie_max_age_sanitized(self):
+        # A max_age that is not a valid int could smuggle extra cookie
+        # attributes past the attribute validation; it must be rejected
+        # rather than written to the header verbatim.
+        response = self.fetch("/set_max_age_sanitized")
+        self.assertEqual(response.code, 400)
+        for header in response.headers.get_list("Set-Cookie"):
+            self.assertNotIn("evil", header)
 
     def test_set_cookie_expires_days(self):
         response = self.fetch("/set_expires_days")
@@ -1299,6 +1340,258 @@ class StaticFileTest(WebTestCase):
 
 
 @wsgi_safe
+@unittest.skipIf(os.name != "posix", "non-posix OS")
+class StaticFileSymlinkTest(WebTestCase):
+    """Symlinks must not be followed out of the static directory unless the
+    application opts in with ``allowed_symlink_directory``.
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir)
+        self.root = os.path.join(self.tmpdir, "static")
+        self.outside = os.path.join(self.tmpdir, "outside")
+        os.mkdir(self.root)
+        os.mkdir(self.outside)
+        with open(os.path.join(self.root, "inside.txt"), "w") as f:
+            f.write("inside")
+        with open(os.path.join(self.outside, "secret.txt"), "w") as f:
+            f.write("secret")
+        with open(os.path.join(self.root, "index.html"), "w") as f:
+            f.write("root index")
+        # A symlink to a file outside the root.
+        os.symlink(os.path.join(self.outside, "secret.txt"),
+                   os.path.join(self.root, "link.txt"))
+        # A symlink to a directory outside the root.
+        os.symlink(self.outside, os.path.join(self.root, "linkdir"))
+        # Out-of-bounds symlink targets, one existing and one not, for the
+        # existence-oracle test below.
+        os.mkdir(os.path.join(self.outside, "realdir"))
+        os.symlink(os.path.join(self.outside, "realdir"),
+                   os.path.join(self.root, "link_exists"))
+        os.symlink(os.path.join(self.outside, "nope"),
+                   os.path.join(self.root, "link_missing"))
+        # A symlink that stays inside the root.
+        os.symlink(os.path.join(self.root, "inside.txt"),
+                   os.path.join(self.root, "internal.txt"))
+        super(StaticFileSymlinkTest, self).setUp()
+
+    def get_handlers(self):
+        return [
+            ("/default/(.*)", StaticFileHandler, dict(path=self.root)),
+            ("/permissive/(.*)", StaticFileHandler,
+             dict(path=self.root, allowed_symlink_directory=self.tmpdir)),
+            ("/permissive_list/(.*)", StaticFileHandler,
+             dict(path=self.root,
+                  allowed_symlink_directory=[self.root, self.outside])),
+            ("/default_filename/(.*)", StaticFileHandler,
+             dict(path=self.root, default_filename="index.html")),
+        ]
+
+    def get_app_kwargs(self):
+        return dict()
+
+    def test_regular_file(self):
+        response = self.fetch("/default/inside.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"inside")
+
+    def test_symlink_within_root(self):
+        # A symlink is fine as long as it resolves inside the root.
+        response = self.fetch("/default/internal.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"inside")
+
+    def test_symlinked_file_escaping_root(self):
+        with ExpectLog(gen_log, ".*is not in root static directory"):
+            response = self.fetch("/default/link.txt")
+        self.assertEqual(response.code, 403)
+
+    def test_symlinked_directory_escaping_root(self):
+        with ExpectLog(gen_log, ".*is not in root static directory"):
+            response = self.fetch("/default/linkdir/secret.txt")
+        self.assertEqual(response.code, 403)
+
+    def test_served_directory_itself(self):
+        # A request for the served directory itself resolves to the allowed
+        # directory exactly, rather than to something beneath it. That must
+        # still be allowed.
+        response = self.fetch("/default_filename/")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"root index")
+
+    def test_symlinked_default_filename(self):
+        # The default filename is appended after the directory has been
+        # resolved, so it must be checked in its own right.
+        os.mkdir(os.path.join(self.root, "dir"))
+        os.symlink(os.path.join(self.outside, "secret.txt"),
+                   os.path.join(self.root, "dir", "index.html"))
+        with ExpectLog(gen_log, ".*is not in root static directory"):
+            response = self.fetch("/default_filename/dir/")
+        self.assertEqual(response.code, 403)
+
+    def test_no_existence_oracle_for_symlinked_directory(self):
+        # A symlink pointing out of bounds must be rejected identically
+        # whether or not its target exists, so that it cannot be used to
+        # probe the server's filesystem.
+        codes = []
+        for name in ("link_exists", "link_missing"):
+            with ExpectLog(gen_log, ".*is not in root static directory"):
+                codes.append(
+                    self.fetch("/default_filename/" + name,
+                               follow_redirects=False).code)
+        self.assertEqual(codes, [403, 403])
+
+    def test_allowed_symlink_directory(self):
+        # With an explicit allowed_symlink_directory that contains the
+        # target, the same symlinks are served.
+        response = self.fetch("/permissive/link.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"secret")
+
+        response = self.fetch("/permissive/linkdir/secret.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"secret")
+
+    def test_allowed_symlink_directory_list(self):
+        response = self.fetch("/permissive_list/link.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"secret")
+
+    def test_subclass_without_allowed_symlink_directory(self):
+        # A subclass whose initialize() does not call ours must not fail.
+        class NoInitHandler(StaticFileHandler):
+            def initialize(self, path):
+                self.root = path
+                self.default_filename = None
+
+        self.assertIsNone(NoInitHandler.allowed_symlink_directory)
+
+
+class StaticFileSymlinkedRootTest(WebTestCase):
+    """The root itself may be reached through a symlink; that must not make
+    every request look like an escape.
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir)
+        real_root = os.path.join(self.tmpdir, "real")
+        os.mkdir(real_root)
+        with open(os.path.join(real_root, "inside.txt"), "w") as f:
+            f.write("inside")
+        # Serve through a symlink to the real directory.
+        self.root = os.path.join(self.tmpdir, "link")
+        os.symlink(real_root, self.root)
+        super(StaticFileSymlinkedRootTest, self).setUp()
+
+    def get_handlers(self):
+        return [("/static/(.*)", StaticFileHandler, dict(path=self.root))]
+
+    def get_app_kwargs(self):
+        return dict()
+
+    @unittest.skipIf(os.name != "posix", "non-posix OS")
+    def test_symlinked_root(self):
+        response = self.fetch("/static/inside.txt")
+        self.assertEqual(response.code, 200)
+        self.assertEqual(response.body, b"inside")
+
+
+class StaticFileVersionTest(unittest.TestCase):
+    """``static_url`` and ``get_version`` must not read outside of the static
+    directory, and must bound the work they do.
+    """
+
+    def setUp(self):
+        self.tmpdir = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmpdir)
+        self.root = os.path.join(self.tmpdir, "static")
+        os.mkdir(self.root)
+        with open(os.path.join(self.root, "inside.txt"), "w") as f:
+            f.write("inside")
+        with open(os.path.join(self.tmpdir, "outside.txt"), "w") as f:
+            f.write("outside")
+        self.settings = {"static_path": self.root}
+
+        class Handler(StaticFileHandler):
+            pass
+
+        # Use a private subclass so that the version cache and the limits
+        # changed by the tests do not leak into other tests.
+        self.handler = Handler
+        self.addCleanup(Handler.reset)
+
+    def test_get_version(self):
+        self.assertIsNotNone(self.handler.get_version(self.settings, "inside.txt"))
+
+    def test_get_absolute_path_outside_root(self):
+        with self.assertRaises(HTTPError) as cm:
+            self.handler.get_absolute_path(self.root, "../outside.txt")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_get_version_outside_root(self):
+        with self.assertRaises(HTTPError) as cm:
+            self.handler.get_version(self.settings, "../outside.txt")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_get_version_directory(self):
+        os.mkdir(os.path.join(self.root, "dir"))
+        with ExpectLog(gen_log, ".*Could not open static file"):
+            self.assertIsNone(self.handler.get_version(self.settings, "dir"))
+
+    @unittest.skipIf(not hasattr(os, "mkfifo"), "os.mkfifo not available")
+    def test_get_version_fifo(self):
+        # Opening a FIFO would block until there is a writer.
+        os.mkfifo(os.path.join(self.root, "fifo"))
+        with ExpectLog(gen_log, ".*Could not open static file"):
+            self.assertIsNone(self.handler.get_version(self.settings, "fifo"))
+
+    def test_get_content_version_too_large(self):
+        self.handler.MAX_VERSION_CONTENT_SIZE = 4
+        with ExpectLog(gen_log, ".*MAX_VERSION_CONTENT_SIZE"):
+            self.assertIsNone(self.handler.get_version(self.settings, "inside.txt"))
+
+    def test_version_cache_is_bounded(self):
+        self.handler.MAX_CACHED_VERSIONS = 2
+        for name in ("a.txt", "b.txt", "c.txt"):
+            with open(os.path.join(self.root, name), "w") as f:
+                f.write(name)
+            self.assertIsNotNone(self.handler.get_version(self.settings, name))
+        self.assertEqual(len(self.handler._static_hashes), 2)
+        self.assertNotIn(os.path.join(self.root, "a.txt"),
+                         self.handler._static_hashes)
+
+
+class StaticFileAlternateDataStreamTest(unittest.TestCase):
+    """On Windows, ``file.txt:name`` names an NTFS alternate data stream of
+    ``file.txt``. Streams are not files in the static directory and must not
+    be served, nor read by ``get_version``.
+    """
+
+    def test_colon_rejected_on_windows(self):
+        root = os.path.abspath("static")
+        with mock.patch.object(os, "name", "nt"):
+            with self.assertRaises(HTTPError) as cm:
+                StaticFileHandler._check_in_root(
+                    root, os.path.join(root, "public.txt:secret"), "x")
+        self.assertEqual(cm.exception.status_code, 403)
+
+    def test_colon_allowed_on_posix(self):
+        # A colon is an ordinary character in a posix file name.
+        root = os.path.abspath("static")
+        with mock.patch.object(os, "name", "posix"):
+            StaticFileHandler._check_in_root(
+                root, os.path.join(root, "a:b.txt"), "x")
+
+    def test_colon_in_root_allowed_on_windows(self):
+        # The root itself contains the drive letter's colon.
+        root = os.path.abspath("static") + os.path.sep + "c:dir"
+        with mock.patch.object(os, "name", "nt"):
+            StaticFileHandler._check_in_root(
+                os.path.dirname(root), os.path.join(os.path.dirname(root), "x.txt"), "x")
+
+
 class StaticDefaultFilenameTest(WebTestCase):
     def get_app_kwargs(self):
         return dict(static_path=relpath('static'),
@@ -2292,7 +2585,10 @@ class BaseStreamingRequestFlowControlTest(object):
                                        'post']))
 
     def test_flow_control_chunked_body(self):
-        chunks = [b'abcd', b'efgh', b'ijkl']
+        # Small chunks may be coalesced (when they arrive together), so use
+        # chunks of exactly chunk_size (except the last) to get a
+        # predictable sequence of calls.
+        chunks = [b'abcdefghij', b'klmnopqrst', b'uvwxyz']
 
         @gen.coroutine
         def body_producer(write):
@@ -2797,6 +3093,9 @@ class DecoratorTest(WebTestCase):
 
         return [("/removeslash/", RemoveSlashHandler),
                 ("/addslash", AddSlashHandler),
+                # Catch-all routes can see paths that start with two slashes.
+                (r"/+rem.*", RemoveSlashHandler),
+                (r"/+add.*", AddSlashHandler),
                 ]
 
     def test_removeslash(self):
@@ -2816,6 +3115,19 @@ class DecoratorTest(WebTestCase):
         response = self.fetch("/addslash?foo=bar", follow_redirects=False)
         self.assertEqual(response.code, 301)
         self.assertEqual(response.headers['Location'], "/addslash/?foo=bar")
+
+    def test_no_protocol_relative_redirect(self):
+        # Redirecting to //example.com would be an open redirect.
+        for path in [
+            "//add.example.com",
+            "///add.example.com",
+            "//rem.example.com/",
+            "//rem.example.com//",
+            "///rem.example.com/x/",
+        ]:
+            with ExpectLog(gen_log, ".*cannot redirect path"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 403, path)
 
 
 @wsgi_safe
@@ -2948,7 +3260,11 @@ class RedirectHandlerTest(WebTestCase):
     def get_handlers(self):
         return [
             ('/src', WebRedirectHandler, {'url': '/dst'}),
-            (r'/(.*?)/(.*?)/(.*)', WebRedirectHandler, {'url': '/{1}/{0}/{2}'})]
+            (r'/(.*)/target', WebRedirectHandler, {'url': '/{0}/destination'}),
+            (r'/(.*?)/(.*?)/(.*)', WebRedirectHandler, {'url': '/{1}/{0}/{2}'}),
+            (r'/hostless/(.*)', WebRedirectHandler, {'url': 'https://{0}'}),
+            (r'/schemeonly/(.*)', WebRedirectHandler, {'url': 'https:{0}'}),
+            (r'/any/(.*)', WebRedirectHandler, {'url': '/{0}'})]
 
     def test_basic_redirect(self):
         response = self.fetch('/src', follow_redirects=False)
@@ -2959,3 +3275,62 @@ class RedirectHandlerTest(WebTestCase):
         response = self.fetch('/a/b/c', follow_redirects=False)
         self.assertEqual(response.code, 301)
         self.assertEqual(response.headers['Location'], '/b/a/c')
+
+    def test_substitution_cannot_change_netloc(self):
+        # With a url of "/{1}/{0}/{2}" a request for "/a//c" would redirect to
+        # "//a/c", which a browser treats as a protocol-relative URL naming
+        # the host "a".
+        for path in [
+            "/a/%5Cexample.com/b",
+            "/a/%09/example.com/b",
+            "/a///example.com/b",
+            "/a////example.com/b",
+            "/a/%2F%2F%5Cexample.com/b",
+            "/a//b",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_substitution_after_first_slash(self):
+        # The substitution comes right after the first slash, so it can add a
+        # second slash (or more) but that must not reject ordinary values.
+        for path, location in [
+            ("/ok/target", "/ok/destination"),
+            ("/a/b/target", "/a/b/destination"),
+        ]:
+            response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 301, path)
+            self.assertEqual(response.headers["Location"], location)
+        for path in [
+            "/%2Fevil.com/target",
+            "/%2F%2Fevil.com/target",
+            "/%5C%5Cevil.com/target",
+            "/%09//evil.com/target",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_invalid_characters(self):
+        # These would otherwise be a 500 error from set_header.
+        for path in ["/any/%0Afoo", "/any/a%00b"]:
+            with ExpectLog(gen_log, ".*Redirect URL (contains invalid|cannot)"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)
+
+    def test_substitution_in_host(self):
+        # Substitutions cannot supply the host, even with extra slashes
+        # (which urlsplit and browsers disagree about).
+        for path in [
+            "/hostless/evil.com",
+            "/hostless//evil.com",
+            "/schemeonly/evil.com",
+            "/schemeonly////evil.com",
+        ]:
+            with ExpectLog(
+                    gen_log, ".*Redirect URL cannot change the scheme or netloc"):
+                response = self.fetch(path, follow_redirects=False)
+            self.assertEqual(response.code, 400, path)

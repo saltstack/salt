@@ -72,6 +72,7 @@ import numbers
 import os.path
 import re
 import stat
+import string
 import sys
 import threading
 import time
@@ -571,6 +572,14 @@ class RequestHandler(object):
                     "Invalid cookie attribute %s=%r for cookie %r"
                     % (attr_name, attr_value, name)
                 )
+        for k, v in kwargs.items():
+            # Also check for disallowed characters in the deprecated kwargs
+            # (such as mixed-case attribute names).
+            if re.search(r"[\x00-\x20\x3b\x7f]", str(v)):
+                raise Cookie.CookieError(
+                    "Invalid cookie attribute %s=%r for cookie %r"
+                    % (k, v, name)
+                )
         if not hasattr(self, "_new_cookie"):
             self._new_cookie = Cookie.SimpleCookie()
         if name in self._new_cookie:
@@ -589,6 +598,11 @@ class RequestHandler(object):
         for k, v in kwargs.items():
             if k == 'max_age':
                 k = 'max-age'
+                # Normalize through int() so that a non-int max_age (which
+                # could smuggle extra cookie attributes past the validation
+                # above) is rejected instead of being written to the header
+                # verbatim.
+                v = str(int(v))
 
             # skip falsy values for httponly and secure flags because
             # SimpleCookie sets them regardless
@@ -1768,6 +1782,11 @@ def removeslash(method):
         if self.request.path.endswith("/"):
             if self.request.method in ("GET", "HEAD"):
                 uri = self.request.path.rstrip("/")
+                if _is_protocol_relative(uri):
+                    # A path like //example.com// would otherwise redirect
+                    # to another host.
+                    raise HTTPError(
+                        403, "cannot redirect path with two initial slashes")
                 if uri:  # don't try to redirect '/' to ''
                     if self.request.query:
                         uri += "?" + self.request.query
@@ -1791,6 +1810,11 @@ def addslash(method):
         if not self.request.path.endswith("/"):
             if self.request.method in ("GET", "HEAD"):
                 uri = self.request.path + "/"
+                if _is_protocol_relative(uri):
+                    # A path like //example.com would otherwise redirect to
+                    # another host.
+                    raise HTTPError(
+                        403, "cannot redirect path with two initial slashes")
                 if self.request.query:
                     uri += "?" + self.request.query
                 self.redirect(uri, permanent=True)
@@ -2105,7 +2129,7 @@ class _HandlerDelegate(httputil.HTTPMessageDelegate):
         self.handler_kwargs = handler_kwargs or {}
         self.path_args = path_args or []
         self.path_kwargs = path_kwargs or {}
-        self.chunks = []
+        self.chunks = bytearray()
         self.stream_request_body = _has_stream_request_body(self.handler_class)
 
     def headers_received(self, start_line, headers):
@@ -2117,13 +2141,13 @@ class _HandlerDelegate(httputil.HTTPMessageDelegate):
         if self.stream_request_body:
             return self.handler.data_received(data)
         else:
-            self.chunks.append(data)
+            self.chunks += data
 
     def finish(self):
         if self.stream_request_body:
             self.request.body.set_result(None)
         else:
-            self.request.body = b''.join(self.chunks)
+            self.request.body = bytes(self.chunks)
             self.request._parse_body()
             self.execute()
 
@@ -2290,13 +2314,51 @@ class RedirectHandler(RequestHandler):
 
     .. versionchanged:: 4.5
        Added support for substitutions into the destination URL.
+
+    .. versionchanged:: 6.6
+       Substituted values may no longer change the scheme or netloc (user
+       info, host, and port) of the destination URL. For example, with a
+       ``url`` of ``"/{0}/b"``, a request that would redirect to
+       ``//example.com/b`` (a protocol-relative URL pointing to another host)
+       now fails with a 400 error. As a consequence, substitutions cannot be
+       used in the scheme or netloc part of the ``url``.
     """
     def initialize(self, url, permanent=True):
         self._url = url
         self._permanent = permanent
 
-    def get(self, *args):
-        self.redirect(self._url.format(*args), permanent=self._permanent)
+    def get(self, *args, **kwargs):
+        to_url = self._url.format(*args, **kwargs)
+        # The scheme and netloc of the redirect must come from the template,
+        # not from the request. Find out what they are from the part of the
+        # template before the first substitution. (Formatting the whole
+        # template with a placeholder doesn't work: whatever the placeholder
+        # is, it can turn the template into a URL with a different netloc, as
+        # "/" does for "/{0}/b".)
+        prefix = ""
+        has_substitution = False
+        for literal, field, _, _ in string.Formatter().parse(self._url):
+            prefix += literal
+            if field is not None:
+                has_substitution = True
+                break
+        try:
+            scheme, netloc = _scheme_and_netloc(prefix)
+            unchanged = _scheme_and_netloc(to_url) == (scheme, netloc)
+            if has_substitution and scheme in ("http", "https") and not netloc:
+                # The host would come entirely from a substitution (or a
+                # browser would find one where urlsplit doesn't, as in
+                # "https:///host").
+                unchanged = False
+        except ValueError:
+            unchanged = False
+        if not unchanged:
+            raise HTTPError(
+                400, "Redirect URL cannot change the scheme or netloc")
+        if RequestHandler._INVALID_HEADER_CHAR_RE.search(to_url):
+            # Let this be a 400 rather than a 500 from set_header.
+            raise HTTPError(400, "Redirect URL contains invalid characters")
+        self.redirect(to_url, permanent=self._permanent)
 
 
 class StaticFileHandler(RequestHandler):
@@ -2362,17 +2424,49 @@ class StaticFileHandler(RequestHandler):
     `get_content_size`, `get_modified_time`, `get_absolute_path`, and
     `validate_absolute_path`.
 
+    Symlinks are not followed out of the directory being served: if a path
+    resolves to a location outside it, the request is rejected with a 403
+    error. Deployments that deliberately serve content through symlinks
+    pointing elsewhere can set the ``allowed_symlink_directory`` initializer
+    argument to a directory (or a list of directories) containing all of the
+    intended targets. It defaults to the ``path`` argument.
+
     .. versionchanged:: 3.1
        Many of the methods for subclasses were added in Tornado 3.1.
+
+    .. versionchanged:: 6.5.9
+       Symlinks pointing outside the served directory are no longer
+       followed, and the ``allowed_symlink_directory`` argument was added
+       to configure this.
+
+    .. versionchanged:: 6.5.10
+       ``allowed_symlink_directory`` may now be a list of directories.
     """
     CACHE_MAX_AGE = 86400 * 365 * 10  # 10 years
 
     _static_hashes = {}  # type: typing.Dict
     _lock = threading.Lock()  # protects _static_hashes
 
-    def initialize(self, path, default_filename=None):
+    # A single directory or a list of them. None means "not set", in which
+    # case the symlink check falls back to the directory being served. The
+    # default lives on the class, not in initialize(), because this attribute
+    # was introduced in a security patch and some projects subclass
+    # StaticFileHandler with their own initialize() that does not call ours.
+    allowed_symlink_directory = None
+
+    # Content larger than this is not hashed by get_content_version (and so
+    # gets no version in static_url), because the hash is computed
+    # synchronously and would block the event loop for a long time.
+    MAX_VERSION_CONTENT_SIZE = 64 * 1024 * 1024
+
+    # The maximum number of entries in the cache of static file versions.
+    MAX_CACHED_VERSIONS = 10000
+
+    def initialize(self, path, default_filename=None,
+                   allowed_symlink_directory=None):
         self.root = path
         self.default_filename = default_filename
+        self.allowed_symlink_directory = allowed_symlink_directory
 
     @classmethod
     def reset(cls):
@@ -2528,9 +2622,19 @@ class StaticFileHandler(RequestHandler):
         as long as they are unique and understood by the subclass's
         overridden `get_content`.
 
+        Raises `HTTPError` (403) if ``path`` leads outside of ``root`` (as
+        written, e.g. with ``../``; symlinks are checked later by
+        `validate_absolute_path`). This check is also what keeps
+        `get_version` (and therefore `~RequestHandler.static_url`) from
+        reading files outside of the static directory.
+
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Paths outside of ``root`` now raise `HTTPError`.
         """
         abspath = os.path.abspath(os.path.join(root, path))
+        cls._check_in_root(root, abspath, path)
         return abspath
 
     def validate_absolute_path(self, root, absolute_path):
@@ -2553,6 +2657,82 @@ class StaticFileHandler(RequestHandler):
 
         .. versionadded:: 3.1
         """
+        root = self._check_in_root(root, absolute_path, self.path)
+        # Symlinks may point anywhere inside allowed_symlink_directory, which
+        # defaults to the directory being served. Normalize it to a list so
+        # that _resolve_symlink_target has only one shape to deal with.
+        allowed_symlink_directories = self.allowed_symlink_directory or root
+        if isinstance(allowed_symlink_directories, str):
+            allowed_symlink_directories = [allowed_symlink_directories]
+        # The check above is on the path as written, which is cheap and
+        # rejects traversal without touching the filesystem. Resolve
+        # symlinks only once it has passed, so that the remaining checks -
+        # and the path this method returns - refer to the file that will
+        # actually be opened rather than to the link. The two checks cannot
+        # be merged: the one above must stay on the unresolved path, because
+        # allowed_symlink_directory may be wider than the root and would
+        # then let a ../ traversal through.
+        absolute_path = self._resolve_symlink_target(
+            absolute_path, allowed_symlink_directories, self.path)
+        if (os.path.isdir(absolute_path) and
+                self.default_filename is not None):
+            # need to look at the request.path here for when path is empty
+            # but there is some prefix to the path that was already
+            # trimmed by the routing
+            if not self.request.path.endswith("/"):
+                if _is_protocol_relative(self.request.path):
+                    # A redirect with two initial slashes is a "protocol-relative" URL.
+                    # This means the next path segment is treated as a hostname instead
+                    # of a part of the path, making this effectively an open redirect.
+                    # Reject paths starting with two slashes to prevent this.
+                    # This is only reachable under certain configurations.
+                    raise HTTPError(
+                        403, "cannot redirect path with two initial slashes"
+                    )
+                self.redirect(self.request.path + "/", permanent=True)
+                return
+            absolute_path = os.path.join(absolute_path, self.default_filename)
+            # The default filename may be a symlink even when the directory
+            # containing it is not. Resolving here rather than deferring a
+            # single resolution until after this block is deliberate: the
+            # isdir() above, and the redirect it can trigger, must not run
+            # on a path that has already escaped, or the difference between
+            # a redirect and a 403 would reveal whether an out-of-bounds
+            # directory exists.
+            absolute_path = self._resolve_symlink_target(
+                absolute_path, allowed_symlink_directories, self.path)
+        if not os.path.exists(absolute_path):
+            raise HTTPError(404)
+        if not os.path.isfile(absolute_path):
+            raise HTTPError(403, "%s is not a file", self.path)
+        return absolute_path
+
+    @staticmethod
+    def _stat_regular_file(absolute_path, path_message):
+        """Stats ``absolute_path`` and checks that it is a regular file.
+
+        Raises `HTTPError` (404) if the path cannot be stat'ed, or (403) if
+        it is anything other than a regular file. Directories, devices (such
+        as ``/dev/zero``), FIFOs and sockets must never be read: some of them
+        never end, and opening a FIFO blocks until there is a writer.
+        ``path_message`` is used only to build the error message.
+        """
+        try:
+            stat_result = os.stat(absolute_path)
+        except OSError:
+            raise HTTPError(404)
+        if not stat.S_ISREG(stat_result.st_mode):
+            raise HTTPError(403, "%s is not a file", path_message)
+        return stat_result
+
+    @staticmethod
+    def _check_in_root(root, absolute_path, path_message):
+        """Checks that ``absolute_path`` (as written) is inside ``root``.
+
+        Returns the normalized root, with a trailing separator. Raises
+        `HTTPError` (403) if the path is outside of it. ``path_message``
+        is used only to build the error message.
+        """
         # os.path.abspath strips a trailing /.
         # We must add it back to `root` so that we only match files
         # in a directory named `root` instead of files starting with
@@ -2569,30 +2749,63 @@ class StaticFileHandler(RequestHandler):
         # the requested path so a request to root/ will match.
         if not (absolute_path + os.path.sep).startswith(root):
             raise HTTPError(403, "%s is not in root static directory",
-                            self.path)
-        if (os.path.isdir(absolute_path) and
-                self.default_filename is not None):
-            # need to look at the request.path here for when path is empty
-            # but there is some prefix to the path that was already
-            # trimmed by the routing
-            if not self.request.path.endswith("/"):
-                if self.request.path.startswith("//"):
-                    # A redirect with two initial slashes is a "protocol-relative" URL.
-                    # This means the next path segment is treated as a hostname instead
-                    # of a part of the path, making this effectively an open redirect.
-                    # Reject paths starting with two slashes to prevent this.
-                    # This is only reachable under certain configurations.
-                    raise HTTPError(
-                        403, "cannot redirect path with two initial slashes"
-                    )
-                self.redirect(self.request.path + "/", permanent=True)
-                return
-            absolute_path = os.path.join(absolute_path, self.default_filename)
-        if not os.path.exists(absolute_path):
-            raise HTTPError(404)
-        if not os.path.isfile(absolute_path):
-            raise HTTPError(403, "%s is not a file", self.path)
-        return absolute_path
+                            path_message)
+        if os.name == "nt" and ":" in absolute_path[len(root):]:
+            # On Windows, "file.txt:name" names the NTFS alternate data
+            # stream "name" of file.txt. abspath, stat and open all accept
+            # this syntax, so without this check the stream (which may hold
+            # data such as the Zone.Identifier recorded for downloaded
+            # files) would be served as if it were a file in the static
+            # directory. A colon can never appear in an ordinary Windows
+            # file name, so rejecting it anywhere below the root (the root
+            # itself contains the drive letter's colon) loses nothing.
+            raise HTTPError(403, "%s is not a file", path_message)
+        return root
+
+    @staticmethod
+    def _resolve_symlink_target(absolute_path, allowed_symlink_directories,
+                                path_message):
+        """Resolves symlinks in ``absolute_path`` and validates the result.
+
+        The path checks in `validate_absolute_path` operate on the path as
+        written, which says nothing about where a symlink points: a symlink
+        inside the static directory can name any file on the system. The
+        resolved path must therefore stay inside one of
+        ``allowed_symlink_directories`` (always a list). ``path_message`` is
+        used only to build the error message.
+
+        Raises `HTTPError` (403) if the resolved path escapes all of those
+        directories.
+
+        Note that this is a check against the state of the filesystem at
+        one moment: a path that is replaced by a symlink after this returns
+        but before the file is opened would not be caught. This check is not
+        a substitute for filesystem permissions on a directory that
+        untrusted users can write to.
+        """
+        # A path that does not exist resolves to itself, which the caller
+        # then reports as a 404.
+        resolved_path = os.path.realpath(absolute_path)
+        for allowed_symlink_directory in allowed_symlink_directories:
+            # realpath() is applied to the allowed directory as well, because
+            # it may itself be reached through a symlink (a static directory
+            # of /var/www that links to /srv/www, say). Comparing a resolved
+            # path against an unresolved directory would reject every request.
+            allowed_directory = os.path.realpath(allowed_symlink_directory)
+            if not allowed_directory.endswith(os.path.sep):
+                # The separator must not be doubled when the directory is
+                # the filesystem root.
+                allowed_directory += os.path.sep
+            # The trailing separator lets the allowed directory itself match,
+            # as well as anything beneath it. This is reachable because the
+            # path may still be a directory at this point (when
+            # default_filename is set).
+            if (resolved_path + os.path.sep).startswith(allowed_directory):
+                return resolved_path
+        # Deliberately the same error as the check on the path as written,
+        # so that a caller cannot tell which way a path left the served
+        # directory.
+        raise HTTPError(403, "%s is not in root static directory", path_message)
 
     @classmethod
     def get_content(cls, abspath, start=None, end=None):
@@ -2609,7 +2822,14 @@ class StaticFileHandler(RequestHandler):
         as it helps reduce memory fragmentation.
 
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Raises `HTTPError` if ``abspath`` is not a regular file.
         """
+        # validate_absolute_path has already checked this when serving a
+        # request, but get_content_version (for static_url) reaches this
+        # method with nothing but get_absolute_path in between.
+        cls._stat_regular_file(abspath, abspath)
         with open(abspath, "rb") as file:
             if start is not None:
                 file.seek(start)
@@ -2638,15 +2858,33 @@ class StaticFileHandler(RequestHandler):
         This class method may be overridden by subclasses.  The
         default implementation is a hash of the file's contents.
 
+        The hash is computed synchronously, so content larger than
+        `MAX_VERSION_CONTENT_SIZE` is not hashed (and gets no version)
+        rather than blocking the event loop for a long time.
+
         .. versionadded:: 3.1
+
+        .. versionchanged:: 6.6
+           Content larger than `MAX_VERSION_CONTENT_SIZE` raises `ValueError`.
         """
         data = cls.get_content(abspath)
+        chunks = [data] if isinstance(data, bytes) else data
         hasher = hashlib.md5()
-        if isinstance(data, bytes):
-            hasher.update(data)
-        else:
-            for chunk in data:
+        size = 0
+        try:
+            for chunk in chunks:
+                size += len(chunk)
+                if size > cls.MAX_VERSION_CONTENT_SIZE:
+                    raise ValueError(
+                        "content is larger than MAX_VERSION_CONTENT_SIZE "
+                        "(%d bytes)" % cls.MAX_VERSION_CONTENT_SIZE)
                 hasher.update(chunk)
+        finally:
+            # Close the file now, rather than when the generator is
+            # collected, if we stopped early.
+            close = getattr(chunks, "close", None)
+            if close is not None:
+                close()
         return hasher.hexdigest()
 
     def _stat(self):
@@ -2770,6 +3008,11 @@ class StaticFileHandler(RequestHandler):
         The returned value should be a string, or ``None`` if no version
         could be determined.
 
+        As with `~RequestHandler.static_url`, ``path`` should name a known
+        static file and should not be derived from untrusted input. Versions
+        are cached (up to `MAX_CACHED_VERSIONS` entries) until ``reset`` is
+        called.
+
         .. versionchanged:: 3.1
            This method was previously recommended for subclasses to override;
            `get_content_version` is now preferred as it allows the base
@@ -2782,16 +3025,20 @@ class StaticFileHandler(RequestHandler):
     def _get_cached_version(cls, abs_path):
         with cls._lock:
             hashes = cls._static_hashes
-            if abs_path not in hashes:
+            if abs_path in hashes:
+                # Move the entry to the end to mark it as most recently used.
+                hsh = hashes[abs_path] = hashes.pop(abs_path)
+            else:
                 try:
-                    hashes[abs_path] = cls.get_content_version(abs_path)
-                except Exception:
-                    gen_log.error("Could not open static file %r", abs_path)
-                    hashes[abs_path] = None
-            hsh = hashes.get(abs_path)
-            if hsh:
-                return hsh
-        return None
+                    hsh = cls.get_content_version(abs_path)
+                except Exception as e:
+                    gen_log.error("Could not open static file %r: %s",
+                                  abs_path, e)
+                    hsh = None
+                while hashes and len(hashes) >= cls.MAX_CACHED_VERSIONS:
+                    del hashes[next(iter(hashes))]
+                hashes[abs_path] = hsh
+            return hsh or None
 
 
 class FallbackHandler(RequestHandler):
@@ -3326,3 +3573,44 @@ def _create_signature_v2(secret, s):
 
 def is_absolute(path):
     return any(path.startswith(x) for x in ["/", "http:", "https:"])
+
+
+def _normalize_url_like_browser(url):
+    """Approximates how a browser cleans up a URL before parsing it.
+
+    Browsers follow the WHATWG URL spec, which strips leading and trailing
+    control characters and spaces, removes tabs and newlines anywhere in the
+    URL, and (for http and https) treats backslashes like forward slashes.
+    Checks on redirect URLs built from untrusted input must account for this.
+    """
+    url = url.strip("".join(chr(i) for i in range(0x21)))
+    url = url.replace("\t", "").replace("\n", "").replace("\r", "")
+    return url.replace("\\", "/")
+
+
+def _is_protocol_relative(url):
+    """Returns True if a browser would treat ``url`` as a protocol-relative URL.
+
+    A protocol-relative URL (``//example.com/path``) names a host, so
+    redirecting to one that was built from untrusted input is an open
+    redirect.
+    """
+    return _normalize_url_like_browser(url).startswith("//")
+
+
+def _scheme_and_netloc(url):
+    """Returns the scheme and netloc a browser would see in ``url``.
+
+    The netloc includes the user info and port as well as the host.
+
+    Both are empty for a relative URL. Raises `ValueError` for some malformed
+    URLs.
+    """
+    url = _normalize_url_like_browser(url)
+    # urlsplit follows RFC 3986, in which "///example.com" has an empty
+    # netloc, but browsers resolving it against an http or https URL skip any
+    # number of slashes before the host. Collapse them so urlsplit sees the
+    # same host.
+    url = re.sub(r"^//+", "//", url)
+    parts = urlparse.urlsplit(url)
+    return parts.scheme.lower(), parts.netloc.lower()

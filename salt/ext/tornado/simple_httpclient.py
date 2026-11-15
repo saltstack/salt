@@ -206,7 +206,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
         self.max_body_size = max_body_size
         self.code = None
         self.headers = None
-        self.chunks = []
+        self.chunks = bytearray()
         self._decompressor = None
         # Timeout handle returned by IOLoop.add_timeout
         self._timeout = None
@@ -503,7 +503,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
                 self.code in (301, 302, 303, 307, 308))
 
     def finish(self):
-        data = b''.join(self.chunks)
+        data = bytes(self.chunks)
         self._remove_timeout()
         original_request = getattr(self.request, "original_request",
                                    self.request)
@@ -574,7 +574,7 @@ class _HTTPConnection(httputil.HTTPMessageDelegate):
         if self.request.streaming_callback is not None:
             self.request.streaming_callback(chunk)
         else:
-            self.chunks.append(chunk)
+            self.chunks += chunk
 
 
 if __name__ == "__main__":
