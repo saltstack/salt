@@ -37,6 +37,7 @@ Env knobs (defaults preserved from baseline.sh):
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import time
@@ -445,13 +446,53 @@ def test_baseline_ping_200_concurrent(topology, request):
                 stderr=subprocess.DEVNULL,
             )
         )
-    # Drain the remainder.
+    # Drain the publish-side processes (``salt --async`` returns as
+    # soon as the publish is sent; this does NOT mean the minion has
+    # finished running the job).
     for proc in running:
         try:
             proc.wait(timeout=30)
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
+
+    # Drain the MINION-side job queue.  200 async publishes leave up
+    # to 200 jobs queued inside each minion's MWorker pool; each
+    # pending job holds a return-channel socket + a proc/<jid> output
+    # file.  Sampling fd/rss before those drain shows a transient
+    # inflation that the leak gate correctly flags as "fd grew".
+    # Poll ``saltutil.running`` until every minion reports [] or the
+    # drain budget expires; then sample.
+    drain_deadline = time.monotonic() + _env_int("BASELINE_CONCURRENT_DRAIN_SEC", 120)
+    while time.monotonic() < drain_deadline:
+        proc = subprocess.run(
+            [
+                "docker",
+                "exec",
+                master,
+                "salt",
+                "--out=json",
+                "--timeout=15",
+                "*",
+                "saltutil.running",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        # If salt itself errors here we fall through to assert_reconnect
+        # which will fail with a clearer message than parsing errors.
+        if proc.returncode != 0 or not proc.stdout.strip():
+            break
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            break
+        # ``saltutil.running`` returns {minion: [job, job, ...]}; drain
+        # is complete when every listed minion has an empty queue.
+        if isinstance(data, dict) and all(not v for v in data.values()):
+            break
+        time.sleep(5)
 
     fault_s = int(time.monotonic() - fault_start)
 
