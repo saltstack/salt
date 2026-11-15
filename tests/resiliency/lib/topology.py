@@ -34,6 +34,7 @@ import pytest
 
 from tests.resiliency.durations import (
     LEAK_BULK_RSS_KB,
+    MIN_FD_DELTA_PER_MINION,
     PING_TIMEOUT_SEC,
     RECOVER_STANDARD_SEC,
     RSS_LEAK_KB_PER_MIN,
@@ -820,7 +821,16 @@ class Topology:
                 # leak) or absolute growth is large (bulk retention).
                 # Values below those gates record RECOVERED and let
                 # the analyzer flag trends across runs instead.
-                leak_fd = fd_delta > 0
+                # Scale the fd gate by minion count: `sample_minions`
+                # sums fds across every container in `spec.minion_containers`,
+                # so a single transient allocation on any one minion
+                # produces +1 in the fleet total.  Require at least
+                # `MIN_FD_DELTA_PER_MINION` per minion before declaring
+                # accumulation.
+                fd_threshold = MIN_FD_DELTA_PER_MINION * max(
+                    1, len(self.spec.minion_containers)
+                )
+                leak_fd = fd_delta > fd_threshold
                 leak_bulk = rss_delta_kb > LEAK_BULK_RSS_KB
                 if rss_per_min > RSS_LEAK_KB_PER_MIN and (leak_fd or leak_bulk):
                     reason = "fd_accumulation" if leak_fd else "bulk_rss_retention"

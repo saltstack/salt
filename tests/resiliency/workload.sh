@@ -22,11 +22,21 @@
 
 set -u
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/common.sh
-. "${SCRIPT_DIR}/lib/common.sh"
-
-load_topology
+# PRIMARY_MASTER identifies the container to run ``docker exec`` loops
+# against.  The pytest ``workload`` fixture exports ``MASTER`` (the
+# ``topology.spec.primary_master`` string); older callers may still
+# pass PRIMARY_MASTER directly.  Previously this script sourced
+# ``lib/common.sh`` for a bash ``load_topology`` function, but the
+# bash scaffolding was removed when the suite moved to pytest, so
+# that source silently errored out and every workload loop ran with
+# no $PRIMARY_MASTER -- meaning every "under load" fault scenario
+# was actually unloaded.  Fix: accept $MASTER or $PRIMARY_MASTER and
+# bail loudly if neither is set.
+PRIMARY_MASTER="${PRIMARY_MASTER:-${MASTER:-}}"
+if [ -z "$PRIMARY_MASTER" ]; then
+    printf 'workload.sh: PRIMARY_MASTER (or MASTER) env must be set\n' >&2
+    exit 2
+fi
 
 : "${PING_INTERVAL:=5}"
 : "${GRAINS_INTERVAL:=15}"

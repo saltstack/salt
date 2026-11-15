@@ -77,6 +77,16 @@ PACING_ROLLING_SEC = _env_int("PACING_ROLLING_SEC", 60)
 # auth-state or event-cache growth after a long-outage marathon).
 RSS_LEAK_KB_PER_MIN = _env_int("RSS_LEAK_KB_PER_MIN", 200)
 LEAK_BULK_RSS_KB = _env_int("LEAK_BULK_RSS_KB", 5000)
+# ``fd_delta`` is summed across every minion in the topology.  A thin
+# signal (e.g. +2 across 5 minions = 0.4 fd/minion) is below the noise
+# floor: a single lingering async-return socket, a chunked register
+# fork-pair spike, or a mid-pillar-refetch sampling race on ANY one
+# minion accounts for +1.  Gate ``leak_fd`` on a per-minion threshold
+# so the fleet scale doesn't produce false positives.  Default 1
+# fd/minion matches the empirical floor demonstrated by local
+# reproduction on mm-failover (single-minion churn fork-pair spike
+# of +14 above steady, settled within 500 ms).
+MIN_FD_DELTA_PER_MINION = _env_int("MIN_FD_DELTA_PER_MINION", 1)
 MASTER_FD_LEAK_PER_MIN = _env_int("MASTER_FD_LEAK_PER_MIN", 30)
 # Bytes/sec threshold used by the prometheus master-RSS slope check.
 MASTER_RSS_LEAK_BYTES_PER_SEC = _env_int("MASTER_RSS_LEAK_BYTES_PER_SEC", 10240)
