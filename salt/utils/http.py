@@ -8,6 +8,7 @@ and the like, but also useful for basic HTTP testing.
 import email.message
 import gzip
 import http.cookiejar
+import inspect
 import io
 import logging
 import os
@@ -614,6 +615,20 @@ def query(
         )
 
         supports_max_body_size = "max_body_size" in client_argspec.args
+
+        if streaming_callback is not None:
+            # Tornado 6.6 awaits whatever a streaming_callback returns so that
+            # coroutines can be used. Callers commonly pass something like
+            # ``file.write``, which returns the number of bytes written, and
+            # awaiting that raises ``TypeError`` and aborts the download after
+            # the first chunk. Only hand back what is actually awaitable.
+            _user_streaming_callback = streaming_callback
+
+            def streaming_callback(chunk):
+                ret = _user_streaming_callback(chunk)
+                if inspect.isawaitable(ret):
+                    return ret
+                return None
 
         req_kwargs.update(
             {
