@@ -1147,7 +1147,16 @@ def installed(
                     else:
                         if (
                             prefix in pipsearch
-                            and prefix not in already_installed_packages
+                            # pip can report the old version as satisfied before
+                            # upgrading it. Prefer the observed version change.
+                            and (
+                                prefix not in already_installed_packages
+                                or (
+                                    pip_list
+                                    and prefix in pip_list
+                                    and pip_list[prefix] != pipsearch[prefix]
+                                )
+                            )
                         ):
                             ver = pipsearch[prefix]
                             ret["changes"][f"{prefix}=={ver}"] = "Installed"

@@ -248,7 +248,7 @@ urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via -r requirements/base.txt
 wmi==1.5.1
     # via -r requirements/base.txt

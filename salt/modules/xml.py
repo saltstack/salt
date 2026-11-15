@@ -5,7 +5,10 @@ XML file manager
 """
 
 import logging
+import re
 import xml.etree.ElementTree as ET
+
+import salt.utils.files
 
 log = logging.getLogger(__name__)
 
@@ -19,6 +22,25 @@ def __virtual__():
     Only load the module if all modules are imported correctly.
     """
     return __virtualname__
+
+
+def _write(tree, file):
+    """
+    Write the tree back to ``file``, keeping the XML declaration (and its
+    encoding) if the original file had one.
+    """
+    with salt.utils.files.fopen(file, "rb") as fh:
+        head = fh.read(256)
+    declaration = re.match(rb"(?:\xef\xbb\xbf)?\s*<\?xml\s.*?\?>", head, re.DOTALL)
+    if not declaration:
+        tree.write(file)
+        return
+    encoding = re.search(rb"encoding\s*=\s*[\"']([^\"']+)[\"']", declaration.group(0))
+    tree.write(
+        file,
+        encoding=encoding.group(1).decode("ascii") if encoding else "UTF-8",
+        xml_declaration=True,
+    )
 
 
 def get_value(file, element):
@@ -57,7 +79,7 @@ def set_value(file, element, value):
         log.error("Unable to find element matching %s", element)
         return False
     relement.text = str(value)
-    root.write(file)
+    _write(root, file)
     return True
 
 
@@ -97,5 +119,5 @@ def set_attribute(file, element, key, value):
         log.error("Unable to find element matching %s", element)
         return False
     element.set(key, str(value))
-    root.write(file)
+    _write(root, file)
     return True

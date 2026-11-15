@@ -420,7 +420,7 @@ urllib3==2.8.0
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/ci/py3.14/linux.lock
     #   -r requirements/base.txt
