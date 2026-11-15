@@ -175,7 +175,6 @@ full text of the Apache license, followed by a full summary of the licensing
 used by external modules.
 
 A complete list of attributions and dependencies can be found here:
-`salt/DEPENDENCIES.md <https://github.com/saltstack/salt/blob/master/DEPENDENCIES.md>`_
 
 .. _Salt Project Community Discord: https://discord.com/invite/J7b7EscrAs
 .. _VMware Salt: https://techdocs.broadcom.com/us/en/vmware-cis/other/vmware-salt/8-18.html
