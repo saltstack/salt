@@ -955,12 +955,20 @@ class Topology:
 
     @staticmethod
     def _stash_result(item: object | None, **fields: object) -> None:
-        """Append one record to ``item.user_properties`` as the tuple
-        ``("resiliency", {...})``.  The ``conftest`` hook picks these
-        up and writes JSONL.  The key MUST match ``conftest.py``'s
-        ``_extract_stash`` / ``stash_result`` (both use ``"resiliency"``);
-        a mismatch silently drops the real outcome and emits a
-        default-sentinel row instead.
+        """Record one resiliency row on ``item.user_properties``.
+
+        The ``conftest`` hook picks up the first ``"resiliency"`` tuple
+        and writes JSONL.  To stay compatible with scenarios that
+        already seeded a partial dict via ``conftest.stash_result``
+        (outcome + notes, no deltas), MERGE our fields into the
+        existing tuple instead of appending a second one.  A second
+        tuple would get silently dropped by ``_extract_stash`` and the
+        real deltas would never reach results.jsonl -- which was the
+        original silent-drop bug.
+
+        If no prior tuple exists, append a fresh one.  The key MUST
+        match ``conftest.py``'s ``_extract_stash`` / ``stash_result``
+        (all three use ``"resiliency"``).
         """
         if item is None:
             return
@@ -968,6 +976,10 @@ class Topology:
         if user_properties is None:
             return
         try:
+            for key, value in user_properties:
+                if key == "resiliency" and isinstance(value, dict):
+                    value.update(fields)
+                    return
             user_properties.append(("resiliency", dict(fields)))
         except AttributeError:
             # Not a list-like; silently drop rather than mask the real

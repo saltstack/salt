@@ -354,12 +354,18 @@ def stash_result(item_or_request, **kwargs: Any) -> None:
     """Attach resiliency-result fields to the current pytest item.
 
     Accepts either a pytest ``Item`` or a ``FixtureRequest``.  Keys are
-    merged into any previously stashed dict so successive calls within
-    the same test refine the row.
+    merged into the first previously stashed ``"resiliency"`` dict so
+    successive calls within the same test refine a single row.  If no
+    prior dict exists, a new tuple is appended.
+
+    ``Topology._stash_result`` (lib/topology.py) uses the same merge
+    semantics so the two write paths produce one authoritative dict
+    rather than racing tuples that ``_extract_stash`` would have to
+    disambiguate.
     """
     item = getattr(item_or_request, "node", None) or item_or_request
     for key, value in item.user_properties:
-        if key == "resiliency":
+        if key == "resiliency" and isinstance(value, dict):
             value.update(kwargs)
             return
     item.user_properties.append(("resiliency", dict(kwargs)))
@@ -543,11 +549,38 @@ _RESULT_DEFAULTS: dict[str, Any] = {
 
 
 def _extract_stash(item) -> dict[str, Any]:
-    """Pull the ``resiliency`` dict out of item.user_properties (or empty)."""
+    """Merge every ``resiliency`` dict in ``item.user_properties``.
+
+    Historically this returned the FIRST tuple, which silently dropped
+    the real deltas when two writers raced the same item: a scenario
+    helper would seed partial fields via ``stash_result`` (outcome +
+    notes, no fd/rss) and then ``assert_reconnect`` would append a
+    second tuple via ``Topology._stash_result`` with the authoritative
+    numbers.  The seed won and results.jsonl rows looked like a
+    no-op sentinel (``fd_delta=0 rss_kb_delta=0 outcome=recovered``).
+
+    Merge-in-order with a ``failed`` tiebreaker preserves every field
+    any writer set while guaranteeing a ``failed`` outcome is never
+    overwritten by a later ``recovered`` (the leak-gate path and
+    deadline-miss path are terminal; only a later write from a stale
+    code path could reverse them).
+    """
+    merged: dict[str, Any] = {}
+    has_failed = False
     for key, value in item.user_properties:
-        if key == "resiliency" and isinstance(value, dict):
-            return value
-    return {}
+        if key != "resiliency" or not isinstance(value, dict):
+            continue
+        # Protect a prior "failed" outcome from being downgraded to
+        # "recovered" / "skipped" by a later write.
+        if value.get("outcome") == "failed":
+            has_failed = True
+        incoming = dict(value)
+        if has_failed and incoming.get("outcome") and incoming["outcome"] != "failed":
+            incoming.pop("outcome")
+        merged.update(incoming)
+    if has_failed and merged.get("outcome") != "failed":
+        merged["outcome"] = "failed"
+    return merged
 
 
 def _skipped_for_topology(item) -> bool:
