@@ -327,7 +327,12 @@ def expand_classes_in_order(minion_dict, salt_data, seen_classes, classes_to_exp
             # Merge newly found pillars into existing ones
             new_pillars = klass_dict[klass].get("pillars", {})
             if new_pillars:
-                # dict_merge alters its source, and the final merge needs it intact
+                # Deepcopy so salt_data["__pillar__"] gets its own copy of the
+                # class's pillars. dict_merge stores lists from new_pillars in
+                # __pillar__ by reference and later extends them in place, which
+                # would also change the class's own lists. The final merge
+                # (in expanded_dict_from_minion) reads those same class dicts from
+                # expanded_classes, so it would then see duplicated entries.
                 dict_merge(salt_data["__pillar__"], copy.deepcopy(new_pillars))
 
             if "classes" in klass_dict[klass]:
