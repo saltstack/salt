@@ -55,13 +55,13 @@ cryptography==50.0.0 ; sys_platform != 'win32'
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   pyopenssl
-distlib==0.4.4
+distlib==0.4.0
     # via virtualenv
 distro==1.9.0
     # via
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
-filelock==4.2.10
+filelock==3.29.1
     # via
     #   -r requirements/base.txt
     #   python-discovery
@@ -136,12 +136,12 @@ multidict==7.2.1
     #   -r requirements/base.txt
     #   aiohttp
     #   yarl
-packaging==26.3
-    # via
-    #   -r requirements/base.txt
-    #   virtualenv
+packaging==24.0
+    # via -r requirements/base.txt
 platformdirs==4.5.1
-    # via virtualenv
+    # via
+    #   python-discovery
+    #   virtualenv
 portend==3.1.0
     # via cherrypy
 propcache==0.3.2
@@ -180,7 +180,7 @@ python-dateutil==2.9.0.post0
     #   -r requirements/base.txt
     #   -r requirements/static/pkg/freebsd.txt
     #   croniter
-python-discovery==1.9.5
+python-discovery==1.4.0
     # via virtualenv
 python-gnupg==0.5.6
     # via
@@ -240,7 +240,7 @@ urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.6
+virtualenv==21.4.2
     # via -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt

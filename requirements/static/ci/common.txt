@@ -24,8 +24,9 @@ clustershell
 dnspython
 etcd3-py==0.1.6
 filelock>=3.19.1 ; python_version < '3.10'
-filelock>=3.29.1,<4.0.0 ; python_version == '3.10'
-filelock>=4.2.1 ; python_version >= '3.11'
+# Capped below 4.0 on 3006.x: filelock 4.x pulls in packaging >= 26, which
+# breaks salt-ssh on legacy target Pythons. See requirements/base.txt.
+filelock>=3.29.1,<4.0.0 ; python_version >= '3.10'
 google-auth==2.35.0; python_version == '3.9'
 jmespath>=1.1.0
 jsonschema

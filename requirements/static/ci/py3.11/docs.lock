@@ -77,7 +77,7 @@ cryptography==50.0.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   pyopenssl
-distlib==0.4.4
+distlib==0.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   virtualenv
@@ -89,7 +89,7 @@ docutils==0.20.1
     # via
     #   pydata-sphinx-theme
     #   sphinx
-filelock==4.2.10
+filelock==3.29.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
@@ -202,15 +202,15 @@ multidict==7.2.1
     #   yarl
 myst-docutils==5.1.0
     # via -r requirements/static/ci/docs.txt
-packaging==26.3
+packaging==24.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   sphinx
-    #   virtualenv
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
+    #   python-discovery
     #   virtualenv
 portend==3.1.0
     # via
@@ -259,7 +259,7 @@ python-dateutil==2.9.0.post0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   croniter
-python-discovery==1.9.5
+python-discovery==1.4.0
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   virtualenv
@@ -363,7 +363,7 @@ urllib3==2.8.0
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.6
+virtualenv==21.4.2
     # via
     #   -c requirements/static/ci/py3.11/linux.lock
     #   -r requirements/base.txt
