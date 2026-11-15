@@ -232,6 +232,29 @@ def get_opts():
     return __opts__
 
 
+def _wire_salt():
+    """
+    Return the whitelist-filtered execution-module loader for
+    user-supplied dispatch (``test.cross_test``).
+
+    Under the two-loader model implemented by
+    :func:`salt.loader.minion_mods`, ``__salt__`` is the unfiltered
+    inner loader so trusted shipped code can compose freely across
+    non-whitelisted modules.  ``test.cross_test`` however takes the
+    target function name from the caller, which would otherwise be an
+    escape hatch around ``whitelist_modules``:  an operator who grants
+    ``whitelist_modules: [test.cross_test]`` would reach any function
+    via ``test.cross_test cmd.run '["id"]'``.  When the exec loader was
+    built with the two-loader model it packs the wire-filtered loader
+    as ``__wire_salt__``; fall back to ``__salt__`` when the pack isn't
+    present (plain-dict test fixtures, salt-ssh ``FunctionWrapper``).
+    """
+    try:
+        return __wire_salt__  # noqa: F821  (packed by salt.loader.minion_mods)
+    except NameError:
+        return __salt__
+
+
 def cross_test(func, args=None):
     """
     Execute a minion function via the ``__salt__`` object in the test
@@ -246,7 +269,7 @@ def cross_test(func, args=None):
     """
     if args is None:
         args = []
-    return __salt__[func](*args)
+    return _wire_salt()[func](*args)
 
 
 def kwarg(**kwargs):

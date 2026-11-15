@@ -521,6 +521,20 @@ def minion_mods(
     # ``salt_dunder`` and is not gated.
     ret._dunder_salt = salt_dunder
 
+    # Pack the wire-filtered outer loader as ``__wire_salt__`` on every
+    # module loaded by either loader.  Dispatcher functions that accept a
+    # function name from untrusted input (``test.cross_test``,
+    # ``mine.send``, peer ``publish.*``, the ``module.run`` / ``salt.function``
+    # states) MUST use ``__wire_salt__`` for that dispatch, not
+    # ``__salt__``; otherwise a caller who can reach the dispatcher
+    # through the whitelist (e.g. ``whitelist_modules: [test.cross_test]``)
+    # escapes the whitelist entirely because ``__salt__`` is the
+    # unfiltered inner loader.  Pack is read lazily at module-load time
+    # (:func:`salt.loader.lazy.LazyLoader._load_module`) so injecting the
+    # key after both loaders exist is safe -- no module has loaded yet.
+    salt_dunder.pack["__wire_salt__"] = ret
+    ret.pack["__wire_salt__"] = ret
+
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):
         utils.pack["__salt__"] = salt_dunder

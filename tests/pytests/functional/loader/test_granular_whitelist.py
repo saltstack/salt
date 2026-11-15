@@ -283,6 +283,112 @@ def test_state_bare_plus_dotted_narrows_in_real_loader(minion_opts, tmp_path):
         assert blocked not in loader, blocked
 
 
+# ---------------------------------------------------------------------------
+# Dispatcher-bypass hardening: test.cross_test uses the wire-filtered loader
+# ---------------------------------------------------------------------------
+#
+# The two-loader model packs the unfiltered inner loader as ``__salt__`` so
+# shipped code can compose with gated modules internally.  Dispatcher
+# functions whose target function name comes from untrusted input must not
+# use ``__salt__`` or granular whitelisting becomes exploitable: granting
+# ``whitelist_modules: [test.cross_test]`` would otherwise reach any
+# function via ``test.cross_test cmd.run '["id"]'``.
+#
+# ``salt.modules.test.cross_test`` is now expected to route through
+# ``__wire_salt__`` (the wire-filtered outer loader), making the whitelist
+# gate apply to the dispatched function as well.
+
+
+def test_cross_test_dispatch_target_is_whitelist_gated(minion_opts, tmp_path):
+    """
+    ``whitelist_modules: [test.cross_test, test.ping]`` -- cross_test to
+    an allowed target succeeds; cross_test to a non-whitelisted target
+    (``cmd.run``) must fail at the dispatch step instead of silently
+    running through the unfiltered inner loader.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test.cross_test", "test.ping"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    cross_test = loader["test.cross_test"]
+    token = salt.loader.context.loader_ctxvar.set(loader)
+    try:
+        # Allowed target: dispatch succeeds.
+        assert cross_test("test.ping") is True
+        # Blocked target: dispatcher uses __wire_salt__ (= outer wire
+        # loader), so the whitelist gate fires on the sub-call.
+        with pytest.raises(KeyError):
+            cross_test("cmd.run", ["id"])
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_cross_test_still_dispatches_to_whitelisted_target(minion_opts, tmp_path):
+    """
+    ``whitelist_modules: [test.cross_test, cmd.run]`` -- when both the
+    dispatcher and the target are whitelisted, cross_test resolves the
+    target through the wire loader and dispatches normally.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test.cross_test", "cmd.run"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    cross_test = loader["test.cross_test"]
+    token = salt.loader.context.loader_ctxvar.set(loader)
+    try:
+        # cmd.run is whitelisted -> dispatch via wire loader succeeds.
+        ret = cross_test("cmd.run", ["true"])
+        # cmd.run returns the string stdout of the command; "true"
+        # produces no output, so just assert a string came back.
+        assert isinstance(ret, str)
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_cross_test_without_whitelist_unchanged(minion_opts, tmp_path):
+    """
+    Backcompat: with no whitelist configured, cross_test must still
+    dispatch to arbitrary functions.  The wire loader is unfiltered
+    when ``whitelist_modules`` is unset, so routing through
+    ``__wire_salt__`` behaves identically to routing through
+    ``__salt__``.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts.pop("whitelist_modules", None)
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    cross_test = loader["test.cross_test"]
+    token = salt.loader.context.loader_ctxvar.set(loader)
+    try:
+        assert cross_test("test.ping") is True
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_wire_salt_packed_on_exec_modules(minion_opts, tmp_path):
+    """
+    The ``__wire_salt__`` pack is injected by :func:`salt.loader.minion_mods`
+    so dispatcher functions can reach the outer wire loader from inside
+    the module.  Both the outer and inner loaders must carry the pack --
+    inner for modules whose ``__salt__`` points at the dunder, outer for
+    modules loaded via the wire path.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+    inner = loader._dunder_salt
+    assert loader.pack["__wire_salt__"] is loader
+    assert inner.pack["__wire_salt__"] is loader
+
+
 def test_state_whitelist_is_independent_from_exec_whitelist(minion_opts, tmp_path):
     """
     Cross-contamination check: a granular ``whitelist_modules`` entry
