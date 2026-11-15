@@ -150,6 +150,28 @@ def _decode_result(result_text, result_headers, backend, decode_body=None, resul
 
 
 @jinja_filter("http_query")
+def _tornado_streaming_callback(callback):
+    """
+    Wrap a ``streaming_callback`` for tornado so that its return value is
+    discarded unless it is awaitable.
+
+    Tornado 6.6 awaits whatever a streaming_callback returns so that coroutines
+    can be used. Callers commonly pass something like ``file.write``, which
+    returns the number of bytes written, and awaiting that raises ``TypeError``
+    and aborts the download after the first chunk.
+    """
+    if callback is None:
+        return None
+
+    def wrapper(chunk):
+        ret = callback(chunk)
+        if inspect.isawaitable(ret):
+            return ret
+        return None
+
+    return wrapper
+
+
 def query(
     url,
     method="GET",
@@ -616,20 +638,6 @@ def query(
 
         supports_max_body_size = "max_body_size" in client_argspec.args
 
-        if streaming_callback is not None:
-            # Tornado 6.6 awaits whatever a streaming_callback returns so that
-            # coroutines can be used. Callers commonly pass something like
-            # ``file.write``, which returns the number of bytes written, and
-            # awaiting that raises ``TypeError`` and aborts the download after
-            # the first chunk. Only hand back what is actually awaitable.
-            _user_streaming_callback = streaming_callback
-
-            def streaming_callback(chunk):
-                ret = _user_streaming_callback(chunk)
-                if inspect.isawaitable(ret):
-                    return ret
-                return None
-
         req_kwargs.update(
             {
                 "method": method,
@@ -639,7 +647,7 @@ def query(
                 "body": data,
                 "validate_cert": verify_ssl,
                 "allow_nonstandard_methods": True,
-                "streaming_callback": streaming_callback,
+                "streaming_callback": _tornado_streaming_callback(streaming_callback),
                 "header_callback": header_callback,
                 "connect_timeout": connect_timeout,
                 "request_timeout": timeout,
