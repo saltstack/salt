@@ -84,7 +84,19 @@ LOG_COUNT = _env_int("LOG_COUNT", 10000)
 
 def test_resource_oom_squeeze(topology, workload, request):
     """docker update --memory=200m on the primary master; some workers may
-    be OOM-killed; master must respawn them."""
+    be OOM-killed; master must respawn them.
+
+    On single-master topologies a 200MB cgroup limit is tight enough that
+    the OOM-killer walks the entire salt-master process tree and tini
+    (pid 1) eventually exits with 137 -- the container as a whole goes
+    ``exited``, not just salt-master.  The compose entrypoint has no
+    restart policy, so nothing else brings it back: every downstream
+    test that ``docker exec``s or pings via the master would then fail
+    the same way.  Simulate the supervisor that a real deployment runs
+    (systemd / k8s / etc.) by ``docker start``-ing the container after
+    the relax step if it exited.  ``assert_reconnect``'s existing window
+    absorbs the re-auth time.
+    """
     scenario = "resource_oom_squeeze"
     primary = topology.spec.primary_master
 
@@ -107,6 +119,7 @@ def test_resource_oom_squeeze(topology, workload, request):
             f"(rc={squeeze.returncode}): {squeeze.stderr.strip()}"
         )
 
+    revived = False
     try:
         time.sleep(OOM_HOLD_SEC)
     finally:
@@ -138,11 +151,36 @@ def test_resource_oom_squeeze(topology, workload, request):
                 stderr=subprocess.DEVNULL,
             )
 
+        # Revive the master container if the OOM cascade dropped tini.
+        # ``docker update`` does not restart an exited container, so we
+        # must do it explicitly before assert_reconnect starts polling.
+        if not topology.inspect_running(primary):
+            try:
+                topology.start(primary)
+                revived = True
+            except Exception:
+                # Fall through -- assert_reconnect will produce a proper
+                # failure record with missing minions and the cause will
+                # be visible in ``compose.log``.
+                pass
+
+    notes = f"mem=200m->{OOM_RELAX_MEMORY}"
+    if revived:
+        # Wait for master + minion re-auth to settle so the leak-delta
+        # baseline reflects the post-revive steady state rather than
+        # the cold-start reconnect churn (fresh zmq ctx + new master
+        # pid both show up as fd/RSS growth that is NOT a minion
+        # leak).  Then resample ``before`` -- assert_reconnect's leak
+        # gate measures ``after - before`` so a fresh baseline keeps
+        # the signal honest.
+        if topology.wait_initial_auth(timeout=180):
+            before = topology.sample_minions()
+        notes += " revived=1"
     topology.assert_reconnect(
         scenario,
         fault_sec=OOM_HOLD_SEC,
         before=before,
-        notes=f"mem=200m->{OOM_RELAX_MEMORY}",
+        notes=notes,
         item=request.node,
     )
 
