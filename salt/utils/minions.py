@@ -14,6 +14,8 @@ import salt.roster
 import salt.transport
 import salt.utils.data
 import salt.utils.files
+import salt.utils.grain_target_cache
+import salt.utils.mmap_trie_index
 import salt.utils.network
 import salt.utils.resource_registry
 import salt.utils.resources
@@ -398,6 +400,180 @@ def update_resource_index(opts, minion_id, resources):
         return (0, 0)
 
 
+def update_resource_index_chunk(
+    opts, minion_id, resources, chunk_final, chunk_scope=None, chunk_index=None
+):
+    """
+    Chunk-aware wrapper around
+    :meth:`ResourceRegistry.register_minion_chunk`.
+
+    Non-final chunks ``put_many`` their SRNs with no delete pass; only the
+    terminal chunk prunes stale entries against the window's cumulative
+    SRN set.  This is the correctness fix for multi-chunk registers --
+    without it, each chunk's receipt would diff against the previous
+    chunk's just-written entries and prune them, leaving only the last
+    chunk persisted.
+
+    :param dict opts: Salt opts (needs ``cachedir``).
+    :param str minion_id: The reporting minion.
+    :param dict resources: ``{resource_type: [resource_id, ...]}`` -- this
+        chunk's slice.
+    :param bool chunk_final: True on the terminal chunk of a register
+        window (triggers the stale-SRN prune).
+    :param str chunk_scope: Which type(s) this register window covers.
+        ``None`` or ``"__all__"`` means the window replaces the minion's
+        full inventory (legacy single-shot).  A type name scopes the
+        prune to that type only.
+    :param int chunk_index: Monotonically-increasing index assigned by
+        the minion-side sender (0-based within the window).  Used by
+        the registry to detect and defer out-of-order terminal prunes
+        on peer masters.  ``None`` keeps pre-chunk semantics for legacy
+        callers.
+    :returns: ``(n_put, n_deleted)`` for logging.  ``n_deleted`` is
+        always zero on non-final chunks and on terminal chunks whose
+        prune was deferred by a chunk-index gap.
+    """
+    try:
+        registry = salt.utils.resource_registry.get_registry(opts)
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to open resource registry while registering %s; "
+            "resource targeting for this minion will be unavailable.",
+            minion_id,
+            exc_info=True,
+        )
+        return (0, 0)
+    try:
+        return registry.register_minion_chunk(
+            minion_id,
+            resources or {},
+            chunk_final,
+            chunk_scope,
+            chunk_index=chunk_index,
+        )
+    except Exception:  # pylint: disable=broad-except
+        log.error(
+            "Failed to register resource chunk for minion '%s' (scope=%s final=%s)",
+            minion_id,
+            chunk_scope,
+            chunk_final,
+            exc_info=True,
+        )
+        return (0, 0)
+
+
+def _is_literal_glob(pattern):
+    """
+    Return ``True`` iff ``pattern`` has no :mod:`fnmatch` wildcards.
+
+    A "literal" pattern contains none of ``*``, ``?``, or ``[`` -- so
+    ``fnmatch.fnmatchcase(x, pattern)`` reduces to ``x == pattern``.
+    Backslash escapes are NOT treated as special (``fnmatch`` does not
+    honour them either on any platform), matching the existing fast-path
+    wildcard check in :meth:`CkMinions._check_glob_minions`.
+    """
+    if not isinstance(pattern, str) or not pattern:
+        return False
+    return not any(c in pattern for c in ("*", "?", "["))
+
+
+def _is_resource_id_literal_predicate(expr, delimiter):
+    """
+    Return ``True`` iff ``expr`` is a flat ``resource_id:<literal-id>``
+    predicate suitable for the exact-key hash-probe fast path.
+
+    Mirrors the shape checks in :func:`_resource_id_candidates` (key is
+    exactly ``resource_id``, non-empty pattern, no nested delimiter) and
+    adds the literal-glob check so ``resource_id:a-*`` and friends fall
+    through to the existing bank-scan fast path.
+    """
+    if not isinstance(expr, str):
+        return False
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return False
+    if delimiter in pattern:
+        return False
+    return _is_literal_glob(pattern)
+
+
+def _resource_id_prefix_predicate(expr, delimiter, regex_match):
+    """
+    Return ``(id_prefix, full_pattern)`` iff ``expr`` is a flat
+    ``resource_id:<glob>`` predicate with a non-empty fixed prefix.
+
+    Mirrors the shape checks of :func:`_resource_id_candidates` (same
+    key / no nested delimiter / non-empty pattern) and adds the
+    prefix-non-empty / non-literal requirements so the caller can
+    dispatch to the sorted-key fast path. Returns ``None`` when the
+    predicate shape doesn't apply, when the glob is literal (the
+    Mission 1 hash-probe path already handled it), when regex matching
+    is in effect (prefix analysis of arbitrary regex is not worth the
+    complexity), or when the glob has no fixed prefix (e.g. starts with
+    ``*`` or ``[``).
+    """
+    if regex_match or not isinstance(expr, str):
+        return None
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return None
+    if delimiter in pattern:
+        return None
+    # Literal globs are already served by the Mission 1 hash probe; we
+    # only want to handle the "prefix + wildcard tail" shape.
+    if _is_literal_glob(pattern):
+        return None
+    prefix = salt.utils.grain_target_cache.fixed_prefix_of(pattern)
+    if not prefix:
+        return None
+    return prefix, pattern
+
+
+def _resource_id_candidates(sr_keys, expr, delimiter, regex_match):
+    """
+    Narrow ``sr_keys`` to the subset whose id portion matches a
+    top-level ``resource_id:<pattern>`` predicate.
+
+    The ``resource_grains`` bank stores one entry per salt resource,
+    keyed by ``<type>:<id>``. By convention the ``resource_id`` grain
+    equals the id portion of that key, so a ``resource_id:<pattern>``
+    target can be narrowed by filename pattern alone — without
+    pickle-loading every grain dict. Callers still fetch + confirm
+    via ``subdict_match`` so the convention does not have to hold
+    for correctness; this helper only trims the fetch set.
+
+    Returns ``None`` when the fast path does not apply (nested
+    predicate, different key, empty pattern), signalling the caller
+    to fall back to a full-bank scan.
+    """
+    if not isinstance(expr, str):
+        return None
+    key, sep, pattern = expr.partition(delimiter)
+    if not sep or key != "resource_id" or not pattern:
+        return None
+    if delimiter in pattern:
+        # Nested predicate (e.g. ``resource_id:sub:value``) — we only
+        # know how to short-circuit the flat top-level case.
+        return None
+    if regex_match:
+        try:
+            rx = re.compile(pattern)
+        except re.error:
+            return None
+        match = rx.search
+    else:
+
+        def match(rid, _pat=pattern):
+            return fnmatch.fnmatchcase(rid, _pat)
+
+    out = []
+    for sr_key in sr_keys:
+        _rtype, sep2, rid = sr_key.partition(":")
+        if sep2 and rid and match(rid):
+            out.append(sr_key)
+    return out
+
+
 class CkMinions:
     """
     Used to check what minions should respond from a target
@@ -619,6 +795,42 @@ class CkMinions:
             if not cminions:
                 return {"minions": [], "missing": []}
             minions = set(minions)
+            # Trie fast path for the per-minion ``grains`` bank. Opt-in
+            # via ``opts["enable_grain_trie_index"]``.  The trie covers
+            # every scalar leaf of every cached minion grain dict, so
+            # arbitrary ``<path>:<value>`` and nested predicates are
+            # served without the per-minion pickle-fetch loop below.
+            # ``exact_match=True`` keeps the old behaviour (the trie's
+            # literal path already short-circuits on equality so there
+            # is no separate exact-match dispatch).  Returns ``None``
+            # when the trie cannot authoritatively answer (cap hit,
+            # missing build, shape mismatch); we then fall through to
+            # the legacy loop.
+            if search_type == "grains" and self.opts.get("enable_grain_trie_index"):
+                try:
+                    trie_hits = salt.utils.mmap_trie_index.dispatch_predicate(
+                        self.cache,
+                        "grains",
+                        self.opts,
+                        expr,
+                        delimiter,
+                        regex_match,
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "mmap_trie_index: grains dispatch failed for expr=%r; "
+                        "falling through to slow path",
+                        expr,
+                        exc_info=True,
+                    )
+                    trie_hits = None
+                if trie_hits is not None:
+                    # Intersect with the starting set so greedy ∩ PKI
+                    # and non-greedy ∩ cached-list semantics are both
+                    # preserved; the trie only knows which minions
+                    # have cached grains, not which are accepted.
+                    filtered = [m for m in trie_hits if m in minions]
+                    return {"minions": filtered, "missing": []}
             # Track which accepted minions have cache data we can evaluate.
             # Any accepted minion not present in ``cminions`` has no cache
             # entry and must be excluded; otherwise grain/pillar targeting
@@ -694,17 +906,145 @@ class CkMinions:
         if not self.opts.get("minion_data_cache", False):
             return
         bank = salt.utils.resource_registry.RESOURCE_GRAINS_BANK
+        existing = result.get("minions", [])
+        seen = set(existing)
+        # Normalise to list up-front so downstream consumers get a stable
+        # shape regardless of which branch returns (``_check_cache_minions``
+        # may hand us a ``set``).
+        if not isinstance(existing, list):
+            result["minions"] = list(existing)
+
+        # Literal-exact fast path for ``resource_id:<literal-id>`` targets
+        # (no wildcards, no delimiter nesting, non-regex). The master
+        # enforces ``bank-key == "<rtype>:<rid>"`` at register time, so an
+        # ``O(T)`` hash probe across the configured resource types is the
+        # authoritative answer -- no need to list the bank (which is the
+        # ~O(bank-size) step we are avoiding).
+        if not regex_match and _is_resource_id_literal_predicate(expr, delimiter):
+            _, _, literal = expr.partition(delimiter)
+            try:
+                rtypes = salt.utils.resources.enabled_resource_types(self.opts)
+            except Exception:  # pylint: disable=broad-except
+                rtypes = []
+            for rtype in rtypes:
+                try:
+                    hit = self.cache.contains(bank, f"{rtype}:{literal}")
+                except Exception:  # pylint: disable=broad-except
+                    continue
+                if hit:
+                    if literal not in seen:
+                        result["minions"].append(literal)
+                        seen.add(literal)
+                    # The master enforces id-uniqueness per bank key
+                    # ``<rtype>:<rid>``, but the same bare id *may* exist
+                    # under multiple types; either way we only add it once
+                    # and can return.
+                    return
+            return
+
+        # Sorted-key prefix fast path for ``resource_id:<prefix>*`` style
+        # predicates. Avoids the O(bank-size) ``cache.list()`` + fnmatch
+        # scan below by binary-searching the sorted bank keys and walking
+        # only the prefix range. The in-process cache is keyed by
+        # ``(cachedir, bank)`` and invalidated via a cheap O(1)
+        # generation signal (mmap_cache occupied-count header or bank
+        # directory mtime).
+        prefix_info = _resource_id_prefix_predicate(expr, delimiter, regex_match)
+        if prefix_info is not None:
+            id_prefix, pattern = prefix_info
+            try:
+                sorted_keys = salt.utils.grain_target_cache.get_sorted_keys(
+                    self.cache, bank
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "resource_id prefix fast-path: sorted-key cache fetch failed "
+                    "for bank=%r; falling through to linear scan",
+                    bank,
+                    exc_info=True,
+                )
+                sorted_keys = None
+            if sorted_keys is not None:
+                # Bank keys are ``<rtype>:<rid>``; we match against the
+                # id portion. ``<rtype>:`` segments sort lexically, so a
+                # single prefix search across the full sorted-keys list
+                # would miss matches whose rtype differs. Instead we
+                # intersect per rtype so each binary-search range only
+                # covers one type-scoped stride. For a bank with K rtypes
+                # and N keys total, this is O(K * log N + matches).
+                try:
+                    rtypes = salt.utils.resources.enabled_resource_types(self.opts)
+                except Exception:  # pylint: disable=broad-except
+                    rtypes = []
+                if rtypes:
+                    for rtype in rtypes:
+                        scoped = f"{rtype}:{id_prefix}"
+                        for (
+                            sr_key
+                        ) in salt.utils.grain_target_cache.prefix_range_candidates(
+                            sorted_keys, scoped
+                        ):
+                            _rtype, sep2, rid = sr_key.partition(":")
+                            if not sep2 or not rid:
+                                continue
+                            if not fnmatch.fnmatchcase(rid, pattern):
+                                continue
+                            if rid not in seen:
+                                result["minions"].append(rid)
+                                seen.add(rid)
+                    return
+                # No enabled rtypes derivable: fall through to the
+                # linear-scan path below so correctness is preserved.
+
         try:
             srns = list(self.cache.list(bank) or [])
         except Exception:  # pylint: disable=broad-except
             return
         if not srns:
             return
-        existing = result.get("minions", [])
-        seen = set(existing)
-        # Normalise to list; preserve any existing order.
-        if not isinstance(existing, list):
-            result["minions"] = list(existing)
+        # Fast path: ``resource_id:<pattern>`` predicates only need to look
+        # at the id portion of each bank key (``<type>:<id>``). The master
+        # enforces ``gdict["resource_id"] == <id>`` at register time (see
+        # ``salt/master.py:__register_resources_sync``), so a bank-key glob
+        # match is the full match -- no fetch / ``subdict_match`` needed.
+        candidates = _resource_id_candidates(srns, expr, delimiter, regex_match)
+        if candidates is not None:
+            for srn in candidates:
+                _rtype, _, rid = srn.partition(":")
+                if rid and rid not in seen:
+                    result["minions"].append(rid)
+                    seen.add(rid)
+            return
+
+        # Persistent-trie fast path. Opt-in via
+        # ``opts["enable_grain_trie_index"]``. The trie covers every
+        # scalar leaf across every grain dict in the bank, so nested
+        # predicates (``dns:nameservers:127.0.0.11``) and arbitrary
+        # grain keys are auto-indexed. Returns ``None`` when the trie
+        # cannot authoritatively serve the predicate (cap hit, missing
+        # build, shape mismatch) -- we then fall through to the
+        # per-key fetch loop below.
+        if self.opts.get("enable_grain_trie_index"):
+            try:
+                trie_hits = salt.utils.mmap_trie_index.dispatch_predicate(
+                    self.cache, bank, self.opts, expr, delimiter, regex_match
+                )
+            except Exception:  # pylint: disable=broad-except
+                log.debug(
+                    "mmap_trie_index: dispatch failed for expr=%r; "
+                    "falling through to slow path",
+                    expr,
+                    exc_info=True,
+                )
+                trie_hits = None
+            if trie_hits is not None:
+                for sr_key in trie_hits:
+                    _rtype, _, rid = sr_key.partition(":")
+                    if rid and rid not in seen:
+                        result["minions"].append(rid)
+                        seen.add(rid)
+                return
+
         for srn in srns:
             try:
                 gdict = self.cache.fetch(bank, srn)
