@@ -322,8 +322,6 @@ class _CloseWithoutContentLengthHandler(BaseHTTPRequestHandler):
         pass
 
 
-
-
 def test_query_tornado_streaming_callback_return_value_is_ignored(httpserver):
     """
     Tornado 6.6 awaits whatever a ``streaming_callback`` returns so that
