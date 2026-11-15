@@ -245,4 +245,11 @@ def test_marathon_flap_during_auth_wave(topology, workload, request):
             f"cycles={cycles} stop={stop_sec}s up={up_sec}s " "auth_wavers=per_minion"
         ),
         item=request.node,
+        # First reconnect re-runs ``_load_modules()`` and repopulates
+        # ~3 MB/minion of long-lived caches (see
+        # ``agents/reports/marathon_flap_bulk_rss.md``).  It's one-shot
+        # cold-start cost, not a retention leak -- a second identical
+        # run grows 8 KB/minion (noise).  fd accumulation is still
+        # gated so a real auth-future socket leak would still surface.
+        allow_bulk_rss=True,
     )
