@@ -1,3 +1,4 @@
+import io
 import socketserver
 import sys
 import threading
@@ -319,6 +320,30 @@ class _CloseWithoutContentLengthHandler(BaseHTTPRequestHandler):
 
     def log_message(self, *args):  # pylint: disable=arguments-differ
         pass
+
+
+
+
+def test_query_tornado_streaming_callback_return_value_is_ignored(httpserver):
+    """
+    Tornado 6.6 awaits whatever a ``streaming_callback`` returns so that
+    coroutines can be used. ``file.write`` returns the number of bytes written,
+    and awaiting that raised ``TypeError`` and aborted the download after the
+    first chunk (this is what ``salt.utils.relenv.download`` does).
+    """
+    body = b"x" * (2 * 1024 * 1024)
+    httpserver.expect_request("/download").respond_with_data(body)
+    sink = io.BytesIO()
+
+    http.query(
+        httpserver.url_for("/download"),
+        backend="tornado",
+        stream=True,
+        streaming_callback=sink.write,
+        opts={},
+    )
+
+    assert sink.getvalue() == body
 
 
 @pytest.mark.slow_test
