@@ -38,6 +38,7 @@ from tests.resiliency.durations import (
     PING_TIMEOUT_SEC,
     RECOVER_STANDARD_SEC,
     RSS_LEAK_KB_PER_MIN,
+    SAMPLE_SETTLE_SEC,
 )
 
 log = logging.getLogger("resiliency.topology")
@@ -719,6 +720,7 @@ class Topology:
         window_sec: int | None = None,
         notes: str = "",
         item: object | None = None,
+        allow_bulk_rss: bool = False,
     ) -> None:
         """Assert fleet is pingable within ``window_sec`` AND RSS slope
         stays under :data:`RSS_LEAK_KB_PER_MIN`.
@@ -730,6 +732,15 @@ class Topology:
 
         Minute-normalised RSS slope uses ``max(60, elapsed)`` so a
         1-second fault doesn't blow up the ratio.
+
+        When ``allow_bulk_rss`` is True, the bulk-RSS retention branch
+        of the leak gate is disabled for this call; only fd
+        accumulation can trip the leak-fail verdict.  Use for tests
+        with legitimate one-shot cold-start working-set growth (e.g.
+        :func:`tests.resiliency.test_master_marathon.test_marathon_flap_during_auth_wave`,
+        where the first reconnect's ``_load_modules()`` re-populates
+        ~3 MB/minion of long-lived caches -- see
+        ``agents/reports/marathon_flap_bulk_rss.md``).
 
         Always records one JSONL-compatible result dict in
         ``item.user_properties`` if ``item`` is provided.  The schema
@@ -801,6 +812,14 @@ class Topology:
                         last_master = m
             if success:
                 reconnect_s = int(time.monotonic() - start)
+                # Quiet window before the AFTER sample: ``sample_minions``
+                # is instantaneous, which races with transient fork
+                # pairs (return-channel fork, chunked-register, docker
+                # exec children) that are still open the instant the
+                # first ping sweep covers the fleet.  See
+                # ``SAMPLE_SETTLE_SEC`` in ``tests/resiliency/durations.py``.
+                if SAMPLE_SETTLE_SEC > 0:
+                    time.sleep(SAMPLE_SETTLE_SEC)
                 after = self.sample_minions()
                 delta = after - before
                 fd_delta = delta.fds
@@ -831,7 +850,13 @@ class Topology:
                     1, len(self.spec.minion_containers)
                 )
                 leak_fd = fd_delta > fd_threshold
-                leak_bulk = rss_delta_kb > LEAK_BULK_RSS_KB
+                # Bulk-RSS retention is skipped when the caller opts out
+                # (``allow_bulk_rss=True``) for scenarios with legitimate
+                # one-shot cold-start growth (module reload after first
+                # reconnect).  fd accumulation is still gated so an
+                # auth-future / async-return socket leak would still
+                # surface.
+                leak_bulk = (not allow_bulk_rss) and rss_delta_kb > LEAK_BULK_RSS_KB
                 if rss_per_min > RSS_LEAK_KB_PER_MIN and (leak_fd or leak_bulk):
                     reason = "fd_accumulation" if leak_fd else "bulk_rss_retention"
                     leak_notes = (

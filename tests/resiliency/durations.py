@@ -87,6 +87,15 @@ LEAK_BULK_RSS_KB = _env_int("LEAK_BULK_RSS_KB", 5000)
 # reproduction on mm-failover (single-minion churn fork-pair spike
 # of +14 above steady, settled within 500 ms).
 MIN_FD_DELTA_PER_MINION = _env_int("MIN_FD_DELTA_PER_MINION", 1)
+# Quiet window applied between a successful ping sweep and the AFTER
+# sample inside ``assert_reconnect``.  ``sample_minions`` is
+# instantaneous, which lands exactly when the minion's return-channel
+# fork is still open on single-minion topologies (demonstrated on the
+# mm-failover minion_churn repro: +14 fds above steady, settled within
+# 500 ms).  2 s is enough for the transient fork pair / docker-exec
+# children to drain without materially inflating per-test wall time.
+# Set to 0 to disable.
+SAMPLE_SETTLE_SEC = _env_int("SAMPLE_SETTLE_SEC", 2)
 MASTER_FD_LEAK_PER_MIN = _env_int("MASTER_FD_LEAK_PER_MIN", 30)
 # Bytes/sec threshold used by the prometheus master-RSS slope check.
 MASTER_RSS_LEAK_BYTES_PER_SEC = _env_int("MASTER_RSS_LEAK_BYTES_PER_SEC", 10240)
