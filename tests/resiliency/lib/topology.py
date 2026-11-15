@@ -322,15 +322,33 @@ class Topology:
         timeout: int | None = None,
         capture: bool = True,
     ) -> subprocess.CompletedProcess:
-        """Internal: run a subprocess and log at debug."""
+        """Internal: run a subprocess and log at debug.
+
+        When ``check=True`` and the command fails, surface stdout +
+        stderr in the ``CalledProcessError`` ``__str__`` instead of
+        just the argv/returncode -- the bare exception otherwise
+        hides the actual docker/salt error and every subsequent
+        diagnosis is a guess.
+        """
         log.debug("run: %s", " ".join(argv))
-        return subprocess.run(
-            argv,
-            check=check,
-            timeout=timeout,
-            text=True,
-            capture_output=capture,
-        )
+        try:
+            return subprocess.run(
+                argv,
+                check=check,
+                timeout=timeout,
+                text=True,
+                capture_output=capture,
+            )
+        except subprocess.CalledProcessError as exc:
+            # Re-raise with stdout/stderr folded into the message so
+            # pytest's --tb=line surfaces the docker/salt error text.
+            tail_stdout = (exc.stdout or "").strip()[-400:]
+            tail_stderr = (exc.stderr or "").strip()[-400:]
+            exc.args = (
+                f"{argv} rc={exc.returncode} "
+                f"stderr={tail_stderr!r} stdout={tail_stdout!r}",
+            )
+            raise
 
     def exec(
         self,
