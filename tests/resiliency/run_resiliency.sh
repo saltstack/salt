@@ -83,6 +83,22 @@ PYTEST_ARGS=(
     # for 90+ min between dot batches.
     -v
     -ra
+    # Stream the ``log.error("LEAK ...")`` / ``log.info("RECOVERED ...")``
+    # calls from assert_reconnect and the pytest.fail message in real
+    # time to stdout.  Without this pytest buffers the whole test
+    # output and only flushes it in the end-of-session summary --
+    # which never reaches the log when ``timeout 6h`` kills the run
+    # mid-suite (as happened on syndic 2026-11-14), so every FAILED
+    # banner lands with zero diagnostic context.  Keep the pattern
+    # minimal so the log stays grep-able.
+    --log-cli-level=INFO
+    "--log-cli-format=%(asctime)s %(levelname)s %(name)s %(message)s"
+    "--log-cli-date-format=%H:%M:%S"
+    # Emit a one-line traceback at the moment each test fails, in
+    # addition to the end-of-session summary.  Belt + suspenders:
+    # even if the session summary is lost, each failure carries its
+    # own error line in the CI log.
+    --tb=line
 )
 
 if [ "${MARATHON_ENABLED}" = "1" ]; then
