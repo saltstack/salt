@@ -101,3 +101,19 @@ def test_dmi_parse_does_not_keep_a_last_field_that_is_not_wanted():
     assert record["data"] == {"vendor": "ACME"}
     record = _only_record(smbios._dmi_parse(data, fields=["version"], clean=False))
     assert record["data"] == {"version": "To be filled by O.E.M."}
+
+
+def test_dmi_parse_returns_a_record_that_has_only_one_field():
+    """
+    A record with one field has nothing but a last field. It used to be left
+    out of the result, because nothing was saved for it.
+    """
+    data = (
+        "Handle 0x0020, DMI type 32, 11 bytes\n"
+        "System Boot Information\n"
+        "\tStatus: No errors detected\n"
+        "\n"
+    )
+    record = _only_record(smbios._dmi_parse(data))
+    assert (record["handle"], record["type"]) == ("0x0020", 32)
+    assert record["data"] == {"status": "No errors detected"}
