@@ -21,6 +21,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import signal
 import subprocess
 import time
 from concurrent.futures import (  # pylint: disable=no-name-in-module
@@ -311,6 +313,68 @@ class Topology:
 
     def __init__(self, spec: TopologySpec):
         self.spec = spec
+        # pgid of the live ``workload.sh`` subprocess, or ``None`` when
+        # no workload fixture is active.  Set via :py:meth:`register_workload`
+        # from the ``workload`` fixture; used by
+        # :py:meth:`pause_workload` / :py:meth:`resume_workload` to
+        # quiet the pgroup around the AFTER sample in
+        # :py:meth:`assert_reconnect`.
+        self._workload_pgid: int | None = None
+
+    # ------------------------------------------------------------------
+    # Workload pgroup tracking (for sampling settle)
+    # ------------------------------------------------------------------
+
+    def register_workload(self, pgid: int) -> None:
+        """Record the pgid of a live ``workload.sh`` subprocess.
+
+        Called by the ``workload`` pytest fixture after ``Popen``.
+        While a pgid is registered, :py:meth:`assert_reconnect`'s
+        success branch pauses the whole pgroup (SIGSTOP) for
+        ``SAMPLE_SETTLE_SEC`` before sampling the AFTER state, so the
+        leak gate sees a workload-free quiet window rather than
+        charging mid-flight ping / grains / state / runner traffic as
+        a leak.
+        """
+        self._workload_pgid = pgid
+
+    def clear_workload(self) -> None:
+        """Forget the current workload pgid (fixture teardown)."""
+        self._workload_pgid = None
+
+    def pause_workload(self) -> None:
+        """SIGSTOP the registered workload pgroup, if any.
+
+        No-op when no workload is registered (null-fault / baseline
+        tests that don't take the ``workload`` fixture).  Swallows
+        ``ProcessLookupError`` so a workload that has already exited
+        (e.g. mid-teardown race) is harmless.
+        """
+        pgid = self._workload_pgid
+        if pgid is None:
+            return
+        try:
+            os.killpg(pgid, signal.SIGSTOP)
+        except ProcessLookupError:
+            # Workload already gone; nothing to pause.
+            self._workload_pgid = None
+        except OSError as exc:  # noqa: BLE001 -- surface + continue
+            log.warning("pause_workload: killpg(%d, SIGSTOP) failed: %s", pgid, exc)
+
+    def resume_workload(self) -> None:
+        """SIGCONT the registered workload pgroup, if any.
+
+        Safe to call unconditionally after :py:meth:`pause_workload`.
+        """
+        pgid = self._workload_pgid
+        if pgid is None:
+            return
+        try:
+            os.killpg(pgid, signal.SIGCONT)
+        except ProcessLookupError:
+            self._workload_pgid = None
+        except OSError as exc:  # noqa: BLE001
+            log.warning("resume_workload: killpg(%d, SIGCONT) failed: %s", pgid, exc)
 
     # ------------------------------------------------------------------
     # Docker subprocess helpers
@@ -818,9 +882,24 @@ class Topology:
                 # exec children) that are still open the instant the
                 # first ping sweep covers the fleet.  See
                 # ``SAMPLE_SETTLE_SEC`` in ``tests/resiliency/durations.py``.
-                if SAMPLE_SETTLE_SEC > 0:
-                    time.sleep(SAMPLE_SETTLE_SEC)
-                after = self.sample_minions()
+                #
+                # Pause the workload pgroup (if the ``workload`` fixture
+                # is active) across the settle + sample so continuous
+                # ping / grains / state / runner traffic from
+                # ``workload.sh`` doesn't inflate the minion working
+                # set after recovery and trip the leak gate as if the
+                # growth were fault-induced.  Without this, run
+                # 43773954141 showed clock_/disk_/fs_ tests growing
+                # 200-3000 KB/min on workload-driven minions even
+                # though no fault leak existed.  ``pause_workload``
+                # is a no-op for tests that don't take the fixture.
+                self.pause_workload()
+                try:
+                    if SAMPLE_SETTLE_SEC > 0:
+                        time.sleep(SAMPLE_SETTLE_SEC)
+                    after = self.sample_minions()
+                finally:
+                    self.resume_workload()
                 delta = after - before
                 fd_delta = delta.fds
                 rss_delta_kb = delta.rss_kb

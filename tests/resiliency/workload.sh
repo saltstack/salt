@@ -17,8 +17,17 @@
 # (network choke, master restart, etc.) transient CLI errors are
 # EXPECTED and must not kill the generator loop.
 #
-# Install the loops under a new process group (``set -m``) and trap
-# SIGINT/SIGTERM to ``kill 0`` the group.
+# The pytest fixture spawns this script with ``start_new_session=True``
+# so the script is already its own session + process-group leader --
+# every ``&`` subshell below inherits the same pgid.  Do NOT set job
+# control (``set -m``): with ``-m`` on, bash puts each ``&`` into a
+# fresh pgroup, which (a) breaks the fixture's teardown
+# (``os.killpg(pgid, SIGTERM)`` would only reach this script, not the
+# loop subshells -- they'd leak to init), and (b) breaks the leak-gate
+# sampling settle in ``Topology.pause_workload`` (SIGSTOP on pgid
+# would miss every active loop and sampling would race in-flight
+# ``docker exec`` children).  ``kill 0`` below sends to our pgid,
+# which under this no-job-control mode covers every subshell.
 
 set -u
 
@@ -45,9 +54,7 @@ fi
 
 wlog() { printf '[workload] %s %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 
-# Ensure we're session leader for our subprocesses so ``kill 0`` reaches
-# every background loop regardless of how they fork.
-set -m
+# (Deliberately no ``set -m`` -- see rationale in the header comment.)
 
 PIDS=()
 

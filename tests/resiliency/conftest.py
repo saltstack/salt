@@ -501,9 +501,26 @@ def workload(topology, request):
     )
     pgid = proc.pid  # start_new_session guarantees pgid == pid
 
+    # Register the pgid with the Topology so ``assert_reconnect`` can
+    # SIGSTOP the workload across the AFTER-sample settle window.
+    # Without this, continuous ping/grains/state/runner traffic from
+    # ``workload.sh`` drives legit minion working-set growth that the
+    # leak gate charges as a fault leak (run 43773954141).
+    topology.register_workload(pgid)
+
     try:
         yield None
     finally:
+        topology.clear_workload()
+        # Guard against a prior SIGSTOP leaking into teardown: a
+        # stopped workload would ignore SIGTERM, hit the 10 s wait
+        # timeout, then be SIGKILLed.  Send SIGCONT first so SIGTERM
+        # can be delivered and the trap in ``workload.sh`` can run its
+        # clean ``kill 0`` teardown.
+        try:
+            os.killpg(pgid, signal.SIGCONT)
+        except ProcessLookupError:
+            pass
         # SIGTERM the whole pgroup; wait; SIGKILL if stubborn.
         try:
             os.killpg(pgid, signal.SIGTERM)
