@@ -389,3 +389,40 @@ def test_module_importing_itself_is_reported(repo: Path) -> None:
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert "PLW0406" in result.stdout
+
+
+# One example per rule that reports some existing violations.
+RULES_WITH_EXISTING_VIOLATIONS = [
+    ("PLW0129", 'def f(x):\n    assert "x must be set"\n'),
+    (
+        "PLW0120",
+        'def f(items):\n    for i in items:\n        print(i)\n    else:\n        print("done")\n',
+    ),
+    ("PLW1641", "class A:\n    def __eq__(self, other):\n        return True\n"),
+    ("LOG002", "import logging\n\nlog = logging.getLogger(__file__)\n"),
+    (
+        "LOG004",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    log.exception("failed")\n',
+    ),
+    ("G010", 'import logging\n\nlog = logging.getLogger(__name__)\nlog.warn("x")\n'),
+    (
+        "G202",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    try:\n        pass\n    except Exception:\n        log.exception("x", exc_info=True)\n',
+    ),
+    ("RUF064", 'import os\n\nos.chmod("/tmp/x", 644)\n'),
+    ("RUF040", "def f(result):\n    assert result, None\n"),
+    ("DTZ003", "import datetime\n\nnow = datetime.datetime.utcnow()\n"),
+    ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
+    ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
+    ("PGH004", "import os  # noqa\n"),
+]
+
+
+@pytest.mark.parametrize(
+    ("code", "source"), RULES_WITH_EXISTING_VIOLATIONS, ids=lambda v: v[:8]
+)
+def test_rules_with_existing_violations(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout

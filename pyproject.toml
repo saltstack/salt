@@ -176,6 +176,20 @@ select = [
     "RUF033",  # default in __post_init__
     "RUF060",  # "in" test on an empty collection
     "RUF068",  # duplicate entry in __all__
+    # Bugs with a few existing violations. Only new ones block a PR.
+    "PLW0129",  # assert on a string literal
+    "PLW0120",  # else on a loop without break
+    "PLW1641",  # __eq__ without __hash__
+    "LOG002",  # getLogger(__file__)
+    "LOG004",  # logger.exception() outside an except block
+    "G010",  # logger.warn()
+    "G202",  # redundant exc_info
+    "RUF064",  # decimal number as a file mode
+    "RUF040",  # non-string assert message
+    "DTZ003",  # datetime.utcnow()
+    "DTZ004",  # datetime.utcfromtimestamp()
+    "ASYNC251",  # time.sleep() in an async function
+    "PGH004",  # blanket noqa
 ]
 ignore = [
     "F403",  # star imports
