@@ -286,9 +286,15 @@ def load_topology(name: str, repo_root: Path | None = None) -> TopologySpec:
 # ---------------------------------------------------------------------------
 
 
+# Match ONLY the MinionProcessManager parent (or the MainProcess fallback),
+# not the ``MinionProcessManager ProcessPayload(jid=...) Minion._thread_return``
+# children that inherit the same prefix in their proctitle.  Without the ``$``
+# anchor, ``pgrep -f`` returns both -- and ``head -1`` picks the lowest pid,
+# which is almost always the parent but is not guaranteed if a child outlives
+# a parent restart.  Anchor so ``sample_container`` is deterministic.
 _PID_SH = (
-    "pgrep -f 'salt-minion.*MinionProcessManager' "
-    "|| pgrep -f 'salt-minion.*MainProcess' "
+    "pgrep -f 'salt-minion.*MinionProcessManager$' "
+    "|| pgrep -f 'salt-minion.*MainProcess$' "
     "|| true"
 )
 

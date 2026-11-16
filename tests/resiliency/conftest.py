@@ -447,7 +447,37 @@ def topology(request):
     # flight.  Pause ``RESILIENCY_WARMUP_SEC`` (default 60s) after
     # wait_initial_auth returns so the first measurement captures a
     # settled baseline, not startup growth.
-    warmup_sec = int(os.environ.get("RESILIENCY_WARMUP_SEC", "60"))
+    #
+    # The cluster3 topology's minion config declares
+    # ``dummy_resource_count: 200000`` (see
+    # ``tests/monitoring/cluster-3node/minion-*.conf``), which triggers
+    # a chunked register of 200 000 resources per minion -- 20 chunks
+    # at 10 000 per chunk, times 5 minions = 100 chunks fleet-wide.
+    # That register keeps going for several minutes after
+    # ``wait_initial_auth`` returns on test.ping, and during it the
+    # minion's working-set legitimately grows ~10 MB per minion.  The
+    # baseline_idle_* tests charge that growth to a phantom leak and
+    # fail with ``reason=fd_accumulation`` or bulk_rss_retention on
+    # cluster3 only (cluster5 doesn't declare dummy_resource_count).
+    # See agents/reports/baseline_leak_regression.md for the local
+    # measurement.
+    #
+    # Per-topology warmup override: topologies that register a large
+    # resource inventory get a longer default warmup so the register
+    # storm is past before the first idle measurement.  Env override
+    # (RESILIENCY_WARMUP_SEC) still wins if explicitly set.
+    _topology_warmup_default = {
+        # cluster3 minions declare ``dummy_resource_count: 200000`` so
+        # the post-auth register storm runs for several minutes past
+        # the default 60s warmup.
+        "cluster3": 300,
+    }
+    warmup_sec = int(
+        os.environ.get(
+            "RESILIENCY_WARMUP_SEC",
+            str(_topology_warmup_default.get(topo_name, 60)),
+        )
+    )
     if warmup_sec > 0:
         print(
             f"[resiliency] warm-up: sleeping {warmup_sec}s after "
