@@ -187,6 +187,101 @@ jobs:
           echo "docker images:"
           docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' 2>&1 | head -20 || true
 
+      - name: Start disk trace (background)
+        # Continuous disk-usage trace to catch disk-exhaustion crashes
+        # where the GHA worker dies before any ``if: always()`` /
+        # ``if: failure()`` step can run (precedent: runs 43773954141 +
+        # 43824366115 cluster3 -- step conclusion=null, logs blob 404,
+        # no Collect Logs output).  TWO independent recorders:
+        #
+        #   1. host-side bash loop setsid'd + disown'd: cheap, sees the
+        #      runner-local /tmp + _diag paths, dies if the worker dies
+        #      hard but survives orderly ``timeout`` kills.
+        #
+        #   2. alpine helper container with --pid=host and
+        #      /var/lib/docker bind-mounted RO: survives the worker's
+        #      Python process dying as long as dockerd is alive, which
+        #      is where we lose visibility in the current failure mode.
+        #
+        # Both write to ${GITHUB_WORKSPACE}/artifacts/disk-trace/, which
+        # the Upload Artifacts step bundles into
+        # resiliency-<topo>-<run>/artifacts/disk-trace/ IF the worker
+        # survives.  If it doesn't, the trace at least lives on the
+        # ephemeral runner until GHA reaps it -- better than the current
+        # zero-data state.
+        if: always()
+        run: |
+          mkdir -p "${GITHUB_WORKSPACE}/artifacts/disk-trace"
+          chmod 0777 "${GITHUB_WORKSPACE}/artifacts/disk-trace"
+
+          # Host-side logger.  setsid detaches from the step's process
+          # group so when GHA kills the step the loop keeps going; the
+          # Stop disk trace step (if it runs) cleans it up via pidfile.
+          cat > "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.sh" <<'LOGGER'
+          #!/bin/bash
+          out="${GITHUB_WORKSPACE}/artifacts/disk-trace"
+          mkdir -p "$out"
+          while :; do
+              ts=$(date -u +%Y%m%dT%H%M%SZ)
+              {
+                  echo "=== $ts df -h / /tmp /var/lib/docker ==="
+                  df -h / /tmp /var/lib/docker 2>&1
+                  echo
+                  echo "=== du -sh (top-level, non-recursive) ==="
+                  sudo du -sh /var/lib/docker 2>/dev/null
+                  sudo du -sh /tmp/* 2>/dev/null | sort -rh | head -15
+                  echo
+                  echo "=== docker ps --size ==="
+                  docker ps --size --format 'table {{.Names}}\t{{.Status}}\t{{.Size}}' 2>&1 | head -30
+                  echo
+                  echo "=== top-20 compose container json.log sizes ==="
+                  sudo du -sh /var/lib/docker/containers/*/*-json.log 2>/dev/null \
+                      | sort -rh | head -20
+                  echo
+                  echo "=== runner _diag worker log sizes (precedent crash site) ==="
+                  sudo du -sh /home/runner/runners/*/_diag 2>/dev/null
+                  sudo ls -la /home/runner/runners/*/_diag/ 2>/dev/null | tail -20
+              } >> "$out/host-trace.log" 2>&1
+              sleep 60
+          done
+          LOGGER
+          chmod +x "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.sh"
+          setsid "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.sh" \
+              < /dev/null > /dev/null 2>&1 &
+          echo $! > "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.pid"
+          disown || true
+          echo "host-logger started pid=$(cat "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.pid")"
+
+          # Container-side logger.  --pid=host lets it see all runner
+          # processes; the RO bind on /var/lib/docker lets it measure
+          # container log volume without touching the daemon.  Named
+          # c3-disk-logger regardless of topology so the Stop step can
+          # kill it idempotently.
+          docker run -d --name c3-disk-logger --rm \
+              -v /var/lib/docker:/host/var-lib-docker:ro \
+              -v "${GITHUB_WORKSPACE}/artifacts/disk-trace:/host/artifacts" \
+              --pid=host \
+              alpine:3.20 sh -c '
+                  apk add --quiet --no-cache coreutils >/dev/null 2>&1 || true
+                  while :; do
+                      ts=$(date -u +%Y%m%dT%H%M%SZ)
+                      {
+                          echo "=== $ts (container logger) ==="
+                          df -h 2>&1
+                          echo
+                          echo "--- container json.log sizes (top 20) ---"
+                          du -sh /host/var-lib-docker/containers/*/*-json.log 2>/dev/null \
+                              | sort -rh | head -20
+                          echo
+                          echo "--- /host/var-lib-docker total ---"
+                          du -sh /host/var-lib-docker 2>/dev/null
+                      } >> /host/artifacts/container-trace.log 2>&1
+                      sleep 60
+                  done
+              ' \
+              || echo "container logger failed to start (continuing with host logger only)"
+          docker ps --filter name=c3-disk-logger 2>&1 || true
+
       - name: Start environment
         # Hand off to the resiliency orchestrator.  ``timeout`` is
         # applied here (not inside the script) so a wedged topology --
@@ -222,6 +317,35 @@ jobs:
             PROMETHEUS_URL="http://127.0.0.1:${PROM_PORT}" \
             MARATHON_ENABLED="$marathon_enabled" \
             ./run_resiliency.sh
+
+      - name: Stop disk trace
+        # Best-effort shutdown of the background disk loggers started
+        # before Start environment.  Never fail the job -- the loggers
+        # self-terminate when the runner is reaped; stopping them here
+        # just prevents a stray orphan between back-to-back matrix jobs
+        # on long-lived runners (not strictly needed on hosted
+        # ubuntu-latest, kept for symmetry).
+        if: always()
+        run: |
+          pidfile="${GITHUB_WORKSPACE}/artifacts/disk-trace/host-logger.pid"
+          if [ -f "$pidfile" ]; then
+              pid=$(cat "$pidfile" 2>/dev/null || echo "")
+              if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                  kill -TERM "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null || true
+              fi
+          fi
+          docker rm -f c3-disk-logger 2>/dev/null || true
+          # Final sample so the trace file has a known terminal entry
+          # even if the workload step hard-killed the periodic loop.
+          {
+              echo "=== FINAL $(date -u +%Y%m%dT%H%M%SZ) ==="
+              df -h / /tmp /var/lib/docker 2>&1
+              sudo du -sh /var/lib/docker 2>/dev/null || true
+              docker ps --size --format 'table {{.Names}}\t{{.Status}}\t{{.Size}}' 2>&1 | head -30
+              echo "--- top-20 container json.log sizes ---"
+              sudo du -sh /var/lib/docker/containers/*/*-json.log 2>/dev/null \
+                  | sort -rh | head -20
+          } >> "${GITHUB_WORKSPACE}/artifacts/disk-trace/host-trace.log" 2>&1 || true
 
       - name: Analyze Results
         # The orchestrator already invokes analyze_resiliency.py and
@@ -310,9 +434,20 @@ jobs:
             echo
             echo "=== docker ps -s (size) ==="
             docker ps -s 2>&1 | head -30 || true
+            echo
+            echo "=== top-20 container json.log sizes ==="
+            sudo du -sh /var/lib/docker/containers/*/*-json.log 2>/dev/null \
+                | sort -rh | head -20 || true
           } > artifacts/disk-usage.txt
           # Containers vary per topology.  List them, grep by project
-          # name, dump each.
+          # name, dump each.  Cap each container log at 50 MB tail --
+          # cluster5 masters routinely produce >300 MB json.log on
+          # overlapping Errno-22 traceback storms (see
+          # resiliency-cluster5-43824366115 c5-salt-master-3.log at
+          # 340 MB/17.5k traceback repetitions) and a 3-master cluster3
+          # on a worker that's already OOMed can't afford to dump the
+          # full streams uncompressed.  50 MB tail is enough to see the
+          # terminal crash context.
           case "${{ matrix.topology }}" in
             single)              project=resiliency-single       ;;
             cluster3)            project=cluster-3node           ;;
@@ -321,7 +456,9 @@ jobs:
             syndic)              project=resiliency-syndic       ;;
           esac
           for c in $(docker ps -a --filter "label=com.docker.compose.project=${project}" --format '{{.Names}}'); do
-            docker logs "$c" > "artifacts/${c}.log" 2>&1 || true
+            docker logs --tail 200000 "$c" 2>&1 \
+                | tail -c 52428800 \
+                > "artifacts/${c}.log" || true
           done
           # Pull the per-run orchestrator artefacts (results.jsonl,
           # analysis.txt, compose.log, per-scenario logs) under
