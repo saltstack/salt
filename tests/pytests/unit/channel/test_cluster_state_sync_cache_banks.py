@@ -154,8 +154,20 @@ class _BarrierHarness:
     # drifts in lockstep if the implementation changes.
     from salt.channel.server import MasterPubServerChannel
 
+    # NEW-4: the per-channel barrier lock is lazy-initialised; expose
+    # the ensure-helper + the locked variants so the harness drives
+    # the same lock-acquisition paths as production.
+    _ensure_cache_bank_barrier_lock = (
+        MasterPubServerChannel._ensure_cache_bank_barrier_lock
+    )
     _cache_bank_barrier_active = MasterPubServerChannel._cache_bank_barrier_active
+    _cache_bank_barrier_active_locked = (
+        MasterPubServerChannel._cache_bank_barrier_active_locked
+    )
     _queue_cache_bank_delta = MasterPubServerChannel._queue_cache_bank_delta
+    _queue_cache_bank_delta_locked = (
+        MasterPubServerChannel._queue_cache_bank_delta_locked
+    )
     _release_cache_bank_barrier = MasterPubServerChannel._release_cache_bank_barrier
     _drain_cache_bank_barrier = MasterPubServerChannel._drain_cache_bank_barrier
 

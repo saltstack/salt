@@ -2547,6 +2547,21 @@ class MasterPubServerChannel:
                 chunk_index=chunk_index,
             )
 
+    def _ensure_cache_bank_barrier_lock(self):
+        """
+        Lazy-init the per-channel ``_cache_bank_barrier_lock``.
+
+        NEW-4: the lock is a plain ``threading.Lock`` (not RLock) per
+        reviewer correction #4 -- the one re-entrant call site
+        (``_drain_cache_bank_barrier`` -> ``_release_cache_bank_barrier``)
+        is refactored to "snapshot the bank list under the lock,
+        release, then call release for each bank unlocked" so no
+        re-entry occurs.
+        """
+        if not hasattr(self, "_cache_bank_barrier_lock"):
+            self._cache_bank_barrier_lock = threading.Lock()
+        return self._cache_bank_barrier_lock
+
     def _handle_delegate_cache_write(self, payload):
         """
         Peer-side handler for ``cluster/peer/delegate-cache-write``.
@@ -2563,15 +2578,29 @@ class MasterPubServerChannel:
         the matching ``bank_sync:<bank>`` channel eofs.  Without this
         barrier a late stale-snapshot chunk can overwrite a fresh
         live delta ("stale wins" ordering).
+
+        NEW-4: this method runs on an executor thread (``run_in_executor``
+        from the state-sync-chunk dispatch) while
+        ``_release_cache_bank_barrier`` runs on the event-loop
+        thread.  A naive check-then-act was susceptible to a drop:
+        thread-A reads ``_cache_bank_barrier_active == True`` just
+        as thread-B calls ``_release_cache_bank_barrier`` and
+        removes the barrier; thread-A then calls
+        ``_queue_cache_bank_delta`` which no-ops (barrier gone), and
+        the delta is lost.  Acquiring ``_cache_bank_barrier_lock``
+        across the check AND the enqueue makes the two steps atomic.
         """
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
 
         bank = None
         if isinstance(payload, dict):
             bank = payload.get("bank")
-        if bank and self._cache_bank_barrier_active(bank):
-            self._queue_cache_bank_delta(bank, payload)
-            return None
+        if bank:
+            lock = self._ensure_cache_bank_barrier_lock()
+            with lock:
+                if self._cache_bank_barrier_active_locked(bank):
+                    self._queue_cache_bank_delta_locked(bank, payload)
+                    return None
         return salt.cache._cluster_replicator._handle_delegate_cache_write(
             self.opts, payload
         )
@@ -2584,6 +2613,19 @@ class MasterPubServerChannel:
         Uses longest-prefix match on the barrier's bank name so a
         compound delta bank (``grains/<minion>``) matches a top-level
         barrier bank (``grains``).
+
+        Acquires ``_cache_bank_barrier_lock`` for a consistent snapshot.
+        Callers that already hold the lock should use
+        :meth:`_cache_bank_barrier_active_locked` instead.
+        """
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            return self._cache_bank_barrier_active_locked(bank)
+
+    def _cache_bank_barrier_active_locked(self, bank):
+        """
+        NEW-4 locked variant: caller MUST already hold
+        ``_cache_bank_barrier_lock``.
         """
         barriers = getattr(self, "_cache_bank_barriers", None) or {}
         if not barriers:
@@ -2598,7 +2640,16 @@ class MasterPubServerChannel:
         """
         Queue a live ``delegate-cache-write`` payload behind the
         matching pending bank's catch-up stream.
+
+        Acquires ``_cache_bank_barrier_lock``.  Callers that already
+        hold it should use :meth:`_queue_cache_bank_delta_locked`.
         """
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            self._queue_cache_bank_delta_locked(bank, payload)
+
+    def _queue_cache_bank_delta_locked(self, bank, payload):
+        """NEW-4 locked variant: caller MUST already hold the lock."""
         barriers = getattr(self, "_cache_bank_barriers", None) or {}
         for banks in barriers.values():
             for pending, queue in banks.items():
@@ -2616,16 +2667,28 @@ class MasterPubServerChannel:
         same free-function handler the live path uses so the
         ``originating_master`` guard and ``_already_replicated``
         flag flow through identically.
+
+        NEW-4: snapshot-under-lock-then-release pattern.  The queue
+        snapshot is popped under the lock; the actual replay of
+        queued payloads runs OUTSIDE the lock because the free-
+        function handler may touch disk / mmap and we do not want
+        to serialise every executor-thread handler on the barrier
+        lock.
         """
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
 
-        barriers = getattr(self, "_cache_bank_barriers", None) or {}
-        session_banks = barriers.get(session_id)
-        if not session_banks:
-            return
-        queue = session_banks.pop(bank, None) or []
-        if not session_banks:
-            barriers.pop(session_id, None)
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            barriers = getattr(self, "_cache_bank_barriers", None) or {}
+            session_banks = barriers.get(session_id)
+            if not session_banks:
+                return
+            queue = session_banks.pop(bank, None) or []
+            if not session_banks:
+                barriers.pop(session_id, None)
+        # ``queue`` is a local list now; replay outside the lock so
+        # the handler's disk / mmap work does not serialise other
+        # executor threads trying to acquire the barrier lock.
         for queued_payload in queue:
             try:
                 salt.cache._cluster_replicator._handle_delegate_cache_write(
@@ -2650,12 +2713,25 @@ class MasterPubServerChannel:
         Drain every bank's queued writes for *session_id* (used when
         on_complete fires via the watchdog rather than eof-of-all-
         channels).  Keeps the barrier a bounded-latency hold.
+
+        NEW-4 (reviewer correction #4): snapshot the bank list under
+        the lock, release the lock, THEN call
+        ``_release_cache_bank_barrier`` for each bank.  Each
+        per-bank release re-acquires the lock.  This avoids the
+        re-entrant RLock requirement -- plain ``threading.Lock`` is
+        sufficient because no code path holds the lock across the
+        nested call.
         """
-        barriers = getattr(self, "_cache_bank_barriers", None) or {}
-        session_banks = barriers.get(session_id)
-        if not session_banks:
-            return
-        for bank in list(session_banks.keys()):
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            barriers = getattr(self, "_cache_bank_barriers", None) or {}
+            session_banks = barriers.get(session_id)
+            if not session_banks:
+                return
+            bank_snapshot = list(session_banks.keys())
+        # Release phase runs UNLOCKED; each bank acquires the lock
+        # itself inside ``_release_cache_bank_barrier``.
+        for bank in bank_snapshot:
             self._release_cache_bank_barrier(session_id, bank)
 
     async def _run_delegate_cache_write(self, payload):
@@ -3659,7 +3735,15 @@ class MasterPubServerChannel:
         session.watchdog_handle = None
         self._state_sync_sessions[session_id] = session
         if banks:
-            self._cache_bank_barriers[session_id] = {bank: [] for bank in banks}
+            # NEW-4: hold the barrier lock across the assignment so a
+            # concurrent ``_handle_delegate_cache_write`` on the
+            # executor thread cannot observe a partially-populated
+            # barrier dict (dict mutation under GIL is atomic per-op
+            # but the ``{bank: []}`` comprehension executes multiple
+            # ops; take the lock to prevent any check-then-act skew).
+            lock = self._ensure_cache_bank_barrier_lock()
+            with lock:
+                self._cache_bank_barriers[session_id] = {bank: [] for bank in banks}
 
         try:
             loop = asyncio.get_event_loop()
