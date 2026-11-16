@@ -406,14 +406,16 @@ class Topology:
                 capture_output=capture,
             )
         except subprocess.CalledProcessError as exc:
-            # Re-raise with stdout/stderr folded into the message so
-            # pytest's --tb=line surfaces the docker/salt error text.
+            # Fold stdout/stderr into ``exc.cmd`` so the default
+            # ``CalledProcessError.__str__`` -- which formats
+            # ``self.cmd`` + ``self.returncode`` and ignores
+            # ``self.args`` -- actually surfaces the docker/salt
+            # error text under pytest's ``--tb=line``.  Mutating
+            # ``exc.args`` alone is invisible: ``__str__`` never
+            # reads it.
             tail_stdout = (exc.stdout or "").strip()[-400:]
             tail_stderr = (exc.stderr or "").strip()[-400:]
-            exc.args = (
-                f"{argv} rc={exc.returncode} "
-                f"stderr={tail_stderr!r} stdout={tail_stdout!r}",
-            )
+            exc.cmd = f"{argv} // stderr={tail_stderr!r} stdout={tail_stdout!r}"
             raise
 
     def exec(
