@@ -865,10 +865,37 @@ def collect_from_peers(channels=(), banks=_DEFAULT_COLLECT_BANKS):
             "cluster.collect_from_peers requires at least one channel or bank"
         )
     requested = fixed + [f"{BANK_CHANNEL_PREFIX}{b}" for b in bank_list]
-    return _fire_cluster_event(
+    result = _fire_cluster_event(
         "cluster/runner/collect_from_peers",
         {"channels": requested},
     )
+    # Reviewer correction Q4: surface the status-sentinel path and the
+    # ``skipped_peers`` operator contract in a backwards-compatible shape.
+    # Callers that scripted against ``.get("status") == "fan-out initiated"``
+    # keep working; the new keys are informational.  ``skipped_peers`` is
+    # populated by the publish daemon when it writes the sentinel JSON
+    # (see :meth:`MasterPubServerChannel._init_collect_sentinel` --
+    # un-joined peers at request time are enumerated there so operators
+    # can distinguish "complete" from "complete-but-partial" without
+    # grepping logs).
+    import os  # pylint: disable=import-outside-toplevel
+
+    cachedir = __opts__.get("cachedir")
+    sentinel_path = (
+        os.path.join(cachedir, "cluster-collect-status.json") if cachedir else None
+    )
+    if isinstance(result, dict):
+        result.setdefault("sentinel_path", sentinel_path)
+        result.setdefault(
+            "skipped_peers_note",
+            (
+                "Un-joined peers at request time are listed under "
+                "'skipped_peers' in the sentinel JSON; the runner is "
+                "fire-and-forget so the server-side gate writes the "
+                "sentinel before any chunk arrives."
+            ),
+        )
+    return result
 
 
 def ring_set(name=None, members=None, replicas=None):

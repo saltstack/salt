@@ -2865,9 +2865,49 @@ class MasterPubServerChannel:
             )
             return
         request_payload = {"requester": requester, "channels": valid_channels}
-        expected_peers = [p.pull_host for p in self.pushers]
-        self._init_collect_sentinel(valid_channels, expected_peers, requester)
-        for pusher in self.pushers:
+        # NEW-10: Gate the collect-request fan-out through
+        # ``filter_joined_pushers`` BEFORE sizing ``expected_peers`` so the
+        # sentinel threshold is set from the kept set, not the raw
+        # ``self.pushers`` list.  ``pending_event=None`` because a
+        # collect-request is a PULL scoped to one run -- replaying it later
+        # via the pending-queue mechanism would not update the original
+        # sentinel's ``expected_peers``.  Operator contract: un-joined
+        # peers are listed in ``skipped_peers`` on the sentinel; operator
+        # re-invokes the runner after the handshake completes if they want
+        # eager delivery.  See primary design §Fix 2; reviewer correction
+        # #2 (per-peer EOF tracking in sentinel) is implemented in
+        # ``_init_collect_sentinel`` / ``_record_collect_chunk``.
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="collect-from-peers",
+            pending_event=None,
+        )
+        skipped_hosts = sorted(p.pull_host for p in skipped if p.pull_host)
+        expected_peers = [p.pull_host for p in kept]
+        if not expected_peers:
+            log.warning(
+                "cluster.collect_from_peers: no peers joined; aborting fan-out "
+                "(skipped_peers=%s)",
+                skipped_hosts,
+            )
+            # Still write a sentinel so operators polling the file see a
+            # deterministic structure (complete=False, skipped lists the
+            # un-joined peers).
+            self._init_collect_sentinel(
+                valid_channels, expected_peers, requester, skipped_peers=skipped_hosts
+            )
+            return
+        self._init_collect_sentinel(
+            valid_channels, expected_peers, requester, skipped_peers=skipped_hosts
+        )
+        for pusher in kept:
             peer_id = pusher.pull_host
             event = salt.utils.event.SaltEvent.pack(
                 salt.utils.event.tagify("collect-request", "peer", "cluster"),
@@ -2888,7 +2928,9 @@ class MasterPubServerChannel:
                     peer_id,
                 )
 
-    def _init_collect_sentinel(self, channels, expected_peers, requester):
+    def _init_collect_sentinel(
+        self, channels, expected_peers, requester, skipped_peers=None
+    ):
         """
         Initialise the per-process collect-status structure and
         flush it to disk.  Subsequent
@@ -2899,31 +2941,56 @@ class MasterPubServerChannel:
         """
         import time  # pylint: disable=import-outside-toplevel
 
+        # Reviewer correction #2: ``peers_eofed`` tracks the SET of peers
+        # that have eof'd a channel, not a monotonic ``eofs_seen`` counter.
+        # The threshold ``peers_eofed >= set(expected_peers)`` is reached
+        # only when every joined peer has acked, not when total acks happen
+        # to equal the kept count (a skipped peer who installs cluster_aes
+        # mid-run could otherwise increment the counter into a false
+        # ``complete=True``).  ``eofs_seen`` is kept for back-compat with
+        # external operator tooling that reads the sentinel JSON.  The
+        # ``peers_eofed`` set is persisted as a sorted list so the sentinel
+        # remains JSON-serialisable.
         self._collect_status = {
             "started_at": time.time(),
             "updated_at": time.time(),
             "requester": requester,
             "channels": list(channels),
             "expected_peers": sorted(expected_peers),
+            "skipped_peers": sorted(skipped_peers or []),
             "items_installed": 0,
             "chunks_installed": 0,
             "per_channel": {
-                ch: {"chunks": 0, "items": 0, "eofs_seen": 0} for ch in channels
+                ch: {
+                    "chunks": 0,
+                    "items": 0,
+                    "eofs_seen": 0,
+                    "peers_eofed": [],
+                }
+                for ch in channels
             },
             "complete": False,
         }
         self._write_collect_sentinel()
 
-    def _record_collect_chunk(self, channel, items_installed, eof):
+    def _record_collect_chunk(self, channel, items_installed, eof, source_peer=None):
         """
         Update the in-memory collect status with one chunk's
         outcome and flush.
 
-        ``complete`` flips to True when every channel has seen at
-        least ``len(expected_peers)`` eofs -- the heuristic for "every
-        peer responded for every requested channel."  Operators
-        watching the file poll for the boolean, not the per-channel
-        counts.
+        ``complete`` flips to True when every channel's
+        ``peers_eofed`` set is a superset of ``expected_peers`` --
+        the correct "every expected peer has eof'd every requested
+        channel" check.  Operators watching the file poll for the
+        boolean, not the per-channel counts.
+
+        Reviewer correction #2: per-peer set replaces the monotonic
+        ``eofs_seen`` counter so a skipped peer whose cluster_aes
+        install races the fan-out cannot count towards a false
+        ``complete=True`` by emitting an eof that would increment
+        the counter past the kept-count threshold.  The threshold
+        now checks "did every kept peer eof?", which can only be
+        answered correctly if we record WHO sent each eof.
         """
         import time  # pylint: disable=import-outside-toplevel
 
@@ -2931,18 +2998,28 @@ class MasterPubServerChannel:
         if status is None:
             return
         per_ch = status["per_channel"].setdefault(
-            channel, {"chunks": 0, "items": 0, "eofs_seen": 0}
+            channel,
+            {"chunks": 0, "items": 0, "eofs_seen": 0, "peers_eofed": []},
         )
         per_ch["chunks"] += 1
         per_ch["items"] += int(items_installed)
         if eof:
+            # Keep the monotonic counter for back-compat with external
+            # tooling that reads the sentinel JSON.
             per_ch["eofs_seen"] += 1
+            # Record WHICH peer eofed so the threshold check is
+            # correct for a filtered expected_peers set.
+            if source_peer:
+                peers = per_ch.setdefault("peers_eofed", [])
+                if source_peer not in peers:
+                    peers.append(source_peer)
+                    peers.sort()
         status["chunks_installed"] += 1
         status["items_installed"] += int(items_installed)
         status["updated_at"] = time.time()
-        expected_eofs = len(status["expected_peers"])
-        if expected_eofs > 0 and all(
-            ch_state["eofs_seen"] >= expected_eofs
+        expected_set = set(status.get("expected_peers") or [])
+        if expected_set and all(
+            expected_set.issubset(set(ch_state.get("peers_eofed") or []))
             for ch_state in status["per_channel"].values()
         ):
             status["complete"] = True
@@ -3026,11 +3103,17 @@ class MasterPubServerChannel:
         # -- the on-complete on that path is a plain teardown, which
         # is what we want here too.  Mark the origin so the
         # requester's chunk handler updates the collect-status
-        # sentinel and not the sync_roots one.
+        # sentinel and not the sync_roots one.  Include this peer's
+        # own id as ``source_peer`` so the requester's sentinel can
+        # track per-peer eofs (reviewer correction #2): without this,
+        # the requester cannot tell which peer's eof arrived and the
+        # sentinel threshold would compare a monotonic counter.
+        source_peer = salt.cluster.node_id(self.opts)
         begin_payload = {
             "session": session_id,
             "channels": channels,
             "origin": "collect",
+            "source_peer": source_peer,
         }
         begin_event = salt.utils.event.SaltEvent.pack(
             salt.utils.event.tagify("sync-roots-begin", "peer", "cluster"),
@@ -3409,10 +3492,17 @@ class MasterPubServerChannel:
             " (eof)" if eof else "",
         )
         # Collect-origin sessions update the operator-visible
-        # status sentinel -- bumps a counter the operator polls
-        # while waiting for the runner's fan-out to finish.
+        # status sentinel -- tracks per-peer eofs (reviewer
+        # correction #2) so the completion threshold is "every
+        # expected peer has eof'd every channel", not a monotonic
+        # counter.
         if getattr(session, "origin", "sync_roots") == "collect":
-            self._record_collect_chunk(channel, installed, eof)
+            self._record_collect_chunk(
+                channel,
+                installed,
+                eof,
+                source_peer=getattr(session, "source_peer", None),
+            )
         session.record_chunk(channel, seq, eof, installed)
 
     def _begin_state_sync_session(
@@ -3509,7 +3599,9 @@ class MasterPubServerChannel:
                 session_id,
             )
 
-    def _begin_root_sync_session(self, session_id, channels, origin="sync_roots"):
+    def _begin_root_sync_session(
+        self, session_id, channels, origin="sync_roots", source_peer=None
+    ):
         """
         Pre-register a state-sync session for an operator-driven
         content push.
@@ -3575,6 +3667,12 @@ class MasterPubServerChannel:
         session = StateSyncSession(session_id, _on_complete, channels=channels)
         session.watchdog_handle = None
         session.origin = origin
+        # Reviewer correction #2: carry the peer-id of the chunk source
+        # on the session so the collect-status sentinel can mark
+        # ``peers_eofed`` as a set, not a monotonic counter.  ``None``
+        # when unknown (legacy sync-roots-begin without ``source_peer``;
+        # the per-peer tracking degrades to a counter in that case).
+        session.source_peer = source_peer
         self._state_sync_sessions[session_id] = session
 
         try:
@@ -4208,6 +4306,7 @@ class MasterPubServerChannel:
                     begin.get("session"),
                     begin.get("channels") or [],
                     origin=begin.get("origin", "sync_roots"),
+                    source_peer=begin.get("source_peer"),
                 )
                 return
             if tag.startswith("cluster/peer/delegate-write"):
