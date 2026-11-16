@@ -33,6 +33,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import os
+import re
 import signal
 import subprocess
 import time
@@ -276,6 +277,141 @@ def _launch_exporters(topo_name: str, spec, workdir: Path) -> None:
         log.close()
 
 
+_DUMMY_RESOURCE_RE = re.compile(r"^\s*dummy_resource_count\s*:\s*(\d+)\s*$", re.M)
+
+
+def _expected_resource_total(spec) -> int:
+    """Sum of ``dummy_resource_count`` across every minion config this
+    topology ships.
+
+    Returns 0 for topologies that don't declare any resource inventory
+    (single, cluster5, multimaster, syndic as of 2026-11).  Only
+    cluster3's ``tests/monitoring/cluster-3node/minion-*.conf`` sets
+    the knob today.  Parsed directly from the YAML on disk rather than
+    exposed via :class:`TopologySpec` so this adapts automatically to
+    future topology changes without a spec-side update.
+    """
+    # Use the actual compose file paths from the spec rather than
+    # globbing every candidate dir -- otherwise cluster5 reads
+    # cluster-3node's minion configs too and sees a phantom 1 M.
+    # Each minion container has a config that compose bind-mounts
+    # from the same directory as the compose yaml.  Glob the yaml's
+    # parent for ``minion*.conf``, DEDUPED across overlays (compose
+    # often ships base + overlay yamls in the same dir).
+    seen_dirs: set[Path] = set()
+    total = 0
+    for yaml_path in spec.compose_files:
+        yaml_dir = Path(yaml_path).parent
+        if yaml_dir in seen_dirs:
+            continue
+        seen_dirs.add(yaml_dir)
+        # Only count one ``minion-N.conf`` per minion container -- the
+        # generic ``minion.conf`` sibling is a shared default that
+        # compose may ALSO bind-mount, which would double-count on
+        # cluster-3node (minion-1..5.conf + minion.conf = 6 files for
+        # 5 minions).  Prefer per-minion configs if any exist; fall
+        # back to the generic ``minion.conf`` otherwise.
+        per_minion = sorted(yaml_dir.glob("minion-[0-9]*.conf"))
+        candidates = per_minion if per_minion else sorted(yaml_dir.glob("minion.conf"))
+        for conf in candidates:
+            try:
+                text = conf.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            match = _DUMMY_RESOURCE_RE.search(text)
+            if match:
+                total += int(match.group(1))
+    return total
+
+
+def _count_registered_resources(spec) -> int:
+    """Count files in the master's ``resource_grains`` cache bank.
+
+    The localfs cache backend writes one file per registered SRN under
+    ``/var/cache/salt/master/resource_grains/``.  Counting files is
+    cheap (readdir) -- avoids the master-side full fetch that
+    ``salt-run resource.list_grains`` would do and that on 1 M
+    resources would be 20 s per poll.  Any master in the spec will do
+    on a cluster-cache-replicated stack; use the primary.
+
+    Returns 0 on any failure (container not up, cache dir not created
+    yet, docker exec timeout).  The poll loop above handles the zero
+    case gracefully.
+    """
+    proc = subprocess.run(
+        [
+            "docker",
+            "exec",
+            spec.primary_master,
+            "sh",
+            "-c",
+            "find /var/cache/salt/master/resource_grains -type f 2>/dev/null | wc -l",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    if proc.returncode != 0:
+        return 0
+    try:
+        return int(proc.stdout.strip() or "0")
+    except ValueError:
+        return 0
+
+
+def _wait_resource_register_complete(spec, expected_total: int, timeout: int) -> None:
+    """Block until the master has seen at least ``expected_total``
+    resource grains from the fleet, or until ``timeout`` seconds
+    elapse.
+
+    Measured on cluster3 (5 minions x 200 000 each) at ~12 000
+    resources/minute/minion fleet-wide -> ~16 min for the full
+    1 000 000.  Default timeout 1200 s covers that with headroom;
+    override via ``RESILIENCY_REGISTER_WAIT_SEC``.
+
+    Progress logging every 30 s so operators tailing the CI log can
+    see motion.  On timeout the suite continues anyway (don't block
+    the test run on a stuck master) -- the first baseline test will
+    then trip the leak gate and surface the real problem.
+    """
+    deadline = time.monotonic() + timeout
+    start = time.monotonic()
+    last_logged_count = -1
+    last_logged_at = 0.0
+    print(
+        f"[resiliency] register-wait: polling master "
+        f"{spec.primary_master} until {expected_total} resources "
+        f"registered (timeout {timeout}s)",
+        flush=True,
+    )
+    while time.monotonic() < deadline:
+        count = _count_registered_resources(spec)
+        now = time.monotonic()
+        if count >= expected_total:
+            print(
+                f"[resiliency] register-wait: complete "
+                f"{count}/{expected_total} after {int(now - start)}s",
+                flush=True,
+            )
+            return
+        if count != last_logged_count and now - last_logged_at >= 30:
+            print(
+                f"[resiliency] register-wait: {count}/{expected_total} "
+                f"at T+{int(now - start)}s",
+                flush=True,
+            )
+            last_logged_count = count
+            last_logged_at = now
+        time.sleep(5)
+    print(
+        f"[resiliency] register-wait: TIMEOUT at "
+        f"{last_logged_count}/{expected_total} after {timeout}s; "
+        f"continuing anyway",
+        flush=True,
+    )
+
+
 def _snapshot_compose_logs(spec, workdir: Path) -> None:
     """``docker compose ... logs > compose.log``.  Best-effort."""
     with (workdir / "compose.log").open("w", encoding="utf-8") as fh:
@@ -449,43 +585,34 @@ def topology(request):
     # settled baseline, not startup growth.
     #
     # The cluster3 topology's minion config declares
-    # ``dummy_resource_count: 200000`` (see
-    # ``tests/monitoring/cluster-3node/minion-*.conf``), which triggers
-    # a chunked register of 200 000 resources per minion -- 20 chunks
-    # at 10 000 per chunk, times 5 minions = 100 chunks fleet-wide.
-    # That register keeps going for several minutes after
-    # ``wait_initial_auth`` returns on test.ping, and during it the
-    # minion's working-set legitimately grows ~10 MB per minion.  The
-    # baseline_idle_* tests charge that growth to a phantom leak and
-    # fail with ``reason=fd_accumulation`` or bulk_rss_retention on
-    # cluster3 only (cluster5 doesn't declare dummy_resource_count).
-    # See agents/reports/baseline_leak_regression.md for the local
-    # measurement.
-    #
-    # Per-topology warmup override: topologies that register a large
-    # resource inventory get a longer default warmup so the register
-    # storm is past before the first idle measurement.  Env override
-    # (RESILIENCY_WARMUP_SEC) still wins if explicitly set.
-    _topology_warmup_default = {
-        # cluster3 minions declare ``dummy_resource_count: 200000`` so
-        # the post-auth register storm runs for several minutes past
-        # the default 60s warmup.
-        "cluster3": 300,
-    }
-    warmup_sec = int(
-        os.environ.get(
-            "RESILIENCY_WARMUP_SEC",
-            str(_topology_warmup_default.get(topo_name, 60)),
+    # ``dummy_resource_count: 200000`` per minion -- 5 minions chunk-
+    # register 1 000 000 resources total.  That continues past the
+    # default sleep-based warmup; baseline_idle_* then measures mid-
+    # register growth and fails with reason=fd_accumulation.  Instead
+    # of guessing a fixed sleep (Agent P's 300s covered only ~25 % of
+    # the storm), actively poll the master's ``resource_grains`` cache
+    # bank -- a localfs directory with one file per registered
+    # resource -- and return as soon as the count crosses the fleet
+    # total.  For topologies that don't declare resources (single /
+    # cluster5 / multimaster / syndic) the expected total is 0 and we
+    # fall back to the short sleep-based warmup.
+    expected_total = _expected_resource_total(spec)
+    if expected_total > 0:
+        _wait_resource_register_complete(
+            spec,
+            expected_total,
+            timeout=int(os.environ.get("RESILIENCY_REGISTER_WAIT_SEC", "1200")),
         )
-    )
-    if warmup_sec > 0:
-        print(
-            f"[resiliency] warm-up: sleeping {warmup_sec}s after "
-            f"wait_initial_auth so minion RSS/FD settles before the "
-            f"first baseline measurement",
-            flush=True,
-        )
-        time.sleep(warmup_sec)
+    else:
+        warmup_sec = int(os.environ.get("RESILIENCY_WARMUP_SEC", "60"))
+        if warmup_sec > 0:
+            print(
+                f"[resiliency] warm-up: sleeping {warmup_sec}s after "
+                f"wait_initial_auth so minion RSS/FD settles before the "
+                f"first baseline measurement",
+                flush=True,
+            )
+            time.sleep(warmup_sec)
 
     try:
         yield topology_handle
