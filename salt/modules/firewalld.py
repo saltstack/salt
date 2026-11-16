@@ -5,6 +5,7 @@ Support for firewalld.
 """
 
 import logging
+import os
 import re
 
 import salt.utils.path
@@ -27,11 +28,38 @@ def __virtual__():
     )
 
 
+def __in_transaction():
+    """
+    Return True when running inside a transactional-update snapshot, where
+    the firewalld daemon (and dbus) are not reachable.
+    """
+    return bool(os.environ.get("TRANSACTIONAL_UPDATE"))
+
+
 def __firewall_cmd(cmd):
     """
     Return the firewall-cmd location
+
+    Inside a transaction (transactional systems such as openSUSE MicroOS)
+    dbus is not available, so ``firewall-offline-cmd`` is used instead. It
+    edits the permanent configuration directly, so ``--permanent`` is not
+    accepted and runtime-only operations (``--reload``) are no-ops.
     """
-    firewall_cmd = "{} {}".format(salt.utils.path.which("firewall-cmd"), cmd)
+    binary = salt.utils.path.which("firewall-cmd")
+    if __in_transaction():
+        offline = salt.utils.path.which("firewall-offline-cmd")
+        if offline:
+            args = [a for a in cmd.split() if a != "--permanent"]
+            if "--reload" in args:
+                return "success"
+            binary = offline
+            cmd = " ".join(args)
+        else:
+            log.debug(
+                "firewall-offline-cmd not found, falling back to firewall-cmd "
+                "inside the transaction"
+            )
+    firewall_cmd = f"{binary} {cmd}"
     out = __salt__["cmd.run_all"](firewall_cmd)
 
     if out["retcode"] != 0:
