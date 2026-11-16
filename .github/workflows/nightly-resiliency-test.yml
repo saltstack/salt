@@ -310,12 +310,25 @@ jobs:
           echo "Resolved outer_timeout=${outer_timeout} (marathon=${MARATHON_ENABLED_INPUT})"
           # ``1`` / ``0`` match the master_marathon.sh env contract.
           marathon_enabled=0; [ "$MARATHON_ENABLED_INPUT" = "true" ] && marathon_enabled=1
+          # ``--no-cleanup`` keeps the compose stack (and prometheus)
+          # running after pytest exits so the follow-on workflow steps
+          # ``Analyze Results`` + ``Render Dashboard Panels`` can
+          # still query http://127.0.0.1:${PROM_PORT}.  The
+          # ``Snapshot Metrics`` step below performs the authoritative
+          # ``compose stop prometheus`` + tar; Collect Logs + the
+          # trailing cleanup take compose down.  Without this, pytest's
+          # topology-fixture finalizer tore down the stack mid-step
+          # and the analyzer reported ``prometheus unreachable`` on
+          # multimaster (which was the only matrix entry that actually
+          # finished pytest within the outer 6h timeout -- the others
+          # got hard-killed and skipped the finalizer by accident).
           timeout "$outer_timeout" env \
             TOPOLOGY=${{ matrix.topology }} \
             DURATION=${{ github.event.inputs.duration || '0.5h' }} \
             SCENARIOS="${{ github.event.inputs.scenarios || 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon' }}" \
             PROMETHEUS_URL="http://127.0.0.1:${PROM_PORT}" \
             MARATHON_ENABLED="$marathon_enabled" \
+            PYTEST_EXTRA_ARGS="--no-cleanup" \
             ./run_resiliency.sh
 
       - name: Stop disk trace

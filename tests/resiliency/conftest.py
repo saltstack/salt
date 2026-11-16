@@ -481,14 +481,32 @@ def _snapshot_compose_logs(spec, workdir: Path) -> None:
         )
 
 
-def _snapshot_prometheus_data(topo_name: str, spec, workdir: Path) -> None:
-    """Stop prometheus, then tar the data dir to prometheus-data.tar.gz."""
-    subprocess.run(
-        _compose_cmd(spec, "stop", "prometheus"),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
+def _snapshot_prometheus_data(
+    topo_name: str,
+    spec,
+    workdir: Path,
+    *,
+    stop_prometheus: bool = True,
+) -> None:
+    """Optionally stop prometheus, then tar the data dir.
+
+    ``stop_prometheus=False`` is used in CI, where the workflow's
+    ``Analyze Results`` + ``Render Dashboard Panels`` steps run AFTER
+    the pytest session exits and need prometheus still reachable at
+    ``http://127.0.0.1:<port>``.  The workflow's own ``Snapshot
+    Metrics`` step performs the final ``compose stop prometheus`` +
+    tar for the authoritative artifact; the pytest-level tar here is
+    best-effort against a still-running TSDB (slightly stale but
+    valid for post-mortem).  Mirrors the ``--no-cleanup`` contract
+    for ``compose down``: both are deferred to the workflow in CI.
+    """
+    if stop_prometheus:
+        subprocess.run(
+            _compose_cmd(spec, "stop", "prometheus"),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
     prom_data = PROM_DATA_DIRS.get(topo_name)
     if prom_data is None or not prom_data.exists():
         return
@@ -669,8 +687,18 @@ def topology(request):
         yield topology_handle
     finally:
         _snapshot_compose_logs(spec, workdir)
-        _snapshot_prometheus_data(topo_name, spec, workdir)
-        if not config.getoption("--no-cleanup"):
+        # In CI we pass ``--no-cleanup`` so the workflow's
+        # ``Analyze Results`` + ``Render Dashboard Panels`` steps,
+        # which run AFTER this fixture's finalizer, can still reach
+        # prometheus.  The workflow's ``Snapshot Metrics`` step
+        # performs the authoritative stop + tar.  Locally
+        # (``--no-cleanup`` not set) the finalizer stops prometheus
+        # and brings the stack down as before.
+        no_cleanup = config.getoption("--no-cleanup")
+        _snapshot_prometheus_data(
+            topo_name, spec, workdir, stop_prometheus=not no_cleanup
+        )
+        if not no_cleanup:
             subprocess.run(
                 _compose_cmd(spec, "down", "-v", "--remove-orphans"),
                 stdout=subprocess.DEVNULL,
@@ -830,8 +858,17 @@ def pytest_runtest_makereport(item, call):
 
     # Only record on the "call" phase, OR on a "setup" failure (so a
     # fixture explosion still produces a setup_error row rather than
-    # silent omission).
-    if report.when not in ("call", "setup"):
+    # silent omission).  A passing setup must NOT emit: the call phase
+    # has not run yet, so the stash is empty, and emitting here would
+    # pin the row to ``outcome="recovered"`` with all-zero deltas
+    # before ``assert_reconnect`` has had a chance to populate the
+    # real fd/rss numbers.  The call-phase hook then early-returns
+    # because ``_resiliency_recorded`` is set, and the real deltas
+    # (plus any ``pytest.fail`` verdict) are silently dropped.
+    if report.when == "setup":
+        if not report.failed:
+            return
+    elif report.when != "call":
         return
 
     # Avoid double-recording: if setup failed we'll emit, then skip call.
