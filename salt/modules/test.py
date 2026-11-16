@@ -234,22 +234,43 @@ def get_opts():
 
 def cross_test(func, args=None):
     """
-    Execute a minion function via the wire-filtered loader
-    (``__wire_salt__``) in the test module, used to verify that the
-    Minion functions can be called this way.
+    Execute a minion function via the ``__salt__`` object in the test
+    module, used to verify that the Minion functions can be called
+    via the ``__salt__`` module.
 
-    ``__wire_salt__`` is the whitelist-gated outer loader (packed by
-    :func:`salt.loader.minion_mods`), so if ``whitelist_modules`` is
-    set, the dispatched function must also be whitelisted or the
-    lookup fails with ``KeyError``.  ``__salt__`` is deliberately not
-    used here: it is the unfiltered inner loader and would be an
-    escape hatch around the whitelist.
+    ``__salt__`` is the unfiltered inner loader, so ``cross_test`` can
+    reach any loaded function regardless of ``whitelist_modules``.
+    An operator who whitelists ``test.cross_test`` is granting
+    reflective access to every execution module; prefer
+    :func:`cross_test_safe` when the dispatch target should be subject
+    to the whitelist.
 
     CLI Example:
 
     .. code-block:: bash
 
         salt '*' test.cross_test file.gid_to_group 0
+    """
+    if args is None:
+        args = []
+    return __salt__[func](*args)
+
+
+def cross_test_safe(func, args=None):
+    """
+    Execute a minion function via the whitelist-gated loader
+    (``__wire_salt__``).  Unlike :func:`cross_test`, which uses the
+    unfiltered inner ``__salt__``, this variant dispatches through the
+    outer wire-filtered loader so ``whitelist_modules`` applies to the
+    target function as well as to ``test.cross_test_safe`` itself.
+
+    Fails with ``KeyError`` when ``func`` is not whitelisted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.cross_test_safe test.ping
     """
     if args is None:
         args = []
