@@ -283,6 +283,14 @@ def test_master_restart_simultaneous(topology, workload, request):
     if not_up:
         pytest.fail(f"{scenario}: masters did not return to Running=true: {not_up}")
 
+    # Direct ``docker restart`` bypasses :py:meth:`Topology.restart`
+    # (used here for parallelism), so re-launch fd_exporter manually
+    # per master -- otherwise prometheus loses ``salt_master_*`` series
+    # after this scenario and the analyzer FAILs with "fd_exporter
+    # likely never started".
+    for m in topology.spec.masters:
+        topology.start_exporter(m)
+
     fault_sec = int(time.monotonic() - fault_start)
     topology.assert_reconnect(
         scenario,

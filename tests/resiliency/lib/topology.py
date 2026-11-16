@@ -97,6 +97,15 @@ class TopologySpec:
     compose_project: str
     prometheus_host_port: int
     cadvisor_host_port: int
+    # Absolute path inside each master container to the bind-mounted
+    # ``fd_exporter.py``.  Multimaster binds at ``/srv/fd_exporter.py``;
+    # every other topology binds at ``/usr/local/bin/fd_exporter.py``.
+    # Used by :py:meth:`Topology.start_exporter` to re-launch the
+    # exporter after a container restart (master_restart scenarios
+    # kill the master pid, which takes fd_exporter with it; without
+    # re-launch prometheus sees no further ``salt_master_*`` series
+    # and the analyzer FAILs with "fd_exporter likely never started").
+    fd_exporter_path: str = "/usr/local/bin/fd_exporter.py"
 
     @property
     def master_count(self) -> int:
@@ -256,6 +265,11 @@ def load_topology(name: str, repo_root: Path | None = None) -> TopologySpec:
             compose_project="resiliency-multimaster",
             prometheus_host_port=19091,
             cadvisor_host_port=18082,
+            # Multimaster compose binds the exporter under ``/srv``
+            # (not ``/usr/local/bin``); mirror that here so
+            # :py:meth:`Topology.start_exporter` exec's the right
+            # path on master restart.
+            fd_exporter_path="/srv/fd_exporter.py",
         )
 
     if name == "syndic":
@@ -463,9 +477,61 @@ class Topology:
 
     def start(self, container: str) -> None:
         self._run(["docker", "start", container])
+        self.start_exporter(container)
 
     def restart(self, container: str) -> None:
         self._run(["docker", "restart", container])
+        self.start_exporter(container)
+
+    def start_exporter(self, container: str) -> None:
+        """Re-launch fd_exporter.py inside ``container`` if it is a master.
+
+        Master containers bind-mount ``fd_exporter.py`` (an ad-hoc
+        python metrics server for ``salt_master_open_fds`` /
+        ``salt_master_rss_bytes``); the orchestrator launches it once
+        via ``docker exec -d`` after ``compose up``.  Any workflow
+        that ends with a container restart (SIGKILL on the salt-master
+        pid, ``docker restart``, ``docker start`` after a prior stop)
+        drops the exporter with it -- the new master container has
+        no exporter process and prometheus stops collecting
+        ``salt_master_*`` series, surfacing downstream as the
+        analyzer's ``prometheus has no salt_master_* series
+        (fd_exporter likely never started)`` FAIL.
+
+        Called unconditionally from :py:meth:`start` and
+        :py:meth:`restart` so every master-restart scenario
+        (``test_master_restart_*``, ``test_master_marathon``,
+        ``test_minion_churn`` on a mis-targeted container, …)
+        auto-relaunches without each test site having to remember.
+        No-op for non-master containers (minions, haproxy, prometheus
+        itself).  Best-effort: a container that's still mid-start
+        will exec-fail and the next scheduled scrape just hits the
+        connection-refused → absent-series path.  Does NOT raise;
+        the scenario under test owns the restart semantics, not the
+        metrics plumbing.
+        """
+        if container not in self.spec.masters:
+            return
+        # Confirm the container is up before exec'ing -- a race
+        # between ``docker start`` returning and the ENTRYPOINT
+        # finishing can leave the container listed as running
+        # but not yet accepting exec.  ``check=False`` on the
+        # exec call below keeps a failed re-launch from masking
+        # the real test outcome.
+        if not self.inspect_running(container):
+            return
+        argv = [
+            "docker",
+            "exec",
+            "-d",
+            container,
+            "python3",
+            self.spec.fd_exporter_path,
+        ]
+        # Swallow errors: exporter already running (fast fail on port
+        # bind), container terminating, etc.  The purpose here is
+        # observability continuity, not a test assertion.
+        self._run(argv, check=False)
 
     def inspect_running(self, container: str) -> bool:
         """Return True iff ``docker inspect -f {{.State.Running}}`` is "true"."""

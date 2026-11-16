@@ -728,6 +728,14 @@ def stopped_container(
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
+                # ``topology.start`` normally relaunches fd_exporter;
+                # the subprocess fallback skipped that, so retry via
+                # the dedicated method so the metrics stream survives
+                # the fallback path too.
+                try:
+                    topology.start_exporter(container)
+                except Exception:  # noqa: BLE001
+                    pass
     finally:
         _mark_revert("stopped_container", container)
 

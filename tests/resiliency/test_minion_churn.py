@@ -238,6 +238,11 @@ def test_minion_churn_hothot_both_restart(topology, workload, request):
     mp.wait()
     np_.wait()
 
+    # Direct ``docker restart`` bypasses :py:meth:`Topology.restart`
+    # (used here for parallelism); re-launch fd_exporter manually so
+    # prometheus keeps collecting ``salt_master_*`` after this test.
+    topology.start_exporter(master_target)
+
     fault_sec = int(time.monotonic() - fault_start)
     topology.assert_reconnect(
         scenario,
