@@ -362,6 +362,19 @@ def sync_roots(roots="both"):
             "each peer's master log for the 'state-sync ... installed N items' "
             "lines to confirm delivery."
         ),
+        # Reviewer correction Q4: the publish daemon's sender-side gate
+        # skips un-joined peers with a WARN (``cluster.sync_roots: skipping
+        # un-joined peers [...]; roots will be caught up via state-sync on
+        # their next handshake``).  Un-joined peers receive the push once
+        # they complete the cluster handshake via the join-time
+        # state-sync catch-up (not via the pending-queue replay, because
+        # sync_roots is a multi-event session).  Operators seeing an
+        # incomplete push should wait for every peer to join and re-run.
+        "skipped_peers_note": (
+            "Un-joined peers are enumerated on each master's log with the "
+            "'cluster.sync_roots: skipping un-joined peers' prefix.  "
+            "Catch-up happens automatically on their next handshake."
+        ),
     }
 
 
@@ -434,7 +447,26 @@ def _fire_cluster_event(tag, data):
         listen=False,
     ) as event:
         event.fire_event(data, tag)
-    return {"status": "fan-out initiated", "tag": tag, "data": data}
+    return {
+        "status": "fan-out initiated",
+        "tag": tag,
+        "data": data,
+        # Reviewer correction Q4: the publish daemon's gate skips
+        # un-joined peers on multi-ring / sync_roots / collect fan-outs
+        # and emits a WARN naming them.  Multi-ring runners rely on
+        # Raft log replication to carry the committed entry to any
+        # peer that was skipped, so the fan-out gate is defence in
+        # depth -- the propose still happens on the leader, and
+        # AppendEntries delivers the commit.  Operators seeing
+        # ``multi-ring fan-out: skipping un-joined peers`` can wait
+        # for the peer to join and re-run to force an eager push.
+        "skipped_peers_note": (
+            "Un-joined peers are enumerated on each master's log with "
+            "the 'multi-ring fan-out: skipping un-joined peers' prefix.  "
+            "Raft AppendEntries delivers the committed entry once the "
+            "peer completes its handshake."
+        ),
+    }
 
 
 def ring_create(name, voters):

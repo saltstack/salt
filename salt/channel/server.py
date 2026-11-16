@@ -2082,7 +2082,34 @@ class MasterPubServerChannel:
             salt.utils.event.tagify("multi-ring-request", "peer", "cluster"),
             crypticle.dumps(payload),
         )
-        for pusher in self.pushers:
+        # NEW-7a: gate the fan-out through ``filter_joined_pushers``.
+        # ``pending_event=None`` because the Raft log replication layer
+        # carries the committed entry to the skipped peer once it
+        # handshakes; replaying a multi-ring-request from a per-peer
+        # pending queue would duplicate propose attempts.  Primary
+        # design §Fix 5; reviewer correction Q4 (runner scope).
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="multi-ring-request",
+            pending_event=None,
+        )
+        if skipped:
+            log.warning(
+                "multi-ring fan-out: skipping un-joined peers %s for %s; "
+                "the Raft leader handles the propose and AppendEntries "
+                "will carry the commit to them once they complete the "
+                "handshake",
+                sorted(p.pull_host for p in skipped if p.pull_host),
+                tag,
+            )
+        for pusher in kept:
             try:
                 await pusher.publish(event)
             except Exception:  # pylint: disable=broad-except
@@ -3192,7 +3219,33 @@ class MasterPubServerChannel:
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
 
-        for pusher in self.pushers:
+        # NEW-6: gate the fan-out through ``filter_joined_pushers``.
+        # ``pending_event=None`` because sync_roots is a multi-event
+        # session (begin + N chunks + eof) with a specific session_id;
+        # pending-queue replay of a single pre-encrypted event cannot
+        # preserve that session's integrity.  Skipped peers catch up
+        # via the join-time state-sync stream (file_roots /
+        # pillar_roots are re-streamed in the join-reply).  Primary
+        # design §Fix 4; reviewer correction Q4 (runner scope).
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="sync-roots",
+            pending_event=None,
+        )
+        if skipped:
+            log.warning(
+                "cluster.sync_roots: skipping un-joined peers %s; roots "
+                "will be caught up via state-sync on their next handshake",
+                sorted(p.pull_host for p in skipped if p.pull_host),
+            )
+        for pusher in kept:
             await self._send_sync_roots_to_peer(
                 pusher,
                 active_channels,
