@@ -179,3 +179,160 @@ def test_stash_result_merges_when_prior_dict_present():
     assert merged["rss_kb_delta"] == 12  # untouched
     assert merged["notes"] == "post-refine"
     assert merged["outcome"] == "recovered"
+
+
+# ---------------------------------------------------------------------------
+# Hook-phase gating: results.jsonl must not be seeded by passing setup
+# ---------------------------------------------------------------------------
+#
+# The call phase is the only phase whose user_properties stash reflects
+# a scenario's real verdict -- ``assert_reconnect`` runs in the test
+# body, so setup phase sees an empty stash.  Earlier the
+# ``pytest_runtest_makereport`` hook fired for any ``report.when ==
+# "setup"`` with ``report.passed == True`` and wrote an empty-sentinel
+# row with ``outcome="recovered"`` before the call phase ran.  That row
+# pinned ``_resiliency_recorded = True``; the call-phase hook then
+# early-returned and the real deltas / pytest.fail verdict silently
+# dropped.
+#
+# These tests pin: passing setup NEVER writes; failing setup DOES write
+# (a fixture explosion must still surface as ``setup_error``); the call
+# phase is the sole writer for a test whose setup passed.
+
+
+class _FakeReport:
+    def __init__(
+        self,
+        when,
+        passed=False,
+        failed=False,
+        skipped=False,
+        longreprtext="",
+    ):
+        self.when = when
+        self.passed = passed
+        self.failed = failed
+        self.skipped = skipped
+        self.longreprtext = longreprtext
+
+
+class _FakePytestItem:
+    """Pytest item with the attribute surface the hook touches."""
+
+    def __init__(self, nodeid="tests/resiliency/test_x.py::test_y"):
+        self.nodeid = nodeid
+        self.user_properties: list = []
+        self._closest_markers: dict = {}
+
+    def get_closest_marker(self, name):
+        return self._closest_markers.get(name)
+
+
+def _run_hook_for_report(item, report, written_rows):
+    """Invoke ``pytest_runtest_makereport``'s body for ``report``.
+
+    The real hook is a ``hookwrapper`` so it yields to an outcome.  We
+    simulate the outcome by patching ``_append_jsonl_row`` to capture
+    rows into ``written_rows``.  The hook also reads
+    ``os.environ["TOPOLOGY"]``; set it before calling.
+    """
+
+    # Replace _append_jsonl_row so we don't need RESULTS_FILE / disk.
+    original = conftest._append_jsonl_row
+    conftest._append_jsonl_row = written_rows.append
+    try:
+        # Mimic the hookwrapper plumbing: run the generator manually.
+        # ``outcome.get_result()`` returns the ``report`` we feed it.
+        class _FakeOutcome:
+            def get_result(self):
+                return report
+
+        gen = conftest.pytest_runtest_makereport(item, call=None)
+        try:
+            next(gen)  # advance past the ``outcome = yield``
+        except StopIteration:
+            return
+        try:
+            gen.send(_FakeOutcome())
+        except StopIteration:
+            pass
+    finally:
+        conftest._append_jsonl_row = original
+
+
+def test_hook_does_not_emit_row_on_passing_setup(monkeypatch):
+    """A passing setup phase MUST NOT write a row.
+
+    Writing here would pin the row to an empty-sentinel
+    ``recovered`` + fd_delta=0 + rss_kb_delta=0 and set
+    ``_resiliency_recorded = True`` so the call-phase hook would
+    early-return -- silently dropping the real
+    ``assert_reconnect`` verdict and deltas.
+    """
+    monkeypatch.setenv("TOPOLOGY", "single")
+    item = _FakePytestItem()
+    written: list = []
+    _run_hook_for_report(item, _FakeReport("setup", passed=True), written)
+    assert written == []
+    assert not getattr(item, "_resiliency_recorded", False)
+
+
+def test_hook_emits_setup_error_row_on_setup_failure(monkeypatch):
+    """A fixture explosion (failed setup) MUST write a ``setup_error``
+    row so the harness doesn't silently swallow it.
+    """
+    monkeypatch.setenv("TOPOLOGY", "single")
+    item = _FakePytestItem()
+    written: list = []
+    _run_hook_for_report(
+        item,
+        _FakeReport("setup", failed=True, longreprtext="boom: fixture blew up"),
+        written,
+    )
+    assert len(written) == 1
+    assert written[0]["outcome"] == "setup_error"
+    assert item._resiliency_recorded is True
+
+
+def test_hook_emits_real_deltas_on_call_phase(monkeypatch):
+    """The call-phase hook is the sole writer when setup passed.
+
+    After ``assert_reconnect`` has populated the stash with real
+    deltas, the call-phase hook rolls them into ``results.jsonl``
+    with the correct outcome.
+    """
+    monkeypatch.setenv("TOPOLOGY", "single")
+    item = _FakePytestItem()
+    # Simulate passing setup: hook returns without writing.
+    pre: list = []
+    _run_hook_for_report(item, _FakeReport("setup", passed=True), pre)
+    assert pre == []
+
+    # Scenario's call body fires assert_reconnect which stashes real fields.
+    Topology._stash_result(
+        item,
+        scenario="leak_check",
+        outcome="failed",
+        reconnect_seconds=5,
+        attempts=2,
+        missing=[],
+        fd_delta=66,
+        rss_kb_delta=628,
+        fault_seconds=90,
+        notes="rss_kb_per_min=418 threshold=200 reason=fd_accumulation",
+    )
+
+    # Call phase fires with report.failed=True (pytest.fail was raised).
+    written: list = []
+    _run_hook_for_report(
+        item,
+        _FakeReport("call", failed=True, longreprtext="Failed: ..."),
+        written,
+    )
+    assert len(written) == 1
+    row = written[0]
+    assert row["scenario"] == "leak_check"
+    assert row["outcome"] == "failed"
+    assert row["fd_delta"] == 66
+    assert row["rss_kb_delta"] == 628
+    assert "fd_accumulation" in row["notes"]
