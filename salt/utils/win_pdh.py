@@ -366,8 +366,7 @@ def get_all_counters(obj, instance_list=None):
         for instance in instance_list:
             instance = "*" if instance.lower() == "_total" else instance
             counter_list.append((obj, instance, counter))
-        else:  # pylint: disable=useless-else-on-loop
-            counter_list.append((obj, None, counter))
+        counter_list.append((obj, None, counter))
 
     return get_counters(counter_list) if counter_list else {}
 
