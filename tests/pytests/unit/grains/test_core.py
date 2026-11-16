@@ -2632,18 +2632,30 @@ def test_fqdns_return():
     test the return for a dns grain. test for issue:
     https://github.com/saltstack/salt/issues/41230
     """
+    # IPv6 addresses need to be outside the ranges
+    # ``_is_resolvable_address`` filters out (link-local ``fe80::/10``,
+    # site-local ``fec0::/10``, private ``fc00::/7``, and the
+    # documentation range ``2001:db8::/32`` which Python's
+    # ``ipaddress`` module also reports as ``is_private=True``).  Use a
+    # globally-routable prefix so the mock reverse-DNS lookup is actually
+    # exercised.
     reverse_resolv_mock = [
         ("foo.bar.baz", [], ["1.2.3.4"]),
         ("rinzler.evil-corp.com", [], ["5.6.7.8"]),
-        ("foo.bar.baz", [], ["fe80::a8b2:93ff:fe00:0"]),
-        ("bluesniff.foo.bar", [], ["fe80::a8b2:93ff:dead:beef"]),
+        ("foo.bar.baz", [], ["2606:4700::a8b2:93ff:fe00:0"]),
+        ("bluesniff.foo.bar", [], ["2606:4700::a8b2:93ff:dead:beef"]),
     ]
     ret = {"fqdns": ["bluesniff.foo.bar", "foo.bar.baz", "rinzler.evil-corp.com"]}
     with patch(
         "salt.utils.network.ip_addrs", MagicMock(return_value=["1.2.3.4", "5.6.7.8"])
     ), patch(
         "salt.utils.network.ip_addrs6",
-        MagicMock(return_value=["fe80::a8b2:93ff:fe00:0", "fe80::a8b2:93ff:dead:beef"]),
+        MagicMock(
+            return_value=[
+                "2606:4700::a8b2:93ff:fe00:0",
+                "2606:4700::a8b2:93ff:dead:beef",
+            ]
+        ),
     ), patch(
         # Just pass-through
         "salt.utils.network.socket.getfqdn",
