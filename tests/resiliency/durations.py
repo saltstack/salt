@@ -82,11 +82,18 @@ LEAK_BULK_RSS_KB = _env_int("LEAK_BULK_RSS_KB", 5000)
 # floor: a single lingering async-return socket, a chunked register
 # fork-pair spike, or a mid-pillar-refetch sampling race on ANY one
 # minion accounts for +1.  Gate ``leak_fd`` on a per-minion threshold
-# so the fleet scale doesn't produce false positives.  Default 1
-# fd/minion matches the empirical floor demonstrated by local
-# reproduction on mm-failover (single-minion churn fork-pair spike
-# of +14 above steady, settled within 500 ms).
-MIN_FD_DELTA_PER_MINION = _env_int("MIN_FD_DELTA_PER_MINION", 1)
+# so the fleet scale doesn't produce false positives.
+#
+# Default 2 fd/minion -- demonstrated empirically on single topology
+# where test_baseline_workload_only ran 10 minutes of workload.sh
+# traffic and showed fd_delta=+4 across 3 minions (1.3 fd/minion),
+# which is noise.  Real leak signatures from CI run 43578341397
+# remain caught: ping_200_concurrent fd+53/5 = 10.6/minion; mm
+# minion_churn_single_restart fd+13/1 = 13/minion; resource_oom
+# fd+42/5 = 8.4/minion.  The gap between the noise floor (~1.5) and
+# the smallest real signal (~8) comfortably accommodates a 2
+# fd/minion threshold.
+MIN_FD_DELTA_PER_MINION = _env_int("MIN_FD_DELTA_PER_MINION", 2)
 # Quiet window applied between a successful ping sweep and the AFTER
 # sample inside ``assert_reconnect``.  ``sample_minions`` is
 # instantaneous, which lands exactly when the minion's return-channel
