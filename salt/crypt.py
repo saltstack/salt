@@ -15,6 +15,8 @@ import logging
 import os
 import pathlib
 import random
+import re
+import shutil
 import stat
 import sys
 import tempfile
@@ -1028,6 +1030,73 @@ def _auth_singleton_key(opts):
     )
 
 
+# Legacy filename used when the minion only ever talks to one master.
+# Preserved as-is for single-master installs so upgrades do not
+# invalidate the on-disk trust-on-first-use cache.
+_LEGACY_MINION_MASTER_PUB = "minion_master.pub"
+
+# Sanitize characters that are unsafe in filenames across platforms.
+# ``opts["master"]`` is almost always a hostname or IP, but in exotic
+# configurations it can carry characters like ``:`` (IPv6) or ``/``
+# (not valid but seen in some test harnesses). Keeping the mapping
+# deterministic ensures that two masters with distinct names cannot
+# collide on the same filename.
+_MPUB_SAFE_CHARS_RE = re.compile(r"[^A-Za-z0-9_.-]")
+
+
+def _sharded_mpub_name(master):
+    safe = _MPUB_SAFE_CHARS_RE.sub("_", master)
+    return f"minion_master.{safe}.pub"
+
+
+def _resolve_mpub(opts, syndic_name="syndic_master.pub"):
+    """
+    Return the cached master pubkey filename for this ``AsyncAuth``.
+
+    In multimaster mode (``salt.minion.MultiMinion`` sets
+    ``opts["multimaster"] = True`` before constructing each child
+    ``Minion``) every sibling ``AsyncAuth`` shares a ``pki_dir``.
+    Returning a single filename like ``minion_master.pub`` for all of
+    them causes concurrent writes during the initial auth to clobber
+    each other and the loser later fails signature verification in
+    ``decrypt_aes`` with ``ValueError('Unable to decrypt message')``.
+
+    Shard by the per-child ``opts["master"]`` (a single hostname/IP
+    after ``MultiMinion._spawn_minions`` collapses the list) so each
+    child owns its own cache file. Single-master and syndic
+    configurations fall back to the historic filenames so existing
+    on-disk caches remain valid across upgrades.
+    """
+    if opts.get("__role") == "syndic":
+        return syndic_name
+    master = opts.get("master")
+    if opts.get("multimaster") and isinstance(master, str) and master:
+        return _sharded_mpub_name(master)
+    return _LEGACY_MINION_MASTER_PUB
+
+
+def _migrate_legacy_mpub(pki_dir, new_name):
+    """
+    First-run migration: when sharding kicks in but only the legacy
+    ``minion_master.pub`` is on disk (e.g. after an upgrade from a
+    single-master deployment to a multimaster roster), seed the new
+    per-master file from the legacy copy so trust-on-first-use is not
+    re-triggered. Non-destructive -- the legacy file is left in place.
+    """
+    if new_name == _LEGACY_MINION_MASTER_PUB:
+        return
+    new_path = os.path.join(pki_dir, new_name)
+    if os.path.exists(new_path):
+        return
+    legacy_path = os.path.join(pki_dir, _LEGACY_MINION_MASTER_PUB)
+    if not os.path.isfile(legacy_path):
+        return
+    try:
+        shutil.copyfile(legacy_path, new_path)
+    except OSError as exc:
+        log.debug("Unable to seed %s from legacy %s: %s", new_path, legacy_path, exc)
+
+
 class AsyncAuth:
     """
     Set up an Async object to maintain authentication with the salt master
@@ -1120,10 +1189,10 @@ class AsyncAuth:
         # later raises ``AttributeError`` on ``self._creds["aes"]`` (see
         # issue #67947).
         self._creds = None
-        if self.opts["__role"] == "syndic":
-            self.mpub = "syndic_master.pub"
-        else:
-            self.mpub = "minion_master.pub"
+        # Per-master cache filename. See ``_resolve_mpub`` for why
+        # multimaster minions MUST NOT share a single ``minion_master.pub``.
+        self.mpub = _resolve_mpub(self.opts)
+        _migrate_legacy_mpub(self.opts["pki_dir"], self.mpub)
         if not os.path.isfile(self.pub_path):
             self.get_keys()
         if io_loop is None:
@@ -1975,7 +2044,11 @@ class SAuth(AsyncAuth):
         elif "alert_master" in self.opts:
             self.mpub = "monitor_master.pub"
         else:
-            self.mpub = "minion_master.pub"
+            # Share the AsyncAuth sharding logic so that concurrent
+            # multimaster SAuth clients on the same ``pki_dir`` do not
+            # overwrite each other's cached master pubkey.
+            self.mpub = _resolve_mpub(self.opts)
+            _migrate_legacy_mpub(self.opts["pki_dir"], self.mpub)
         if not os.path.isfile(self.pub_path):
             self.get_keys()
 

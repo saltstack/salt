@@ -1,0 +1,91 @@
+# Monitoring overlay for tests/monitoring/cluster-3node/docker-compose.yml.
+#
+# The resiliency test orchestrator composes this file on top of the base
+# cluster-3node stack:
+#
+#   docker compose \
+#       -f tests/monitoring/cluster-3node/docker-compose.yml \
+#       -f tests/resiliency/compose/cluster3/monitoring-overlay.yml \
+#       --project-name cluster-3node up -d
+#
+# What it adds:
+#
+#   * prometheus  scrapes the three master fd_exporters (:8002) + cadvisor
+#   * cadvisor    per-container resource metrics
+#
+# Both attach to the base stack's existing ``salt-net`` network as an
+# *external* network.  Compose names unqualified networks
+# ``<project>_<name>``, so with ``--project-name cluster-3node`` the base
+# network is ``cluster-3node_salt-net``.  We declare it ``external: true``
+# here so this overlay does not try to re-create it.
+#
+# The fd_exporter itself is not launched as a compose service -- it has
+# to run *inside* each salt-master container so it can read /proc of the
+# master processes directly.  The companion ``start_exporters.sh`` in
+# this directory does that via ``docker exec -d`` after compose up.
+
+services:
+  # Bind-mount fd_exporter.py into each master so ``start_exporters.sh``
+  # can run it via ``docker exec -d``.  The base cluster-3node compose
+  # mounts its own ``./srv/salt`` (pillar + states only), which does NOT
+  # contain the exporter -- so this overlay adds the file to the volume
+  # list, where it merges with the base service definition.
+  salt-master-1:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-2:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  salt-master-3:
+    volumes:
+      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: c3-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    volumes:
+      - ../../../tests/resiliency/compose/cluster3/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../../../tests/resiliency/compose/cluster3/prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "19090:9090"
+    networks:
+      - salt-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: c3-cadvisor
+    hostname: cadvisor
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "18081:8080"
+    networks:
+      - salt-net
+
+# Do NOT declare ``salt-net`` as ``external`` here.  When this overlay
+# is composed on top of the base cluster-3node docker-compose.yml via
+# ``-f base.yml -f overlay.yml``, compose MERGES the network stanzas:
+# marking it external in the overlay would preempt the base compose's
+# create-network definition and compose would then refuse to start
+# because it can't find a pre-existing ``cluster-3node_salt-net``.
+# Letting the merged config create the network naturally (via the
+# base compose's unqualified ``networks: salt-net:``) means the
+# prometheus + cadvisor services added here just join the same
+# bridge the master + minion services join.
+networks:
+  salt-net: {}
