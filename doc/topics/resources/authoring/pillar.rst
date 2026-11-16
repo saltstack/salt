@@ -105,24 +105,6 @@ Two rules:
    and falls back to the default.
 
 
-Secrets and pillar masking
-==========================
-
-.. versionchanged:: 3008.0
-
-Salt 3008.0 introduced pillar masking: ``pillar.get`` from the CLI
-returns ``'**********'`` for string values by default. Templates and
-SLS files render with masking disabled so they see plain values, so
-your resource type's ``init(opts)`` reading pillar via
-:py:func:`salt.utils.resources.pillar_resources_tree` continues to see
-real values.
-
-If you write an integration test that calls ``pillar.get`` from the
-CLI and compares against a real value, pass ``unmask=True``::
-
-    salt-call pillar.get resources:widget:hosts unmask=True
-
-
 Examples in the wild
 ====================
 

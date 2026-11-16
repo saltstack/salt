@@ -66,11 +66,8 @@ Confirm pillar reads correctly:
 
 .. code-block:: bash
 
-    salt-call --local pillar.get resources unmask=True
+    salt-call --local pillar.get resources
     # {'dummy': {'resource_ids': ['dummy-01', 'dummy-02', 'dummy-03']}}
-
-(The ``unmask=True`` is required in 3008.0+: pillar values are masked
-by default at the CLI. SLS files render with masking disabled.)
 
 
 Step 1 — confirm discovery
