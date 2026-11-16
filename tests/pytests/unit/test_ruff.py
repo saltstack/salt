@@ -426,3 +426,76 @@ def test_rules_with_existing_violations(repo: Path, code: str, source: str) -> N
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert code in result.stdout
+
+
+# One example per rule that has no violation in the code base today (stage 5).
+NEW_RULE_CASES_STAGE_5 = [
+    (
+        "ASYNC210",
+        'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
+    ),
+    (
+        "ASYNC220",
+        'import subprocess\n\n\nasync def f():\n    subprocess.Popen(["ls"])\n',
+    ),
+    ("ASYNC222", "import os\n\n\nasync def f():\n    os.wait()\n"),
+    ("ASYNC230", 'async def f():\n    open("x")\n'),
+    ("ASYNC250", 'async def f():\n    input("x")\n'),
+    ("S313", 'from xml.etree.cElementTree import parse\n\nparse("x")\n'),
+    (
+        "S315",
+        "from xml.sax.expatreader import create_parser\n\nparser = create_parser()\n",
+    ),
+    ("S316", 'from xml.dom.expatbuilder import parse\n\nparse("x")\n'),
+    ("S317", 'import xml.sax\n\nxml.sax.parse("x")\n'),
+    ("S319", 'from xml.dom.pulldom import parse\n\nparse("x")\n'),
+    (
+        "S304",
+        'from cryptography.hazmat.primitives.ciphers import Cipher, algorithms\n\ncipher = Cipher(algorithms.ARC4(b"k"), mode=None)\n',
+    ),
+    (
+        "S305",
+        'from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes\n\nCipher(algorithms.AES(b"k"), modes.ECB())\n',
+    ),
+    ("S302", 'import marshal\n\nmarshal.loads(b"x")\n'),
+    ("S501", 'import requests\n\nrequests.get("https://x", verify=False)\n'),
+    ("S502", "import ssl\n\nssl.wrap_socket(None, ssl_version=ssl.PROTOCOL_SSLv3)\n"),
+    ("S503", "import ssl\n\n\ndef f(ctx=ssl.PROTOCOL_SSLv2):\n    pass\n"),
+    (
+        "S505",
+        "from cryptography.hazmat.primitives.asymmetric import dsa\n\ndsa.generate_private_key(key_size=512)\n",
+    ),
+    ("S609", 'import subprocess\n\nsubprocess.Popen("chmod 600 *", shell=True)\n'),
+    ("S612", "import logging.config\n\nlogging.config.listen(9999)\n"),
+    (
+        "SIM107",
+        "def f():\n    try:\n        return 1\n    finally:\n        return 2\n",
+    ),
+    ("SIM220", "def f(a):\n    return a and not a\n"),
+    ("SIM221", "def f(a):\n    return a or not a\n"),
+    ("SIM223", "def f(x, y):\n    return x and [] and y\n"),
+    ("PIE794", "class A:\n    x = 1\n    x = 2\n"),
+    ("PIE796", "import enum\n\n\nclass E(enum.Enum):\n    A = 1\n    B = 1\n"),
+    ("PLC0205", 'class A:\n    __slots__ = "a"\n'),
+    ("PLC0208", "for x in {1, 2, 3}:\n    print(x)\n"),
+    ("PLC3002", "x = (lambda: 1)()\n"),
+    ("PLR0133", "x = 1 < 2\n"),
+    ("PLR1708", "def f():\n    raise StopIteration\n    yield 1\n"),
+    ("RUF030", 'def f(x):\n    assert x, print("bad")\n'),
+    ("RUF032", "from decimal import Decimal\n\nx = Decimal(0.1)\n"),
+    ("RUF048", 'v = tuple(map(int, __version__.split(".")))\n'),
+    ("RUF101", "import os  # noqa: PGH001\n"),
+    ("RUF103", "# ruff: disable\nx = 1\n"),
+]
+
+
+@pytest.mark.parametrize(
+    ("code", "source"), NEW_RULE_CASES_STAGE_5, ids=lambda v: v[:8]
+)
+def test_stage_5_rules_without_existing_violations(
+    repo: Path, code: str, source: str
+) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
