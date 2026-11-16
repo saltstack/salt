@@ -221,6 +221,32 @@ def test_bare_plus_dotted_narrows_in_loader(loader_dir):
         loader["mod_a.func2"]()
 
 
+def test_bare_whitelist_tolerates_dict_iteration(loader_dir):
+    """
+    ``patch.dict(target.__utils__, whitelisted_loader)`` calls
+    ``dict(loader)``, which triggers ``_load_all`` and then subscripts
+    every key.  ``_load_all`` ignores the whitelist (it predates the
+    granular work), so ``_dict`` fills with keys from non-whitelisted
+    modules.  The function-level ``__getitem__`` gate added for the
+    granular syntax must NOT reject those post-``_load_all`` reads, or
+    the many tests that iterate a whitelisted loader (ansible, network,
+    renderer suites, ...) break with ``KeyError`` on unrelated
+    modules.  Only dotted whitelist entries ("mod.func") trigger the
+    per-key gate; bare module entries fall back to the pre-existing
+    coarse semantics.
+    """
+    loader = LazyLoader(
+        [loader_dir], opts={"optimization_order": [0]}, whitelist=["mod_a"]
+    )
+    # Materialize every discoverable key (what ``dict(loader)`` does).
+    snapshot = dict(loader)
+    # Both modules on disk were loaded; keys from the non-whitelisted
+    # module are present and subscriptable without KeyError.
+    assert "mod_a.func1" in snapshot
+    assert "mod_b.func1" in snapshot
+    assert callable(loader["mod_b.func1"])
+
+
 def test_bare_whitelist_still_allows_any_function(loader_dir):
     """
     Backward compat: ``whitelist=["mod_a"]`` behaves as before -- every

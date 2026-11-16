@@ -629,16 +629,32 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
-        # Function-level whitelist gate.  ``_load`` gates at module
-        # granularity on first access, but once a module has loaded
-        # every ``module.func`` from that module sits in ``self._dict``
-        # and ``LazyDict.__getitem__`` skips ``_load`` entirely -- so a
-        # ``module.func``-granular whitelist MUST be enforced here, at
-        # every lookup, or a sibling function of an allowed function
-        # would be reachable just because the module was already loaded
-        # by the first allowed call.
-        if self.whitelist and not self._whitelist_allows_key(item):
-            raise KeyError(item)
+        # Function-level whitelist gate -- only enforced when the
+        # module in ``item`` has dotted (``module.func``) entries in the
+        # whitelist.  ``_load`` gates at module granularity on first
+        # access, but once a module has loaded every ``module.func`` from
+        # that module sits in ``self._dict`` and ``LazyDict.__getitem__``
+        # skips ``_load`` entirely, so for granular entries we MUST re-
+        # check here or a sibling function of an allowed function would
+        # be reachable just because the first allowed call loaded the
+        # module.
+        #
+        # We deliberately do NOT enforce a module-level check here when
+        # ``item``'s module is absent from the whitelist map.  The
+        # classic coarse whitelist (bare module entries only) has always
+        # tolerated post-``_load_all`` access to non-whitelisted keys
+        # (``_load_all`` loads every module on disk, then ``_dict``
+        # subscripts bypass ``_load``) -- many test helpers rely on that
+        # to iterate a whitelisted loader (``dict(target.__utils__)`` via
+        # ``patch.dict``).  Tightening it would be correct in principle
+        # but out of scope for the function-scoped syntax this PR adds;
+        # it would belong in a dedicated follow-up that also audits the
+        # callers.
+        if self.whitelist and "." in item:
+            mod_name, func_name = item.split(".", 1)
+            allowed = self._whitelist_funcs.get(mod_name)
+            if allowed is not None and func_name not in allowed:
+                raise KeyError(item)
         _ = super().__getitem__(item)  # try to get the item from the dictionary
         if not isinstance(_, LoadedFunc) and inspect.iscoroutinefunction(_):
             return LoadedCoro(item, self)
