@@ -53,7 +53,37 @@ services:
     networks:
       salt-net:
         ipv4_address: 10.88.0.11
-    command: ["/usr/local/bin/salt-master", "-l", "info"]
+    # master-a.conf binds salt-master to interface 10.88.0.11 (not
+    # 0.0.0.0) so the publisher/ret-port sockets don't attach to
+    # loopback.  On a ``docker restart`` dockerd first tears the
+    # container's veth down, then reattaches it with the configured
+    # ipv4_address -- there is a brief window where eth0 exists but
+    # 10.88.0.11 is not yet bound, and a salt-master that invokes
+    # ``verify_socket`` in that window hits ``[Errno 99] Cannot assign
+    # requested address`` and calls ``shutdown(4, "ports are not
+    # available")``.  Tini exits with the child's status and the
+    # container drops to ``exited``.  The resiliency fault tests
+    # (test_multimaster_both_masters_restart_staggered and every
+    # subsequent fault that restarts a master) then race
+    # ``_wait_container_running`` against an ``exited`` state and fail.
+    #
+    # Gate the salt-master start on the configured IP actually being
+    # assigned to the container's primary interface, with a 30s cap.
+    # The grep pattern is loose (just the IP string) so it works
+    # whether ``ip`` is iproute2 or busybox.  Mirrors the
+    # syndic-mom-reachability wait in ../syndic/docker-compose.yml.
+    command:
+      - "sh"
+      - "-c"
+      - |
+        for _ in $$(seq 1 300); do
+            if ip -4 addr show dev eth0 2>/dev/null | grep -q '10.88.0.11'; then
+                echo "interface 10.88.0.11 is live"
+                break
+            fi
+            sleep 0.1
+        done
+        exec /usr/local/bin/salt-master -l info
 
   salt-master-b:
     <<: *master-common
@@ -70,7 +100,20 @@ services:
     networks:
       salt-net:
         ipv4_address: 10.88.0.12
-    command: ["/usr/local/bin/salt-master", "-l", "info"]
+    # See the matching note on salt-master-a; same restart-time EADDRNOTAVAIL
+    # race, different IP.
+    command:
+      - "sh"
+      - "-c"
+      - |
+        for _ in $$(seq 1 300); do
+            if ip -4 addr show dev eth0 2>/dev/null | grep -q '10.88.0.12'; then
+                echo "interface 10.88.0.12 is live"
+                break
+            fi
+            sleep 0.1
+        done
+        exec /usr/local/bin/salt-master -l info
 
   salt-minion-1:
     <<: *master-common
