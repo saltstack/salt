@@ -15,6 +15,9 @@ import asyncio
 import pytest
 
 import salt.cache._cluster_replicator as _crep
+from tests.support.mock import patch
+
+_TEST_FP = "latchfp0"
 
 
 class _FakePusher:
@@ -61,7 +64,10 @@ def _reset_pending():
     _crep._reset_pending_state()
     with _crep._SKIP_LOG_LOCK:
         _crep._SKIP_LOG_LAST.clear()
-    yield
+    # D-1b: patch ``_current_cluster_aes_fp`` so the flush path's
+    # fingerprint check accepts the entries these tests enqueue.
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value=_TEST_FP):
+        yield
     _crep._reset_pending_state()
     with _crep._SKIP_LOG_LOCK:
         _crep._SKIP_LOG_LAST.clear()
@@ -95,7 +101,12 @@ def test_concurrent_drain_and_publish_preserves_order_live_wins_over_stale(opts)
     for i in range(3):
         _crep.enqueue_pending(
             "peer-A",
-            _crep.PendingEvent(kind="cache", event=f"stale-{i}".encode(), tag="t"),
+            _crep.PendingEvent(
+                kind="cache",
+                event=f"stale-{i}".encode(),
+                tag="t",
+                cluster_aes_fp=_TEST_FP,
+            ),
             opts=opts,
         )
 

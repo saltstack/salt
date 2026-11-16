@@ -24,6 +24,7 @@ import time
 import pytest
 
 import salt.cache._cluster_replicator as _crep
+from tests.support.mock import patch
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -367,7 +368,14 @@ def test_log_decrypt_failure_handles_missing_secret(caplog):
 # ---------------------------------------------------------------------------
 
 
+_DEFAULT_TEST_FP = "testfp01"
+
+
 def _make_event(event=b"evt", tag="cluster/peer/delegate-cache-write", **kw):
+    # D-1b: stamp a stable test fingerprint so the flush path's
+    # fingerprint check accepts the entry.  Individual tests that
+    # exercise the mismatch path pass their own ``cluster_aes_fp``
+    # in ``kw``.
     return _crep.PendingEvent(
         kind=kw.pop("kind", "cache"),
         event=event,
@@ -375,7 +383,21 @@ def _make_event(event=b"evt", tag="cluster/peer/delegate-cache-write", **kw):
         bank=kw.pop("bank", "grains"),
         key=kw.pop("key", "minion-1"),
         minion_id=kw.pop("minion_id", None),
+        cluster_aes_fp=kw.pop("cluster_aes_fp", _DEFAULT_TEST_FP),
     )
+
+
+@pytest.fixture(autouse=True)
+def _stub_current_fp():
+    """
+    D-1b: every test in this module runs with
+    ``_current_cluster_aes_fp`` returning the module's default fp so
+    the flush path accepts ``_make_event``-constructed entries.
+    Individual tests that exercise the mismatch path patch over this
+    at a narrower scope.
+    """
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value=_DEFAULT_TEST_FP):
+        yield
 
 
 def test_enqueue_pending_round_trip(opts):
@@ -907,3 +929,187 @@ def test_drop_all_pending_resets_log_coalesce_state(opts, caplog):
         _crep.enqueue_pending("peer-C", _make_event(event=b"b"), opts=tight_opts)
     # The second enqueue evicts the first; a WARN should appear.
     assert any("queue cap exceeded" in r.getMessage() for r in caplog.records)
+
+
+# ---------------------------------------------------------------------------
+# D-1b: cluster_aes fingerprint stamping + drop-on-mismatch at flush time
+# ---------------------------------------------------------------------------
+#
+# Primary design §Fix 6 + reviewer correction Q3 (drop on ANY <unavailable>
+# sentinel, not "publish on symmetric sentinel").
+
+
+class _FpFakePusher(_FakePusher):
+    """``_FakePusher`` that supports an awaitable ``publish`` for flush tests."""
+
+    async def publish(self, event):
+        self.calls.append(event)
+
+    def __init__(self, pull_host):
+        super().__init__(pull_host)
+        self.calls = []
+
+
+def _make_event_fp(
+    event=b"evt", fp="abcd1234", tag="cluster/peer/delegate-cache-write"
+):
+    return _crep.PendingEvent(
+        kind="cache",
+        event=event,
+        tag=tag,
+        bank="grains",
+        key="minion-1",
+        cluster_aes_fp=fp,
+    )
+
+
+def test_pending_event_carries_cluster_aes_fp_field():
+    """``PendingEvent.cluster_aes_fp`` is a first-class dataclass field."""
+    evt = _crep.PendingEvent(
+        kind="cache",
+        event=b"x",
+        tag="t",
+        cluster_aes_fp="abcd1234",
+    )
+    assert evt.cluster_aes_fp == "abcd1234"
+
+
+def test_pending_event_default_cluster_aes_fp_is_unavailable_sentinel():
+    """Legacy code that constructs PendingEvent without stamping gets the sentinel."""
+    evt = _crep.PendingEvent(kind="cache", event=b"x", tag="t")
+    assert evt.cluster_aes_fp == _crep._UNAVAILABLE_FP
+
+
+def test_flush_publishes_entries_with_matching_fp(opts):
+    """
+    Fingerprint matches current cluster_aes fp -> entry is published
+    through the pusher.  Baseline happy path.
+    """
+    pusher = _FpFakePusher("peer-A")
+    evt = _make_event_fp(event=b"happy", fp="MATCH1")
+    _crep.enqueue_pending("peer-A", evt, opts=opts)
+
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value="MATCH1"):
+
+        async def _run():
+            return await _crep.flush_pending_for_peer("peer-A", [pusher], opts=opts)
+
+        flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 1
+    assert pusher.calls == [b"happy"]
+
+
+def test_flush_drops_entries_with_stale_cluster_aes_fp(opts, caplog):
+    """
+    Fingerprint stamped at encrypt (``old_fp``) differs from the
+    current cluster_aes fp (``new_fp``) -> entry is dropped with a
+    WARN; ``pusher.publish`` is NEVER called.
+    """
+    pusher = _FpFakePusher("peer-A")
+    for i in range(3):
+        _crep.enqueue_pending(
+            "peer-A",
+            _make_event_fp(event=f"stale-{i}".encode(), fp="OLD_FP"),
+            opts=opts,
+        )
+
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value="NEW_FP"):
+        caplog.clear()
+        with caplog.at_level(logging.WARNING, logger="salt.cache._cluster_replicator"):
+
+            async def _run():
+                return await _crep.flush_pending_for_peer("peer-A", [pusher], opts=opts)
+
+            flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 0
+    assert pusher.calls == []
+    # One WARN per dropped entry + one summary WARN.
+    drop_logs = [r for r in caplog.records if "stale-fingerprint" in r.getMessage()]
+    assert len(drop_logs) >= 1
+    entry_logs = [
+        r for r in caplog.records if "cluster_aes_fp=OLD_FP" in r.getMessage()
+    ]
+    assert len(entry_logs) == 3
+
+
+def test_flush_drops_entries_when_current_fp_is_unavailable(opts, caplog):
+    """
+    Reviewer Q3: current cluster_aes fp is ``<unavailable>`` (SMaster
+    not initialised, or hash failed) -> drop every entry regardless
+    of the stamped fp.  Primary chose "publish on symmetric
+    sentinel"; reviewer correctly flipped this to always drop.
+    """
+    pusher = _FpFakePusher("peer-A")
+    _crep.enqueue_pending("peer-A", _make_event_fp(event=b"a", fp="any-fp"), opts=opts)
+
+    with patch.object(
+        _crep, "_current_cluster_aes_fp", return_value=_crep._UNAVAILABLE_FP
+    ):
+        with caplog.at_level(logging.WARNING, logger="salt.cache._cluster_replicator"):
+
+            async def _run():
+                return await _crep.flush_pending_for_peer("peer-A", [pusher], opts=opts)
+
+            flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 0
+    assert pusher.calls == []
+
+
+def test_flush_drops_entries_when_stamped_fp_is_unavailable(opts, caplog):
+    """
+    Reviewer Q3: stamped fp is ``<unavailable>`` (encrypt-time secret
+    unreadable) -> drop, even if current fp is a valid hash.
+    """
+    pusher = _FpFakePusher("peer-A")
+    _crep.enqueue_pending(
+        "peer-A",
+        _make_event_fp(event=b"a", fp=_crep._UNAVAILABLE_FP),
+        opts=opts,
+    )
+
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value="valid123"):
+        with caplog.at_level(logging.WARNING, logger="salt.cache._cluster_replicator"):
+
+            async def _run():
+                return await _crep.flush_pending_for_peer("peer-A", [pusher], opts=opts)
+
+            flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 0
+    assert pusher.calls == []
+
+
+def test_flush_mixed_entries_only_drops_mismatches(opts):
+    """
+    Three entries: two match current fp, one has stale fp.  Only the
+    stale one is dropped; the matching two are published.
+    """
+    pusher = _FpFakePusher("peer-A")
+    _crep.enqueue_pending(
+        "peer-A", _make_event_fp(event=b"good-1", fp="CURRENT"), opts=opts
+    )
+    _crep.enqueue_pending(
+        "peer-A", _make_event_fp(event=b"stale", fp="STALE"), opts=opts
+    )
+    _crep.enqueue_pending(
+        "peer-A", _make_event_fp(event=b"good-2", fp="CURRENT"), opts=opts
+    )
+
+    with patch.object(_crep, "_current_cluster_aes_fp", return_value="CURRENT"):
+
+        async def _run():
+            return await _crep.flush_pending_for_peer("peer-A", [pusher], opts=opts)
+
+        flushed = asyncio.new_event_loop().run_until_complete(_run())
+    assert flushed == 2
+    assert pusher.calls == [b"good-1", b"good-2"]
+
+
+def test_secret_fingerprint_returns_sentinel_for_none():
+    """
+    ``secret_fingerprint(None)`` returns the ``<unavailable>`` sentinel.
+    This is the same sentinel ``_current_cluster_aes_fp`` returns
+    when SMaster.secrets is missing (which it delegates to via
+    ``secret_fingerprint``).  The flush path uses this sentinel to
+    trigger the Q3 drop branch.
+    """
+    assert _crep.secret_fingerprint(None) == _crep._UNAVAILABLE_FP

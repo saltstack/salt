@@ -2240,13 +2240,20 @@ class MasterPubServerChannel:
         ``cluster/peer/delegate-write`` (ring-routed, single owner).
         """
         try:
-            crypticle = salt.crypt.Crypticle(
-                self.opts,
-                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-            )
+            cluster_aes_value = salt.master.SMaster.secrets["cluster_aes"][
+                "secret"
+            ].value
+            crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_value)
         except Exception:  # pylint: disable=broad-except
             log.exception("cache-replicate: cluster_aes unavailable")
             return
+        # D-1b: fingerprint the cluster_aes value we encrypted under
+        # so the flush path can detect a rotation that happened in
+        # the read+encrypt+enqueue window.  The flush compares this
+        # to the current cluster_aes fp and drops on mismatch.
+        import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
+
+        cluster_aes_fp = _crep_fp.secret_fingerprint(cluster_aes_value)
         if batch_items is not None:
             payload = {
                 "bank": bank,
@@ -2297,6 +2304,7 @@ class MasterPubServerChannel:
             tag="cluster/peer/delegate-cache-write",
             bank=bank,
             key=label,
+            cluster_aes_fp=cluster_aes_fp,
         )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,
@@ -2353,13 +2361,19 @@ class MasterPubServerChannel:
         that bypasses the :class:`salt.cache.Cache` facade.
         """
         try:
-            crypticle = salt.crypt.Crypticle(
-                self.opts,
-                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-            )
+            cluster_aes_value = salt.master.SMaster.secrets["cluster_aes"][
+                "secret"
+            ].value
+            crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_value)
         except Exception:  # pylint: disable=broad-except
             log.exception("resource-replicate: cluster_aes unavailable")
             return
+        # D-1b: fingerprint the cluster_aes value we encrypted under
+        # so the flush path can detect a rotation that happened in
+        # the read+encrypt+enqueue window.
+        import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
+
+        cluster_aes_fp = _crep_fp.secret_fingerprint(cluster_aes_value)
         payload = {
             "minion_id": minion_id,
             "resources": resources,
@@ -2401,6 +2415,7 @@ class MasterPubServerChannel:
             event=event,
             tag="cluster/peer/delegate-resource-register-write",
             minion_id=minion_id,
+            cluster_aes_fp=cluster_aes_fp,
         )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,

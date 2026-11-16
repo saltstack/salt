@@ -298,6 +298,16 @@ class PendingEvent:
     packed under (useful for diagnostics).  ``bank``/``key``/
     ``minion_id`` are optional human-readable attribution fields --
     they are NOT used by the flush path, only by the skip/drop logs.
+
+    ``cluster_aes_fp`` is the ``secret_fingerprint`` of the
+    cluster_aes value that was current at encrypt time.  The flush
+    path compares it to the current cluster_aes fp; mismatch means a
+    rotation happened between encrypt and flush (D-1b window) and
+    the entry is dropped with a WARN (receiver would log a silent
+    decrypt-fail otherwise).  Defaults to ``"<unavailable>"`` so
+    legacy tests / callers that construct PendingEvent without
+    stamping still work (but see reviewer Q3: ``<unavailable>`` on
+    EITHER side drops the entry, never publishes).
     """
 
     kind: str
@@ -306,6 +316,7 @@ class PendingEvent:
     bank: str | None = None
     key: str | None = None
     minion_id: str | None = None
+    cluster_aes_fp: str = "<unavailable>"
     enqueued_at: float = dataclasses.field(default_factory=time.monotonic)
 
 
@@ -620,7 +631,44 @@ async def flush_pending_for_peer(peer_host, pushers, opts=None):
             peer_host,
         )
         flushed = 0
+        dropped_fp = 0
         for idx, entry in enumerate(entries):
+            # D-1b: compare the entry's stamped cluster_aes fingerprint
+            # to the current cluster_aes fp at flush time.  A mismatch
+            # means a rotation happened between encrypt and flush; the
+            # receiver would log a loud ``Failed to decrypt``.  Drop
+            # the entry with a WARN instead -- the drop surfaces the
+            # window to the sender's log and converts a silent-loss
+            # failure mode into an operator-visible one.
+            #
+            # Reviewer correction Q3: drop on ANY ``<unavailable>`` on
+            # EITHER side (not "publish on symmetric sentinel" as the
+            # primary chose).  Symmetric <unavailable> means we cannot
+            # verify stability; the cost of false-drop is "operator
+            # re-runs a write", the cost of false-publish is silent
+            # corruption on the peer.  Prefer the louder failure.
+            current_fp = _current_cluster_aes_fp()
+            stamped_fp = entry.cluster_aes_fp
+            if (
+                current_fp == _UNAVAILABLE_FP
+                or stamped_fp == _UNAVAILABLE_FP
+                or stamped_fp != current_fp
+            ):
+                log.warning(
+                    "cluster-cache-replication: dropping %s event for %s "
+                    "encrypted with cluster_aes_fp=%s (current=%s); peer "
+                    "would fail to decrypt (tag=%s bank=%s key=%s minion_id=%s)",
+                    entry.kind,
+                    peer_host,
+                    stamped_fp,
+                    current_fp,
+                    entry.tag,
+                    entry.bank,
+                    entry.key,
+                    entry.minion_id,
+                )
+                dropped_fp += 1
+                continue
             try:
                 await target.publish(entry.event)
             except Exception:  # pylint: disable=broad-except
@@ -646,6 +694,13 @@ async def flush_pending_for_peer(peer_host, pushers, opts=None):
                         queue.appendleft(remainder)
                 return flushed
             flushed += 1
+        if dropped_fp:
+            log.warning(
+                "cluster-cache-replication: dropped %d stale-fingerprint "
+                "event(s) for %s across this flush",
+                dropped_fp,
+                peer_host,
+            )
         return flushed
 
 
@@ -656,6 +711,9 @@ def _reset_pending_state():
         _PENDING_LOG_LAST.clear()
     with _PENDING_PEER_LATCHES_SYNC:
         _PENDING_PEER_LATCHES.clear()
+
+
+_UNAVAILABLE_FP = "<unavailable>"
 
 
 def secret_fingerprint(secret):
@@ -670,13 +728,39 @@ def secret_fingerprint(secret):
     wrong type).
     """
     if secret is None:
-        return "<unavailable>"
+        return _UNAVAILABLE_FP
     try:
         if isinstance(secret, str):
             secret = secret.encode()
         return hashlib.sha256(secret).hexdigest()[:8]
     except Exception:  # pylint: disable=broad-except
-        return "<unavailable>"
+        return _UNAVAILABLE_FP
+
+
+def _current_cluster_aes_fp():
+    """
+    D-1b: return the fingerprint of the cluster_aes secret currently
+    installed in ``SMaster.secrets``, or ``"<unavailable>"`` if the
+    secret cannot be read (missing, mis-typed, or SMaster not
+    initialised in this process -- e.g. a unit test that imports
+    this module without a master running).
+
+    Called from :func:`flush_pending_for_peer` to compare against a
+    PendingEvent's stamped ``cluster_aes_fp`` and detect the D-1b
+    window (encrypt vs. flush under a rotation).  Reviewer Q3:
+    returning ``<unavailable>`` here causes the flush path to drop
+    the entry rather than publish an unverified stale payload.
+    """
+    try:
+        import salt.master  # pylint: disable=import-outside-toplevel
+
+        entry = salt.master.SMaster.secrets.get("cluster_aes")
+        if entry is None:
+            return _UNAVAILABLE_FP
+        secret = entry["secret"].value
+        return secret_fingerprint(secret)
+    except Exception:  # pylint: disable=broad-except
+        return _UNAVAILABLE_FP
 
 
 # ---------------------------------------------------------------------------
