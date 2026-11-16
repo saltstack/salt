@@ -210,14 +210,11 @@ def verify_files(files, user):
             if os.path.isfile(dirname):
                 msg = f"Failed to create path {fn_}, is {dirname} a file?"
                 raise SaltSystemExit(msg=msg)
-            if err.errno != errno.EACCES:
-                raise
-            msg = 'No permissions to access "{}", are you running as the correct user?'.format(
-                fn_
-            )
-            raise SaltSystemExit(msg=msg)
-
-        except OSError as err:  # pylint: disable=duplicate-except
+            if err.errno == errno.EACCES:
+                msg = 'No permissions to access "{}", are you running as the correct user?'.format(
+                    fn_
+                )
+                raise SaltSystemExit(msg=msg)
             msg = f'Failed to create path "{fn_}" - {err}'
             raise SaltSystemExit(msg=msg)
 

@@ -1,3 +1,6 @@
+import errno
+import logging
+
 import pytest
 
 import salt.modules.alternatives as alternatives
@@ -247,3 +250,29 @@ def test_show_link_suse():
         mock_open(read_data={"/var/lib/rpm/alternatives/ld": ld_data}),
     ):
         assert alternatives.show_link("ld") == "/usr/bin/ld"
+
+
+def test_read_alternative_link_directly_file_does_not_exist(tmp_path, caplog):
+    with caplog.at_level(logging.ERROR):
+        ret = alternatives._read_alternative_link_directly("hell", str(tmp_path))
+    assert ret is False
+    assert "alternatives: hell does not exist" in caplog.text
+
+
+def test_read_alternative_link_directly_logs_the_error_for_other_errors(caplog):
+    error = PermissionError(errno.EACCES, "Permission denied")
+    with patch("salt.utils.files.fopen", side_effect=error):
+        with caplog.at_level(logging.ERROR):
+            ret = alternatives._read_alternative_link_directly("hell", "/nowhere")
+    assert ret is False
+    assert "does not exist" not in caplog.text
+    assert "unable to get master link for hell" in caplog.text
+    assert "Permission denied" in caplog.text
+
+
+def test_read_alternative_link_directly_link_is_missing(tmp_path, caplog):
+    (tmp_path / "hell").write_text("auto\n")
+    with caplog.at_level(logging.ERROR):
+        ret = alternatives._read_alternative_link_directly("hell", str(tmp_path))
+    assert ret is False
+    assert "unable to get master link for hell" in caplog.text

@@ -1,3 +1,4 @@
+import errno
 import getpass
 import logging
 import os
@@ -11,6 +12,7 @@ import pytest
 
 import salt.utils.files
 import salt.utils.verify
+from salt.exceptions import SaltSystemExit
 from tests.support.mock import patch
 
 log = logging.getLogger(__name__)
@@ -159,6 +161,39 @@ def test_verify_env(tmp_path):
     assert dir_stat.st_mode & stat.S_IRWXU == stat.S_IRWXU
     assert dir_stat.st_mode & stat.S_IRWXG == 40
     assert dir_stat.st_mode & stat.S_IRWXO == 5
+
+
+@pytest.mark.skip_on_windows(reason="No verify_files Windows")
+def test_verify_files_reports_an_error_that_is_not_about_permissions(tmp_path):
+    target = str(tmp_path / "dir" / "file")
+    error = OSError(errno.ENOSPC, "No space left on device")
+    with patch("os.makedirs", side_effect=error):
+        with pytest.raises(SaltSystemExit) as exc:
+            salt.utils.verify.verify_files([target], getpass.getuser())
+    assert f'Failed to create path "{target}"' in str(exc.value)
+    assert "No space left on device" in str(exc.value)
+
+
+@pytest.mark.skip_on_windows(reason="No verify_files Windows")
+def test_verify_files_reports_missing_permissions(tmp_path):
+    target = str(tmp_path / "dir" / "file")
+    error = OSError(errno.EACCES, "Permission denied")
+    with patch("os.makedirs", side_effect=error):
+        with pytest.raises(SaltSystemExit) as exc:
+            salt.utils.verify.verify_files([target], getpass.getuser())
+    assert "No permissions to access" in str(exc.value)
+
+
+@pytest.mark.skip_on_windows(reason="No verify_files Windows")
+def test_verify_files_reports_a_file_in_place_of_a_directory(tmp_path):
+    blocker = tmp_path / "blocker"
+    blocker.write_text("")
+    target = str(blocker / "file")
+    error = OSError(errno.ENOTDIR, "Not a directory")
+    with patch("os.makedirs", side_effect=error):
+        with pytest.raises(SaltSystemExit) as exc:
+            salt.utils.verify.verify_files([target], getpass.getuser())
+    assert f"Failed to create path {target}, is {blocker} a file?" in str(exc.value)
 
 
 @pytest.mark.requires_network(only_local_network=True)
