@@ -324,40 +324,81 @@ def _expected_resource_total(spec) -> int:
     return total
 
 
+#: Python script executed inside the primary master container to
+#: report the resource-registry's current ``occupied`` count.  Uses
+#: ``salt.utils.resource_registry.get_registry(opts)`` so the probe
+#: stays source-of-truth even if the on-disk layout moves; prints
+#: ``0`` on any error (e.g. registry file not yet created before the
+#: first register payload lands).
+_REGISTER_OCCUPIED_PY = """
+import sys
+try:
+    import salt.config
+    import salt.utils.resource_registry as rr
+    opts = salt.config.master_config('/etc/salt/master')
+    reg = rr.get_registry(opts)
+    print(reg._store._primary.get_stats().get('occupied', 0))
+except Exception as exc:  # pylint: disable=broad-except
+    sys.stderr.write(f'occupied-probe: {exc}\\n')
+    print(0)
+"""
+
+
 def _count_registered_resources(spec) -> int:
-    """Count files in the master's ``resource_grains`` cache bank.
+    """Return the primary master's resource-registry ``occupied`` count.
 
-    The localfs cache backend writes one file per registered SRN under
-    ``/var/cache/salt/master/resource_grains/``.  Counting files is
-    cheap (readdir) -- avoids the master-side full fetch that
-    ``salt-run resource.list_grains`` would do and that on 1 M
-    resources would be 20 s per poll.  Any master in the spec will do
-    on a cluster-cache-replicated stack; use the primary.
+    The registry is the raft-replicated ``resource_index.by_id.mmap`` --
+    every master's local copy carries the complete fleet-wide count, so
+    polling the primary alone is authoritative.  We read
+    ``_primary.get_stats()['occupied']`` which is O(1) off the mmap
+    header's ``occupied_count`` uint64 (no table scan, no heap I/O).
 
-    Returns 0 on any failure (container not up, cache dir not created
-    yet, docker exec timeout).  The poll loop above handles the zero
-    case gracefully.
+    Rejected alternatives:
+
+    * ``find /var/cache/salt/master/resource_grains -type f | wc -l``
+      -- only works when the master's ``cache:`` backend is ``localfs``
+      (one file per SRN).  cluster3 pins ``cache: mmap_cache`` in
+      master-*.conf so the bank has 4 mmap metadata files regardless of
+      register state and the find-count is always 4.
+
+    * Any salt-run / cache-list approach that iterates the bank's full
+      key set -- O(N) in registered resources, ~20 s per poll at 1 M
+      entries, and fights ring-mode sharding
+      (``cluster_cache_routing: resource_grains: ring``) where SRNs
+      are partitioned across the 3 masters (primary sees ~1/3).
+
+    Returns 0 on any failure (container not up, registry file not yet
+    created before the first register payload lands, docker exec
+    timeout).  The poll loop handles the zero case gracefully.
     """
-    proc = subprocess.run(
-        [
-            "docker",
-            "exec",
-            spec.primary_master,
-            "sh",
-            "-c",
-            "find /var/cache/salt/master/resource_grains -type f 2>/dev/null | wc -l",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=30,
-    )
+    try:
+        proc = subprocess.run(
+            [
+                "docker",
+                "exec",
+                spec.primary_master,
+                "python3",
+                "-c",
+                _REGISTER_OCCUPIED_PY,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return 0
     if proc.returncode != 0:
         return 0
     try:
-        return int(proc.stdout.strip() or "0")
-    except ValueError:
+        # Accept trailing whitespace / repeated newlines; take last non-empty.
+        for line in reversed(proc.stdout.strip().splitlines()):
+            line = line.strip()
+            if line:
+                return int(line)
+    except (ValueError, AttributeError):
         return 0
+    return 0
 
 
 def _wait_resource_register_complete(spec, expected_total: int, timeout: int) -> None:
@@ -379,6 +420,12 @@ def _wait_resource_register_complete(spec, expected_total: int, timeout: int) ->
     start = time.monotonic()
     last_logged_count = -1
     last_logged_at = 0.0
+    # Require TWO consecutive samples at or above expected before
+    # declaring completion -- the registry's ``occupied`` counter can
+    # regress briefly during a chunked register's terminal-prune pass
+    # (delete-diff against the previous full inventory), so a single
+    # hit is not sufficient.
+    consecutive_hits = 0
     print(
         f"[resiliency] register-wait: polling master "
         f"{spec.primary_master} until {expected_total} resources "
@@ -389,12 +436,16 @@ def _wait_resource_register_complete(spec, expected_total: int, timeout: int) ->
         count = _count_registered_resources(spec)
         now = time.monotonic()
         if count >= expected_total:
-            print(
-                f"[resiliency] register-wait: complete "
-                f"{count}/{expected_total} after {int(now - start)}s",
-                flush=True,
-            )
-            return
+            consecutive_hits += 1
+            if consecutive_hits >= 2:
+                print(
+                    f"[resiliency] register-wait: complete "
+                    f"{count}/{expected_total} after {int(now - start)}s",
+                    flush=True,
+                )
+                return
+        else:
+            consecutive_hits = 0
         if count != last_logged_count and now - last_logged_at >= 30:
             print(
                 f"[resiliency] register-wait: {count}/{expected_total} "
