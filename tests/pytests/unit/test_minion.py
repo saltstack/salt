@@ -32,6 +32,7 @@ import salt.utils.json
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.process
+import salt.utils.secret
 import salt.utils.state
 import salt.utils.stringutils
 from salt._compat import ipaddress
@@ -4962,3 +4963,36 @@ async def test_minion_process_process_queue_keeps_task_reference(
     with contextlib.suppress(Exception):
         await asyncio.gather(*minion._background_tasks, return_exceptions=True)
     minion.destroy()
+
+
+@pytest.mark.parametrize("mask", [False, True])
+def test_job_return_is_redacted_only_when_pillar_masking_is_on(
+    minion_opts, tmp_path, mask
+):
+    """
+    A masked pillar container in a job return is redacted when the return
+    leaves the minion, and only with ``pillar_mask_output`` enabled.
+    """
+    minion_opts["pillar_mask_output"] = mask
+    minion_opts["cache_jobs"] = False
+    io_loop = tornado.ioloop.IOLoop()
+    minion = salt.minion.Minion(minion_opts, io_loop=io_loop)
+    try:
+        minion.proc_dir = str(tmp_path)
+        pillar = salt.utils.secret.hide({"db": {"password": "hunter2"}})
+        ret = {
+            "jid": "20260101000000000000",
+            "fun": "test.ping",
+            "return": {"pillar": pillar, "plain": {"password": "visible"}},
+        }
+        load = minion._prepare_return_pub(ret)
+        if mask:
+            assert load["return"] == {
+                "pillar": {"db": {"password": salt.utils.secret.REDACT_PLACEHOLDER}},
+                "plain": {"password": "visible"},
+            }
+        else:
+            assert load["return"]["pillar"] == {"db": {"password": "hunter2"}}
+            assert load["return"]["plain"] == {"password": "visible"}
+    finally:
+        minion.destroy()

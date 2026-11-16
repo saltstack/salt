@@ -20,9 +20,9 @@ Usage::
     # Repr/logging is masked
     log.debug("pillar: %s", opts["pillar"])      # {'password': '**********'}
 
-    # Explicit output boundary (pillar.get CLI)
-    serial(opts["pillar"]["password"])           # '**********'
-    expose(opts["pillar"]["password"])           # 'hunter2'
+    # Output boundaries redact masked containers (job returns, CLI output)
+    mask_output(opts["pillar"])                  # {'password': '**********'}
+    expose(opts["pillar"])                       # {'password': 'hunter2'}
 
     # Safety net for general output (output/__init__.py)
     mask_output(state_return_data)              # no-op for plain data
@@ -227,8 +227,8 @@ def expose(value, _seen=None):
     """Recursively unwrap MaskedDict / MaskedList to plain Python types.
 
     Also traverse plain containers, which may contain nested masked values.
-    Use at ``unmask=True`` pillar output boundaries so callers receive the
-    real values (e.g. ``pillar.get(key, unmask=True)``).
+    Use where callers must receive plain data, e.g. the ``pillar`` execution
+    module before it re-wraps its result.
     """
     if isinstance(value, dict):
         if _seen is None:
@@ -259,8 +259,7 @@ def serial(value, _seen=None):
     """Aggressively redact: replace every non-empty/truthy scalar leaf value
     (str, bytes, int, float, bool) with a redacted placeholder.
 
-    Use at explicit pillar output boundaries (``pillar.get``, ``pillar.items``,
-    ``pillar.item``, ``pillar.ext``) and inside ``no_log_mask``.
+    Used by ``mask_output`` for masked containers and inside ``no_log_mask``.
 
     Because ``MaskedDict.__getitem__`` returns plain strings (the scalar leaves
     are stored unwrapped), this function must handle plain str/dict/list values

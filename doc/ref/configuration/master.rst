@@ -5209,27 +5209,26 @@ Recursively merge lists by aggregating them instead of replacing them.
 
 Default: ``False``
 
-Feature flag for pillar masking in :py:func:`pillar.get
-<salt.modules.pillar.get>`, :py:func:`pillar.item
-<salt.modules.pillar.item>`, :py:func:`pillar.items
-<salt.modules.pillar.items>` and :py:func:`pillar.ext
-<salt.modules.pillar.ext>`.
+Feature flag for pillar masking.
 
-When ``False`` (the default), they return real values and the ``unmask``
-argument has no effect. When ``True``, they return masked values
-(``**********``) unless a caller passes ``unmask=True`` for a single call or
-state.
+When ``False`` (the default), pillar is never masked. The ``pillar`` execution
+module functions (``get``, ``item``, ``items``, ``raw``, ``ext`` and the others)
+return the real values, received pillar containers are plain dicts and lists,
+and ``repr()`` and ``str()`` show real values.
+
+When ``True``, the values are still real when read, but pillar containers
+are redacted (``**********``) where they are output: the job return of a
+minion, ``salt-call`` and other CLI output, and ``repr()``, ``str()`` and
+logging. A single value that a function returns by itself, such as the result of
+``pillar.get password``, is a plain string and is not redacted.
+
+The ``unmask`` argument of the ``pillar`` functions has no effect with either
+setting and is kept for compatibility.
 
 .. versionchanged:: 3008.4
-    The default is now ``False``, and the option applies to ``pillar.get``,
-    ``pillar.item`` and ``pillar.ext`` too. Before, the default was ``True``
-    and the option only changed the default of ``pillar.items``.
-
-When ``False``, received pillar containers are left as plain dicts and lists,
-so ``repr()`` and ``str()`` show real values. When ``True``, received pillar
-containers are wrapped for display masking. An explicit call to
-``salt.utils.secret.hide()`` still wraps and masks its input regardless of this
-option.
+    The default is now ``False``. Before, the default was ``True``, and masked
+    values were returned by the ``pillar`` functions unless ``unmask=True`` was
+    passed.
 
 This option does **not** change ``no_log``. It is an explicit per-state
 setting rather than pillar masking, so a state with ``no_log: True`` still has
@@ -5237,7 +5236,8 @@ its ``name``, ``comment`` and ``changes`` redacted.
 
 The option is read by the process that runs the code, so set it in the
 :conf_minion:`minion <pillar_mask_output>` configuration for the minions. The
-master setting only applies to what the master itself runs, such as salt-ssh.
+master setting only applies to what the master itself runs, such as salt-ssh,
+where the job return is not redacted.
 
 .. code-block:: yaml
 

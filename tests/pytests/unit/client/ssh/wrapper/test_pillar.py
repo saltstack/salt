@@ -38,26 +38,11 @@ def mask_flag(request):
         yield request.param
 
 
-def test_item_returns_real_values_when_masking_is_off():
-    with patch.dict(ssh_pillar.__opts__, {"pillar_mask_output": False}):
-        assert ssh_pillar.item("pin") == {"pin": 1234}
-
-
-def test_item_masks_when_masking_is_on():
-    with patch.dict(ssh_pillar.__opts__, {"pillar_mask_output": True}):
-        assert ssh_pillar.item("pin") == {"pin": secret.REDACT_PLACEHOLDER}
-
-
-def test_item_masks_nested_values_only_when_masking_is_on():
-    with patch.dict(ssh_pillar.__opts__, {"pillar_mask_output": False}):
-        assert ssh_pillar.item("db") == {"db": {"user": "admin", "password": "hunter2"}}
-    with patch.dict(ssh_pillar.__opts__, {"pillar_mask_output": True}):
-        assert ssh_pillar.item("db") == {
-            "db": {
-                "user": secret.REDACT_PLACEHOLDER,
-                "password": secret.REDACT_PLACEHOLDER,
-            }
-        }
+def test_item_returns_real_values(mask_flag):
+    assert ssh_pillar.item("pin") == {"pin": 1234}
+    ret = ssh_pillar.item("db")
+    assert ret == {"db": {"user": "admin", "password": "hunter2"}}
+    assert not isinstance(ret["db"], secret.MaskedDict)
 
 
 def test_get_returns_real_values(mask_flag):
