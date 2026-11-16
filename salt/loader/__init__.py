@@ -11,6 +11,7 @@ import os
 import re
 import time
 import types
+import weakref
 from collections import OrderedDict
 
 import salt.config
@@ -532,8 +533,19 @@ def minion_mods(
     # unfiltered inner loader.  Pack is read lazily at module-load time
     # (:func:`salt.loader.lazy.LazyLoader._load_module`) so injecting the
     # key after both loaders exist is safe -- no module has loaded yet.
-    salt_dunder.pack["__wire_salt__"] = ret
-    ret.pack["__wire_salt__"] = ret
+    #
+    # Store as ``weakref.proxy`` to avoid a new reference cycle: a strong
+    # back-pointer from ``salt_dunder`` to ``ret`` (and ``ret`` to itself)
+    # would pin both loaders until Python's cyclic gc runs, delaying
+    # collection across every ``saltutil.sync_*`` reload.  The proxy
+    # delegates ``__contains__`` / ``__getitem__`` transparently, which is
+    # all dispatcher functions use, and raises ``ReferenceError`` after
+    # ``ret`` is collected -- which only happens once no caller holds the
+    # loader, at which point no module loaded via these loaders is still
+    # executing.
+    ret_proxy = weakref.proxy(ret)
+    salt_dunder.pack["__wire_salt__"] = ret_proxy
+    ret.pack["__wire_salt__"] = ret_proxy
 
     # Allow the usage of salt dunder in utils modules.
     if utils and isinstance(utils, LazyLoader):

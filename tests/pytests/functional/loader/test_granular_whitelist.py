@@ -374,19 +374,56 @@ def test_cross_test_without_whitelist_unchanged(minion_opts, tmp_path):
 def test_wire_salt_packed_on_exec_modules(minion_opts, tmp_path):
     """
     The ``__wire_salt__`` pack is injected by :func:`salt.loader.minion_mods`
-    so dispatcher functions can reach the outer wire loader from inside
-    the module.  Both the outer and inner loaders must carry the pack --
-    inner for modules whose ``__salt__`` points at the dunder, outer for
-    modules loaded via the wire path.
+    on both the outer and inner loaders.  It is stored as a
+    ``weakref.proxy`` to avoid pinning the outer loader in a reference
+    cycle (a strong back-pointer from ``salt_dunder`` to ``ret`` would
+    delay collection until Python's cyclic gc ran on every reload).
+    The proxy is transparent for the ``__contains__`` / ``__getitem__``
+    operations dispatcher functions use.
     """
+    import weakref
+
     opts = copy.deepcopy(minion_opts)
     opts["whitelist_modules"] = ["test"]
     opts["file_client"] = "local"
     opts["cachedir"] = str(tmp_path)
     loader = salt.loader.minion_mods(opts)
     inner = loader._dunder_salt
-    assert loader.pack["__wire_salt__"] is loader
-    assert inner.pack["__wire_salt__"] is loader
+    outer_proxy = loader.pack["__wire_salt__"]
+    inner_proxy = inner.pack["__wire_salt__"]
+    assert type(outer_proxy) is weakref.ProxyType
+    assert type(inner_proxy) is weakref.ProxyType
+    # Through the proxy, dispatcher operations see the gated loader.
+    assert "test.ping" in outer_proxy
+    assert callable(outer_proxy["test.ping"])
+
+
+def test_wire_salt_proxy_does_not_cycle_outer(minion_opts, tmp_path):
+    """
+    Regression: packing ``__wire_salt__`` as a strong reference to the
+    outer loader created a new cycle (``salt_dunder.pack`` -> ret ->
+    ``_WriteThroughLoader`` closure -> ``salt_dunder``) that forced
+    cyclic gc to collect the outer loader instead of plain refcount.
+    With the ``weakref.proxy`` fix, releasing the caller's reference
+    to the outer loader collects it immediately -- no gc pass needed.
+    """
+    import gc
+    import weakref as weakref_mod
+
+    gc.collect()
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+    wr = weakref_mod.ref(loader)
+    del loader
+    # Without the fix this is still alive (held by inner.pack["__wire_salt__"]);
+    # with the proxy, the strong ref is gone and gc isn't needed.
+    assert wr() is None, (
+        "outer loader still reachable after del -- __wire_salt__ is "
+        "likely a strong reference (should be weakref.proxy)"
+    )
 
 
 def test_state_whitelist_is_independent_from_exec_whitelist(minion_opts, tmp_path):

@@ -232,34 +232,18 @@ def get_opts():
     return __opts__
 
 
-def _wire_salt():
-    """
-    Return the whitelist-filtered execution-module loader for
-    user-supplied dispatch (``test.cross_test``).
-
-    Under the two-loader model implemented by
-    :func:`salt.loader.minion_mods`, ``__salt__`` is the unfiltered
-    inner loader so trusted shipped code can compose freely across
-    non-whitelisted modules.  ``test.cross_test`` however takes the
-    target function name from the caller, which would otherwise be an
-    escape hatch around ``whitelist_modules``:  an operator who grants
-    ``whitelist_modules: [test.cross_test]`` would reach any function
-    via ``test.cross_test cmd.run '["id"]'``.  When the exec loader was
-    built with the two-loader model it packs the wire-filtered loader
-    as ``__wire_salt__``; fall back to ``__salt__`` when the pack isn't
-    present (plain-dict test fixtures, salt-ssh ``FunctionWrapper``).
-    """
-    try:
-        return __wire_salt__  # noqa: F821  (packed by salt.loader.minion_mods)
-    except NameError:
-        return __salt__
-
-
 def cross_test(func, args=None):
     """
-    Execute a minion function via the ``__salt__`` object in the test
-    module, used to verify that the Minion functions can be called
-    via the ``__salt__`` module.
+    Execute a minion function via the wire-filtered loader
+    (``__wire_salt__``) in the test module, used to verify that the
+    Minion functions can be called this way.
+
+    ``__wire_salt__`` is the whitelist-gated outer loader (packed by
+    :func:`salt.loader.minion_mods`), so if ``whitelist_modules`` is
+    set, the dispatched function must also be whitelisted or the
+    lookup fails with ``KeyError``.  ``__salt__`` is deliberately not
+    used here: it is the unfiltered inner loader and would be an
+    escape hatch around the whitelist.
 
     CLI Example:
 
@@ -269,7 +253,8 @@ def cross_test(func, args=None):
     """
     if args is None:
         args = []
-    return _wire_salt()[func](*args)
+    # pylint: disable=undefined-variable
+    return __wire_salt__[func](*args)  # noqa: F821  (packed by salt.loader.minion_mods)
 
 
 def kwarg(**kwargs):
