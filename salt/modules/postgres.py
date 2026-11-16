@@ -394,7 +394,7 @@ def _psql_prepare_and_run(
     cmd, host=None, port=None, maintenance_db=None, password=None, runas=None, user=None
 ):
     rcmd = _psql_cmd(
-        host=host, user=user, port=port, maintenance_db=maintenance_db, *cmd
+        *cmd, host=host, user=user, port=port, maintenance_db=maintenance_db
     )
     cmdret = _run_psql(
         rcmd, runas=runas, password=password, host=host, port=port, user=user
