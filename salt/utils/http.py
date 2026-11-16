@@ -149,7 +149,6 @@ def _decode_result(result_text, result_headers, backend, decode_body=None, resul
     return result_text, result_headers
 
 
-@jinja_filter("http_query")
 def _tornado_streaming_callback(callback):
     """
     Wrap a ``streaming_callback`` for tornado so that its return value is
@@ -172,6 +171,7 @@ def _tornado_streaming_callback(callback):
     return wrapper
 
 
+@jinja_filter("http_query")
 def query(
     url,
     method="GET",
