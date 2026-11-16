@@ -205,6 +205,26 @@ def _dmi_parse(data, clean=True, fields=None):
     return dmi
 
 
+def _dmi_store(dmi_data, key, key_data):
+    """
+    Store a finished key of a handle in dmi_data
+    """
+    if key is None:
+        return
+    # log.debug('Evaluating DMI key {0}: {1}'.format(key, key_data))
+    value, vlist = key_data
+    if vlist:
+        if value is not None:
+            # On the rare occasion
+            # (I counted 1 on all systems we have)
+            # that there's both a value <and> a list
+            # just insert the value on top of the list
+            vlist.insert(0, value)
+        dmi_data[key] = vlist
+    elif value is not None:
+        dmi_data[key] = value
+
+
 def _dmi_data(dmi_raw, clean, fields):
     """
     Parse the raw DMIdecode output of a single handle
@@ -217,19 +237,7 @@ def _dmi_data(dmi_raw, clean, fields):
     for line in dmi_raw:
         if re.match(r"\t[^\s]+", line):
             # Finish previous key
-            if key is not None:
-                # log.debug('Evaluating DMI key {0}: {1}'.format(key, key_data))
-                value, vlist = key_data
-                if vlist:
-                    if value is not None:
-                        # On the rare occasion
-                        # (I counted 1 on all systems we have)
-                        # that there's both a value <and> a list
-                        # just insert the value on top of the list
-                        vlist.insert(0, value)
-                    dmi_data[key] = vlist
-                elif value is not None:
-                    dmi_data[key] = value
+            _dmi_store(dmi_data, key, key_data)
 
             # Family: Core i5
             # Keyboard Password Status: Not Implemented
@@ -252,6 +260,9 @@ def _dmi_data(dmi_raw, clean, fields):
             if val is not None:
                 # log.debug('DMI key %s gained list item %s', key, val)
                 key_data[1].append(val)
+
+    # Finish the last key, there is no next key to finish it
+    _dmi_store(dmi_data, key, key_data)
 
     return dmi_data
 
