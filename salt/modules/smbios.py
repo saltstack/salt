@@ -174,8 +174,8 @@ def _dmi_parse(data, clean=True, fields=None):
     dmi_split = re.compile(
         "(handle [0-9]x[0-9a-f]+[^\n]+)\n", re.MULTILINE + re.IGNORECASE
     )
-    dmi_raw = iter(re.split(dmi_split, data)[1:])
-    for handle, dmi_raw in zip(dmi_raw, dmi_raw):
+    dmi_parts = iter(re.split(dmi_split, data)[1:])
+    for handle, dmi_raw in zip(dmi_parts, dmi_parts):
         handle, htype = [hline.split()[-1] for hline in handle.split(",")][0:2]
         dmi_raw = dmi_raw.split("\n")
         # log.debug('%s record contains %s', handle, dmi_raw)
