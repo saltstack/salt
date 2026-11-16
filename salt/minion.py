@@ -2264,21 +2264,12 @@ class Minion(MinionBase):
         # this means that the parent class doesn't know *which* master we connect to
         super().__init__(opts)
 
-        # Clean up stale queue lock that might have been left behind if the minion
-        # was killed forcefully (SIGKILL). This ensures recovery on restart.
-        # In multimaster, each Minion instance has its own per-master lock path,
-        # so this cleanup cannot interfere across masters sharing a cachedir.
-        lock_path = salt.utils.state.queue_lock_path(self.opts)
-        if os.path.isfile(lock_path):
-            try:
-                os.remove(lock_path)
-                log.info("Removed stale lock file: %s", lock_path)
-            except OSError:
-                pass
-
-        # Clean up orphaned running_ files from crashed minions
-        # These can be left behind if minion crashes after rename but before cleanup
-        self._cleanup_orphaned_queue_files()
+        # Queue-lock + orphaned-running-file cleanup live on the CLI daemon
+        # entry point (salt.cli.daemons.Minion.prepare) because they must
+        # run exactly once per daemon startup. Running them from
+        # ``Minion.__init__`` also fired them in every per-job subprocess
+        # on multiprocessing spawn-start platforms, which stomped on
+        # locks held by sibling jobs (issue #70580 side-effect).
 
         self.timeout = timeout
         self.safe = safe
@@ -2386,41 +2377,11 @@ class Minion(MinionBase):
 
     def _cleanup_orphaned_queue_files(self):
         """
-        Clean up orphaned running_ queue files that may have been left behind
-        if the minion crashed after renaming queued_ to running_ but before cleanup.
+        Compatibility shim; delegates to ``salt.utils.state.cleanup_orphaned_queue_files``.
+        The real cleanup lives on the daemon entry point now so it does not
+        run inside per-job subprocesses on spawn-start platforms.
         """
-        for queue_dir in (
-            salt.utils.state.state_queue_dir(self.opts),
-            salt.utils.state.job_queue_dir(self.opts),
-        ):
-            if not os.path.exists(queue_dir):
-                continue
-
-            try:
-                for fn in os.listdir(queue_dir):
-                    if not fn.startswith("running_") or not fn.endswith(".p"):
-                        continue
-
-                    path = os.path.join(queue_dir, fn)
-                    try:
-                        # Check if file is older than 5 minutes (300 seconds)
-                        # This gives running jobs time to complete and clean up
-                        stat_info = os.stat(path)
-                        age_seconds = time.time() - stat_info.st_mtime
-
-                        if age_seconds > 300:  # 5 minutes
-                            log.info(
-                                "Removing orphaned running queue file: %s (age: %.1fs)",
-                                path,
-                                age_seconds,
-                            )
-                            os.remove(path)
-                    except OSError as exc:
-                        log.debug(
-                            "Could not check/cleanup running file %s: %s", path, exc
-                        )
-            except OSError as exc:
-                log.debug("Could not list queue directory %s: %s", queue_dir, exc)
+        salt.utils.state.cleanup_orphaned_queue_files(self.opts)
 
     def sync_connect_master(self, timeout=None, failed=False):
         """

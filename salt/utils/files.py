@@ -370,8 +370,16 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 time.sleep(sleep)
             else:
-                # Write the lock file
-                with os.fdopen(fh_, "w"):
+                # Write the holder's PID into the lock file so stale-lock
+                # recovery (``salt.utils.state.cleanup_stale_queue_lock``)
+                # can liveness-probe us instead of blindly stomping. Any
+                # exception while writing is swallowed -- an empty lock
+                # file is backward-compatible with the pre-PID-write
+                # cleanup behavior.
+                try:
+                    with os.fdopen(fh_, "w") as f:
+                        f.write(str(os.getpid()))
+                except OSError:
                     pass
                 # Lock successfully acquired
                 log.trace("Write lock %s obtained", lock_fn)
@@ -452,8 +460,16 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 await tornado.gen.sleep(sleep)
             else:
-                # Write the lock file
-                with os.fdopen(fh_, "w"):
+                # Write the holder's PID into the lock file so stale-lock
+                # recovery (``salt.utils.state.cleanup_stale_queue_lock``)
+                # can liveness-probe us instead of blindly stomping. Any
+                # exception while writing is swallowed -- an empty lock
+                # file is backward-compatible with the pre-PID-write
+                # cleanup behavior.
+                try:
+                    with os.fdopen(fh_, "w") as f:
+                        f.write(str(os.getpid()))
+                except OSError:
                     pass
                 # Lock successfully acquired
                 log.trace("Write lock %s obtained", lock_fn)

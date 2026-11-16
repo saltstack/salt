@@ -563,6 +563,20 @@ def _check_queue(queue, kwargs):
         queue_ret = False
         if not isinstance(queue, bool) and isinstance(queue, int):
             jid = kwargs.get("__pub_jid")
+            if jid is None:
+                # salt-call --local and other in-process callers have no
+                # master-published __pub_jid. Mint one so _set_queue_flag
+                # writes an observable flag file; without it, concurrent
+                # waiters each appear to the other as "running without a
+                # flag" and deadlock (issue #70580 on the salt-call path).
+                #
+                # Force unique_jid=True: the default microsecond-precision
+                # format can collide across processes, and the "same jid
+                # is me" short-circuit in check_prior_running_states
+                # (salt/utils/state.py:206) would then let two colliding
+                # salt-call runs execute concurrently -- breaking the
+                # #69825 invariant. unique_jid=True appends ``_<pid>``.
+                jid = salt.utils.jid.gen_jid({"unique_jid": True})
             # For max_queue (int), we retain blocking behavior but use lock
             _set_queue_flag(jid)
             try:
