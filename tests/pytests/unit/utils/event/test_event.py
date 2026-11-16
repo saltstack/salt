@@ -68,7 +68,7 @@ def test_event_single_no_block(sock_dir):
             # We should get None and way before the 5 seconds wait since it's
             # non-blocking, otherwise it would wait for an event which we
             # didn't even send
-            assert evt1 is None, None
+            assert evt1 is None
             assert start < finish
             me.fire_event({"data": "foo1"}, "evt1")
             evt1 = me.get_event(wait=0, tag="evt1")

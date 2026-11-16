@@ -78,7 +78,7 @@ def multiline_file(tmp_path, multiline_string):
 def test_grep_query_exists(multiline_file):
     result = filemod.grep(multiline_file, "Lorem ipsum")
 
-    assert result, None
+    assert result
     assert result["retcode"] == 0
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
@@ -95,7 +95,7 @@ def test_grep_query_not_exists(multiline_file):
 def test_grep_query_exists_with_opt(multiline_file):
     result = filemod.grep(multiline_file, "Lorem ipsum", "-i")
 
-    assert result, None
+    assert result
     assert result["retcode"] == 0
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
@@ -120,7 +120,7 @@ def test_grep_query_exists_wildcard(multiline_file):
     _file = f"{multiline_file}*"
     result = filemod.grep(_file, "Lorem ipsum")
 
-    assert result, None
+    assert result
     assert result["retcode"] == 0
     assert result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     assert result["stderr"] == ""
@@ -130,7 +130,7 @@ def test_grep_file_not_exists_wildcard(multiline_file):
     _file = f"{multiline_file}-junk*"
     result = filemod.grep(_file, "Lorem ipsum")
 
-    assert result, None
+    assert result
     assert not result["retcode"] == 0
     assert not result["stdout"] == "Lorem ipsum dolor sit amet, consectetur"
     _expected_stderr = "grep: {}-junk*: No such file or directory".format(
