@@ -511,7 +511,7 @@ def _get_supported_py_config(tops, extended_cfg):
     :return:
     """
     pymap = []
-    for py_ver, tops in copy.deepcopy(tops).items():
+    for py_ver in copy.deepcopy(tops):
         py_ver = int(py_ver)
         if py_ver == 2:
             pymap.append("py2:2:7")
