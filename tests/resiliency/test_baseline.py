@@ -46,6 +46,8 @@ import pytest
 
 from tests.resiliency.conftest import stash_result
 from tests.resiliency.durations import (
+    LEAK_BULK_RSS_KB,
+    MIN_FD_DELTA_PER_MINION,
     PING_TIMEOUT_SEC,
     RECOVER_FAST_SEC,
     RECOVER_STANDARD_SEC,
@@ -189,13 +191,39 @@ def test_baseline_workload_only(topology, workload, request):
     window = max(60, elapsed)
     rss_per_min = rss_delta_kb * 60 // window
 
+    # Mirror the compound leak gate used by
+    # :py:meth:`Topology.assert_reconnect` so this test's verdict
+    # tracks every other scenario's: slope alone is not a leak
+    # signature on a workload-driven fleet.  Require either fd
+    # accumulation (progressive leak) or bulk-RSS retention
+    # (> LEAK_BULK_RSS_KB in a single phase) in addition to the
+    # minute-normalised slope exceeding RSS_LEAK_KB_PER_MIN.  Without
+    # this, legitimate working-set growth from workload.sh (grains /
+    # pillar / state churn ~500 KB/min typical) trips a verdict that
+    # the fault scenarios never would -- see
+    # ``agents/reports/marathon_deadline_misses.md``.
+    fd_threshold = MIN_FD_DELTA_PER_MINION * max(
+        1, len(topology.spec.minion_containers)
+    )
+    leak_fd = fd_delta > fd_threshold
+    leak_bulk = rss_delta_kb > LEAK_BULK_RSS_KB
+    leak = rss_per_min > RSS_LEAK_KB_PER_MIN and (leak_fd or leak_bulk)
+
+    if leak_fd:
+        reason = "fd_accumulation"
+    elif leak_bulk:
+        reason = "bulk_rss_retention"
+    else:
+        reason = "clean"
     notes = (
         f"rss_kb_per_min={rss_per_min} "
         f"threshold={RSS_LEAK_KB_PER_MIN} "
+        f"fd_delta={fd_delta} fd_threshold={fd_threshold} "
+        f"reason={reason} "
         f"workload_s={elapsed}"
     )
 
-    if rss_per_min > RSS_LEAK_KB_PER_MIN:
+    if leak:
         # Stash the slope-verdict row then fail; conftest will emit
         # one JSONL row with outcome="failed" and the slope in notes.
         stash_result(
