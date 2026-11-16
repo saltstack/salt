@@ -18,6 +18,7 @@ import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
 import salt.syspaths
+import salt.utils.args
 import salt.utils.context
 import salt.utils.data
 import salt.utils.dictupdate
@@ -118,6 +119,20 @@ def static_loader(
     return ret
 
 
+def _accepts_loader_opts(provider):
+    """Whether an entry-point callable accepts a positional options mapping.
+
+    Returns True when *provider* has at least one positional parameter
+    (e.g. ``def dirs(opts)``).  Providers that only accept ``**kwargs``
+    are intentionally excluded — opts is passed positionally.
+    """
+    try:
+        aspec = salt.utils.args.get_function_argspec(provider)
+    except TypeError:
+        return False
+    return len(aspec.args) >= 1
+
+
 def _module_dirs(
     opts,
     ext_type,
@@ -127,6 +142,7 @@ def _module_dirs(
     ext_type_dirs=None,
     base_path=None,
     load_extensions=True,
+    provider_opts=None,
 ):
     if tag is None:
         tag = ext_type
@@ -185,7 +201,15 @@ def _module_dirs(
                     #   1: It returns a list; This is an old style entry entry_point
                     #   2: It returns a dictionary; This is a new style entry point
                     with catch_entry_points_exception(entry_point) as ctx:
-                        loaded_entry_point_value = loaded_entry_point()
+                        # SSH builds an extension archive for each roster target.
+                        # Pass that target's options to providers which accept
+                        # them, while retaining support for zero-argument hooks.
+                        if provider_opts is not None and _accepts_loader_opts(
+                            loaded_entry_point
+                        ):
+                            loaded_entry_point_value = loaded_entry_point(provider_opts)
+                        else:
+                            loaded_entry_point_value = loaded_entry_point()
                     if ctx.exception_caught:
                         continue
 
