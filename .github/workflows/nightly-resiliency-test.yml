@@ -113,16 +113,28 @@ jobs:
         # ConnectionRefusedError against the analyzer URL.  Same pattern
         # as nightly-stress-test.yml's "Build and Start Environment"
         # step, but the path varies per topology so switch on it here.
+        #
+        # cluster3 + cluster5 are the two overlay-merged topologies:
+        # their base compose lives under tests/monitoring/, but the
+        # monitoring-overlay.yml (which adds the prometheus service)
+        # bind-mounts the prometheus_data directory from
+        # tests/resiliency/compose/cluster{3,5}/prometheus_data.  Chowning
+        # the base-compose path (tests/monitoring/cluster-3node/...) was
+        # a no-op: docker auto-created the real overlay path root-owned
+        # and prometheus restart-looped the entire run (see the 362
+        # "Starting Prometheus Server" entries in cluster5's sidecar log
+        # on run 43773954141).  Point PROM_DATA_DIR at the path the
+        # overlay actually binds.
         run: |
           case "${{ matrix.topology }}" in
             single)
               PROM_DATA_DIR=tests/resiliency/compose/single/prometheus_data
               ;;
             cluster3)
-              PROM_DATA_DIR=tests/monitoring/cluster-3node/prometheus_data
+              PROM_DATA_DIR=tests/resiliency/compose/cluster3/prometheus_data
               ;;
             cluster5)
-              PROM_DATA_DIR=tests/monitoring/cluster-5node/prometheus_data
+              PROM_DATA_DIR=tests/resiliency/compose/cluster5/prometheus_data
               ;;
             multimaster-failover|multimaster-hothot)
               PROM_DATA_DIR=tests/resiliency/compose/multimaster/prometheus_data
@@ -159,6 +171,21 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements/static/ci/py3.14/linux.lock
+
+      - name: Disk preflight
+        # ubuntu-latest ships with ~14 GB free on /, which 5h of debug-
+        # logged masters + buildx cache + docker image layers + per-test
+        # workload logs can absolutely exhaust -- see run
+        # 43773954141/job/132995852482 (cluster3), hard-killed at ~2h54m
+        # by ``No space left on device`` writing the runner's own
+        # ``_diag/Worker_*.log``.  Log the pre-run size so the next
+        # exhaustion has a baseline, and log the post-run size in
+        # Collect Logs so we can see how fast the budget drained.
+        if: always()
+        run: |
+          df -h / /tmp 2>&1 || true
+          echo "docker images:"
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' 2>&1 | head -20 || true
 
       - name: Start environment
         # Hand off to the resiliency orchestrator.  ``timeout`` is
@@ -270,6 +297,20 @@ jobs:
         if: failure()
         run: |
           mkdir -p artifacts
+          # Post-run disk report.  If this job was killed by the GHA
+          # worker running out of inodes/space (see "Disk preflight"
+          # above for the precedent), this is the last place we can
+          # record the exhausted state before Upload Artifacts.
+          {
+            echo "=== df -h ==="
+            df -h / /tmp 2>&1 || true
+            echo
+            echo "=== du -sh biggest /tmp consumers ==="
+            sudo du -sh /tmp/* 2>/dev/null | sort -rh | head -15 || true
+            echo
+            echo "=== docker ps -s (size) ==="
+            docker ps -s 2>&1 | head -30 || true
+          } > artifacts/disk-usage.txt
           # Containers vary per topology.  List them, grep by project
           # name, dump each.
           case "${{ matrix.topology }}" in
