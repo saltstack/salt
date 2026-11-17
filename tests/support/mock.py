@@ -24,6 +24,7 @@ import sys
 import mock  # pylint: disable=blacklisted-external-import
 
 # pylint: disable=no-name-in-module,no-member
+from mock import call  # noqa: F401  re-exported for the tests
 from mock import (
     ANY,
     DEFAULT,
@@ -35,7 +36,6 @@ from mock import (
     NonCallableMock,
     PropertyMock,
     __version__,
-    call,
     create_autospec,
     patch,
     sentinel,
@@ -375,8 +375,8 @@ class MockOpen:
         Match the file being opened to the patterns in the read_data and spawn
         a mocked filehandle with the corresponding file contents.
         """
-        call = MockCall(name, *args, **kwargs)
-        self.calls.append(call)
+        mock_call = MockCall(name, *args, **kwargs)
+        self.calls.append(mock_call)
         self.call_count += 1
         for pat in self.read_data:
             if pat == "*":
