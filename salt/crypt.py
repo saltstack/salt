@@ -437,7 +437,7 @@ class PublicKey(BaseKey):
         _padding = self.parse_padding_for_encryption(algorithm)
         _hash = self.parse_hash(algorithm)
         self._enforce_fips(algorithm)
-        if type(data) == "bytes":
+        if isinstance(data, bytes):
             bdata = data
         else:
             bdata = salt.utils.stringutils.to_bytes(data)

@@ -1629,3 +1629,19 @@ def test_decrypt_genuine_bad_payload_raises_after_retry(
     pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
     with pytest.raises(ValueError):
         pub.decrypt(b"\x00" * 256)
+
+
+@pytest.mark.parametrize(
+    "data",
+    [b"salt", "salt", "sält", b"s\xc3\xa4lt\xff"],
+    ids=["bytes", "str", "non-ascii-str", "non-utf8-bytes"],
+)
+def test_publickey_encrypt_accepts_bytes_and_str(_rsa_keypair, data):
+    """
+    PublicKey.encrypt takes bytes as they are and encodes a str. What the
+    private key decrypts is the bytes of the data.
+    """
+    pub = crypt.PublicKey.from_file(_rsa_keypair["pub_path"])
+    priv = crypt.PrivateKey.from_file(_rsa_keypair["priv_path"])
+    expected = data if isinstance(data, bytes) else data.encode("utf-8")
+    assert priv.decrypt(pub.encrypt(data)) == expected
