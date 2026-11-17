@@ -2308,7 +2308,11 @@ class MasterPubServerChannel:
         )
         for pusher in targets:
             try:
-                await pusher.publish(event)
+                # Serialise this live publish with any in-flight
+                # handshake-driven pending-queue drain on the same
+                # peer so stale entries land before the live entry
+                # (last-writer-wins on the peer => live wins).
+                await _crep.publish_with_latch(pusher.pull_host, pusher, event)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "cache-replicate: failed to send %s/%s to %s",
@@ -2408,7 +2412,11 @@ class MasterPubServerChannel:
         )
         for pusher in targets:
             try:
-                await pusher.publish(event)
+                # Serialise this live publish with any in-flight
+                # handshake-driven pending-queue drain on the same
+                # peer so stale entries land before the live entry
+                # (last-writer-wins on the peer => live wins).
+                await _crep.publish_with_latch(pusher.pull_host, pusher, event)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "resource-replicate: failed to send register for %s to %s",

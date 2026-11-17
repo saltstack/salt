@@ -10,6 +10,7 @@ or a Cache object.  ``Cache.store`` and ``Cache.store_many`` emit via
 :func:`_handle_delegate_cache_write`.
 """
 
+import asyncio
 import atexit
 import collections
 import concurrent.futures
@@ -312,6 +313,68 @@ _PENDING_QUEUES: dict[str, "collections.deque[PendingEvent]"] = {}
 _PENDING_LOCK = threading.Lock()
 _PENDING_LOG_LAST: dict[str, float] = {}
 
+# Per-peer flush-latch.
+#
+# The publish daemon drains a peer's pending queue (via
+# ``flush_pending_for_peer``) whenever the peer transitions to joined
+# -- ``_schedule_pending_flush`` fires on the ``cluster/peer/discover-
+# reply`` or AES-key-broadcast handlers and schedules a drain task on
+# the loop.  Without serialisation, a live ``publish_cache_write`` to
+# the SAME peer that arrives mid-drain can land on the socket BEFORE
+# the drain finishes publishing its stale entries.  For ``(bank, key)``
+# last-writer-wins buckets this reorders as "stale wins", corrupting
+# peer state.
+#
+# The latch serialises per-peer publish activity: both
+# ``flush_pending_for_peer`` (handshake-driven drain) and
+# ``publish_with_latch`` (live publish) acquire the SAME per-peer
+# asyncio.Lock.  Live publishes that arrive while the drain is in
+# flight wait until it finishes; the stale entries land on the socket
+# first, then the live entry -- under last-writer-wins the peer ends
+# up with the live value.
+#
+# ``asyncio.Lock`` is appropriate because both drain and live publish
+# run as asyncio tasks on the publish daemon's event loop; a sync
+# ``threading.Lock`` would deadlock on the loop thread when the
+# holding coroutine awaits.
+_PENDING_PEER_LATCHES: dict[str, "asyncio.Lock"] = {}
+_PENDING_PEER_LATCHES_SYNC = threading.Lock()
+
+
+def _get_peer_latch(peer_host):
+    """
+    Return the per-peer flush-latch (asyncio.Lock), creating it on
+    first touch.
+
+    Called by the handshake-driven drain path and the live-publish
+    path so both serialise on the SAME lock.  The dict is bounded by
+    the number of peers (small, O(N_peers)); no eviction needed.
+    """
+    with _PENDING_PEER_LATCHES_SYNC:
+        latch = _PENDING_PEER_LATCHES.get(peer_host)
+        if latch is None:
+            latch = asyncio.Lock()
+            _PENDING_PEER_LATCHES[peer_host] = latch
+    return latch
+
+
+async def publish_with_latch(peer_host, pusher, event):
+    """
+    Publish ``event`` through ``pusher`` while holding the per-peer
+    flush-latch.
+
+    Serialises with any concurrent ``flush_pending_for_peer`` drain on
+    the same peer so stale pending entries land on the peer socket
+    BEFORE the live entry -- under last-writer-wins the peer state
+    converges to the live entry.
+    """
+    if not peer_host:
+        await pusher.publish(event)
+        return
+    latch = _get_peer_latch(peer_host)
+    async with latch:
+        await pusher.publish(event)
+
 
 def _pending_max_events(opts):
     if not isinstance(opts, dict):
@@ -539,49 +602,60 @@ async def flush_pending_for_peer(peer_host, pushers, opts=None):
         # flush attempt.  (Common during the first few ms after a join
         # where the pusher dict is still being populated.)
         return 0
-    entries = drain_pending_for_peer(peer_host, opts=opts)
-    if not entries:
-        return 0
-    log.info(
-        "cluster-cache-replication: flushing %d pending event(s) to %s",
-        len(entries),
-        peer_host,
-    )
-    flushed = 0
-    for idx, entry in enumerate(entries):
-        try:
-            await target.publish(entry.event)
-        except Exception:  # pylint: disable=broad-except
-            log.exception(
-                "cluster-cache-replication: pending-flush publish failed to %s "
-                "(entry kind=%s tag=%s bank=%s key=%s minion_id=%s); "
-                "re-queueing %d remaining entries",
-                peer_host,
-                entry.kind,
-                entry.tag,
-                entry.bank,
-                entry.key,
-                entry.minion_id,
-                len(entries) - idx,
-            )
-            # Re-enqueue the failed entry + all remaining entries.
-            with _PENDING_LOCK:
-                queue = _PENDING_QUEUES.setdefault(peer_host, collections.deque())
-                # Preserve order: push the failing entry and remaining
-                # entries to the LEFT, so the queue head still carries
-                # the oldest unflushed event.
-                for remainder in reversed(entries[idx:]):
-                    queue.appendleft(remainder)
-            return flushed
-        flushed += 1
-    return flushed
+    # Hold the per-peer flush-latch across the entire drain+publish
+    # sequence so a concurrent live publish on the same peer waits
+    # for the handshake-driven drain to finish.  That preserves "live
+    # wins over stale" ordering: the stale pending entries land first,
+    # then the live entry, so last-writer-wins on the peer converges
+    # to the live value.  ``asyncio.Lock`` is appropriate because both
+    # paths are asyncio tasks on the publish daemon loop.
+    latch = _get_peer_latch(peer_host)
+    async with latch:
+        entries = drain_pending_for_peer(peer_host, opts=opts)
+        if not entries:
+            return 0
+        log.info(
+            "cluster-cache-replication: flushing %d pending event(s) to %s",
+            len(entries),
+            peer_host,
+        )
+        flushed = 0
+        for idx, entry in enumerate(entries):
+            try:
+                await target.publish(entry.event)
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "cluster-cache-replication: pending-flush publish failed to %s "
+                    "(entry kind=%s tag=%s bank=%s key=%s minion_id=%s); "
+                    "re-queueing %d remaining entries",
+                    peer_host,
+                    entry.kind,
+                    entry.tag,
+                    entry.bank,
+                    entry.key,
+                    entry.minion_id,
+                    len(entries) - idx,
+                )
+                # Re-enqueue the failed entry + all remaining entries.
+                with _PENDING_LOCK:
+                    queue = _PENDING_QUEUES.setdefault(peer_host, collections.deque())
+                    # Preserve order: push the failing entry and
+                    # remaining entries to the LEFT, so the queue head
+                    # still carries the oldest unflushed event.
+                    for remainder in reversed(entries[idx:]):
+                        queue.appendleft(remainder)
+                return flushed
+            flushed += 1
+        return flushed
 
 
 def _reset_pending_state():
-    """Test-only: clear all pending queues + logs."""
+    """Test-only: clear all pending queues + logs + per-peer latches."""
     with _PENDING_LOCK:
         _PENDING_QUEUES.clear()
         _PENDING_LOG_LAST.clear()
+    with _PENDING_PEER_LATCHES_SYNC:
+        _PENDING_PEER_LATCHES.clear()
 
 
 def secret_fingerprint(secret):
