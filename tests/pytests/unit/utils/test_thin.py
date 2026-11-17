@@ -1084,7 +1084,7 @@ def test_get_supported_py_config_typecheck(thin_ctx):
     tops = {}
     ext_cfg = {}
     out = thin._get_supported_py_config(tops=tops, extended_cfg=ext_cfg)
-    assert type(salt.utils.stringutils.to_bytes("")) is type(out)
+    assert isinstance(out, bytes)
 
 
 def test_get_supported_py_config_base_tops(thin_ctx):

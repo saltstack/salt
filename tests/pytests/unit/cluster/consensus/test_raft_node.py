@@ -100,7 +100,6 @@ def test_node_state_init_become_leader():
     assert state._state == state.START
     with pytest.raises(RuntimeError) as err:
         state.become_leader()
-    assert err.value.__class__ is RuntimeError
     assert err.value.args == ("State must be follower first",)
 
 
@@ -109,7 +108,6 @@ def test_node_state_become_leader_as_follower():
     state._state = state.FOLLOWER
     with pytest.raises(RuntimeError) as err:
         state.become_leader()
-    assert err.value.__class__ is RuntimeError
     assert err.value.args == ("Not candidate (follower)",)
 
 
@@ -118,7 +116,6 @@ def test_node_state_init_become_candidate():
     assert state._state == state.START
     with pytest.raises(RuntimeError) as err:
         state.become_candidate()
-    assert err.value.__class__ is RuntimeError
     assert err.value.args == ("State must be follower first",)
 
 
@@ -134,7 +131,6 @@ def test_node_state_become_candidate_as_leader():
     state._state = state.LEADER
     with pytest.raises(RuntimeError) as err:
         state.become_candidate()
-    assert err.value.__class__ is RuntimeError
     assert err.value.args == ("Not follower",)
 
 
