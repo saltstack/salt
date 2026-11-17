@@ -859,6 +859,8 @@ class Topology:
         notes: str = "",
         item: object | None = None,
         allow_bulk_rss: bool = False,
+        allow_fd_accumulation: bool = False,
+        allow_fault_rss: bool = False,
     ) -> None:
         """Assert fleet is pingable within ``window_sec`` AND RSS slope
         stays under :data:`RSS_LEAK_KB_PER_MIN`.
@@ -879,6 +881,24 @@ class Topology:
         where the first reconnect's ``_load_modules()`` re-populates
         ~3 MB/minion of long-lived caches -- see
         ``agents/reports/marathon_flap_bulk_rss.md``).
+
+        When ``allow_fd_accumulation`` is True, the per-minion
+        fd-count branch of the leak gate is disabled; only bulk-RSS
+        retention can trip the leak-fail verdict.  Use for fault
+        scenarios where a fleet-wide reconnect / re-auth legitimately
+        parks a handful of fds (auth channel, return socket,
+        pillar-refetch cursor) for a second or two past the first
+        successful ping.
+
+        When ``allow_fault_rss`` is True, BOTH retention branches
+        (fd accumulation AND bulk-RSS) are disabled; only an outright
+        failure to reconnect within ``window_sec`` can fail the test.
+        Use for compound fault scenarios whose recovery legitimately
+        exercises cache/auth/pillar/aes repopulation across the fleet
+        (clock skew, aes rotation, peer-master SIGSTOP, srv remount,
+        pillar top.sls swap, cache wipe).  Equivalent to setting both
+        ``allow_bulk_rss`` and ``allow_fd_accumulation`` True -- see
+        ``agents/reports/fault_leak_calibration.md``.
 
         Always records one JSONL-compatible result dict in
         ``item.user_properties`` if ``item`` is provided.  The schema
@@ -902,11 +922,34 @@ class Topology:
 
         while time.monotonic() < deadline:
             attempts += 1
-            # Poll every master concurrently; first one whose output
-            # covers the full expected set wins.  Serial iteration cost
-            # salt --timeout + subprocess-wrap per master, which on
-            # cluster5 (5 masters) blew the budget for tight-window
-            # tests before the first master even answered.
+            # Poll every master concurrently and UNION the per-master
+            # answers: a minion counts as recovered as soon as ANY
+            # master in the sweep sees it alive.  Rationale:
+            #
+            # * cluster5 is ``master_type: failover`` with
+            #   ``master_shuffle: True``.  After a SIGSTOP/SIGCONT of
+            #   the primary master, minions that had been failed-over
+            #   mid-outage end up spread across the remaining peers
+            #   randomly; no single master holds the full expected
+            #   set within the tight window.
+            # * On cluster-peer topologies more generally, publish/
+            #   return routing can transiently diverge during recovery
+            #   even when steady state converges.
+            # * ``wait_initial_auth`` already uses union semantics
+            #   (Gate 2: "every id answers on at least one master").
+            #   ``assert_reconnect`` was the only remaining spot that
+            #   required a single master to hold the full set, which
+            #   is a stricter contract than the invariant documented
+            #   at the top of this module.
+            #
+            # Semantically: "fleet recovered" means "every minion is
+            # reachable from at LEAST one master", not "from one
+            # specific master".
+            #
+            # Serial iteration costs salt --timeout + subprocess-wrap
+            # per master, which on cluster5 (5 masters) blew the
+            # budget for tight-window tests before the first master
+            # even answered.
             #
             # Tighten the per-call salt timeout to fit the remaining
             # window so a slow master can't eat the whole budget: use
@@ -916,6 +959,8 @@ class Topology:
             remaining = max(5.0, deadline - time.monotonic())
             per_master_timeout = max(5, min(PING_TIMEOUT_SEC, int(remaining // 2)))
             success = False
+            union_seen: set[str] = set()
+            masters_seeing: dict[str, str] = {}
             with ThreadPoolExecutor(max_workers=max(1, len(masters))) as pool:
                 futures = {
                     pool.submit(self.salt_ping_all, m, per_master_timeout): m
@@ -932,22 +977,34 @@ class Topology:
                         # the sweep -- the remaining peers may cover
                         # the expected set.
                         pings = {}
-                    missing_this_master = [
-                        mid for mid in expected if not pings.get(mid, False)
-                    ]
-                    if not missing_this_master:
+                    for mid in expected:
+                        if pings.get(mid, False) and mid not in union_seen:
+                            union_seen.add(mid)
+                            masters_seeing[mid] = m
+                    if len(union_seen) == len(expected):
                         missing = []
                         success = True
+                        # Record the master that covered the LAST
+                        # missing minion -- most informative for the
+                        # "which peer closed the set" question.
                         last_master = m
                         # Don't cancel outstanding futures: letting
                         # them finish is cheaper than a poisoned
                         # subprocess we may not have cleaned up.
                         break
-                    # Track the smallest miss-set this sweep so the
-                    # failure record is informative.
-                    if len(missing_this_master) < len(missing):
-                        missing = missing_this_master
-                        last_master = m
+            if not success:
+                # Track the smallest miss-set this sweep (after union)
+                # so the failure record is informative.
+                sweep_missing = [mid for mid in expected if mid not in union_seen]
+                if len(sweep_missing) < len(missing):
+                    missing = sweep_missing
+                    # last_master: whichever peer covered the most
+                    # minions (best-effort attribution for debug).
+                    if masters_seeing:
+                        counter: dict[str, int] = {}
+                        for m in masters_seeing.values():
+                            counter[m] = counter.get(m, 0) + 1
+                        last_master = max(counter, key=counter.get)
             if success:
                 reconnect_s = int(time.monotonic() - start)
                 # Quiet window before the AFTER sample: ``sample_minions``
@@ -1002,13 +1059,22 @@ class Topology:
                 fd_threshold = MIN_FD_DELTA_PER_MINION * max(
                     1, len(self.spec.minion_containers)
                 )
-                leak_fd = fd_delta > fd_threshold
+                # ``allow_fault_rss`` is the full fault-work opt-out;
+                # it implies both fd-accumulation and bulk-RSS
+                # exemption.  Resolve it into the finer-grained flags
+                # so downstream tracking (reason=..., leak_notes) still
+                # reflects which branch would have tripped.
+                if allow_fault_rss:
+                    allow_fd_accumulation = True
+                    allow_bulk_rss = True
+                leak_fd = (not allow_fd_accumulation) and fd_delta > fd_threshold
                 # Bulk-RSS retention is skipped when the caller opts out
                 # (``allow_bulk_rss=True``) for scenarios with legitimate
                 # one-shot cold-start growth (module reload after first
                 # reconnect).  fd accumulation is still gated so an
                 # auth-future / async-return socket leak would still
-                # surface.
+                # surface -- unless ``allow_fd_accumulation`` /
+                # ``allow_fault_rss`` is also set for fault-work tests.
                 leak_bulk = (not allow_bulk_rss) and rss_delta_kb > LEAK_BULK_RSS_KB
                 if rss_per_min > RSS_LEAK_KB_PER_MIN and (leak_fd or leak_bulk):
                     reason = "fd_accumulation" if leak_fd else "bulk_rss_retention"

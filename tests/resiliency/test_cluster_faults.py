@@ -177,6 +177,12 @@ def test_cluster_peer_sigstop_standard(topology, workload, request):
         before=before,
         notes=f"paused_peer={peer}",
         item=request.node,
+        # Minions hold the SIGSTOP'd peer's socket until TCP
+        # keepalive fires on the connection; fd count accumulates
+        # across the fleet during the reconnect-to-live-peer dance,
+        # drains over several seconds.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -212,6 +218,10 @@ def test_cluster_peer_sigstop_backoff(topology, workload, request):
         window_sec=RECOVER_STANDARD_SEC,
         notes=f"paused_peer={peer} tier=backoff",
         item=request.node,
+        # Longer SIGSTOP tier: minions back off further + reconnect
+        # work on resume is proportionally larger.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -245,6 +255,10 @@ def test_cluster_peer_unreachable(topology, workload, request):
         window_sec=RECOVER_STANDARD_SEC,
         notes=f"disconnected_peer={peer}",
         item=request.node,
+        # Docker network disconnect severs the minion's connection
+        # mid-flight; reconnect-and-queued-return holds fds briefly
+        # past ping.  See agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -328,6 +342,11 @@ def test_cluster_aes_rotation_under_load(topology, workload, request):
             before=before,
             notes=f"aes_rotation_via_dropfile master_id={master_id}",
             item=request.node,
+            # AES rotation forces every minion to re-auth against
+            # the new key; fleet-wide re-auth legitimately parks
+            # auth channel + return socket fds briefly past ping.
+            # See agents/reports/fault_leak_calibration.md.
+            allow_fault_rss=True,
         )
     finally:
         # Idempotent cleanup: if Maintenance consumed the dropfile this

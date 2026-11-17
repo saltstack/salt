@@ -593,10 +593,18 @@ def topology(request):
     spec = load_topology(topo_name)
 
     # --- compose up ----------------------------------------------------
+    # ``RESILIENCY_SKIP_BUILD=1`` drops the ``--build`` flag so an
+    # already-built image is used verbatim.  Useful for local iteration
+    # when the docker daemon cannot reach pypi (air-gapped / offline
+    # dev) and the salt image is already fresh.  Default keeps the
+    # hermetic rebuild for CI.
+    up_args = ["up", "-d"]
+    if os.environ.get("RESILIENCY_SKIP_BUILD", "").lower() not in ("1", "true", "yes"):
+        up_args.append("--build")
     up_log_path = workdir / "compose-up.log"
     with up_log_path.open("w", encoding="utf-8") as fh:
         rc = subprocess.run(
-            _compose_cmd(spec, "up", "-d", "--build"),
+            _compose_cmd(spec, *up_args),
             stdout=fh,
             stderr=subprocess.STDOUT,
             check=False,

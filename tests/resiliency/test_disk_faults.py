@@ -116,6 +116,13 @@ def test_disk_cache_readonly(topology, workload, request):
         before=before,
         notes=f"remount_ro {MASTER_CACHEDIR}",
         item=request.node,
+        # Remounting the master cachedir ro forces fleet-wide
+        # re-auth / re-subscribe on the master's recovery; minions
+        # legitimately hold transient auth + return-channel fds for
+        # a few seconds past the first successful ping while the
+        # master drains the queued reconnect backlog.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 

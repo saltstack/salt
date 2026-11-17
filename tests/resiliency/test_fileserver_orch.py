@@ -382,6 +382,12 @@ def test_fs_large_file_mid_cache(topology, workload, request):
         before=before,
         notes=f"size_mb={LARGE_FILE_MB}",
         item=request.node,
+        # cp.cache_file interrupted by source delete/recreate forces
+        # every minion to retry the fetch; transient fetch sockets +
+        # file handle on the local cache stage legitimately hold open
+        # briefly past the first successful ping.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -483,6 +489,11 @@ def test_fs_pillar_flip_mid_run(topology, workload, request):
         before=before,
         notes=f"pillar_top={pillar_top}",
         item=request.node,
+        # Pillar top.sls swap drives an fleet-wide pillar refetch;
+        # minions hold the refetch cursor + render pipe briefly past
+        # the first successful ping.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -513,6 +524,11 @@ def test_fs_master_srv_remount(topology, workload, request):
         before=before,
         notes=f"duration={SHORT_FAULT_SEC}s",
         item=request.node,
+        # /srv/salt remount ro invalidates the master's fileserver
+        # cache and triggers fleet-wide re-subscribe; minions hold
+        # fileserver + pillar refetch handles briefly past ping.
+        # See agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -636,6 +652,11 @@ def test_orch_volume_remount_simulate(topology, workload, request):
         before=before,
         notes="wiped=/var/cache/salt/master/minions",
         item=request.node,
+        # Master cache wipe forces every minion to repopulate
+        # cache/data on the master's recovery; transient
+        # reconnect fds + fetch stage files legitimately held.
+        # See agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 

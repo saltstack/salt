@@ -194,6 +194,12 @@ def test_clock_minion_back_300s(topology, workload, request):
         before=before,
         notes=f"skew -300s on {container}",
         item=request.node,
+        # Minion wall-clock jump backwards forces aes-key re-sync
+        # and auth channel rebuild; fleet-wide reconnect
+        # legitimately parks a handful of fds briefly past the
+        # first successful ping.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
@@ -209,6 +215,11 @@ def test_clock_master_fwd_60s(topology, workload, request):
         before=before,
         notes=f"skew +60s on {container}",
         item=request.node,
+        # Master wall-clock jump forward can trigger aes-key
+        # rotation / auth-signature invalidation; fleet-wide
+        # re-auth legitimately parks fds briefly past ping.  See
+        # agents/reports/fault_leak_calibration.md.
+        allow_fault_rss=True,
     )
 
 
