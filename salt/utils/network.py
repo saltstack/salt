@@ -300,6 +300,7 @@ def is_reachable_host(entity_name):
     :return:
     """
     try:
+        # getaddrinfo raises when the name cannot be resolved, the result is not used
         socket.getaddrinfo(entity_name, 0, 0, 0, 0)
         ret = True
     except (socket.gaierror, UnicodeError):
