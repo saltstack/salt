@@ -334,7 +334,7 @@ def test_low():
         assert not state.low({"state": "pkg", "fun": "installed", "name": "vi"})
 
         MockState.State.flag = False
-        assert state.low({"state": "pkg", "fun": "installed", "name": "vi"}) == list
+        assert state.low({"state": "pkg", "fun": "installed", "name": "vi"}) is list
 
         MockState.State.flag = True
         assert state.low({"state": "pkg", "fun": "installed", "name": "vi"})

@@ -575,7 +575,7 @@ def test_get_ordered():
         ),
     ):
         res = grainsmod.get("b")
-        assert type(res) == OrderedDict
+        assert type(res) is OrderedDict
         # Check that order really matters
         assert res == OrderedDict(
             [
@@ -614,7 +614,7 @@ def test_get_unordered():
         ),
     ):
         res = grainsmod.get("b", ordered=False)
-        assert type(res) == dict
+        assert type(res) is dict
         # Check that order doesn't matter
         assert res == OrderedDict(
             [
@@ -647,7 +647,7 @@ def test_equals():
         ),
     ):
         res = grainsmod.equals("a", "aval")
-        assert type(res) == bool
+        assert type(res) is bool
         assert res
         res = grainsmod.equals("b:z", "zval")
         assert res

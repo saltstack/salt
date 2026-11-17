@@ -519,7 +519,7 @@ def _merge_dict(stack, obj):
                     stack_k = stack[k]
                     stack[k] = _cleanup(v)
                     v = stack_k
-                if type(stack[k]) != type(v):
+                if type(stack[k]) is not type(v):
                     log.debug(
                         "Force overwrite, types differ: '%s' != '%s'", stack[k], v
                     )

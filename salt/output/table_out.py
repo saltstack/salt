@@ -207,7 +207,7 @@ class TableDisplay:
         # all rows must have the same datatype
         consistent = True
         for row in rows[1:]:
-            if type(row) != first_row_type:
+            if type(row) is not first_row_type:
                 consistent = False
 
         if not consistent:

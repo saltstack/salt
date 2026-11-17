@@ -260,7 +260,7 @@ def test_normalization(push_channel):
     for msg in msgs:
         ret = push_channel.send(msg, timeout=5, tries=1)
         for key, value in ret["load"].items():
-            assert types[key] == type(value)
+            assert types[key] is type(value)
 
 
 def test_badload(push_channel, req_channel_crypt):
