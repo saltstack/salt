@@ -46,28 +46,35 @@ log = logging.getLogger(__name__)
 # Keyword arguments injected by Salt's publish layer and state compiler.
 # These are stripped from validation input and forwarded unchanged to the
 # wrapped function, so module authors do not have to declare them.
-RESERVED_KWARGS = frozenset(
-    {
-        "__pub_jid",
-        "__pub_fun",
-        "__pub_arg",
-        "__pub_tgt",
-        "__pub_tgt_type",
-        "__pub_ret",
-        "__pub_pid",
-        "__pub_user",
-        "__pub_schedule",
-        "__pub_master",
-        "__pub_metadata",
-        "__pub_id",
-        "__id__",
-        "__sls__",
-        "__env__",
-        "__low__",
-        "__running__",
-        "__orchestration_jid__",
-    }
-)
+#
+# Sourced from salt.state.STATE_RUNTIME_KEYWORDS (the canonical state-compiler
+# set), filtered to just dunder-named entries. Plain-name runtime keywords
+# like 'failhard', 'onlyif', 'retry' are stripped by the state compiler
+# before dispatch and never reach the loader, so they aren't needed here.
+# The import is deferred to avoid a circular import: salt.state imports
+# salt.loader which transitively imports this module.
+_RESERVED_KWARGS_CACHE = None
+
+
+def _reserved_kwargs():
+    global _RESERVED_KWARGS_CACHE
+    if _RESERVED_KWARGS_CACHE is None:
+        try:
+            from salt.state import STATE_RUNTIME_KEYWORDS
+
+            _RESERVED_KWARGS_CACHE = frozenset(
+                k for k in STATE_RUNTIME_KEYWORDS if k.startswith("__")
+            )
+        except ImportError:
+            _RESERVED_KWARGS_CACHE = frozenset()
+    return _RESERVED_KWARGS_CACHE
+
+
+def __getattr__(name):
+    # PEP 562: resolve RESERVED_KWARGS lazily from salt.state's canonical set.
+    if name == "RESERVED_KWARGS":
+        return _reserved_kwargs()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # Loader tags whose function returns are validated against StateReturn.
@@ -170,12 +177,24 @@ def _build_input_model(fn):
     return model, sig
 
 
+def _is_reserved(name, reserved_set):
+    """A kwarg is reserved if it is in the state-compiler's canonical set,
+    or has the ``__pub_`` prefix (publish-layer convention). The prefix
+    check catches keys like ``__pub_schedule`` / ``__pub_stamp`` that the
+    publish layer injects but the state compiler doesn't know about.
+    """
+    return name in reserved_set or name.startswith("__pub_")
+
+
 def _split_reserved(kwargs):
     """Partition kwargs into (non-reserved, reserved) dicts."""
-    reserved = {k: v for k, v in kwargs.items() if k in RESERVED_KWARGS}
+    reserved_set = _reserved_kwargs()
+    reserved = {k: v for k, v in kwargs.items() if _is_reserved(k, reserved_set)}
     if not reserved:
         return kwargs, reserved
-    non_reserved = {k: v for k, v in kwargs.items() if k not in RESERVED_KWARGS}
+    non_reserved = {
+        k: v for k, v in kwargs.items() if not _is_reserved(k, reserved_set)
+    }
     return non_reserved, reserved
 
 

@@ -239,9 +239,26 @@ class TestReservedKwargs:
         assert non_reserved == {"a": 1, "b": 2}
         assert reserved == {}
 
-    def test_reserved_kwargs_includes_pub_and_state_keys(self):
+    def test_reserved_kwargs_sourced_from_state_module(self):
+        # RESERVED_KWARGS mirrors salt.state.STATE_RUNTIME_KEYWORDS filtered
+        # to dunder-named entries. These are the ones the state compiler
+        # treats as reserved; the loader needs the same view.
         assert "__pub_jid" in validation.RESERVED_KWARGS
         assert "__id__" in validation.RESERVED_KWARGS
         assert "__sls__" in validation.RESERVED_KWARGS
-        # Guard against accidental additions of plain names.
+        assert "__pub_minion_is_target" in validation.RESERVED_KWARGS
+        assert "__prereq__" in validation.RESERVED_KWARGS
+        # Plain-name runtime keywords (failhard, onlyif, retry, ...) are
+        # stripped by the state compiler before dispatch and never reach
+        # the loader; they should not appear in our set.
         assert all(k.startswith("__") for k in validation.RESERVED_KWARGS)
+
+    def test_pub_prefix_is_reserved_by_pattern(self):
+        # __pub_schedule / __pub_stamp are injected by the publish layer
+        # but are not in STATE_RUNTIME_KEYWORDS. The prefix match catches
+        # them so modules can safely read them from **kwargs.
+        non_reserved, reserved = validation._split_reserved(
+            {"a": 1, "__pub_schedule": "s", "__pub_stamp": "t"}
+        )
+        assert non_reserved == {"a": 1}
+        assert reserved == {"__pub_schedule": "s", "__pub_stamp": "t"}
