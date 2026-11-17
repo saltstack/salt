@@ -1197,6 +1197,11 @@ VALID_OPTS = immutabletypes.freeze(
         # Whitelist/blacklist specific modules to be synced
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
+        # Loader-level input validation mode: one of 'off', 'warn', 'strict'.
+        # 'off' (default): loader behaves as before.
+        # 'warn': validate annotated callables on every call; log on failure.
+        # 'strict': raise SaltInvocationError on validation failure.
+        "loader_validate_mode": str,
         # django auth
         "django_auth_path": str,
         "django_auth_settings": str,
@@ -1621,6 +1626,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "salt_cp_chunk_size": 65536,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
+        "loader_validate_mode": "off",
         "minion_sign_messages": False,
         "discovery": False,
         "schedule": {},
@@ -2066,6 +2072,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
+        "loader_validate_mode": "off",
         "clean_dynamic_modules": True,
         "django_auth_path": "",
         "django_auth_settings": "",

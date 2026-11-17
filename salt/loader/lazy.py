@@ -21,6 +21,7 @@ import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
+import salt.loader.validation
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -1370,6 +1371,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.missing_modules[module_name] = err_string
                     self.missing_modules[name] = err_string
                     return False
+
+        # Install input / state-return validation wrappers in place on the
+        # module object. Gated by opts['loader_validate_mode']; a no-op
+        # when 'off' (default) or pydantic is unavailable. Done before
+        # funcs_to_load discovery so every downstream getattr() sees the
+        # wrapped version.
+        salt.loader.validation.wrap_module(mod, self.opts, self.tag)
 
         try:
             funcs_to_load = mod.__load__
