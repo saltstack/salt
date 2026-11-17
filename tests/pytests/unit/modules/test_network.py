@@ -4,6 +4,7 @@ import os.path
 import shutil
 import socket
 import threading
+import time
 import warnings
 
 import pytest
@@ -55,23 +56,38 @@ def fake_fqdn():
 
 @pytest.fixture
 def fake_ips():
+    # Addresses need to be outside the RFC1918 / link-local / TEST-NET
+    # ranges that ``_is_resolvable_address`` filters out, or ``fqdns``
+    # would correctly skip them and the mocks below would never fire.
     with patch(
         "salt.utils.network.ip_addrs",
         autospec=True,
         return_value=[
-            "203.0.113.1",
-            "203.0.113.3",
-            "203.0.113.6",
-            "203.0.113.25",
-            "203.0.113.82",
+            "1.2.3.1",
+            "1.2.3.3",
+            "1.2.3.6",
+            "1.2.3.25",
+            "1.2.3.82",
         ],
     ), patch("salt.utils.network.ip_addrs6", autospec=True, return_value=[]):
         yield
 
 
+def _wait_for_thread_count(target, timeout=5.0):
+    # ``network.fqdns`` now shuts the worker pool down with ``wait=False``
+    # so a stuck ``getaddrinfo`` can't stall ``salt-master`` startup; idle
+    # workers exit on their own but not synchronously with the return.
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if threading.active_count() == target:
+            return
+        time.sleep(0.05)
+
+
 def test_when_errors_happen_looking_up_fqdns_threads_should_not_leak(socket_errors):
     before_threads = threading.active_count()
     networkmod.fqdns()
+    _wait_for_thread_count(before_threads)
     after_threads = threading.active_count()
     assert (
         before_threads == after_threads
@@ -83,6 +99,7 @@ def test_when_no_errors_happen_looking_up_fqdns_threads_should_not_leak(
 ):
     before_threads = threading.active_count()
     networkmod.fqdns()
+    _wait_for_thread_count(before_threads)
     after_threads = threading.active_count()
     assert (
         before_threads == after_threads
@@ -145,6 +162,92 @@ def test_fqdns_unexpected_herror_is_logged_as_error(fake_ips, caplog):
         r.levelno == logging.ERROR and "Failed to resolve address" in r.getMessage()
         for r in caplog.records
     )
+
+
+@pytest.mark.parametrize(
+    "addr,resolvable",
+    [
+        # Globally routable -- public DNS could answer.
+        ("1.2.3.4", True),
+        ("2606:4700::1", True),
+        # RFC1918 private IPv4.
+        ("10.0.2.15", False),
+        ("172.16.5.5", False),
+        ("192.168.1.100", False),
+        # Link-local (IPv4 169.254/16, IPv6 fe80::/10).
+        ("169.254.1.1", False),
+        ("fe80::1", False),
+        # Site-local IPv6 (deprecated per RFC 3879 but macOS still assigns).
+        ("fec0::1441:4aab:41c5:b227", False),
+        # ULA fc00::/7.
+        ("fd00::1", False),
+        # Loopback.
+        ("127.0.0.1", False),
+        ("::1", False),
+        # Documentation ranges (Python reports is_private=True).
+        ("203.0.113.5", False),
+        ("2001:db8::1", False),
+        # Not a valid address -- preserve back-compat (don't crash, treat
+        # as "let the OS resolver decide").
+        ("not-an-address", True),
+    ],
+)
+def test_fqdns_is_resolvable_address_filter(addr, resolvable):
+    assert networkmod._is_resolvable_address(addr) is resolvable
+
+
+def test_fqdns_skips_private_addresses(caplog):
+    # Mix of filterable (private/link-local/site-local) and routable
+    # addresses.  Only the routable one should actually hit gethostbyaddr.
+    addrs = ["1.2.3.4", "10.0.0.5", "fe80::1", "fec0::1"]
+    called_with = []
+
+    def _fake_gethostbyaddr(ip):
+        called_with.append(ip)
+        return ("fnord", [], [ip])
+
+    with patch(
+        "salt.utils.network.ip_addrs",
+        autospec=True,
+        return_value=["1.2.3.4", "10.0.0.5"],
+    ), patch(
+        "salt.utils.network.ip_addrs6",
+        autospec=True,
+        return_value=["fe80::1", "fec0::1"],
+    ), patch(
+        "socket.getfqdn", autospec=True, side_effect=lambda v: v
+    ), patch(
+        "socket.gethostbyaddr", autospec=True, side_effect=_fake_gethostbyaddr
+    ):
+        result = networkmod.fqdns()
+    assert called_with == [
+        "1.2.3.4"
+    ], f"only globally-routable addresses should be looked up, got {called_with}"
+    assert result == {"fqdns": ["fnord"]}
+
+
+def test_fqdns_returns_within_timeout_when_lookups_stall(fake_ips):
+    # Simulate ``gethostbyaddr`` hanging indefinitely.  fqdns() must
+    # still return within a bounded time rather than letting the master
+    # startup stall.  Allow a generous ceiling to tolerate CI jitter;
+    # the function is bounded at ~5s internally.
+    stall = threading.Event()
+
+    def _hang(_ip):
+        stall.wait()  # blocks until the test releases
+        return ("fnord", [], ["1.2.3.1"])
+
+    with patch("socket.getfqdn", autospec=True, side_effect=lambda v: v), patch(
+        "socket.gethostbyaddr", autospec=True, side_effect=_hang
+    ):
+        start = time.monotonic()
+        try:
+            result = networkmod.fqdns()
+        finally:
+            stall.set()
+        elapsed = time.monotonic() - start
+    assert elapsed < 15, f"fqdns() should bound its own wait; took {elapsed:.1f}s"
+    assert result == {"fqdns": []}, "timed-out lookups must not leak partial results"
 
 
 def test___virtual__is_windows_true():

@@ -2940,9 +2940,22 @@ def mminion_config(path, overrides, ignore_config_errors=True):
     apply_sdb(opts)
 
     _validate_opts(opts)
-    if "grains" in opts and hasattr(opts["grains"], "destroy"):
-        opts["grains"].destroy()
-    opts["grains"] = salt.loader.grains(opts)
+    # Reuse a grains dict the caller already computed (e.g. a forked
+    # ``MWorker`` whose parent ran ``salt.loader.grains(opts)``).  Without
+    # this short-circuit every ``MasterMinion`` instantiation -- which
+    # happens in every MWorker fork and every ``ClearFuncs`` /
+    # ``AESFuncs`` thread -- repeats the full grain refresh.  On
+    # ``salt-master`` startup that's 30+ redundant refreshes, each
+    # paying any slow grain function (notably reverse-DNS on macOS, see
+    # #62168).  A ``LazyLoader`` instance has ``destroy``; a
+    # fully-computed grains dict does not, so we gate on that.
+    caller_grains = overrides.get("grains")
+    if isinstance(caller_grains, dict) and not hasattr(caller_grains, "destroy"):
+        opts["grains"] = caller_grains
+    else:
+        if "grains" in opts and hasattr(opts["grains"], "destroy"):
+            opts["grains"].destroy()
+        opts["grains"] = salt.loader.grains(opts)
     opts["pillar"] = {}
     return opts
 
