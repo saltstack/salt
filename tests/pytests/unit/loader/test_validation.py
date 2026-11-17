@@ -1,10 +1,9 @@
 """
 Tests for salt.loader.validation -- annotation-driven input validation and
-StateReturn contract enforcement installed at loader-wrap time.
+return-contract enforcement called from LoadedFunc.__call__.
 """
 
 import logging
-import types
 
 import pytest
 
@@ -16,233 +15,29 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _make_module(**attrs):
-    """Build a throwaway module with the given attrs. Functions declared in
-    the caller's frame carry their original __module__, which wrap_module
-    uses to filter re-exports -- we rewrite __module__ to match."""
-    mod = types.ModuleType("salt_test_validation_mod")
-    for k, v in attrs.items():
-        if callable(v) and hasattr(v, "__module__"):
-            v.__module__ = mod.__name__
-        setattr(mod, k, v)
-    return mod
-
-
-class TestWrapCallable:
-    def test_off_returns_fn_unchanged(self):
-        def f(x: int) -> int:
-            return x
-
-        assert validation.wrap_callable(f, mode="off") is f
-
-    def test_unannotated_fn_returns_fn_unchanged(self):
-        def f(x, y):
-            return (x, y)
-
-        assert validation.wrap_callable(f, mode="strict") is f
-
-    def test_annotated_fn_is_wrapped(self):
-        def f(x: int) -> int:
-            return x
-
-        wrapped = validation.wrap_callable(f, mode="warn")
-        assert wrapped is not f
-        assert getattr(wrapped, "__salt_validated__", False)
-        assert wrapped.__wrapped__ is f
-
-    def test_strict_mode_raises_on_bad_type(self):
-        def f(x: int) -> int:
-            return x
-
-        wrapped = validation.wrap_callable(f, mode="strict")
-        with pytest.raises(SaltInvocationError):
-            wrapped(x="not-an-int-or-numeric")
-
-    def test_warn_mode_logs_and_passes_through(self, caplog):
-        def f(x: int):
-            return x
-
-        wrapped = validation.wrap_callable(f, mode="warn")
-        with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
-            got = wrapped(x="definitely-not-an-int")
-        assert got == "definitely-not-an-int"
-        assert any("input validation failure" in r.message for r in caplog.records)
-
-    def test_cli_string_coercion_int(self):
-        def f(x: int):
-            return x
-
-        wrapped = validation.wrap_callable(f, mode="strict")
-        # "30" coerces to 30 in lax mode.
-        assert wrapped(x="30") == 30
-
-    def test_cli_string_coercion_bool(self):
-        def f(flag: bool):
-            return flag
-
-        wrapped = validation.wrap_callable(f, mode="strict")
-        assert wrapped(flag="true") is True
-        assert wrapped(flag="false") is False
-
-    def test_reserved_kwargs_pass_through_untouched(self):
-        captured = {}
-
-        def f(x: int, **kwargs):
-            captured.update(kwargs)
-            return x
-
-        wrapped = validation.wrap_callable(f, mode="strict")
-        ret = wrapped(x=1, __pub_jid="J", __pub_user="u", __id__="id-x")
-        assert ret == 1
-        # Reserved kwargs arrived at fn in kwargs, not filtered or coerced.
-        assert captured == {"__pub_jid": "J", "__pub_user": "u", "__id__": "id-x"}
-
-    def test_positional_args_preserved(self):
-        def f(a: int, b: str):
-            return (a, b)
-
-        wrapped = validation.wrap_callable(f, mode="strict")
-        assert wrapped(1, "x") == (1, "x")
-
-    def test_double_wrap_is_noop(self):
-        def f(x: int):
-            return x
-
-        once = validation.wrap_callable(f, mode="strict")
-        twice = validation.wrap_callable(once, mode="strict")
-        assert twice is once
-
-    def test_state_return_strict_raises(self):
-        def f():
-            return {"name": "n", "changes": {}, "result": True}  # missing comment
-
-        wrapped = validation.wrap_callable(f, mode="strict", validate_state_return=True)
-        with pytest.raises(SaltInvocationError):
-            wrapped()
-
-    def test_state_return_warn_passes_through(self, caplog):
-        def f():
-            return {"name": "n", "changes": {}, "result": True}
-
-        wrapped = validation.wrap_callable(f, mode="warn", validate_state_return=True)
-        with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
-            got = wrapped()
-        assert got == {"name": "n", "changes": {}, "result": True}
-        assert any(
-            "state return contract violation" in r.message for r in caplog.records
-        )
-
-    def test_state_return_valid_passes(self):
-        def f():
-            return {
-                "name": "n",
-                "changes": {"a": 1},
-                "result": True,
-                "comment": "ok",
-            }
-
-        wrapped = validation.wrap_callable(f, mode="strict", validate_state_return=True)
-        # Should not raise.
-        assert wrapped()["result"] is True
-
-
-class TestWrapModule:
-    def test_wrap_module_off_is_noop(self):
-        def f(x: int):
-            return x
-
-        mod = _make_module(f=f)
-        original = mod.f
-        validation.wrap_module(mod, {"loader_validate_mode": "off"}, "modules")
-        assert mod.f is original
-
-    def test_wrap_module_wraps_annotated_only(self):
-        def annotated(x: int):
-            return x
-
-        def plain(x, y):
-            return (x, y)
-
-        mod = _make_module(annotated=annotated, plain=plain)
-        validation.wrap_module(mod, {"loader_validate_mode": "warn"}, "modules")
-        assert getattr(mod.annotated, "__salt_validated__", False)
-        # Plain functions (no annotations) are untouched.
-        assert not getattr(mod.plain, "__salt_validated__", False)
-
-    def test_wrap_module_skips_private(self):
-        def _private(x: int):
-            return x
-
-        def public(x: int):
-            return x
-
-        mod = _make_module(_private=_private, public=public)
-        validation.wrap_module(mod, {"loader_validate_mode": "warn"}, "modules")
-        assert mod._private is _private
-        assert getattr(mod.public, "__salt_validated__", False)
-
-    def test_wrap_module_skips_reexports(self):
-        """Functions whose __module__ doesn't match the loaded module's
-        name are imports and should not be wrapped."""
-
-        def f(x: int):
-            return x
-
-        mod = _make_module()
-        # Attach without rewriting __module__ (simulating an import).
-        setattr(mod, "imported", f)
-        validation.wrap_module(mod, {"loader_validate_mode": "warn"}, "modules")
-        assert mod.imported is f
-
-    def test_wrap_module_states_tag_wraps_returns(self):
-        def present(name: str):
-            return {"name": name, "changes": {}, "result": "not-a-bool", "comment": ""}
-
-        mod = _make_module(present=present)
-        validation.wrap_module(mod, {"loader_validate_mode": "strict"}, "states")
-        # The wrapped call should fail because result is a string.
-        with pytest.raises(SaltInvocationError):
-            mod.present(name="foo")
-
-    def test_wrap_module_modules_tag_does_not_wrap_returns(self):
-        def f() -> dict:
-            # A return that would fail StateReturn (no 'name' key) but we're
-            # under the 'modules' tag -- no return validation applies.
-            return {"anything": "goes"}
-
-        mod = _make_module(f=f)
-        validation.wrap_module(mod, {"loader_validate_mode": "strict"}, "modules")
-        assert mod.f() == {"anything": "goes"}
-
-    def test_wrap_module_invalid_mode_is_noop(self, caplog):
-        def f(x: int):
-            return x
-
-        mod = _make_module(f=f)
-        original = mod.f
-        with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
-            validation.wrap_module(mod, {"loader_validate_mode": "bogus"}, "modules")
-        assert mod.f is original
-        assert any("Invalid loader_validate_mode" in r.message for r in caplog.records)
-
-
-class TestReservedKwargs:
-    def test_split_reserved_partitions(self):
+class TestSplitReserved:
+    def test_partitions(self):
         non_reserved, reserved = validation._split_reserved(
             {"a": 1, "__pub_jid": "J", "b": 2, "__id__": "x"}
         )
         assert non_reserved == {"a": 1, "b": 2}
         assert reserved == {"__pub_jid": "J", "__id__": "x"}
 
-    def test_split_reserved_empty_reserved(self):
+    def test_empty_reserved(self):
         non_reserved, reserved = validation._split_reserved({"a": 1, "b": 2})
         assert non_reserved == {"a": 1, "b": 2}
         assert reserved == {}
 
+    def test_pub_prefix_caught_by_pattern(self):
+        # __pub_schedule / __pub_stamp are injected by the publish layer
+        # but not in STATE_RUNTIME_KEYWORDS; the prefix match catches them.
+        non_reserved, reserved = validation._split_reserved(
+            {"a": 1, "__pub_schedule": "s", "__pub_stamp": "t"}
+        )
+        assert non_reserved == {"a": 1}
+        assert reserved == {"__pub_schedule": "s", "__pub_stamp": "t"}
+
     def test_reserved_kwargs_sourced_from_state_module(self):
-        # RESERVED_KWARGS mirrors salt.state.STATE_RUNTIME_KEYWORDS filtered
-        # to dunder-named entries. These are the ones the state compiler
-        # treats as reserved; the loader needs the same view.
         assert "__pub_jid" in validation.RESERVED_KWARGS
         assert "__id__" in validation.RESERVED_KWARGS
         assert "__sls__" in validation.RESERVED_KWARGS
@@ -253,12 +48,185 @@ class TestReservedKwargs:
         # the loader; they should not appear in our set.
         assert all(k.startswith("__") for k in validation.RESERVED_KWARGS)
 
-    def test_pub_prefix_is_reserved_by_pattern(self):
-        # __pub_schedule / __pub_stamp are injected by the publish layer
-        # but are not in STATE_RUNTIME_KEYWORDS. The prefix match catches
-        # them so modules can safely read them from **kwargs.
-        non_reserved, reserved = validation._split_reserved(
-            {"a": 1, "__pub_schedule": "s", "__pub_stamp": "t"}
+
+class TestValidateInputs:
+    def test_off_passes_through(self):
+        def f(x: int):
+            return x
+
+        args, kwargs = validation.validate_inputs(f, (), {"x": "not-a-number"}, "off")
+        # Nothing coerced, nothing raised; raw args returned.
+        assert kwargs == {"x": "not-a-number"}
+
+    def test_no_annotations_passes_through(self):
+        def f(x, y):
+            return (x, y)
+
+        args, kwargs = validation.validate_inputs(f, (1, 2), {}, "strict")
+        assert args == (1, 2)
+        assert kwargs == {}
+
+    def test_strict_raises_on_bad_type(self):
+        def f(x: int):
+            return x
+
+        with pytest.raises(SaltInvocationError):
+            validation.validate_inputs(f, (), {"x": "not-an-int-or-numeric"}, "strict")
+
+    def test_warn_logs_and_passes_through(self, caplog):
+        def f(x: int):
+            return x
+
+        with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
+            args, kwargs = validation.validate_inputs(
+                f, (), {"x": "definitely-not-an-int"}, "warn"
+            )
+        assert kwargs == {"x": "definitely-not-an-int"}
+        assert any("input validation failure" in r.message for r in caplog.records)
+
+    def test_cli_string_coercion_int(self):
+        def f(x: int):
+            return x
+
+        args, kwargs = validation.validate_inputs(f, (), {"x": "30"}, "strict")
+        assert kwargs == {"x": 30}
+
+    def test_cli_string_coercion_bool(self):
+        def f(flag: bool):
+            return flag
+
+        _args, kwargs = validation.validate_inputs(f, (), {"flag": "true"}, "strict")
+        assert kwargs == {"flag": True}
+        _args, kwargs = validation.validate_inputs(f, (), {"flag": "false"}, "strict")
+        assert kwargs == {"flag": False}
+
+    def test_reserved_kwargs_pass_through_as_kwargs(self):
+        def f(x: int, **_kwargs):
+            return x
+
+        args, kwargs = validation.validate_inputs(
+            f,
+            (),
+            {"x": "1", "__pub_jid": "J", "__pub_user": "u", "__id__": "id-x"},
+            "strict",
         )
-        assert non_reserved == {"a": 1}
-        assert reserved == {"__pub_schedule": "s", "__pub_stamp": "t"}
+        # Reserved kwargs preserved alongside coerced non-reserved.
+        assert kwargs == {
+            "x": 1,
+            "__pub_jid": "J",
+            "__pub_user": "u",
+            "__id__": "id-x",
+        }
+
+    def test_positional_args_preserved(self):
+        def f(a: int, b: str):
+            return (a, b)
+
+        args, kwargs = validation.validate_inputs(f, (1, "x"), {}, "strict")
+        # bind_partial maps positional to kwarg names; downstream dispatch
+        # works either way, so we accept kwargs-form here.
+        reconstructed = dict(kwargs)
+        # Pydantic coerced in lax mode.
+        assert reconstructed == {"a": 1, "b": "x"}
+
+    def test_model_cache_attached(self):
+        def f(x: int):
+            return x
+
+        validation.validate_inputs(f, (), {"x": "1"}, "strict")
+        cached = getattr(f, "__salt_validate_model__", None)
+        assert cached is not None and cached is not validation._NO_MODEL
+
+    def test_unannotated_cached_as_no_model(self):
+        def f(x, y):
+            return (x, y)
+
+        validation.validate_inputs(f, (1, 2), {}, "strict")
+        assert getattr(f, "__salt_validate_model__", None) is validation._NO_MODEL
+
+
+class TestValidateReturn:
+    def test_off_is_noop(self):
+        def f():
+            return {"malformed": True}
+
+        ret = validation.validate_return(
+            f, {"malformed": True}, validation.StateReturn, "off"
+        )
+        assert ret == {"malformed": True}
+
+    def test_no_contract_is_noop(self):
+        def f():
+            return "anything"
+
+        ret = validation.validate_return(f, "anything", None, "strict")
+        assert ret == "anything"
+
+    def test_strict_raises(self):
+        def present():
+            return {"name": "n", "changes": {}, "result": True}  # missing comment
+
+        with pytest.raises(SaltInvocationError):
+            validation.validate_return(
+                present,
+                {"name": "n", "changes": {}, "result": True},
+                validation.StateReturn,
+                "strict",
+            )
+
+    def test_warn_logs_and_returns_unmutated(self, caplog):
+        def present():
+            return {"name": "n", "changes": {}, "result": True}
+
+        with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
+            ret = validation.validate_return(
+                present,
+                {"name": "n", "changes": {}, "result": True},
+                validation.StateReturn,
+                "warn",
+            )
+        assert ret == {"name": "n", "changes": {}, "result": True}
+        assert any("return contract violation" in r.message for r in caplog.records)
+
+    def test_valid_state_return_passes(self):
+        def present():
+            return {
+                "name": "n",
+                "changes": {"a": 1},
+                "result": True,
+                "comment": "ok",
+            }
+
+        ret = validation.validate_return(
+            present,
+            {"name": "n", "changes": {"a": 1}, "result": True, "comment": "ok"},
+            validation.StateReturn,
+            "strict",
+        )
+        assert ret["result"] is True
+
+
+class TestBuildInputModel:
+    def test_skips_unannotated_params(self):
+        def f(annotated: int, bare=None):
+            return (annotated, bare)
+
+        model, sig = validation._build_input_model(f)
+        assert model is not None
+        # Only the annotated param becomes a model field.
+        assert set(model.model_fields) == {"annotated"}
+        assert sig is not None
+
+    def test_returns_none_when_no_fields(self):
+        def f(a, b):
+            return (a, b)
+
+        model, _sig = validation._build_input_model(f)
+        assert model is None
+
+    def test_var_positional_and_keyword_skipped(self):
+        def f(x: int, *args: str, **kwargs: int):
+            return x
+
+        model, _sig = validation._build_input_model(f)
+        assert set(model.model_fields) == {"x"}

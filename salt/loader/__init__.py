@@ -1247,6 +1247,12 @@ def states(
     if minion_mods is not None:
         pack["__minion__"] = minion_mods
 
+    # Pin the StateReturn contract on this loader; LoadedFunc.__call__ will
+    # validate every state function's return against it when
+    # opts["loader_validate_mode"] is not "off". Imported lazily so this
+    # module doesn't require pydantic at import time.
+    from salt.loader.validation import HAS_PYDANTIC, StateReturn
+
     return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
@@ -1256,6 +1262,7 @@ def states(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",
         loaded_base_name=loaded_base_name,
+        output_contract=StateReturn if HAS_PYDANTIC else None,
     )
 
 

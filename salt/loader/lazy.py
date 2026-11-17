@@ -190,7 +190,21 @@ class LoadedFunc:
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        # Input validation: strip reserved kwargs, validate against the
+        # function's inferred pydantic model, coerce, re-merge reserved.
+        # No-op when opts["loader_validate_mode"] is "off", pydantic is
+        # unavailable, or the function has no type annotations.
+        mode = self.loader.opts.get("loader_validate_mode", "off")
+        args, kwargs = salt.loader.validation.validate_inputs(
+            self.func, args, kwargs, mode
+        )
         ret = self.loader.run(run_func, *args, **kwargs)
+        # Return validation: enforce the loader's output_contract (pinned
+        # per loader-kind by the factory in salt/loader/__init__.py).
+        if self.loader.output_contract is not None:
+            salt.loader.validation.validate_return(
+                self.func, ret, self.loader.output_contract, mode
+            )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
         return ret
@@ -230,7 +244,15 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        mode = self.loader.opts.get("loader_validate_mode", "off")
+        args, kwargs = salt.loader.validation.validate_inputs(
+            self.func, args, kwargs, mode
+        )
         ret = await self.loader.run(run_func, *args, **kwargs)
+        if self.loader.output_contract is not None:
+            salt.loader.validation.validate_return(
+                self.func, ret, self.loader.output_contract, mode
+            )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
         return ret
@@ -365,6 +387,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
+        output_contract=None,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
@@ -397,6 +420,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
 
         self.module_dirs = module_dirs
         self.tag = tag
+        # Optional pydantic model that every function's return value must
+        # satisfy. Factories pin this per loader-kind (e.g. states() passes
+        # salt.loader.validation.StateReturn). None means no return
+        # contract. Enforced at call time in LoadedFunc.__call__ when
+        # opts["loader_validate_mode"] is not "off".
+        self.output_contract = output_contract
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type
@@ -1371,13 +1400,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                     self.missing_modules[module_name] = err_string
                     self.missing_modules[name] = err_string
                     return False
-
-        # Install input / state-return validation wrappers in place on the
-        # module object. Gated by opts['loader_validate_mode']; a no-op
-        # when 'off' (default) or pydantic is unavailable. Done before
-        # funcs_to_load discovery so every downstream getattr() sees the
-        # wrapped version.
-        salt.loader.validation.wrap_module(mod, self.opts, self.tag)
 
         try:
             funcs_to_load = mod.__load__

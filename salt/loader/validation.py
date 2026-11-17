@@ -1,35 +1,35 @@
 """
-Loader-level input and state-return validation for Salt modules.
+Loader-level input and return validation for Salt modules.
 
-Hooks into ``LazyLoader._load_module`` to wrap annotated callables with
-pydantic-driven validation. Behavior is controlled by the
-``loader_validate_mode`` option:
+Called from ``LoadedFunc.__call__`` / ``LoadedCoro.__call__`` on every
+loader dispatch. Behavior is controlled by the ``loader_validate_mode``
+option:
 
-* ``off`` (default) -- no wrapping; loader behaves as before.
+* ``off`` (default) -- validation is skipped; loader behaves as before.
 * ``warn`` -- validate on every call; on failure log and pass through.
 * ``strict`` -- validate on every call; on failure raise
   ``SaltInvocationError``.
 
 Annotation-driven -- no per-function decorators required. A module author
-writes a plain Python function with type hints and the loader installs the
-wrapper at load time. The same hook runs for core modules, ``saltext.*``
-extensions, and third-party modules under ``file_roots/_modules/`` because
-everything flows through the loader. Functions on modules that don't go
-through the loader are untouched.
+writes a plain Python function with type hints and the loader validates
+on dispatch. The input model is built lazily from the signature on first
+call and cached on the function via ``__salt_validate_model__``, so only
+functions actually invoked pay the model-build cost.
+
+Return contracts are pinned per loader-kind by the factories in
+``salt/loader/__init__.py`` -- for example ``salt.loader.states()`` passes
+``output_contract=StateReturn`` so every state function's return is
+checked against that model. Other factories pass no contract and only
+input validation applies.
 
 Reserved kwargs injected by the publish layer and state compiler
 (``__pub_*``, ``__id__``, ``__sls__``, ...) are filtered out of the
-validation input and forwarded unchanged to the underlying function, so
-module authors never have to declare them in signatures.
-
-Functions in ``salt.states.*`` additionally get their return validated
-against the universal ``StateReturn`` contract regardless of annotations.
+validation input and forwarded unchanged to the underlying function,
+so module authors never have to declare them in signatures.
 """
 
-import functools
 import inspect
 import logging
-import typing
 
 try:
     from pydantic import BaseModel, ConfigDict, ValidationError, create_model
@@ -43,16 +43,12 @@ from salt.exceptions import SaltInvocationError
 log = logging.getLogger(__name__)
 
 
-# Keyword arguments injected by Salt's publish layer and state compiler.
-# These are stripped from validation input and forwarded unchanged to the
-# wrapped function, so module authors do not have to declare them.
-#
-# Sourced from salt.state.STATE_RUNTIME_KEYWORDS (the canonical state-compiler
-# set), filtered to just dunder-named entries. Plain-name runtime keywords
-# like 'failhard', 'onlyif', 'retry' are stripped by the state compiler
-# before dispatch and never reach the loader, so they aren't needed here.
-# The import is deferred to avoid a circular import: salt.state imports
-# salt.loader which transitively imports this module.
+# Reserved kwargs are sourced lazily from salt.state.STATE_RUNTIME_KEYWORDS
+# (the canonical state-compiler set), filtered to dunder-named entries.
+# Plain-name runtime keywords like 'failhard', 'onlyif', 'retry' are
+# stripped by the state compiler before dispatch and never reach the
+# loader, so they aren't needed here. The import is deferred to avoid
+# a circular: salt.state imports salt.loader which imports this module.
 _RESERVED_KWARGS_CACHE = None
 
 
@@ -77,19 +73,12 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-# Loader tags whose function returns are validated against StateReturn.
-_STATE_LOADER_TAGS = frozenset({"states"})
-
-
-_VALID_MODES = frozenset({"off", "warn", "strict"})
-
-
 if HAS_PYDANTIC:
     SALT_VALIDATE_CONFIG = ConfigDict(
         arbitrary_types_allowed=True,
         # Lax coercion: CLI strings ("30", "true") coerce to declared type.
         strict=False,
-        # Reserved kwargs are already stripped by the wrapper, but keep
+        # Reserved kwargs are already stripped by the caller, but keep
         # extras tolerant for anything we missed.
         extra="ignore",
     )
@@ -97,10 +86,10 @@ if HAS_PYDANTIC:
     class StateReturn(BaseModel):
         """Universal contract for ``salt.states.*`` function returns.
 
-        Every state function's return must satisfy this shape. Enforced at
-        loader-wrap time so a module returning ``result='True'`` (string)
-        rather than ``result=True`` (bool) is caught at the module, not
-        three layers downstream in ``State.call``.
+        Every state function's return must satisfy this shape. Pinned on
+        the states loader by ``salt.loader.states()`` so a module returning
+        ``result='True'`` (string) rather than ``result=True`` (bool) is
+        caught at the module, not three layers downstream in ``State.call``.
         """
 
         model_config = SALT_VALIDATE_CONFIG
@@ -112,9 +101,34 @@ if HAS_PYDANTIC:
         warnings: list | None = None
         pchanges: dict | None = None
 
+else:  # pragma: no cover
+    SALT_VALIDATE_CONFIG = None
+    StateReturn = None
+
+
+def _is_reserved(name, reserved_set):
+    """A kwarg is reserved if it is in the state-compiler's canonical set,
+    or has the ``__pub_`` prefix (publish-layer convention). The prefix
+    check catches keys like ``__pub_schedule`` / ``__pub_stamp`` that the
+    publish layer injects but the state compiler doesn't know about.
+    """
+    return name in reserved_set or name.startswith("__pub_")
+
+
+def _split_reserved(kwargs):
+    """Partition kwargs into (non-reserved, reserved) dicts."""
+    reserved_set = _reserved_kwargs()
+    reserved = {k: v for k, v in kwargs.items() if _is_reserved(k, reserved_set)}
+    if not reserved:
+        return kwargs, reserved
+    non_reserved = {
+        k: v for k, v in kwargs.items() if not _is_reserved(k, reserved_set)
+    }
+    return non_reserved, reserved
+
 
 def _has_annotations(fn):
-    """Return True if the function has any parameter or return annotation."""
+    """Return True if the function has any parameter annotation."""
     try:
         sig = inspect.signature(fn)
     except (TypeError, ValueError):
@@ -122,7 +136,13 @@ def _has_annotations(fn):
     for param in sig.parameters.values():
         if param.annotation is not inspect.Parameter.empty:
             return True
-    return sig.return_annotation is not inspect.Signature.empty
+    return False
+
+
+# Sentinel attached to a function when we've determined no input model
+# can be built for it (either no annotations, or pydantic was unable to
+# construct one). Avoids re-attempting model build on every call.
+_NO_MODEL = object()
 
 
 def _build_input_model(fn):
@@ -150,7 +170,11 @@ def _build_input_model(fn):
             inspect.Parameter.VAR_KEYWORD,
         ):
             continue
-        annotation = hints.get(name, typing.Any)
+        annotation = hints.get(name, inspect.Parameter.empty)
+        if annotation is inspect.Parameter.empty:
+            # Skip unannotated params so pydantic doesn't invent a schema
+            # for them from the default value's type.
+            continue
         default = ... if param.default is inspect.Parameter.empty else param.default
         fields[name] = (annotation, default)
 
@@ -166,7 +190,7 @@ def _build_input_model(fn):
         )
     except Exception:  # pylint: disable=broad-exception-caught
         # Any pydantic schema-build failure should degrade to no validation
-        # for that one function, never break loader_module.
+        # for that one function, never break the loader.
         log.debug(
             "Could not build input model for %s.%s",
             fn.__module__,
@@ -177,46 +201,33 @@ def _build_input_model(fn):
     return model, sig
 
 
-def _is_reserved(name, reserved_set):
-    """A kwarg is reserved if it is in the state-compiler's canonical set,
-    or has the ``__pub_`` prefix (publish-layer convention). The prefix
-    check catches keys like ``__pub_schedule`` / ``__pub_stamp`` that the
-    publish layer injects but the state compiler doesn't know about.
-    """
-    return name in reserved_set or name.startswith("__pub_")
+def _get_or_build_model(fn):
+    """Return the cached (model, sig) for ``fn``, building on first call."""
+    cached = getattr(fn, "__salt_validate_model__", None)
+    if cached is _NO_MODEL:
+        return None, None
+    if cached is not None:
+        return cached
+    if not _has_annotations(fn):
+        _set_cache(fn, _NO_MODEL)
+        return None, None
+    model, sig = _build_input_model(fn)
+    if model is None:
+        _set_cache(fn, _NO_MODEL)
+        return None, None
+    _set_cache(fn, (model, sig))
+    return model, sig
 
 
-def _split_reserved(kwargs):
-    """Partition kwargs into (non-reserved, reserved) dicts."""
-    reserved_set = _reserved_kwargs()
-    reserved = {k: v for k, v in kwargs.items() if _is_reserved(k, reserved_set)}
-    if not reserved:
-        return kwargs, reserved
-    non_reserved = {
-        k: v for k, v in kwargs.items() if not _is_reserved(k, reserved_set)
-    }
-    return non_reserved, reserved
-
-
-def _check_state_return(fn, ret, mode):
-    """Validate a state function's return against StateReturn.
-
-    On failure: raise SaltInvocationError in strict mode, log in warn mode.
-    Always returns the original ``ret`` -- the payload is never mutated.
-    """
-    if not HAS_PYDANTIC or mode == "off":
-        return ret
+def _set_cache(fn, value):
+    """Attach the model cache to the function. Some callables (C builtins,
+    functools.partial) don't accept attribute assignment; silently skip
+    caching in that case -- we'll rebuild each call, which is correct
+    but slower."""
     try:
-        StateReturn.model_validate(ret)
-    except ValidationError as exc:
-        msg = (
-            f"state return contract violation in "
-            f"{fn.__module__}.{fn.__name__}: {exc}"
-        )
-        if mode == "strict":
-            raise SaltInvocationError(msg) from exc
-        log.warning(msg)
-    return ret
+        fn.__salt_validate_model__ = value
+    except (AttributeError, TypeError):  # pragma: no cover
+        pass
 
 
 def _coerced_kwargs(validated_model, provided_keys):
@@ -232,105 +243,62 @@ def _coerced_kwargs(validated_model, provided_keys):
     }
 
 
-def wrap_callable(fn, mode="off", validate_state_return=False):
-    """Wrap ``fn`` with validation. Returns ``fn`` unchanged when disabled.
+def validate_inputs(fn, args, kwargs, mode):
+    """Validate call-site inputs for ``fn`` and return the (args, kwargs)
+    to dispatch with. No-op when mode is ``off``, pydantic is unavailable,
+    or no input model can be built for the function.
 
-    :param fn: the function to wrap
-    :param mode: one of ``off``, ``warn``, ``strict``
-    :param validate_state_return: when True, validate return against
-        :class:`StateReturn` in addition to input validation
+    In ``strict`` mode a validation failure raises ``SaltInvocationError``.
+    In ``warn`` mode the original args/kwargs are returned unchanged and
+    the error is logged.
     """
     if mode == "off" or not HAS_PYDANTIC:
-        return fn
-    if getattr(fn, "__salt_validated__", False):
-        return fn
+        return args, kwargs
 
-    annotated = _has_annotations(fn)
-    if not annotated and not validate_state_return:
-        return fn
+    model, sig = _get_or_build_model(fn)
+    if model is None:
+        return args, kwargs
 
-    model, sig = _build_input_model(fn) if annotated else (None, None)
-    if sig is None:
-        try:
-            sig = inspect.signature(fn)
-        except (TypeError, ValueError):
-            return fn
+    non_reserved, reserved = _split_reserved(dict(kwargs))
+    try:
+        bound = sig.bind_partial(*args, **non_reserved)
+    except TypeError:
+        # Arity mismatch -- let fn's own TypeError surface.
+        return args, kwargs
 
+    try:
+        validated = model.model_validate(dict(bound.arguments))
+    except ValidationError as exc:
+        msg = f"input validation failure in {fn.__module__}.{fn.__name__}: {exc}"
+        if mode == "strict":
+            raise SaltInvocationError(msg) from exc
+        log.warning(msg)
+        return args, kwargs
+
+    coerced = _coerced_kwargs(validated, bound.arguments)
     positional_only = [
         p.name
         for p in sig.parameters.values()
         if p.kind is inspect.Parameter.POSITIONAL_ONLY
     ]
-
-    @functools.wraps(fn)
-    def wrapper(*args, **kwargs):
-        non_reserved, reserved = _split_reserved(kwargs)
-        if model is None:
-            ret = fn(*args, **kwargs)
-        else:
-            try:
-                bound = sig.bind_partial(*args, **non_reserved)
-            except TypeError:
-                # Arity mismatch -- let fn's own TypeError surface.
-                return fn(*args, **kwargs)
-            try:
-                validated = model.model_validate(dict(bound.arguments))
-            except ValidationError as exc:
-                msg = (
-                    f"input validation failure in "
-                    f"{fn.__module__}.{fn.__name__}: {exc}"
-                )
-                if mode == "strict":
-                    raise SaltInvocationError(msg) from exc
-                log.warning(msg)
-                ret = fn(*args, **kwargs)
-            else:
-                coerced = _coerced_kwargs(validated, bound.arguments)
-                pos = [coerced.pop(n) for n in positional_only if n in coerced]
-                ret = fn(*pos, **coerced, **reserved)
-
-        if validate_state_return:
-            _check_state_return(fn, ret, mode)
-        return ret
-
-    wrapper.__salt_validated__ = True
-    return wrapper
+    new_pos = tuple(coerced.pop(n) for n in positional_only if n in coerced)
+    new_kwargs = {**coerced, **reserved}
+    return new_pos, new_kwargs
 
 
-def wrap_module(mod, opts, tag):
-    """Walk a loaded module and install validation wrappers in place.
+def validate_return(fn, ret, contract, mode):
+    """Validate ``fn``'s return against the loader's ``output_contract``.
 
-    Called from ``LazyLoader._load_module`` after dunder injection. No-op
-    when pydantic is unavailable, the mode is ``off``, or the module has
-    no annotated public callables.
-
-    Functions are replaced on the module object via ``setattr`` -- the same
-    mechanism the loader already uses to install ``__opts__`` et al. This
-    means direct imports of the module after the first loader load also
-    see wrapped functions.
+    Returns ``ret`` unchanged (we never mutate the payload). On failure
+    raises ``SaltInvocationError`` in strict mode, logs in warn mode.
     """
-    if not HAS_PYDANTIC:
-        return
-    mode = opts.get("loader_validate_mode", "off")
-    if mode not in _VALID_MODES:
-        log.warning("Invalid loader_validate_mode %r; falling back to 'off'", mode)
-        return
-    if mode == "off":
-        return
-
-    validate_state_return = tag in _STATE_LOADER_TAGS
-
-    for name in dir(mod):
-        if name.startswith("_"):
-            continue
-        fn = getattr(mod, name, None)
-        if not inspect.isfunction(fn):
-            continue
-        # Skip re-exports: only wrap functions defined in this module.
-        if getattr(fn, "__module__", None) != mod.__name__:
-            continue
-        wrapped = wrap_callable(
-            fn, mode=mode, validate_state_return=validate_state_return
-        )
-        if wrapped is not fn:
-            setattr(mod, name, wrapped)
+    if mode == "off" or not HAS_PYDANTIC or contract is None:
+        return ret
+    try:
+        contract.model_validate(ret)
+    except ValidationError as exc:
+        msg = f"return contract violation in {fn.__module__}.{fn.__name__}: {exc}"
+        if mode == "strict":
+            raise SaltInvocationError(msg) from exc
+        log.warning(msg)
+    return ret
