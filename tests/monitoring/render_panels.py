@@ -39,7 +39,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # matplotlib is required at runtime but only installed in the CI workflow
@@ -136,6 +136,55 @@ def _is_count_unit(unit_hint: str) -> bool:
     return unit_hint.lower() == "short"
 
 
+def _provenance_env() -> dict[str, str]:
+    """Read run-provenance fields from the environment.
+
+    Returns a mapping with keys ``topology``, ``run_id``, ``sha``,
+    ``started_at``.  Each value is the first non-empty of the
+    corresponding ``RESILIENCY_PANEL_*`` override, then the matching
+    GitHub Actions env, then an empty string.  ``started_at`` falls
+    back to the current UTC time only when at least one other
+    provenance field is populated, so a plain local invocation with no
+    env vars still returns all-empty and callers can skip the stamp.
+    """
+    topology = (
+        os.environ.get("RESILIENCY_PANEL_TOPOLOGY") or os.environ.get("TOPOLOGY") or ""
+    )
+    run_id = (
+        os.environ.get("RESILIENCY_PANEL_RUN_ID")
+        or os.environ.get("GITHUB_RUN_ID")
+        or ""
+    )
+    sha = os.environ.get("RESILIENCY_PANEL_SHA") or os.environ.get("GITHUB_SHA") or ""
+    started_at = os.environ.get("RESILIENCY_PANEL_STARTED_AT", "")
+    any_set = bool(topology or run_id or sha or started_at)
+    if any_set and not started_at:
+        started_at = (
+            datetime.now(timezone.utc)
+            .isoformat(timespec="seconds")
+            .replace("+00:00", "Z")
+        )
+    return {
+        "topology": topology,
+        "run_id": run_id,
+        "sha": sha,
+        "started_at": started_at,
+    }
+
+
+def _provenance_suptitle(prov: dict[str, str]) -> str | None:
+    """Format the provenance suptitle string, or ``None`` when all
+    fields are empty (local-dev invocation without the env vars)."""
+    if not any(prov.values()):
+        return None
+    topology = prov["topology"] or "unknown"
+    run_id = prov["run_id"] or "unknown"
+    sha_full = prov["sha"] or ""
+    sha = sha_full[:12] if sha_full else "unknown"
+    started_at = prov["started_at"] or "unknown"
+    return f"{topology} / run {run_id} / {sha} / started {started_at}"
+
+
 def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     """Return a matplotlib Figure for ``panel``, or ``None`` if no series."""
     targets = panel.get("targets") or []
@@ -215,7 +264,15 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     ax.grid(alpha=0.3)
     if series_count <= 15:
         ax.legend(fontsize=7, loc="best", framealpha=0.7)
-    fig.tight_layout()
+    suptitle = _provenance_suptitle(_provenance_env())
+    if suptitle is not None:
+        # Keep the suptitle small + near the top edge and reserve
+        # vertical space via rect= so it doesn't overlap the existing
+        # per-panel ax.set_title() below it.
+        fig.suptitle(suptitle, fontsize=9, y=0.995)
+        fig.tight_layout(rect=(0, 0, 1, 0.97))
+    else:
+        fig.tight_layout()
     return fig
 
 
@@ -291,6 +348,7 @@ def write_step_summary(
     rendered: list[tuple[str, Path]],
     artifact_link: str | None,
     image_url_prefix: str | None,
+    repo: str | None = None,
 ) -> None:
     """Append a markdown report to ``$GITHUB_STEP_SUMMARY`` if set.
 
@@ -301,23 +359,55 @@ def write_step_summary(
     prefix), each panel is embedded inline.  Without the prefix the
     summary falls back to listing each panel's path inside the uploaded
     artifact bundle.
+
+    The leading section is a run-provenance block (topology, run id,
+    sha, start time, link to the Actions run) sourced from the same
+    ``RESILIENCY_PANEL_*`` / ``GITHUB_*`` envs that stamp each PNG.  A
+    plain local invocation with none of those set falls back to the
+    generic ``## Stress test panels`` heading.
     """
     target = os.environ.get("GITHUB_STEP_SUMMARY")
     if not target:
         print("GITHUB_STEP_SUMMARY not set; skipping markdown emit")
         return
 
-    lines = ["## Stress test panels", ""]
-    if artifact_link and artifact_link.startswith(("http://", "https://")):
-        lines.append(
-            f"Full-resolution PNGs are in the [workflow " f"artifact]({artifact_link})."
-        )
-    elif artifact_link:
-        lines.append(
-            f"Full-resolution PNGs are in the **{artifact_link}** "
-            f"workflow artifact."
-        )
-    lines.append("")
+    prov = _provenance_env()
+    repo = repo or os.environ.get("GITHUB_REPOSITORY") or ""
+    any_prov = any(prov.values())
+
+    lines: list[str] = []
+    if any_prov:
+        topology = prov["topology"] or "unknown"
+        run_id = prov["run_id"] or "unknown"
+        lines.append(f"## Resiliency Run — {topology} / {run_id}")
+        lines.append("")
+        if prov["sha"]:
+            lines.append(f"- **SHA**: `{prov['sha']}`")
+        if prov["started_at"]:
+            lines.append(f"- **Started**: {prov['started_at']}")
+        if repo and prov["run_id"]:
+            lines.append(
+                f"- **Run**: https://github.com/{repo}/actions/runs/{prov['run_id']}"
+            )
+        if artifact_link and artifact_link.startswith(("http://", "https://")):
+            lines.append(f"- **Artifact**: [workflow artifact]({artifact_link})")
+        elif artifact_link:
+            lines.append(f"- **Artifact**: `{artifact_link}`")
+        lines.append("")
+    else:
+        lines.append("## Stress test panels")
+        lines.append("")
+        if artifact_link and artifact_link.startswith(("http://", "https://")):
+            lines.append(
+                f"Full-resolution PNGs are in the [workflow "
+                f"artifact]({artifact_link})."
+            )
+        elif artifact_link:
+            lines.append(
+                f"Full-resolution PNGs are in the **{artifact_link}** "
+                f"workflow artifact."
+            )
+        lines.append("")
 
     if image_url_prefix:
         prefix = image_url_prefix
@@ -402,6 +492,14 @@ def main() -> int:
             "panel inline via ``![title](prefix/file.png)``"
         ),
     )
+    parser.add_argument(
+        "--repo",
+        default=None,
+        help=(
+            "owner/name slug used to build the run-provenance link in the "
+            "step summary header; defaults to ``$GITHUB_REPOSITORY``"
+        ),
+    )
     args = parser.parse_args()
 
     if args.from_existing:
@@ -415,7 +513,7 @@ def main() -> int:
         # actions/upload-artifact ``artifact-url`` output is the
         # canonical source).  Fall back to the artifact bundle name.
         link = args.artifact_url or args.artifact_name
-        write_step_summary(rendered, link, args.image_url_prefix)
+        write_step_summary(rendered, link, args.image_url_prefix, args.repo)
 
     if args.from_existing or args.summary:
         # Summary-only / discover-only runs never fail the step on an

@@ -268,6 +268,7 @@ jobs:
         # a knob inside the orchestrator.  Normal runs use 1h; a
         # marathon-enabled run expands to 5h (120m phase alone is 2h)
         # and 120m-enabled to 6h (hard GHA ceiling).
+        id: start-env
         env:
           # Default to true on scheduled triggers (``github.event.inputs``
           # is empty on schedule events, so the workflow_dispatch
@@ -275,6 +276,19 @@ jobs:
           # the full battery including the 2-hour master outage.
           MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'true' }}
         run: |
+          # Stamp the run-start timestamp BEFORE the long orchestrator
+          # invocation so the render + summary steps can thread it into
+          # the per-PNG suptitle + the step-summary header.  Captured
+          # once here (not re-computed later) so retries / cache hits
+          # don't drift and every panel + summary references the same
+          # moment the compose stack went up.  ``github.event.repository.
+          # pushed_at`` was rejected as the source because it's the
+          # commit push time, not the run-start time, and would be
+          # identical across a matrix of six topologies all triggered
+          # from the same commit.
+          run_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          echo "run-started-at=${run_started_at}" >> "$GITHUB_OUTPUT"
+          echo "Resiliency run start stamp: ${run_started_at}"
           cd tests/resiliency
           # Marathon ON runs the full battery (30m + 60m + 2h outages +
           # workload) which can take ~5.5h; cap at 6h, the GHA ceiling.
@@ -369,7 +383,21 @@ jobs:
         # (not PROMETHEUS_URL) from the environment, so pass it through
         # explicitly; multimaster swaps :19090 for :19091.
         # Mirrors nightly-stress-test.yml's render step.
+        #
+        # ``RESILIENCY_PANEL_*`` envs stamp each PNG with a
+        # ``<topology> / run <id> / <sha[:12]> / started <iso>`` suptitle
+        # so a panel downloaded from an artifact bundle or copied out of
+        # the ``resiliency-snapshots`` branch still identifies which
+        # Actions run produced it.  Fallback to current UTC inside the
+        # script if ``RESILIENCY_PANEL_STARTED_AT`` is empty, but we
+        # pass the ``start-env`` step output so every panel references
+        # the same stamp the Panel Summary step uses.
         if: always()
+        env:
+          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}
+          RESILIENCY_PANEL_RUN_ID: ${{ github.run_id }}
+          RESILIENCY_PANEL_SHA: ${{ github.sha }}
+          RESILIENCY_PANEL_STARTED_AT: ${{ steps.start-env.outputs.run-started-at }}
         run: |
           python3 -m pip install --quiet matplotlib
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
@@ -530,10 +558,23 @@ jobs:
         # points at the resiliency-snapshots branch so each panel
         # renders inline; without it the summary falls back to listing
         # the artifact bundle.
+        #
+        # The ``RESILIENCY_PANEL_*`` envs + ``--repo`` arg feed the
+        # provenance header (``## Resiliency Run — <topology> /
+        # <run_id>`` + SHA / start / Actions-run link) at the top of
+        # the summary so a glance at the Actions page tells you which
+        # commit the panels belong to.  Same values the render step
+        # used, so header + per-panel suptitle stay consistent.
         if: always()
+        env:
+          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}
+          RESILIENCY_PANEL_RUN_ID: ${{ github.run_id }}
+          RESILIENCY_PANEL_SHA: ${{ github.sha }}
+          RESILIENCY_PANEL_STARTED_AT: ${{ steps.start-env.outputs.run-started-at }}
         run: |
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 tests/monitoring/render_panels.py --summary --from-existing \
               --artifact-name resiliency-${{ matrix.topology }}-${{ github.run_id }} \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
-              --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}"
+              --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}" \
+              --repo "${{ github.repository }}"
