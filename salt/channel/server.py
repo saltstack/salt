@@ -53,6 +53,18 @@ log = logging.getLogger(__name__)
 # Upper bound on the per-process presence write throttle table
 PRESENCE_MEMO_MAX = 65536
 
+# Cool-off window (seconds) between successive WARNING + ``send_aes_key_event``
+# reschedules for a given cluster peer in ``publish_payload``'s
+# ``StreamClosedError`` handler.  A persistently-down peer would otherwise
+# emit one WARNING + one ``call_later`` per forwarded event, flooding the
+# container log and saturating the local IPC bus with repeated AES-key
+# re-announcements (symptom: tornado ``IOStream._handle_read`` logging
+# ``error on read: [Errno 22] Invalid argument`` at hundreds of lines/sec).
+# The 10 s window keeps peer reconnect latency bounded (first reset still
+# schedules a 2 s AES-key announcement) while bounding the steady-state
+# rate on a hard-down peer.  Not an operator tunable.
+PEER_RESET_COOLDOWN = 10.0
+
 
 def _get_crypticle(opts, key_string, key_size=192, serial=0):
     """
@@ -1852,6 +1864,16 @@ class MasterPubServerChannel:
         self._discover_event = None
         self._discover_token = None
         self._discover_candidates = {}
+        # Per-peer cool-off state for the ``publish_payload`` forward-pusher
+        # failure path.  Keyed on peer name (``pusher.pull_host``), value is
+        # the monotonic clock when we last emitted a WARNING + scheduled
+        # ``send_aes_key_event`` for that peer.  A persistently-down peer
+        # would otherwise produce one WARNING + one ``call_later`` per
+        # event (hundreds per second under load), flooding the container
+        # log and saturating the local IPC bus with repeated AES-key
+        # re-announcements.  See
+        # ``agents/reports/cluster_peer_forward_pusher_errno22.md``.
+        self._peer_reset_times = {}
         # Set of peer ids we have received a ``cluster/peer/discover-reply``
         # from.  Populated in the discover-reply branch of
         # ``handle_pool_publish`` and consumed by
@@ -5281,7 +5303,16 @@ class MasterPubServerChannel:
                 salt.utils.event.tagify(tag, self.opts["id"], "cluster/event"),
                 crypticle.dumps(load),
             )
-            tasks.append(asyncio.create_task(pusher.publish(event_data)))
+            # Name the fan-out task with ``pusher.pull_host`` so the
+            # StreamClosedError handler below resolves ``peer`` to the real
+            # peer name (not an asyncio-assigned ``Task-NNNN``, which would
+            # silently skip the per-peer ``pub_sock`` reset and emit a
+            # misleading ``cluster peer Task-NNNN`` WARNING).  Matches the
+            # named-task pattern used in the ``cluster/peer``-tag branch
+            # above.
+            tasks.append(
+                asyncio.create_task(pusher.publish(event_data), name=pusher.pull_host)
+            )
         await asyncio.gather(*tasks, return_exceptions=True)
         for task in tasks:
             try:
@@ -5292,14 +5323,13 @@ class MasterPubServerChannel:
                     log.error("Unable to forward event to local ipc bus")
                 else:
                     peer = task.get_name()
-                    log.warning(
-                        "Unable to forward event to cluster peer %s; "
-                        "resetting pusher for reconnect",
-                        peer,
-                    )
-                    # Reset the broken pub_sock so the next publish attempt
-                    # triggers a fresh TCP connection rather than reusing a
-                    # dead stream.
+                    # Reset the broken pub_sock on every failure so the next
+                    # publish attempt triggers a fresh TCP connection.  The
+                    # reset itself is idempotent (guarded by
+                    # ``pub_sock is not None``), so a persistently-down peer
+                    # produces no extra churn here -- the issue is log
+                    # volume + ``send_aes_key_event`` reschedule rate
+                    # below.
                     for pusher in self.pushers:
                         if pusher.pull_host == peer and pusher.pub_sock is not None:
                             try:
@@ -5307,9 +5337,37 @@ class MasterPubServerChannel:
                             except Exception:  # pylint: disable=broad-except
                                 pass
                             pusher.pub_sock = None
-                    # Schedule an AES-key re-announcement so the peer
-                    # learns our key after it reconnects.
-                    self.io_loop.call_later(2.0, self.send_aes_key_event)
+                    # Debounce the WARNING and the AES-key reschedule per
+                    # peer.  Without this, a persistently-unreachable peer
+                    # produces one WARNING + one ``call_later`` per
+                    # forwarded event -- hundreds of lines/sec under load,
+                    # which also saturates the local IPC bus with repeated
+                    # AES-key re-announcements and surfaces as a
+                    # tornado-internal ``[WARNING ] error on read:
+                    # [Errno 22] Invalid argument`` on the local-bus
+                    # stream.  See
+                    # ``agents/reports/cluster_peer_forward_pusher_errno22.md``.
+                    now = time.monotonic()
+                    last = self._peer_reset_times.get(peer, 0.0)
+                    if now - last >= PEER_RESET_COOLDOWN:
+                        self._peer_reset_times[peer] = now
+                        log.warning(
+                            "Unable to forward event to cluster peer %s; "
+                            "resetting pusher for reconnect",
+                            peer,
+                        )
+                        # Schedule an AES-key re-announcement so the peer
+                        # learns our key after it reconnects.
+                        self.io_loop.call_later(2.0, self.send_aes_key_event)
+                    else:
+                        log.debug(
+                            "Suppressing forward-pusher warning for cluster "
+                            "peer %s (within %.1fs cool-off, %.2fs since "
+                            "last)",
+                            peer,
+                            PEER_RESET_COOLDOWN,
+                            now - last,
+                        )
             except Exception as exc:  # pylint: disable=broad-except
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
