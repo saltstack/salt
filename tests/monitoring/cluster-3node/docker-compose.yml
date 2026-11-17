@@ -25,12 +25,26 @@
 #   directory.  Verifiers running against a worktree override
 #   ``SALT_SRC`` to that worktree's root.
 
+# Cap json-file container logs at 60 MB per container (20 MB x 3
+# rotated files).  cluster-peer forward-pusher reconnect traceback
+# storms (tornado on-read Errno 22) can produce 300+ MB per master
+# log in a single CI run (verified in resiliency-cluster5-43824366115);
+# unbounded json.log fills /var/lib/docker and ENOSPCs the GHA
+# runner's own _diag/Worker log before Collect Logs on Failure can
+# fire.  Rotation caps the damage without masking the underlying bug.
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 x-master-common: &master-common
   build:
     context: ${SALT_SRC:-../../..}
     dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
   image: cluster-3node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  logging: *default-logging
   # Kernel capabilities for the resiliency suite's fault injectors
   # (tc/iptables, clock skew, prlimit, scheduler priority).  Safe
   # for stress-test / monitoring reuse.
@@ -62,7 +76,7 @@ services:
       - cluster-pki:/etc/salt/cluster-pki
       - master-1-cache:/var/cache/salt/master
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
 
   salt-master-2:
     <<: *master-common
@@ -80,7 +94,7 @@ services:
       - cluster-pki:/etc/salt/cluster-pki
       - master-2-cache:/var/cache/salt/master
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
 
   salt-master-3:
     <<: *master-common
@@ -98,12 +112,13 @@ services:
       - cluster-pki:/etc/salt/cluster-pki
       - master-3-cache:/var/cache/salt/master
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-master", "-l", "debug"]
+    command: ["/usr/local/bin/salt-master", "-l", "info"]
 
   salt-haproxy:
     image: haproxy:2.8
     container_name: c3-salt-haproxy
     hostname: salt-haproxy
+    logging: *default-logging
     depends_on:
       - salt-master-1
       - salt-master-2
@@ -160,7 +175,7 @@ services:
       - ./minion-1.conf:/etc/salt/minion
       - minion-1-cache:/var/cache/salt/minion
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
 
   salt-minion-2:
     <<: *master-common
@@ -177,7 +192,7 @@ services:
       - ./minion-2.conf:/etc/salt/minion
       - minion-2-cache:/var/cache/salt/minion
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
 
   salt-minion-3:
     <<: *master-common
@@ -194,7 +209,7 @@ services:
       - ./minion-3.conf:/etc/salt/minion
       - minion-3-cache:/var/cache/salt/minion
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
 
   salt-minion-4:
     <<: *master-common
@@ -211,7 +226,7 @@ services:
       - ./minion-4.conf:/etc/salt/minion
       - minion-4-cache:/var/cache/salt/minion
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
 
   salt-minion-5:
     <<: *master-common
@@ -228,7 +243,7 @@ services:
       - ./minion-5.conf:/etc/salt/minion
       - minion-5-cache:/var/cache/salt/minion
       - /etc/localtime:/etc/localtime:ro
-    command: ["/usr/local/bin/salt-minion", "-l", "debug"]
+    command: ["/usr/local/bin/salt-minion", "-l", "info"]
 
 networks:
   salt-net:

@@ -16,12 +16,20 @@
 # config files from the monitoring stack -- those are the
 # well-maintained defaults; no reason to duplicate them.
 
+# Cap json-file container logs (see cluster-3node for rationale).
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 x-salt-common: &salt-common
   build:
     context: ../../../..
     dockerfile: tests/monitoring/Dockerfile.salt
   image: resiliency-single-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  logging: *default-logging
   # Added kernel capabilities let the fault injectors actually fire
   # on a vanilla ubuntu-latest GHA runner.  Without these, ~15 phases
   # pytest.skip at setup with "CAP_SYS_TIME unavailable" /
@@ -111,6 +119,7 @@ services:
     container_name: rs-single-prometheus
     hostname: prometheus
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus_data:/prometheus
@@ -132,6 +141,7 @@ services:
     container_name: rs-single-cadvisor
     hostname: cadvisor
     restart: unless-stopped
+    logging: *default-logging
     privileged: true
     volumes:
       - /:/rootfs:ro

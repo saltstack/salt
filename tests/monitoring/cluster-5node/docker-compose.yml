@@ -1,9 +1,17 @@
+# Cap json-file container logs (see cluster-3node for rationale).
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 x-master-common: &master-common
   build:
     context: ../../..
     dockerfile: tests/monitoring/cluster-5node/Dockerfile.salt
   image: cluster-5node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  logging: *default-logging
   cap_add:
     - NET_ADMIN
     - SYS_TIME
@@ -18,6 +26,7 @@ x-master-common: &master-common
 x-minion-common: &minion-common
   image: cluster-5node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  logging: *default-logging
   cap_add:
     - NET_ADMIN
     - SYS_TIME

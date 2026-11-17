@@ -26,12 +26,20 @@
 # chosen to avoid collisions with cluster3 (19090/18081) and multimaster
 # (19091/18082) stacks that may be up simultaneously.
 
+# Cap json-file container logs (see cluster-3node for rationale).
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+
 x-master-common: &master-common
   build:
     context: ${SALT_SRC:-../../../..}
     dockerfile: tests/monitoring/cluster-3node/Dockerfile.salt
   image: cluster-3node-salt:latest
   entrypoint: ["/usr/bin/tini", "--"]
+  logging: *default-logging
   cap_add:
     - NET_ADMIN
     - SYS_TIME
@@ -175,6 +183,7 @@ services:
     container_name: rs-syndic-prometheus
     hostname: prometheus
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus_data:/prometheus
@@ -193,6 +202,7 @@ services:
     container_name: rs-syndic-cadvisor
     hostname: cadvisor
     restart: unless-stopped
+    logging: *default-logging
     privileged: true
     volumes:
       - /:/rootfs:ro
