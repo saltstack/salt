@@ -20,7 +20,6 @@ import subprocess
 
 import pytest
 
-import salt.fileserver.gitfs as gitfs
 import salt.utils.gitfs as utils_gitfs
 from salt.utils.gitfs import GITPYTHON_VERSION, PYGIT2_VERSION
 
@@ -116,8 +115,6 @@ def _build_gitfs(opts, remotes, provider):
     return utils_gitfs.GitFS(
         opts,
         opts["gitfs_remotes"],
-        per_remote_overrides=gitfs.PER_REMOTE_OVERRIDES,
-        per_remote_only=gitfs.PER_REMOTE_ONLY,
     )
 
 

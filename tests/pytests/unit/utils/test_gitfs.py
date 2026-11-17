@@ -7,9 +7,6 @@ import pytest
 
 import salt.config
 import salt.exceptions
-import salt.fileserver.gitfs
-import salt.pillar.git_pillar
-import salt.runners.winrepo
 import salt.utils.configparser
 import salt.utils.gitfs
 from salt.exceptions import FileserverConfigError
@@ -296,6 +293,26 @@ def test_checkout_pygit2(_prepare_provider):
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
 )
+def test_init_remote_pygit2_git_config(_prepare_provider):
+    """
+    The repo config already includes .git/config, so init_remote must not add
+    it again (pygit2 >= 1.21 raises TypeError, older versions load it twice and
+    list every fetch refspec twice).
+    """
+    provider = _prepare_provider
+    assert provider.init_remote() is False
+    origin = provider.repo.remotes["origin"]
+    assert origin.url == provider.url
+    assert origin.fetch_refspecs == [
+        "+refs/heads/*:refs/remotes/origin/*",
+        "+refs/tags/*:refs/tags/*",
+    ]
+
+
+@pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
 def test_checkout_pygit2_with_home_env_unset(_prepare_provider):
     provider = _prepare_provider
     provider.remotecallbacks = None
@@ -321,9 +338,9 @@ def test_get_cachedir_basename_pygit2(_prepare_provider):
 @pytest.mark.parametrize(
     "overrides",
     (
-        salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-        salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-        salt.runners.winrepo.PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.GITFS_PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.PILLAR_PER_REMOTE_OVERRIDES,
+        salt.utils.gitfs.WINREPO_PER_REMOTE_OVERRIDES,
     ),
 )
 def test_proxy_is_a_per_remote_override(overrides):
@@ -425,6 +442,51 @@ def test_pygit2_fetch_enables_proxy_lookup(_prepare_provider):
     assert fetch_mock.call_args.kwargs["proxy"] is True
 
 
+@pytest.mark.skipif(
+    not HAS_PYGIT2 or not HAS_PYGIT2_ENUMS,
+    reason="This host lacks proper pygit2 support",
+)
+@pytest.mark.skip_on_windows(
+    reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
+)
+def test_pygit2_fetch_prunes_without_legacy_constant(_prepare_provider, monkeypatch):
+    """
+    pygit2 1.20.0 removed GIT_FETCH_PRUNE. Pruning must still be requested on
+    fetch, so stale refs don't need the git CLI fallback, which is skipped
+    entirely for authenticated remotes.
+    """
+    monkeypatch.delattr(pygit2, "GIT_FETCH_PRUNE", raising=False)
+    provider = _prepare_provider
+    provider.remotecallbacks = None
+    provider.credentials = None
+    provider.repo = MagicMock()
+    provider.repo.listall_references.return_value = []
+    fetch_mock = provider.repo.remotes[0].fetch
+    fetch_mock.return_value = SimpleNamespace(received_objects=0)
+    with patch.object(
+        salt.utils.gitfs.GitProvider, "clean_stale_refs"
+    ) as fallback_mock:
+        provider._fetch()
+    assert fetch_mock.call_args.kwargs["prune"] == pygit2.enums.FetchPrune.PRUNE
+    fallback_mock.assert_not_called()
+
+
+@pytest.mark.skipif(
+    not HAS_PYGIT2 or not HAS_PYGIT2_ENUMS,
+    reason="This host lacks proper pygit2 support",
+)
+def test_pygit2_provider_does_not_need_git_cli(minion_opts, monkeypatch):
+    """
+    pygit2 prunes stale refs by itself, so the git CLI is not required, even on
+    pygit2 1.20.0 and newer where GIT_FETCH_PRUNE no longer exists.
+    """
+    monkeypatch.delattr(pygit2, "GIT_FETCH_PRUNE", raising=False)
+    minion_opts["gitfs_provider"] = "pygit2"
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        gitfs = salt.utils.gitfs.GitFS(minion_opts, {}, init_remotes=False)
+    assert gitfs.provider == "pygit2"
+
+
 @pytest.mark.skipif(not HAS_PYGIT2, reason="This host lacks proper pygit2 support")
 @pytest.mark.skip_on_windows(
     reason="Skip Pygit2 on windows, due to pygit2 access error on windows"
@@ -461,6 +523,12 @@ def test_find_file(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -485,6 +553,12 @@ def test_find_file_bad_path(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -510,6 +584,12 @@ def test_find_file_bad_env(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
 
@@ -585,6 +665,12 @@ def test_find_file_subdir(tmp_path):
         "gitfs_root": "",
         "gitfs_env": "",
         "gitfs_fallback": "",
+        "gitfs_mountpoint": "",
+        "gitfs_saltenv_whitelist": [],
+        "gitfs_saltenv_blacklist": [],
+        "gitfs_disable_saltenv_mapping": False,
+        "gitfs_ref_types": ["branch", "tag", "sha"],
+        "gitfs_update_interval": 60,
     }
     remotes = []
     gitfs = salt.utils.gitfs.GitFS(opts, remotes)

@@ -25,6 +25,7 @@ runner modules
     manage
     match
     mine
+    nacl
     net
     network
     pillar

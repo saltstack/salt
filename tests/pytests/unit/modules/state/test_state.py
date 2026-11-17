@@ -1438,3 +1438,15 @@ class TestCheckPriorRunningStates:
         # Only the strictly older queued placeholder should block.
         assert len(result) == 1
         assert result[0]["jid"] == "20260718005609000000"
+
+
+@pytest.mark.usefixtures("mocked_tcp_pub_client")
+@pytest.mark.parametrize("exc", [KeyboardInterrupt, SystemExit])
+def test_event_exits_cleanly_on_interrupt(exc):
+    """
+    state.event must stop quietly, without a traceback, when interrupted
+    with Ctrl-c (KeyboardInterrupt, or SystemExit from the CLI signal handler)
+    """
+    with patch.object(SaltEvent, "get_event", side_effect=exc):
+        with patch.object(SaltEvent, "connect_pub", return_value=True):
+            assert state.event(count=-1, quiet=True) is None

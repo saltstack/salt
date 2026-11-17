@@ -679,6 +679,39 @@ class Node:
 
         self.next_index = {p.node_id: self.log.index + 1 for p in self.peers}
         self.match_index = {p.node_id: -1 for p in self.peers}
+
+        # Append a no-op barrier entry in the new leader's term when the
+        # log already carries entries from a prior term that still need
+        # to be committed.  Raft §5.4.2 forbids a leader from committing
+        # an entry solely because it exists on a quorum of logs if that
+        # entry's term is not the leader's current term; the leader must
+        # first commit (by replication count) an entry from its own term,
+        # which transitively commits all prior entries.
+        #
+        # Without this barrier, a cluster that restarts from persisted
+        # log with no snapshot cannot commit the founding CONFIG from
+        # the previous term — ``MembershipStateMachine`` never applies
+        # it, ``RaftService._on_ready`` never fires, and minion requests
+        # sit behind ``cluster_retry`` indefinitely.
+        #
+        # We *only* append when there's something uncommitted from a
+        # prior term.  On a fresh cluster the log is empty and the
+        # founding CONFIG proposal path in
+        # ``RaftService._maybe_commit_founding_config`` is still
+        # responsible for the first entry — appending a NOOP at index 0
+        # would push the founding CONFIG to index 1 and permanently
+        # suppress the founding path (which keys on ``log.index < 0``).
+        try:
+            needs_barrier = self.log.index > self.log.commit_index and any(
+                e.term != self.term for e in self.log.entries
+            )
+            if needs_barrier:
+                self.log.append(self.term, None, entry_type=LogEntryType.NOOP)
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "Node %s failed to append NOOP barrier on becoming leader", self.node_id
+            )
+
         self.schedule_heartbeat()
 
     def schedule_heartbeat(self):
@@ -803,6 +836,7 @@ class Node:
                     self.apply_entries()
 
     def apply_entries(self):
+        starting_applied = self.log.last_applied
         while self.log.last_applied < self.log.commit_index:
             new_applied = self.log.last_applied + 1
             entry = self.log.get(new_applied)
@@ -854,7 +888,34 @@ class Node:
                     routing_sm = self.log._extra_state_machines.get("routing_sm")
                     if routing_sm is not None:
                         routing_sm.apply(entry.cmd, index=entry.index)
+                elif entry.type == LogEntryType.NOOP:
+                    # Leader barrier; no payload, no state-machine
+                    # effect.  Its role is purely to anchor a current-
+                    # term entry so Raft §5.4.2 allows prior-term
+                    # entries above it to commit.
+                    pass
             self.log.last_applied = new_applied
+        # Persist ``last_applied`` once per batch so a restart can
+        # resume at exactly this point instead of re-applying entries
+        # that already hit the SMs.  Re-apply of COMMAND entries is
+        # only safe when the state machine dedups on
+        # ``(client_id, sequence_num)``; persisting ``last_applied``
+        # lets apply_entries skip them on restart regardless of the
+        # SM's dedup policy.  Batched to once per handle_append_entries
+        # call to keep the hot path from issuing one fsync per entry.
+        if self.log.last_applied > starting_applied and self.storage is not None:
+            save = getattr(self.storage, "save_commit_index", None)
+            if save is not None:
+                try:
+                    save(self.log.commit_index, last_applied=self.log.last_applied)
+                except Exception as exc:  # pylint: disable=broad-except
+                    log.warning(
+                        "Node.apply_entries: save_commit_index(commit=%s, "
+                        "last_applied=%s) failed: %s",
+                        self.log.commit_index,
+                        self.log.last_applied,
+                        exc,
+                    )
 
     @lock
     def become_follower(self, term=None):
@@ -1385,7 +1446,12 @@ class Node:
             # compacted away).
             self.reconcile_membership()
 
-            self.log.commit_index = max(self.log.commit_index, last_index)
+            # Route through ``Log.commit`` so the persisted
+            # ``commit_index`` (state.p) gets updated alongside the
+            # in-memory value — a snapshot install that advances the
+            # commit index must survive restart just like a normal
+            # commit path does.
+            self.log.commit(last_index)
             self.log.last_applied = max(self.log.last_applied, last_index)
             self.apply_entries()
             return self.term, self.node_id
@@ -1414,7 +1480,11 @@ class Node:
 
     @commit_index.setter
     def commit_index(self, val):
-        self.log.commit_index = val
+        # Route through ``Log.commit`` so persistence (state.p
+        # ``commit_index`` field) stays in step with the in-memory
+        # value.  ``Log.commit`` is monotonic — a caller that assigns a
+        # lower value is a no-op, which is the correct Raft semantics.
+        self.log.commit(val)
         self.apply_entries()
 
         # Check if we should snapshot now that commit_index advanced and entries were applied

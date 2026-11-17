@@ -34,7 +34,7 @@ from salt.cluster.consensus.storage import SaltStorage
 def _make_opts(node_id, cachedir):
     """Minimal opts dict the SaltStorage / Node constructors actually consult."""
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cachedir": cachedir,
         "cluster_id": "compaction-scenario",

@@ -24,10 +24,22 @@ import asyncio
 import logging
 import uuid
 
+import tornado.iostream
+
 from salt.cluster.consensus import rpc
 from salt.cluster.consensus.raft.node import Peer
 
 log = logging.getLogger(__name__)
+
+
+# Exceptions that indicate the remote Raft peer is unreachable -- expected
+# during cluster shutdown and transient network blips, and should not flood
+# ERROR logs from the heartbeat tick.
+_PEER_UNREACHABLE_EXCEPTIONS = (
+    ConnectionError,
+    OSError,
+    tornado.iostream.StreamClosedError,
+)
 
 
 async def _publish(pusher, raw):
@@ -102,18 +114,33 @@ async def _publish(pusher, raw):
         # The pusher's lifetime exceeds the master process; the kernel
         # closes the fd at exit, so explicit teardown isn't required.
         pusher._consensus_async_client = client
-    await client.send(raw)
+    try:
+        await client.send(raw)
+    except Exception:
+        # The cached TCP stream is broken (peer went away, SIGTERM in flight,
+        # etc.).  Drop the cached client so the next send re-establishes
+        # instead of repeatedly firing against a dead stream and spamming
+        # ERROR logs every heartbeat tick.
+        try:
+            client.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        if getattr(pusher, "_consensus_async_client", None) is client:
+            try:
+                del pusher._consensus_async_client
+            except AttributeError:
+                pass
+        raise
 
 
 class SaltPeer(Peer):
     """
     A ``Peer`` that sends Raft RPCs over the cluster pool channel.
 
-    :param node_id:       The remote master's node-id — its
-                          ``opts["interface"]`` address (matches the
-                          entries in ``opts["cluster_peers"]`` and the
-                          ``peer_pushers`` keys used everywhere else
-                          in the cluster code).
+    :param node_id:       The remote master's node-id — the identity it
+                          publishes as ``peer_id`` (matches the entries in
+                          ``opts["cluster_peers"]`` and the ``peer_pushers``
+                          keys used everywhere else in the cluster code).
     :param pusher:        The ``PublishServer`` instance already
                           connected to that master's
                           ``cluster_pool_port``.
@@ -157,6 +184,14 @@ class SaltPeer(Peer):
         )
         try:
             await _publish(self._pusher, raw)
+        except _PEER_UNREACHABLE_EXCEPTIONS as exc:
+            # Peer is down / going away (SIGTERM, network drop, etc.).  The
+            # Raft heartbeat tick fires every ``_HEARTBEAT_INTERVAL`` for
+            # every peer, so logging each failure as ERROR with a traceback
+            # floods the log during cluster shutdown.  Log one DEBUG line
+            # per send; the heartbeat loop will retry on the next tick and
+            # ``_publish`` has already dropped the cached dead stream.
+            log.debug("SaltPeer: %s to %s unreachable: %s", tag, self._node_id, exc)
         except Exception:  # pylint: disable=broad-except
             log.exception("SaltPeer: failed to send %s to %s", tag, self._node_id)
 
@@ -272,10 +307,9 @@ class RaftDispatcher:
                       mapping group-id to its local ``Node``.  Passing
                       a single Node preserves the pre-multi-ring
                       constructor signature.
-    :param local_id:  This master's node-id (``opts["interface"]``) — used as
-                      ``src`` in outbound RPC envelopes.
-    :param pushers:   Dict mapping peer node-id (interface address) ->
-                      ``PublishServer`` pusher.
+    :param local_id:  This master's node-id (:func:`salt.cluster.node_id`) —
+                      used as ``src`` in outbound RPC envelopes.
+    :param pushers:   Dict mapping peer node-id -> ``PublishServer`` pusher.
     """
 
     def __init__(self, node, local_id, pushers):
@@ -339,6 +373,12 @@ class RaftDispatcher:
         )
         try:
             await _publish(pusher, raw)
+        except _PEER_UNREACHABLE_EXCEPTIONS as exc:
+            # Peer is down / going away during cluster shutdown.  Every
+            # inbound RPC that arrives after the peer's stream has been
+            # torn down tries to reply here, so logging each failure as
+            # ERROR floods the log.  Mirrors ``SaltPeer._send``.
+            log.debug("RaftDispatcher: %s reply to %s unreachable: %s", tag, dst, exc)
         except Exception:  # pylint: disable=broad-except
             log.exception("RaftDispatcher: failed to send %s reply to %s", tag, dst)
 

@@ -161,6 +161,16 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
+
+    # pygit2 1.14.0 replaced the GIT_* constants with pygit2.enums, and 1.20.0
+    # removed the old names, including GIT_FETCH_PRUNE. Fetch pruning itself
+    # is only available in pygit2 0.26.2 and newer.
+    try:
+        from pygit2.enums import FetchPrune
+
+        PYGIT2_FETCH_PRUNE = FetchPrune.PRUNE
+    except ImportError:
+        PYGIT2_FETCH_PRUNE = getattr(pygit2, "GIT_FETCH_PRUNE", None)
 except Exception as exc:  # pylint: disable=broad-except
     # Exceptions other than ImportError can be raised in cases where there is a
     # problem with cffi (such as when python-cffi is upgraded and pygit2 tries
@@ -169,6 +179,7 @@ except Exception as exc:  # pylint: disable=broad-except
     # than an ImportError.
     PYGIT2_VERSION = None
     LIBGIT2_VERSION = None
+    PYGIT2_FETCH_PRUNE = None
     if not isinstance(exc, ImportError):
         log.exception("Failed to import pygit2")
 
@@ -1479,15 +1490,26 @@ class GitPython(GitProvider):
 
         # 'origin/' + tgt_ref ==> matches a branch head
         # 'tags/' + tgt_ref + '@{commit}' ==> matches tag's commit
+        # Bare tgt_ref ==> matches a commit SHA (full or short). This mirrors
+        # the behavior of ``gitfs_remotes`` which already accepts a commit SHA
+        # in place of a branch name. See issue #64199.
         checkout_refs = [
             ("origin/" + tgt_ref, False),
             ("tags/" + tgt_ref, False),
         ]
+        if "sha" in getattr(
+            self, "ref_types", ["branch", "tag", "sha"]
+        ) and salt.utils.stringutils.is_hex(tgt_ref):
+            checkout_refs.append((tgt_ref, False))
         if self.fallback:
             checkout_refs += [
                 ("origin/" + self.fallback, True),
                 ("tags/" + self.fallback, True),
             ]
+            if "sha" in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) and salt.utils.stringutils.is_hex(self.fallback):
+                checkout_refs.append((self.fallback, True))
         for checkout_ref, fallback in checkout_refs:
             try:
                 target_sha = self.repo.rev_parse(checkout_ref).hexsha
@@ -1890,8 +1912,26 @@ class Pygit2(GitProvider):
                     )
             return False
 
+        def _ref_resolves_to_sha(ref):
+            """Return True if ``ref`` looks like a commit SHA that is
+            present in the local repository (full or short)."""
+            if "sha" not in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) or not salt.utils.stringutils.is_hex(ref):
+                return False
+            try:
+                self.repo.revparse_single(ref)
+            except (KeyError, ValueError):
+                return False
+            return True
+
         try:
-            if remote_ref not in refs and tag_ref not in refs and self.fallback:
+            if (
+                remote_ref not in refs
+                and tag_ref not in refs
+                and not _ref_resolves_to_sha(tgt_ref)
+                and self.fallback
+            ):
                 tgt_ref = self.fallback
                 local_ref = "refs/heads/" + tgt_ref
                 remote_ref = "refs/remotes/origin/" + tgt_ref
@@ -2015,6 +2055,48 @@ class Pygit2(GitProvider):
 
                     # Return the relative root, if present
                     return self.check_root()
+
+            elif "sha" in getattr(
+                self, "ref_types", ["branch", "tag", "sha"]
+            ) and salt.utils.stringutils.is_hex(tgt_ref):
+                # Neither branch nor tag matched, but the target looks like a
+                # commit SHA (full or short). Mirror the behavior of
+                # ``gitfs_remotes`` which already accepts a commit SHA in
+                # place of a branch/tag. See issue #64199.
+                try:
+                    commit_obj = self.repo.revparse_single(tgt_ref)
+                except (KeyError, ValueError):
+                    commit_obj = None
+                if commit_obj is not None:
+                    try:
+                        commit_peeled = self.peel(commit_obj)
+                        commit_sha = str(commit_peeled.id)
+                    except AttributeError:
+                        commit_sha = None
+                    if commit_sha is not None:
+                        if head_sha != commit_sha:
+                            try:
+                                with self.gen_lock(lock_type="checkout"):
+                                    # Materialize the worktree at this commit
+                                    # and set a detached HEAD.
+                                    self.repo.checkout_tree(commit_peeled)
+                                    self.repo.set_head(commit_peeled.id)
+                            except GitLockError as exc:
+                                if exc.errno == errno.EEXIST:
+                                    raise GitLockError(
+                                        exc.errno,
+                                        f"Checkout lock exists for {self.role} "
+                                        f"remote '{self.id}'",
+                                    )
+                                log.error(
+                                    "Error %d encountered obtaining checkout "
+                                    "lock for %s remote '%s'",
+                                    exc.errno,
+                                    self.role,
+                                    self.id,
+                                )
+                                return None
+                        return self.check_root()
         except GitLockError:
             raise
         except Exception as exc:  # pylint: disable=broad-except
@@ -2048,13 +2130,9 @@ class Pygit2(GitProvider):
         """
         Clean stale local refs so they don't appear as fileserver environments
         """
-        try:
-            if pygit2.GIT_FETCH_PRUNE:
-                # Don't need to clean anything, pygit2 can do it by itself
-                return []
-        except AttributeError:
-            # However, only in 0.26.2 and newer
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            # Don't need to clean anything, pygit2 can do it by itself
+            return []
         if self.credentials is not None:
             log.debug(
                 "The installed version of pygit2 (%s) does not support "
@@ -2092,9 +2170,6 @@ class Pygit2(GitProvider):
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
         self.enforce_git_config()
-        git_config = os.path.join(self.gitdir, "config")
-        if os.path.exists(git_config) and PYGIT2_VERSION >= Version("0.28.0"):
-            self.repo.config.add_file(git_config)
 
         if self.proxy:
             transport, _, _ = self.url.partition("://")
@@ -2195,11 +2270,8 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
-        try:
-            fetch_kwargs["prune"] = pygit2.GIT_FETCH_PRUNE
-        except AttributeError:
-            # pruning only available in pygit2 >= 0.26.2
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            fetch_kwargs["prune"] = PYGIT2_FETCH_PRUNE
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
 
@@ -3062,9 +3134,9 @@ class GitBase:
         self,
         opts,
         remotes=None,
-        per_remote_overrides=(),
-        per_remote_only=PER_REMOTE_ONLY,
-        global_only=GLOBAL_ONLY,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -3102,12 +3174,18 @@ class GitBase:
             gitfs = salt.utils.gitfs.GitFS(
                 __opts__,
                 __opts__['gitfs_remotes'],
-                per_remote_overrides=PER_REMOTE_OVERRIDES,
-                per_remote_only=PER_REMOTE_ONLY,
                 git_providers=git_providers)
 
             gitfs.fetch_remotes()
         """
+        if per_remote_overrides is None:
+            raise FileserverConfigError(
+                "Child class must provided 'per_remote_overrides'"
+            )
+        if per_remote_only is None:
+            raise FileserverConfigError("Child class must provided 'per_remote_only'")
+        if global_only is None:
+            raise FileserverConfigError("Child class must provided 'global_only'")
         self.opts = opts
         if git_providers is not None:
             self.git_providers = git_providers
@@ -3726,9 +3804,7 @@ class GitBase:
                 f"{self.role} is configured, but the libgit2 version is earlier than "
                 f"{LIBGIT2_MINVER}. Version {LIBGIT2_VERSION} detected."
             )
-        if not getattr(pygit2, "GIT_FETCH_PRUNE", False) and not salt.utils.path.which(
-            "git"
-        ):
+        if PYGIT2_FETCH_PRUNE is None and not salt.utils.path.which("git"):
             errors.append(
                 "The git command line utility is required when using the "
                 f"'pygit2' {self.role}_provider."
@@ -3821,6 +3897,25 @@ class GitBase:
         return None
 
 
+GITFS_PER_REMOTE_OVERRIDES = (
+    "base",
+    "fallback",
+    "mountpoint",
+    "root",
+    "ssl_verify",
+    "saltenv_whitelist",
+    "saltenv_blacklist",
+    "refspecs",
+    "disable_saltenv_mapping",
+    "ref_types",
+    "update_interval",
+    "proxy",
+    "depth",
+)
+GITFS_PER_REMOTE_ONLY = ("all_saltenvs", "name", "saltenv")
+GITFS_GLOBAL_ONLY = ()
+
+
 class GitFS(GitBase):
     """
     Functionality specific to the git fileserver backend
@@ -3833,8 +3928,8 @@ class GitFS(GitBase):
         cls,
         opts,
         remotes=None,
-        per_remote_overrides=(),
-        per_remote_only=PER_REMOTE_ONLY,
+        per_remote_overrides=None,
+        per_remote_only=None,
         git_providers=None,
         cache_root=None,
         init_remotes=True,
@@ -3847,6 +3942,18 @@ class GitFS(GitBase):
         used to ensure that we garbage collect instances for threads which have
         exited.
         """
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
         # No need to get the ioloop reference if we're not initializing remotes
         io_loop = tornado.ioloop.IOLoop.current() if init_remotes else None
         if not init_remotes or io_loop not in cls.instance_map:
@@ -3857,8 +3964,9 @@ class GitFS(GitBase):
             super(GitFS, obj).__init__(
                 opts,
                 remotes if remotes is not None else [],
-                per_remote_overrides=per_remote_overrides,
-                per_remote_only=per_remote_only,
+                per_remote_overrides=GITFS_PER_REMOTE_OVERRIDES,
+                per_remote_only=GITFS_PER_REMOTE_ONLY,
+                global_only=GITFS_GLOBAL_ONLY,
                 git_providers=(
                     git_providers if git_providers is not None else GIT_PROVIDERS
                 ),
@@ -4188,12 +4296,68 @@ class GitFS(GitBase):
         return {key: val for key, val in symlinks.items() if key.startswith(prefix)}
 
 
+PILLAR_PER_REMOTE_OVERRIDES = (
+    "base",
+    "env",
+    "root",
+    "ssl_verify",
+    "refspecs",
+    "fallback",
+    "proxy",
+    "ref_types",
+    "disable_saltenv_mapping",
+    "depth",
+)
+PILLAR_PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
+PILLAR_GLOBAL_ONLY = ("branch",)
+
+
 class GitPillar(GitBase):
     """
     Functionality specific to the git external pillar
     """
 
     role = "git_pillar"
+
+    def __init__(
+        self,
+        opts,
+        remotes=None,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
+        git_providers=None,
+        cache_root=None,
+        init_remotes=True,
+    ):
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if global_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `global_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        super().__init__(
+            opts,
+            remotes=remotes,
+            per_remote_overrides=PILLAR_PER_REMOTE_OVERRIDES,
+            per_remote_only=PILLAR_PER_REMOTE_ONLY,
+            global_only=PILLAR_GLOBAL_ONLY,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
 
     def checkout(self, fetch_on_fail=True):
         """
@@ -4355,6 +4519,11 @@ class GitPillar(GitBase):
         return True
 
 
+WINREPO_PER_REMOTE_OVERRIDES = ("ssl_verify", "refspecs", "fallback", "proxy")
+WINREPO_PER_REMOTE_ONLY = ("name", "mountpoint", "all_saltenvs")
+WINREPO_GLOBAL_ONLY = ("branch",)
+
+
 class WinRepo(GitBase):
     """
     Functionality specific to the winrepo runner
@@ -4367,6 +4536,46 @@ class WinRepo(GitBase):
     # Need to define this in case we try to reference it before checking
     # out the repos.
     winrepo_dirs = {}
+
+    def __init__(
+        self,
+        opts,
+        remotes=None,
+        per_remote_overrides=None,
+        per_remote_only=None,
+        global_only=None,
+        git_providers=None,
+        cache_root=None,
+        init_remotes=True,
+    ):
+        if per_remote_overrides is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_overrides` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if per_remote_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `per_remote_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        if global_only is not None:
+            salt.utils.versions.warn_until(
+                "Potassium",
+                "The `global_only` parameter deprecated, "
+                "and is set to be removed in {version}. ",
+            )
+        super().__init__(
+            opts,
+            remotes=remotes,
+            per_remote_overrides=WINREPO_PER_REMOTE_OVERRIDES,
+            per_remote_only=WINREPO_PER_REMOTE_ONLY,
+            global_only=WINREPO_GLOBAL_ONLY,
+            git_providers=git_providers,
+            cache_root=cache_root,
+            init_remotes=init_remotes,
+        )
 
     def checkout(self, fetch_on_fail=True):
         """

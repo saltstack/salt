@@ -951,3 +951,84 @@ def test_set_fstab_ceph_special_filesystem():
                 match_on="auto",
             )
             assert result == "new"
+
+
+@pytest.mark.parametrize(
+    "name,device,opts,expected_line",
+    [
+        (
+            "/tmp/some directory with spaces",
+            "/dev/sda1",
+            "defaults",
+            "/dev/sda1\t\t/tmp/some\\040directory\\040with\\040spaces\text4\tdefaults\t0 0\n",
+        ),
+        (
+            "/mnt/tab\there",
+            "/dev/sda1",
+            "defaults",
+            "/dev/sda1\t\t/mnt/tab\\011here\text4\tdefaults\t0 0\n",
+        ),
+        (
+            "/mnt/data",
+            "//server/share name",
+            "defaults",
+            "//server/share\\040name\t\t/mnt/data\text4\tdefaults\t0 0\n",
+        ),
+        (
+            "/mnt/data",
+            "/dev/sda1",
+            "defaults,fsname=my fs",
+            "/dev/sda1\t\t/mnt/data\text4\tdefaults,fsname=my\\040fs\t0 0\n",
+        ),
+        # Values that are already escaped are written unchanged
+        (
+            "/tmp/already\\040escaped",
+            "/dev/sda1",
+            "defaults",
+            "/dev/sda1\t\t/tmp/already\\040escaped\text4\tdefaults\t0 0\n",
+        ),
+        # A backslash followed by a space is the historical escaped space
+        (
+            "/tmp/backslash\\ space",
+            "/dev/sda1",
+            "defaults",
+            "/dev/sda1\t\t/tmp/backslash\\040space\text4\tdefaults\t0 0\n",
+        ),
+    ],
+)
+def test_set_fstab_escapes_whitespace(tmp_path, name, device, opts, expected_line):
+    """
+    Spaces and tabs in the name, device and opts of an fstab entry must be
+    written as \\040 and \\011, otherwise the line cannot be parsed. Running
+    the same call again must report the entry as already present.
+    """
+    config = tmp_path / "fstab"
+    config.write_text("# comment\n")
+
+    kwargs = {"name": name, "device": device, "fstype": "ext4", "opts": opts}
+    kwargs["config"] = str(config)
+    assert mount.set_fstab(**kwargs) == "new"
+    assert config.read_text() == "# comment\n" + expected_line
+    assert mount.set_fstab(**kwargs) == "present"
+    assert config.read_text() == "# comment\n" + expected_line
+
+
+def test_set_fstab_escaped_entry_is_parseable(tmp_path):
+    """
+    An entry written for a path containing spaces can be read back by
+    mount.fstab as a single entry
+    """
+    config = tmp_path / "fstab"
+    config.write_text("")
+
+    with patch.dict(mount.__grains__, {"kernel": "Linux"}, clear=True):
+        mount.set_fstab(
+            "/tmp/some directory",
+            "/dev/sda1",
+            "ext4",
+            config=str(config),
+        )
+        entries = mount.fstab(str(config))
+    assert list(entries) == ["/tmp/some\\040directory"]
+    assert entries["/tmp/some\\040directory"]["device"] == "/dev/sda1"
+    assert entries["/tmp/some\\040directory"]["fstype"] == "ext4"

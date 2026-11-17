@@ -6,7 +6,6 @@ import weakref
 
 import pytest
 
-from salt.fileserver.gitfs import PER_REMOTE_ONLY, PER_REMOTE_OVERRIDES
 from salt.utils.gitfs import GitFS
 
 pytestmark = [pytest.mark.skip_if_binaries_missing("git")]
@@ -75,12 +74,7 @@ def test_find_file_with_root(
     opts["gitfs_remotes"] = remotes
     # GitFS instances are cached per process; isolate each configuration.
     monkeypatch.setattr(GitFS, "instance_map", weakref.WeakKeyDictionary())
-    gitfs = GitFS(
-        opts,
-        remotes,
-        per_remote_overrides=PER_REMOTE_OVERRIDES,
-        per_remote_only=PER_REMOTE_ONLY,
-    )
+    gitfs = GitFS(opts, remotes)
     gitfs.update()
 
     rooted = root_config != "none"

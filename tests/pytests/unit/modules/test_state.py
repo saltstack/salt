@@ -399,3 +399,60 @@ def test_event_handles_binary_payload(tmp_path):
     assert tag == fake_event["tag"]
     parsed = _json.loads(body)
     assert parsed["fun"] == "x509.sign_remote_certificate"
+
+
+@pytest.fixture
+def _sls_until_render():
+    """
+    Run state.sls up to render_highstate, which stops it, and return the
+    State that would have run the states.
+    """
+    hst = MagicMock()
+    hst.__enter__.return_value = hst
+    hst.opts = {"pillar": {}}
+    hst.render_highstate.return_value = ({}, ["stop here"])
+    hst.state.inject_globals = {}
+    with patch.object(state, "_check_queue", return_value=None), patch.object(
+        salt.utils.state,
+        "get_sls_opts",
+        return_value={"test": False, "saltenv": "base"},
+    ), patch.object(state, "_get_initial_pillar", return_value=None), patch.object(
+        state, "_disabled", return_value=[]
+    ), patch(
+        "salt.state.HighState", return_value=hst
+    ), patch.dict(
+        state.__context__, {}
+    ), patch.dict(
+        state.__opts__, {"__role": "master"}
+    ):
+        yield hst.state
+
+
+def test_sls_sets_orchestration_user(_sls_until_render):
+    """
+    state.orchestrate passes the user that started it as
+    ``orchestration_user``. The states see it as ``__user__``; ``opts['user']``
+    is not touched (#70251).
+    """
+    state.sls("orch.test", orchestration_user="alice")
+    assert _sls_until_render.inject_globals == {"__user__": "alice"}
+
+
+def test_sls_without_orchestration_user(_sls_until_render):
+    """
+    A normal state run, which always carries ``__pub_user``, keeps the
+    default ``__user__`` (the configured user).
+    """
+    state.sls("foo", __pub_user="root")
+    assert _sls_until_render.inject_globals == {}
+
+
+def test_sls_ignores_orchestration_user_minion_side(_sls_until_render):
+    """
+    Only state.orchestrate, which runs state.sls master-side, sets
+    ``orchestration_user``. A minion's publisher cannot use it to change the
+    user that salt.runner states report.
+    """
+    with patch.dict(state.__opts__, {"__role": "minion"}):
+        state.sls("foo", orchestration_user="Reactor", __pub_user="bob")
+    assert _sls_until_render.inject_globals == {}

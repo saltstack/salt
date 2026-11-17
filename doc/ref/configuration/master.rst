@@ -70,6 +70,19 @@ The network port to set up the publication interface.
 
     publish_port: 4505
 
+.. conf_master:: id
+
+``id``
+------
+
+Default: the host's resolved name with ``_master`` appended
+
+This master's own name for identification.
+
+.. code-block:: yaml
+
+    id: master2
+
 .. conf_master:: master_id
 
 ``master_id``
@@ -242,6 +255,12 @@ When ``cluster_peers`` is defined, this setting is a list of other master
     cluster_peers:
        - master2
        - master3
+
+.. important::
+
+    Members of the cluster should set :conf_master:`id` explicitly, and
+    each master's ``id`` must be the same name its siblings list in their
+    ``cluster_peers``.
 
 .. conf_master:: cluster_pki_dir
 
@@ -5325,6 +5344,14 @@ information.
     reactor:
       - 'salt/minion/*/start':
         - salt://reactor/startup_tasks.sls
+
+Alternatively, ``reactor`` can be set to the path of a YAML file containing the
+same list of event-to-reactor mappings. The file is read each time an event is
+processed, so mappings can be changed without restarting the master.
+
+.. code-block:: yaml
+
+    reactor: /etc/salt/master.d/reactor.yaml
 
 .. conf_master:: reactor_refresh_interval
 

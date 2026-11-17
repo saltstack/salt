@@ -37,11 +37,11 @@ def _isolate_ring():
     ring_membership.reset()
 
 
-def _opts(interface="m1"):
+def _opts(node_id="m1"):
     """Minimal opts the gate sites consult."""
     return {
-        "interface": interface,
-        "id": f"{interface}-host",
+        "id": f"{node_id}_master",
+        "interface": "127.0.0.1",
         "cluster_id": "test-cluster",
         "sock_dir": "/tmp",
     }
@@ -151,7 +151,7 @@ def test_job_new_event_drops_when_key_not_owned():
     owned_jid, other_jid = _pick_owned_and_other_jid(members)
     # Route "jobs" to the populated ring so ``owns_for`` defers to it.
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
 
     with patch("salt.utils.job.store_minions") as mock_store:
         # Owned by m1: store_minions runs.
@@ -178,7 +178,7 @@ def test_job_ret_event_drops_when_key_not_owned():
     members = ["m1", "m2", "m3"]
     owned_jid, other_jid = _pick_owned_and_other_jid(members)
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
 
     with patch("salt.utils.job.store_job") as mock_store:
         _fire(
@@ -259,7 +259,7 @@ def test_job_new_drops_when_routed_to_unknown_ring():
     # Route exists, but no rebuild has populated "jobs_ring" — the
     # ring is empty / unknown to this master.
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
     with patch("salt.utils.job.store_minions") as mock_store:
         _fire(
             monitor,
@@ -279,7 +279,7 @@ def test_job_new_drop_fires_delegate_when_owner_known():
     """
     ring_membership.rebuild("jobs_ring", ["other-master", "another-one"])
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
 
     fired = []
 
@@ -329,7 +329,7 @@ def test_job_ret_drop_fires_delegate_for_returns():
     """
     ring_membership.rebuild("jobs_ring", ["owner-a", "owner-b"])
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
 
     fired = []
 
@@ -381,7 +381,7 @@ def test_delegate_skip_when_this_master_is_the_owner():
     """
     ring_membership.rebuild("jobs_ring", ["m1", "m2", "m3"])
     ring_membership.set_route("jobs", "jobs_ring")
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
 
     fired = []
 
@@ -437,7 +437,7 @@ def test_job_new_writes_when_route_cleared():
     ring_membership.rebuild("jobs_ring", ["m1", "m2", "m3"])
     ring_membership.set_route("jobs", "jobs_ring")
     ring_membership.set_route("jobs", None)  # back to broadcast
-    monitor = _make_monitor(_opts(interface="m1"))
+    monitor = _make_monitor(_opts("m1"))
     with patch("salt.utils.job.store_minions") as mock_store:
         _fire(
             monitor,
@@ -445,3 +445,45 @@ def test_job_new_writes_when_route_cleared():
             {"__peer_id": "m2", "jid": "anything", "minions": ["x"]},
         )
     mock_store.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# salt/key branch: intentionally NOT gated by owns_for
+# ---------------------------------------------------------------------------
+
+
+def test_salt_key_event_applies_regardless_of_route():
+    """
+    The published ring documentation says ``keys/`` / ``denied_keys/``
+    minion-key material is intentionally broadcast across every
+    master — every master must hold the bytes to verify a minion's
+    signature on auth, so sharding key metadata would break
+    positional authentication.
+
+    The implementation makes this true by having the ``salt/key``
+    branch of :meth:`EventMonitor.handle_event` not call
+    :func:`ring_membership.owns_for` at all.  Pin that property: even
+    when the operator (or a bug) has routed a ``"keys"`` data type
+    to a ring this master isn't in, the handler must still apply
+    the key change.  A regression that adds an ``owns_for("keys",
+    ...)`` gate would trip this test.
+    """
+    # Build a ring that this master is NOT in and route "keys" to it.
+    ring_membership.rebuild("keys_ring", ["other-1", "other-2"])
+    ring_membership.set_route("keys", "keys_ring")
+
+    monitor = _make_monitor(_opts("m1"))
+    with patch.object(monitor, "_apply_peer_key_change") as apply_mock:
+        _fire(
+            monitor,
+            "salt/key",
+            {
+                "__peer_id": "m2",
+                "act": "accept",
+                "id": "minion-xyz",
+                "pub": b"-----BEGIN PUBLIC KEY-----\n...dummy...\n",
+            },
+        )
+    apply_mock.assert_called_once_with(
+        "accept", "minion-xyz", b"-----BEGIN PUBLIC KEY-----\n...dummy...\n"
+    )

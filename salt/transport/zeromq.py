@@ -585,14 +585,6 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 ipc_path = os.path.join(self.opts["sock_dir"], "workers.ipc")
             os.chmod(ipc_path, 0o600)
 
-        # Initialize request router for command classification
-        # In non-pooled mode, this is primarily for statistics and consistency
-        import salt.master
-
-        router = salt.master.RequestRouter(
-            self.opts, secrets=secrets or getattr(self, "secrets", None)
-        )
-
         try:
             while True:
                 if self.clients.closed or self.workers.closed:
@@ -852,7 +844,11 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
             try:
                 task.cancel()
             except RuntimeError:
-                log.error("IOLoop closed when trying to cancel task")
+                # The IOLoop is already closed -- expected during a clean
+                # shutdown sequence where the loop teardown runs before
+                # this close() path.  Nothing to do; the task has already
+                # been dropped with the loop.
+                log.debug("IOLoop closed when trying to cancel task")
 
     def pre_fork(self, process_manager, *args, **kwargs):
         """
@@ -1596,10 +1592,16 @@ class AsyncReqMessageClient:
                         # Time is in milliseconds.
                         ready = yield socket.poll(300, zmq.POLLIN)
                     except zmq.eventloop.future.CancelledError as exc:
+                        # The event loop is being torn down (SIGTERM,
+                        # reconnect during shutdown, etc.); the matching
+                        # send path logs at TRACE for the same reason.
+                        # Previously this also emitted an ERROR ("Master
+                        # is unavailable (Connection Cancelled).") which
+                        # fired on every reconnect at shutdown and
+                        # obscured real connectivity errors.
                         log.trace(
                             "Loop closed while polling receive socket.", exc_info=True
                         )
-                        log.error("Master is unavailable (Connection Cancelled).")
                         send_recv_running = False
                         if not future.done():
                             future.set_result(None)
@@ -1700,7 +1702,14 @@ class ZeroMQSocketMonitor:
             except (asyncio.CancelledError, GeneratorExit):
                 break
             except zmq.error.ZMQError as exc:
-                log.error("ZmqMonitor, %s", exc)
+                # ENOTSOCK / ETERM / EINTR are the expected shutdown
+                # signatures: the socket or context has been torn down
+                # under us.  Anything else (EFAULT, EMTHREAD, ...) is a
+                # real zmq-level problem worth seeing at ERROR.
+                if exc.errno in (zmq.ENOTSOCK, zmq.ETERM, zmq.error.EINTR):
+                    log.debug("ZmqMonitor stopping on shutdown: %s", exc)
+                else:
+                    log.error("ZmqMonitor, %s", exc)
                 # We've disconnected just die
                 break
             except Exception as exc:  # pylint: disable=broad-except
@@ -1754,6 +1763,17 @@ class ZeroMQSocketMonitor:
         self._monitor_task = None
         if task is not None and not task.done():
             task.cancel()
+            # ``stop()`` is a sync call -- we can't ``await`` the cancellation
+            # here, so the task may still be in the "cancelling" state when
+            # the loop tears down on SIGTERM and asyncio prints
+            # ``Task was destroyed but it is pending!`` for ``consume()``.
+            # Suppress that GC warning: the task is cancelled, the underlying
+            # monitor socket is closed below, and the coroutine's next await
+            # will raise ``CancelledError`` and exit cleanly.
+            try:
+                task._log_destroy_pending = False
+            except AttributeError:
+                pass
         try:
             self._socket.disable_monitor()
         except zmq.Error:

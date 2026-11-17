@@ -1600,6 +1600,14 @@ def sls(
             return ["Pillar failed to render with the following messages:"] + errors
 
         orchestration_jid = kwargs.get("orchestration_jid")
+        orchestration_user = kwargs.get("orchestration_user")
+        if orchestration_user is not None and __opts__.get("__role") == "master":
+            # Set by state.orchestrate so that salt.runner states attribute the
+            # jobs they start to the user that started the orchestration
+            # (#63148). Injected as __user__ rather than written to
+            # opts["user"], which is the user the master runs as (#70251).
+            # Only honoured master-side, so a minion's publisher cannot set it.
+            st_.state.inject_globals["__user__"] = orchestration_user
         with salt.utils.files.set_umask(0o077):
             if kwargs.get("cache"):
                 if os.path.isfile(cfn):
@@ -2413,11 +2421,21 @@ def graph(mods, test=None, queue=None, **kwargs):
 
 
 def sls_exists(mods, test=None, queue=None, **kwargs):
-    """
+    r"""
     Tests for the existence of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. note::
+        This function checks whether the SLS *renders to valid state data*,
+        not merely whether the file is present. It returns ``False`` if the
+        file does not exist, **and also** if it (or anything it ``include``\ s,
+        directly or indirectly) fails to render, has a syntax error, or
+        references a missing include. Such errors are not raised. To see why
+        an SLS is reported as missing, run
+        :py:func:`state.show_sls <salt.modules.state.show_sls>`, which returns
+        the rendering errors.
 
     .. versionadded:: 2019.2.0
 
@@ -2439,7 +2457,11 @@ def id_exists(ids, mods, test=None, queue=None, **kwargs):
     Tests for the existence of a specific ID or list of IDs within the
     specified SLS file(s). Similar to :py:func:`state.sls_exists
     <salt.modules.state.sls_exists>`, returns True or False. The default
-    environment is base``, use ``saltenv`` to specify a different environment.
+    environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. note::
+        As with :py:func:`state.sls_exists <salt.modules.state.sls_exists>`,
+        an SLS that fails to render is not reported as an error here.
 
     .. versionadded:: 2019.2.0
 
@@ -2885,32 +2907,37 @@ def event(
         opts=__opts__,
         listen=True,
     ) as sevent:
-        while True:
-            ret = sevent.get_event(full=True, auto_reconnect=True)
-            if ret is None:
-                continue
+        try:
+            while True:
+                ret = sevent.get_event(full=True, auto_reconnect=True)
+                if ret is None:
+                    continue
 
-            if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
-                if not quiet:
-                    salt.utils.stringutils.print_cli(
-                        "{}\t{}".format(
-                            salt.utils.stringutils.to_str(ret["tag"]),
-                            salt.utils.json.dumps(
-                                salt.utils.data.decode(ret["data"], keep=True),
-                                sort_keys=pretty,
-                                indent=None if not pretty else 4,
-                                default=_json_safe,
-                            ),
+                if salt.utils.stringutils.expr_match(ret["tag"], tagmatch):
+                    if not quiet:
+                        salt.utils.stringutils.print_cli(
+                            "{}\t{}".format(
+                                salt.utils.stringutils.to_str(ret["tag"]),
+                                salt.utils.json.dumps(
+                                    salt.utils.data.decode(ret["data"], keep=True),
+                                    sort_keys=pretty,
+                                    indent=None if not pretty else 4,
+                                    default=_json_safe,
+                                ),
+                            )
                         )
-                    )
-                    sys.stdout.flush()
+                        sys.stdout.flush()
 
-                if count > 0:
-                    count -= 1
-                    log.debug("Remaining event matches: %s", count)
+                    if count > 0:
+                        count -= 1
+                        log.debug("Remaining event matches: %s", count)
 
-                if count == 0:
-                    break
-            else:
-                log.debug("Skipping event tag: %s", ret["tag"])
-                continue
+                    if count == 0:
+                        break
+                else:
+                    log.debug("Skipping event tag: %s", ret["tag"])
+                    continue
+        except (KeyboardInterrupt, SystemExit):
+            # Ctrl-c (the CLI signal handler raises SystemExit) is the normal
+            # way to stop watching the bus; leave quietly, without a traceback.
+            log.debug("Stopped watching the event bus")

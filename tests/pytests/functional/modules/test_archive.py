@@ -125,9 +125,9 @@ class Archive:
         dir_in_ret = None
         file_in_ret = None
         for line in ret:
-            if normdir(self.src) in os.path.normcase(line) and not normdir(
+            if normdir(self.src) in os.path.normcase(line) and normdir(
                 self.src_file
-            ) in os.path.normcase(line):
+            ) not in os.path.normcase(line):
                 dir_in_ret = True
             if normdir(self.src_file) in os.path.normcase(line):
                 file_in_ret = True

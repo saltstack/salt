@@ -116,6 +116,37 @@ def test_fqdns_should_return_sorted_unique_domains(fake_ips):
         }
 
 
+@pytest.mark.parametrize("h_errno", [0, 1, 2, 4])
+def test_fqdns_unresolvable_address_is_not_logged_as_error(h_errno, fake_ips, caplog):
+    """
+    Reverse lookup failures such as TRY_AGAIN (errno 2) must not be logged at
+    error level.
+    """
+    with patch(
+        "socket.gethostbyaddr",
+        autospec=True,
+        side_effect=socket.herror(h_errno, "Host name lookup failure"),
+    ):
+        with caplog.at_level(logging.DEBUG):
+            actual = networkmod.fqdns()
+    assert actual == {"fqdns": []}
+    assert not [r for r in caplog.records if r.levelno >= logging.ERROR]
+
+
+def test_fqdns_unexpected_herror_is_logged_as_error(fake_ips, caplog):
+    with patch(
+        "socket.gethostbyaddr",
+        autospec=True,
+        side_effect=socket.herror(3, "Non-recoverable failure"),
+    ):
+        with caplog.at_level(logging.DEBUG):
+            networkmod.fqdns()
+    assert any(
+        r.levelno == logging.ERROR and "Failed to resolve address" in r.getMessage()
+        for r in caplog.records
+    )
+
+
 def test___virtual__is_windows_true():
     with patch("salt.utils.platform.is_windows", return_value=True):
         result = networkmod.__virtual__()
@@ -647,6 +678,27 @@ def test_connect():
                     "comment": ret,
                     "result": True,
                 }
+
+
+def test_connect_udp():
+    """
+    Test that a UDP connection sends a bytes payload and reports success
+    """
+    address = ("127.0.0.1", 53)
+    addrinfo = [(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP, "", address)]
+    with patch.object(socket, "getaddrinfo", return_value=addrinfo), patch(
+        "socket.socket"
+    ) as mock_socket:
+        skt = mock_socket.return_value
+        skt.recvfrom.return_value = (b"reply", address)
+        ret = networkmod.connect("127.0.0.1", 53, proto="udp")
+    assert ret == {
+        "result": True,
+        "comment": "Successfully connected to 127.0.0.1 (127.0.0.1) on udp port 53",
+    }
+    payload, destination = skt.sendto.call_args.args
+    assert isinstance(payload, bytes)
+    assert destination == address
 
 
 def test_is_private():

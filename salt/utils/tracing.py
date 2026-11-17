@@ -457,7 +457,11 @@ def _build_exporter(opts):
         if name == "console":
             return _otel.ConsoleSpanExporter()
         if name == "otlp-http":
-            kwargs = {}
+            import requests  # pylint: disable=import-outside-toplevel
+
+            # Pass a requests session: without one, opentelemetry >= 1.45
+            # falls back to a urllib3 transport that ignores HTTP(S)_PROXY.
+            kwargs = {"session": requests.Session()}
             if endpoint:
                 kwargs["endpoint"] = endpoint
             if headers:

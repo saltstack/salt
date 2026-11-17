@@ -1037,6 +1037,66 @@ async def test_publish_payload_cluster_runner_shed_unowned_all_decodes(master_op
     channel.transport.publish_payload.assert_not_called()
 
 
+async def test_run_shed_unowned_all_fans_out_cluster_peer_shed_request(master_opts):
+    """
+    The published ring documentation says ``cluster.shed_unowned_all``
+    fans out to every peer via a ``cluster/peer/shed-request`` event
+    carrying the runner's parameters, cluster_aes-encrypted.  Pin:
+
+    1. Every pusher receives a ``publish`` call.
+    2. Each event's outer tag is exactly
+       ``cluster/peer/shed-request``.
+    3. The envelope round-trips through the ``cluster_aes`` crypticle
+       and restores the original request payload — a regression that
+       dropped the encryption (or truncated the payload) trips here.
+    """
+    from tests.support.mock import AsyncMock, MagicMock
+    from tests.support.mock import patch as _patch
+
+    channel = _pub_channel(
+        master_opts,
+        pushers=[MagicMock(pull_host="peer-a"), MagicMock(pull_host="peer-b")],
+    )
+    for pusher in channel.pushers:
+        pusher.publish = AsyncMock(return_value=None)
+
+    # Secrets stub for the Crypticle.  SMaster.secrets["cluster_aes"]
+    # is the shared cluster AES key; a 32-byte token is enough to
+    # satisfy ``Crypticle.generate_key_string`` consumers.
+    secrets = {
+        "cluster_aes": {
+            "secret": MagicMock(value=salt.crypt.Crypticle.generate_key_string())
+        }
+    }
+    payload = {
+        "ring_id": "jobs",
+        "banks": ["jobs/loads", "jobs/minions"],
+        "subbank_template": "jobs/returns/{key}",
+        "driver": None,
+        "dry_run": False,
+    }
+
+    with _patch.object(server.salt.master.SMaster, "secrets", secrets):
+        await channel._run_shed_unowned_all(payload)
+
+    for pusher in channel.pushers:
+        pusher.publish.assert_called_once()
+    # Inspect the envelope on one of the publishes.
+    envelope = channel.pushers[0].publish.call_args.args[0]
+    tag, body = salt.utils.event.SaltEvent.unpack(envelope)
+    assert tag == "cluster/peer/shed-request", (
+        "fan-out envelope tag drifted from the documented "
+        f"'cluster/peer/shed-request': got {tag!r}"
+    )
+    # Round-trip the encrypted body through a fresh Crypticle sharing
+    # the same cluster_aes secret — proves the envelope stayed
+    # encrypted and the full payload survived.
+    crypticle = salt.crypt.Crypticle(
+        master_opts, secrets["cluster_aes"]["secret"].value
+    )
+    assert crypticle.loads(body) == payload
+
+
 async def test_publish_payload_cluster_runner_delegate_write_decodes(master_opts):
     """
     ``cluster/runner/delegate_write`` decodes and dispatches
@@ -1561,3 +1621,190 @@ def test_publish_daemon_binds_pool_puller_without_brackets(interface, expected_b
         channel._publish_daemon()
 
     assert fake_puller.call_args.kwargs["host"] == expected_bind
+
+
+async def test_cluster_join_handler_skips_joiner_in_notify_broadcast(tmp_path):
+    """
+    Regression: ``cluster/peer/join`` handler must not fan out
+    ``cluster/peer/join-notify`` to the newly-joining peer.
+
+    On cluster bootstrap the join-handler appends the joiner to
+    ``self.pushers`` so later broadcasts reach it, then loops over
+    ``self.pushers`` to publish a ``join-notify`` encrypted with the
+    receiver's current ``cluster_aes``.  The joiner's local
+    ``cluster_aes`` at the moment the notify arrives is still its
+    pre-join placeholder (``K_b``), NOT the authoritative ``K_a`` the
+    receiver uses.  The joiner's handler decrypts with ``K_b`` and
+    emits a cosmetic-but-noisy ``AuthenticationError`` traceback
+    ~80ms before the ``join-reply`` arrives and installs the
+    authoritative ``cluster_aes``.
+
+    The fix filters the joiner out of the fan-out loop by
+    ``pusher.pull_host == payload["peer_id"]``.  The joiner learns
+    everything it needs from the ``join-reply`` sent later in the
+    same handler.
+
+    Invariants verified:
+
+    #. The pre-existing peer still receives ``join-notify`` (membership
+       announcement is preserved).
+    #. The newly-joining peer does NOT receive ``join-notify``.
+    """
+    # ---- Opts & on-disk layout ---------------------------------------
+    pki = tmp_path / "pki"
+    (pki / "peers").mkdir(parents=True)
+    opts = {
+        "id": "master-a_master",
+        "cluster_id": "test_cluster",
+        "cluster_peers": ["127.0.0.3"],
+        "cluster_pki_dir": str(pki),
+        "cluster_encryption_algorithm": "OAEP-SHA1",
+        "publish_signing_algorithm": "PKCS1v15-SHA224",
+        "cluster_secret": "",
+        "cluster_isolated_filesystem": False,
+        "sock_dir": str(tmp_path / "sock"),
+    }
+    (tmp_path / "sock").mkdir()
+
+    # ---- Channel -----------------------------------------------------
+    channel = server.MasterPubServerChannel.__new__(server.MasterPubServerChannel)
+    channel.opts = opts
+    channel.cluster_peers = ["127.0.0.3"]
+    channel._raft_dispatcher = None
+    channel._raft_service = None
+    channel.send_aes_key_event = MagicMock()
+    channel.cluster_key = MagicMock(return_value="")
+    channel.cluster_public_key = MagicMock(return_value="")
+    channel.private_key = MagicMock(return_value=b"-----FAKE-PRIV-----")
+
+    # ``gen_token`` returns a str, and ``_discover_candidates`` stores
+    # the str token.  The joiner echoes it back as ``return_token``
+    # (str, round-tripped through ``salt.payload``).  Both ``secret``
+    # and ``key`` are RSA-decrypted to bytes ``token.encode() + ...``
+    # and sliced by ``len(token)`` which matches the str length.
+    token = "test-token-0000000000000000000000"
+    joiner_id = "127.0.0.4"
+    joiner_pub_pem = (
+        "-----BEGIN PUBLIC KEY-----\nJOINER-PUB\n-----END PUBLIC KEY-----\n"
+    )
+    channel._discover_candidates = {joiner_id: (joiner_pub_pem, token)}
+
+    # ---- Master key ---------------------------------------------------
+    fake_master_key = MagicMock()
+    fake_master_key.master_rsa_path = str(tmp_path / "master.pem")
+    channel.master_key = fake_master_key
+
+    # ---- Pushers -----------------------------------------------------
+    # One pre-existing (127.0.0.3), one added by the handler for the
+    # joiner (127.0.0.4).  Build the pre-existing one up-front; the
+    # handler adds the joiner's via ``_add_pusher`` which we intercept
+    # so we can observe it the same way.
+    pre_existing_pusher = MagicMock()
+    pre_existing_pusher.pull_host = "127.0.0.3"
+    pre_existing_pusher.pull_port = 4520
+    pre_existing_pusher.publish = AsyncMock()
+    channel.pushers = [pre_existing_pusher]
+
+    joiner_pusher = MagicMock()
+    joiner_pusher.pull_host = joiner_id
+    joiner_pusher.pull_port = 4520
+    joiner_pusher.publish = AsyncMock()
+
+    # ``self.pusher(peer)`` is called twice in the handler: once to
+    # build the pusher appended via ``_add_pusher``, and once for
+    # the reply pusher at the end.  Return the shared ``joiner_pusher``
+    # both times -- the reply pusher gets ``.close()`` called on it.
+    channel.pusher = MagicMock(return_value=joiner_pusher)
+    channel._add_pusher = MagicMock(side_effect=channel.pushers.append)
+
+    # ---- Crypto stubs ------------------------------------------------
+    # ``PublicKeyString(joiner_pub).verify(...)`` returns True so the
+    # sig check passes.  Also used to encrypt the join-reply payload;
+    # returning fixed bytes is fine because we don't decrypt the reply.
+    fake_joiner_pub = MagicMock()
+    fake_joiner_pub.verify.return_value = True
+    fake_joiner_pub.encrypt.return_value = b"wrapped-ciphertext"
+
+    # ``PrivateKey.from_file(...).decrypt(...)`` returns ``token.encode() +
+    # cluster_secret`` for the ``secret`` payload (secret == "")
+    # and ``token.encode() + aes_key`` for the ``key`` payload.  We
+    # return the same salted-bytes for both because the handler decodes
+    # each with ``[len(token):]`` and only compares the ``secret``
+    # against ``opts["cluster_secret"]`` ("" == "").
+    fake_private_key = MagicMock()
+    fake_private_key.decrypt.return_value = token.encode() + b""
+
+    # ``PrivateKeyString(...).sign(...)`` for the join-reply.
+    fake_private_key_string = MagicMock()
+    fake_private_key_string.sign.return_value = b"sig"
+
+    # ``Crypticle(...).dumps(...)`` is used inside the fan-out loop to
+    # encrypt each join-notify; a MagicMock is fine, we only assert on
+    # which pushers publish was invoked on.
+    fake_crypticle = MagicMock()
+    fake_crypticle.encrypt.return_value = b"crypt"
+    fake_crypticle.dumps.return_value = b"notify-ciphertext"
+
+    # ---- Build the inbound join payload ------------------------------
+    # Mirror exactly what the joiner emits (see the ``discover-reply``
+    # handler): ``return_token`` is the token echoed back, ``secret``
+    # and ``key`` are RSA-wrapped ciphertext, ``token`` is the joiner's
+    # own freshly-generated token (used at the end of the handler to
+    # wrap the join-reply, not for verification here).
+    inner_payload = {
+        "peer_id": joiner_id,
+        "pub": joiner_pub_pem,
+        "return_token": token,
+        "secret": b"encrypted-secret",
+        "key": b"encrypted-aes",
+        "token": token,
+    }
+    data = {
+        "payload": salt.payload.dumps(inner_payload),
+        "sig": b"sig",
+    }
+    tag = salt.utils.event.tagify("join", "peer", "cluster")
+    payload = salt.utils.event.SaltEvent.pack(tag, data)
+
+    secrets = {
+        "aes": {"secret": MagicMock(value=b"aes-secret-bytes")},
+        "cluster_aes": {"secret": MagicMock(value=b"cluster-aes-bytes")},
+    }
+
+    with patch.object(SMaster, "secrets", secrets), patch(
+        "salt.crypt.PublicKeyString", return_value=fake_joiner_pub
+    ), patch("salt.crypt.PrivateKey.from_file", return_value=fake_private_key), patch(
+        "salt.crypt.PrivateKeyString", return_value=fake_private_key_string
+    ), patch(
+        "salt.crypt.Crypticle", return_value=fake_crypticle
+    ):
+        await channel.handle_pool_publish(payload)
+
+    # ---- Assertions --------------------------------------------------
+    # Pre-existing peer MUST still receive join-notify.
+    assert pre_existing_pusher.publish.await_count == 1, (
+        "join-notify must still be broadcast to pre-existing peers; "
+        f"pre-existing pusher saw {pre_existing_pusher.publish.await_count} "
+        "publishes"
+    )
+
+    # The joiner's pusher MUST NOT receive a join-notify.  It is used
+    # only for the final join-reply (at the end of the handler); we
+    # filter by tag to distinguish.
+    joiner_publish_tags = []
+    for call in joiner_pusher.publish.await_args_list:
+        event_bytes = call.args[0]
+        try:
+            notify_tag, _ = salt.utils.event.SaltEvent.unpack(event_bytes)
+        except Exception:  # pylint: disable=broad-except
+            notify_tag = ""
+        joiner_publish_tags.append(notify_tag)
+
+    assert not any("join-notify" in t for t in joiner_publish_tags), (
+        "Regression: join-notify must not be sent to the joiner itself; "
+        f"joiner pusher received publishes tagged {joiner_publish_tags!r}. "
+        "The joiner cannot decrypt a notify encrypted with the receiver's "
+        "cluster_aes until the subsequent join-reply installs it; sending "
+        "it here produces a cosmetic AuthenticationError in the joiner's "
+        "log on every cluster bootstrap."
+    )

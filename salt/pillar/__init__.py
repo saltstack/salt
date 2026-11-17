@@ -269,8 +269,20 @@ class AsyncRemotePillar(RemotePillarMixin):
                 dictkey="pillar",
             )
         except salt.crypt.AuthenticationError as exc:
-            log.error(exc.message)
-            raise SaltClientError("Exception getting pillar.")
+            # ``AsyncReqChannel`` tags transient cluster-bringup deferrals
+            # with a sentinel suffix (see
+            # ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).  Those races
+            # are expected on every bringup of a clustered master while Raft
+            # is still catching up, and the caller retries them, so keep the
+            # log noise down.  Real auth failures still surface at ERROR.
+            if salt.channel.client._is_cluster_not_ready_message(exc.message):
+                log.debug(exc.message)
+            else:
+                log.error(exc.message)
+            # ``raise ... from exc`` lets the outer ``_connect_minion`` retry
+            # loop distinguish the cluster-not-ready sentinel (quiet INFO +
+            # retry) from genuine ``SaltClientError``s (ERROR + traceback).
+            raise SaltClientError("Exception getting pillar.") from exc
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
                 f"Pillar timed out after {int(time.monotonic() - start)} seconds"
@@ -407,8 +419,20 @@ class RemotePillar(RemotePillarMixin):
                 dictkey="pillar",
             )
         except salt.crypt.AuthenticationError as exc:
-            log.error(exc.message)
-            raise SaltClientError("Exception getting pillar.")
+            # ``AsyncReqChannel`` tags transient cluster-bringup deferrals
+            # with a sentinel suffix (see
+            # ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).  Those races
+            # are expected on every bringup of a clustered master while Raft
+            # is still catching up, and the caller retries them, so keep the
+            # log noise down.  Real auth failures still surface at ERROR.
+            if salt.channel.client._is_cluster_not_ready_message(exc.message):
+                log.debug(exc.message)
+            else:
+                log.error(exc.message)
+            # ``raise ... from exc`` lets the outer ``_connect_minion`` retry
+            # loop distinguish the cluster-not-ready sentinel (quiet INFO +
+            # retry) from genuine ``SaltClientError``s (ERROR + traceback).
+            raise SaltClientError("Exception getting pillar.") from exc
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
                 f"Pillar timed out after {int(time.monotonic() - start)} seconds"
@@ -1143,16 +1167,9 @@ class Pillar:
             # the git ext_pillar() func is run, but only for masterless.
             if self.ext and "git" in self.ext and self.opts.get("__role") != "minion":
                 # Avoid circular import
-                import salt.pillar.git_pillar as git_pillar
                 import salt.utils.gitfs as gitfs
 
-                git_pillar = gitfs.GitPillar(
-                    self.opts,
-                    self.ext["git"],
-                    per_remote_overrides=git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=git_pillar.PER_REMOTE_ONLY,
-                    global_only=git_pillar.GLOBAL_ONLY,
-                )
+                git_pillar = gitfs.GitPillar(self.opts, self.ext["git"])
                 git_pillar.fetch_remotes()
         except TypeError:
             # Handle malformed ext_pillar

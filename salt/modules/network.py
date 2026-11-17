@@ -3,12 +3,11 @@ Module for gathering and managing network information
 """
 
 import concurrent.futures
-import datetime
-import hashlib
 import logging
 import os
 import random
 import re
+import secrets
 import socket
 import time
 
@@ -1756,9 +1755,7 @@ def connect(host, port=None, **kwargs):
         if proto == "udp":
             # Generate a random string of a
             # decent size to test UDP connection
-            md5h = hashlib.md5()
-            md5h.update(datetime.datetime.now().strftime("%s"))
-            msg = md5h.hexdigest()
+            msg = secrets.token_hex(16).encode()
             skt.sendto(msg, _address)
             recv, svr = skt.recvfrom(255)
             skt.close()
@@ -2254,6 +2251,7 @@ def fqdns():
 
     # Possible value for h_errno defined in netdb.h
     HOST_NOT_FOUND = 1
+    TRY_AGAIN = 2
     NO_DATA = 4
 
     fqdns = set()
@@ -2267,8 +2265,9 @@ def fqdns():
         try:
             return [socket.getfqdn(socket.gethostbyaddr(ip)[0])]
         except socket.herror as err:
-            if err.errno in (0, HOST_NOT_FOUND, NO_DATA):
-                # No FQDN for this IP address, so we don't need to know this all the time.
+            if err.errno in (0, HOST_NOT_FOUND, TRY_AGAIN, NO_DATA):
+                # No FQDN for this IP address (or the resolver is temporarily
+                # unavailable), so we don't need to know this all the time.
                 log.debug("Unable to resolve address %s: %s", ip, err)
             else:
                 log.error("Failed to resolve address %s: %s", ip, err)

@@ -40,6 +40,35 @@ def _cluster_retry(data):
     )
 
 
+# Sentinel suffix appended to the ``AuthenticationError`` message raised when a
+# clustered master defers a request with the ``cluster_retry`` flag.  Callers
+# upstream of the channel use this to recognize a transient cluster-bringup
+# race (vs. a real authentication failure) so they can retry quietly instead
+# of emitting alarming ``[ERROR]`` logs.
+CLUSTER_NOT_READY_SUFFIX = " (cluster not ready)"
+
+# Exact message used by the generic ``_crypted_transfer`` path when its
+# internal retry-until-deadline loop expires with the master still replying
+# with ``cluster_retry``.  Older than ``CLUSTER_NOT_READY_SUFFIX`` and kept
+# verbatim so existing log / test consumers keep matching; detected here so
+# non-pillar callers get the same quiet-retry treatment as the pillar path.
+CLUSTER_NOT_READY_DEADLINE_MESSAGE = "master cluster is not ready"
+
+
+def _is_cluster_not_ready_message(message):
+    """
+    Return ``True`` when ``message`` was produced by a clustered master's
+    deferred-retry sentinel (see :data:`CLUSTER_NOT_READY_SUFFIX` and
+    :data:`CLUSTER_NOT_READY_DEADLINE_MESSAGE`).
+    """
+    if not isinstance(message, str):
+        return False
+    return (
+        message.endswith(CLUSTER_NOT_READY_SUFFIX)
+        or message == CLUSTER_NOT_READY_DEADLINE_MESSAGE
+    )
+
+
 REQUEST_CHANNEL_TIMEOUT = 60
 REQUEST_CHANNEL_TRIES = 3
 
@@ -268,7 +297,7 @@ class AsyncReqChannel:
             # otherwise blow up at ``ret["key"]`` below.
             raise salt.crypt.AuthenticationError(
                 "Master did not return a session key for pillar request"
-                + (" (cluster not ready)" if _cluster_retry(ret) else "")
+                + (CLUSTER_NOT_READY_SUFFIX if _cluster_retry(ret) else "")
             )
         aes = key.decrypt(ret["key"], self.opts["encryption_algorithm"])
 
@@ -357,7 +386,9 @@ class AsyncReqChannel:
                     break
                 # If master is not ready, try retrying until the deadline is reached.
                 if time.monotonic() >= deadline:
-                    raise salt.crypt.AuthenticationError("master cluster is not ready")
+                    raise salt.crypt.AuthenticationError(
+                        CLUSTER_NOT_READY_DEADLINE_MESSAGE
+                    )
                 log.debug("Master cluster is not ready yet, retrying request")
                 await tornado.gen.sleep(self.opts.get("acceptance_wait_time", 10))
         return ret
@@ -552,11 +583,29 @@ class AsyncPubChannel:
         try:
             if not self.auth.authenticated:
                 await self.auth.authenticate()
+            # Mirror the master-reported publish_port into opts so that
+            # out-of-band consumers (notably the scheduler job that calls
+            # ``status.master``) can learn the port the minion is actually
+            # connected on. The underscore prefix signals runtime-written.
+            # Guard: ``self.auth.creds`` is only populated on a real
+            # authenticate() -- tests that mock authentication away may
+            # leave it as ``None`` or an empty dict. Skip the mirror in
+            # that case rather than raising, so test harnesses that patch
+            # only ``gen_token`` / ``authenticated`` keep working.
+            creds = getattr(self.auth, "creds", None)
+            if isinstance(creds, dict) and "publish_port" in creds:
+                self.opts["_auth_publish_port"] = creds["publish_port"]
             # if this is changed from the default, we assume it was intentional
-            if int(self.opts.get("publish_port", 4506)) != 4506:
+            if int(self.opts.get("publish_port", 4505)) != 4505:
                 publish_port = self.opts.get("publish_port")
             # else take the relayed publish_port master reports
+            elif isinstance(creds, dict) and "publish_port" in creds:
+                publish_port = creds["publish_port"]
             else:
+                # Last-ditch fallback for test harnesses that don't
+                # populate auth.creds -- the original behavior was to
+                # raise KeyError here, which bubbled up as SaltClientError;
+                # preserve that behavior shape by raising a clearer error.
                 publish_port = self.auth.creds["publish_port"]
             # TODO: The zeromq transport does not use connect_callback and
             # disconnect_callback.

@@ -48,6 +48,7 @@ future move to a shared-memory ring.
 import logging
 import threading
 
+import salt.cluster
 from salt.cluster.ring import HashRing
 
 log = logging.getLogger(__name__)
@@ -93,19 +94,20 @@ def owns(opts, key, ring=DEFAULT_RING):
     """
     Return ``True`` if this master should process *key* locally.
 
-    *opts* must carry ``"interface"`` — the cluster-wide node identity
-    matching :func:`rebuild`'s input and ``cluster_peers``.  *ring* is
-    the name of the ring to consult (defaults to the legacy
-    ``"cluster"`` ring so pre-multi-ring call sites keep working).
+    *opts* must carry ``"id"``, from which :func:`salt.cluster.node_id`
+    derives the cluster-wide node identity matching :func:`rebuild`'s
+    input and ``cluster_peers``.  *ring* is the name of the ring to
+    consult (defaults to the legacy ``"cluster"`` ring so pre-multi-ring
+    call sites keep working).
 
     Empty rings answer ``True`` for every key, so a master that has
     not had its ring populated (subprocess pre-fork, or one without a
     routing entry) keeps the broadcast behaviour.
     """
-    node_id = opts.get("interface")
+    node_id = opts.get("id") and salt.cluster.node_id(opts)
     if node_id is None:
-        # Defensive: opts without an interface (some test fixtures)
-        # act as a standalone master — own everything.
+        # Defensive: opts without an id (some test fixtures) act as a
+        # standalone master — own everything.
         return True
     return get_ring(ring).owns(key, node_id)
 
@@ -145,7 +147,7 @@ def owns_for(opts, data_type, key):
         # load balancer.  Count the drop so a misconfig is visible.
         _record_drop(data_type, ring_id, "not_a_member")
         return False
-    node_id = opts.get("interface")
+    node_id = opts.get("id") and salt.cluster.node_id(opts)
     if node_id is None:
         return True
     if ring.owns(key, node_id):

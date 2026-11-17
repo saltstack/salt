@@ -34,7 +34,7 @@ _TMPDIR = tempfile.mkdtemp(prefix="salt_raft_scenario_")
 
 def _make_opts(node_id, peers, cachedir=None):
     return {
-        "id": f"{node_id}-hostname",
+        "id": node_id,
         "interface": node_id,
         "cluster_id": "scenario-cluster",
         "cluster_peers": peers,

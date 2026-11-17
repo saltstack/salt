@@ -10,8 +10,6 @@ import salt.cache
 import salt.config
 import salt.fileserver.gitfs
 import salt.payload
-import salt.pillar.git_pillar
-import salt.runners.winrepo
 import salt.syspaths
 import salt.utils.args
 import salt.utils.gitfs
@@ -290,8 +288,6 @@ def clear_git_lock(role, remote=None, **kwargs):
             salt.utils.gitfs.GitFS(
                 __opts__,
                 __opts__["gitfs_remotes"],
-                per_remote_overrides=salt.fileserver.gitfs.PER_REMOTE_OVERRIDES,
-                per_remote_only=salt.fileserver.gitfs.PER_REMOTE_ONLY,
             )
         ]
     elif role == "git_pillar":
@@ -304,9 +300,6 @@ def clear_git_lock(role, remote=None, **kwargs):
                 obj = salt.utils.gitfs.GitPillar(
                     __opts__,
                     ext_pillar["git"],
-                    per_remote_overrides=salt.pillar.git_pillar.PER_REMOTE_OVERRIDES,
-                    per_remote_only=salt.pillar.git_pillar.PER_REMOTE_ONLY,
-                    global_only=salt.pillar.git_pillar.GLOBAL_ONLY,
                 )
                 git_objects.append(obj)
     elif role == "winrepo":
@@ -321,9 +314,6 @@ def clear_git_lock(role, remote=None, **kwargs):
             obj = salt.utils.gitfs.WinRepo(
                 __opts__,
                 remotes,
-                per_remote_overrides=salt.runners.winrepo.PER_REMOTE_OVERRIDES,
-                per_remote_only=salt.runners.winrepo.PER_REMOTE_ONLY,
-                global_only=salt.runners.winrepo.GLOBAL_ONLY,
                 cache_root=base_dir,
             )
             git_objects.append(obj)

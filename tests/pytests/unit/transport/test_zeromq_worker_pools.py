@@ -5,8 +5,11 @@ Unit tests for ZeroMQ worker pool functionality
 import inspect
 
 import pytest
+from pytestshellutils.utils import ports
 
+import salt.config
 import salt.transport.zeromq
+from tests.support.mock import patch
 
 pytestmark = [
     pytest.mark.core_test,
@@ -137,3 +140,33 @@ class TestRequestServerIntegration:
         assert callable(
             salt.transport.zeromq.RequestServer.zmq_device_pooled
         ), "zmq_device_pooled should be callable"
+
+
+def test_zmq_device_with_worker_pools_disabled():
+    """
+    With ``worker_pools_enabled: False`` the default ``worker_pools: {}``
+    must not stop the legacy ``zmq_device`` from reaching its QUEUE loop.
+
+    Regression test for https://github.com/saltstack/salt/issues/69911
+    """
+    opts = dict(salt.config.DEFAULT_MASTER_OPTS)
+    opts.update(
+        {
+            "worker_pools_enabled": False,
+            "interface": "127.0.0.1",
+            "ret_port": ports.get_unused_localhost_port(),
+            "ipc_mode": "tcp",
+            "tcp_master_workers": ports.get_unused_localhost_port(),
+        }
+    )
+    assert opts["worker_pools"] == {}
+    server = salt.transport.zeromq.RequestServer(opts)
+    with patch.object(
+        salt.transport.zeromq.RequestServer, "_RequestServer__setup_signals"
+    ), patch.object(
+        salt.transport.zeromq.zmq, "device", side_effect=KeyboardInterrupt
+    ) as device:
+        server.zmq_device()
+    device.assert_called_once()
+    assert server.clients.closed
+    assert server.workers.closed

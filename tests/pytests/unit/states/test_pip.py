@@ -190,3 +190,49 @@ def test_already_satisfied_with_version_spec_not_reported_as_change():
     assert (
         ret["changes"] == {}
     ), "Package with version spec in satisfied message must not appear in changes"
+
+
+@pytest.mark.parametrize(
+    "requirement,package_name", [("six", "six"), ("My_Package", "my-package")]
+)
+@pytest.mark.parametrize(
+    "satisfied_message",
+    ["Requirement already satisfied", "Requirement already up-to-date"],
+)
+@pytest.mark.parametrize("installed_version", ["1.16.0", "1.17.0"])
+def test_upgrade_reports_version_change_after_already_satisfied(
+    requirement, package_name, satisfied_message, installed_version
+):
+    """An initial satisfied message must not hide a subsequent upgrade (#70774)."""
+    pip_list = MagicMock(
+        side_effect=[
+            {package_name: "1.16.0"},
+            {package_name: installed_version},
+        ]
+    )
+    stdout = f"{satisfied_message}: {requirement} in /site-packages (1.16.0)\n"
+    if installed_version != "1.16.0":
+        stdout += f"Successfully installed {package_name}-{installed_version}\n"
+    pip_install = MagicMock(return_value={"retcode": 0, "stdout": stdout})
+
+    with patch.dict(
+        pip_state.__salt__,
+        {
+            "pip.list": pip_list,
+            "pip.version": MagicMock(return_value="26.2.2"),
+            "pip.list_all_versions": MagicMock(return_value=["1.16.0", "1.17.0"]),
+            "pip.install": pip_install,
+            "pip.normalize": pip_module.normalize,
+        },
+    ):
+        ret = pip_state.installed(name=requirement, upgrade=True)
+
+    assert ret["result"] is True
+    assert ret["changes"] == (
+        {f"{package_name}=={installed_version}": "Installed"}
+        if installed_version != "1.16.0"
+        else {}
+    )
+    pip_install.assert_called_once()
+    assert pip_install.call_args.kwargs["upgrade"] is True
+    assert pip_list.call_count == 2
