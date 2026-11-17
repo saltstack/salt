@@ -1,6 +1,6 @@
 """
-Unit tests for the founder-only ``cluster_aes`` gate in the
-``cluster/peer/join-reply`` path.
+Unit tests for the founder-predicate helpers and the deprecated
+``filter_non_founder_cluster_aes_from_join_reply`` shim.
 
 Background
 ----------
@@ -12,32 +12,33 @@ founder (the lowest-id member of ``{self, *cluster_peers}``) holds
 the authoritative cluster-wide ``cluster_aes``; non-founders overwrite
 their bootstrap value when they receive the founder's join-reply.
 
-The sender-side responder to ``cluster/peer/join`` previously
-attached ``SMaster.secrets["cluster_aes"]["secret"].value`` to every
-``cluster/peer/join-reply`` regardless of founder identity.  A
-non-founder that received a ``cluster/peer/discover`` from a third
-master during its own bootstrap window would reply with its
-locally-generated bootstrap ``cluster_aes``; if that reply landed on
-the receiver AFTER the founder's reply, the receiver would overwrite
-the founder's authoritative value with the non-founder's bootstrap
-value.  In the three-master topology this produces a persistent
-``m1 != m2 == m3`` disagreement; writes from m1 then decrypt-fail on
-m2/m3.  Agent #148 traced this timeline in CI run 43983101731
-(arm64 integration-3).
-
-Fix
----
-
-Two-layer defence:
+Historical two-layer defence (commit ``6acb1653613``):
 
 1. Sender-side gate in the ``cluster/peer/join`` handler: only the
-   founder attaches ``cluster_aes`` to ``inner_payload``.
-   Tested here indirectly via ``is_designated_cluster_founder``
-   -- the guard the handler calls to decide whether to attach.
+   founder attached ``cluster_aes`` to ``inner_payload``.
 
 2. Receiver-side filter at the ``cluster/peer/join-reply`` install
-   site: ``filter_non_founder_cluster_aes_from_join_reply`` drops
-   the attached field if the sender isn't the designated founder.
+   site: ``filter_non_founder_cluster_aes_from_join_reply`` dropped
+   the attached field if the sender wasn't the designated founder.
+
+That identity-based pair permanently broke late-joiner propagation:
+once the founder died, a surviving non-founder could not deliver
+``cluster_aes`` to a brand-new master joining through it.
+
+Current design (unified cluster-key propagation primitive)
+----------------------------------------------------------
+
+The sender ships ``cluster_aes`` unconditionally; the receiver
+installs or rejects based on its own per-key bootstrap-vs-committed
+state machine with a founder-wait window during bootstrap.  Identity
+is consulted only by the receiver (to decide whether to honour the
+first-arriving install or wait for the founder's reply).
+
+``is_designated_cluster_founder`` / ``_cluster_bootstrap_founder_id``
+remain in use by the receiver's founder-wait window.
+``filter_non_founder_cluster_aes_from_join_reply`` is kept as a
+deprecated no-op shim so cross-fork integrators who pulled the
+original commit continue to build.
 """
 
 import pytest
@@ -130,15 +131,22 @@ def test_single_master_is_trivially_founder():
 
 
 # ---------------------------------------------------------------------------
-# Receiver-side filter
+# Deprecated receiver-side filter shim
 # ---------------------------------------------------------------------------
+#
+# Behaviour after deprecation: ``filter_non_founder_cluster_aes_from_join_reply``
+# unconditionally returns ``(inner, False)`` and emits a one-shot
+# DeprecationWarning-style log line per process.  The tests here lock
+# that contract so cross-fork integrators who pulled commit 6 as a
+# backport candidate get a predictable no-op.
 
 
 @pytest.fixture
 def opts_as_joiner():
     """
-    A joiner (non-founder) that expects founder ``m1`` to respond
-    with cluster_aes and rejects cluster_aes from any other peer.
+    A joiner (non-founder) that previously relied on the filter to
+    reject cluster_aes from any peer other than the designated
+    founder.  The filter is now a no-op shim.
     """
     return {
         "id": "m2",
@@ -147,10 +155,24 @@ def opts_as_joiner():
     }
 
 
-def test_receiver_accepts_cluster_aes_from_founder(opts_as_joiner):
+@pytest.fixture(autouse=True)
+def _reset_filter_deprecation_warned_flag(monkeypatch):
     """
-    Founder-sourced join-reply is accepted unchanged: filter returns
-    the input dict and ``was_filtered=False``.
+    The deprecation WARN is emitted at most once per process via a
+    module-level flag.  Reset it between tests so each test can
+    independently assert its emission (or absence).
+    """
+    import salt.channel.server as _ch
+
+    monkeypatch.setattr(_ch, "_FILTER_DEPRECATION_WARNED", False)
+    yield
+    monkeypatch.setattr(_ch, "_FILTER_DEPRECATION_WARNED", False)
+
+
+def test_filter_is_noop_for_founder_sourced_reply(opts_as_joiner):
+    """
+    Founder-sourced join-reply: the shim still returns the input
+    unchanged with ``was_filtered=False``.
     """
     inner = {
         "peer_id": "m1",  # founder
@@ -161,18 +183,18 @@ def test_receiver_accepts_cluster_aes_from_founder(opts_as_joiner):
         inner, opts_as_joiner
     )
     assert was_filtered is False
-    assert "cluster_aes" in filtered
+    assert filtered is inner
     assert filtered["cluster_aes"] == b"<founder-ciphertext>"
 
 
-def test_receiver_drops_cluster_aes_from_non_founder(opts_as_joiner):
+def test_filter_is_noop_for_non_founder_sourced_reply(opts_as_joiner):
     """
-    A non-founder's join-reply with cluster_aes is filtered: the
-    returned dict is a NEW dict (original is not mutated) with
-    ``cluster_aes`` removed, and ``was_filtered=True``.
+    Non-founder join-reply with ``cluster_aes``: the shim NO LONGER
+    drops the field (the receiver state machine gates the install
+    instead).  Return value is the original dict unchanged.
     """
     inner = {
-        "peer_id": "m3",  # NOT the founder (m1 is)
+        "peer_id": "m3",  # NOT the founder
         "cluster_aes": b"<bootstrap-ciphertext>",
         "cluster_pem": b"<pem>",
         "return_token": b"tok",
@@ -180,21 +202,16 @@ def test_receiver_drops_cluster_aes_from_non_founder(opts_as_joiner):
     filtered, was_filtered = filter_non_founder_cluster_aes_from_join_reply(
         inner, opts_as_joiner
     )
-    assert was_filtered is True
-    assert "cluster_aes" not in filtered
-    # Other fields preserved -- static per-cluster material still
-    # installed from non-founder replies.
+    assert was_filtered is False
+    # No copy, no field removed -- state machine handles it later.
+    assert filtered is inner
+    assert filtered["cluster_aes"] == b"<bootstrap-ciphertext>"
     assert filtered["cluster_pem"] == b"<pem>"
-    assert filtered["return_token"] == b"tok"
-    # Original dict not mutated -- defence against caller re-use.
-    assert "cluster_aes" in inner
 
 
-def test_receiver_passthrough_when_no_cluster_aes_present(opts_as_joiner):
+def test_filter_passthrough_when_no_cluster_aes_present(opts_as_joiner):
     """
-    A reply without ``cluster_aes`` (e.g. from a non-founder that
-    already honours the sender-side gate) passes through unmodified
-    and ``was_filtered=False``.
+    Reply without ``cluster_aes``: still a no-op.
     """
     inner = {
         "peer_id": "m3",
@@ -205,51 +222,13 @@ def test_receiver_passthrough_when_no_cluster_aes_present(opts_as_joiner):
         inner, opts_as_joiner
     )
     assert was_filtered is False
-    assert filtered is inner  # no-copy fast path
+    assert filtered is inner
 
 
-def test_receiver_drops_cluster_aes_when_sender_id_missing(opts_as_joiner):
+def test_filter_handles_non_dict_input_gracefully():
     """
-    A reply with ``cluster_aes`` but no ``peer_id`` field (malformed
-    or forged) MUST be filtered -- we cannot verify the sender is
-    the founder.
-    """
-    inner = {
-        "cluster_aes": b"<unknown-source-ciphertext>",
-    }
-    filtered, was_filtered = filter_non_founder_cluster_aes_from_join_reply(
-        inner, opts_as_joiner
-    )
-    assert was_filtered is True
-    assert "cluster_aes" not in filtered
-
-
-def test_founder_receiver_accepts_cluster_aes_from_itself_identity():
-    """
-    Edge case: a founder re-processes its own join-reply (should not
-    happen in practice -- a master doesn't send discover to itself --
-    but the filter must not corrupt the identity case).  When
-    ``peer_id`` equals the founder id, the field is kept.
-    """
-    opts = {
-        "id": "m1",
-        "cluster_id": "cluster-A",
-        "cluster_peers": ["m2", "m3"],
-    }
-    inner = {
-        "peer_id": "m1",  # founder sending to itself
-        "cluster_aes": b"<founder-ciphertext>",
-    }
-    filtered, was_filtered = filter_non_founder_cluster_aes_from_join_reply(inner, opts)
-    assert was_filtered is False
-    assert filtered["cluster_aes"] == b"<founder-ciphertext>"
-
-
-def test_receiver_filter_handles_non_dict_input_gracefully():
-    """
-    Defensive: a malformed payload (non-dict) passes through
-    unchanged.  The caller will almost certainly crash downstream
-    but the filter must not raise on its own.
+    Defensive: a malformed payload (non-dict) still passes through
+    unchanged under the shim.
     """
     opts = {
         "id": "m2",
@@ -261,3 +240,25 @@ def test_receiver_filter_handles_non_dict_input_gracefully():
     )
     assert was_filtered is False
     assert filtered == "not-a-dict"
+
+
+def test_filter_emits_one_shot_deprecation_warning(opts_as_joiner, caplog):
+    """
+    The shim emits a deprecation WARN exactly once per process on
+    first call; subsequent calls are silent.
+    """
+    import logging as _logging
+
+    caplog.set_level(_logging.WARNING, logger="salt.channel.server")
+    inner = {"peer_id": "m1", "cluster_aes": b"<x>"}
+    filter_non_founder_cluster_aes_from_join_reply(inner, opts_as_joiner)
+    filter_non_founder_cluster_aes_from_join_reply(inner, opts_as_joiner)
+    deprecation_records = [
+        r
+        for r in caplog.records
+        if "deprecated" in r.getMessage()
+        and "filter_non_founder_cluster_aes_from_join_reply" in r.getMessage()
+    ]
+    assert len(deprecation_records) == 1, (
+        "Expected the deprecation WARN exactly once; got " f"{len(deprecation_records)}"
+    )

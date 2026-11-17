@@ -172,58 +172,53 @@ def is_designated_cluster_founder(opts):
     return founder == salt.cluster.node_id(opts)
 
 
+# Guard: emit the deprecation WARN for
+# ``filter_non_founder_cluster_aes_from_join_reply`` at most once per
+# process.  The filter sits inside the hot path of every
+# ``cluster/peer/join-reply`` install; a per-call WARN would be
+# overwhelming.
+_FILTER_DEPRECATION_WARNED = False
+
+
 def filter_non_founder_cluster_aes_from_join_reply(inner, opts):
     """
-    Receiver-side filter: strip ``cluster_aes`` from a
-    ``cluster/peer/join-reply`` inner payload if the sender is not
-    the designated founder of ``opts``' cluster.
+    DEPRECATED no-op shim.
 
-    Returns ``(filtered_inner, was_filtered)``.  ``filtered_inner``
-    is either the original dict (shared reference, no copy) or a new
-    dict with ``cluster_aes`` removed.  ``was_filtered`` is ``True``
-    only when a ``cluster_aes`` field was present and dropped.
+    Historically this filter dropped ``cluster_aes`` from a
+    ``cluster/peer/join-reply`` whose sender was not the designated
+    founder, as defence-in-depth paired with a sender-side founder
+    gate (commit ``6acb1653613``).  That identity-based pair
+    permanently broke late-joiner propagation: once the founder died,
+    a surviving non-founder could no longer deliver ``cluster_aes``
+    to a brand-new master joining through it, because the sender gate
+    omitted the key and this filter would have discarded it anyway.
 
-    Defence-in-depth paired with the sender-side gate in
-    ``handle_pool_publish`` (``cluster/peer/join`` responder).  A
-    non-founder in the three-master bootstrap window can install a
-    locally-generated bootstrap ``cluster_aes`` before the founder's
-    join-reply overwrites it; if that non-founder then responds to a
-    third master's ``cluster/peer/discover`` with a join-reply that
-    carries its bootstrap value, the receiver would overwrite the
-    founder's authoritative ``cluster_aes`` and the cluster would
-    diverge.  This filter guarantees "only the founder is
-    authoritative for cluster_aes" at the install site.
+    Both gates have been superseded by the unified state-machine
+    primitive in ``salt/channel/_cluster_key_state.py`` -- the receiver
+    decides whether to honour an install based on its own
+    bootstrap-vs-committed state, with a founder-wait window during
+    bootstrap for determinism.  The sender always ships its current
+    bytes; identity is never consulted.
 
-    See Agent #148's followup-new9-not-closing-primary.md for the
-    timeline evidence (CI run 43983101731, arm64 integration-3).
+    This function is kept as a no-op shim for one release so cross-fork
+    integrators who pulled commit 6 as a backport candidate can
+    continue to build.  Callers are advised to remove the call and
+    rely on the state machine directly.
+
+    :returns: ``(inner, False)`` unconditionally -- no filtering is
+              performed.  The returned dict is the original input
+              dict (no copy) regardless of contents.
     """
-    if not isinstance(inner, dict):
-        return inner, False
-    if "cluster_aes" not in inner:
-        return inner, False
-    sender = inner.get("peer_id")
-    # ``opts["id"]`` on a master carries the ``_master`` suffix added
-    # by ``apply_master_config`` (``salt/config/__init__.py``);
-    # ``_cluster_bootstrap_founder_id`` normalises via
-    # ``salt.cluster.node_id`` which strips that suffix.  Strip the
-    # sender symmetrically so the equality check compares like with
-    # like.  Without this the founder's own join-replies carry the
-    # suffixed form and the filter drops them unconditionally.
-    sender_norm = sender.removesuffix("_master") if sender else sender
-    founder = _cluster_bootstrap_founder_id(opts)
-    if sender_norm == founder:
-        return inner, False
-    log.warning(
-        "Cluster join-reply from %s carries cluster_aes but sender is "
-        "not the designated founder (founder=%s); dropping the attached "
-        "cluster_aes -- only the founder is authoritative for the "
-        "cluster session key",
-        sender,
-        founder,
-    )
-    filtered = dict(inner)
-    filtered.pop("cluster_aes", None)
-    return filtered, True
+    global _FILTER_DEPRECATION_WARNED
+    if not _FILTER_DEPRECATION_WARNED:
+        _FILTER_DEPRECATION_WARNED = True
+        log.warning(
+            "filter_non_founder_cluster_aes_from_join_reply is deprecated "
+            "and now a no-op; the receiver-side cluster-key state machine "
+            "supersedes identity-based filtering.  This warning is emitted "
+            "once per process; the call site should be removed."
+        )
+    return inner, False
 
 
 class ReqServerChannel:
@@ -5190,28 +5185,21 @@ class MasterPubServerChannel:
                     token_bytes + cluster_key_session.encode(),
                     algorithm=self.opts["cluster_encryption_algorithm"],
                 )
-                # Founder-only ``cluster_aes`` attach: only the master
-                # with the lowest id in the bootstrap pool (the
-                # designated founder; see the matching predicate at
-                # ``_publish_daemon`` where new nodes decide whether to
-                # bootstrap or wait for a join-reply) is authoritative
-                # for the cluster's shared cluster_aes.  A non-founder
-                # that happens to receive a ``cluster/peer/discover``
-                # from a third master during its own bootstrap window
-                # has installed its locally-generated random
-                # ``cluster_aes`` but has NOT yet overwritten it with
-                # the founder's; if it ships that bootstrap value in a
-                # ``cluster/peer/join-reply`` it will race the
-                # founder's join-reply on the receiver and, when the
-                # non-founder's reply lands later, overwrite the
-                # founder's cluster_aes with a bootstrap value --
-                # producing the three-way ``cluster_aes`` disagreement
-                # seen in Agent #148's diagnosis (CI run 43983101731,
-                # arm64 integration-3).  Non-founders therefore omit
-                # the key from the inner payload; they still ship
-                # ``cluster_pem``/``cluster_pub`` (static per-cluster)
-                # and the receiver tolerates a missing ``cluster_aes``
-                # (installed from the founder's reply instead).
+                # Unconditional ``cluster_aes`` attach: the sender
+                # always ships its current cluster session key.  The
+                # founder-only sender gate historically introduced in
+                # commit ``6acb1653613`` is superseded by the receiver-
+                # side state machine (see
+                # ``_cluster_key_state.install_cluster_key``) -- the
+                # receiver's bootstrap-vs-committed state decides
+                # whether to honour an install, with a founder-wait
+                # window during bootstrap for determinism.  Keeping the
+                # sender unconditional lets a surviving non-founder
+                # deliver ``cluster_aes`` to a brand-new master that
+                # joins after the founder has died (I-2 regression
+                # scenario).  ``is_designated_cluster_founder`` is kept
+                # (consulted by the receiver for its founder-wait
+                # window) but is no longer a sender gate.
                 inner_payload = {
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
@@ -5222,21 +5210,12 @@ class MasterPubServerChannel:
                     "cluster_key_session": wrapped_session,
                     "cluster_pem": cluster_pem_ciphertext,
                     "cluster_pub": cluster_pub_pem,
-                    "peers": {},
-                }
-                if is_designated_cluster_founder(self.opts):
-                    inner_payload["cluster_aes"] = joiner_pub.encrypt(
+                    "cluster_aes": joiner_pub.encrypt(
                         token_bytes + cluster_aes_secret,
                         algorithm=self.opts["cluster_encryption_algorithm"],
-                    )
-                else:
-                    log.info(
-                        "Cluster join-reply to %s: omitting cluster_aes "
-                        "(this master is not the designated founder; "
-                        "founder=%s)",
-                        payload["peer_id"],
-                        _cluster_bootstrap_founder_id(self.opts),
-                    )
+                    ),
+                    "peers": {},
+                }
                 # Isolated-FS bulk state sync: announce a session id in the
                 # join-reply, then push the per-channel chunks separately.
                 # The joiner waits on all four channel eofs before becoming
