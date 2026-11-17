@@ -28,6 +28,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 import salt.cache
+import salt.channel._cluster_key_state as _cluster_key_state
 import salt.cluster
 import salt.cluster.consensus.rpc
 import salt.crypt
@@ -1953,6 +1954,13 @@ class MasterPubServerChannel:
         self._discover_retry_pc = None
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
+        # Receiver-side cluster-key state machine (BOOTSTRAP vs COMMITTED
+        # per key, per process).  Lazily reconciled with on-disk
+        # sentinels + key bytes in ``_cluster_key_state_machine``.
+        # Only instantiated when the master is actually clustered --
+        # non-clustered masters never traverse the join-reply install
+        # path and don't need the extra bookkeeping.
+        self._cluster_key_sm = None
 
     def _start_raft_as_founding_voter(self):
         """
@@ -4447,6 +4455,50 @@ class MasterPubServerChannel:
         if path.exists():
             return path.read_text(encoding="utf-8")
 
+    def _cluster_key_state_machine(self):
+        """
+        Return the lazy-initialised
+        :class:`salt.channel._cluster_key_state.ClusterKeyStateMachine`
+        for this master process.
+
+        On first call the machine is reconciled against the on-disk
+        sentinels + current key bytes: if a sentinel is present and
+        its fingerprint matches disk, the key starts COMMITTED;
+        otherwise BOOTSTRAP (reviewer T-2: the mismatch case deletes
+        the stale sentinel so the next join-reply install re-commits).
+        """
+        # Use getattr with a default so instances built via
+        # ``__new__`` in tests (which skip __init__) still work.
+        existing = getattr(self, "_cluster_key_sm", None)
+        if existing is not None:
+            return existing
+        cluster_pki_dir = self.opts.get("cluster_pki_dir")
+        if not cluster_pki_dir:
+            # Not a clustered master; no sentinel scope.  Caller
+            # should check ``is not None`` before using.
+            return None
+        sm = _cluster_key_state.ClusterKeyStateMachine(self.opts, cluster_pki_dir)
+        # Reconcile cluster_aes.
+        aes_path = pathlib.Path(cluster_pki_dir) / ".aes"
+        aes_bytes = None
+        if aes_path.is_file():
+            try:
+                aes_bytes = aes_path.read_bytes()
+            except OSError:
+                aes_bytes = None
+        sm.load_from_disk("cluster_aes", aes_bytes)
+        # Reconcile cluster.pem (cluster RSA private).
+        pem_path = pathlib.Path(cluster_pki_dir) / "cluster.pem"
+        pem_bytes = None
+        if pem_path.is_file():
+            try:
+                pem_bytes = pem_path.read_bytes()
+            except OSError:
+                pem_bytes = None
+        sm.load_from_disk("cluster_pem", pem_bytes)
+        self._cluster_key_sm = sm
+        return sm
+
     def pusher(self, peer, port=None):
         if port is None:
             port = self.tcp_master_pool_port
@@ -4808,21 +4860,30 @@ class MasterPubServerChannel:
                 token = self._discover_token or ""
                 if isinstance(token, str):
                     token = token.encode()
-                # Founder-only acceptance: only install cluster_aes if
-                # the sender is the designated founder of OUR
-                # configured cluster.  Defence-in-depth against a
-                # non-founder peer that mistakenly ships its own
-                # ``cluster_aes`` in a ``cluster/peer/join-reply``;
-                # see Agent #148's followup-new9-not-closing-primary.md
-                # for the timeline evidence (CI run 43983101731).
-                # The sender-side gate already omits ``cluster_aes``
-                # from non-founder replies; this receiver gate
-                # survives a mis-configured or older peer that
-                # disagrees on founder identity.
+                # Shim call left in place for cross-fork integrators
+                # who cherry-picked commit 6; deprecated no-op (see
+                # ``filter_non_founder_cluster_aes_from_join_reply``
+                # docstring).  The state machine below supersedes the
+                # identity filter.
                 inner, _ = filter_non_founder_cluster_aes_from_join_reply(
                     inner, self.opts
                 )
-                if "cluster_aes" in inner:
+                # Receiver-side state machine (unified cluster-key
+                # propagation primitive).  BOOTSTRAP accepts the first
+                # install (with founder-wait bias for non-founders);
+                # COMMITTED no-ops on equal arrivals and rejects
+                # divergent arrivals with a WARN.  See
+                # ``salt/channel/_cluster_key_state.py``.
+                sm = self._cluster_key_state_machine()
+                sender_peer_id = inner.get("peer_id")
+                founder_id = _cluster_bootstrap_founder_id(self.opts)
+                sender_norm = (
+                    sender_peer_id.removesuffix("_master")
+                    if isinstance(sender_peer_id, str)
+                    else sender_peer_id
+                )
+                sender_is_founder = founder_id is not None and sender_norm == founder_id
+                if "cluster_aes" in inner and sm is not None:
                     try:
                         salted = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
@@ -4831,68 +4892,110 @@ class MasterPubServerChannel:
                             algorithm=self.opts["cluster_encryption_algorithm"],
                         )
                         new_cluster_aes = salted[len(token) :]
-                        prev_cluster_aes = salt.master.SMaster.secrets["cluster_aes"][
-                            "secret"
-                        ].value
-                        try:
-                            import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
-
-                            new_fp = _crep_fp.secret_fingerprint(new_cluster_aes)
-                            prev_fp = _crep_fp.secret_fingerprint(prev_cluster_aes)
-                            log.info(
-                                "Installing cluster_aes from founder %s: "
-                                "prev_fp=%s new_fp=%s",
-                                inner.get("peer_id"),
-                                prev_fp,
-                                new_fp,
-                            )
-                        except Exception:  # pylint: disable=broad-except
-                            pass
-                        with salt.master.SMaster.secrets["cluster_aes"][
-                            "secret"
-                        ].get_lock():
-                            salt.master.SMaster.secrets["cluster_aes"][
-                                "secret"
-                            ].value = new_cluster_aes
-                        # Persist locally so the joiner survives restart
-                        # without re-running the join handshake.
-                        aes_path = pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
-                        aes_path.parent.mkdir(parents=True, exist_ok=True)
-                        with salt.utils.files.set_umask(0o177):
-                            with salt.utils.files.fopen(aes_path, "wb") as fp:
-                                fp.write(new_cluster_aes)
-                        log.info(
-                            "Installed cluster_aes from join-reply (%d bytes)",
-                            len(new_cluster_aes),
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "cluster_aes join-reply decrypt failed; skipping install"
                         )
-                        # A (re)joining master boots with a randomly
-                        # generated local ``cluster_aes`` (own ``.aes``
-                        # file).  Any writes fired between startup and
-                        # this install were queued pre-encrypted with
-                        # that fresh key; peers only know the cluster's
-                        # actual ``cluster_aes`` and cannot decrypt
-                        # those bytes.  Drop the pending queues on every
-                        # key *change* so no replay silently loses on
-                        # the receiver side.  See reviewer I-1 in
-                        # ``followup-bootstrap-race-reviewer.md``.
-                        if prev_cluster_aes != new_cluster_aes:
+                        new_cluster_aes = None
+                    if new_cluster_aes is not None:
+                        decision = sm.decide(
+                            "cluster_aes",
+                            new_cluster_aes,
+                            sender_peer_id=sender_peer_id,
+                            is_founder=sender_is_founder,
+                        )
+                        if decision == "install":
                             try:
-                                import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+                                prev_cluster_aes = salt.master.SMaster.secrets[
+                                    "cluster_aes"
+                                ]["secret"].value
+                                try:
+                                    import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
 
-                                _crep.drop_all_pending(
-                                    reason="cluster_aes install from join-reply"
+                                    new_fp = _crep_fp.secret_fingerprint(
+                                        new_cluster_aes
+                                    )
+                                    prev_fp = _crep_fp.secret_fingerprint(
+                                        prev_cluster_aes
+                                    )
+                                    log.info(
+                                        "Installing cluster_aes from %s: "
+                                        "prev_fp=%s new_fp=%s",
+                                        sender_peer_id,
+                                        prev_fp,
+                                        new_fp,
+                                    )
+                                except Exception:  # pylint: disable=broad-except
+                                    pass
+                                with salt.master.SMaster.secrets["cluster_aes"][
+                                    "secret"
+                                ].get_lock():
+                                    salt.master.SMaster.secrets["cluster_aes"][
+                                        "secret"
+                                    ].value = new_cluster_aes
+                                # Persist locally so the joiner survives restart
+                                # without re-running the join handshake.
+                                aes_path = (
+                                    pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
                                 )
+                                aes_path.parent.mkdir(parents=True, exist_ok=True)
+                                with salt.utils.files.set_umask(0o177):
+                                    with salt.utils.files.fopen(aes_path, "wb") as fp:
+                                        fp.write(new_cluster_aes)
+                                transition = sm.mark_committed(
+                                    "cluster_aes", new_cluster_aes
+                                )
+                                log.info(
+                                    "Installed cluster_aes from join-reply "
+                                    "(%d bytes, transition=%s)",
+                                    len(new_cluster_aes),
+                                    transition,
+                                )
+                                # A (re)joining master boots with a randomly
+                                # generated local ``cluster_aes`` (own ``.aes``
+                                # file).  Any writes fired between startup and
+                                # this install were queued pre-encrypted with
+                                # that fresh key; peers only know the cluster's
+                                # actual ``cluster_aes`` and cannot decrypt
+                                # those bytes.  Drop the pending queues on the
+                                # BOOTSTRAP->COMMITTED transition OR whenever
+                                # the bytes actually change so no replay
+                                # silently loses on the receiver side.
+                                # See reviewer I-1 in
+                                # ``followup-bootstrap-race-reviewer.md``.
+                                if transition or prev_cluster_aes != new_cluster_aes:
+                                    try:
+                                        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+                                        _crep.drop_all_pending(
+                                            reason=(
+                                                "cluster_aes install from " "join-reply"
+                                            )
+                                        )
+                                    except Exception:  # pylint: disable=broad-except
+                                        log.exception(
+                                            "cluster-cache-replication: failed "
+                                            "to drop pending queues after "
+                                            "join-reply install"
+                                        )
                             except Exception:  # pylint: disable=broad-except
                                 log.exception(
-                                    "cluster-cache-replication: failed to drop "
-                                    "pending queues after join-reply install"
+                                    "Failed to install cluster_aes from join-reply"
                                 )
-                    except Exception:  # pylint: disable=broad-except
-                        log.exception("Failed to install cluster_aes from join-reply")
                 # Install the cluster RSA key pair (private + public) from
                 # the wire so a joiner without shared ``cluster_pki_dir``
-                # can sign cluster events and serve discover-reply.
-                if "cluster_key_session" in inner and "cluster_pem" in inner:
+                # can sign cluster events and serve discover-reply.  Same
+                # unified state machine as cluster_aes: BOOTSTRAP accepts,
+                # COMMITTED equal is a no-op, COMMITTED mismatch WARNs
+                # and skips (critical -- unlinking cluster.pem +
+                # reassigning ``master_key.key`` on a divergent arrival
+                # is the NEW-11 bug that invalidates every cached minion
+                # mpub mid-flight).
+                if (
+                    "cluster_key_session" in inner
+                    and "cluster_pem" in inner
+                    and sm is not None
+                ):
                     try:
                         salted_session = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
@@ -4905,74 +5008,96 @@ class MasterPubServerChannel:
                             self.opts, session_key_str
                         )
                         pem_bytes = cluster_key_crypt.decrypt(inner["cluster_pem"])
-                        pub_pem = inner.get("cluster_pub") or ""
-                        if isinstance(pub_pem, bytes):
-                            pub_pem = pub_pem.decode()
-                        cluster_pki = pathlib.Path(self.opts["cluster_pki_dir"])
-                        cluster_pki.mkdir(parents=True, exist_ok=True)
-                        # ``find_or_create_keys`` may have already written a
-                        # locally-generated cluster.pem at mode 0400; unlink
-                        # before writing so the wire-delivered version wins.
-                        pem_path = cluster_pki / "cluster.pem"
-                        pub_path = cluster_pki / "cluster.pub"
-                        for p in (pem_path, pub_path):
-                            try:
-                                p.unlink()
-                            except FileNotFoundError:
-                                pass
-                        with salt.utils.files.set_umask(0o277):
-                            with salt.utils.files.fopen(pem_path, "wb") as fp:
-                                fp.write(pem_bytes)
-                        if pub_pem:
-                            with salt.utils.files.fopen(pub_path, "w") as fp:
-                                fp.write(pub_pem)
-                        # Refresh the key cache so subsequent
-                        # ``MasterKeys.get_pub_str()`` / ``find_or_create_keys``
-                        # lookups see the wire-delivered cluster keypair
-                        # rather than the stale locally-generated bytes that
-                        # ``_setup_keys`` stored during startup. Without this
-                        # the mmap_key driver's per-master index still points
-                        # at the joiner's own cluster.pub, so under HAProxy
-                        # (or any load-balancer) the minion sees a different
-                        # cluster.pub from each backend and hits
-                        # "Invalid master key" on its second sign-in.
-                        # See https://github.com/saltstack/salt/issues/70090
-                        try:
-                            self.master_key.cache.store(
-                                "master_keys", "cluster.pem", pem_bytes
-                            )
-                            if pub_pem:
-                                self.master_key.cache.store(
-                                    "master_keys",
-                                    "cluster.pub",
-                                    salt.utils.stringutils.to_bytes(pub_pem),
-                                )
-                        except Exception:  # pylint: disable=broad-except
-                            log.exception(
-                                "Failed to refresh cluster keypair in cache "
-                                "after join-reply install"
-                            )
-                        # Reload the in-memory PrivateKey so the running
-                        # master process signs and decrypts with the shared
-                        # cluster identity from this event onward.
-                        try:
-                            self.master_key.cluster_key = (
-                                salt.crypt.PrivateKey.from_str(pem_bytes)
-                            )
-                            self.master_key.key = self.master_key.cluster_key
-                        except Exception:  # pylint: disable=broad-except
-                            log.exception(
-                                "Failed to reload cluster_key from "
-                                "join-reply-delivered PEM"
-                            )
-                        log.info(
-                            "Installed cluster.pem (%d bytes) and cluster.pub from join-reply",
-                            len(pem_bytes),
-                        )
                     except Exception:  # pylint: disable=broad-except
                         log.exception(
-                            "Failed to install cluster RSA key pair from join-reply"
+                            "cluster.pem join-reply decrypt failed; skipping install"
                         )
+                        pem_bytes = None
+                    if pem_bytes is not None:
+                        decision = sm.decide(
+                            "cluster_pem",
+                            pem_bytes,
+                            sender_peer_id=sender_peer_id,
+                            is_founder=sender_is_founder,
+                        )
+                        if decision == "install":
+                            try:
+                                pub_pem = inner.get("cluster_pub") or ""
+                                if isinstance(pub_pem, bytes):
+                                    pub_pem = pub_pem.decode()
+                                cluster_pki = pathlib.Path(self.opts["cluster_pki_dir"])
+                                cluster_pki.mkdir(parents=True, exist_ok=True)
+                                # ``find_or_create_keys`` may have already written
+                                # a locally-generated cluster.pem at mode 0400;
+                                # unlink before writing so the wire-delivered
+                                # version wins.
+                                pem_path = cluster_pki / "cluster.pem"
+                                pub_path = cluster_pki / "cluster.pub"
+                                for p in (pem_path, pub_path):
+                                    try:
+                                        p.unlink()
+                                    except FileNotFoundError:
+                                        pass
+                                with salt.utils.files.set_umask(0o277):
+                                    with salt.utils.files.fopen(pem_path, "wb") as fp:
+                                        fp.write(pem_bytes)
+                                if pub_pem:
+                                    with salt.utils.files.fopen(pub_path, "w") as fp:
+                                        fp.write(pub_pem)
+                                # Refresh the key cache so subsequent
+                                # ``MasterKeys.get_pub_str()`` /
+                                # ``find_or_create_keys`` lookups see the
+                                # wire-delivered cluster keypair rather than
+                                # the stale locally-generated bytes that
+                                # ``_setup_keys`` stored during startup.
+                                # Without this the mmap_key driver's
+                                # per-master index still points at the
+                                # joiner's own cluster.pub, so under HAProxy
+                                # (or any load-balancer) the minion sees a
+                                # different cluster.pub from each backend and
+                                # hits "Invalid master key" on its second
+                                # sign-in.
+                                # See https://github.com/saltstack/salt/issues/70090
+                                try:
+                                    self.master_key.cache.store(
+                                        "master_keys", "cluster.pem", pem_bytes
+                                    )
+                                    if pub_pem:
+                                        self.master_key.cache.store(
+                                            "master_keys",
+                                            "cluster.pub",
+                                            salt.utils.stringutils.to_bytes(pub_pem),
+                                        )
+                                except Exception:  # pylint: disable=broad-except
+                                    log.exception(
+                                        "Failed to refresh cluster keypair in "
+                                        "cache after join-reply install"
+                                    )
+                                # Reload the in-memory PrivateKey so the
+                                # running master process signs and decrypts
+                                # with the shared cluster identity from this
+                                # event onward.
+                                try:
+                                    self.master_key.cluster_key = (
+                                        salt.crypt.PrivateKey.from_str(pem_bytes)
+                                    )
+                                    self.master_key.key = self.master_key.cluster_key
+                                except Exception:  # pylint: disable=broad-except
+                                    log.exception(
+                                        "Failed to reload cluster_key from "
+                                        "join-reply-delivered PEM"
+                                    )
+                                sm.mark_committed("cluster_pem", pem_bytes)
+                                log.info(
+                                    "Installed cluster.pem (%d bytes) and "
+                                    "cluster.pub from join-reply",
+                                    len(pem_bytes),
+                                )
+                            except Exception:  # pylint: disable=broad-except
+                                log.exception(
+                                    "Failed to install cluster RSA key pair "
+                                    "from join-reply"
+                                )
                 event = self._discover_event
                 self._discover_event = None
                 # Write the join sentinel so future restarts skip discover/join.
