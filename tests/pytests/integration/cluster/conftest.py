@@ -586,6 +586,39 @@ def cluster_master_3_isolated(
         yield factory
 
 
+def _build_cluster_master_4_isolated_factory(
+    salt_factories,
+    cluster_master_1_isolated,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    """Build (but do not start) the 4th isolated-FS master's factory."""
+    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
+        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.4", "up"])
+    config_defaults = {
+        "open_mode": True,
+        "transport": cluster_master_1_isolated.config["transport"],
+    }
+    config_overrides = _isolated_master_overrides(
+        "127.0.0.4",
+        ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
+    for key in ("ret_port", "publish_port"):
+        config_overrides[key] = cluster_master_1_isolated.config[key]
+    return salt_factories.salt_master_daemon(
+        "127.0.0.4",
+        defaults=config_defaults,
+        overrides=config_overrides,
+        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
+    )
+
+
 @pytest.fixture
 def cluster_master_4_isolated(
     salt_factories,
@@ -603,30 +636,45 @@ def cluster_master_4_isolated(
     minion keys (and any other state delivered in join-reply) to a master
     that handshakes after the cluster is already running.
     """
-    if salt.utils.platform.is_darwin() or salt.utils.platform.is_freebsd():
-        subprocess.check_output(["ifconfig", "lo0", "alias", "127.0.0.4", "up"])
-    config_defaults = {
-        "open_mode": True,
-        "transport": cluster_master_1_isolated.config["transport"],
-    }
-    config_overrides = _isolated_master_overrides(
-        "127.0.0.4",
-        ["127.0.0.1", "127.0.0.2", "127.0.0.3"],
+    factory = _build_cluster_master_4_isolated_factory(
+        salt_factories,
+        cluster_master_1_isolated,
         cluster_pki_path_isolated,
         cluster_cache_path_isolated,
         cluster_file_roots_path_isolated,
         cluster_pillar_roots_path_isolated,
     )
-    for key in ("ret_port", "publish_port"):
-        config_overrides[key] = cluster_master_1_isolated.config[key]
-    factory = salt_factories.salt_master_daemon(
-        "127.0.0.4",
-        defaults=config_defaults,
-        overrides=config_overrides,
-        extra_cli_arguments_after_first_start_failure=["--log-level=info"],
-    )
     with factory.started(start_timeout=120):
         yield factory
+
+
+@pytest.fixture
+def cluster_master_4_isolated_factory(
+    salt_factories,
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+    cluster_pki_path_isolated,
+    cluster_cache_path_isolated,
+    cluster_file_roots_path_isolated,
+    cluster_pillar_roots_path_isolated,
+):
+    """
+    A 4th, late-joining master factory under the isolated-FS fixture set
+    that is NOT auto-started by the fixture.  The test body wraps
+    ``factory.started(...)`` after any preconditions (e.g. founder kill)
+    are set up, so D's handshake observes the exact cluster topology the
+    test cares about.  See ``test_late_joiner_through_non_founder_...``
+    for the founder-dead variant.
+    """
+    yield _build_cluster_master_4_isolated_factory(
+        salt_factories,
+        cluster_master_1_isolated,
+        cluster_pki_path_isolated,
+        cluster_cache_path_isolated,
+        cluster_file_roots_path_isolated,
+        cluster_pillar_roots_path_isolated,
+    )
 
 
 @pytest.fixture
