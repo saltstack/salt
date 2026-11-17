@@ -7,12 +7,43 @@ import os
 import time
 
 import salt.utils.beacons
+from salt._logging import LOG_LEVELS
 
 log = logging.getLogger(__name__)
 
 LAST_STATUS = {}
 
 __virtualname__ = "service"
+
+
+def _service_status(service, output_loglevel=None):
+    """
+    Check the service status. When ``output_loglevel`` is configured it is
+    passed to ``service.status`` so the logging of the executed commands can
+    be tuned. Not every ``service`` module accepts ``output_loglevel``, so
+    fall back to a plain call for those.
+    """
+    if output_loglevel is None:
+        return __salt__["service.status"](service)
+    try:
+        return __salt__["service.status"](service, output_loglevel=output_loglevel)
+    except TypeError:
+        return __salt__["service.status"](service)
+
+
+def _check_loglevel(loglevel):
+    """
+    Return an error message if ``loglevel`` is not valid, otherwise None
+    """
+    if loglevel is None:
+        return None
+    if isinstance(loglevel, str) and (
+        loglevel.lower() == "quiet" or loglevel.lower() in LOG_LEVELS
+    ):
+        return None
+    return "output_loglevel for service beacon must be 'quiet' or one of: {}.".format(
+        ", ".join(sorted(LOG_LEVELS))
+    )
 
 
 def validate(config):
@@ -41,6 +72,14 @@ def validate(config):
                         "Configuration for service beacon must "
                         "be a list of dictionaries.",
                     )
+                err = _check_loglevel(
+                    config["services"][config_item].get("output_loglevel")
+                )
+                if err:
+                    return False, err
+            err = _check_loglevel(config.get("output_loglevel"))
+            if err:
+                return False, err
 
     return True, "Valid beacon configuration"
 
@@ -82,6 +121,32 @@ def beacon(config):
     `is_running_state` is set to `False`, the beacon will fire only when the
     service is not running.
 
+    `output_loglevel`: the log level used for the commands the beacon runs to
+    check the service status (for example ``systemctl is-active``). By default
+    the commands are logged at ``info`` level, as for any other ``cmd`` call.
+    Set it to ``quiet`` to suppress the "Executing command" messages, which is
+    useful when the beacon runs at a short interval. It can be set for a single
+    service, or for all services at the top level of the beacon configuration;
+    a per-service value overrides the top-level one. Only ``service`` modules
+    that accept ``output_loglevel`` (currently ``systemd``) honour this option;
+    it is ignored by the others.
+
+    .. code-block:: yaml
+
+        beacons:
+          service:
+            - services:
+                sshd:
+                  onchangeonly: True
+                sssd: {}
+                zabbix-agent2:
+                  output_loglevel: info
+            - output_loglevel: quiet
+            - interval: 1
+
+    In the example above ``sshd`` and ``sssd`` are checked quietly, while
+    ``zabbix-agent2`` keeps logging at ``info``.
+
     `uncleanshutdown`: If `uncleanshutdown` is present it should point to the
     location of a pid file for the service.  Most services will not clean up
     this pid file if they are shutdown uncleanly (e.g. via `kill -9`) or if they
@@ -119,8 +184,15 @@ def beacon(config):
         ret_dict = {}
 
         service_config = config["services"][service]
+        if not service_config:
+            service_config = {}
 
-        ret_dict[service] = {"running": __salt__["service.status"](service)}
+        ret_dict[service] = {
+            "running": _service_status(
+                service,
+                service_config.get("output_loglevel", config.get("output_loglevel")),
+            )
+        }
         ret_dict["service_name"] = service
         ret_dict["tag"] = service
         currtime = time.time()

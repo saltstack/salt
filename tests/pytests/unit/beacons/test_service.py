@@ -4,7 +4,7 @@ import pytest
 
 # Salt libs
 import salt.beacons.service as service_beacon
-from tests.support.mock import MagicMock, patch
+from tests.support.mock import MagicMock, call, patch
 
 
 @pytest.fixture
@@ -229,3 +229,70 @@ def test_service_matching_is_running_state():
                 "salt-master": {"running": False},
             }
         ]
+
+
+def test_service_status_default_loglevel_unchanged():
+    """
+    Without output_loglevel configured service.status is called as before
+    """
+    mock = MagicMock(return_value=True)
+    with patch.dict(service_beacon.__salt__, {"service.status": mock}):
+        config = [{"services": {"salt-master": {}}}]
+        service_beacon.beacon(config)
+    mock.assert_called_once_with("salt-master")
+
+
+def test_service_status_configured_loglevel():
+    mock = MagicMock(return_value=True)
+    with patch.dict(service_beacon.__salt__, {"service.status": mock}):
+        config = [{"services": {"salt-master": {"output_loglevel": "quiet"}}}]
+        service_beacon.beacon(config)
+    mock.assert_called_once_with("salt-master", output_loglevel="quiet")
+
+
+def test_service_status_falls_back_without_output_loglevel():
+    def status(name, sig=None):
+        return True
+
+    mock = MagicMock(side_effect=status)
+    with patch.dict(service_beacon.__salt__, {"service.status": mock}):
+        config = [{"services": {"salt-master": {"output_loglevel": "quiet"}}}]
+        ret = service_beacon.beacon(config)
+    assert ret[0]["salt-master"]["running"] is True
+
+
+@pytest.mark.parametrize("level", ["quiet", "debug", "INFO", "warning"])
+def test_validate_output_loglevel_valid(level):
+    config = [{"services": {"sshd": {"output_loglevel": level}}}]
+    assert service_beacon.validate(config)[0] is True
+
+
+@pytest.mark.parametrize("level", ["loud", 5, ["debug"]])
+def test_validate_output_loglevel_invalid(level):
+    config = [{"services": {"sshd": {"output_loglevel": level}}}]
+    ret = service_beacon.validate(config)
+    assert ret[0] is False
+    assert "output_loglevel" in ret[1]
+
+
+def test_service_status_beacon_wide_loglevel():
+    mock = MagicMock(return_value=True)
+    with patch.dict(service_beacon.__salt__, {"service.status": mock}):
+        config = [
+            {"services": {"a": {}, "b": {"output_loglevel": "info"}}},
+            {"output_loglevel": "quiet"},
+        ]
+        service_beacon.beacon(config)
+    assert mock.call_args_list == [
+        call("a", output_loglevel="quiet"),
+        call("b", output_loglevel="info"),
+    ]
+
+
+def test_validate_beacon_wide_output_loglevel():
+    good = [{"services": {"sshd": {}}}, {"output_loglevel": "quiet"}]
+    bad = [{"services": {"sshd": {}}}, {"output_loglevel": "loud"}]
+    assert service_beacon.validate(good)[0] is True
+    ret = service_beacon.validate(bad)
+    assert ret[0] is False
+    assert "output_loglevel" in ret[1]
