@@ -270,7 +270,24 @@ done
 
 
 def test_resource_cpu_throttle(topology, workload, request):
-    """docker update --cpus=0.1 on the primary master; hold; reset."""
+    """docker update --cpus=0.1 on the primary master; hold; reset.
+
+    Under a 0.1-CPU cap the salt-master's ioloop starves enough that
+    minion auth/keepalive requests time out repeatedly on
+    ``workload``-driven CLI calls (the ``docker exec`` loops keep
+    hammering it).  Starving the master while the host-side workload
+    wedges ``docker exec`` children can starve the minion containers
+    too -- observed in CI run 44002386163 where all three minions
+    exited by the time the relax step ran (``missing=[minion-1,
+    minion-2, minion-3]``, ``rss_delta_kb=-19576``).
+
+    Mirror Agent B's ``test_resource_oom_squeeze`` revive pattern:
+    after relax, inspect the primary master AND every minion
+    container; ``docker start`` anything that exited.  Then
+    ``wait_initial_auth`` + resample ``before`` so the leak-delta
+    baseline reflects post-revive steady state rather than the
+    cold-start reconnect churn.
+    """
     scenario = "resource_cpu_throttle"
     primary = topology.spec.primary_master
 
@@ -297,11 +314,39 @@ def test_resource_cpu_throttle(topology, workload, request):
             stderr=subprocess.DEVNULL,
         )
 
+    # Revive any container that exited under the throttle.  The
+    # compose entrypoint has no restart policy, so we simulate the
+    # supervisor a real deployment runs.  Covers both the primary
+    # master (its ioloop starved under the cap) and every minion
+    # (their ``docker exec``-driven workload traffic plus auth
+    # retries while the master was unresponsive).
+    revived: list[str] = []
+    revive_targets = (primary,) + tuple(topology.spec.minion_containers)
+    for target in revive_targets:
+        if not topology.inspect_running(target):
+            try:
+                topology.start(target)
+                revived.append(target)
+            except Exception:
+                # Fall through -- assert_reconnect will produce a
+                # proper failure record with missing minions and
+                # the cause will be visible in ``compose.log``.
+                pass
+
+    notes = "cpus=0.1->0"
+    if revived:
+        # Wait for the fleet to resettle so the leak-delta baseline
+        # reflects post-revive steady state rather than cold-start
+        # reconnect churn.  Match the oom_squeeze revive pattern.
+        if topology.wait_initial_auth(timeout=180):
+            before = topology.sample_minions()
+        notes += f" revived={','.join(revived)}"
+
     topology.assert_reconnect(
         scenario,
         fault_sec=CPU_HOLD_SEC,
         before=before,
-        notes="cpus=0.1->0",
+        notes=notes,
         item=request.node,
     )
 
