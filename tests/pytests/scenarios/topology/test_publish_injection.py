@@ -174,18 +174,40 @@ def clean_link_manager(monkeypatch):
 
 class _CapturingRouter:
     """
-    Router stub that would unconditionally request a local publish on
-    ``forward_publish``.  The test's assertion target is that this
-    router is never consulted and -- as a stronger guard --
-    :func:`_publish_to_local_minions` is never invoked.
+    Router stub that captures every dispatch sink the wire-level
+    ``_handle_inbound_channel`` could reach: ``forward_publish`` for
+    ``topology/pub``, ``route_return`` / ``route_event`` /
+    ``ingest_summary`` for the three side channels.  Tests assert on
+    the appropriate ``*_calls`` attribute depending on which tag they
+    simulate.  Return values mirror :class:`_FakeRouter` in the
+    functional test module so dispatchers that chain on the return
+    don't crash the chain being measured.
     """
 
     def __init__(self):
         self.forward_publish_calls = []
+        self.route_return_calls = []
+        self.route_event_calls = []
+        self.ingest_summary_calls = []
 
     def forward_publish(self, load, inbound_link):
         self.forward_publish_calls.append((load, inbound_link))
         return [], True  # (links, local_match=True)
+
+    def route_return(self, ret):
+        self.route_return_calls.append(ret)
+        return None
+
+    def route_event(self, event):
+        self.route_event_calls.append(event)
+        return None
+
+    async def ingest_summary(self, summary, inbound_link):
+        # ``_dispatch_sum`` wraps the call with ``asyncio.ensure_future``;
+        # provide an awaitable so the chain doesn't raise before the
+        # call site registers in ``ingest_summary_calls``.
+        self.ingest_summary_calls.append((summary, inbound_link))
+        return None
 
 
 def test_wire_envelope_forged_pub_blocked(
@@ -362,6 +384,224 @@ def test_wire_envelope_forged_pub_does_not_pollute_inbound(
         if inbound is not None:
             assert getattr(inbound, "session_generation", None) != 919191, (
                 "wire-level forged frame installed attacker-chosen "
+                "session_generation in _INBOUND -- subsequent replays "
+                "with the same gen would pass _verify_session"
+            )
+    finally:
+        try:
+            if channel is not None:
+                channel.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            loop.run_until_complete(link_manager.stop())
+        except Exception:  # pylint: disable=broad-except
+            pass
+        loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Side-channel wire-level coverage
+# ---------------------------------------------------------------------------
+#
+# The two tests above pin the wire-level invariant for ``topology/pub``.
+# These three (two parameterized tests × three tags) extend the same
+# coverage to the ret/evt/sum side channels so a future fix that
+# regresses only one tag is caught at the wire layer, not just at the
+# unit/functional dispatcher layer.  Mirrors the pub tests exactly:
+# real ``ReqServerChannel.handle_message``, ``minimum_auth_version=0``,
+# attacker-chosen ``session_generation``.
+
+_SIDE_CHANNEL_CASES = [
+    # ``topology/ret`` -- fake minion returns from an un-handshaked
+    # peer.  Observable sink: ``router.route_return`` fires with the
+    # attacker's return body.
+    (
+        "topology/ret",
+        {
+            "batch": [
+                {
+                    "jid": "20260101000000000030",
+                    "id": "web-01",
+                    "return": "pwn",
+                }
+            ]
+        },
+        "route_return_calls",
+    ),
+    # ``topology/evt`` -- arbitrary master-event-bus injection.
+    # Observable sink: ``router.route_event`` fires with the attacker's
+    # event payload.
+    (
+        "topology/evt",
+        {"tag": "salt/custom/pwn", "data": {"pwn": True}},
+        "route_event_calls",
+    ),
+    # ``topology/sum`` -- forged topology summary that would poison the
+    # routing table.  Observable sink: ``router.ingest_summary`` fires
+    # with the deserialized attacker-chosen summary.
+    (
+        "topology/sum",
+        {
+            "summary": {
+                "cluster_id": "east",
+                "path": ["east"],
+                "minion_count": 0,
+                "up_count": 0,
+                "grain_histograms": {},
+                "origin_seq": 1,
+                "origin_at": 0.0,
+            },
+        },
+        "ingest_summary_calls",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    "tag,body,sink_attr", _SIDE_CHANNEL_CASES, ids=["ret", "evt", "sum"]
+)
+def test_wire_envelope_forged_side_channel_blocked(
+    tmp_path,
+    _reset_master_secrets,
+    clean_link_manager,
+    monkeypatch,
+    tag,
+    body,
+    sink_attr,
+):
+    """
+    Side-channel wire-level regression: a version=0 cleartext envelope
+    bearing a ``topology/{ret,evt,sum}`` tag must not reach the router.
+
+    The attacker who got a ``topology/pub`` through this path also gets
+    every other non-handshake tag through, because the version gate +
+    lazy-register + verify-session chain is shared.  This test pins
+    the full wire path for each side-channel tag so a fix that
+    regresses only one sink gets caught here as well as at the
+    unit/functional layers.
+    """
+    import socket as _socket
+
+    with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        topology_link_port = sock.getsockname()[1]
+
+    opts = _make_master_opts(tmp_path, topology_link_port)
+
+    loop = asyncio.new_event_loop()
+    channel = None
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        router_stub = _CapturingRouter()
+        monkeypatch.setattr(router_mod, "_ROUTER", router_stub)
+
+        accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+        assert (
+            "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+        ), "test precondition: no prior inbound session for east"
+
+        channel_opts = dict(opts)
+        channel_opts["ret_port"] = opts["topology_link_port"]
+        channel = salt.channel.server.ReqServerChannel.factory(channel_opts)
+        channel.payload_handler = (
+            link_manager._handle_inbound_channel  # pylint: disable=protected-access
+        )
+
+        forged_inner = {
+            "tag": tag,
+            "origin_cluster_id": "east",
+            "session_generation": 424242,  # attacker-chosen
+            "load": body,
+        }
+        envelope = {"enc": "clear", "load": forged_inner, "version": 0}
+
+        # Envelope must survive salt.payload round-trip so the test's
+        # envelope matches what the ZMQ layer would deserialize.
+        assert salt.payload.loads(salt.payload.dumps(envelope)) == envelope
+
+        reply = loop.run_until_complete(channel.handle_message(envelope))
+
+        calls = getattr(router_stub, sink_attr)
+        assert calls == [], (
+            f"Full wire-path {tag!r} injection succeeded: router {sink_attr} "
+            f"invoked with {calls!r}; handle_message reply was {reply!r}"
+        )
+    finally:
+        try:
+            if channel is not None:
+                channel.close()
+        except Exception:  # pylint: disable=broad-except
+            pass
+        try:
+            loop.run_until_complete(link_manager.stop())
+        except Exception:  # pylint: disable=broad-except
+            pass
+        loop.close()
+
+
+@pytest.mark.parametrize(
+    "tag,body,_sink_attr", _SIDE_CHANNEL_CASES, ids=["ret", "evt", "sum"]
+)
+def test_wire_envelope_forged_side_channel_does_not_pollute_inbound(
+    tmp_path,
+    _reset_master_secrets,
+    clean_link_manager,
+    monkeypatch,
+    tag,
+    body,
+    _sink_attr,
+):
+    """
+    Side-channel side-effect regression: a wire-level forged side-channel
+    frame must not install the attacker-chosen ``session_generation``
+    into ``_INBOUND``.  Guards against a partial fix that stops the
+    dispatch for one tag but still runs lazy-register on all of them.
+    """
+    import socket as _socket
+
+    with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        topology_link_port = sock.getsockname()[1]
+
+    opts = _make_master_opts(tmp_path, topology_link_port)
+
+    loop = asyncio.new_event_loop()
+    channel = None
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        monkeypatch.setattr(router_mod, "_ROUTER", _CapturingRouter())
+
+        accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+
+        channel_opts = dict(opts)
+        channel_opts["ret_port"] = opts["topology_link_port"]
+        channel = salt.channel.server.ReqServerChannel.factory(channel_opts)
+        channel.payload_handler = (
+            link_manager._handle_inbound_channel  # pylint: disable=protected-access
+        )
+
+        forged = {
+            "tag": tag,
+            "origin_cluster_id": "east",
+            "session_generation": 737373,
+            "load": body,
+        }
+        loop.run_until_complete(
+            channel.handle_message({"enc": "clear", "load": forged, "version": 0})
+        )
+        inbound = link_manager._INBOUND.get("east")  # pylint: disable=protected-access
+        if inbound is not None:
+            assert getattr(inbound, "session_generation", None) != 737373, (
+                f"wire-level forged {tag!r} installed attacker-chosen "
                 "session_generation in _INBOUND -- subsequent replays "
                 "with the same gen would pass _verify_session"
             )
