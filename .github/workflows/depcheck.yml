@@ -256,7 +256,6 @@ jobs:
     needs:
       - prepare-workflow
     with:
-      ci-python-version: "${{ inputs.ci-python-version }}"
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
 

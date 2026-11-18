@@ -281,7 +281,6 @@ jobs:
     needs:
       - prepare-workflow
     with:
-      ci-python-version: "3.14"
       changed-files: ${{ needs.prepare-workflow.outputs.changed-files }}
       full: ${{ fromJSON(needs.prepare-workflow.outputs.config)['testrun']['type'] == 'full' }}
   nsis-tests:
