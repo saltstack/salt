@@ -733,3 +733,29 @@ def test_event_listeners_registered(connection_opts, mock_engine):
                     break
             message = f"Event listener for {event_name} was not registered"
             assert event_registered, message
+
+
+def test_migrations_require_alembic():
+    import salt.sqlalchemy.migrations
+
+    with patch.object(salt.sqlalchemy.migrations, "HAS_ALEMBIC", False):
+        with pytest.raises(salt.exceptions.SaltInvocationError, match="Alembic"):
+            salt.sqlalchemy.migrations.upgrade()
+
+
+@pytest.mark.parametrize(
+    "dialect,enabled,expected",
+    [
+        ("postgresql", True, "true"),
+        ("postgresql", False, "false"),
+        ("mysql", True, "false"),
+        ("sqlite", True, "false"),
+    ],
+)
+def test_schema_settings_record_effective_partman(dialect, enabled, expected):
+    import salt.sqlalchemy.migrations
+
+    settings = salt.sqlalchemy.migrations.schema_settings(
+        {"partman.enabled": enabled}, dialect
+    )
+    assert settings == {"partman.enabled": expected}

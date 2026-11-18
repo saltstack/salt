@@ -17,6 +17,10 @@ aiosignal==1.4.0
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
+alembic==1.20.1
+    # via
+    #   -c requirements/static/ci/py3.10/linux.lock
+    #   -r requirements/static/ci/common.txt
 annotated-doc==0.0.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -356,6 +360,7 @@ mako==1.2.4
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
+    #   alembic
 markdown-it-py==3.0.0
     # via
     #   -c requirements/constraints.txt
@@ -823,6 +828,7 @@ sqlalchemy==2.0.57
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
     #   -r requirements/static/ci/common.txt
+    #   alembic
 sqlparse==0.5.5
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
@@ -853,6 +859,7 @@ toml==0.10.2
 tomli==2.2.1
     # via
     #   -c requirements/static/ci/py3.10/linux.lock
+    #   alembic
     #   pytest
 tornado==6.5.10
     # via
@@ -892,6 +899,7 @@ typing-extensions==4.16.0
     #   -c requirements/static/pkg/py3.10/linux.lock
     #   aiohttp
     #   aiosignal
+    #   alembic
     #   cryptography
     #   multidict
     #   opentelemetry-api

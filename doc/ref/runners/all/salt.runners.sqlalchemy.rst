@@ -4,6 +4,39 @@ salt.runners.sqlalchemy
 .. automodule:: salt.runners.sqlalchemy
     :members:
 
+Schema migrations
+-----------------
+
+The schema is versioned with Alembic, which must be installed on the master
+running these commands. Create or upgrade the schema explicitly; masters never
+migrate it at startup::
+
+    salt-run sqlalchemy.upgrade
+    salt-run sqlalchemy.current
+    salt-run sqlalchemy.history
+
+``sqlalchemy.create_all`` is equivalent to ``sqlalchemy.upgrade`` and
+``sqlalchemy.drop_all`` to ``sqlalchemy.downgrade base``.
+
+Online upgrades hold a database lock (an advisory lock on PostgreSQL, a named
+lock on MySQL and MariaDB), so masters running an upgrade at the same time
+apply each revision once. SQLite relies on its own file locking.
+
+To review SQL before applying it, generate it without connecting::
+
+    salt-run sqlalchemy.upgrade sql=True
+    salt-run sqlalchemy.downgrade 0001:base sql=True
+
+Offline SQL is not available when ``sqlalchemy.partman.enabled`` is set,
+because pg_partman setup queries the installed extension.
+
+The schema records structural settings when it is created. Upgrades refuse to
+run if ``sqlalchemy.partman.enabled`` has since changed on PostgreSQL, because
+converting tables to or from partitions requires a manual data migration.
+
+``sqlalchemy.stamp`` records a revision as applied without running it, for
+databases whose schema was created or repaired by hand.
+
 Named connections can be managed without configuring a default connection::
 
     salt-run sqlalchemy.create_all target_engine=jobs

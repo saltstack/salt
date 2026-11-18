@@ -286,6 +286,7 @@ def configure_orm(opts):
             _ROSession = _Session
 
         ENGINE_REGISTRY[name] = {}
+        ENGINE_REGISTRY[name]["config"] = engine_config
         ENGINE_REGISTRY[name]["engine"] = _engine
         ENGINE_REGISTRY[name]["session"] = _Session
         ENGINE_REGISTRY[name]["ro_engine"] = _ro_engine
