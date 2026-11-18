@@ -35,7 +35,7 @@ import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, ServiceNotFoundError
 from salt.utils.versions import Version
 
 # Define the module's virtual name
@@ -143,7 +143,7 @@ def _get_service(name):
     # so we need to raise that the service could not be found.
     try:
         if not __context__["using_cached_services"]:
-            raise CommandExecutionError(f"Service not found: {name}")
+            raise ServiceNotFoundError(f"Service not found: {name}")
     except KeyError:
         pass
 
@@ -151,7 +151,7 @@ def _get_service(name):
     # state then there is no reason to check again.
     # fixes https://github.com/saltstack/salt/issues/57907
     if __context__.get("service.state") == "dead":
-        raise CommandExecutionError(f"Service not found: {name}")
+        raise ServiceNotFoundError(f"Service not found: {name}")
 
     # we used a cached version to check, a service could have been made
     # between now and then, we should refresh our available services.
@@ -162,7 +162,7 @@ def _get_service(name):
 
     if not service:
         # Could not find the service after refresh raise.
-        raise CommandExecutionError(f"Service not found: {name}")
+        raise ServiceNotFoundError(f"Service not found: {name}")
 
     # found it :)
     return service

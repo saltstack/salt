@@ -4,10 +4,12 @@ from types import SimpleNamespace
 import pytest
 
 import salt.exceptions
+import salt.payload
 import salt.returners.local_cache as local_cache
 import salt.returners.multi_returner as multi_returner
 import salt.utils.jid
 import salt.utils.job
+import salt.utils.verify
 from tests.support.mock import MagicMock, call, patch
 
 
@@ -91,15 +93,21 @@ def test_store_job_real_multi_load_guard(real_multi_cache, existing):
     salt.utils.job.store_job(opts, load, mminion=mminion)
     assert isinstance(load["jid"], str)
     jid = load["jid"]
-    assert local_cache.get_load(jid) == (dispatch if existing == "dispatch" else load)
+    expected_load = dispatch if existing == "dispatch" else load
+    if existing == "req":
+        expected_load = dict(load, Minions=[load["id"]])
+    assert local_cache.get_load(jid) == expected_load
     assert local_get.call_args_list == [call(jid)] * (2 if existing == "req" else 1)
     if existing == "dispatch":
         local_save.assert_not_called()
+    elif existing == "req":
+        local_save.assert_called_once_with(jid, load, [load["id"]])
     else:
         local_save.assert_called_once_with(jid, load, None)
-    assert es_save.call_count == (2 if existing == "req" else 1)
-    for saved in es_save.call_args_list:
-        assert saved.args == (jid, load, None)
+    expected_es_calls = [call(jid, load, None)]
+    if existing == "req":
+        expected_es_calls.insert(0, call(jid, load, [load["id"]]))
+    assert es_save.call_args_list == expected_es_calls
     if existing == "req":
         assert load["arg"] == ["ok"]
         assert load["tgt_type"] == "glob"
@@ -213,9 +221,9 @@ def test_store_job_req_cache_disabled_keeps_real_first_load(
         "nocache": nocache,
     }
     salt.utils.job.store_job(opts, load, mminion=mminion)
-    assert local_cache.get_load(load["jid"]) == load
-    local_save.assert_called_once_with(load["jid"], load, None)
-    es_save.assert_called_once_with(load["jid"], load, None)
+    assert local_cache.get_load(load["jid"]) == dict(load, Minions=[load["id"]])
+    local_save.assert_called_once_with(load["jid"], load, [load["id"]])
+    es_save.assert_called_once_with(load["jid"], load, [load["id"]])
     local_get.assert_called_once_with(load["jid"])
     es_return.assert_not_called()
     assert local_cache.get_jid(load["jid"]) == {}
@@ -266,6 +274,62 @@ def test_store_job_multi_cache_exit_does_not_write(real_multi_cache, jid, disabl
     query.assert_not_called()
     assert local_cache.get_jid(jid) == {}
     assert local_cache.get_endtime(jid) is False
+
+
+@pytest.mark.parametrize("explicit_arg", [False, True])
+def test_store_job_scheduled_return_skips_target_discovery(
+    minion_opts, tmp_path, explicit_arg
+):
+    opts = dict(
+        minion_opts,
+        cachedir=str(tmp_path / "cache"),
+        master_job_cache="local_cache",
+        job_cache=True,
+        ext_job_cache="",
+    )
+    minion_id = "minion[1]"
+    assert salt.utils.verify.valid_id(opts, minion_id)
+    load = {
+        "jid": "req",
+        "id": minion_id,
+        "cmd": "_return",
+        "fun": "test.echo",
+        "fun_args": ["scheduled"],
+        "return": "scheduled",
+        "retcode": 0,
+        "success": True,
+    }
+    if explicit_arg:
+        load["arg"] = ["explicit"]
+    expected_arg = ["explicit"] if explicit_arg else ["scheduled"]
+    with patch(
+        "salt.utils.minions.CkMinions.check_minions",
+        side_effect=AssertionError("scheduled returns must not discover targets"),
+    ) as check_minions:
+        salt.utils.job.store_job(opts, load)
+        check_minions.assert_not_called()
+
+    jid = load["jid"]
+    assert salt.utils.jid.is_jid(jid)
+    assert load["arg"] == expected_arg
+    assert load["tgt"] == minion_id
+    assert load["tgt_type"] == "glob"
+    job_dir = pathlib.Path(
+        salt.utils.jid.jid_dir(
+            jid, str(pathlib.Path(opts["cachedir"]) / "jobs"), opts["hash_type"]
+        )
+    )
+    with (job_dir / ".load.p").open("rb") as stream:
+        assert salt.payload.load(stream) == load
+    with (job_dir / ".minions.p").open("rb") as stream:
+        assert salt.payload.load(stream) == [minion_id]
+    with (job_dir / minion_id / "return.p").open("rb") as stream:
+        assert salt.payload.load(stream) == {
+            "return": "scheduled",
+            "retcode": 0,
+            "success": True,
+        }
+    assert (job_dir / "jid").is_file()
 
 
 def test_store_job_save_load(minion_opts, tmp_path):

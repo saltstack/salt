@@ -184,7 +184,7 @@ def latest_version(*names, **kwargs):
             elif p:
                 s = _splitpkg(p[0])
                 if s:
-                    if not s[0] in pkglist:
+                    if s[0] not in pkglist:
                         if len(p) > 1 and p[1] in ("<", "", "="):
                             pkglist[s[0]] = s[1]
                         else:

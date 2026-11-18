@@ -66,18 +66,175 @@ known_third_party = [
 target-version = "py38"
 line-length = 88
 extend-exclude = ["salt/ext", "templates"]
+# Names Salt injects into modules at load time. Keep in sync with
+# additional-builtins in .pylintrc.
+builtins = [
+    "__opts__",
+    "__utils__",
+    "__salt__",
+    "__pillar__",
+    "__grains__",
+    "__context__",
+    "__runner__",
+    "__ret__",
+    "__env__",
+    "__low__",
+    "__states__",
+    "__lowstate__",
+    "__running__",
+    "__active_provider_name__",
+    "__master_opts__",
+    "__jid_event__",
+    "__instance_id__",
+    "__salt_system_encoding__",
+    "__proxy__",
+    "__serializers__",
+    "__reg__",
+    "__executors__",
+    "__events__",
+    "__resource_funcs__",
+    "napalm_device",
+]
 
 [tool.ruff.lint]
-# Start with a small set of correctness checks, alongside Salt's pylint plugins.
-# Black remains the formatter. Type checking is a separate rollout.
+# Correctness checks, alongside Salt's pylint plugins. Only new violations
+# block a PR (see tools/precommit/ruff.py). Black remains the formatter, so no
+# style rules are enabled. Type checking is a separate rollout.
 select = [
-    "F401",  # unused imports
-    "F541",  # f-strings without placeholders
-    "F631",  # assertions with a non-empty tuple (always true)
-    "F634",  # conditions with a non-empty tuple (always true)
+    "F",     # pyflakes
+    "B004",  # unreliable callable check
+    "B005",  # strip() with multi-character strings
     "B006",  # mutable argument defaults
+    "B015",  # useless comparisons
+    "B017",  # assertRaises/pytest.raises(Exception)
+    "B018",  # useless expressions
+    "B020",  # loop variable overrides the iterable
     "B023",  # loop variables captured without binding
+    "B025",  # duplicate exception in try/except
+    "B026",  # star-arg unpacking after a keyword argument
+    "B034",  # re.sub/split/subn positional count or flags
+    "B039",  # mutable ContextVar default
+    "E711",  # comparison to None
+    "E712",  # comparison to True/False
+    "E713",  # "not x in y"
+    "E714",  # "not x is y"
+    "E721",  # type comparison with ==
+    "E722",  # bare except
+    "PLE",   # pylint errors
+    "RUF006",  # asyncio task reference dropped
+    "W605",  # invalid escape sequence
+    # Bugs that are not present in the code base today.
+    "B002",  # ++x / --x do nothing
+    "B003",  # assignment to os.environ
+    "B012",  # return/break/continue in finally
+    "B013",  # one-element tuple in except
+    "B014",  # duplicate exception in one except
+    "B016",  # raise of a literal
+    "B019",  # lru_cache on a method
+    "B021",  # f-string docstring
+    "B022",  # contextlib.suppress() without arguments
+    "B029",  # except with an empty tuple
+    "B030",  # except with a non-exception class
+    "B031",  # itertools.groupby group used twice
+    "B032",  # annotation instead of assignment
+    "B033",  # duplicate item in a set literal
+    "B035",  # static key in a dict comprehension
+    "PLW0127",  # variable assigned to itself
+    "PLW0128",  # same name twice in one assignment
+    "PLW0131",  # walrus used as a statement
+    "PLW0133",  # exception created but not raised
+    "PLW0177",  # comparison with NaN
+    "PLW0211",  # staticmethod with self/cls
+    "PLW0245",  # super without ()
+    "PLW0406",  # module imports itself
+    "PLW0604",  # global at module level
+    "PLW0642",  # self/cls reassigned
+    "PLW0711",  # "except A or B"
+    "PLW1501",  # invalid open() mode
+    "PLW1507",  # shallow copy of os.environ
+    "PLW2101",  # lock created inside with
+    "PGH003",  # blanket "type: ignore"
+    "PGH005",  # wrong mock assertion attribute
+    "LOG001",  # logging.Logger() instantiated directly
+    "LOG007",  # logging.exception(exc_info=False)
+    "LOG014",  # exc_info outside an exception handler
+    "G101",  # extra key clashes with a LogRecord attribute
+    "YTT101",  # sys.version[:3]
+    "YTT102",  # sys.version[2]
+    "YTT103",  # sys.version compared to a string
+    "YTT201",  # sys.version_info[0] == 3
+    "YTT202",  # six.PY3
+    "YTT301",  # sys.version[0]
+    "YTT302",  # sys.version compared to a string
+    "YTT303",  # sys.version[:1]
+    "RUF008",  # mutable dataclass default
+    "RUF009",  # function call in a dataclass default
+    "RUF016",  # list/str/tuple index of the wrong type
+    "RUF018",  # walrus inside assert
+    "RUF024",  # dict.fromkeys with a mutable value
+    "RUF026",  # defaultdict(default_factory=...)
+    "RUF033",  # default in __post_init__
+    "RUF060",  # "in" test on an empty collection
+    "RUF068",  # duplicate entry in __all__
+    # Bugs with a few existing violations. Only new ones block a PR.
+    "PLW0129",  # assert on a string literal
+    "PLW0120",  # else on a loop without break
+    "PLW1641",  # __eq__ without __hash__
+    "LOG002",  # getLogger(__file__)
+    "LOG004",  # logger.exception() outside an except block
+    "G010",  # logger.warn()
+    "G202",  # redundant exc_info
+    "RUF064",  # decimal number as a file mode
+    "RUF040",  # non-string assert message
+    "DTZ003",  # datetime.utcnow()
+    "DTZ004",  # datetime.utcfromtimestamp()
+    "ASYNC251",  # time.sleep() in an async function
+    "PGH004",  # blanket noqa
+    # Bugs and unsafe calls that are not present in the code base today.
+    "ASYNC210",  # blocking requests call in async function
+    "ASYNC220",  # subprocess started in async function
+    "ASYNC222",  # os.wait() in async function
+    "ASYNC230",  # open() in async function
+    "ASYNC250",  # input() in async function
+    "S313",  # cElementTree parser
+    "S315",  # expat reader
+    "S316",  # expat builder
+    "S317",  # xml.sax
+    "S319",  # pulldom
+    "S304",  # insecure cipher
+    "S305",  # insecure cipher mode
+    "S302",  # marshal.loads
+    "S501",  # certificate check turned off
+    "S502",  # insecure SSL/TLS version
+    "S503",  # insecure SSL/TLS default
+    "S505",  # weak cryptographic key
+    "S609",  # wildcard in a shell command
+    "S612",  # logging.config.listen
+    "SIM107",  # return in try/finally
+    "SIM220",  # x and not x
+    "SIM221",  # x or not x
+    "SIM223",  # x and False
+    "PIE794",  # duplicate class field
+    "PIE796",  # duplicate enum value
+    "PLC0205",  # __slots__ is a string
+    "PLC0208",  # iteration over a set literal
+    "PLC3002",  # lambda called directly
+    "PLR0133",  # comparison of two constants
+    "PLR1708",  # raise StopIteration in a generator
+    "RUF030",  # print() as assert message
+    "RUF032",  # Decimal() from a float
+    "RUF048",  # map(int, version.split())
+    "RUF101",  # redirected noqa code
+    "RUF103",  # invalid ruff suppression comment
 ]
+ignore = [
+    "F403",  # star imports
+    "F405",  # names from star imports
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Unused local variables are not checked in tests for now.
+"tests/**" = ["F841"]
 
 [tool.towncrier]
     package = "salt"

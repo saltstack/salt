@@ -55,10 +55,11 @@ def _store_job(opts, load, event, mminion, endtime=None):
                 exc_info=True,
             )
 
-        # save the load, since we don't have it
+        # A standalone return belongs to this validated minion, not a target
+        # that needs discovery across the master's accepted keys.
         saveload_fstr = f"{job_cache}.save_load"
         try:
-            mminion.returners[saveload_fstr](load["jid"], load)
+            mminion.returners[saveload_fstr](load["jid"], load, minions=[load["id"]])
         except KeyError:
             emsg = f"Returner '{job_cache}' does not support function save_load"
             log.error(emsg)

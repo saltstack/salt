@@ -191,10 +191,10 @@ class SaltCP:
                         # File is not within this dir
                         continue
                     return os.path.join(dest, os.path.basename(path), relpath)
-                else:  # pylint: disable=useless-else-on-loop
-                    # Should not happen
-                    log.error("Failed to find remote path for %s", fn_)
-                    return None
+
+                # Should not happen
+                log.error("Failed to find remote path for %s", fn_)
+                return None
 
         ret = {}
         parent = ".." + os.sep

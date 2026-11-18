@@ -819,14 +819,14 @@ def test_held_unheld(package_manager):
         if name and pkgs is None:
             pkgs = [name]
         ret = {}
-        for pkg in pkgs:
+        for pkg_name in pkgs:
             ret.update(
                 {
-                    pkg: {
-                        "name": pkg,
+                    pkg_name: {
+                        "name": pkg_name,
                         "changes": {"new": "hold", "old": ""},
                         "result": True,
-                        "comment": f"Package {pkg} is now being held.",
+                        "comment": f"Package {pkg_name} is now being held.",
                     }
                 }
             )
@@ -836,14 +836,14 @@ def test_held_unheld(package_manager):
         if name and pkgs is None:
             pkgs = [name]
         ret = {}
-        for pkg in pkgs:
+        for pkg_name in pkgs:
             ret.update(
                 {
-                    pkg: {
-                        "name": pkg,
+                    pkg_name: {
+                        "name": pkg_name,
                         "changes": {"new": "", "old": "hold"},
                         "result": True,
-                        "comment": f"Package {pkg} is no longer held.",
+                        "comment": f"Package {pkg_name} is no longer held.",
                     }
                 }
             )

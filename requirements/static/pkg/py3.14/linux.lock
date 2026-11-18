@@ -246,7 +246,7 @@ urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt

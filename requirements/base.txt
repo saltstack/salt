@@ -94,6 +94,7 @@ python-gnupg>=0.5.6
 pythonnet>=3.0.1; sys_platform == 'win32' and python_version < '3.11'
 pythonnet>=3.0.4; sys_platform == 'win32' and python_version >= '3.11' and python_version < '3.13'
 pythonnet>=3.1.0rc0; sys_platform == 'win32' and python_version >= '3.13'
+tzdata; sys_platform == 'win32'
 pywin32>=312; sys_platform == 'win32'
 pycryptodomex>=3.23.0
 PyYAML>=6.0.3
@@ -114,7 +115,7 @@ urllib3>=1.26.20,<2.0.0; python_version < '3.10'
 urllib3>=2.8.0; python_version >= '3.10'
 # virtualenv 21.5.1 drops Python 3.9; keep the last 3.9-compatible release there.
 virtualenv>=21.4.2,<21.5.1; python_version < '3.10'
-virtualenv>=21.14.9; python_version >= '3.10'
+virtualenv>=21.15.6; python_version >= '3.10'
 # Transitive of virtualenv; some uv resolver caches pin a stale 3.25
 # version that conflicts with the CI floor on Python 3.10+. filelock 4.2+
 # requires Python>=3.11, so py3.10 stays on 3.29.1.

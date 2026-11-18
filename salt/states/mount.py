@@ -372,6 +372,7 @@ def mounted(
                     "retry",
                     "soft",
                     "auto",
+                    "noauto",
                     "users",
                     "bind",
                     "nonempty",

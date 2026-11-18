@@ -38,8 +38,10 @@ try:
     import win32gui
 
     HAS_WINDOWS_MODULES = True
-except ImportError:
+    IMPORT_ERROR = None
+except ImportError as exc:
     HAS_WINDOWS_MODULES = False
+    IMPORT_ERROR = str(exc)
 
 
 log = logging.getLogger(__name__)
@@ -100,7 +102,8 @@ class Registry:  # pylint: disable=R0903
     def __init__(self):
         if not HAS_WINDOWS_MODULES:
             raise CommandExecutionError(
-                "Registry functionality requires 'pywin32' to be installed."
+                "Registry functionality requires 'pywin32' to be installed. "
+                f"Import error: {IMPORT_ERROR}"
             )
         self.hkeys = {
             "HKEY_CURRENT_CONFIG": win32con.HKEY_CURRENT_CONFIG,
