@@ -60,10 +60,11 @@ class DefaultOrderedDict(OrderedDict):
     def __copy__(self):
         return type(self)(self.default_factory, self)
 
-    def __deepcopy__(self):
-        import copy
-
-        return type(self)(self.default_factory, copy.deepcopy(self.items()))
+    def __deepcopy__(self, memo):
+        return type(self)(
+            self.default_factory,
+            copy.deepcopy(list(self.items()), memo),
+        )
 
     def __repr__(self, _repr_running={}):  # pylint: disable=W0102
         return "DefaultOrderedDict({}, {})".format(
