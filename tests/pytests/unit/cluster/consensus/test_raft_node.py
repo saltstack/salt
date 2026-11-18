@@ -1,5 +1,6 @@
 """Tests for the Raft node implementation."""
 
+import re
 import tempfile
 
 import pytest
@@ -98,25 +99,22 @@ def test_node_state_repr():
 def test_node_state_init_become_leader():
     state = NodeState()
     assert state._state == state.START
-    with pytest.raises(RuntimeError) as err:
+    with pytest.raises(RuntimeError, match=re.escape("State must be follower first")):
         state.become_leader()
-    assert err.value.args == ("State must be follower first",)
 
 
 def test_node_state_become_leader_as_follower():
     state = NodeState()
     state._state = state.FOLLOWER
-    with pytest.raises(RuntimeError) as err:
+    with pytest.raises(RuntimeError, match=re.escape("Not candidate (follower)")):
         state.become_leader()
-    assert err.value.args == ("Not candidate (follower)",)
 
 
 def test_node_state_init_become_candidate():
     state = NodeState()
     assert state._state == state.START
-    with pytest.raises(RuntimeError) as err:
+    with pytest.raises(RuntimeError, match=re.escape("State must be follower first")):
         state.become_candidate()
-    assert err.value.args == ("State must be follower first",)
 
 
 def test_node_state_init_become_follower():
@@ -129,9 +127,8 @@ def test_node_state_init_become_follower():
 def test_node_state_become_candidate_as_leader():
     state = NodeState()
     state._state = state.LEADER
-    with pytest.raises(RuntimeError) as err:
+    with pytest.raises(RuntimeError, match=re.escape("Not follower")):
         state.become_candidate()
-    assert err.value.args == ("Not follower",)
 
 
 def test_node_state_candidate_can_become_candidate():
