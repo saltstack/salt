@@ -10,6 +10,7 @@ under child-PID emulation, ``start`` step ordering, and the
 
 import asyncio
 import os
+import pathlib
 import socket
 
 import pytest
@@ -1143,6 +1144,207 @@ def test_verify_session_master_auth_bypass_preserved(clean_state):
         assert link_manager._verify_session(  # pylint: disable=protected-access
             payload
         ), f"{tag} must bypass session check"
+
+
+# ---------------------------------------------------------------------------
+# Unauthenticated-frame rejection (publish-injection regression)
+# ---------------------------------------------------------------------------
+#
+# A peer that has not completed an ``_master_auth`` handshake in THIS
+# process lifetime must not be able to inject a ``topology/pub`` (or
+# any other non-handshake frame) just because a public key file exists
+# on disk at ``masters/<origin>.pub``.  The on-disk key is the identity
+# anchor for a future handshake; it is not by itself proof that the
+# peer holds the matching private key.
+#
+# The vulnerable arrangement is:
+#   - ``_maybe_lazy_register_inbound`` writes ``_INBOUND[origin]`` from
+#     the frame's self-reported ``session_generation``, with
+#     ``session_aes=None``, whenever ``masters/<origin>.pub`` exists;
+#   - ``_verify_session`` then compares the frame's gen against that
+#     record it just created and returns True.
+# The end invariant that any valid fix must preserve: a frame arriving
+# with no prior in-process ``_INBOUND[origin]`` must not dispatch, even
+# when the on-disk key exists.  The tests below pin that invariant at
+# both the ``_handle_inbound`` boundary and at the two helper
+# boundaries that make up its session check.
+
+
+def test_handle_inbound_rejects_forged_pub_with_no_prior_inbound(
+    opts, clean_state, caplog, monkeypatch, tmp_path
+):
+    """A ``topology/pub`` arriving with no prior ``_INBOUND[origin]``
+    must be dropped, even when ``masters/<origin>.pub`` is on disk.
+
+    Reproduces the publish-injection chain: version-gate-bypassed
+    frame -> lazy-register creates ``_INBOUND[east]`` with
+    ``session_aes=None`` -> self-matching gen passes verify -> dispatch
+    fires.  Post-fix the dispatch must not fire; the drop path is the
+    ``bad/missing session`` WARNING already used by stale-gen rejects.
+    """
+    import logging as _logging
+
+    # Pre-stage the attacker's precondition: ``masters/east.pub`` present
+    # on disk but no in-process ``_INBOUND`` for east.
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+    assert "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+
+    # Spy the dispatcher that would receive a validated frame.  The
+    # router level is a more robust observation point than
+    # ``_publish_to_local_minions`` because any valid fix must stop
+    # the chain BEFORE the handler runs, regardless of whether it
+    # would have progressed to local-publish.
+    dispatched = []
+
+    async def _spy_dispatch(payload):
+        dispatched.append(payload)
+        return None
+
+    monkeypatch.setitem(
+        link_manager._DISPATCH_TABLE,  # pylint: disable=protected-access
+        "topology/pub",
+        _spy_dispatch,
+    )
+
+    forged = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 424242,  # attacker-chosen
+        "load": {
+            "jid": "20260101000000000000",
+            "tgt": "C@self and *",
+            "tgt_type": "compound",
+            "fun": "cmd.run",
+            "arg": ["id"],
+        },
+    }
+    with caplog.at_level(_logging.WARNING, logger="salt.topology.link_manager"):
+        result = asyncio.new_event_loop().run_until_complete(
+            link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+        )
+    assert result is None, (
+        "forged frame with no prior handshake must not dispatch "
+        f"(got result={result!r}, dispatched={dispatched!r})"
+    )
+    assert dispatched == [], (
+        "topology/pub handler received a frame whose origin never "
+        f"completed _master_auth in this process: {dispatched!r}"
+    )
+    assert any(
+        "bad/missing session" in rec.message for rec in caplog.records
+    ), "unauthenticated frame must be logged at WARNING on drop"
+
+
+def test_handle_inbound_rejects_forged_pub_when_prior_inbound_mismatches(
+    opts, clean_state, caplog, monkeypatch, tmp_path
+):
+    """A frame carrying a ``session_generation`` that does not match the
+    existing ``_INBOUND[origin]`` record (established via a real
+    handshake) must be dropped.  Guards against an attacker piggybacking
+    on an in-process authenticated session by guessing or scanning
+    nearby gen values; also guards against lazy-register bumping the
+    record forward on an unauthenticated frame.
+    """
+    import logging as _logging
+
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+    # Real handshake-established record, gen=3.
+    authentic = _StubLink("east")
+    authentic.session_generation = 3
+    link_manager._INBOUND["east"] = authentic  # pylint: disable=protected-access
+
+    dispatched = []
+
+    async def _spy_dispatch(payload):
+        dispatched.append(payload)
+        return None
+
+    monkeypatch.setitem(
+        link_manager._DISPATCH_TABLE,  # pylint: disable=protected-access
+        "topology/pub",
+        _spy_dispatch,
+    )
+
+    forged = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 999,  # attacker-bumped above the real session
+        "load": {"jid": "20260101000000000001"},
+    }
+    with caplog.at_level(_logging.WARNING, logger="salt.topology.link_manager"):
+        result = asyncio.new_event_loop().run_until_complete(
+            link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+        )
+    assert result is None
+    assert dispatched == [], (
+        "bumped-gen frame dispatched past verify -- lazy-register "
+        f"accepted an unauthenticated gen bump: {dispatched!r}"
+    )
+    # ``_INBOUND[east].session_generation`` must remain at the real
+    # value.  If an unauthenticated frame bumps it, a subsequent
+    # replay could use the bumped value to pass verification.
+    assert (
+        link_manager._INBOUND[  # pylint: disable=protected-access
+            "east"
+        ].session_generation
+        == 3
+    ), (
+        "unauthenticated frame bumped the authentic session_generation "
+        f"forward (new value: "
+        f"{link_manager._INBOUND['east'].session_generation})"  # pylint: disable=protected-access
+    )
+
+
+def test_maybe_lazy_register_inbound_does_not_fabricate_session_without_handshake(
+    opts, clean_state, monkeypatch, tmp_path
+):
+    """
+    ``_maybe_lazy_register_inbound`` must not establish a usable
+    ``_INBOUND[origin]`` record purely from a frame's self-reported
+    fields plus an on-disk key file.  Either it must refuse to register,
+    or the record it writes must not satisfy :func:`_verify_session`.
+
+    Rationale: the sole input to the lazy-register path, apart from the
+    on-disk key existence, is the attacker-controlled frame body.
+    Establishing a verify-passing session from those inputs alone makes
+    the on-disk key an authentication credential it was never meant
+    to be --- it is a long-lived identity anchor, not proof that the
+    sender holds the matching private key for THIS frame.
+    """
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+
+    forged = {
+        "tag": "topology/pub",
+        "origin_cluster_id": "east",
+        "session_generation": 7,
+    }
+    link_manager._maybe_lazy_register_inbound(  # pylint: disable=protected-access
+        forged
+    )
+    # Either no record at all, OR a record that _verify_session rejects.
+    if "east" in link_manager._INBOUND:  # pylint: disable=protected-access
+        assert not link_manager._verify_session(  # pylint: disable=protected-access
+            forged
+        ), (
+            "lazy-register wrote a record that _verify_session accepts "
+            "for an unauthenticated frame -- the on-disk key alone "
+            "must not bootstrap a verify-passing session"
+        )
 
 
 # ---------------------------------------------------------------------------
