@@ -984,6 +984,7 @@ class MasterKeys(dict):
         """
         proxy to PrivateKey.sign
         """
+        self._maybe_reload_cluster_key()
         return self.key.sign(*args, **kwargs)
 
     def _maybe_reload_cluster_key(self):
@@ -1031,6 +1032,7 @@ class MasterKeys(dict):
         """
         proxy to PrivateKey.encrypt
         """
+        self._maybe_reload_cluster_key()
         return self.key.encrypt(*args, **kwargs)
 
     def fetch(self, name):
