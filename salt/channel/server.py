@@ -28,6 +28,7 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 import salt.cache
+import salt.channel._cluster_key_state as _cluster_key_state
 import salt.cluster
 import salt.cluster.consensus.rpc
 import salt.crypt
@@ -136,6 +137,89 @@ def cluster_pub_matches_fingerprint(opts, cluster_pub):
         pub_bytes = cluster_pub
     digest = hashlib.sha256(pub_bytes).hexdigest()
     return hmac.compare_digest(digest.lower(), str(pinned).lower())
+
+
+def _cluster_bootstrap_founder_id(opts):
+    """
+    Return the designated founder's node id for the cluster
+    described by ``opts``, or ``None`` if no cluster membership is
+    configured.
+
+    The founder is the master with the lowest node id in the pool
+    ``{self_node_id, *cluster_peers}`` -- the same deterministic
+    lowest-id-wins predicate used by ``MasterPubServerChannel`` to
+    decide whether to self-bootstrap Raft as the founding voter or
+    wait for a join-reply.  Factoring the predicate here lets the
+    sender-side join-reply builder and the receiver-side filter
+    share the same source of truth.
+    """
+    node_id = salt.cluster.node_id(opts)
+    peers = opts.get("cluster_peers") or []
+    pool = sorted({node_id, *peers})
+    if not pool:
+        return None
+    return pool[0]
+
+
+def is_designated_cluster_founder(opts):
+    """
+    Return ``True`` if this master is the designated founder of
+    its configured cluster.  See
+    :func:`_cluster_bootstrap_founder_id` for the predicate.
+    """
+    founder = _cluster_bootstrap_founder_id(opts)
+    if founder is None:
+        return False
+    return founder == salt.cluster.node_id(opts)
+
+
+# Guard: emit the deprecation WARN for
+# ``filter_non_founder_cluster_aes_from_join_reply`` at most once per
+# process.  The filter sits inside the hot path of every
+# ``cluster/peer/join-reply`` install; a per-call WARN would be
+# overwhelming.
+_FILTER_DEPRECATION_WARNED = False
+
+
+def filter_non_founder_cluster_aes_from_join_reply(inner, opts):
+    """
+    DEPRECATED no-op shim.
+
+    Historically this filter dropped ``cluster_aes`` from a
+    ``cluster/peer/join-reply`` whose sender was not the designated
+    founder, as defence-in-depth paired with a sender-side founder
+    gate (commit ``6acb1653613``).  That identity-based pair
+    permanently broke late-joiner propagation: once the founder died,
+    a surviving non-founder could no longer deliver ``cluster_aes``
+    to a brand-new master joining through it, because the sender gate
+    omitted the key and this filter would have discarded it anyway.
+
+    Both gates have been superseded by the unified state-machine
+    primitive in ``salt/channel/_cluster_key_state.py`` -- the receiver
+    decides whether to honour an install based on its own
+    bootstrap-vs-committed state, with a founder-wait window during
+    bootstrap for determinism.  The sender always ships its current
+    bytes; identity is never consulted.
+
+    This function is kept as a no-op shim for one release so cross-fork
+    integrators who pulled commit 6 as a backport candidate can
+    continue to build.  Callers are advised to remove the call and
+    rely on the state machine directly.
+
+    :returns: ``(inner, False)`` unconditionally -- no filtering is
+              performed.  The returned dict is the original input
+              dict (no copy) regardless of contents.
+    """
+    global _FILTER_DEPRECATION_WARNED
+    if not _FILTER_DEPRECATION_WARNED:
+        _FILTER_DEPRECATION_WARNED = True
+        log.warning(
+            "filter_non_founder_cluster_aes_from_join_reply is deprecated "
+            "and now a no-op; the receiver-side cluster-key state machine "
+            "supersedes identity-based filtering.  This warning is emitted "
+            "once per process; the call site should be removed."
+        )
+    return inner, False
 
 
 class ReqServerChannel:
@@ -1870,6 +1954,13 @@ class MasterPubServerChannel:
         self._discover_retry_pc = None
         # Set by service.py once the Raft node is started.
         self._raft_dispatcher = None
+        # Receiver-side cluster-key state machine (BOOTSTRAP vs COMMITTED
+        # per key, per process).  Lazily reconciled with on-disk
+        # sentinels + key bytes in ``_cluster_key_state_machine``.
+        # Only instantiated when the master is actually clustered --
+        # non-clustered masters never traverse the join-reply install
+        # path and don't need the extra bookkeeping.
+        self._cluster_key_sm = None
 
     def _start_raft_as_founding_voter(self):
         """
@@ -1906,6 +1997,32 @@ class MasterPubServerChannel:
             self._raft_service.start()
             # Write the join sentinel so future restarts skip discover/join.
             self._mark_joined_cluster()
+            # Founder-side commit: mark THIS master's locally-generated
+            # ``cluster_aes`` + ``cluster.pem`` as COMMITTED in the state
+            # machine so (a) later peers' join-replies that echo these
+            # values back no-op cleanly, and (b) on process restart the
+            # sentinel + on-disk bytes match and the state machine stays
+            # in COMMITTED instead of reverting to BOOTSTRAP and accepting
+            # a stranger's key.  Receivers only call ``mark_committed``
+            # from the install path -- the founder never receives its own
+            # key via join-reply, so without this call its state machine
+            # would stay in BOOTSTRAP forever.
+            try:
+                sm = self._cluster_key_state_machine()
+                if sm is not None:
+                    pki_dir = pathlib.Path(self.opts["cluster_pki_dir"])
+                    aes_path = pki_dir / ".aes"
+                    pem_path = pki_dir / "cluster.pem"
+                    if aes_path.is_file():
+                        sm.mark_committed("cluster_aes", aes_path.read_bytes())
+                    if pem_path.is_file():
+                        sm.mark_committed("cluster_pem", pem_path.read_bytes())
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to commit founder-generated cluster keys to "
+                    "state machine; cluster bootstrap continues but a "
+                    "restart may reset to BOOTSTRAP"
+                )
             log.info(
                 "Raft consensus service started as founding voter for cluster %r",
                 self.opts["cluster_id"],
@@ -2082,7 +2199,34 @@ class MasterPubServerChannel:
             salt.utils.event.tagify("multi-ring-request", "peer", "cluster"),
             crypticle.dumps(payload),
         )
-        for pusher in self.pushers:
+        # NEW-7a: gate the fan-out through ``filter_joined_pushers``.
+        # ``pending_event=None`` because the Raft log replication layer
+        # carries the committed entry to the skipped peer once it
+        # handshakes; replaying a multi-ring-request from a per-peer
+        # pending queue would duplicate propose attempts.  Primary
+        # design §Fix 5; reviewer correction Q4 (runner scope).
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="multi-ring-request",
+            pending_event=None,
+        )
+        if skipped:
+            log.warning(
+                "multi-ring fan-out: skipping un-joined peers %s for %s; "
+                "the Raft leader handles the propose and AppendEntries "
+                "will carry the commit to them once they complete the "
+                "handshake",
+                sorted(p.pull_host for p in skipped if p.pull_host),
+                tag,
+            )
+        for pusher in kept:
             try:
                 await pusher.publish(event)
             except Exception:  # pylint: disable=broad-except
@@ -2213,13 +2357,20 @@ class MasterPubServerChannel:
         ``cluster/peer/delegate-write`` (ring-routed, single owner).
         """
         try:
-            crypticle = salt.crypt.Crypticle(
-                self.opts,
-                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-            )
+            cluster_aes_value = salt.master.SMaster.secrets["cluster_aes"][
+                "secret"
+            ].value
+            crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_value)
         except Exception:  # pylint: disable=broad-except
             log.exception("cache-replicate: cluster_aes unavailable")
             return
+        # D-1b: fingerprint the cluster_aes value we encrypted under
+        # so the flush path can detect a rotation that happened in
+        # the read+encrypt+enqueue window.  The flush compares this
+        # to the current cluster_aes fp and drops on mismatch.
+        import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
+
+        cluster_aes_fp = _crep_fp.secret_fingerprint(cluster_aes_value)
         if batch_items is not None:
             payload = {
                 "bank": bank,
@@ -2270,6 +2421,7 @@ class MasterPubServerChannel:
             tag="cluster/peer/delegate-cache-write",
             bank=bank,
             key=label,
+            cluster_aes_fp=cluster_aes_fp,
         )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,
@@ -2281,7 +2433,11 @@ class MasterPubServerChannel:
         )
         for pusher in targets:
             try:
-                await pusher.publish(event)
+                # Serialise this live publish with any in-flight
+                # handshake-driven pending-queue drain on the same
+                # peer so stale entries land before the live entry
+                # (last-writer-wins on the peer => live wins).
+                await _crep.publish_with_latch(pusher.pull_host, pusher, event)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "cache-replicate: failed to send %s/%s to %s",
@@ -2322,13 +2478,19 @@ class MasterPubServerChannel:
         that bypasses the :class:`salt.cache.Cache` facade.
         """
         try:
-            crypticle = salt.crypt.Crypticle(
-                self.opts,
-                salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
-            )
+            cluster_aes_value = salt.master.SMaster.secrets["cluster_aes"][
+                "secret"
+            ].value
+            crypticle = salt.crypt.Crypticle(self.opts, cluster_aes_value)
         except Exception:  # pylint: disable=broad-except
             log.exception("resource-replicate: cluster_aes unavailable")
             return
+        # D-1b: fingerprint the cluster_aes value we encrypted under
+        # so the flush path can detect a rotation that happened in
+        # the read+encrypt+enqueue window.
+        import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
+
+        cluster_aes_fp = _crep_fp.secret_fingerprint(cluster_aes_value)
         payload = {
             "minion_id": minion_id,
             "resources": resources,
@@ -2370,6 +2532,7 @@ class MasterPubServerChannel:
             event=event,
             tag="cluster/peer/delegate-resource-register-write",
             minion_id=minion_id,
+            cluster_aes_fp=cluster_aes_fp,
         )
         targets, _skipped = _crep.filter_joined_pushers(
             targets,
@@ -2381,7 +2544,11 @@ class MasterPubServerChannel:
         )
         for pusher in targets:
             try:
-                await pusher.publish(event)
+                # Serialise this live publish with any in-flight
+                # handshake-driven pending-queue drain on the same
+                # peer so stale entries land before the live entry
+                # (last-writer-wins on the peer => live wins).
+                await _crep.publish_with_latch(pusher.pull_host, pusher, event)
             except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "resource-replicate: failed to send register for %s to %s",
@@ -2497,6 +2664,21 @@ class MasterPubServerChannel:
                 chunk_index=chunk_index,
             )
 
+    def _ensure_cache_bank_barrier_lock(self):
+        """
+        Lazy-init the per-channel ``_cache_bank_barrier_lock``.
+
+        NEW-4: the lock is a plain ``threading.Lock`` (not RLock) per
+        reviewer correction #4 -- the one re-entrant call site
+        (``_drain_cache_bank_barrier`` -> ``_release_cache_bank_barrier``)
+        is refactored to "snapshot the bank list under the lock,
+        release, then call release for each bank unlocked" so no
+        re-entry occurs.
+        """
+        if not hasattr(self, "_cache_bank_barrier_lock"):
+            self._cache_bank_barrier_lock = threading.Lock()
+        return self._cache_bank_barrier_lock
+
     def _handle_delegate_cache_write(self, payload):
         """
         Peer-side handler for ``cluster/peer/delegate-cache-write``.
@@ -2513,15 +2695,29 @@ class MasterPubServerChannel:
         the matching ``bank_sync:<bank>`` channel eofs.  Without this
         barrier a late stale-snapshot chunk can overwrite a fresh
         live delta ("stale wins" ordering).
+
+        NEW-4: this method runs on an executor thread (``run_in_executor``
+        from the state-sync-chunk dispatch) while
+        ``_release_cache_bank_barrier`` runs on the event-loop
+        thread.  A naive check-then-act was susceptible to a drop:
+        thread-A reads ``_cache_bank_barrier_active == True`` just
+        as thread-B calls ``_release_cache_bank_barrier`` and
+        removes the barrier; thread-A then calls
+        ``_queue_cache_bank_delta`` which no-ops (barrier gone), and
+        the delta is lost.  Acquiring ``_cache_bank_barrier_lock``
+        across the check AND the enqueue makes the two steps atomic.
         """
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
 
         bank = None
         if isinstance(payload, dict):
             bank = payload.get("bank")
-        if bank and self._cache_bank_barrier_active(bank):
-            self._queue_cache_bank_delta(bank, payload)
-            return None
+        if bank:
+            lock = self._ensure_cache_bank_barrier_lock()
+            with lock:
+                if self._cache_bank_barrier_active_locked(bank):
+                    self._queue_cache_bank_delta_locked(bank, payload)
+                    return None
         return salt.cache._cluster_replicator._handle_delegate_cache_write(
             self.opts, payload
         )
@@ -2534,6 +2730,19 @@ class MasterPubServerChannel:
         Uses longest-prefix match on the barrier's bank name so a
         compound delta bank (``grains/<minion>``) matches a top-level
         barrier bank (``grains``).
+
+        Acquires ``_cache_bank_barrier_lock`` for a consistent snapshot.
+        Callers that already hold the lock should use
+        :meth:`_cache_bank_barrier_active_locked` instead.
+        """
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            return self._cache_bank_barrier_active_locked(bank)
+
+    def _cache_bank_barrier_active_locked(self, bank):
+        """
+        NEW-4 locked variant: caller MUST already hold
+        ``_cache_bank_barrier_lock``.
         """
         barriers = getattr(self, "_cache_bank_barriers", None) or {}
         if not barriers:
@@ -2548,7 +2757,16 @@ class MasterPubServerChannel:
         """
         Queue a live ``delegate-cache-write`` payload behind the
         matching pending bank's catch-up stream.
+
+        Acquires ``_cache_bank_barrier_lock``.  Callers that already
+        hold it should use :meth:`_queue_cache_bank_delta_locked`.
         """
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            self._queue_cache_bank_delta_locked(bank, payload)
+
+    def _queue_cache_bank_delta_locked(self, bank, payload):
+        """NEW-4 locked variant: caller MUST already hold the lock."""
         barriers = getattr(self, "_cache_bank_barriers", None) or {}
         for banks in barriers.values():
             for pending, queue in banks.items():
@@ -2566,16 +2784,28 @@ class MasterPubServerChannel:
         same free-function handler the live path uses so the
         ``originating_master`` guard and ``_already_replicated``
         flag flow through identically.
+
+        NEW-4: snapshot-under-lock-then-release pattern.  The queue
+        snapshot is popped under the lock; the actual replay of
+        queued payloads runs OUTSIDE the lock because the free-
+        function handler may touch disk / mmap and we do not want
+        to serialise every executor-thread handler on the barrier
+        lock.
         """
         import salt.cache._cluster_replicator  # pylint: disable=import-outside-toplevel
 
-        barriers = getattr(self, "_cache_bank_barriers", None) or {}
-        session_banks = barriers.get(session_id)
-        if not session_banks:
-            return
-        queue = session_banks.pop(bank, None) or []
-        if not session_banks:
-            barriers.pop(session_id, None)
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            barriers = getattr(self, "_cache_bank_barriers", None) or {}
+            session_banks = barriers.get(session_id)
+            if not session_banks:
+                return
+            queue = session_banks.pop(bank, None) or []
+            if not session_banks:
+                barriers.pop(session_id, None)
+        # ``queue`` is a local list now; replay outside the lock so
+        # the handler's disk / mmap work does not serialise other
+        # executor threads trying to acquire the barrier lock.
         for queued_payload in queue:
             try:
                 salt.cache._cluster_replicator._handle_delegate_cache_write(
@@ -2600,12 +2830,25 @@ class MasterPubServerChannel:
         Drain every bank's queued writes for *session_id* (used when
         on_complete fires via the watchdog rather than eof-of-all-
         channels).  Keeps the barrier a bounded-latency hold.
+
+        NEW-4 (reviewer correction #4): snapshot the bank list under
+        the lock, release the lock, THEN call
+        ``_release_cache_bank_barrier`` for each bank.  Each
+        per-bank release re-acquires the lock.  This avoids the
+        re-entrant RLock requirement -- plain ``threading.Lock`` is
+        sufficient because no code path holds the lock across the
+        nested call.
         """
-        barriers = getattr(self, "_cache_bank_barriers", None) or {}
-        session_banks = barriers.get(session_id)
-        if not session_banks:
-            return
-        for bank in list(session_banks.keys()):
+        lock = self._ensure_cache_bank_barrier_lock()
+        with lock:
+            barriers = getattr(self, "_cache_bank_barriers", None) or {}
+            session_banks = barriers.get(session_id)
+            if not session_banks:
+                return
+            bank_snapshot = list(session_banks.keys())
+        # Release phase runs UNLOCKED; each bank acquires the lock
+        # itself inside ``_release_cache_bank_barrier``.
+        for bank in bank_snapshot:
             self._release_cache_bank_barrier(session_id, bank)
 
     async def _run_delegate_cache_write(self, payload):
@@ -2865,9 +3108,49 @@ class MasterPubServerChannel:
             )
             return
         request_payload = {"requester": requester, "channels": valid_channels}
-        expected_peers = [p.pull_host for p in self.pushers]
-        self._init_collect_sentinel(valid_channels, expected_peers, requester)
-        for pusher in self.pushers:
+        # NEW-10: Gate the collect-request fan-out through
+        # ``filter_joined_pushers`` BEFORE sizing ``expected_peers`` so the
+        # sentinel threshold is set from the kept set, not the raw
+        # ``self.pushers`` list.  ``pending_event=None`` because a
+        # collect-request is a PULL scoped to one run -- replaying it later
+        # via the pending-queue mechanism would not update the original
+        # sentinel's ``expected_peers``.  Operator contract: un-joined
+        # peers are listed in ``skipped_peers`` on the sentinel; operator
+        # re-invokes the runner after the handshake completes if they want
+        # eager delivery.  See primary design §Fix 2; reviewer correction
+        # #2 (per-peer EOF tracking in sentinel) is implemented in
+        # ``_init_collect_sentinel`` / ``_record_collect_chunk``.
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="collect-from-peers",
+            pending_event=None,
+        )
+        skipped_hosts = sorted(p.pull_host for p in skipped if p.pull_host)
+        expected_peers = [p.pull_host for p in kept]
+        if not expected_peers:
+            log.warning(
+                "cluster.collect_from_peers: no peers joined; aborting fan-out "
+                "(skipped_peers=%s)",
+                skipped_hosts,
+            )
+            # Still write a sentinel so operators polling the file see a
+            # deterministic structure (complete=False, skipped lists the
+            # un-joined peers).
+            self._init_collect_sentinel(
+                valid_channels, expected_peers, requester, skipped_peers=skipped_hosts
+            )
+            return
+        self._init_collect_sentinel(
+            valid_channels, expected_peers, requester, skipped_peers=skipped_hosts
+        )
+        for pusher in kept:
             peer_id = pusher.pull_host
             event = salt.utils.event.SaltEvent.pack(
                 salt.utils.event.tagify("collect-request", "peer", "cluster"),
@@ -2888,7 +3171,9 @@ class MasterPubServerChannel:
                     peer_id,
                 )
 
-    def _init_collect_sentinel(self, channels, expected_peers, requester):
+    def _init_collect_sentinel(
+        self, channels, expected_peers, requester, skipped_peers=None
+    ):
         """
         Initialise the per-process collect-status structure and
         flush it to disk.  Subsequent
@@ -2899,31 +3184,56 @@ class MasterPubServerChannel:
         """
         import time  # pylint: disable=import-outside-toplevel
 
+        # Reviewer correction #2: ``peers_eofed`` tracks the SET of peers
+        # that have eof'd a channel, not a monotonic ``eofs_seen`` counter.
+        # The threshold ``peers_eofed >= set(expected_peers)`` is reached
+        # only when every joined peer has acked, not when total acks happen
+        # to equal the kept count (a skipped peer who installs cluster_aes
+        # mid-run could otherwise increment the counter into a false
+        # ``complete=True``).  ``eofs_seen`` is kept for back-compat with
+        # external operator tooling that reads the sentinel JSON.  The
+        # ``peers_eofed`` set is persisted as a sorted list so the sentinel
+        # remains JSON-serialisable.
         self._collect_status = {
             "started_at": time.time(),
             "updated_at": time.time(),
             "requester": requester,
             "channels": list(channels),
             "expected_peers": sorted(expected_peers),
+            "skipped_peers": sorted(skipped_peers or []),
             "items_installed": 0,
             "chunks_installed": 0,
             "per_channel": {
-                ch: {"chunks": 0, "items": 0, "eofs_seen": 0} for ch in channels
+                ch: {
+                    "chunks": 0,
+                    "items": 0,
+                    "eofs_seen": 0,
+                    "peers_eofed": [],
+                }
+                for ch in channels
             },
             "complete": False,
         }
         self._write_collect_sentinel()
 
-    def _record_collect_chunk(self, channel, items_installed, eof):
+    def _record_collect_chunk(self, channel, items_installed, eof, source_peer=None):
         """
         Update the in-memory collect status with one chunk's
         outcome and flush.
 
-        ``complete`` flips to True when every channel has seen at
-        least ``len(expected_peers)`` eofs -- the heuristic for "every
-        peer responded for every requested channel."  Operators
-        watching the file poll for the boolean, not the per-channel
-        counts.
+        ``complete`` flips to True when every channel's
+        ``peers_eofed`` set is a superset of ``expected_peers`` --
+        the correct "every expected peer has eof'd every requested
+        channel" check.  Operators watching the file poll for the
+        boolean, not the per-channel counts.
+
+        Reviewer correction #2: per-peer set replaces the monotonic
+        ``eofs_seen`` counter so a skipped peer whose cluster_aes
+        install races the fan-out cannot count towards a false
+        ``complete=True`` by emitting an eof that would increment
+        the counter past the kept-count threshold.  The threshold
+        now checks "did every kept peer eof?", which can only be
+        answered correctly if we record WHO sent each eof.
         """
         import time  # pylint: disable=import-outside-toplevel
 
@@ -2931,18 +3241,28 @@ class MasterPubServerChannel:
         if status is None:
             return
         per_ch = status["per_channel"].setdefault(
-            channel, {"chunks": 0, "items": 0, "eofs_seen": 0}
+            channel,
+            {"chunks": 0, "items": 0, "eofs_seen": 0, "peers_eofed": []},
         )
         per_ch["chunks"] += 1
         per_ch["items"] += int(items_installed)
         if eof:
+            # Keep the monotonic counter for back-compat with external
+            # tooling that reads the sentinel JSON.
             per_ch["eofs_seen"] += 1
+            # Record WHICH peer eofed so the threshold check is
+            # correct for a filtered expected_peers set.
+            if source_peer:
+                peers = per_ch.setdefault("peers_eofed", [])
+                if source_peer not in peers:
+                    peers.append(source_peer)
+                    peers.sort()
         status["chunks_installed"] += 1
         status["items_installed"] += int(items_installed)
         status["updated_at"] = time.time()
-        expected_eofs = len(status["expected_peers"])
-        if expected_eofs > 0 and all(
-            ch_state["eofs_seen"] >= expected_eofs
+        expected_set = set(status.get("expected_peers") or [])
+        if expected_set and all(
+            expected_set.issubset(set(ch_state.get("peers_eofed") or []))
             for ch_state in status["per_channel"].values()
         ):
             status["complete"] = True
@@ -3026,11 +3346,17 @@ class MasterPubServerChannel:
         # -- the on-complete on that path is a plain teardown, which
         # is what we want here too.  Mark the origin so the
         # requester's chunk handler updates the collect-status
-        # sentinel and not the sync_roots one.
+        # sentinel and not the sync_roots one.  Include this peer's
+        # own id as ``source_peer`` so the requester's sentinel can
+        # track per-peer eofs (reviewer correction #2): without this,
+        # the requester cannot tell which peer's eof arrived and the
+        # sentinel threshold would compare a monotonic counter.
+        source_peer = salt.cluster.node_id(self.opts)
         begin_payload = {
             "session": session_id,
             "channels": channels,
             "origin": "collect",
+            "source_peer": source_peer,
         }
         begin_event = salt.utils.event.SaltEvent.pack(
             salt.utils.event.tagify("sync-roots-begin", "peer", "cluster"),
@@ -3109,7 +3435,33 @@ class MasterPubServerChannel:
             salt.master.SMaster.secrets["cluster_aes"]["secret"].value,
         )
 
-        for pusher in self.pushers:
+        # NEW-6: gate the fan-out through ``filter_joined_pushers``.
+        # ``pending_event=None`` because sync_roots is a multi-event
+        # session (begin + N chunks + eof) with a specific session_id;
+        # pending-queue replay of a single pre-encrypted event cannot
+        # preserve that session's integrity.  Skipped peers catch up
+        # via the join-time state-sync stream (file_roots /
+        # pillar_roots are re-streamed in the join-reply).  Primary
+        # design §Fix 4; reviewer correction Q4 (runner scope).
+        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+        discover_replies = getattr(self, "_discover_replies", None) or set()
+        peer_keys = getattr(self, "peer_keys", None) or {}
+        kept, skipped = _crep.filter_joined_pushers(
+            self.pushers,
+            discover_replies,
+            peer_keys,
+            self.opts,
+            context="sync-roots",
+            pending_event=None,
+        )
+        if skipped:
+            log.warning(
+                "cluster.sync_roots: skipping un-joined peers %s; roots "
+                "will be caught up via state-sync on their next handshake",
+                sorted(p.pull_host for p in skipped if p.pull_host),
+            )
+        for pusher in kept:
             await self._send_sync_roots_to_peer(
                 pusher,
                 active_channels,
@@ -3409,10 +3761,17 @@ class MasterPubServerChannel:
             " (eof)" if eof else "",
         )
         # Collect-origin sessions update the operator-visible
-        # status sentinel -- bumps a counter the operator polls
-        # while waiting for the runner's fan-out to finish.
+        # status sentinel -- tracks per-peer eofs (reviewer
+        # correction #2) so the completion threshold is "every
+        # expected peer has eof'd every channel", not a monotonic
+        # counter.
         if getattr(session, "origin", "sync_roots") == "collect":
-            self._record_collect_chunk(channel, installed, eof)
+            self._record_collect_chunk(
+                channel,
+                installed,
+                eof,
+                source_peer=getattr(session, "source_peer", None),
+            )
         session.record_chunk(channel, seq, eof, installed)
 
     def _begin_state_sync_session(
@@ -3493,7 +3852,15 @@ class MasterPubServerChannel:
         session.watchdog_handle = None
         self._state_sync_sessions[session_id] = session
         if banks:
-            self._cache_bank_barriers[session_id] = {bank: [] for bank in banks}
+            # NEW-4: hold the barrier lock across the assignment so a
+            # concurrent ``_handle_delegate_cache_write`` on the
+            # executor thread cannot observe a partially-populated
+            # barrier dict (dict mutation under GIL is atomic per-op
+            # but the ``{bank: []}`` comprehension executes multiple
+            # ops; take the lock to prevent any check-then-act skew).
+            lock = self._ensure_cache_bank_barrier_lock()
+            with lock:
+                self._cache_bank_barriers[session_id] = {bank: [] for bank in banks}
 
         try:
             loop = asyncio.get_event_loop()
@@ -3509,7 +3876,9 @@ class MasterPubServerChannel:
                 session_id,
             )
 
-    def _begin_root_sync_session(self, session_id, channels, origin="sync_roots"):
+    def _begin_root_sync_session(
+        self, session_id, channels, origin="sync_roots", source_peer=None
+    ):
         """
         Pre-register a state-sync session for an operator-driven
         content push.
@@ -3575,6 +3944,12 @@ class MasterPubServerChannel:
         session = StateSyncSession(session_id, _on_complete, channels=channels)
         session.watchdog_handle = None
         session.origin = origin
+        # Reviewer correction #2: carry the peer-id of the chunk source
+        # on the session so the collect-status sentinel can mark
+        # ``peers_eofed`` as a set, not a monotonic counter.  ``None``
+        # when unknown (legacy sync-roots-begin without ``source_peer``;
+        # the per-peer tracking degrades to a counter in that case).
+        session.source_peer = source_peer
         self._state_sync_sessions[session_id] = session
 
         try:
@@ -4106,6 +4481,50 @@ class MasterPubServerChannel:
         if path.exists():
             return path.read_text(encoding="utf-8")
 
+    def _cluster_key_state_machine(self):
+        """
+        Return the lazy-initialised
+        :class:`salt.channel._cluster_key_state.ClusterKeyStateMachine`
+        for this master process.
+
+        On first call the machine is reconciled against the on-disk
+        sentinels + current key bytes: if a sentinel is present and
+        its fingerprint matches disk, the key starts COMMITTED;
+        otherwise BOOTSTRAP (reviewer T-2: the mismatch case deletes
+        the stale sentinel so the next join-reply install re-commits).
+        """
+        # Use getattr with a default so instances built via
+        # ``__new__`` in tests (which skip __init__) still work.
+        existing = getattr(self, "_cluster_key_sm", None)
+        if existing is not None:
+            return existing
+        cluster_pki_dir = self.opts.get("cluster_pki_dir")
+        if not cluster_pki_dir:
+            # Not a clustered master; no sentinel scope.  Caller
+            # should check ``is not None`` before using.
+            return None
+        sm = _cluster_key_state.ClusterKeyStateMachine(self.opts, cluster_pki_dir)
+        # Reconcile cluster_aes.
+        aes_path = pathlib.Path(cluster_pki_dir) / ".aes"
+        aes_bytes = None
+        if aes_path.is_file():
+            try:
+                aes_bytes = aes_path.read_bytes()
+            except OSError:
+                aes_bytes = None
+        sm.load_from_disk("cluster_aes", aes_bytes)
+        # Reconcile cluster.pem (cluster RSA private).
+        pem_path = pathlib.Path(cluster_pki_dir) / "cluster.pem"
+        pem_bytes = None
+        if pem_path.is_file():
+            try:
+                pem_bytes = pem_path.read_bytes()
+            except OSError:
+                pem_bytes = None
+        sm.load_from_disk("cluster_pem", pem_bytes)
+        self._cluster_key_sm = sm
+        return sm
+
     def pusher(self, peer, port=None):
         if port is None:
             port = self.tcp_master_pool_port
@@ -4208,6 +4627,7 @@ class MasterPubServerChannel:
                     begin.get("session"),
                     begin.get("channels") or [],
                     origin=begin.get("origin", "sync_roots"),
+                    source_peer=begin.get("source_peer"),
                 )
                 return
             if tag.startswith("cluster/peer/delegate-write"):
@@ -4466,7 +4886,30 @@ class MasterPubServerChannel:
                 token = self._discover_token or ""
                 if isinstance(token, str):
                     token = token.encode()
-                if "cluster_aes" in inner:
+                # Shim call left in place for cross-fork integrators
+                # who cherry-picked commit 6; deprecated no-op (see
+                # ``filter_non_founder_cluster_aes_from_join_reply``
+                # docstring).  The state machine below supersedes the
+                # identity filter.
+                inner, _ = filter_non_founder_cluster_aes_from_join_reply(
+                    inner, self.opts
+                )
+                # Receiver-side state machine (unified cluster-key
+                # propagation primitive).  BOOTSTRAP accepts the first
+                # install (with founder-wait bias for non-founders);
+                # COMMITTED no-ops on equal arrivals and rejects
+                # divergent arrivals with a WARN.  See
+                # ``salt/channel/_cluster_key_state.py``.
+                sm = self._cluster_key_state_machine()
+                sender_peer_id = inner.get("peer_id")
+                founder_id = _cluster_bootstrap_founder_id(self.opts)
+                sender_norm = (
+                    sender_peer_id.removesuffix("_master")
+                    if isinstance(sender_peer_id, str)
+                    else sender_peer_id
+                )
+                sender_is_founder = founder_id is not None and sender_norm == founder_id
+                if "cluster_aes" in inner and sm is not None:
                     try:
                         salted = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
@@ -4475,54 +4918,110 @@ class MasterPubServerChannel:
                             algorithm=self.opts["cluster_encryption_algorithm"],
                         )
                         new_cluster_aes = salted[len(token) :]
-                        prev_cluster_aes = salt.master.SMaster.secrets["cluster_aes"][
-                            "secret"
-                        ].value
-                        with salt.master.SMaster.secrets["cluster_aes"][
-                            "secret"
-                        ].get_lock():
-                            salt.master.SMaster.secrets["cluster_aes"][
-                                "secret"
-                            ].value = new_cluster_aes
-                        # Persist locally so the joiner survives restart
-                        # without re-running the join handshake.
-                        aes_path = pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
-                        aes_path.parent.mkdir(parents=True, exist_ok=True)
-                        with salt.utils.files.set_umask(0o177):
-                            with salt.utils.files.fopen(aes_path, "wb") as fp:
-                                fp.write(new_cluster_aes)
-                        log.info(
-                            "Installed cluster_aes from join-reply (%d bytes)",
-                            len(new_cluster_aes),
+                    except Exception:  # pylint: disable=broad-except
+                        log.exception(
+                            "cluster_aes join-reply decrypt failed; skipping install"
                         )
-                        # A (re)joining master boots with a randomly
-                        # generated local ``cluster_aes`` (own ``.aes``
-                        # file).  Any writes fired between startup and
-                        # this install were queued pre-encrypted with
-                        # that fresh key; peers only know the cluster's
-                        # actual ``cluster_aes`` and cannot decrypt
-                        # those bytes.  Drop the pending queues on every
-                        # key *change* so no replay silently loses on
-                        # the receiver side.  See reviewer I-1 in
-                        # ``followup-bootstrap-race-reviewer.md``.
-                        if prev_cluster_aes != new_cluster_aes:
+                        new_cluster_aes = None
+                    if new_cluster_aes is not None:
+                        decision = sm.decide(
+                            "cluster_aes",
+                            new_cluster_aes,
+                            sender_peer_id=sender_peer_id,
+                            is_founder=sender_is_founder,
+                        )
+                        if decision == "install":
                             try:
-                                import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+                                prev_cluster_aes = salt.master.SMaster.secrets[
+                                    "cluster_aes"
+                                ]["secret"].value
+                                try:
+                                    import salt.cache._cluster_replicator as _crep_fp  # pylint: disable=import-outside-toplevel
 
-                                _crep.drop_all_pending(
-                                    reason="cluster_aes install from join-reply"
+                                    new_fp = _crep_fp.secret_fingerprint(
+                                        new_cluster_aes
+                                    )
+                                    prev_fp = _crep_fp.secret_fingerprint(
+                                        prev_cluster_aes
+                                    )
+                                    log.info(
+                                        "Installing cluster_aes from %s: "
+                                        "prev_fp=%s new_fp=%s",
+                                        sender_peer_id,
+                                        prev_fp,
+                                        new_fp,
+                                    )
+                                except Exception:  # pylint: disable=broad-except
+                                    pass
+                                with salt.master.SMaster.secrets["cluster_aes"][
+                                    "secret"
+                                ].get_lock():
+                                    salt.master.SMaster.secrets["cluster_aes"][
+                                        "secret"
+                                    ].value = new_cluster_aes
+                                # Persist locally so the joiner survives restart
+                                # without re-running the join handshake.
+                                aes_path = (
+                                    pathlib.Path(self.opts["cluster_pki_dir"]) / ".aes"
                                 )
+                                aes_path.parent.mkdir(parents=True, exist_ok=True)
+                                with salt.utils.files.set_umask(0o177):
+                                    with salt.utils.files.fopen(aes_path, "wb") as fp:
+                                        fp.write(new_cluster_aes)
+                                transition = sm.mark_committed(
+                                    "cluster_aes", new_cluster_aes
+                                )
+                                log.info(
+                                    "Installed cluster_aes from join-reply "
+                                    "(%d bytes, transition=%s)",
+                                    len(new_cluster_aes),
+                                    transition,
+                                )
+                                # A (re)joining master boots with a randomly
+                                # generated local ``cluster_aes`` (own ``.aes``
+                                # file).  Any writes fired between startup and
+                                # this install were queued pre-encrypted with
+                                # that fresh key; peers only know the cluster's
+                                # actual ``cluster_aes`` and cannot decrypt
+                                # those bytes.  Drop the pending queues on the
+                                # BOOTSTRAP->COMMITTED transition OR whenever
+                                # the bytes actually change so no replay
+                                # silently loses on the receiver side.
+                                # See reviewer I-1 in
+                                # ``followup-bootstrap-race-reviewer.md``.
+                                if transition or prev_cluster_aes != new_cluster_aes:
+                                    try:
+                                        import salt.cache._cluster_replicator as _crep  # pylint: disable=import-outside-toplevel
+
+                                        _crep.drop_all_pending(
+                                            reason=(
+                                                "cluster_aes install from " "join-reply"
+                                            )
+                                        )
+                                    except Exception:  # pylint: disable=broad-except
+                                        log.exception(
+                                            "cluster-cache-replication: failed "
+                                            "to drop pending queues after "
+                                            "join-reply install"
+                                        )
                             except Exception:  # pylint: disable=broad-except
                                 log.exception(
-                                    "cluster-cache-replication: failed to drop "
-                                    "pending queues after join-reply install"
+                                    "Failed to install cluster_aes from join-reply"
                                 )
-                    except Exception:  # pylint: disable=broad-except
-                        log.exception("Failed to install cluster_aes from join-reply")
                 # Install the cluster RSA key pair (private + public) from
                 # the wire so a joiner without shared ``cluster_pki_dir``
-                # can sign cluster events and serve discover-reply.
-                if "cluster_key_session" in inner and "cluster_pem" in inner:
+                # can sign cluster events and serve discover-reply.  Same
+                # unified state machine as cluster_aes: BOOTSTRAP accepts,
+                # COMMITTED equal is a no-op, COMMITTED mismatch WARNs
+                # and skips (critical -- unlinking cluster.pem +
+                # reassigning ``master_key.key`` on a divergent arrival
+                # is the NEW-11 bug that invalidates every cached minion
+                # mpub mid-flight).
+                if (
+                    "cluster_key_session" in inner
+                    and "cluster_pem" in inner
+                    and sm is not None
+                ):
                     try:
                         salted_session = salt.crypt.PrivateKey.from_file(
                             self.master_key.master_rsa_path
@@ -4535,74 +5034,96 @@ class MasterPubServerChannel:
                             self.opts, session_key_str
                         )
                         pem_bytes = cluster_key_crypt.decrypt(inner["cluster_pem"])
-                        pub_pem = inner.get("cluster_pub") or ""
-                        if isinstance(pub_pem, bytes):
-                            pub_pem = pub_pem.decode()
-                        cluster_pki = pathlib.Path(self.opts["cluster_pki_dir"])
-                        cluster_pki.mkdir(parents=True, exist_ok=True)
-                        # ``find_or_create_keys`` may have already written a
-                        # locally-generated cluster.pem at mode 0400; unlink
-                        # before writing so the wire-delivered version wins.
-                        pem_path = cluster_pki / "cluster.pem"
-                        pub_path = cluster_pki / "cluster.pub"
-                        for p in (pem_path, pub_path):
-                            try:
-                                p.unlink()
-                            except FileNotFoundError:
-                                pass
-                        with salt.utils.files.set_umask(0o277):
-                            with salt.utils.files.fopen(pem_path, "wb") as fp:
-                                fp.write(pem_bytes)
-                        if pub_pem:
-                            with salt.utils.files.fopen(pub_path, "w") as fp:
-                                fp.write(pub_pem)
-                        # Refresh the key cache so subsequent
-                        # ``MasterKeys.get_pub_str()`` / ``find_or_create_keys``
-                        # lookups see the wire-delivered cluster keypair
-                        # rather than the stale locally-generated bytes that
-                        # ``_setup_keys`` stored during startup. Without this
-                        # the mmap_key driver's per-master index still points
-                        # at the joiner's own cluster.pub, so under HAProxy
-                        # (or any load-balancer) the minion sees a different
-                        # cluster.pub from each backend and hits
-                        # "Invalid master key" on its second sign-in.
-                        # See https://github.com/saltstack/salt/issues/70090
-                        try:
-                            self.master_key.cache.store(
-                                "master_keys", "cluster.pem", pem_bytes
-                            )
-                            if pub_pem:
-                                self.master_key.cache.store(
-                                    "master_keys",
-                                    "cluster.pub",
-                                    salt.utils.stringutils.to_bytes(pub_pem),
-                                )
-                        except Exception:  # pylint: disable=broad-except
-                            log.exception(
-                                "Failed to refresh cluster keypair in cache "
-                                "after join-reply install"
-                            )
-                        # Reload the in-memory PrivateKey so the running
-                        # master process signs and decrypts with the shared
-                        # cluster identity from this event onward.
-                        try:
-                            self.master_key.cluster_key = (
-                                salt.crypt.PrivateKey.from_str(pem_bytes)
-                            )
-                            self.master_key.key = self.master_key.cluster_key
-                        except Exception:  # pylint: disable=broad-except
-                            log.exception(
-                                "Failed to reload cluster_key from "
-                                "join-reply-delivered PEM"
-                            )
-                        log.info(
-                            "Installed cluster.pem (%d bytes) and cluster.pub from join-reply",
-                            len(pem_bytes),
-                        )
                     except Exception:  # pylint: disable=broad-except
                         log.exception(
-                            "Failed to install cluster RSA key pair from join-reply"
+                            "cluster.pem join-reply decrypt failed; skipping install"
                         )
+                        pem_bytes = None
+                    if pem_bytes is not None:
+                        decision = sm.decide(
+                            "cluster_pem",
+                            pem_bytes,
+                            sender_peer_id=sender_peer_id,
+                            is_founder=sender_is_founder,
+                        )
+                        if decision == "install":
+                            try:
+                                pub_pem = inner.get("cluster_pub") or ""
+                                if isinstance(pub_pem, bytes):
+                                    pub_pem = pub_pem.decode()
+                                cluster_pki = pathlib.Path(self.opts["cluster_pki_dir"])
+                                cluster_pki.mkdir(parents=True, exist_ok=True)
+                                # ``find_or_create_keys`` may have already written
+                                # a locally-generated cluster.pem at mode 0400;
+                                # unlink before writing so the wire-delivered
+                                # version wins.
+                                pem_path = cluster_pki / "cluster.pem"
+                                pub_path = cluster_pki / "cluster.pub"
+                                for p in (pem_path, pub_path):
+                                    try:
+                                        p.unlink()
+                                    except FileNotFoundError:
+                                        pass
+                                with salt.utils.files.set_umask(0o277):
+                                    with salt.utils.files.fopen(pem_path, "wb") as fp:
+                                        fp.write(pem_bytes)
+                                if pub_pem:
+                                    with salt.utils.files.fopen(pub_path, "w") as fp:
+                                        fp.write(pub_pem)
+                                # Refresh the key cache so subsequent
+                                # ``MasterKeys.get_pub_str()`` /
+                                # ``find_or_create_keys`` lookups see the
+                                # wire-delivered cluster keypair rather than
+                                # the stale locally-generated bytes that
+                                # ``_setup_keys`` stored during startup.
+                                # Without this the mmap_key driver's
+                                # per-master index still points at the
+                                # joiner's own cluster.pub, so under HAProxy
+                                # (or any load-balancer) the minion sees a
+                                # different cluster.pub from each backend and
+                                # hits "Invalid master key" on its second
+                                # sign-in.
+                                # See https://github.com/saltstack/salt/issues/70090
+                                try:
+                                    self.master_key.cache.store(
+                                        "master_keys", "cluster.pem", pem_bytes
+                                    )
+                                    if pub_pem:
+                                        self.master_key.cache.store(
+                                            "master_keys",
+                                            "cluster.pub",
+                                            salt.utils.stringutils.to_bytes(pub_pem),
+                                        )
+                                except Exception:  # pylint: disable=broad-except
+                                    log.exception(
+                                        "Failed to refresh cluster keypair in "
+                                        "cache after join-reply install"
+                                    )
+                                # Reload the in-memory PrivateKey so the
+                                # running master process signs and decrypts
+                                # with the shared cluster identity from this
+                                # event onward.
+                                try:
+                                    self.master_key.cluster_key = (
+                                        salt.crypt.PrivateKey.from_str(pem_bytes)
+                                    )
+                                    self.master_key.key = self.master_key.cluster_key
+                                except Exception:  # pylint: disable=broad-except
+                                    log.exception(
+                                        "Failed to reload cluster_key from "
+                                        "join-reply-delivered PEM"
+                                    )
+                                sm.mark_committed("cluster_pem", pem_bytes)
+                                log.info(
+                                    "Installed cluster.pem (%d bytes) and "
+                                    "cluster.pub from join-reply",
+                                    len(pem_bytes),
+                                )
+                            except Exception:  # pylint: disable=broad-except
+                                log.exception(
+                                    "Failed to install cluster RSA key pair "
+                                    "from join-reply"
+                                )
                 event = self._discover_event
                 self._discover_event = None
                 # Write the join sentinel so future restarts skip discover/join.
@@ -4815,6 +5336,21 @@ class MasterPubServerChannel:
                     token_bytes + cluster_key_session.encode(),
                     algorithm=self.opts["cluster_encryption_algorithm"],
                 )
+                # Unconditional ``cluster_aes`` attach: the sender
+                # always ships its current cluster session key.  The
+                # founder-only sender gate historically introduced in
+                # commit ``6acb1653613`` is superseded by the receiver-
+                # side state machine (see
+                # ``_cluster_key_state.install_cluster_key``) -- the
+                # receiver's bootstrap-vs-committed state decides
+                # whether to honour an install, with a founder-wait
+                # window during bootstrap for determinism.  Keeping the
+                # sender unconditional lets a surviving non-founder
+                # deliver ``cluster_aes`` to a brand-new master that
+                # joins after the founder has died (I-2 regression
+                # scenario).  ``is_designated_cluster_founder`` is kept
+                # (consulted by the receiver for its founder-wait
+                # window) but is no longer a sender gate.
                 inner_payload = {
                     "return_token": payload["token"],
                     "peer_id": self.opts["id"],
@@ -4822,13 +5358,13 @@ class MasterPubServerChannel:
                         token_bytes + aes_secret,
                         algorithm=self.opts["cluster_encryption_algorithm"],
                     ),
+                    "cluster_key_session": wrapped_session,
+                    "cluster_pem": cluster_pem_ciphertext,
+                    "cluster_pub": cluster_pub_pem,
                     "cluster_aes": joiner_pub.encrypt(
                         token_bytes + cluster_aes_secret,
                         algorithm=self.opts["cluster_encryption_algorithm"],
                     ),
-                    "cluster_key_session": wrapped_session,
-                    "cluster_pem": cluster_pem_ciphertext,
-                    "cluster_pub": cluster_pub_pem,
                     "peers": {},
                 }
                 # Isolated-FS bulk state sync: announce a session id in the

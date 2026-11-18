@@ -984,18 +984,55 @@ class MasterKeys(dict):
         """
         proxy to PrivateKey.sign
         """
+        self._maybe_reload_cluster_key()
         return self.key.sign(*args, **kwargs)
+
+    def _maybe_reload_cluster_key(self):
+        # The join-reply install path in ``MasterPubServerChannel`` rewrites
+        # ``cluster.pem`` in place when the founder's bytes arrive.  MWorker
+        # processes that ``_setup_keys()`` ran before that install still hold
+        # the bootstrap ``PrivateKey`` in ``self.key``, but ``get_pub_str()``
+        # already reads the current founder's ``cluster.pub`` from disk --
+        # so the pub we serve to the minion and the priv we decrypt the
+        # minion's token with come from different key pairs and every auth
+        # fails with ``Decryption failed``.  Reread from disk on each
+        # decrypt and swap ``self.key`` when the bytes have changed.
+        if not self.opts.get("cluster_id"):
+            return
+        try:
+            pem_bytes = self.cache.fetch("master_keys", "cluster.pem")
+        except Exception:  # pylint: disable=broad-except
+            return
+        if not pem_bytes:
+            return
+        if isinstance(pem_bytes, str):
+            pem_bytes_b = pem_bytes.encode()
+        else:
+            pem_bytes_b = pem_bytes
+        fp = hashlib.sha256(pem_bytes_b).hexdigest()
+        if getattr(self, "_cluster_key_fp", None) == fp:
+            return
+        try:
+            new_key = PrivateKey.from_str(pem_bytes)
+        except Exception:  # pylint: disable=broad-except
+            log.exception("Failed to reload cluster_key from disk")
+            return
+        self.cluster_key = new_key
+        self.key = new_key
+        self._cluster_key_fp = fp
 
     def decrypt(self, *args, **kwargs):
         """
         proxy to PrivateKey.decrypt
         """
+        self._maybe_reload_cluster_key()
         return self.key.decrypt(*args, **kwargs)
 
     def encrypt(self, *args, **kwargs):
         """
         proxy to PrivateKey.encrypt
         """
+        self._maybe_reload_cluster_key()
         return self.key.encrypt(*args, **kwargs)
 
     def fetch(self, name):
