@@ -243,12 +243,19 @@ def test_start_registers_sm_callbacks_before_migration(opts, clean_state, monkey
 
 
 class _StubLink:
-    """Minimal link stand-in for dedup tests."""
+    """Minimal link stand-in for dedup tests.
+
+    Defaults to a non-None ``session_aes`` so records installed in
+    ``_INBOUND`` by the stub represent a handshake-established peer;
+    :func:`_verify_session` rejects records whose ``session_aes`` is
+    None as a defense-in-depth guard against a lazy-register bypass.
+    """
 
     def __init__(self, cluster_id, health=LinkHealth.CONNECTED):
         self.peer_cluster_id = cluster_id
         self.health = health
         self.session_generation = 1
+        self.session_aes = b"stub-aes-32-bytes-session-sentinel"
         self.endpoints = (PeerRef(host="127.0.0.1", port=1234, finger=None),)
 
     async def disconnect(self):
