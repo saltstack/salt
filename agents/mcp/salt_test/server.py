@@ -601,7 +601,7 @@ async def call_tool(name: str, arguments: Any) -> list[TextContent]:
                         "pip",
                         "install",
                         "-r",
-                        "requirements/static/ci/py3.10/tools.lock",
+                        "requirements/static/ci/py3.13/tools.lock",
                     ],
                     check=False,
                     stdout=sys.stderr,
