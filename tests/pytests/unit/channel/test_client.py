@@ -503,6 +503,7 @@ async def test_connected_event_does_not_gate_connection_callback(
     request.__aexit__ = AsyncMock(return_value=None)
     try:
         with patch("salt.channel.client.AsyncReqChannel.factory", return_value=request):
+            # pylint: disable-next=not-callable
             await asyncio.wait_for(channel.connect_callback(True), 1)
         await asyncio.wait_for(started.wait(), 1)
         assert channel.connected

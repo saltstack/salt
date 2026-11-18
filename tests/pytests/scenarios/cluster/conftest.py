@@ -48,7 +48,7 @@ log = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def cluster_minion_fast_tick(cluster_master_1):
+def cluster_minion_fast_tick(cluster_master_1):  # noqa: F811
     """
     A cluster minion identical to ``cluster_minion_1`` except
     ``master_alive_interval`` is 3 s (vs. 60 s default).  ``status.master``

@@ -841,9 +841,16 @@ def log_decrypt_failure(tag, opts, secret, source_peer=None, extra=None):
             parts.append(f"{k}={v!r}")
     if suppressed:
         parts.append(f"suppressed_similar={suppressed}")
-    log.exception(
+    # Use ``log.error(..., exc_info=True)`` instead of ``log.exception()`` so
+    # Ruff LOG004 is satisfied; Ruff only sees this call site statically and
+    # can't tell the function is only invoked from inside ``except`` handlers
+    # (see callers in ``salt/channel/server.py``). ``exc_info=True`` picks up
+    # the active exception from ``sys.exc_info()`` exactly like
+    # ``log.exception()``.
+    log.error(
         "cluster-decrypt-failed: %s -- handshake incomplete or cluster_aes mismatch",
         " ".join(parts),
+        exc_info=True,  # noqa: LOG014
     )
 
 
