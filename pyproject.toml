@@ -190,6 +190,42 @@ select = [
     "DTZ004",  # datetime.utcfromtimestamp()
     "ASYNC251",  # time.sleep() in an async function
     "PGH004",  # blanket noqa
+    # Bugs and unsafe calls that are not present in the code base today.
+    "ASYNC210",  # blocking requests call in async function
+    "ASYNC220",  # subprocess started in async function
+    "ASYNC222",  # os.wait() in async function
+    "ASYNC230",  # open() in async function
+    "ASYNC250",  # input() in async function
+    "S313",  # cElementTree parser
+    "S315",  # expat reader
+    "S316",  # expat builder
+    "S317",  # xml.sax
+    "S319",  # pulldom
+    "S304",  # insecure cipher
+    "S305",  # insecure cipher mode
+    "S302",  # marshal.loads
+    "S501",  # certificate check turned off
+    "S502",  # insecure SSL/TLS version
+    "S503",  # insecure SSL/TLS default
+    "S505",  # weak cryptographic key
+    "S609",  # wildcard in a shell command
+    "S612",  # logging.config.listen
+    "SIM107",  # return in try/finally
+    "SIM220",  # x and not x
+    "SIM221",  # x or not x
+    "SIM223",  # x and False
+    "PIE794",  # duplicate class field
+    "PIE796",  # duplicate enum value
+    "PLC0205",  # __slots__ is a string
+    "PLC0208",  # iteration over a set literal
+    "PLC3002",  # lambda called directly
+    "PLR0133",  # comparison of two constants
+    "PLR1708",  # raise StopIteration in a generator
+    "RUF030",  # print() as assert message
+    "RUF032",  # Decimal() from a float
+    "RUF048",  # map(int, version.split())
+    "RUF101",  # redirected noqa code
+    "RUF103",  # invalid ruff suppression comment
 ]
 ignore = [
     "F403",  # star imports

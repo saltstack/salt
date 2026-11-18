@@ -281,6 +281,8 @@ typing-extensions==4.16.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt

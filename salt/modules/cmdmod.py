@@ -95,7 +95,7 @@ def _check_cb(cb_):
     the value passed.
     """
     if cb_ is not None:
-        if hasattr(cb_, "__call__"):
+        if callable(cb_):
             return cb_
         else:
             log.error("log_callback is not callable, ignoring")
