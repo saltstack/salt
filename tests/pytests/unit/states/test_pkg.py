@@ -1061,6 +1061,75 @@ def test_installed_with_freebsd_origin():
         assert ret["result"]
 
 
+@pytest.mark.parametrize("test", [False, True])
+def test_installed_mark_manual_already_installed(test):
+    """
+    pkg.installed with mark_manual marks an already installed dependency, and
+    in test mode only reports the change without calling pkg.set_mark
+    """
+    get_mock = MagicMock(return_value=["jq", "libonig5"])
+    set_mock = MagicMock(return_value=True)
+    salt_dict = {
+        "pkg.list_pkgs": MagicMock(return_value={"jq": ["1.7"]}),
+        "pkg.version": MagicMock(return_value="1.7"),
+        "pkg.get_mark": get_mock,
+        "pkg.set_mark": set_mock,
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ), patch.dict(pkg.__opts__, {"test": test}):
+        ret = pkg.installed("jq", mark_manual=True)
+        assert ret["changes"]["mark_manual"] == {"jq": {"old": "auto", "new": "manual"}}
+        if test:
+            assert ret["result"] is None
+            set_mock.assert_not_called()
+        else:
+            assert ret["result"] is True
+            set_mock.assert_called_once_with(["jq"], "manual")
+        get_mock.reset_mock()
+        pkg.installed("jq")
+        get_mock.assert_not_called()
+
+
+def test_installed_mark_manual_nothing_to_do():
+    get_mock = MagicMock(return_value=[])
+    set_mock = MagicMock()
+    salt_dict = {
+        "pkg.list_pkgs": MagicMock(return_value={"jq": ["1.7"]}),
+        "pkg.version": MagicMock(return_value="1.7"),
+        "pkg.get_mark": get_mock,
+        "pkg.set_mark": set_mock,
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ), patch.dict(pkg.__opts__, {"test": False}):
+        ret = pkg.installed("jq", mark_manual=True)
+    assert ret["result"] is True
+    assert "mark_manual" not in ret["changes"]
+    set_mock.assert_not_called()
+
+
+def test_installed_mark_manual_unsupported():
+    salt_dict = {
+        "pkg.list_pkgs": MagicMock(return_value={"jq": ["1.7"]}),
+        "pkg.version": MagicMock(return_value="1.7"),
+        "lowpkg.unpurge": MagicMock(return_value={}),
+        "pkg_resource.version_clean": pkg_resource.version_clean,
+        "pkg_resource.check_extra_requirements": MagicMock(return_value=True),
+    }
+    with patch.dict(pkg.__salt__, salt_dict), patch.dict(
+        pkg.__grains__, {"os": "Ubuntu", "os_family": "Debian"}
+    ), patch.dict(pkg.__opts__, {"test": False}):
+        ret = pkg.installed("jq", mark_manual=True)
+    assert ret["result"] is False
+
+
 def test_installed_preserves_apt_multiarch_pkg_names_for_update_holds():
     """
     Test pkg.installed keeps explicit APT multiarch package names intact.
