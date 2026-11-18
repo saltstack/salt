@@ -380,7 +380,7 @@ def list_(
             dirs, files, links = func(name, cached, *args)
         except OSError as exc:
             raise CommandExecutionError(f"Failed to list contents of {name}: {exc}")
-        except CommandExecutionError as exc:
+        except CommandExecutionError:
             raise
         except Exception as exc:  # pylint: disable=broad-except
             raise CommandExecutionError(
@@ -837,7 +837,7 @@ def zip_(zip_file, sources, template=None, cwd=None, runas=None, zip64=False):
                             arc_name = os.path.relpath(src, rel_root)
                         archived_files.append(arc_name)
                         zfile.write(src, arc_name)
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         pass
     finally:
         # Restore the euid/egid

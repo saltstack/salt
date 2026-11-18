@@ -596,7 +596,7 @@ def connect(host, port=None, **kwargs):
         else:
             skt.connect(_address)
             skt.shutdown(2)
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         ret["result"] = False
         ret["comment"] = "Unable to connect to {} ({}) on {} port {}".format(
             host, _address[0], proto, port

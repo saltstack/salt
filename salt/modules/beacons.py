@@ -106,7 +106,7 @@ def list_available(return_yaml=True, **kwargs):
                 )
                 if event_ret and event_ret["complete"]:
                     beacons = event_ret["beacons"]
-    except KeyError as e:
+    except KeyError:
         # Effectively a no-op, since we can't really return without an event system
         ret = {}
         ret["result"] = False

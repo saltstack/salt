@@ -582,7 +582,7 @@ def _format_markdown_system_file(filename, config):
             file_type = __salt__["cmd.shell"](f"\\file -i '{filename}'")
             if "charset=binary" not in file_type:
                 is_binary = False
-        except Exception as ex:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # likely on a windows system, set as not binary for now.
             is_binary = False
         if is_binary:
