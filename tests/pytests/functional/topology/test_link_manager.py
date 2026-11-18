@@ -1045,3 +1045,109 @@ def test_handle_inbound_forged_pub_blocks_local_minion_publish(
     finally:
         loop.run_until_complete(link_manager.stop())
         loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Side-channel coverage: ret / evt / sum share the lazy-register +
+# session-verify chain with pub.  Pin each at the router boundary so
+# a regression at any sink is caught.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tag,body,sink_attr",
+    [
+        # ``topology/ret``: dispatcher iterates ``batch`` and calls
+        # ``router.route_return`` per item -- sink is the per-item
+        # route_return invocation.
+        (
+            "topology/ret",
+            {
+                "batch": [
+                    {
+                        "jid": "20260101000000000020",
+                        "id": "web-01",
+                        "return": "pwn",
+                    }
+                ]
+            },
+            "route_return_calls",
+        ),
+        # ``topology/evt``: dispatcher calls ``router.route_event`` once
+        # with the whole load.
+        (
+            "topology/evt",
+            {"tag": "salt/custom/pwn", "data": {"pwn": True}},
+            "route_event_calls",
+        ),
+        # ``topology/sum``: dispatcher deserializes the wire summary and
+        # schedules ``router.ingest_summary``.  Sink: ingest_summary calls
+        # observed on the fake router.
+        (
+            "topology/sum",
+            {
+                "summary": {
+                    "cluster_id": "east",
+                    "path": ["east"],
+                    "minion_count": 0,
+                    "up_count": 0,
+                    "grain_histograms": {},
+                    "origin_seq": 1,
+                    "origin_at": 0.0,
+                },
+            },
+            "ingest_summary_calls",
+        ),
+    ],
+    ids=["ret", "evt", "sum"],
+)
+def test_handle_inbound_forged_side_channel_without_prior_handshake_is_dropped(
+    opts, clean_state, caplog, monkeypatch, tmp_path, tag, body, sink_attr
+):
+    """
+    Side-channel end-to-end regression: ``topology/ret`` (fake minion
+    returns), ``topology/evt`` (event-bus injection), and
+    ``topology/sum`` (routing-table poisoning) must not reach the
+    router when the inbound session cannot be verified.  Mirrors the
+    ``topology/pub`` end-to-end test for the same chain; any valid
+    fix blocks all four tags uniformly.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        fake = _FakeRouter()
+        monkeypatch.setattr(router_mod, "_ROUTER", fake)
+
+        accepted = tmp_path / "pki" / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+        assert (
+            "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+        ), "test precondition: no in-process inbound session for east"
+
+        forged = {
+            "tag": tag,
+            "origin_cluster_id": "east",
+            "session_generation": 131313,
+            "load": body,
+        }
+        with caplog.at_level(logging.WARNING, logger="salt.topology.link_manager"):
+            result = loop.run_until_complete(
+                link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+            )
+        assert (
+            result is None
+        ), f"forged {tag!r} dispatched past the session guard: {result!r}"
+        calls = getattr(fake, sink_attr)
+        assert calls == [], (
+            f"router {sink_attr} fired for a forged {tag!r} whose origin "
+            f"never completed _master_auth: {calls!r}"
+        )
+        assert any(
+            "bad/missing session" in rec.message for rec in caplog.records
+        ), f"unauthenticated {tag!r} must be dropped with WARNING"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()

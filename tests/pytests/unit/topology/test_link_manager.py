@@ -1348,6 +1348,106 @@ def test_maybe_lazy_register_inbound_does_not_fabricate_session_without_handshak
 
 
 # ---------------------------------------------------------------------------
+# Side-channel coverage: ret / evt / sum share the lazy-register +
+# session-verify chain with pub, so the same bypass enables fake-return
+# injection, event-bus injection, and routing-table poisoning.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tag,body",
+    [
+        # ``topology/ret``: fake minion returns from an un-handshaked
+        # peer.  Payoff: poisoning job cache + tripping reactors watching
+        # ``salt/job/<jid>/ret``.
+        (
+            "topology/ret",
+            {
+                "batch": [
+                    {"jid": "20260101000000000010", "id": "web-01", "return": "pwn"}
+                ]
+            },
+        ),
+        # ``topology/evt``: arbitrary master-event-bus injection.  Payoff:
+        # tripping any reactor on this master.
+        ("topology/evt", {"tag": "salt/custom/pwn", "data": {"pwn": True}}),
+        # ``topology/sum``: forged topology summary.  Payoff: poisoning the
+        # routing table used to decide which peer this master forwards to.
+        (
+            "topology/sum",
+            {
+                "summary": {
+                    "cluster_id": "east",
+                    "path": ["east"],
+                    "minion_count": 0,
+                    "up_count": 0,
+                    "grain_histograms": {},
+                    "origin_seq": 1,
+                    "origin_at": 0.0,
+                },
+            },
+        ),
+    ],
+    ids=["ret", "evt", "sum"],
+)
+def test_handle_inbound_rejects_forged_side_channel_without_prior_inbound(
+    opts, clean_state, caplog, monkeypatch, tag, body
+):
+    """
+    Side-channel regression: ``topology/ret`` (fake returns),
+    ``topology/evt`` (event injection), and ``topology/sum`` (routing-
+    table poisoning) must be dropped by the same gate that rejects a
+    forged ``topology/pub``.  All four tags share the lazy-register
+    plus ``_verify_session`` chain; the pub coverage above pins the
+    chain for one tag, this pins it for the other three so a fix
+    that regresses verify-session for any tag is caught.
+    """
+    import logging as _logging
+
+    monkeypatch.setattr(link_manager, "_OPTS", opts)
+    accepted = pathlib.Path(opts["pki_dir"]) / "masters" / "east.pub"
+    accepted.parent.mkdir(parents=True, exist_ok=True)
+    accepted.write_bytes(
+        b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+    )
+    assert "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+
+    dispatched = []
+
+    async def _spy(payload):
+        dispatched.append(payload)
+        return None
+
+    monkeypatch.setitem(
+        link_manager._DISPATCH_TABLE,  # pylint: disable=protected-access
+        tag,
+        _spy,
+    )
+
+    forged = {
+        "tag": tag,
+        "origin_cluster_id": "east",
+        "session_generation": 131313,  # attacker-chosen
+        "load": body,
+    }
+    with caplog.at_level(_logging.WARNING, logger="salt.topology.link_manager"):
+        result = asyncio.new_event_loop().run_until_complete(
+            link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+        )
+    assert result is None, (
+        f"forged {tag!r} frame with no prior handshake must not dispatch "
+        f"(result={result!r}, dispatched={dispatched!r})"
+    )
+    assert dispatched == [], (
+        f"{tag!r} handler received a frame whose origin never completed "
+        f"_master_auth in this process: {dispatched!r}"
+    )
+    assert any(
+        "bad/missing session" in rec.message for rec in caplog.records
+    ), f"unauthenticated {tag!r} frame must be logged at WARNING on drop"
+
+
+# ---------------------------------------------------------------------------
 # cluster_pki_dir must be consulted for topology peer keys
 # ---------------------------------------------------------------------------
 
