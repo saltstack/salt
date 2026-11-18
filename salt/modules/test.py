@@ -238,6 +238,13 @@ def cross_test(func, args=None):
     module, used to verify that the Minion functions can be called
     via the ``__salt__`` module.
 
+    ``__salt__`` is the unfiltered inner loader, so ``cross_test`` can
+    reach any loaded function regardless of ``whitelist_modules``.
+    An operator who whitelists ``test.cross_test`` is granting
+    reflective access to every execution module; prefer
+    :func:`cross_test_safe` when the dispatch target should be subject
+    to the whitelist.
+
     CLI Example:
 
     .. code-block:: bash
@@ -247,6 +254,28 @@ def cross_test(func, args=None):
     if args is None:
         args = []
     return __salt__[func](*args)
+
+
+def cross_test_safe(func, args=None):
+    """
+    Execute a minion function via the whitelist-gated loader
+    (``__wire_salt__``).  Unlike :func:`cross_test`, which uses the
+    unfiltered inner ``__salt__``, this variant dispatches through the
+    outer wire-filtered loader so ``whitelist_modules`` applies to the
+    target function as well as to ``test.cross_test_safe`` itself.
+
+    Fails with ``KeyError`` when ``func`` is not whitelisted.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' test.cross_test_safe test.ping
+    """
+    if args is None:
+        args = []
+    # pylint: disable=undefined-variable
+    return __wire_salt__[func](*args)  # noqa: F821  (packed by salt.loader.minion_mods)
 
 
 def kwarg(**kwargs):
