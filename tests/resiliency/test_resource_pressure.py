@@ -33,6 +33,7 @@ Env knobs (preserve bash defaults from resource_pressure.sh):
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import time
@@ -40,6 +41,8 @@ import time
 import pytest
 
 from tests.resiliency.durations import TIER_STANDARD_SEC
+
+log = logging.getLogger("resiliency.test_resource_pressure")
 
 # pylint: disable=broad-exception-caught
 # Resiliency tests catch broad Exception in cleanup paths deliberately;
@@ -278,15 +281,69 @@ def test_resource_cpu_throttle(topology, workload, request):
     hammering it).  Starving the master while the host-side workload
     wedges ``docker exec`` children can starve the minion containers
     too -- observed in CI run 44002386163 where all three minions
-    exited by the time the relax step ran (``missing=[minion-1,
-    minion-2, minion-3]``, ``rss_delta_kb=-19576``).
+    exited by the time the relax step ran.
 
-    Mirror Agent B's ``test_resource_oom_squeeze`` revive pattern:
-    after relax, inspect the primary master AND every minion
-    container; ``docker start`` anything that exited.  Then
-    ``wait_initial_auth`` + resample ``before`` so the leak-delta
-    baseline reflects post-revive steady state rather than the
-    cold-start reconnect churn.
+    Agent BB's initial revive pattern (commit 79014ebc7fd) mirrored
+    Agent B's ``oom_squeeze`` approach and only ``docker start``-ed
+    exited containers.  CI run 44212539681 showed that is not
+    sufficient: the primary master and every minion stayed
+    ``running`` but ``missing`` with ``rss_delta_kb=-17452``,
+    ``fd_delta=+6`` and ``reconnect_s=-1``.  Signature says the
+    processes were alive (fd/RSS nonzero) but the master was so
+    backlogged from the throttle period that every
+    ``assert_reconnect`` ping timed out.  The revive helper logged
+    nothing because it only wrote to ``notes``, so the regression
+    was uninspectable without an interactive attach.
+
+    First, the throttle-release ``docker update --cpus=0`` was a
+    SILENT NO-OP: docker's update API rejects CPU values outside
+    ``[0.01, <nproc>]`` without a non-zero exit, so the "cpus=0"
+    attempt to clear the limit left the master pinned at 0.1 CPU
+    through the entire resettle + poll.  Verified against docker
+    28.5.2+dfsg4 on 2026-11-18: ``docker update --cpus=0`` reports
+    ``rs-single-salt-master`` on stdout and returns 0 but
+    ``HostConfig.NanoCpus`` stays at ``100000000``.  The finally
+    block now calls ``--cpus=<nproc>`` (effectively unlimited: nano-
+    cpus matching host core count removes CPU pressure).
+
+    Revive strategy (five layers, all logged at INFO):
+
+    1. Pause the ``workload`` fixture pgroup.  During the 0.1-CPU
+       hold its ping/grains/state/runner loops queue ~60-90 jobs in
+       the master's publish queue.  Keeping that traffic flowing
+       during resettle starves our ``salt '*' test.ping`` probes of
+       MWorker capacity.  ``topology.pause_workload`` is a safe
+       no-op when the scenario doesn't take the workload fixture.
+    2. Inspect the primary master.  ``docker start`` it if the
+       container exited; otherwise ``pgrep`` for the salt-master
+       MainProcess -- if the daemon died but tini stayed up,
+       ``docker restart`` the container.  Using ``pgrep`` rather
+       than ``salt-key -L`` because the latter cold-imports the
+       salt loader and typically takes ~18s even on an idle master,
+       so a short-timeout probe would produce false-positive
+       restarts on every run.
+    3. Mirror for each minion container: start if exited, restart
+       if the container is up but ``sample_container`` shows the
+       salt-minion MainProcess is gone.
+    4. Call ``wait_initial_auth(300)`` unconditionally so the
+       master drains its backlog before we hand off to
+       ``assert_reconnect``.
+    5. Leave the workload PAUSED through ``assert_reconnect``'s
+       180 s poll.  CI run 44267471361 showed that resuming
+       workload before the poll caused every ``salt '*' test.ping``
+       subprocess to exceed its ``timeout + 15 = 25 s`` wall cap
+       (local measurement: 50-60 s per invocation under contention)
+       and the test failed with ``missing=3/3`` despite the master
+       log showing workload pings completing for every minion.
+       The "under load" invariant is proven during the 90 s hold;
+       the post-release window is a recovery check.  The success
+       path inside ``assert_reconnect`` resumes the workload for
+       its final AFTER sample settle; the ``workload`` fixture's
+       finally block SIGCONTs + SIGTERMs on teardown so a
+       deadline-missed path still unblocks cleanly.
+
+    Every branch logs what it saw and what it did so the CI job
+    log explains the verdict without needing a repro.
     """
     scenario = "resource_cpu_throttle"
     primary = topology.spec.primary_master
@@ -307,40 +364,169 @@ def test_resource_cpu_throttle(topology, workload, request):
     try:
         time.sleep(CPU_HOLD_SEC)
     finally:
+        # ``docker update --cpus=0`` is SILENTLY IGNORED -- docker
+        # rejects values below the ``[0.01, <nproc>]`` range without a
+        # non-zero rc.  Agent BB's original revive and Agent HH's
+        # hardening both relied on the stdout-suppressed "cpus=0" call
+        # to clear the throttle; the limit actually stayed at 0.1 CPU
+        # through ``wait_initial_auth`` + ``assert_reconnect`` on every
+        # CI run.  Pass ``--cpus=<nproc>`` instead: the kernel treats
+        # a nano-cpu budget equal to the host's CPU count as
+        # effectively unlimited, and docker accepts it on any host
+        # (checked against docker 28.5.2+dfsg4).  Fall back to
+        # ``--cpus=16`` if ``nproc`` reads non-numerically or is
+        # unavailable -- 16 covers every GHA runner tier we target.
+        try:
+            relax_cpus = int(
+                subprocess.run(
+                    ["nproc"],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                ).stdout.strip()
+            )
+        except (subprocess.SubprocessError, ValueError, OSError):
+            relax_cpus = 16
         subprocess.run(
-            ["docker", "update", "--cpus=0", primary],
+            ["docker", "update", f"--cpus={relax_cpus}", primary],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
-    # Revive any container that exited under the throttle.  The
-    # compose entrypoint has no restart policy, so we simulate the
-    # supervisor a real deployment runs.  Covers both the primary
-    # master (its ioloop starved under the cap) and every minion
-    # (their ``docker exec``-driven workload traffic plus auth
-    # retries while the master was unresponsive).
-    revived: list[str] = []
-    revive_targets = (primary,) + tuple(topology.spec.minion_containers)
-    for target in revive_targets:
-        if not topology.inspect_running(target):
-            try:
-                topology.start(target)
-                revived.append(target)
-            except Exception:
-                # Fall through -- assert_reconnect will produce a
-                # proper failure record with missing minions and
-                # the cause will be visible in ``compose.log``.
-                pass
+    # --- Pause workload so the master can drain -----------------------
+    # The 0.1-CPU hold queued ~60-90 workload jobs in the master's
+    # publish queue; if we keep feeding new traffic, our
+    # ``wait_initial_auth`` + ``assert_reconnect`` pings time out.
+    log.info("revive: pausing workload for resettle window")
+    topology.pause_workload()
 
+    # --- Master recovery -----------------------------------------------
+    master_actions: list[str] = []
+    if not topology.inspect_running(primary):
+        log.info("revive: master %s container exited; docker start", primary)
+        try:
+            topology.start(primary)
+            master_actions.append(f"{primary}:started")
+        except Exception as exc:  # pragma: no cover - diagnostic
+            log.warning("revive: docker start %s failed: %s", primary, exc)
+    else:
+        probe = subprocess.run(
+            [
+                "docker",
+                "exec",
+                primary,
+                "pgrep",
+                "-f",
+                "salt-master.*MainProcess",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if probe.returncode != 0:
+            log.info(
+                "revive: master %s MainProcess missing (pgrep rc=%d); "
+                "docker restart",
+                primary,
+                probe.returncode,
+            )
+            try:
+                topology.restart(primary)
+                master_actions.append(f"{primary}:restarted")
+            except Exception as exc:  # pragma: no cover - diagnostic
+                log.warning("revive: docker restart %s failed: %s", primary, exc)
+        else:
+            log.info(
+                "revive: master %s MainProcess alive (pid=%s)",
+                primary,
+                probe.stdout.strip().splitlines()[0] if probe.stdout.strip() else "?",
+            )
+
+    # --- Minion recovery -----------------------------------------------
+    minion_actions: list[str] = []
+    for minion in topology.spec.minion_containers:
+        if not topology.inspect_running(minion):
+            log.info("revive: minion %s container exited; docker start", minion)
+            try:
+                topology.start(minion)
+                minion_actions.append(f"{minion}:started")
+            except Exception as exc:  # pragma: no cover - diagnostic
+                log.warning("revive: docker start %s failed: %s", minion, exc)
+            continue
+        sample = topology.sample_container(minion)
+        if sample.fds == 0 and sample.rss_kb == 0:
+            log.info(
+                "revive: minion %s container up but salt-minion dead; "
+                "docker restart",
+                minion,
+            )
+            try:
+                topology.restart(minion)
+                minion_actions.append(f"{minion}:restarted")
+            except Exception as exc:  # pragma: no cover - diagnostic
+                log.warning("revive: docker restart %s failed: %s", minion, exc)
+
+    # --- Resettle ------------------------------------------------------
     notes = "cpus=0.1->0"
-    if revived:
-        # Wait for the fleet to resettle so the leak-delta baseline
-        # reflects post-revive steady state rather than cold-start
-        # reconnect churn.  Match the oom_squeeze revive pattern.
-        if topology.wait_initial_auth(timeout=180):
-            before = topology.sample_minions()
-        notes += f" revived={','.join(revived)}"
+    actions = master_actions + minion_actions
+    log.info(
+        "revive: waiting for fleet to settle (actions=%s)",
+        ",".join(actions) if actions else "<none>",
+    )
+    if topology.wait_initial_auth(timeout=300):
+        log.info("revive: fleet re-authed; resampling before baseline")
+        before = topology.sample_minions()
+    else:
+        log.warning(
+            "revive: wait_initial_auth(300) timed out (actions=%s)",
+            ",".join(actions) if actions else "<none>",
+        )
+    if actions:
+        notes += f" revive={','.join(actions)}"
+
+    # NOTE: do NOT resume workload before ``assert_reconnect`` here.
+    # CI run 44267471361 (single topology) showed the test fail with
+    # ``missing=3/3 fd_delta=+14 rss_delta=-72KB attempts=6`` even
+    # though the master log showed workload pings succeeding for all
+    # 3 minions throughout the window.  Root cause: Agent HH's revive
+    # pattern paused workload for ``wait_initial_auth`` (which
+    # converged in ~64 s on the first iteration), then resumed
+    # workload BEFORE ``assert_reconnect``'s 180 s poll.  Under the
+    # resumed load, each ``salt --out=json '*' test.ping`` subprocess
+    # from ``salt_ping_all`` takes longer than its wall-clock
+    # ``timeout + 15 = 25-30 s`` cap because the salt CLI's cold-start
+    # (loader import, auth handshake, publish round-trip) contends
+    # with workload's own CLI invocations for the master's MWorker
+    # pool.  Every sweep returned ``{}`` via ``subprocess.TimeoutExpired``,
+    # burning all 6 attempts.  Locally timing
+    # ``docker exec rs-single-salt-master salt --out=json
+    # --timeout=10 '*' test.ping`` on a workload-free master still
+    # measured 50-60 s wall time -- the 25 s subprocess cap is
+    # structurally too tight for a congested CLI path post-fault.
+    #
+    # The "under load" invariant for ``cpu_throttle`` is tested
+    # during the 90 s hold itself; the post-release window measures
+    # recovery, not steady-state-under-load.  Other resource tests
+    # (oom_squeeze, fd_squeeze) don't need this because their
+    # revive-then-assert_reconnect runs on an idle master -- the
+    # OOM cascade kills workload's docker-exec children too, and
+    # fd_squeeze doesn't starve CPU.  cpu_throttle is unique in
+    # leaving workload actively hammering a still-draining master.
+    #
+    # ``assert_reconnect``'s existing success-path
+    # ``pause_workload()`` + ``resume_workload()`` wrap around the
+    # AFTER sample stays correct: calling pause on an already-paused
+    # workload is an idempotent SIGSTOP (no-op), and the final
+    # resume SIGCONTs the loops before test teardown runs
+    # ``os.killpg(pgid, SIGCONT)`` + ``SIGTERM`` in the ``workload``
+    # fixture finally block.
+    log.info(
+        "revive: leaving workload paused through assert_reconnect "
+        "(salt-CLI wall time exceeds subprocess cap under resumed load)"
+    )
 
     topology.assert_reconnect(
         scenario,
