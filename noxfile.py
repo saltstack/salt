@@ -1504,9 +1504,9 @@ def pre_archive_cleanup(session, pkg):
     if session.posargs:
         session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 10):
+    if version_info < (3, 11):
         session.error(
-            "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
+            "The nox session 'pre-archive-cleanup' needs Python 3.11+ to run."
         )
 
     if _upgrade_pip_setuptools_and_wheel(session):
