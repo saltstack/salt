@@ -173,7 +173,12 @@ def _onedir_build_matrix(os_kind, linux_arm_runner, python_versions=None):
     Generate matrix onedir python builds.
     """
     if python_versions is None:
-        python_versions = [tools.utils.get_cicd_shared_context()["python_version"]]
+        python_versions = [
+            "3.10.21",
+            "3.11.16",
+            "3.12.14",
+            "3.13.15",
+        ]
     _matrix = []
     if os_kind == "windows":
         for version in python_versions:
