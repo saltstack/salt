@@ -182,7 +182,6 @@ def test_resource_oom_squeeze(topology, workload, request):
         before=before,
         notes=notes,
         item=request.node,
-        allow_fault_rss=True,
     )
 
 
