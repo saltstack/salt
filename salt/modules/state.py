@@ -546,8 +546,17 @@ def _check_queue(queue, kwargs):
                     if recovered:
                         arg = [{"__kwarg__": True, **recovered}]
 
+                # __pub_fun is likewise only set for master-published jobs.
+                # For in-process calls (e.g. __salt__["state.sls"](...) from
+                # another module) fall back to the calling state function, or
+                # the drained job would be dispatched with fun=None.
+                fun = kwargs.get("__pub_fun")
+                if fun is None:
+                    caller = sys._getframe(1).f_code.co_name
+                    fun = f"{__virtualname__}.{__func_alias__.get(caller, caller)}"
+
                 payload = {
-                    "fun": kwargs.get("__pub_fun"),
+                    "fun": fun,
                     "arg": arg,
                     "tgt": kwargs.get("__pub_tgt"),
                     "jid": queued_jid,
