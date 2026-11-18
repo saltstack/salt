@@ -372,107 +372,6 @@ NEW_RULE_CASES = [
     ),
     ("RUF060", "x = 1 in []\n"),
     ("RUF068", '__all__ = ["a", "a"]\n'),
-]
-
-
-@pytest.mark.parametrize(("code", "source"), NEW_RULE_CASES, ids=lambda v: v[:7])
-def test_rules_without_existing_violations(repo: Path, code: str, source: str) -> None:
-    write(repo, "salt/new.py", source)
-    result = check(repo)
-    assert result.returncode == 1, result.stderr + result.stdout
-    assert code in result.stdout
-
-
-def test_module_importing_itself_is_reported(repo: Path) -> None:
-    write(repo, "pkg/__init__.py", "")
-    write(repo, "pkg/mod.py", "import pkg.mod\n")
-    result = check(repo)
-    assert result.returncode == 1, result.stderr + result.stdout
-    assert "PLW0406" in result.stdout
-
-
-# One example per rule that has no violation in the code base today (stage 6).
-NEW_RULE_CASES_STAGE_6 = [
-    ("S601", 'import paramiko\n\nparamiko.exec_command("ls")\n'),
-    ("S606", 'import os\n\nos.execl("/bin/ls", "ls")\n'),
-    (
-        "S704",
-        'from markupsafe import Markup\n\n\ndef f(text):\n    return Markup("<b>" + text + "</b>")\n',
-    ),
-    ("S312", 'import telnetlib\n\ntelnetlib.Telnet("host")\n'),
-    (
-        "G002",
-        'import logging\n\nlog = logging.getLogger(__name__)\nlog.info("%s" % "x")\n',
-    ),
-    ("SIM202", "def f(a, b):\n    return not a != b\n"),
-    ("RUF034", "def f(x):\n    return 1 if x else 1\n"),
-    ("RUF057", "a = round(1, 0)\n"),
-    ("PIE790", 'def f():\n    """Doc."""\n    pass\n'),
-    ("E742", "class l:\n    pass\n"),
-    ("E743", "def l():\n    pass\n"),
-    (
-        "PT010",
-        "import pytest\n\n\ndef test_f():\n    with pytest.raises():\n        pass\n",
-    ),
-    ("PT016", "import pytest\n\n\ndef test_f():\n    pytest.fail()\n"),
-    (
-        "PT031",
-        "import pytest\n\n\ndef test_f():\n    with pytest.warns(UserWarning):\n        a = 1\n        b = 2\n",
-    ),
-]
-
-
-@pytest.mark.parametrize(
-    ("code", "source"), NEW_RULE_CASES_STAGE_6, ids=lambda v: v[:8]
-)
-def test_stage_6_rules_without_existing_violations(
-    repo: Path, code: str, source: str
-) -> None:
-    write(repo, "salt/new.py", source)
-    result = check(repo)
-    assert result.returncode == 1, result.stderr + result.stdout
-    assert code in result.stdout
-
-
-# One example per rule that reports some existing violations.
-RULES_WITH_EXISTING_VIOLATIONS = [
-    ("PLW0129", 'def f(x):\n    assert "x must be set"\n'),
-    (
-        "PLW0120",
-        'def f(items):\n    for i in items:\n        print(i)\n    else:\n        print("done")\n',
-    ),
-    ("PLW1641", "class A:\n    def __eq__(self, other):\n        return True\n"),
-    ("LOG002", "import logging\n\nlog = logging.getLogger(__file__)\n"),
-    (
-        "LOG004",
-        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    log.exception("failed")\n',
-    ),
-    ("G010", 'import logging\n\nlog = logging.getLogger(__name__)\nlog.warn("x")\n'),
-    (
-        "G202",
-        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    try:\n        pass\n    except Exception:\n        log.exception("x", exc_info=True)\n',
-    ),
-    ("RUF064", 'import os\n\nos.chmod("/tmp/x", 644)\n'),
-    ("RUF040", "def f(result):\n    assert result, None\n"),
-    ("DTZ003", "import datetime\n\nnow = datetime.datetime.utcnow()\n"),
-    ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
-    ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
-    ("PGH004", "import os  # noqa\n"),
-]
-
-
-@pytest.mark.parametrize(
-    ("code", "source"), RULES_WITH_EXISTING_VIOLATIONS, ids=lambda v: v[:8]
-)
-def test_rules_with_existing_violations(repo: Path, code: str, source: str) -> None:
-    write(repo, "salt/new.py", source)
-    result = check(repo)
-    assert result.returncode == 1, result.stderr + result.stdout
-    assert code in result.stdout
-
-
-# One example per rule that has no violation in the code base today (stage 5).
-NEW_RULE_CASES_STAGE_5 = [
     (
         "ASYNC210",
         'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
@@ -529,15 +428,82 @@ NEW_RULE_CASES_STAGE_5 = [
     ("RUF048", 'v = tuple(map(int, __version__.split(".")))\n'),
     ("RUF101", "import os  # noqa: PGH001\n"),
     ("RUF103", "# ruff: disable\nx = 1\n"),
+    ("S601", 'import paramiko\n\nparamiko.exec_command("ls")\n'),
+    ("S606", 'import os\n\nos.execl("/bin/ls", "ls")\n'),
+    (
+        "S704",
+        'from markupsafe import Markup\n\n\ndef f(text):\n    return Markup("<b>" + text + "</b>")\n',
+    ),
+    ("S312", 'import telnetlib\n\ntelnetlib.Telnet("host")\n'),
+    (
+        "G002",
+        'import logging\n\nlog = logging.getLogger(__name__)\nlog.info("%s" % "x")\n',
+    ),
+    ("SIM202", "def f(a, b):\n    return not a != b\n"),
+    ("RUF034", "def f(x):\n    return 1 if x else 1\n"),
+    ("RUF057", "a = round(1, 0)\n"),
+    ("PIE790", 'def f():\n    """Doc."""\n    pass\n'),
+    ("E742", "class l:\n    pass\n"),
+    ("E743", "def l():\n    pass\n"),
+    (
+        "PT010",
+        "import pytest\n\n\ndef test_f():\n    with pytest.raises():\n        pass\n",
+    ),
+    ("PT016", "import pytest\n\n\ndef test_f():\n    pytest.fail()\n"),
+    (
+        "PT031",
+        "import pytest\n\n\ndef test_f():\n    with pytest.warns(UserWarning):\n        a = 1\n        b = 2\n",
+    ),
+]
+
+
+@pytest.mark.parametrize(("code", "source"), NEW_RULE_CASES, ids=lambda v: v[:8])
+def test_rules_without_existing_violations(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
+def test_module_importing_itself_is_reported(repo: Path) -> None:
+    write(repo, "pkg/__init__.py", "")
+    write(repo, "pkg/mod.py", "import pkg.mod\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "PLW0406" in result.stdout
+
+
+# One example per rule that reports some existing violations.
+RULES_WITH_EXISTING_VIOLATIONS = [
+    ("PLW0129", 'def f(x):\n    assert "x must be set"\n'),
+    (
+        "PLW0120",
+        'def f(items):\n    for i in items:\n        print(i)\n    else:\n        print("done")\n',
+    ),
+    ("PLW1641", "class A:\n    def __eq__(self, other):\n        return True\n"),
+    ("LOG002", "import logging\n\nlog = logging.getLogger(__file__)\n"),
+    (
+        "LOG004",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    log.exception("failed")\n',
+    ),
+    ("G010", 'import logging\n\nlog = logging.getLogger(__name__)\nlog.warn("x")\n'),
+    (
+        "G202",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    try:\n        pass\n    except Exception:\n        log.exception("x", exc_info=True)\n',
+    ),
+    ("RUF064", 'import os\n\nos.chmod("/tmp/x", 644)\n'),
+    ("RUF040", "def f(result):\n    assert result, None\n"),
+    ("DTZ003", "import datetime\n\nnow = datetime.datetime.utcnow()\n"),
+    ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
+    ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
+    ("PGH004", "import os  # noqa\n"),
 ]
 
 
 @pytest.mark.parametrize(
-    ("code", "source"), NEW_RULE_CASES_STAGE_5, ids=lambda v: v[:8]
+    ("code", "source"), RULES_WITH_EXISTING_VIOLATIONS, ids=lambda v: v[:8]
 )
-def test_stage_5_rules_without_existing_violations(
-    repo: Path, code: str, source: str
-) -> None:
+def test_rules_with_existing_violations(repo: Path, code: str, source: str) -> None:
     write(repo, "salt/new.py", source)
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
