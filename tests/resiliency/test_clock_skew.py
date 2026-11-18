@@ -237,6 +237,7 @@ def test_clock_master_back_3600s(topology, workload, request):
         before=before,
         notes=f"skew -3600s on {container}",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 

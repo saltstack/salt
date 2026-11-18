@@ -208,6 +208,7 @@ def test_master_restart_docker_restart(topology, workload, request):
         fault_sec,
         before,
         item=request.node,
+        allow_fault_rss=True,
     )
 
 

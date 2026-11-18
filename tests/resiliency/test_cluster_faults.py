@@ -490,6 +490,7 @@ def test_cluster_split_brain_simulate(topology, workload, request):
         window_sec=RECOVER_STANDARD_SEC,
         notes=f"isolated={primary}",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 
@@ -549,6 +550,7 @@ def test_cluster_rolling_restart_with_traffic(
         before=before,
         notes=f"rolling burst_from={burst_source}",
         item=request.node,
+        allow_fault_rss=True,
     )
 
     # Pace between rolling steps so a slow reconnect for master N

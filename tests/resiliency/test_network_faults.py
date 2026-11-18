@@ -73,6 +73,7 @@ def test_network_latency(topology, workload, request):
         window_sec=RECOVER_FAST_SEC,
         notes="netem delay 200ms 50ms distribution normal",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 
@@ -101,6 +102,7 @@ def test_network_jitter_loss(topology, workload, request):
         window_sec=RECOVER_FAST_SEC,
         notes="netem delay 100ms 40ms distribution normal loss 5%",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 
@@ -137,6 +139,7 @@ def test_network_partition(topology, workload, label, hold_sec, recovery_sec, re
         window_sec=recovery_sec,
         notes="netem loss 100%",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 

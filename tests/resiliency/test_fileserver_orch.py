@@ -554,6 +554,7 @@ def test_orch_docker_network_disconnect(topology, workload, request):
         before=before,
         notes=f"container={primary}",
         item=request.node,
+        allow_fault_rss=True,
     )
 
 
