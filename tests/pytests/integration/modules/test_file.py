@@ -49,7 +49,7 @@ def sls_content(setup_symlink, request):
     """.format(
         name=name, symlink_file=symlink_file
     )
-    if request.param is str:
+    if request.param == "str":
         return string_contents, name, symlink_file
     else:
         return list_contents, name, symlink_file
