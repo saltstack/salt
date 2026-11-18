@@ -699,7 +699,12 @@ class GitProvider:
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = salt.utils.path.join(self._cachedir, self.root()).rstrip(os.sep)
+        cache_dir = self._cachedir
+        if self.provider == "gitcli" and self.role in ("git_pillar", "winrepo"):
+            # GitCLI keeps a bare repository, and git_pillar and winrepo read
+            # files from disk, so GitCLI.checkout() writes them to the working dir.
+            cache_dir = self._salt_working_dir
+        root_dir = salt.utils.path.join(cache_dir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -2818,20 +2823,61 @@ class GitCLI(GitProvider):
 
     def checkout(self, fetch_on_fail=True):
         """
-        GitCLI is a 'bare' provider, it doesn't do checkouts to a worktree.
-        It always operates on the ODB.
-        Return the cache root to indicate success.
+        GitCLI is a 'bare' provider and serves gitfs straight from the ODB.
+        git_pillar and winrepo read files from disk, so for those roles the
+        target ref is written to the working dir.
+        Return the root dir to indicate success.
         """
         # We still want to ensure the ref exists
         tgt_ref = self.get_checkout_target()
         git_ref = f"origin/{tgt_ref}"
         res = self._run_git(["rev-parse", "--verify", git_ref])
         if res.returncode != 0:
-            res = self._run_git(["rev-parse", "--verify", tgt_ref])
+            git_ref = tgt_ref
+            res = self._run_git(["rev-parse", "--verify", git_ref])
             if res.returncode != 0:
                 if fetch_on_fail:
                     self.fetch()
                     return self.checkout(fetch_on_fail=False)
+                return None
+        if self.role in ("git_pillar", "winrepo"):
+            head = self._run_git(["rev-parse", "--verify", "-q", "HEAD"])
+            target = self._run_git(["rev-parse", f"{git_ref}^{{commit}}"])
+            if head.returncode == 0 and head.stdout == target.stdout:
+                return self.check_root()
+            try:
+                with self.gen_lock(lock_type="checkout"):
+                    res = self._run_git(
+                        [
+                            "--work-tree",
+                            self._salt_working_dir,
+                            "checkout",
+                            "--force",
+                            git_ref,
+                        ]
+                    )
+            except GitLockError as exc:
+                if exc.errno == errno.EEXIST:
+                    # Re-raise with a different strerror containing a more
+                    # meaningful error message for the calling function.
+                    raise GitLockError(
+                        exc.errno,
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
+                    )
+                log.error(
+                    "Error %d encountered obtaining checkout lock for %s remote '%s'",
+                    exc.errno,
+                    self.role,
+                    self.id,
+                )
+                return None
+            if res.returncode != 0:
+                log.error(
+                    "GitCLI checkout failed for %s remote '%s': %s",
+                    self.role,
+                    self.id,
+                    res.stderr.decode(),
+                )
                 return None
         return self.check_root()
 
@@ -4386,21 +4432,18 @@ class GitPillar(GitBase):
                         tgt = repo.get_checkout_target()
                         env = "base" if tgt == repo.base else tgt
                 if repo._mountpoint:
-                    if self.link_mountpoint(repo):
+                    if self.link_mountpoint(repo, cachedir):
                         self.pillar_dirs[repo.get_linkdir()] = env
                         self.pillar_linked_dirs.append(repo.get_linkdir())
                 else:
                     self.pillar_dirs[cachedir] = env
 
-    def link_mountpoint(self, repo):
+    def link_mountpoint(self, repo, lcachedest):
         """
         Ensure that the mountpoint is present in the correct location and
-        points at the correct path
+        points at lcachedest, the root dir returned by the checkout
         """
         lcachelink = salt.utils.path.join(repo.get_linkdir(), repo._mountpoint)
-        lcachedest = salt.utils.path.join(repo.get_cachedir(), repo.root()).rstrip(
-            os.sep
-        )
         wipe_linkdir = False
         create_link = False
         try:
