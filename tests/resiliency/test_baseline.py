@@ -289,7 +289,19 @@ def test_baseline_workload_only(topology, workload, request):
 def test_baseline_rapid_ping_burst(topology, request):
     """baseline_rapid_ping_burst_60s -- tight test.ping loop at
     100 ms interval for 60 s; assert every sweep succeeded and no fd
-    growth."""
+    growth.
+
+    Iterates ``spec.masters`` per attempt and counts the attempt as a
+    success as soon as ANY master's ping returns rc=0 AND reports every
+    expected minion as True.  Rationale: on ``master_type: failover``
+    topologies (multimaster-failover, cluster5) the minion is attached
+    to exactly one master at any time; a test pinned to
+    ``primary_master`` reports "No minions matched the target" for the
+    full 90s window whenever ``master_shuffle`` landed the minion on
+    peer-b.  Matches the union-of-masters semantics
+    :py:meth:`Topology.assert_reconnect` already uses so baseline tests
+    are not strictly stricter than fault-scenario tests.
+    """
     label = "baseline_rapid_ping_burst_60s"
     burst_sec = _env_int("BASELINE_BURST_SEC", TIER_STANDARD_SEC)
     sleep_ms = _env_int("BASELINE_BURST_SLEEP_MS", 100)
@@ -299,39 +311,79 @@ def test_baseline_rapid_ping_burst(topology, request):
     deadline = time.monotonic() + burst_sec
     attempts = 0
     failures = 0
-    master = topology.spec.primary_master
+    masters = tuple(topology.spec.masters)
+    expected = frozenset(topology.spec.minion_ids)
+    # Use -L (list targeting) over the real minion ids rather than
+    # a wildcard glob.  Wildcard globs trigger resource-registry
+    # fanout (``salt/minion.py::_resolve_resource_targets``) on
+    # topologies with dummy_resource_count>0 (cluster3), which flood
+    # the publish stream with per-resource returns and stall the CLI
+    # json buffer past the per-attempt timeout.  List targeting
+    # addresses the minions directly and is semantically equivalent
+    # for the fleet-reachability intent on every topology.
+    minion_list_arg = ",".join(topology.spec.minion_ids)
 
     first_fail_stdout = ""
     first_fail_stderr = ""
     first_fail_rc = 0
+    first_fail_master = ""
     while time.monotonic() < deadline:
         attempts += 1
-        # Capture stdout/stderr so the first failure has a visible
-        # salt error signature; without this we only knew "rc!=0 N
-        # times" and could not tell publish-refused from minion-
-        # didn't-return.
-        proc = subprocess.run(
-            [
-                "docker",
-                "exec",
-                master,
-                "salt",
-                f"--timeout={min(PING_TIMEOUT_SEC, 10)}",
-                "--out=json",
-                "*",
-                "test.ping",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        rc = proc.returncode
-        if rc != 0:
+        # Capture stdout/stderr on the first failing master so the
+        # first failure has a visible salt error signature; without
+        # this we only knew "rc!=0 N times" and could not tell
+        # publish-refused from minion-didn't-return.  Try every master
+        # in order; break on the first one that both exits 0 AND sees
+        # every expected minion as True (union-of-masters, matches
+        # assert_reconnect).
+        attempt_ok = False
+        attempt_rc = 0
+        attempt_stdout = ""
+        attempt_stderr = ""
+        attempt_master = ""
+        for master in masters:
+            proc = subprocess.run(
+                [
+                    "docker",
+                    "exec",
+                    master,
+                    "salt",
+                    f"--timeout={min(PING_TIMEOUT_SEC, 10)}",
+                    "--out=json",
+                    "-L",
+                    minion_list_arg,
+                    "test.ping",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            rc = proc.returncode
+            stdout = proc.stdout or ""
+            if rc == 0:
+                # Cheap check: all expected ids appear as "true" in the
+                # json stream (either wrapped or streaming form).  Avoid
+                # a full JSON parse on the hot path; substring match on
+                # ``"<id>": true`` is sufficient -- test.ping only ever
+                # answers True (anything else is rc!=0 at the CLI).
+                if all(f'"{mid}": true' in stdout for mid in expected):
+                    attempt_ok = True
+                    break
+            # Remember the first non-ok master so the fail-notes have a
+            # signature; subsequent masters that also fail just don't
+            # overwrite it.
+            if not attempt_master:
+                attempt_rc = rc
+                attempt_stdout = stdout[:400]
+                attempt_stderr = (proc.stderr or "")[:400]
+                attempt_master = master
+        if not attempt_ok:
             failures += 1
             if not first_fail_stderr and not first_fail_stdout:
-                first_fail_rc = rc
-                first_fail_stdout = (proc.stdout or "")[:400]
-                first_fail_stderr = (proc.stderr or "")[:400]
+                first_fail_rc = attempt_rc
+                first_fail_stdout = attempt_stdout
+                first_fail_stderr = attempt_stderr
+                first_fail_master = attempt_master
         time.sleep(sleep_frac)
 
     after = topology.sample_minions()
@@ -341,6 +393,7 @@ def test_baseline_rapid_ping_burst(topology, request):
     notes = f"attempts={attempts} failures={failures}"
     if failures > 0:
         notes += (
+            f" first_master={first_fail_master!r}"
             f" first_rc={first_fail_rc}"
             f" first_stdout={first_fail_stdout!r}"
             f" first_stderr={first_fail_stderr!r}"

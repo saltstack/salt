@@ -637,10 +637,22 @@ class Topology:
     def salt_ping_all(
         self, master: str, timeout: int = PING_TIMEOUT_SEC
     ) -> dict[str, bool]:
-        """Run ``salt --out=json '*' test.ping`` on ``master``.
+        """Run ``salt --out=json -L <ids> test.ping`` on ``master``.
 
         Returns ``{minion_id: bool}``.  Returns ``{}`` on any failure
         (timeout, non-zero exit, no parseable output).
+
+        Uses ``-L`` (list targeting) over ``spec.minion_ids`` rather
+        than a wildcard glob.  On topologies with a resource registry
+        (cluster3's 100K dummy_resources) a wildcard
+        ``salt '*' test.ping`` fans out to every managed resource via
+        ``salt/minion.py::_resolve_resource_targets`` -- each dummy
+        emits a return, the master's ``_check_loop`` stays busy for
+        minutes on the drain, and the CLI never flushes its
+        ``--out=json`` buffer within the test's timeout.  List
+        targeting addresses the real minion ids directly and skips
+        the resource fanout.  Semantically equivalent to the glob
+        for the fleet-reachability intent on every topology we test.
 
         Salt's ``--out=json`` output for a multi-minion call is a
         STREAM of JSON objects (one per minion as returns arrive),
@@ -668,7 +680,8 @@ class Topology:
                     "salt",
                     "--out=json",
                     f"--timeout={timeout}",
-                    "*",
+                    "-L",
+                    ",".join(self.spec.minion_ids),
                     "test.ping",
                 ],
                 check=False,
