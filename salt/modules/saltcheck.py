@@ -1003,7 +1003,7 @@ class SaltCheck:
         new_expected = expected
         if returned is not None:
             ret_type = type(returned)
-            if expected == "False" and ret_type is bool:
+            if expected == "False" and isinstance(returned, bool):
                 expected = False
             try:
                 new_expected = ret_type(expected)
