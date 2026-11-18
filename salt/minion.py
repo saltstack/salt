@@ -2121,7 +2121,7 @@ class MinionManager(MinionBase):
                 )
                 log.error(err)
                 break
-            except Exception as e:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 minion.destroy()
                 failed = True
                 log.critical(

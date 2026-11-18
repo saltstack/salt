@@ -351,7 +351,7 @@ class Minion(
         while True:
             try:
                 self._real_start()
-            except SaltClientError as exc:
+            except SaltClientError:
                 # The minion lost its master connection and tune_in()
                 # returned without ever going through shutdown(). Destroy
                 # the MinionManager's resources (event_publisher, event,

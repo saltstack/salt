@@ -2926,7 +2926,7 @@ class State:
                         else:
                             return "run"
                         time.sleep(1)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     "Failed to read in pause data for file located at: %s", pause_path
                 )

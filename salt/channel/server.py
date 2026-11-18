@@ -571,7 +571,7 @@ class ReqServerChannel:
             # always attempt to return an error to the minion
             return "Server-side exception handling payload"
 
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # always attempt to return an error to the minion
             log.error("Some exception handling a payload from minion", exc_info=True)
             return "Some exception handling minion payload"
@@ -5310,7 +5310,7 @@ class MasterPubServerChannel:
                     # Schedule an AES-key re-announcement so the peer
                     # learns our key after it reconnects.
                     self.io_loop.call_later(2.0, self.send_aes_key_event)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     "Unhandled error sending task %s", task.get_name(), exc_info=True
                 )

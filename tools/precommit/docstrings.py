@@ -1172,7 +1172,7 @@ def check_cp1252_docstrings(
                 continue
             try:
                 docstring.encode("cp1252")
-            except UnicodeEncodeError as exc:
+            except UnicodeEncodeError:
                 # ``exc.object[exc.start]`` is the offending character.
                 bad_chars = sorted(
                     {

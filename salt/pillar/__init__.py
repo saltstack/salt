@@ -833,7 +833,7 @@ class Pillar:
         tops, errors = self.get_tops()
         try:
             merged_tops = self.merge_tops(tops)
-        except TypeError as err:
+        except TypeError:
             merged_tops = OrderedDict()
             errors.append("Error encountered while rendering pillar top file.")
         return merged_tops, errors

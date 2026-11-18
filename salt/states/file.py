@@ -1985,7 +1985,7 @@ def symlink(
         # Make sure the passed owner exists
         try:
             salt.utils.win_functions.get_sid_from_name(win_owner)
-        except CommandExecutionError as exc:
+        except CommandExecutionError:
             preflight_errors.append(f"User {win_owner} does not exist")
 
         # Make sure users passed in win_perms exist
@@ -1993,7 +1993,7 @@ def symlink(
             for name_check in win_perms:
                 try:
                     salt.utils.win_functions.get_sid_from_name(name_check)
-                except CommandExecutionError as exc:
+                except CommandExecutionError:
                     preflight_errors.append(f"User {name_check} does not exist")
 
         # Make sure users passed in win_deny_perms exist
@@ -2001,7 +2001,7 @@ def symlink(
             for name_check in win_deny_perms:
                 try:
                     salt.utils.win_functions.get_sid_from_name(name_check)
-                except CommandExecutionError as exc:
+                except CommandExecutionError:
                     preflight_errors.append(f"User {name_check} does not exist")
     else:
         uid = __salt__["file.user_to_uid"](user)

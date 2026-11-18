@@ -1202,7 +1202,7 @@ def enumerate_tokens(sid=None, session_id=None, privs=None):
                 | win32security.TOKEN_ASSIGN_PRIMARY
             )
             th = win32security.OpenProcessToken(ph, access)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.debug(
                 "OpenProcessToken failed pid=%d name=%s user%s",
                 p.pid,
@@ -1214,7 +1214,7 @@ def enumerate_tokens(sid=None, session_id=None, privs=None):
             process_sid = win32security.GetTokenInformation(
                 th, win32security.TokenUser
             )[0]
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception(
                 "GetTokenInformation pid=%d name=%s user%s",
                 p.pid,

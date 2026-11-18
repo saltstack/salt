@@ -700,7 +700,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         try:
             for pillar in self.git_pillar:
                 pillar.fetch_remotes()
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.error("Exception caught while updating git_pillar", exc_info=True)
 
     def handle_schedule(self):
@@ -889,7 +889,7 @@ class FileserverUpdate(salt.utils.process.SignalHandlingProcess):
                     args = ()
 
                 update_func(*args)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.exception(
                     "Uncaught exception while updating %s fileserver cache",
                     backend_name,
@@ -4905,7 +4905,7 @@ class AuthFuncs(TransportMethods):
                     aes = "{}_|-{}".format(
                         SMaster.secrets["aes"]["secret"].value, mtoken
                     )
-                except UnsupportedAlgorithm as exc:
+                except UnsupportedAlgorithm:
                     log.info(
                         "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
                         load["id"],
@@ -4937,7 +4937,7 @@ class AuthFuncs(TransportMethods):
                     ret["token"] = await loop.run_in_executor(
                         None, pub.encrypt, mtoken, enc_algo
                     )
-                except UnsupportedAlgorithm as exc:
+                except UnsupportedAlgorithm:
                     log.info(
                         "Minion %s tried to authenticate with unsupported encryption algorithm: %s",
                         load["id"],

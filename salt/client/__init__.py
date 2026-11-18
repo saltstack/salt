@@ -515,9 +515,9 @@ class LocalClient:
             raise SaltClientError(
                 "The salt master could not be contacted. Is master running?"
             )
-        except AuthenticationError as err:
+        except AuthenticationError:
             raise
-        except AuthorizationError as err:
+        except AuthorizationError:
             raise
         except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message

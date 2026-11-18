@@ -1537,7 +1537,7 @@ class RemoteClient(Client):
         hash_result = self.hash_file(path, saltenv)
         try:
             path = self._check_proto(path)
-        except MinionError as err:
+        except MinionError:
             if not os.path.isfile(path):
                 return hash_result, None
             else:
