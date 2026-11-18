@@ -1997,6 +1997,32 @@ class MasterPubServerChannel:
             self._raft_service.start()
             # Write the join sentinel so future restarts skip discover/join.
             self._mark_joined_cluster()
+            # Founder-side commit: mark THIS master's locally-generated
+            # ``cluster_aes`` + ``cluster.pem`` as COMMITTED in the state
+            # machine so (a) later peers' join-replies that echo these
+            # values back no-op cleanly, and (b) on process restart the
+            # sentinel + on-disk bytes match and the state machine stays
+            # in COMMITTED instead of reverting to BOOTSTRAP and accepting
+            # a stranger's key.  Receivers only call ``mark_committed``
+            # from the install path -- the founder never receives its own
+            # key via join-reply, so without this call its state machine
+            # would stay in BOOTSTRAP forever.
+            try:
+                sm = self._cluster_key_state_machine()
+                if sm is not None:
+                    pki_dir = pathlib.Path(self.opts["cluster_pki_dir"])
+                    aes_path = pki_dir / ".aes"
+                    pem_path = pki_dir / "cluster.pem"
+                    if aes_path.is_file():
+                        sm.mark_committed("cluster_aes", aes_path.read_bytes())
+                    if pem_path.is_file():
+                        sm.mark_committed("cluster_pem", pem_path.read_bytes())
+            except Exception:  # pylint: disable=broad-except
+                log.exception(
+                    "Failed to commit founder-generated cluster keys to "
+                    "state machine; cluster bootstrap continues but a "
+                    "restart may reset to BOOTSTRAP"
+                )
             log.info(
                 "Raft consensus service started as founding voter for cluster %r",
                 self.opts["cluster_id"],
