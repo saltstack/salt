@@ -1346,6 +1346,19 @@ class AsyncAuth:
         doomed one -- its ``_on_sign_in_done`` short-circuits without
         fanning out, so any caller that registered as a waiter on the
         cancelled task would otherwise wait forever.
+
+        The cancellation alone does not release the request channel in
+        time either: unwinding the task through ``async with
+        AsyncReqChannel`` and ``close_async()`` needs several more loop
+        iterations, and a caller that stops its loop as soon as it is
+        released leaves the task ``cancelling`` with the REQ socket
+        still open -- the next ``gc.collect()`` then runs
+        ``_finalize_zmq_context`` whose ``destroy()`` blocks forever in
+        ``zmq_ctx_term()`` (issue #70857, same end state as #70353).
+        Close the channel synchronously here as well; the transport's
+        same-thread ``close()`` shuts the socket and destroys the zmq
+        context inline, and the task's own ``async with`` teardown
+        becomes a no-op through the channel's ``_closing`` flag.
         """
         self._waiters.discard(future)
         if (
@@ -1357,6 +1370,15 @@ class AsyncAuth:
             self._sign_in_task = None
             self._last_result = None
             task.cancel()
+            channel = getattr(task, "_sign_in_channel", None)
+            if channel is not None:
+                try:
+                    channel.close()
+                except Exception:  # pylint: disable=broad-except
+                    log.debug(
+                        "Error closing sign-in channel on last-waiter cancel",
+                        exc_info=True,
+                    )
 
     def _on_sign_in_done(self, task):
         """
@@ -1426,6 +1448,14 @@ class AsyncAuth:
         async with salt.channel.client.AsyncReqChannel.factory(
             self.opts, crypt="clear", io_loop=self.io_loop
         ) as channel:
+            # Expose the live channel on this sign-in task so
+            # ``_on_waiter_done`` can tear it down synchronously when a
+            # last-waiter cancel lands -- the cooperative unwind through
+            # this ``async with`` needs loop iterations a caller that
+            # stops its loop right away will never grant (issue #70857).
+            task = asyncio.current_task()
+            if task is not None:
+                task._sign_in_channel = channel
             error = None
             attempts = 0
             # ``auth_retries`` caps the outer retry loop introduced for
