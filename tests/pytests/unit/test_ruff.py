@@ -391,6 +391,49 @@ def test_module_importing_itself_is_reported(repo: Path) -> None:
     assert "PLW0406" in result.stdout
 
 
+# One example per rule that has no violation in the code base today (stage 6).
+NEW_RULE_CASES_STAGE_6 = [
+    ("S601", 'import paramiko\n\nparamiko.exec_command("ls")\n'),
+    ("S606", 'import os\n\nos.execl("/bin/ls", "ls")\n'),
+    (
+        "S704",
+        'from markupsafe import Markup\n\n\ndef f(text):\n    return Markup("<b>" + text + "</b>")\n',
+    ),
+    ("S312", 'import telnetlib\n\ntelnetlib.Telnet("host")\n'),
+    (
+        "G002",
+        'import logging\n\nlog = logging.getLogger(__name__)\nlog.info("%s" % "x")\n',
+    ),
+    ("SIM202", "def f(a, b):\n    return not a != b\n"),
+    ("RUF034", "def f(x):\n    return 1 if x else 1\n"),
+    ("RUF057", "a = round(1, 0)\n"),
+    ("PIE790", 'def f():\n    """Doc."""\n    pass\n'),
+    ("E742", "class l:\n    pass\n"),
+    ("E743", "def l():\n    pass\n"),
+    (
+        "PT010",
+        "import pytest\n\n\ndef test_f():\n    with pytest.raises():\n        pass\n",
+    ),
+    ("PT016", "import pytest\n\n\ndef test_f():\n    pytest.fail()\n"),
+    (
+        "PT031",
+        "import pytest\n\n\ndef test_f():\n    with pytest.warns(UserWarning):\n        a = 1\n        b = 2\n",
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("code", "source"), NEW_RULE_CASES_STAGE_6, ids=lambda v: v[:8]
+)
+def test_stage_6_rules_without_existing_violations(
+    repo: Path, code: str, source: str
+) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
 # One example per rule that reports some existing violations.
 RULES_WITH_EXISTING_VIOLATIONS = [
     ("PLW0129", 'def f(x):\n    assert "x must be set"\n'),

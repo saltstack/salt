@@ -123,6 +123,21 @@ select = [
     "PLE",   # pylint errors
     "RUF006",  # asyncio task reference dropped
     "W605",  # invalid escape sequence
+    # Patterns that are not reported anywhere in the code base today (stage 6).
+    "S601",  # paramiko exec_command call
+    "S606",  # process started with no shell (os.exec*, os.spawn*)
+    "S704",  # Markup() with a string that is built from text
+    "S312",  # telnet
+    "G002",  # % formatting inside a logging call
+    "SIM202",  # not a != b
+    "RUF034",  # if/else with the same value in both branches
+    "RUF057",  # round() that does nothing
+    "PIE790",  # pass in a body that has a docstring
+    "E742",  # class named l, O or I
+    "E743",  # function named l, O or I
+    "PT010",  # pytest.raises() without an exception
+    "PT016",  # pytest.fail() without a message
+    "PT031",  # pytest.warns() with more than one statement
     # Bugs that are not present in the code base today.
     "B002",  # ++x / --x do nothing
     "B003",  # assignment to os.environ
