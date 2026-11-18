@@ -1036,7 +1036,7 @@ def wait_for_psexecsvc(host, port, username, password, timeout=900):
             stdout, stderr, ret_code = run_psexec_command(
                 "cmd.exe", "/c hostname", host, username, password, port=port
             )
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception("Unable to execute command")
         if ret_code == 0:
             log.debug("psexec connected...")
@@ -1129,7 +1129,7 @@ def validate_windows_cred(
             stdout, stderr, ret_code = run_psexec_command(
                 "cmd.exe", "/c hostname", host, username, password, port=445
             )
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception("Exception while executing psexec")
         if ret_code == 0:
             break
@@ -1339,7 +1339,7 @@ def deploy_windows(
                     f"{root_dir}\\conf\\pki\\minion\\master_sign.pub",
                     conn=smb_conn,
                 )
-            except Exception as e:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.debug(
                     "Exception copying master_sign.pub file %s to minion",
                     master_sign_pub_file,
@@ -2382,7 +2382,7 @@ def win_cmd(command, **kwargs):
         proc.poll_and_read_until_finish()
         proc.communicate()
         return proc.returncode
-    except Exception as err:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         log.exception("Failed to execute command '%s'", logging_command)
     # Signal an error
     return 1
@@ -3056,7 +3056,7 @@ def update_bootstrap(config, url=None):
         if makedirs and not os.path.isdir(entry):
             try:
                 os.makedirs(entry)
-            except OSError as err:
+            except OSError:
                 log.info("Failed to create directory '%s'", entry)
                 continue
 

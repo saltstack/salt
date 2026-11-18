@@ -267,7 +267,7 @@ def wrap_tmpl_func(render_str):
                 if newline:
                     output += os.linesep
 
-        except SaltRenderError as exc:
+        except SaltRenderError:
             log.exception("Rendering exception occurred")
             # return dict(result=False, data=str(exc))
             raise

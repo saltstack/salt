@@ -223,7 +223,7 @@ def which(exe=None):
             pext = p + ext
             try:
                 rp = resolve(pext)
-            except OSError as exc:
+            except OSError:
                 continue
             if is_executable(rp):
                 return p + ext

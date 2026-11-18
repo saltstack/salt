@@ -490,7 +490,7 @@ class EtcdClient(EtcdBase):
                 raise EtcdUtilWatchTimeout(f"Watch on {key} timed out")
             log.error("etcd: Timed out")
             raise etcd.EtcdConnectionFailed("Connection failed")
-        except MaxRetryError as err:
+        except MaxRetryError:
             # Same issue as ReadTimeoutError.  When it 'works', python-etcd
             # throws EtcdConnectionFailed, so we'll do that for it.
             log.error("etcd: Could not connect")
