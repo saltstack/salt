@@ -197,7 +197,7 @@ def render_panel(panel: dict, end_ts: float) -> plt.Figure | None:
     is_percent = _is_percent(unit_hint)
     is_count = _is_count_unit(unit_hint)
 
-    fig, ax = plt.subplots(figsize=(11, 4))
+    fig, ax = plt.subplots(figsize=(7, 3))
     series_count = 0
 
     for target in targets:
@@ -413,12 +413,26 @@ def write_step_summary(
         prefix = image_url_prefix
         if not prefix.endswith("/"):
             prefix = prefix + "/"
-        for title, path in rendered:
-            url = prefix + path.name
-            lines.append(f"### {title}")
-            lines.append("")
-            lines.append(f"![{title}]({url})")
-            lines.append("")
+        # Two-column HTML grid so panels fit side-by-side in the step
+        # summary pane.  GitHub's markdown sanitizer allows <table>, <tr>,
+        # <td>, <img width=..>, <a>, and <br>; a plain markdown image
+        # (``![...](...)``) always consumes a full row, which doesn't
+        # scale when there are 10+ panels.
+        lines.append("<table>")
+        for i in range(0, len(rendered), 2):
+            lines.append("<tr>")
+            for title, path in rendered[i : i + 2]:
+                url = prefix + path.name
+                lines.append(
+                    f'<td valign="top"><b>{title}</b><br>'
+                    f'<a href="{url}"><img src="{url}" alt="{title}" '
+                    f'width="480"></a></td>'
+                )
+            if len(rendered) - i == 1:
+                lines.append("<td></td>")
+            lines.append("</tr>")
+        lines.append("</table>")
+        lines.append("")
     else:
         lines.append(
             "_(Inline images need ``--image-url-prefix``; this run only "

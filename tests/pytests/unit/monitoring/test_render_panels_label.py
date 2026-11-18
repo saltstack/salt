@@ -184,8 +184,42 @@ def test_write_step_summary_provenance_header(
     assert (
         "- **Artifact**: [workflow artifact](https://example.invalid/artifact)" in text
     )
-    # Image embedding still works.
-    assert "![Master Memory]" in text
+    # Panels are embedded in a two-column HTML table so GitHub renders
+    # at least two per row.  Width-capped so they don't blow out the
+    # step-summary pane; links wrap back to the full-resolution PNG.
+    assert "<table>" in text
+    assert "<b>Master Memory</b>" in text
+    assert 'alt="Master Memory"' in text
+    assert 'width="480"' in text
+
+
+def test_write_step_summary_grid_pairs_panels_per_row(
+    render_panels, clean_env, monkeypatch, tmp_path
+):
+    """Three panels → two full rows with a trailing empty <td> pad."""
+    summary_path = tmp_path / "step_summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary_path))
+
+    rendered = [
+        ("Panel A", tmp_path / "001_A.png"),
+        ("Panel B", tmp_path / "002_B.png"),
+        ("Panel C", tmp_path / "003_C.png"),
+    ]
+    render_panels.write_step_summary(
+        rendered,
+        artifact_link=None,
+        image_url_prefix="https://example.invalid/snaps/",
+    )
+    text = summary_path.read_text(encoding="utf-8")
+    # Two <tr> rows wrapping three cells + one padding <td></td>.
+    assert text.count("<tr>") == 2
+    # First row: A and B share a row.
+    first_tr = text.split("<tr>")[1].split("</tr>")[0]
+    assert "<b>Panel A</b>" in first_tr and "<b>Panel B</b>" in first_tr
+    # Second row: C alone, padded with empty cell to keep grid rectangular.
+    second_tr = text.split("<tr>")[2].split("</tr>")[0]
+    assert "<b>Panel C</b>" in second_tr
+    assert "<td></td>" in second_tr
 
 
 def test_write_step_summary_no_env_keeps_old_header(
