@@ -107,7 +107,7 @@ class Depends:
                     frame,
                     self.params,
                 )
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Exception encountered when attempting to inspect frame in "
                 "dependency decorator"

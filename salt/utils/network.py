@@ -2300,7 +2300,7 @@ def parse_host_port(host_port):
             host, _hostport_separator_, port = _s_.partition(":")
             try:
                 port = int(port)
-            except ValueError as _e_:
+            except ValueError:
                 errmsg = 'host_port "{}" port value "{}" is not an integer.'.format(
                     host_port, port
                 )

@@ -426,7 +426,7 @@ def decode_dict(
                     preserve_tuples,
                     to_str,
                 )
-            except TypeError as e:
+            except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
                 # means we are going to leave the value as-is.

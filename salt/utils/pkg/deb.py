@@ -695,7 +695,7 @@ class SourcesList:
                     for line in f:
                         source = SourceEntry(line, file_path)
                         self.list.append(source)
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.error("Could not parse source file '%s'", file_path, exc_info=True)
 
     def index(self, entry):
