@@ -160,8 +160,9 @@ propcache==0.4.1
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==7.2.2
@@ -245,7 +246,7 @@ urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via -r requirements/base.txt
 xxhash==3.7.0
     # via -r requirements/base.txt

@@ -568,6 +568,31 @@ def test_master_user_runas_unknown_user_returns_none(monkeypatch):
         assert saltutil._master_user_runas({"user": "sudo_alice"}) is None
 
 
+def test_master_user_runas_reactor_sentinel_returns_none(monkeypatch):
+    """
+    Same class of bug as #69600 but triggered from the reactor: when the
+    master (running as root) reacts to an event that runs
+    ``state.orchestrate``, ``salt.utils.reactor.ReactWrap`` stamps
+    ``__user__ = "Reactor"`` on runner/wheel low data so reactor-fired
+    events can be told apart from user-fired ones.
+    ``state.orchestrate`` copies that value into ``__opts__["user"]``, so
+    any downstream ``salt['saltutil.runner'](...)`` call from a rendered
+    SLS reaches ``_master_user_runas`` with ``runas="Reactor"``, which
+    has no passwd entry. ``_master_user_runas`` must return ``None``
+    instead of returning ``"Reactor"`` and blowing up later in
+    ``chugid``. See #69833.
+    """
+
+    def _raise(user):
+        raise KeyError(user)
+
+    monkeypatch.setattr(saltutil, "pwd", types.SimpleNamespace(getpwnam=_raise))
+    with patch("os.geteuid", return_value=0), patch(
+        "salt.utils.user.get_user", return_value="root"
+    ):
+        assert saltutil._master_user_runas({"user": "Reactor"}) is None
+
+
 def test_align_runas_environment_without_pwd_is_noop(monkeypatch):
     """On platforms without the pwd module (Windows) the helper is a no-op."""
     monkeypatch.setattr(saltutil, "pwd", None)

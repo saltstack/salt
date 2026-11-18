@@ -42,10 +42,10 @@ def get_triage_next_account(options):
         if previous_account and previous_account.login == last_account_assigned:
             return member
         previous_account = member
-    else:
-        # The previously assigned account is not longer part of the team members
-        # or the team was switched
-        return random.choice(team_members)
+
+    # The previously assigned account is not longer part of the team members
+    # or the team was switched
+    return random.choice(team_members)
 
 
 def label_and_assign_issue(options):

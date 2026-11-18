@@ -252,8 +252,14 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==6.33.6 ; python_full_version < '3.10'
     # via
+    #   -c requirements/constraints.txt
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+protobuf==7.36.2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/constraints.txt
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==5.9.8 ; python_full_version < '3.10'
@@ -376,6 +382,8 @@ typing-extensions==4.16.0
     #   opentelemetry-semantic-conventions
     #   pyopenssl
     #   virtualenv
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -r requirements/base.txt
@@ -386,7 +394,7 @@ urllib3==2.8.0 ; python_full_version >= '3.10'
     #   requests
 virtualenv==21.5.0 ; python_full_version < '3.10'
     # via -r requirements/base.txt
-virtualenv==21.15.2 ; python_full_version >= '3.10'
+virtualenv==21.15.6 ; python_full_version >= '3.10'
     # via -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt

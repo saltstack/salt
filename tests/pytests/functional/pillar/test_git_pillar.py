@@ -297,3 +297,144 @@ def test_gitpython_multiple_slash_in_branch_name(gitpython_pillar_opts, grains):
 @skipif_no_pygit2
 def test_pygit2_multiple_slash_in_branch_name(pygit2_pillar_opts, grains):
     _test_multiple_slash_in_branch_name(pygit2_pillar_opts, grains)
+
+
+# ---------------------------------------------------------------------------
+# Issue #64199: ext_pillar ``git`` must accept a commit SHA (full or short) as
+# the "branch" argument, matching the behavior of ``gitfs_remotes``.
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def git_pillar_sha_repo(tmp_path_factory):
+    """
+    Create a local git repository with two commits and a ``pillar/``
+    directory. Yields a tuple of (``file://`` URL, first-commit SHA,
+    second-commit SHA).
+    """
+    import subprocess
+
+    repo_dir = tmp_path_factory.mktemp("64199-sha-repo")
+
+    def _git(*args):
+        return subprocess.run(
+            ["git", "-C", str(repo_dir), *args],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+    _git("init", "-q", "-b", "master")
+    _git("config", "user.email", "test@example.com")
+    _git("config", "user.name", "test")
+    pillar_dir = repo_dir / "pillar"
+    pillar_dir.mkdir()
+    (pillar_dir / "top.sls").write_text("base:\n  '*':\n    - data\n")
+    (pillar_dir / "data.sls").write_text("key: v1\n")
+    _git("add", "pillar")
+    _git("commit", "-q", "-m", "initial")
+    sha1 = _git("rev-parse", "HEAD").stdout.strip()
+    (pillar_dir / "data.sls").write_text("key: v2\n")
+    _git("add", "pillar")
+    _git("commit", "-q", "-m", "update")
+    sha2 = _git("rev-parse", "HEAD").stdout.strip()
+    yield f"file://{repo_dir}", sha1, sha2
+
+
+def _test_sha_branch(pillar_opts, grains, repo_info, ref):
+    url, _sha1, _sha2 = repo_info
+    data = _get_ext_pillar(
+        "minion",
+        pillar_opts,
+        grains,
+        {f"{ref} {url}": [{"root": "pillar"}, {"env": "base"}]},
+    )
+    return data
+
+
+@skipif_no_gitpython
+def test_gitpython_full_sha(gitpython_pillar_opts, grains, git_pillar_sha_repo):
+    """
+    A 40-char commit SHA used in place of a branch name resolves to that
+    commit's tree.
+    """
+    _url, sha1, sha2 = git_pillar_sha_repo
+    data = _test_sha_branch(gitpython_pillar_opts, grains, git_pillar_sha_repo, sha2)
+    assert data == {"key": "v2"}
+    # Also verify a different commit (not just HEAD).
+    data = _test_sha_branch(gitpython_pillar_opts, grains, git_pillar_sha_repo, sha1)
+    assert data == {"key": "v1"}
+
+
+@skipif_no_gitpython
+def test_gitpython_short_sha(gitpython_pillar_opts, grains, git_pillar_sha_repo):
+    """
+    A 7-char short SHA resolves the same way as the full SHA.
+    """
+    _url, _sha1, sha2 = git_pillar_sha_repo
+    data = _test_sha_branch(
+        gitpython_pillar_opts, grains, git_pillar_sha_repo, sha2[:7]
+    )
+    assert data == {"key": "v2"}
+
+
+@skipif_no_gitpython
+def test_gitpython_branch_still_works(
+    gitpython_pillar_opts, grains, git_pillar_sha_repo
+):
+    """
+    Regression guard: a plain branch name still resolves (fix must not
+    change existing semantics).
+    """
+    data = _test_sha_branch(
+        gitpython_pillar_opts, grains, git_pillar_sha_repo, "master"
+    )
+    assert data == {"key": "v2"}
+
+
+@skipif_no_gitpython
+def test_gitpython_nonexistent_sha(gitpython_pillar_opts, grains, git_pillar_sha_repo):
+    """
+    A SHA that doesn't exist in the repo fails cleanly (empty pillar, no
+    uncaught traceback).
+    """
+    data = _test_sha_branch(
+        gitpython_pillar_opts,
+        grains,
+        git_pillar_sha_repo,
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    )
+    assert data == {}
+
+
+@skipif_no_pygit2
+def test_pygit2_full_sha(pygit2_pillar_opts, grains, git_pillar_sha_repo):
+    _url, sha1, sha2 = git_pillar_sha_repo
+    data = _test_sha_branch(pygit2_pillar_opts, grains, git_pillar_sha_repo, sha2)
+    assert data == {"key": "v2"}
+    data = _test_sha_branch(pygit2_pillar_opts, grains, git_pillar_sha_repo, sha1)
+    assert data == {"key": "v1"}
+
+
+@skipif_no_pygit2
+def test_pygit2_short_sha(pygit2_pillar_opts, grains, git_pillar_sha_repo):
+    _url, _sha1, sha2 = git_pillar_sha_repo
+    data = _test_sha_branch(pygit2_pillar_opts, grains, git_pillar_sha_repo, sha2[:7])
+    assert data == {"key": "v2"}
+
+
+@skipif_no_pygit2
+def test_pygit2_branch_still_works(pygit2_pillar_opts, grains, git_pillar_sha_repo):
+    data = _test_sha_branch(pygit2_pillar_opts, grains, git_pillar_sha_repo, "master")
+    assert data == {"key": "v2"}
+
+
+@skipif_no_pygit2
+def test_pygit2_nonexistent_sha(pygit2_pillar_opts, grains, git_pillar_sha_repo):
+    data = _test_sha_branch(
+        pygit2_pillar_opts,
+        grains,
+        git_pillar_sha_repo,
+        "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    )
+    assert data == {}

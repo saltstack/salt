@@ -510,3 +510,76 @@ def test_status_pid_linux():
             with patch.object(os, "getpid", return_value="6674"):
                 ret = status.pid("httpd")
                 assert ret == m.ret
+
+
+class TestStatusMaster:
+    """
+    Tests for ``status.master`` port-source ordering.
+
+    The function decides whether the minion is connected by scanning the OS
+    TCP table for the publish port. The port lookup prefers the master-
+    reported ``_auth_publish_port`` (populated by the pub channel on
+    authentication), falls back to the operator-configured ``publish_port``,
+    and finally to the default ``4505``. Issue #66846.
+    """
+
+    @staticmethod
+    def _call_master(opts, config_publish_port):
+        """
+        Invoke ``status.master`` with mocked network helpers and return the
+        port value that was passed to ``remote_port_tcp``.
+        """
+        host_to_ips = MagicMock(return_value=["10.0.0.1"])
+        # Return a non-matching IP so the "disconnected" branch would fire;
+        # fire_event is mocked so no event bus is touched. We only care about
+        # the port argument captured by remote_port_tcp.
+        remote_port_tcp = MagicMock(return_value=["10.0.0.99"])
+        config_get = MagicMock(return_value=config_publish_port)
+        event_cm = MagicMock()
+        event_cm.__enter__ = MagicMock(return_value=MagicMock())
+        event_cm.__exit__ = MagicMock(return_value=False)
+
+        with patch.dict(status.__opts__, opts, clear=True), patch.dict(
+            status.__salt__, {"config.get": config_get}
+        ), patch("salt.utils.network.host_to_ips", host_to_ips), patch(
+            "salt.utils.network.remote_port_tcp", remote_port_tcp
+        ), patch(
+            "salt.utils.event.get_event", return_value=event_cm
+        ):
+            status.master(master="master.example.com", connected=True)
+
+        assert remote_port_tcp.call_count == 1
+        return remote_port_tcp.call_args[0][0]
+
+    def test_master_prefers_auth_publish_port(self):
+        """
+        When ``_auth_publish_port`` is set in opts it wins over both the
+        config value and the hard default.
+        """
+        port = self._call_master(
+            opts={"_auth_publish_port": 44505},
+            config_publish_port=4505,
+        )
+        assert port == 44505
+
+    def test_master_falls_back_to_config_publish_port(self):
+        """
+        Without ``_auth_publish_port`` the operator-configured
+        ``publish_port`` is used.
+        """
+        port = self._call_master(
+            opts={},
+            config_publish_port=44505,
+        )
+        assert port == 44505
+
+    def test_master_falls_back_to_default_port(self):
+        """
+        With neither ``_auth_publish_port`` nor a configured ``publish_port``
+        the default ``4505`` is used.
+        """
+        port = self._call_master(
+            opts={},
+            config_publish_port=None,
+        )
+        assert port == 4505

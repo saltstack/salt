@@ -112,11 +112,11 @@ def counts_by_contributor(commits_by_contributor, results):
 
     output += "\n"
 
-    for email in sorted(commits_by_contributor.keys()):
-        output += f"'{email}"
+    for address in sorted(commits_by_contributor.keys()):
+        output += f"'{address}"
         for d in dates:
-            if d in commits_by_contributor[email]:
-                output += f"\t{commits_by_contributor[email][d]}"
+            if d in commits_by_contributor[address]:
+                output += f"\t{commits_by_contributor[address][d]}"
             else:
                 output += "\t"
         output += "\n"

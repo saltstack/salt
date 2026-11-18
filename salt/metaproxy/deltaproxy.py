@@ -474,7 +474,7 @@ async def post_master_init(self, master):
                     )
 
     if _failed:
-        log.info("Following sub proxies failed %s", _failed)
+        log.error("The following sub proxies failed to initialize: %s", _failed)
     self.ready = True
 
 

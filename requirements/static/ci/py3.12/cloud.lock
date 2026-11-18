@@ -504,8 +504,9 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   googleapis-common-protos
@@ -875,7 +876,7 @@ vcert==0.9.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock

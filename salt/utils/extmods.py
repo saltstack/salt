@@ -39,9 +39,14 @@ def sync(
     saltenv=None,
     extmod_whitelist=None,
     extmod_blacklist=None,
+    clean=None,
 ):
     """
     Sync custom modules into the extension_modules directory
+
+    ``clean`` overrides the ``clean_dynamic_modules`` option: ``False`` only
+    adds and updates modules, ``True`` also removes any that are not in the
+    file roots. ``None`` (the default) defers to ``clean_dynamic_modules``.
     """
     if saltenv is None:
         saltenv = ["base"]
@@ -136,7 +141,9 @@ def sync(
                             ret.append(f"{form}.{relname}")
 
             touched = bool(ret)
-            if opts["clean_dynamic_modules"] is True:
+            if clean is None:
+                clean = opts["clean_dynamic_modules"]
+            if clean is True:
                 current = set(_listdir_recursively(mod_dir))
                 for fn_ in current - remote:
                     full = os.path.join(mod_dir, fn_)

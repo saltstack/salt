@@ -362,6 +362,19 @@ def sync_roots(roots="both"):
             "each peer's master log for the 'state-sync ... installed N items' "
             "lines to confirm delivery."
         ),
+        # Reviewer correction Q4: the publish daemon's sender-side gate
+        # skips un-joined peers with a WARN (``cluster.sync_roots: skipping
+        # un-joined peers [...]; roots will be caught up via state-sync on
+        # their next handshake``).  Un-joined peers receive the push once
+        # they complete the cluster handshake via the join-time
+        # state-sync catch-up (not via the pending-queue replay, because
+        # sync_roots is a multi-event session).  Operators seeing an
+        # incomplete push should wait for every peer to join and re-run.
+        "skipped_peers_note": (
+            "Un-joined peers are enumerated on each master's log with the "
+            "'cluster.sync_roots: skipping un-joined peers' prefix.  "
+            "Catch-up happens automatically on their next handshake."
+        ),
     }
 
 
@@ -434,7 +447,26 @@ def _fire_cluster_event(tag, data):
         listen=False,
     ) as event:
         event.fire_event(data, tag)
-    return {"status": "fan-out initiated", "tag": tag, "data": data}
+    return {
+        "status": "fan-out initiated",
+        "tag": tag,
+        "data": data,
+        # Reviewer correction Q4: the publish daemon's gate skips
+        # un-joined peers on multi-ring / sync_roots / collect fan-outs
+        # and emits a WARN naming them.  Multi-ring runners rely on
+        # Raft log replication to carry the committed entry to any
+        # peer that was skipped, so the fan-out gate is defence in
+        # depth -- the propose still happens on the leader, and
+        # AppendEntries delivers the commit.  Operators seeing
+        # ``multi-ring fan-out: skipping un-joined peers`` can wait
+        # for the peer to join and re-run to force an eager push.
+        "skipped_peers_note": (
+            "Un-joined peers are enumerated on each master's log with "
+            "the 'multi-ring fan-out: skipping un-joined peers' prefix.  "
+            "Raft AppendEntries delivers the committed entry once the "
+            "peer completes its handshake."
+        ),
+    }
 
 
 def ring_create(name, voters):
@@ -865,10 +897,37 @@ def collect_from_peers(channels=(), banks=_DEFAULT_COLLECT_BANKS):
             "cluster.collect_from_peers requires at least one channel or bank"
         )
     requested = fixed + [f"{BANK_CHANNEL_PREFIX}{b}" for b in bank_list]
-    return _fire_cluster_event(
+    result = _fire_cluster_event(
         "cluster/runner/collect_from_peers",
         {"channels": requested},
     )
+    # Reviewer correction Q4: surface the status-sentinel path and the
+    # ``skipped_peers`` operator contract in a backwards-compatible shape.
+    # Callers that scripted against ``.get("status") == "fan-out initiated"``
+    # keep working; the new keys are informational.  ``skipped_peers`` is
+    # populated by the publish daemon when it writes the sentinel JSON
+    # (see :meth:`MasterPubServerChannel._init_collect_sentinel` --
+    # un-joined peers at request time are enumerated there so operators
+    # can distinguish "complete" from "complete-but-partial" without
+    # grepping logs).
+    import os  # pylint: disable=import-outside-toplevel
+
+    cachedir = __opts__.get("cachedir")
+    sentinel_path = (
+        os.path.join(cachedir, "cluster-collect-status.json") if cachedir else None
+    )
+    if isinstance(result, dict):
+        result.setdefault("sentinel_path", sentinel_path)
+        result.setdefault(
+            "skipped_peers_note",
+            (
+                "Un-joined peers at request time are listed under "
+                "'skipped_peers' in the sentinel JSON; the runner is "
+                "fire-and-forget so the server-side gate writes the "
+                "sentinel before any chunk arrives."
+            ),
+        )
+    return result
 
 
 def ring_set(name=None, members=None, replicas=None):

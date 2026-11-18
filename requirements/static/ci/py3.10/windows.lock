@@ -363,8 +363,9 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
@@ -613,6 +614,10 @@ typing-extensions==4.16.0
     #   pyopenssl
     #   pytest-system-statistics
     #   virtualenv
+tzdata==2026.2
+    # via
+    #   -c requirements/static/pkg/py3.10/windows.lock
+    #   -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
@@ -622,7 +627,7 @@ urllib3==2.8.0
     #   kubernetes
     #   requests
     #   responses
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/pkg/py3.10/windows.lock
     #   -r requirements/base.txt

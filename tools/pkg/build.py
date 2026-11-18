@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 # The pip version shipped in the onedir and in virtualenv's embedded wheels.
 # This is independent of the pip pinned in requirements/constraints.txt, which
 # only applies to the dev/CI tooling venvs.
-PACKAGED_PIP_VERSION = "26.2.2"
+PACKAGED_PIP_VERSION = "26.3"
 
 # Cache of the pip wheels prepared by _download_pip_wheel, keyed by the
 # urllib3 version overlaid onto them (None when no overlay applies). Reused

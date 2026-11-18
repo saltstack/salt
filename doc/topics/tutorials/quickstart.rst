@@ -80,6 +80,13 @@ Configuration which resided in the
 should be moved to the :ref:`minion configuration <configuration-salt-minion>`
 since the minion does not read the master configuration.
 
+``salt-call --local`` syncs custom grains from the ``_grains`` directory of each
+environment in :conf_minion:`file_roots` before it loads grains and compiles
+pillar. Custom grains can therefore be used in pillar files without running
+:py:func:`saltutil.sync_grains <salt.modules.saltutil.sync_grains>` first. This
+sync only adds and updates grains; it does not remove any, regardless of
+:conf_minion:`clean_dynamic_modules`.
+
 .. note::
 
     When running Salt in masterless mode, do not run the salt-minion daemon.

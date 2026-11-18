@@ -97,6 +97,14 @@ class LogEntryType:
     # from the registry MmapCache and moves/removes the on-disk
     # key file per the ``reason`` field.
     MASTER_PEER_DETACH = 8
+    # Leader barrier: a no-op entry appended on every ``become_leader``
+    # so the new leader can commit prior-term entries under Raft §5.4.2
+    # (a leader may only commit by counting replicas on an entry from
+    # its own term; committing the no-op implicitly commits everything
+    # before it).  Carries no payload and has no state-machine effect;
+    # ``apply_entries`` simply advances ``last_applied`` past it.  See
+    # ``Node.become_leader`` / ``Node.apply_entries``.
+    NOOP = 9
 
 
 class LogEntry(NamedTuple):

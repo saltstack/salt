@@ -520,10 +520,11 @@ def symlink_list(load):
     ):
         return ret
 
-    if "prefix" in load:
-        prefix = load["prefix"].strip("/")
-    else:
-        prefix = ""
+    prefix = load.get("prefix", "")
 
     symlinks = _file_lists(load, "links")
-    return {key: val for key, val in symlinks.items() if key.startswith(prefix)}
+    return {
+        key: val
+        for key, val in symlinks.items()
+        if salt.fileserver._matches_prefix(key, prefix)
+    }

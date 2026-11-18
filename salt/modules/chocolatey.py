@@ -10,8 +10,6 @@ import os
 import re
 import tempfile
 
-from requests.structures import CaseInsensitiveDict
-
 import salt.utils.data
 import salt.utils.platform
 import salt.utils.win_dotnet

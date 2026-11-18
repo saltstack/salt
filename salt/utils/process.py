@@ -704,14 +704,11 @@ class ProcessManager:
                 # Check again after sleep - in async mode, exit if no processes
                 if not self._process_map:
                     break
-            # OSError is raised if a signal handler is called (SIGTERM) during os.wait
+            # OSError is raised if a signal handler is called (SIGTERM) during os.wait.
+            # Any OSError ends the loop. This includes EINTR from time.sleep() on
+            # Windows. IOError used to be handled separately to re-raise the other
+            # errors, but IOError is an alias of OSError in Python 3.
             except OSError:
-                break
-            except OSError as exc:  # pylint: disable=duplicate-except
-                # IOError with errno of EINTR (4) may be raised
-                # when using time.sleep() on Windows.
-                if exc.errno != errno.EINTR:
-                    raise
                 break
 
     def check_children(self):
@@ -1266,16 +1263,18 @@ class SubprocessList:
         with self.lock:
             for proc in self.processes[:]:
                 try:
-                    proc.join(0.01)
+                    # is_alive() uses waitpid(WNOHANG) and never blocks.
+                    # join() without a timeout would block until the child
+                    # exits, so skip live children entirely -- a periodic
+                    # callback running every 200ms cannot afford to wait
+                    # on a live process.
+                    if proc.is_alive():
+                        continue
+                    proc.join()
                     if hasattr(proc, "exitcode"):
-                        # Only processes have exitcode and a close method, threads
-                        # do not.
-                        if proc.exitcode is None:
-                            continue
+                        # Only processes have exitcode and a close method,
+                        # threads do not.
                         proc.close()
-                    else:
-                        if proc.is_alive():
-                            continue
                 except (ValueError, OSError):
                     # Process may be closed or already cleaned up
                     pass

@@ -1709,7 +1709,17 @@ def master(master=None, connected=True):
         return
 
     master_connection_status = False
-    port = __salt__["config.get"]("publish_port", default=4505)
+    # Prefer the master-reported publish_port that the pub channel actually
+    # connected on (mirrored into opts by AsyncPubChannel.connect). Fall back
+    # to the operator-configured publish_port, then to the hard default. This
+    # prevents a bogus __master_disconnected when the master uses a non-default
+    # publish_port and the minion config does not mirror it (issue #66846).
+    port = (
+        __opts__.get("_auth_publish_port")
+        or __salt__["config.get"]("publish_port", default=None)
+        or 4505
+    )
+    port = int(port)
     connected_ips = salt.utils.network.remote_port_tcp(port)
 
     # Get connection status for master
