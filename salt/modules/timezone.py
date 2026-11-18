@@ -432,7 +432,7 @@ def get_hwclock():
                                 return "UTC"
                             else:
                                 return "localtime"
-            except OSError as exc:
+            except OSError:
                 pass
             # Since Wheezy
             return _get_adjtime_timezone()

@@ -472,7 +472,7 @@ def _get_process_owner(process):
         domain, error_code, user = process.GetOwner()
         owner["user"] = salt.utils.stringutils.to_unicode(user)
         owner["user_domain"] = salt.utils.stringutils.to_unicode(domain)
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         pass
     if not error_code and all((user, domain)):
         owner["user"] = salt.utils.stringutils.to_unicode(user)

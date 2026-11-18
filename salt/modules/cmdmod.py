@@ -4227,7 +4227,7 @@ def shell_info(shell, list_modules=False):
             }
         try:
             proc.run()
-        except TimedProcTimeoutError as exc:
+        except TimedProcTimeoutError:
             return {
                 "error": "Unable to run command '{}' Reason: Timed out.".format(
                     " ".join(shell_data)

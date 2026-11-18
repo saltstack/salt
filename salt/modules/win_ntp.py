@@ -78,6 +78,6 @@ def get_servers():
             if line.startswith("NtpServer:"):
                 _, ntpsvrs = line.rsplit(" (", 1)[0].split(":", 1)
                 return sorted(ntpsvrs.split())
-        except ValueError as e:
+        except ValueError:
             return False
     return False
