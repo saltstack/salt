@@ -208,11 +208,6 @@ def generate_workflows(ctx: Context):
         shared_context = tools.utils.get_cicd_shared_context()
         for key, value in shared_context.items():
             context[key.replace("-", "_")] = value
-        # The setup-python minor version ("3.14") follows the full onedir
-        # version ("3.14.10") from the shared context.
-        context["gh_actions_workflows_python_version"] = ".".join(
-            str(shared_context["python_version"]).split(".")[:2]
-        )
         loaded_template = env.get_template(template_path.name)
         rendered_template = loaded_template.render(**context)
         workflow_path.write_text(rendered_template.rstrip() + "\n")
