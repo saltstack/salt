@@ -4,7 +4,6 @@ Tests for salt.utils.data
 
 import builtins
 import logging
-from collections import OrderedDict as SaltOrderedDict
 
 import pytest
 

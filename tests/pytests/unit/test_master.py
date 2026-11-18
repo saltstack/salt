@@ -3563,7 +3563,6 @@ async def test_pub_ret_returns_empty_when_auth_id_mismatch(
 # ---------------------------------------------------------------------------
 
 
-import asyncio  # noqa: E402
 import inspect  # noqa: E402
 
 
