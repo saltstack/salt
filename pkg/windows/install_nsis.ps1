@@ -38,6 +38,17 @@ function Write-Result($result, $ForegroundColor="Green") {
     }
 }
 
+# Expand-Archive fails on the windows-11-vs2026-arm64 runner image from
+# 20261112.217.1 onwards with 'Cannot find an overload for
+# "ExtractToDirectory" and the argument count: "3"', while 20261101.203.1
+# worked. Call the two-argument ZipFile.ExtractToDirectory directly, which
+# exists in both Windows PowerShell 5.1 (.NET Framework) and PowerShell 7.
+# Like Expand-Archive without -Force, it fails if a target file exists.
+function Expand-ZipFile($Path, $DestinationPath) {
+  Add-Type -AssemblyName System.IO.Compression.FileSystem
+  [System.IO.Compression.ZipFile]::ExtractToDirectory($Path, $DestinationPath)
+}
+
 #-------------------------------------------------------------------------------
 # Script Variables
 #-------------------------------------------------------------------------------
@@ -120,7 +131,7 @@ if ( Test-Path -Path $check_file ) {
     }
 
     Write-Host "Extracting NSIS NxS Unzip (ansi) Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP"
     if ( Test-Path -Path "$env:TEMP\nsisunz\Release\nsisunz.dll") {
         Write-Result "Success" -ForegroundColor Green
     } else {
@@ -171,7 +182,7 @@ if ( Test-Path -Path $check_file ) {
     }
 
     Write-Host "Extracting NSIS NxS Unzip (unicode) Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP"
     if ( Test-Path -Path "$env:TEMP\NSISunzU\Plugin unicode\nsisunz.dll") {
         Write-Result "Success" -ForegroundColor Green
     } else {
@@ -227,7 +238,7 @@ if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
     }
 
     Write-Host "Extracting NSIS EnVar Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisenvar\"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP\nsisenvar\"
     if ( ! (Test-Path -Path "$env:TEMP\nsisenvar\Plugins\x86-ansi\EnVar.dll") ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
@@ -292,7 +303,7 @@ if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
     }
 
     Write-Host "Extracting NSIS EnVar Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisaccesscontrol\"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP\nsisaccesscontrol\"
     if ( ! (Test-Path -Path "$env:TEMP\nsisaccesscontrol\Plugins\i386-ansi\AccessControl.dll") ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
@@ -357,7 +368,7 @@ if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
     }
 
     Write-Host "Extracting NSIS SimpleSC (ansi) Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSC\"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSC\"
     if ( Test-Path -Path "$env:TEMP\nsisSimpleSC\SimpleSC.dll" ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
@@ -397,7 +408,7 @@ if ( (Test-Path -Path $check_file_a) -and (Test-Path -Path $check_file_u) ) {
     }
 
     Write-Host "Extracting NSIS SimpleSC (unicode) Plugin: " -NoNewline
-    Expand-Archive -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSCu\"
+    Expand-ZipFile -Path "$file" -DestinationPath "$env:TEMP\nsisSimpleSCu\"
     if ( Test-Path -Path "$env:TEMP\nsisSimpleSCu\SimpleSC.dll" ) {
         Write-Result "Success" -ForegroundColor Green
     } else {
