@@ -2738,7 +2738,7 @@ def test_certificate_managed_should_not_fail_with_removed_args(
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match=f"'{next(iter(arg))}'"):
         ret = x509.certificate_managed(**cert_args, **arg)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2751,7 +2751,7 @@ def test_certificate_managed_warns_about_algorithm_renaming(
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="has been renamed to `digest`"):
         ret = x509.certificate_managed(**cert_args, algorithm="sha512")
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2765,7 +2765,7 @@ def test_certificate_managed_warns_about_long_name_attributes(
     cert_args["days_remaining"] = 7
     cert_args["commonName"] = "success"
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="Found commonName in keyword args"):
         ret = x509.certificate_managed(**cert_args)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2777,7 +2777,9 @@ def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_pr
     cert_args["days_valid"] = 30
     cert_args["days_remaining"] = 7
     cert_args["private_key"] = rsa_privkey
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning, match="Found X509v3 Basic Constraints in keyword args"
+    ):
         ret = x509.certificate_managed(**cert_args)
     assert ret.result is True
     cert = _get_cert(cert_args["name"])
@@ -2790,7 +2792,7 @@ def test_certificate_managed_warns_about_long_extensions(x509, cert_args, rsa_pr
 
 @pytest.mark.parametrize("arg", [{"version": 1}, {"text": True}])
 def test_csr_managed_should_not_fail_with_removed_args(x509, arg, csr_args):
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match=f"'{next(iter(arg))}'"):
         ret = x509.csr_managed(**csr_args, **arg)
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2798,7 +2800,7 @@ def test_csr_managed_should_not_fail_with_removed_args(x509, arg, csr_args):
 
 
 def test_csr_managed_warns_about_algorithm_renaming(x509, csr_args):
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="has been renamed to `digest`"):
         ret = x509.csr_managed(**csr_args, algorithm="sha512")
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2807,7 +2809,7 @@ def test_csr_managed_warns_about_algorithm_renaming(x509, csr_args):
 
 def test_csr_managed_warns_about_long_name_attributes(x509, csr_args):
     csr_args.pop("CN", None)
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="Found commonName in keyword args"):
         ret = x509.csr_managed(**csr_args, commonName="deprecated_yo")
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2816,7 +2818,9 @@ def test_csr_managed_warns_about_long_name_attributes(x509, csr_args):
 
 def test_csr_managed_warns_about_long_extensions(x509, csr_args):
     csr_args["X509v3 Basic Constraints"] = "critical CA:FALSE"
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning, match="Found X509v3 Basic Constraints in keyword args"
+    ):
         ret = x509.csr_managed(**csr_args)
     assert ret.result is True
     csr = _get_csr(csr_args["name"])
@@ -2831,7 +2835,7 @@ def test_csr_managed_warns_about_long_extensions(x509, csr_args):
 def test_crl_managed_should_not_fail_with_removed_args(x509, arg, crl_args):
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match=f"'{next(iter(arg))}'"):
         ret = x509.crl_managed(**crl_args, **arg)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
@@ -2846,7 +2850,10 @@ def test_crl_managed_should_recognize_old_style_revoked(x509, crl_args, crl_revo
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning,
+        match="Revoked certificates should be specified as a simple list of dicts",
+    ):
         ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
@@ -2869,7 +2876,10 @@ def test_crl_managed_should_recognize_old_style_revoked_for_change_detection(
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(
+        DeprecationWarning,
+        match="Revoked certificates should be specified as a simple list of dicts",
+    ):
         ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     assert not ret.changes
@@ -2880,8 +2890,14 @@ def test_crl_managed_should_recognize_old_style_reason(x509, crl_args):
     crl_args["revoked"] = revoked
     crl_args["days_remaining"] = 3
     crl_args["days_valid"] = 7
-    with pytest.warns(DeprecationWarning):
-        ret = x509.crl_managed(**crl_args)
+    with pytest.warns(
+        DeprecationWarning,
+        match="Revoked certificates should be specified as a simple list of dicts",
+    ):
+        with pytest.warns(
+            DeprecationWarning, match="`reason` parameter for revoked certificates"
+        ):
+            ret = x509.crl_managed(**crl_args)
     assert ret.result is True
     crl = _get_crl(crl_args["name"])
     assert len(crl) == 1
@@ -2896,14 +2912,14 @@ def test_crl_managed_should_recognize_old_style_reason(x509, crl_args):
     "arg", [{"cipher": "aes_256_cbc"}, {"verbose": True}, {"text": True}]
 )
 def test_private_key_managed_should_not_fail_with_removed_args(x509, arg, pk_args):
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match=f"'{next(iter(arg))}'"):
         ret = x509.private_key_managed(**pk_args, **arg)
     assert ret.result is True
     assert _get_privkey(pk_args["name"])
 
 
 def test_private_key_managed_warns_about_bits_renaming(x509, pk_args):
-    with pytest.warns(DeprecationWarning):
+    with pytest.warns(DeprecationWarning, match="has been renamed to `keysize`"):
         ret = x509.private_key_managed(**pk_args, bits=3072)
     assert ret.result is True
     pk = _get_privkey(pk_args["name"])
