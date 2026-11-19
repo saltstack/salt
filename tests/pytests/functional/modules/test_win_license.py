@@ -11,7 +11,13 @@ Tests that install, uninstall, or activate product keys are not included here
 as they require a valid product key that cannot be committed to the test suite.
 """
 
+import logging
+
 import pytest
+
+import salt.exceptions
+
+log = logging.getLogger(__name__)
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -27,24 +33,51 @@ def license(modules):
 
 @pytest.fixture
 def restore_kms_host(license):
-    """Save and restore the global KMS host around a test."""
+    """Save and restore the global KMS host around a test.
+
+    Best-effort teardown: on Windows Server 2022 GitHub Actions runners
+    the preset KMS host is the Azure KMS endpoint
+    (``azkms.core.windows.net``), and
+    ``Invoke-CimMethod -MethodName SetKeyManagementServiceMachine``
+    rejects it with ``WBEM_E_INVALID_PARAMETER`` on that OS build.
+    The test body itself still exercises set/clear with a regular DNS
+    host and asserts correctness; the restore is just a hygiene step.
+    """
     original = license.get_kms_host()
     yield
-    if original:
-        license.set_kms_host(original)
-    else:
-        license.clear_kms_host()
+    try:
+        if original:
+            license.set_kms_host(original)
+        else:
+            license.clear_kms_host()
+    except salt.exceptions.CommandExecutionError as exc:
+        log.warning(
+            "Could not restore original KMS host %r during teardown: %s",
+            original,
+            exc,
+        )
 
 
 @pytest.fixture
 def restore_kms_port(license):
-    """Save and restore the global KMS port around a test."""
+    """Save and restore the global KMS port around a test.
+
+    Best-effort teardown; see ``restore_kms_host`` for the Windows
+    Server 2022 Azure-KMS rationale.
+    """
     original = license.get_kms_port()
     yield
-    if original:
-        license.set_kms_port(original)
-    else:
-        license.clear_kms_port()
+    try:
+        if original:
+            license.set_kms_port(original)
+        else:
+            license.clear_kms_port()
+    except salt.exceptions.CommandExecutionError as exc:
+        log.warning(
+            "Could not restore original KMS port %r during teardown: %s",
+            original,
+            exc,
+        )
 
 
 # ---------------------------------------------------------------------------
