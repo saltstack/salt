@@ -7,8 +7,13 @@ option:
 
 * ``off`` (default) -- validation is skipped; loader behaves as before.
 * ``warn`` -- validate on every call; on failure log and pass through.
-* ``strict`` -- validate on every call; on failure raise
+* ``enforce`` -- validate on every call; on failure raise
   ``SaltInvocationError``.
+* ``strict`` -- like ``enforce``, additionally require every loader-
+  dispatched function to have type annotations on all non-var parameters.
+  Raises ``SaltInvocationError`` on the first call to any function that
+  doesn't meet the bar. Intended for dev / CI environments that want to
+  enforce "the whole surface is typed."
 
 Annotation-driven -- no per-function decorators required. A module author
 writes a plain Python function with type hints and the loader validates
@@ -127,6 +132,9 @@ def _split_reserved(kwargs):
     return non_reserved, reserved
 
 
+_RAISING_MODES = frozenset({"enforce", "strict"})
+
+
 def _has_annotations(fn):
     """Return True if the function has any parameter annotation."""
     try:
@@ -137,6 +145,29 @@ def _has_annotations(fn):
         if param.annotation is not inspect.Parameter.empty:
             return True
     return False
+
+
+def _missing_annotations(fn):
+    """Return the list of parameter names on ``fn`` that lack annotations.
+
+    Excludes ``*args`` and ``**kwargs`` -- they can't be annotated in a way
+    pydantic would validate anyway, so a missing annotation on those is not
+    actionable.
+    """
+    try:
+        sig = inspect.signature(fn)
+    except (TypeError, ValueError):
+        return []
+    missing = []
+    for name, param in sig.parameters.items():
+        if param.kind in (
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ):
+            continue
+        if param.annotation is inspect.Parameter.empty:
+            missing.append(name)
+    return missing
 
 
 # Sentinel attached to a function when we've determined no input model
@@ -245,15 +276,26 @@ def _coerced_kwargs(validated_model, provided_keys):
 
 def validate_inputs(fn, args, kwargs, mode):
     """Validate call-site inputs for ``fn`` and return the (args, kwargs)
-    to dispatch with. No-op when mode is ``off``, pydantic is unavailable,
-    or no input model can be built for the function.
+    to dispatch with. No-op when mode is ``off`` or pydantic is unavailable.
 
-    In ``strict`` mode a validation failure raises ``SaltInvocationError``.
-    In ``warn`` mode the original args/kwargs are returned unchanged and
-    the error is logged.
+    In ``strict`` mode, any non-``*args``/``**kwargs`` parameter lacking a
+    type annotation is itself a failure -- raises ``SaltInvocationError``
+    on the first call to that function.
+
+    In ``enforce`` / ``strict`` mode a validation failure raises. In
+    ``warn`` mode the original args/kwargs are returned unchanged and the
+    error is logged.
     """
     if mode == "off" or not HAS_PYDANTIC:
         return args, kwargs
+
+    if mode == "strict":
+        missing = _missing_annotations(fn)
+        if missing:
+            raise SaltInvocationError(
+                f"strict mode requires type annotations in "
+                f"{fn.__module__}.{fn.__name__}, missing: {', '.join(missing)}"
+            )
 
     model, sig = _get_or_build_model(fn)
     if model is None:
@@ -270,7 +312,7 @@ def validate_inputs(fn, args, kwargs, mode):
         validated = model.model_validate(dict(bound.arguments))
     except ValidationError as exc:
         msg = f"input validation failure in {fn.__module__}.{fn.__name__}: {exc}"
-        if mode == "strict":
+        if mode in _RAISING_MODES:
             raise SaltInvocationError(msg) from exc
         log.warning(msg)
         return args, kwargs
@@ -290,7 +332,8 @@ def validate_return(fn, ret, contract, mode):
     """Validate ``fn``'s return against the loader's ``output_contract``.
 
     Returns ``ret`` unchanged (we never mutate the payload). On failure
-    raises ``SaltInvocationError`` in strict mode, logs in warn mode.
+    raises ``SaltInvocationError`` in ``enforce`` / ``strict`` mode, logs
+    in ``warn`` mode.
     """
     if mode == "off" or not HAS_PYDANTIC or contract is None:
         return ret
@@ -298,7 +341,7 @@ def validate_return(fn, ret, contract, mode):
         contract.model_validate(ret)
     except ValidationError as exc:
         msg = f"return contract violation in {fn.__module__}.{fn.__name__}: {exc}"
-        if mode == "strict":
+        if mode in _RAISING_MODES:
             raise SaltInvocationError(msg) from exc
         log.warning(msg)
     return ret

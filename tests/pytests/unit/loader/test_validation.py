@@ -58,13 +58,43 @@ class TestValidateInputs:
         # Nothing coerced, nothing raised; raw args returned.
         assert kwargs == {"x": "not-a-number"}
 
-    def test_no_annotations_passes_through(self):
+    def test_enforce_passes_through_unannotated(self):
         def f(x, y):
             return (x, y)
 
-        args, kwargs = validation.validate_inputs(f, (1, 2), {}, "strict")
+        args, kwargs = validation.validate_inputs(f, (1, 2), {}, "enforce")
         assert args == (1, 2)
         assert kwargs == {}
+
+    def test_strict_raises_on_missing_annotations(self):
+        def f(x: int, y):  # y lacks annotation
+            return (x, y)
+
+        with pytest.raises(SaltInvocationError, match="missing: y"):
+            validation.validate_inputs(f, (), {"x": 1, "y": 2}, "strict")
+
+    def test_strict_raises_on_fully_unannotated(self):
+        def f(x, y):
+            return (x, y)
+
+        with pytest.raises(SaltInvocationError, match="missing: x, y"):
+            validation.validate_inputs(f, (1, 2), {}, "strict")
+
+    def test_strict_ignores_var_kwargs_and_var_args(self):
+        # *args / **kwargs don't count as "missing annotations"; strict
+        # only cares about declared non-var params.
+        def f(x: int, *args, **kwargs):
+            return (x, args, kwargs)
+
+        args, kwargs = validation.validate_inputs(f, (), {"x": 1}, "strict")
+        assert kwargs == {"x": 1}
+
+    def test_enforce_raises_on_bad_type(self):
+        def f(x: int):
+            return x
+
+        with pytest.raises(SaltInvocationError):
+            validation.validate_inputs(f, (), {"x": "not-an-int-or-numeric"}, "enforce")
 
     def test_strict_raises_on_bad_type(self):
         def f(x: int):
@@ -141,7 +171,9 @@ class TestValidateInputs:
         def f(x, y):
             return (x, y)
 
-        validation.validate_inputs(f, (1, 2), {}, "strict")
+        # enforce (not strict): unannotated functions are OK, cached as
+        # _NO_MODEL so subsequent calls short-circuit.
+        validation.validate_inputs(f, (1, 2), {}, "enforce")
         assert getattr(f, "__salt_validate_model__", None) is validation._NO_MODEL
 
 
@@ -162,7 +194,8 @@ class TestValidateReturn:
         ret = validation.validate_return(f, "anything", None, "strict")
         assert ret == "anything"
 
-    def test_strict_raises(self):
+    @pytest.mark.parametrize("mode", ["enforce", "strict"])
+    def test_raising_modes_raise(self, mode):
         def present():
             return {"name": "n", "changes": {}, "result": True}  # missing comment
 
@@ -171,7 +204,7 @@ class TestValidateReturn:
                 present,
                 {"name": "n", "changes": {}, "result": True},
                 validation.StateReturn,
-                "strict",
+                mode,
             )
 
     def test_warn_logs_and_returns_unmutated(self, caplog):

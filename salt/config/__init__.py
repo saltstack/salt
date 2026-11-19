@@ -1197,10 +1197,14 @@ VALID_OPTS = immutabletypes.freeze(
         # Whitelist/blacklist specific modules to be synced
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
-        # Loader-level input validation mode: one of 'off', 'warn', 'strict'.
+        # Loader-level input validation mode: one of 'off', 'warn',
+        # 'enforce', 'strict'.
         # 'off' (default): loader behaves as before.
         # 'warn': validate annotated callables on every call; log on failure.
-        # 'strict': raise SaltInvocationError on validation failure.
+        # 'enforce': raise SaltInvocationError on validation failure.
+        # 'strict': like 'enforce', plus require every loader-dispatched
+        #           function to have type annotations on all non-var params;
+        #           raise on the first call to any function that doesn't.
         "loader_validate_mode": str,
         # django auth
         "django_auth_path": str,
