@@ -86,7 +86,7 @@ class PromState:
         self.unreachable = False
         self.any_data_seen = False
 
-    def get_slope(self, metric, duration="30m"):
+    def get_slope(self, metric, duration="30m", aggregate="max"):
         if self.unreachable:
             return 0.0
         promql = f"deriv({metric}[{duration}])"
@@ -99,8 +99,6 @@ class PromState:
             )
             self.unreachable = True
             return 0.0
-        # ``data.data.result`` is a list of series; we return the max
-        # slope seen across series (a leak in ANY master is a leak).
         try:
             results = data["data"]["result"]
         except (KeyError, TypeError):
@@ -114,7 +112,18 @@ class PromState:
                 slopes.append(float(series["value"][1]))
             except (KeyError, IndexError, ValueError):
                 continue
-        return max(slopes) if slopes else 0.0
+        if not slopes:
+            return 0.0
+        # Single-master topologies use ``max`` (one series only, so
+        # max/min are the same).  Multi-master topologies use ``min``:
+        # a real cluster-wide leak shows up on every master, while a
+        # restart-ramp FP on a single master (e.g. after a
+        # marathon_outage/split_brain revive) leaves the other
+        # continuous masters flat.  See
+        # agents/reports/cluster5-master-rss-leak-44267471361.md.
+        if aggregate == "min":
+            return min(slopes)
+        return max(slopes)
 
 
 def load_results(path):
@@ -272,8 +281,20 @@ def main():
     # Prometheus-level verdict (master-side leaks).
     # -----------------------------------------------------------------
     prom = PromState(args.prometheus_url)
-    master_fd_slope = prom.get_slope("salt_master_open_fds")
-    master_rss_slope = prom.get_slope("salt_master_rss_bytes")
+    # Multi-master topologies: require the slope on EVERY master to
+    # trip the gate, not just any one.  A real cluster-wide leak is
+    # present on every master; a restart-ramp artifact is confined to
+    # the restarted one and should not fail the whole run.
+    multi_master = args.topology in (
+        "cluster3",
+        "cluster5",
+        "multimaster-failover",
+        "multimaster-hothot",
+        "syndic",
+    )
+    agg = "min" if multi_master else "max"
+    master_fd_slope = prom.get_slope("salt_master_open_fds", aggregate=agg)
+    master_rss_slope = prom.get_slope("salt_master_rss_bytes", aggregate=agg)
 
     fd_fail_threshold = args.master_fd_leak_per_min / 60.0
     print(
