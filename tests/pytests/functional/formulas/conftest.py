@@ -16,7 +16,7 @@ def modules(loaders, formula, tmp_path_factory, base_env_state_tree_root_dir):
     try:
         target_path = base_env_state_tree_root_dir / f"{formula.name}-{formula.tag}"
         zipfile_path = pytest.helpers.download_file(
-            url, zipfiles_dir / url.split("/")[-1]
+            url, zipfiles_dir / url.rsplit("/", maxsplit=1)[-1]
         )
         with zipfile.ZipFile(zipfile_path) as zip_obj:
             zip_obj.extractall(zipfiles_dir)

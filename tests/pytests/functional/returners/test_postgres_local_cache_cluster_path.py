@@ -11,7 +11,7 @@ import pytest
 import salt.returners.postgres_local_cache as postgres_local_cache
 
 docker = pytest.importorskip("docker")
-psycopg2 = pytest.importorskip("psycopg2")
+psycopg2 = pytest.importorskip("psycopg2", exc_type=ImportError)
 
 log = logging.getLogger(__name__)
 
