@@ -14,7 +14,7 @@ class SanitizersTestCase(TestCase):
         value = " sample "
         response = clean.trim(value)
         assert response == "sample"
-        assert type(response) == str
+        assert isinstance(response, str)
 
     def test_sanitized_filename(self):
         """

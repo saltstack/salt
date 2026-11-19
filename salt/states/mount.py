@@ -1330,7 +1330,7 @@ def fstab_present(
         ret["comment"].append(msg.format(fs_file, config))
         if mount:
             out = __salt__["mount.mount"](fs_file)
-            if type(out) == str:
+            if isinstance(out, str):
                 ret["result"] = False
                 msg = "Error while mounting {}".format(out.split(":", maxsplit=1)[1])
             else:
