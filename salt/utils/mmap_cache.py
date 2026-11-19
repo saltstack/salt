@@ -800,7 +800,16 @@ class MmapCache:
             try:
                 tfd = os.open(self.roster_path, os.O_WRONLY)
                 try:
-                    os.pwrite(tfd, tombstone, byte_offset)
+                    # ``os.pwrite`` is POSIX-only (not available on Windows).
+                    # Fall back to ``lseek``+``write`` where it is absent.
+                    # The point of this fast path is the fresh non-O_APPEND
+                    # fd -- seek+write is correct here; only the *reuse* of
+                    # the persistent O_APPEND fd was the original bug.
+                    if hasattr(os, "pwrite"):
+                        os.pwrite(tfd, tombstone, byte_offset)
+                    else:
+                        os.lseek(tfd, byte_offset, os.SEEK_SET)
+                        os.write(tfd, tombstone)
                     _fsync_fd_maybe(tfd)
                 finally:
                     os.close(tfd)
