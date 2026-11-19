@@ -234,12 +234,30 @@ def test_isolated_cluster_pem_propagates(
         cluster_master_2_isolated,
         cluster_master_3_isolated,
     ]
-    pems = []
-    pubs = []
-    for m in masters:
-        pki = pathlib.Path(m.config["cluster_pki_dir"])
-        pems.append(_read(pki / "cluster.pem"))
-        pubs.append(_read(pki / "cluster.pub"))
+    # Propagation is asynchronous -- ``factory.started()`` only waits for
+    # ``ret_port`` to bind, not for the join handshake to settle. Mirror
+    # ``test_isolated_cluster_aes_converges``'s polling loop so slower
+    # arm64 CI runners can finish the join-reply before we assert.
+    pems = [None, None, None]
+    pubs = [None, None, None]
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        pems = [
+            _read(pathlib.Path(m.config["cluster_pki_dir"]) / "cluster.pem")
+            for m in masters
+        ]
+        pubs = [
+            _read(pathlib.Path(m.config["cluster_pki_dir"]) / "cluster.pub")
+            for m in masters
+        ]
+        if (
+            all(v is not None for v in pems)
+            and all(v is not None for v in pubs)
+            and len(set(pems)) == 1
+            and len(set(pubs)) == 1
+        ):
+            break
+        time.sleep(0.5)
     assert all(v is not None for v in pems), (
         f"Some masters missing cluster.pem: "
         f"{[m.config['interface'] for m, v in zip(masters, pems) if v is None]}"

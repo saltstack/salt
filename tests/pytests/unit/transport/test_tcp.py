@@ -50,7 +50,13 @@ async def test_request_client_close_resolves_pending_reply():
         await asyncio.wait_for(received.wait(), timeout=5)
         reader_task = client.task
         client.close()
-        with pytest.raises(tornado.iostream.StreamClosedError):
+        # ``close()``'s drain is a no-op for live requests after the merge
+        # with 3008.x: the ``_do_send`` task's ``CancelledError`` handler
+        # pops the entry from ``send_future_map`` and sets
+        # ``ClosingError`` on the future itself. See
+        # ``tests/pytests/functional/transport/tcp/test_request_client.py``
+        # for the functional-level contract.
+        with pytest.raises(salt.transport.tcp.ClosingError):
             await asyncio.wait_for(request, timeout=1)
         assert client.send_future_map == {}
         await asyncio.wait_for(disconnected.wait(), timeout=5)
@@ -79,7 +85,11 @@ async def test_request_client_close_preserves_finished_replies():
     try:
         client.close()
         client.close()
-        assert isinstance(pending.exception(), tornado.iostream.StreamClosedError)
+        # Orphaned futures (no ``_do_send`` task owning them, as set up
+        # above by direct ``.update()``) still get resolved by close()'s
+        # drain, which uses ``ClosingError`` to match the contract of
+        # ``_do_send``'s ``CancelledError`` handler for live requests.
+        assert isinstance(pending.exception(), salt.transport.tcp.ClosingError)
         assert completed.result() == "reply"
         assert cancelled.cancelled()
         assert client.send_future_map == {}
