@@ -185,7 +185,11 @@ def test_master_default_ipc_write_buffer_is_bounded(tmp_path):
     conf_file = conf_dir / "master"
     conf_file.write_text("")  # empty master config -- no overrides at all
 
-    opts = salt.config.master_config(str(conf_file))
+    opts = salt.config.master_config(
+        str(conf_file),
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy()
+        | {"id": "transport-test-master"},
+    )
     opts["root_dir"] = str(root_dir)
 
     cap = opts.get("ipc_write_buffer", 0)

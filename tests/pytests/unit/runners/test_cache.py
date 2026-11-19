@@ -12,7 +12,10 @@ from tests.support.mock import patch
 
 @pytest.fixture
 def configure_loader_modules(tmp_path):
-    master_config = salt.config.master_config(None)
+    master_config = salt.config.master_config(
+        None,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "runner-test-master"},
+    )
     master_config.update(
         {
             "cache": "localfs",

@@ -82,7 +82,10 @@ def _runner_opts(tmp_path, monkeypatch):
     entries via a SaltStorage built with the same opts and assert what
     the runner reads back.
     """
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "runner-test-master"},
+    )
     opts["cachedir"] = str(tmp_path)
     opts["id"] = "127.0.0.1"
     opts["interface"] = "127.0.0.1"
