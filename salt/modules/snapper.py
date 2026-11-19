@@ -597,6 +597,17 @@ def run(function, *args, **kwargs):
 
     You can immediately see the changes
 
+    Dispatch goes through the whitelist-gated loader
+    (``__wire_salt__``), so ``whitelist_modules`` applies to
+    ``function``: a non-whitelisted target raises
+    ``CommandExecutionError`` and no snapshots are taken.
+
+    .. versionchanged:: 3008.7
+
+        Previously dispatched via the unfiltered inner ``__salt__``,
+        which let ``snapper.run`` reach any execution function.  The
+        target is now subject to ``whitelist_modules``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -611,6 +622,12 @@ def run(function, *args, **kwargs):
     func_kwargs = {k: v for k, v in kwargs.items() if not k.startswith("__")}
     kwargs = {k: v for k, v in kwargs.items() if k.startswith("__")}
 
+    # pylint: disable=undefined-variable
+    wire_salt = __wire_salt__  # noqa: F821  (packed by salt.loader.minion_mods)
+
+    if function not in wire_salt:
+        raise CommandExecutionError(f'function "{function}" does not exist')
+
     pre_nr = __salt__["snapper.create_snapshot"](
         config=config,
         snapshot_type="pre",
@@ -620,13 +637,10 @@ def run(function, *args, **kwargs):
         **kwargs,
     )
 
-    if function not in __salt__:
-        raise CommandExecutionError(f'function "{function}" does not exist')
-
     try:
-        ret = __salt__[function](*args, **func_kwargs)
+        ret = wire_salt[function](*args, **func_kwargs)
     except CommandExecutionError as exc:
-        ret = "\n".join([str(exc), __salt__[function].__doc__])
+        ret = "\n".join([str(exc), wire_salt[function].__doc__])
 
     __salt__["snapper.create_snapshot"](
         config=config,

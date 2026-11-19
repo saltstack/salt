@@ -284,28 +284,36 @@ def test_state_bare_plus_dotted_narrows_in_real_loader(minion_opts, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Dispatcher behaviour: cross_test vs cross_test_safe
+# Tier-1 reflective-dispatch functions now honour whitelist_modules
 # ---------------------------------------------------------------------------
 #
-# The two-loader model packs the unfiltered inner loader as ``__salt__`` so
-# shipped code can compose with gated modules internally.  ``test.cross_test``
-# intentionally uses ``__salt__`` -- an operator who whitelists it is
-# opting into reflective access to every execution module.
+# ``test.cross_test``, ``test.try_``, ``mine.send``, ``mine.update`` and
+# ``snapper.run`` all accept a function name as data and dispatch it
+# through the loader.  Historically they used ``__salt__`` (the
+# unfiltered inner loader) which let an operator who whitelisted any
+# of them reach any execution function reflectively.  They now
+# dispatch through ``__wire_salt__`` (the whitelist-gated outer
+# loader), so ``whitelist_modules`` applies to the target as well.
 #
-# ``test.cross_test_safe`` dispatches via the whitelist-gated
-# ``__wire_salt__`` instead, so a caller that whitelists only
-# ``test.cross_test_safe`` cannot reach ungated functions through it.
+# The ``cross_test_safe`` wrapper added in PR #70795 is removed --
+# its behaviour is now the default.
 
 
-def test_cross_test_remains_unfiltered(minion_opts, tmp_path):
+def _set_loader(loader):
     """
-    ``test.cross_test`` is documented as reflective access and
-    dispatches via ``__salt__`` (the unfiltered inner loader).  When an
-    operator whitelists ``test.cross_test`` they are granting that
-    reflective access deliberately, so a sub-call to a non-whitelisted
-    function (``cmd.run``) must still succeed.  This test pins that
-    behaviour so a future change doesn't silently tighten it (callers
-    who want gating should use :func:`cross_test_safe`).
+    Helper: push ``loader`` as the active loader for the duration of a
+    ``with`` block so NamedLoaderContext resolves ``__wire_salt__`` to
+    it.
+    """
+    return salt.loader.context.loader_ctxvar.set(loader)
+
+
+def test_cross_test_dispatch_target_is_whitelist_gated(minion_opts, tmp_path):
+    """
+    ``whitelist_modules: [test.cross_test, test.ping]`` -- cross_test
+    dispatches to the allowed target; a call to a non-whitelisted
+    target (``cmd.run``) raises ``KeyError`` because the dispatcher now
+    uses the wire-filtered loader.
     """
     opts = copy.deepcopy(minion_opts)
     opts["whitelist_modules"] = ["test.cross_test", "test.ping"]
@@ -314,72 +322,43 @@ def test_cross_test_remains_unfiltered(minion_opts, tmp_path):
     loader = salt.loader.minion_mods(opts)
 
     cross_test = loader["test.cross_test"]
-    token = salt.loader.context.loader_ctxvar.set(loader)
+    token = _set_loader(loader)
     try:
-        # ``cmd.run`` is NOT whitelisted, but cross_test uses the
-        # unfiltered inner loader so it still dispatches.
+        assert cross_test("test.ping") is True
+        with pytest.raises(KeyError):
+            cross_test("cmd.run", ["id"])
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_cross_test_dispatches_to_whitelisted_target(minion_opts, tmp_path):
+    """
+    When both the dispatcher and the target are whitelisted,
+    ``cross_test`` resolves the target through the wire loader and
+    dispatches normally.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test.cross_test", "cmd.run"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    cross_test = loader["test.cross_test"]
+    token = _set_loader(loader)
+    try:
         ret = cross_test("cmd.run", ["true"])
         assert isinstance(ret, str)
     finally:
         salt.loader.context.loader_ctxvar.reset(token)
 
 
-def test_cross_test_safe_dispatch_target_is_whitelist_gated(minion_opts, tmp_path):
+def test_cross_test_without_whitelist_unchanged(minion_opts, tmp_path):
     """
-    ``whitelist_modules: [test.cross_test_safe, test.ping]`` --
-    ``cross_test_safe`` to an allowed target succeeds; to a
-    non-whitelisted target (``cmd.run``) it must fail at the dispatch
-    step instead of silently running through the unfiltered inner
-    loader.
-    """
-    opts = copy.deepcopy(minion_opts)
-    opts["whitelist_modules"] = ["test.cross_test_safe", "test.ping"]
-    opts["file_client"] = "local"
-    opts["cachedir"] = str(tmp_path)
-    loader = salt.loader.minion_mods(opts)
-
-    cross_test_safe = loader["test.cross_test_safe"]
-    token = salt.loader.context.loader_ctxvar.set(loader)
-    try:
-        # Allowed target: dispatch succeeds.
-        assert cross_test_safe("test.ping") is True
-        # Blocked target: dispatcher uses __wire_salt__ (= outer wire
-        # loader), so the whitelist gate fires on the sub-call.
-        with pytest.raises(KeyError):
-            cross_test_safe("cmd.run", ["id"])
-    finally:
-        salt.loader.context.loader_ctxvar.reset(token)
-
-
-def test_cross_test_safe_dispatches_to_whitelisted_target(minion_opts, tmp_path):
-    """
-    ``whitelist_modules: [test.cross_test_safe, cmd.run]`` -- when both
-    the dispatcher and the target are whitelisted, ``cross_test_safe``
-    resolves the target through the wire loader and dispatches
-    normally.
-    """
-    opts = copy.deepcopy(minion_opts)
-    opts["whitelist_modules"] = ["test.cross_test_safe", "cmd.run"]
-    opts["file_client"] = "local"
-    opts["cachedir"] = str(tmp_path)
-    loader = salt.loader.minion_mods(opts)
-
-    cross_test_safe = loader["test.cross_test_safe"]
-    token = salt.loader.context.loader_ctxvar.set(loader)
-    try:
-        ret = cross_test_safe("cmd.run", ["true"])
-        assert isinstance(ret, str)
-    finally:
-        salt.loader.context.loader_ctxvar.reset(token)
-
-
-def test_cross_test_safe_without_whitelist_unchanged(minion_opts, tmp_path):
-    """
-    Backcompat: with no whitelist configured, ``cross_test_safe`` must
-    dispatch to arbitrary functions.  The wire loader is unfiltered
-    when ``whitelist_modules`` is unset, so routing through
-    ``__wire_salt__`` behaves identically to routing through
-    ``__salt__``.
+    Backcompat: with no whitelist configured, ``cross_test`` dispatches
+    to arbitrary functions.  The wire loader is unfiltered when
+    ``whitelist_modules`` is unset, so routing through
+    ``__wire_salt__`` is behaviour-identical to the pre-3008.7
+    ``__salt__`` routing.
     """
     opts = copy.deepcopy(minion_opts)
     opts.pop("whitelist_modules", None)
@@ -387,10 +366,116 @@ def test_cross_test_safe_without_whitelist_unchanged(minion_opts, tmp_path):
     opts["cachedir"] = str(tmp_path)
     loader = salt.loader.minion_mods(opts)
 
-    cross_test_safe = loader["test.cross_test_safe"]
-    token = salt.loader.context.loader_ctxvar.set(loader)
+    cross_test = loader["test.cross_test"]
+    token = _set_loader(loader)
     try:
-        assert cross_test_safe("test.ping") is True
+        assert cross_test("test.ping") is True
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_try_dispatch_is_whitelist_gated(minion_opts, tmp_path):
+    """
+    ``test.try_`` returns ``None`` (or the raised exception when
+    ``return_try_exception=True``) when the target is not whitelisted,
+    rather than silently reaching through the unfiltered inner loader.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["test.try", "test.ping"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    try_ = loader["test.try"]
+    token = _set_loader(loader)
+    try:
+        assert try_(module="test.ping") is True
+        # Blocked target: wire loader raises KeyError, try_ swallows it.
+        assert try_(module="cmd.run") is None
+        # With return_try_exception=True the caller gets the KeyError.
+        err = try_(module="cmd.run", return_try_exception=True)
+        assert isinstance(err, KeyError)
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_mine_send_dispatch_is_whitelist_gated(minion_opts, tmp_path):
+    """
+    ``mine.send`` dispatches the target function via the wire loader.
+    A non-whitelisted target makes ``mine.send`` return ``False``
+    without publishing anything -- the KeyError inside the gated
+    lookup is caught by the existing broad-except in ``mine.send``.
+    """
+    import tempfile
+
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["mine.send", "test.ping"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    # mine.send writes through the data cache; point it at tmp_path too.
+    opts.setdefault("cachedir", tempfile.mkdtemp(prefix="mine-"))
+    loader = salt.loader.minion_mods(opts)
+
+    mine_send = loader["mine.send"]
+    token = _set_loader(loader)
+    try:
+        # Non-whitelisted target -> False (caught internally).
+        assert mine_send("ip_addrs", mine_function="cmd.run") is False
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_mine_update_skips_non_whitelisted_mine_function(minion_opts, tmp_path):
+    """
+    ``mine.update`` iterates configured ``mine_functions``; when the
+    wire loader rejects a target, the per-entry exception handler logs
+    and continues.  No KeyError escapes to the caller.
+    """
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["mine.update", "test.ping"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    mine_update = loader["mine.update"]
+    token = _set_loader(loader)
+    try:
+        # Explicit mine_functions kwarg bypasses the config.merge path
+        # and exercises the wire-loader dispatch directly.
+        result = mine_update(mine_functions={"cmd.run": []})
+        # mine.update returns nothing on empty / all-skipped runs;
+        # the point is that it doesn't propagate KeyError.
+        assert result in (None, False, True, {})
+    finally:
+        salt.loader.context.loader_ctxvar.reset(token)
+
+
+def test_snapper_run_rejects_non_whitelisted_function(minion_opts, tmp_path):
+    """
+    ``snapper.run`` checks ``function in __wire_salt__`` up front and
+    raises ``CommandExecutionError`` for a non-whitelisted target,
+    before any snapshot is created.  Skipped when snapper itself
+    isn't loadable (no python-dbus or no snapper daemon on this host).
+    """
+    import salt.exceptions
+
+    opts = copy.deepcopy(minion_opts)
+    opts["whitelist_modules"] = ["snapper.run", "test.ping"]
+    opts["file_client"] = "local"
+    opts["cachedir"] = str(tmp_path)
+    loader = salt.loader.minion_mods(opts)
+
+    if "snapper.run" not in loader:
+        pytest.skip("snapper module not available on this host")
+
+    snapper_run = loader["snapper.run"]
+    token = _set_loader(loader)
+    try:
+        # cmd.run is not whitelisted -> wire loader rejects it, the
+        # pre-dispatch check in snapper.run surfaces it as a
+        # CommandExecutionError.  No pre-snapshot is taken.
+        with pytest.raises(salt.exceptions.CommandExecutionError):
+            snapper_run("cmd.run")
     finally:
         salt.loader.context.loader_ctxvar.reset(token)
 

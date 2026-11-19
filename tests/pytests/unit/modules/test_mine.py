@@ -57,6 +57,21 @@ def configure_loader_modules(mock_cache):
     }
 
 
+@pytest.fixture(autouse=True)
+def _wire_salt_passthrough():
+    """
+    ``mine.send`` and ``mine.update`` dispatch user-supplied function
+    names through ``__wire_salt__`` (the whitelist-gated loader) as of
+    3008.7.  Point ``__wire_salt__`` at the same dict as ``__salt__``
+    for the duration of each test so existing ``patch.dict(mine.__salt__,
+    ...)`` patterns continue to work -- the mutation affects both views.
+    ``saltfactories``'s loader helper does not allow ``__wire_salt__`` in
+    ``configure_loader_modules``, hence the autouse ``patch.object``.
+    """
+    with patch.object(mine, "__wire_salt__", mine.__salt__, create=True):
+        yield
+
+
 def test_get_local_empty():
     """
     Tests getting function data from the local mine that does not exist.
