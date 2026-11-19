@@ -1,5 +1,3 @@
-import re
-
 import pytest
 
 from salt.exceptions import SaltInvocationError
@@ -25,8 +23,7 @@ def test_deprecation_58638():
     # message and the newer one with the trailing suggestion.
     with pytest.raises(
         TypeError,
-        match="^"
-        + re.escape("list_state() got an unexpected keyword argument 'show_ipv4'"),
+        match=r"^list_state\(\) got an unexpected keyword argument 'show_ipv4'",
     ):
         manage.list_state(show_ipv4="data")  # pylint: disable=unexpected-keyword-arg
 
