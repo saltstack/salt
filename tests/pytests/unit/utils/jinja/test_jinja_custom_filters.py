@@ -425,7 +425,9 @@ def test_indent_no_blank_skips_empty_lines():
 
 def test_indent_indentfirst_deprecated():
     """The deprecated indentfirst argument still maps onto first."""
-    with pytest.warns(DeprecationWarning, match="indentfirst"):
+    with pytest.warns(
+        DeprecationWarning, match="'indentfirst' argument is renamed to 'first'"
+    ):
         assert jinja.indent("a\nb", width=2, indentfirst=True) == "  a\n  b"
 
 
