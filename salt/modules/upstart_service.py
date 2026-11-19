@@ -528,8 +528,8 @@ def _upstart_enable(name):
                 r"^\s*manual\n?",
                 "",
                 salt.utils.stringutils.to_unicode(fp_.read()),
-                0,
-                re.MULTILINE,
+                count=0,
+                flags=re.MULTILINE,
             )
             fp_.seek(0)
             fp_.write(salt.utils.stringutils.to_str(new_text))
