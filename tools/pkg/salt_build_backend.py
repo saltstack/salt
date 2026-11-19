@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 
 # Add project root to sys.path
@@ -113,6 +114,13 @@ def get_install_requires(dist=None):
                 )
             ]
         elif is_windows:
+            # Windows arm64 has its own lockfile; windows.lock is resolved
+            # for x86_64 and pins packages with no win_arm64 wheel (pymssql).
+            # Must match _pkg_lock_file() in tools/pkg/build.py.
+            if platform.machine().upper() == "ARM64":
+                windows_lock = "windows-arm64.lock"
+            else:
+                windows_lock = "windows.lock"
             req_files = [
                 os.path.join(
                     PROJECT_ROOT,
@@ -120,7 +128,7 @@ def get_install_requires(dist=None):
                     "static",
                     "pkg",
                     f"py{sys.version_info[0]}.{sys.version_info[1]}",
-                    "windows.lock",
+                    windows_lock,
                 )
             ]
         else:

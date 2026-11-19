@@ -681,6 +681,28 @@ repos:
           - --no-emit-index-url
           - -o=requirements/static/pkg/py3.14/windows.lock
 
+      # Windows arm64 needs its own lock: windows.lock is resolved for x86_64, so
+      # platform_machine markers (e.g. pymssql, which has no win_arm64 wheel) are
+      # evaluated for the wrong machine. Only 3.14 is built for arm64.
+      - id: pip-compile
+        alias: compile-pkg-windows-arm64-3.14-zmq-requirements
+        name: Windows arm64 Packaging Py3.14 ZeroMQ Requirements
+        files: ^requirements/(constraints\.lock|(base|zeromq|crypto|windows)\.lock|static/pkg/(windows\.txt|py3\.14/windows-arm64\.lock))$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
+          - requirements/crypto.txt
+          - requirements/windows.txt
+          - requirements/static/pkg/windows.txt
+          - --python-platform=aarch64-pc-windows-msvc
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - -o=requirements/static/pkg/py3.14/windows-arm64.lock
+
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
   # ----- CI Requirements ------------------------------------------------------------------------------------------->

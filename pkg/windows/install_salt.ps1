@@ -80,7 +80,15 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
-$SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.lock"
+# Windows arm64 has its own lockfile; windows.lock is resolved for x86_64 and
+# pins packages with no win_arm64 wheel (pymssql). Must match _pkg_lock_file()
+# in tools/pkg/build.py.
+$MACHINE         = $(. $PYTHON_BIN -c "import platform; print(platform.machine().upper())")
+if ( $MACHINE -eq "ARM64" ) {
+  $SALT_DEPS = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows-arm64.lock"
+} else {
+  $SALT_DEPS = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.lock"
+}
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------

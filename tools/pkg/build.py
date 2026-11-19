@@ -53,19 +53,29 @@ def _set_pip_constraint_env(env: dict[str, str]) -> None:
     env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
 
-def _pkg_lock_file(platform: str, python_version: str) -> pathlib.Path:
+def _pkg_lock_file(
+    platform: str, python_version: str, arch: str | None = None
+) -> pathlib.Path:
     """
     Return the static package lockfile for *platform* and a ``X.Y`` (or
     longer) *python_version*.
+
+    Windows arm64 has its own lockfile, resolved by uv for
+    ``aarch64-pc-windows-msvc``, because ``windows.lock`` is resolved for
+    x86_64 and so evaluates ``platform_machine`` markers for that target
+    (e.g. it pins pymssql, which has no win_arm64 wheel).
     """
     major, minor = python_version.split(".")[:2]
+    name = platform if platform != "macos" else "darwin"
+    if platform == "windows" and arch == "arm64":
+        name = "windows-arm64"
     return (
         tools.utils.REPO_ROOT
         / "requirements"
         / "static"
         / "pkg"
         / f"py{major}.{minor}"
-        / f"{platform if platform != 'macos' else 'darwin'}.lock"
+        / f"{name}.lock"
     )
 
 
@@ -872,7 +882,7 @@ def onedir_dependencies(
         capture=True,
     )
     requirements_version = version_info.stdout.strip().decode()
-    requirements_file = _pkg_lock_file(platform, requirements_version)
+    requirements_file = _pkg_lock_file(platform, requirements_version, arch)
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
     # This matters here since install_args enables --no-binary=:all: for
