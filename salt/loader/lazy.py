@@ -192,18 +192,20 @@ class LoadedFunc:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
         # Input validation: strip reserved kwargs, validate against the
         # function's inferred pydantic model, coerce, re-merge reserved.
-        # No-op when opts["loader_validate_mode"] is "off", pydantic is
-        # unavailable, or the function has no type annotations.
-        mode = self.loader.opts.get("loader_validate_mode", "off")
+        # No-op when opts["loader_validate_input_mode"] is "off", pydantic
+        # is unavailable, or the function has no type annotations.
+        input_mode = self.loader.opts.get("loader_validate_input_mode", "off")
         args, kwargs = salt.loader.validation.validate_inputs(
-            self.func, args, kwargs, mode
+            self.func, args, kwargs, input_mode
         )
         ret = self.loader.run(run_func, *args, **kwargs)
         # Return validation: enforce the loader's output_contract (pinned
         # per loader-kind by the factory in salt/loader/__init__.py).
+        # Governed independently of input validation.
         if self.loader.output_contract is not None:
+            return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
             salt.loader.validation.validate_return(
-                self.func, ret, self.loader.output_contract, mode
+                self.func, ret, self.loader.output_contract, return_mode
             )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
@@ -244,14 +246,15 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        mode = self.loader.opts.get("loader_validate_mode", "off")
+        input_mode = self.loader.opts.get("loader_validate_input_mode", "off")
         args, kwargs = salt.loader.validation.validate_inputs(
-            self.func, args, kwargs, mode
+            self.func, args, kwargs, input_mode
         )
         ret = await self.loader.run(run_func, *args, **kwargs)
         if self.loader.output_contract is not None:
+            return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
             salt.loader.validation.validate_return(
-                self.func, ret, self.loader.output_contract, mode
+                self.func, ret, self.loader.output_contract, return_mode
             )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
@@ -424,7 +427,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # satisfy. Factories pin this per loader-kind (e.g. states() passes
         # salt.loader.validation.StateReturn). None means no return
         # contract. Enforced at call time in LoadedFunc.__call__ when
-        # opts["loader_validate_mode"] is not "off".
+        # opts["loader_validate_return_mode"] is not "off".
         self.output_contract = output_contract
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME

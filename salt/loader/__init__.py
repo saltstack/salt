@@ -1249,8 +1249,8 @@ def states(
 
     # Pin the StateReturn contract on this loader; LoadedFunc.__call__ will
     # validate every state function's return against it when
-    # opts["loader_validate_mode"] is not "off". Imported lazily so this
-    # module doesn't require pydantic at import time.
+    # opts["loader_validate_return_mode"] is not "off". Imported lazily so
+    # this module doesn't require pydantic at import time.
     from salt.loader.validation import HAS_PYDANTIC, StateReturn
 
     return LazyLoader(

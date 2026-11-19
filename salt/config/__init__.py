@@ -1198,14 +1198,25 @@ VALID_OPTS = immutabletypes.freeze(
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
         # Loader-level input validation mode: one of 'off', 'warn',
-        # 'enforce', 'strict'.
+        # 'enforce', 'strict'. Governs validate_inputs() called from
+        # LoadedFunc.__call__.
         # 'off' (default): loader behaves as before.
         # 'warn': validate annotated callables on every call; log on failure.
         # 'enforce': raise SaltInvocationError on validation failure.
         # 'strict': like 'enforce', plus require every loader-dispatched
         #           function to have type annotations on all non-var params;
         #           raise on the first call to any function that doesn't.
-        "loader_validate_mode": str,
+        "loader_validate_input_mode": str,
+        # Loader-level return validation mode: one of 'off', 'warn',
+        # 'enforce'. Governs validate_return() called from
+        # LoadedFunc.__call__ against the loader's output_contract (pinned
+        # per-factory -- e.g. states() pins StateReturn).
+        # 'off' (default): return validation is skipped.
+        # 'warn': validate, log + pass return through on failure.
+        # 'enforce': raise SaltInvocationError on contract violation.
+        # No 'strict' here -- contracts are factory-pinned, not annotation-
+        # driven, so the stricter semantic doesn't apply.
+        "loader_validate_return_mode": str,
         # django auth
         "django_auth_path": str,
         "django_auth_settings": str,
@@ -1630,7 +1641,8 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "salt_cp_chunk_size": 65536,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_mode": "off",
+        "loader_validate_input_mode": "off",
+        "loader_validate_return_mode": "off",
         "minion_sign_messages": False,
         "discovery": False,
         "schedule": {},
@@ -2076,7 +2088,8 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_mode": "off",
+        "loader_validate_input_mode": "off",
+        "loader_validate_return_mode": "off",
         "clean_dynamic_modules": True,
         "django_auth_path": "",
         "django_auth_settings": "",

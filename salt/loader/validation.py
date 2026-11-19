@@ -2,18 +2,28 @@
 Loader-level input and return validation for Salt modules.
 
 Called from ``LoadedFunc.__call__`` / ``LoadedCoro.__call__`` on every
-loader dispatch. Behavior is controlled by the ``loader_validate_mode``
-option:
+loader dispatch. Behavior is split across two independent options:
 
-* ``off`` (default) -- validation is skipped; loader behaves as before.
-* ``warn`` -- validate on every call; on failure log and pass through.
-* ``enforce`` -- validate on every call; on failure raise
-  ``SaltInvocationError``.
+``loader_validate_input_mode`` -- governs ``validate_inputs()``:
+
+* ``off`` (default) -- input validation is skipped.
+* ``warn`` -- validate annotated callables; log + pass through on failure.
+* ``enforce`` -- raise ``SaltInvocationError`` on validation failure.
 * ``strict`` -- like ``enforce``, additionally require every loader-
   dispatched function to have type annotations on all non-var parameters.
-  Raises ``SaltInvocationError`` on the first call to any function that
-  doesn't meet the bar. Intended for dev / CI environments that want to
-  enforce "the whole surface is typed."
+  Raises on the first call to any function that doesn't meet the bar.
+  Intended for dev / CI environments that want "the whole surface typed."
+
+``loader_validate_return_mode`` -- governs ``validate_return()`` against
+the loader's ``output_contract`` (pinned per-factory, e.g. ``states()``
+pins :class:`StateReturn`):
+
+* ``off`` (default) -- return validation is skipped.
+* ``warn`` -- validate, log + pass return through on failure.
+* ``enforce`` -- raise ``SaltInvocationError`` on contract violation.
+
+Return mode has no ``strict`` -- contracts are factory-pinned, not
+annotation-driven, so the stricter semantic doesn't apply.
 
 Annotation-driven -- no per-function decorators required. A module author
 writes a plain Python function with type hints and the loader validates
