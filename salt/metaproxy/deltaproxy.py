@@ -453,8 +453,8 @@ async def post_master_init(self, master):
                     _id, uid, self.opts, self.proxy, self.utils
                 )
             except Exception as exc:  # pylint: disable=broad-except
-                log.info(
-                    "An exception occurred during initialization for %s, skipping: %s",
+                log.error(
+                    "An exception occured during initialization for %s, skipping: %s",
                     _id,
                     exc,
                 )

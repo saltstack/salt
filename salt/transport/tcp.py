@@ -3011,13 +3011,26 @@ class RequestClient(salt.transport.base.RequestClient):
         # Don't leave getstream() retrying, or waiting on a master that never
         # answers, after close.
         self._cancel_and_drain(self._connect_task)
-        # Cancelling the reader can prevent it from propagating StreamClosedError
-        # to Salt's reply futures. Resolve them here so requests cannot hang.
+        # Cancelling the reader can prevent it from propagating to Salt's
+        # reply futures. Resolve them here so in-flight requests cannot hang.
+        # Use ``ClosingError`` (not ``StreamClosedError``) to match the
+        # contract exercised by ``_do_send``'s ``CancelledError`` handler and
+        # by the functional tests ``test_close_cancels_connect_in_flight``,
+        # ``test_close_before_connect_attempt_starts``, and
+        # ``test_close_after_loop_is_closed``.
         pending = list(self.send_future_map.values())
         self.send_future_map.clear()
         for future in pending:
             if not future.done():
-                future.set_exception(tornado.iostream.StreamClosedError())
+                try:
+                    future.set_exception(ClosingError())
+                except RuntimeError:
+                    # ``Future.set_exception`` schedules done-callbacks via
+                    # ``loop.call_soon``, which raises when the loop is
+                    # already closed (test_close_after_loop_is_closed). See
+                    # the matching guard around ``self._stream.close()``
+                    # just below and #70178.
+                    pass
         if self._stream is not None:
             try:
                 self._stream.close()
