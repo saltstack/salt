@@ -131,10 +131,19 @@ if ( ! $SkipInstall ) {
   # Installing dependencies
   #-------------------------------------------------------------------------------
   Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", "-r", "$SALT_DEPS", "-U" `
-                -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+  # Same as the Salt install below: stream pip's real output and fail on its
+  # exit code, rather than hiding it behind Start-Process -WindowStyle Hidden.
+  Push-Location "$PROJECT_DIR"
+  try {
+      & "$SCRIPTS_DIR\pip3.exe" install -r "$SALT_DEPS" -U
+      $pipExitCode = $LASTEXITCODE
+  } finally {
+      Pop-Location
+  }
+  if ( $pipExitCode -ne 0 ) {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
