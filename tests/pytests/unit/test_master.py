@@ -1188,10 +1188,8 @@ def test_run_func(maintenance):
     ), patch(
         "salt.utils.verify.check_max_open_files", mocked_check_max_open_files
     ):
-        try:
+        with pytest.raises(RuntimeError, match="^Time passes$"):
             maintenance.run()
-        except RuntimeError as exc:
-            assert str(exc) == "Time passes"
         assert mocked_time._calls == [60] * 4
         assert mocked__post_fork_init.call_times == [0]
         assert mocked_clean_old_jobs.call_times == [0, 120, 180]

@@ -70,17 +70,13 @@ def _validate_miimon_downdelay(kwargs):
 
     kwargs["miimon"] = 100
     kwargs["downdelay"] = 201
-    try:
+    with pytest.raises(AttributeError, match="multiple of miimon"):
         rh_ip.build_interface(
             "bond0",
             "bond",
             enabled=True,
             **kwargs,
         )
-    except AttributeError as exc:
-        assert "multiple of miimon" in str(exc)
-    else:
-        raise Exception("AttributeError was not raised")
 
 
 def _validate_miimon_conf(kwargs, required=True):
@@ -96,17 +92,13 @@ def _validate_miimon_conf(kwargs, required=True):
 
     if required:
         # Leaving out miimon should raise an error
-        try:
+        with pytest.raises(AttributeError, match="miimon"):
             rh_ip.build_interface(
                 "bond0",
                 "bond",
                 enabled=True,
                 **kwargs,
             )
-        except AttributeError as exc:
-            assert "miimon" in str(exc)
-        else:
-            raise Exception("AttributeError was not raised")
 
     _validate_miimon_downdelay(kwargs)
 
@@ -162,12 +154,8 @@ def _test_mode_0_or_2(mode_num=0):
                 _validate_miimon_downdelay(kwargs)
 
                 # Leaving out miimon and arp_interval should raise an error
-                try:
+                with pytest.raises(AttributeError, match="miimon or arp_interval"):
                     bonding_opts = _get_bonding_opts(kwargs)
-                except AttributeError as exc:
-                    assert "miimon or arp_interval" in str(exc)
-                else:
-                    raise Exception("AttributeError was not raised")
 
                 kwargs["miimon"] = 100
                 kwargs["downdelay"] = 200
@@ -632,12 +620,8 @@ def test_build_interface_bond_mode_2():
                 # to be raised.
                 kwargs["mode"] = mode
                 kwargs["hashing-algorithm"] = "layer42"
-                try:
+                with pytest.raises(AttributeError, match="hashing-algorithm"):
                     bonding_opts = _get_bonding_opts(kwargs)
-                except AttributeError as exc:
-                    assert "hashing-algorithm" in str(exc)
-                else:
-                    raise Exception("AttributeError was not raised")
 
                 # Correct the hashing algorithm and re-run
                 kwargs["hashing-algorithm"] = "layer2"
@@ -713,24 +697,16 @@ def test_build_interface_bond_mode_4_xmit():
                         # Using an invalid hashing algorithm should cause an error
                         # to be raised.
                         kwargs["hashing-algorithm"] = "layer42"
-                        try:
+                        with pytest.raises(AttributeError, match="hashing-algorithm"):
                             bonding_opts = _get_bonding_opts(kwargs)
-                        except AttributeError as exc:
-                            assert "hashing-algorithm" in str(exc)
-                        else:
-                            raise Exception("AttributeError was not raised")
 
                     hash_alg = "vlan+srcmac"
                     if version == 7:
                         # Using an invalid hashing algorithm should cause an error
                         # to be raised.
                         kwargs["hashing-algorithm"] = hash_alg
-                        try:
+                        with pytest.raises(AttributeError, match="hashing-algorithm"):
                             bonding_opts = _get_bonding_opts(kwargs)
-                        except AttributeError as exc:
-                            assert "hashing-algorithm" in str(exc)
-                        else:
-                            raise Exception("AttributeError was not raised")
                     else:
                         # Correct the hashing algorithm and re-run
                         kwargs["hashing-algorithm"] = hash_alg
