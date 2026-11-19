@@ -23,7 +23,7 @@ import salt.utils.path
 import salt.utils.versions
 import salt.version
 import salt.wheel
-from salt.exceptions import SaltClientError, SaltSystemExit
+from salt.exceptions import SaltClientError, SaltInvocationError, SaltSystemExit
 
 FINGERPRINT_REGEX = re.compile(r"^([a-f0-9]{2}:){15}([a-f0-9]{2})$")
 
@@ -161,6 +161,27 @@ def key_regen():
     return msg
 
 
+def _removekeys_flag(removekeys):
+    """
+    Return ``removekeys`` as a bool, or raise if it is not one.
+
+    ``removekeys`` is the first positional argument of ``manage.down``, so
+    ``salt-run manage.down <minion_id>`` binds the minion id to it. A plain
+    truthiness check would then delete the keys of every down minion, so only
+    real booleans (or the strings "true"/"false" that the API can send) are
+    accepted.
+    """
+    if isinstance(removekeys, bool):
+        return removekeys
+    if isinstance(removekeys, str) and removekeys.lower() in ("true", "false"):
+        return removekeys.lower() == "true"
+    raise SaltInvocationError(
+        f"removekeys must be True or False, not {removekeys!r}. "
+        "To check specific minions, pass tgt, e.g. "
+        f"'salt-run manage.down tgt={removekeys}'."
+    )
+
+
 def down(
     removekeys=False, tgt="*", tgt_type="glob", timeout=None, gather_job_timeout=None
 ):
@@ -181,6 +202,7 @@ def down(
         salt-run manage.down removekeys=True
         salt-run manage.down tgt="webservers" tgt_type="nodegroup"
     """
+    removekeys = _removekeys_flag(removekeys)
     ret = status(
         output=False,
         tgt=tgt,
