@@ -391,6 +391,10 @@ psutil==7.2.2
     #   pytest-salt-factories
     #   pytest-shell-utilities
     #   pytest-system-statistics
+psycopg==3.3.9
+    # via -r requirements/static/ci/common.txt
+psycopg-binary==3.3.9
+    # via psycopg
 psycopg2-binary==2.9.12
     # via -r requirements/static/ci/common.txt
 py-cpuinfo==9.0.0
@@ -569,6 +573,8 @@ smmap==5.0.2
     #   gitdb
 sortedcontainers==2.4.0
     # via hypothesis
+sqlalchemy==2.0.57
+    # via -r requirements/static/ci/common.txt
 sqlparse==0.5.5
     # via -r requirements/static/ci/common.txt
 strict-rfc3339==0.7
@@ -620,8 +626,10 @@ typing-extensions==4.16.0
     #   opentelemetry-exporter-otlp-proto-http
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
+    #   psycopg
     #   pyopenssl
     #   pytest-system-statistics
+    #   sqlalchemy
     #   virtualenv
 urllib3==2.8.0
     # via
