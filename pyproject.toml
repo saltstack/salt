@@ -241,6 +241,12 @@ select = [
     "RUF048",  # map(int, version.split())
     "RUF101",  # redirected noqa code
     "RUF103",  # invalid ruff suppression comment
+    # Test patterns with existing violations. Only new ones block a PR.
+    "RUF043",  # unescaped regex metacharacters in pytest match=
+    "PT030",  # pytest.warns() without match
+    "PT017",  # assert on an exception inside except
+    "PT014",  # duplicate parametrize case
+    "B011",  # assert False
 ]
 ignore = [
     "F403",  # star imports

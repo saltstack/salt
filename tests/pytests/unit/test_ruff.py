@@ -497,6 +497,23 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
     ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
     ("PGH004", "import os  # noqa\n"),
+    (
+        "RUF043",
+        'import pytest\n\n\ndef test_f():\n    with pytest.raises(ValueError, match="a.b"):\n        pass\n',
+    ),
+    (
+        "PT030",
+        "import pytest\n\n\ndef test_f():\n    with pytest.warns(DeprecationWarning):\n        pass\n",
+    ),
+    (
+        "PT017",
+        "def test_f():\n    try:\n        pass\n    except ValueError as exc:\n        assert exc.args\n",
+    ),
+    (
+        "PT014",
+        'import pytest\n\n\n@pytest.mark.parametrize("a", [1, 1])\ndef test_f(a):\n    pass\n',
+    ),
+    ("B011", "def test_f():\n    assert False\n"),
 ]
 
 
