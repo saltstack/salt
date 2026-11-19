@@ -289,14 +289,14 @@ def test_queue_base_dir_namespaces_by_proxyid(tmp_path):
     assert "proxy-b" in with_proxy_b
 
 
-def test_cleanup_stale_queue_lock_skips_live_pid(tmp_path):
+def test_cleanup_stale_queue_lock_skips_live_holder(tmp_path):
     """
     Regression for SALT_KEEPALIVE respawn stomp (and any scenario where a
     cleanup fires while a live process still holds ``queue.lock``).
 
-    ``wait_lock`` writes the holder's PID into the lock file.
-    ``cleanup_stale_queue_lock`` must probe that PID with
-    ``os.kill(pid, 0)`` and skip removal when it is alive.
+    The holder is identified by the PID recorded in the lock file AND
+    its process start time (the process must have been running when the
+    lock was written). Cleanup must skip removal when that pair matches.
     """
     opts = {"cachedir": str(tmp_path), "master": "liveness-test"}
     lock_path = salt.utils.state.queue_lock_path(opts)
@@ -308,8 +308,83 @@ def test_cleanup_stale_queue_lock_skips_live_pid(tmp_path):
 
     assert os.path.exists(lock_path), (
         "cleanup_stale_queue_lock removed a lock whose recorded PID is "
-        "alive. Concurrent/orphan holders can lose their lock."
+        "alive and whose mtime is after our start time. Concurrent "
+        "holders can lose their lock."
     )
+
+
+def test_cleanup_stale_queue_lock_detects_pid_reuse(tmp_path):
+    """
+    Regression for BrianHa94's PR-review finding #3: after a SIGKILL +
+    restart, the recorded PID can be reclaimed by an unrelated process.
+    Pure liveness probing (``os.kill(pid, 0)``) would see the new owner
+    as alive and leave the stale lock in place; the next ``wait_lock``
+    would then sit on the 24 h timeout.
+
+    Cleanup must compare the process's start time against the lock
+    file's mtime: if the process started AFTER the lock was written,
+    the PID has been reused and the lock is stale.
+    """
+    psutil = pytest.importorskip("psutil")
+
+    opts = {"cachedir": str(tmp_path), "master": "pid-reuse-test"}
+    lock_path = salt.utils.state.queue_lock_path(opts)
+    os.makedirs(os.path.dirname(lock_path), exist_ok=True)
+    # Use our own (alive) PID so the liveness probe succeeds.
+    with salt.utils.files.fopen(lock_path, "w", encoding="utf-8") as fp:
+        fp.write(str(os.getpid()))
+    # Backdate the lock mtime to 60 s before this process was started.
+    # The PID is alive but cannot be the holder that wrote the file.
+    create_time = psutil.Process(os.getpid()).create_time()
+    old = create_time - 60
+    os.utime(lock_path, (old, old))
+
+    salt.utils.state.cleanup_stale_queue_lock(opts)
+
+    assert not os.path.exists(lock_path), (
+        "cleanup_stale_queue_lock treated a PID-reused holder as live. "
+        "After a reboot or PID-wrap scenario the next wait_lock acquire "
+        "would block up to 24 h."
+    )
+
+
+def test_wait_lock_survives_concurrent_removal(tmp_path):
+    """
+    Regression for BrianHa94's PR-review finding #2: if a concurrent
+    cleanup removes the lock file while a legitimate holder has it,
+    ``wait_lock``'s ``finally`` used to raise ``FileNotFoundError``,
+    turning a successful state run into a traceback.
+
+    The ``finally`` must catch ``FileNotFoundError`` and log a warning
+    instead.
+    """
+    import threading
+
+    lock = str(tmp_path / "concurrent.lock")
+    acquired = threading.Event()
+    proceed = threading.Event()
+    result = []
+
+    def hold():
+        try:
+            with salt.utils.files.wait_lock(lock, lock_fn=lock, timeout=10):
+                acquired.set()
+                proceed.wait(timeout=5)
+            result.append("clean")
+        except Exception as exc:  # pylint: disable=broad-except
+            result.append(f"crash:{type(exc).__name__}")
+
+    t = threading.Thread(target=hold)
+    t.start()
+    assert acquired.wait(timeout=5), "holder never acquired the lock"
+    # Simulate a concurrent stale-lock cleanup removing the lock file
+    # out from under us.
+    os.remove(lock)
+    proceed.set()
+    t.join(timeout=5)
+    assert result == [
+        "clean"
+    ], f"wait_lock holder crashed instead of logging and continuing: {result}"
 
 
 def test_cleanup_stale_queue_lock_removes_dead_pid(tmp_path):

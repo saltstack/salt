@@ -141,6 +141,38 @@ def _pid_is_alive(pid):
         return False
 
 
+def _pid_is_lock_holder(pid, lock_mtime):
+    """
+    Return True if the process at ``pid`` can plausibly be the holder
+    that wrote the lock file.
+
+    The lock file's mtime is the moment the holder wrote its PID. If the
+    current process at ``pid`` was started AFTER that moment its PID has
+    been reused by an unrelated process and the recorded holder is gone.
+    Without this check, a SIGKILLed holder's PID being reclaimed (e.g.
+    on a PID-wrap-around or ``kernel.ns_last_pid`` manipulation) would
+    make cleanup skip the lock and the next ``wait_lock`` acquirer
+    would sit on the 24 h timeout.
+
+    When ``psutil`` is unavailable we fall back to pure liveness; the
+    PID-reuse window is unprotected but no false negatives beyond that.
+    """
+    if not _pid_is_alive(pid):
+        return False
+    try:
+        import psutil  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return True
+    try:
+        return psutil.Process(pid).create_time() <= lock_mtime
+    except psutil.NoSuchProcess:
+        return False
+    except psutil.Error:
+        # Permission denied or other psutil error -- cannot determine
+        # start time, be conservative and assume live holder.
+        return True
+
+
 def cleanup_stale_queue_lock(opts):
     """
     Remove a leftover ``queue.lock`` file, but only when it is no longer
@@ -183,7 +215,7 @@ def cleanup_stale_queue_lock(opts):
             pid = int(content)
         except ValueError:
             pid = None
-        if pid is not None and _pid_is_alive(pid):
+        if pid is not None and _pid_is_lock_holder(pid, st.st_mtime):
             log.debug(
                 "queue.lock %s held by live pid %d; skipping stale cleanup",
                 lock_path,

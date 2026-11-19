@@ -1318,92 +1318,40 @@ def test__check_queue(queue, wait_called, ret_value):
             assert state.__context__["retcode"] == 1
 
 
-def test__check_queue_int_without_pub_jid_writes_flag(tmp_path):
+def test_load_args_and_kwargs_propagates_pub_jid_for_state_modules():
     """
-    Regression test for the uncovered deadlock path left by PR #70787.
+    Companion invariant for the queue=<int> flag-file design.
 
-    When state.apply is dispatched via salt-call --local (or any in-process
-    caller that does not propagate ``__pub_jid``), ``_check_queue`` receives
-    ``kwargs`` with no ``__pub_jid`` key. The ``queue=<int>`` branch then
-    calls ``_set_queue_flag(None)`` which short-circuits and writes no flag
-    file. ``_wait`` mints a fresh JID purely for ``_prior_running_states``
-    comparisons, but no on-disk flag ever appears.
+    salt-call, orchestration, and master-published calls all route
+    through ``salt.minion.load_args_and_kwargs``. When the target
+    function accepts ``**kwargs`` (all state module entry points do),
+    ``load_args_and_kwargs`` packs the publish data into kwargs as
+    ``__pub_<key>``. ``_check_queue`` therefore always sees a non-None
+    ``__pub_jid`` -- no mint fallback is needed -- and the on-disk flag
+    file key will match the jid recorded in the proc file.
 
-    To observers, each concurrent salt-call waiter looks like "running with
-    a PID, no flag" -- which ``check_prior_running_states`` treats as an
-    actually-executing job that unconditionally blocks. Three concurrent
-    salt-call runs deadlock exactly as #70580 described, on a code path
-    the PR did not cover.
-
-    The fix is to mint a JID in ``_check_queue`` before ``_set_queue_flag``
-    on the ``queue=<int>`` path when no ``__pub_jid`` was supplied, and to
-    propagate that JID through ``_wait``/``_clear_queue_flag`` so the flag
-    file lifecycle matches the master-published path.
+    If a future refactor removes ``**kwargs`` from a state entry point
+    (or stops passing ``data=`` to ``load_args_and_kwargs``), this test
+    fails and the queue=<int> flag-file lookup would silently miss.
     """
-    recorded = []
+    import salt.minion
+    import salt.modules.state as state_mod
 
-    def record_flag(jid):
-        recorded.append(jid)
-
-    opts = {"cachedir": str(tmp_path), "master": "test-master"}
-    with patch("salt.modules.state._set_queue_flag", side_effect=record_flag), patch(
-        "salt.modules.state._clear_queue_flag", MagicMock()
-    ), patch("salt.modules.state._wait", MagicMock(return_value=True)), patch.dict(
-        state.__opts__, opts
-    ):
-        # kwargs has NO __pub_jid, as happens on salt-call --local.
-        state._check_queue(10, {})
-
-    assert recorded, "_set_queue_flag was never invoked on the queue=<int> path"
-    assert recorded[0] is not None, (
-        "_set_queue_flag was called with jid=None on the salt-call "
-        "queue=<int> path. No flag file is written, so concurrent waiters "
-        "appear to each other as actually-executing jobs and deadlock. "
-        "See salt/modules/state.py:562-571 -- _check_queue must mint a JID "
-        "before _set_queue_flag when __pub_jid is absent."
+    sdata = {
+        "fun": "state.single",
+        "pid": 42,
+        "jid": "20261118010101000001",
+        "tgt": "salt-call",
+    }
+    _, kwargs = salt.minion.load_args_and_kwargs(
+        state_mod.single,
+        ["cmd.run", "name=sleep 1", "queue=10"],
+        data=sdata,
     )
-
-
-def test__check_queue_int_without_pub_jid_mints_unique_jid(tmp_path):
-    """
-    Regression: the JID minted on the salt-call queue=<int> path must be
-    cross-process unique.
-
-    ``gen_jid(opts)`` with ``unique_jid=False`` (the default) emits only a
-    microsecond-precision timestamp and its monotonic-bump dedupe is
-    per-process. Two concurrent salt-call --local invocations on fast
-    hardware would mint the IDENTICAL jid. ``check_prior_running_states``
-    at salt/utils/state.py:206 then short-circuits on ``data_jid == jid``
-    so neither sees the other as prior and both run concurrently --
-    re-breaking the #69825 "one state run at a time" invariant.
-
-    The fix passes ``unique_jid=True`` which appends ``_<pid>`` so
-    separate processes always produce distinct JIDs.
-    """
-    recorded = []
-
-    def record_flag(jid):
-        recorded.append(jid)
-
-    opts = {"cachedir": str(tmp_path), "master": "test-master"}
-    with patch("salt.modules.state._set_queue_flag", side_effect=record_flag), patch(
-        "salt.modules.state._clear_queue_flag", MagicMock()
-    ), patch("salt.modules.state._wait", MagicMock(return_value=True)), patch.dict(
-        state.__opts__, opts
-    ):
-        state._check_queue(10, {})
-
-    assert recorded and recorded[0] is not None
-    jid = recorded[0]
-    assert "_" in jid, (
-        f"Minted jid {jid!r} has no PID suffix. Two concurrent salt-call "
-        "processes can mint the same timestamp and bypass the queue; see "
-        "salt/modules/state.py:_check_queue mint site. Pass "
-        "unique_jid=True to gen_jid()."
-    )
-    assert jid.split("_", 1)[1] == str(os.getpid()), (
-        f"Minted jid {jid!r} does not carry the current process's PID "
-        "suffix. The suffix is what makes the JID cross-process unique."
+    assert kwargs.get("__pub_jid") == sdata["jid"], (
+        "load_args_and_kwargs did not inject __pub_jid for state.single. "
+        "The queue=<int> flag file would be written under a different "
+        "jid than the proc file, and sibling waiters would deadlock."
     )
 
 
