@@ -194,7 +194,7 @@ def _register_master_observables(opts, workers_inflight):
 
     def _connected_minions_cb(_options):
         try:
-            ck = salt.utils.minions.CkMinions(opts)
+            ck = salt.utils.minions.CkMinions.factory(opts)
             return (Observation(len(ck.connected_ids())),)
         except Exception as exc:  # pylint: disable=broad-except
             log.debug("connected_minions observable failed: %s", exc)
@@ -520,7 +520,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.schedule = salt.utils.schedule.Schedule(
             self.opts, runner_client.functions_dict(), returners=self.returners
         )
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         # Make Event bus for firing
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
@@ -2658,7 +2658,7 @@ class AESFuncs(TransportMethods):
         self.event = salt.utils.event.get_master_event(
             self.opts, self.opts["sock_dir"], listen=False
         )
-        self.ckminions = salt.utils.minions.CkMinions(opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(opts)
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
         # Create the master minion to access the external job cache
@@ -4278,7 +4278,7 @@ class AuthFuncs(TransportMethods):
             self.ckminions = None
         else:
             self.cache_cli = False
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+            self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
 
     @property
     def aes_key(self):
@@ -5663,7 +5663,7 @@ class ClearFuncs(TransportMethods):
         # Make a client
         self.local = salt.client.get_local_client(self.opts["conf_file"])
         # Make an minion checker object
-        self.ckminions = salt.utils.minions.CkMinions(opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(opts)
         # Make an Auth object
         self.loadauth = salt.auth.LoadAuth(opts)
         # Stand up the master Minion to access returner data

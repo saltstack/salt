@@ -197,17 +197,17 @@ def test_save_load_computes_matched_minions_when_not_supplied(opts):
     """
 
     class _FakeCkMinions:
-        def __init__(self, _opts):
-            pass
-
         def check_minions(self, _tgt, _tgt_type="glob"):
             return {"minions": ["m1", "m2"]}
 
-    with patch("salt.utils.minions.CkMinions", _FakeCkMinions):
+    with patch(
+        "salt.utils.minions.CkMinions.factory", return_value=_FakeCkMinions()
+    ) as factory:
         salt_cache.save_load(
             "20260516-D2",
             {"fun": "test.ping", "tgt": "*", "tgt_type": "glob"},
         )
+    factory.assert_called_once_with(opts)
 
     out = salt_cache.get_load("20260516-D2")
     assert out["Minions"] == ["m1", "m2"]

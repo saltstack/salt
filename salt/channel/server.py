@@ -378,7 +378,7 @@ class ReqServerChannel:
         else:
             self.cache_cli = False
             # Make an minion checker object
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+            self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.master_key = salt.crypt.MasterKeys(self.opts)
         self.payload_handler = payload_handler
         if hasattr(self.transport, "post_fork"):
@@ -804,9 +804,9 @@ class ReqServerChannel:
             self.opts
         )
         af.cache_cli = getattr(self, "cache_cli", False)
-        af.ckminions = getattr(self, "ckminions", None) or salt.utils.minions.CkMinions(
-            self.opts
-        )
+        af.ckminions = getattr(
+            self, "ckminions", None
+        ) or salt.utils.minions.CkMinions.factory(self.opts)
         return await af._auth(load, sign_messages, version)
 
     def close(self):
@@ -932,7 +932,7 @@ class PoolRoutingChannel:
             self.cache_cli = CacheCli(self.opts)
         else:
             self.cache_cli = False
-            self.ckminions = salt.utils.minions.CkMinions(self.opts)
+            self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
 
     def _build_routing_table(self):
         """
@@ -1610,7 +1610,7 @@ class PubServerChannel:
 
     def __init__(self, opts, transport, presence_events=False):
         self.opts = opts
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.transport = transport
         self.aes_funcs = salt.master.AESFuncs(self.opts)
         self.present = {}
@@ -1635,7 +1635,7 @@ class PubServerChannel:
         self.presence_events = state["presence_events"]
         self.transport = state["transport"]
         self.event = salt.utils.event.get_event("master", opts=self.opts, listen=False)
-        self.ckminions = salt.utils.minions.CkMinions(self.opts)
+        self.ckminions = salt.utils.minions.CkMinions.factory(self.opts)
         self.present = {}
         self.aes_funcs = None
         self.master_key = salt.crypt.MasterKeys(self.opts)

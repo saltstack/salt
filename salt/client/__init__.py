@@ -151,7 +151,7 @@ def _iter_failed_missing_returns(opts, found, missing_root_ids):
     (``salt_resources``) and **pillar** (``resources`` / ``resource_pillar_key``),
     so offline minions still expand to their last-known resource rows.
     """
-    ck = salt.utils.minions.CkMinions(opts)
+    ck = salt.utils.minions.CkMinions.factory(opts)
     reported = set()
     missing_set = set(missing_root_ids)
     try:
@@ -644,7 +644,7 @@ class LocalClient:
         return self._check_pub_data(pub_data, listen=listen)
 
     def gather_minions(self, tgt, expr_form):
-        _res = salt.utils.minions.CkMinions(self.opts).check_minions(
+        _res = salt.utils.minions.CkMinions.factory(self.opts).check_minions(
             tgt, tgt_type=expr_form
         )
         return _res["minions"]
@@ -1629,7 +1629,7 @@ class LocalClient:
                 # print a misleading "No minions matched" message.
                 pending = minions - found
                 accepted_minions = set(
-                    salt.utils.minions.CkMinions(self.opts)._pki_minions()
+                    salt.utils.minions.CkMinions.factory(self.opts)._pki_minions()
                 )
                 minion_pending = list(pending & accepted_minions)
                 jinfo = (
@@ -2076,7 +2076,7 @@ class LocalClient:
                 # CLI drop the row on :func:`~salt.cli.salt.Salt._format_ret` KeyError.
                 if min_ret.get("failed"):
                     if connected_minions is None:
-                        connected_minions = salt.utils.minions.CkMinions(
+                        connected_minions = salt.utils.minions.CkMinions.factory(
                             self.opts
                         ).connected_ids()
                     if (

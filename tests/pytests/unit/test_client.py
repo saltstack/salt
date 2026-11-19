@@ -134,7 +134,7 @@ def test_iter_failed_missing_returns_expands_managed_resources(master_opts):
     class _FakeCk:
         registry = _FakeReg()
 
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+    with patch("salt.utils.minions.CkMinions.factory", return_value=_FakeCk()):
         keys = [
             next(iter(chunk))
             for chunk in _iter_failed_missing_returns(master_opts, set(), {"minion-1"})
@@ -170,7 +170,7 @@ def test_iter_failed_missing_returns_uses_grains_when_registry_empty(master_opts
     mopts = dict(master_opts)
     mopts["minion_data_cache"] = True
 
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+    with patch("salt.utils.minions.CkMinions.factory", return_value=_FakeCk()):
         with patch("salt.cache.factory", return_value=_FakeCache()):
             keys = [
                 next(iter(chunk))
@@ -225,7 +225,7 @@ def test_iter_failed_missing_returns_uses_pillar_when_registry_and_grains_empty(
     mopts = dict(master_opts)
     mopts["minion_data_cache"] = True
 
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+    with patch("salt.utils.minions.CkMinions.factory", return_value=_FakeCk()):
         with patch("salt.cache.factory", return_value=_FakeCache()):
             keys = [
                 next(iter(chunk))
@@ -246,7 +246,7 @@ def test_iter_failed_missing_returns_skips_resources_already_found(master_opts):
     class _FakeCk:
         registry = _FakeReg()
 
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+    with patch("salt.utils.minions.CkMinions.factory", return_value=_FakeCk()):
         keys = [
             next(iter(chunk))
             for chunk in _iter_failed_missing_returns(master_opts, {"r1"}, {"minion-1"})
@@ -287,7 +287,7 @@ def test_iter_failed_missing_returns_pki_minions_before_bare_resource_ids(master
     mopts = dict(master_opts)
     mopts["minion_data_cache"] = True
 
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
+    with patch("salt.utils.minions.CkMinions.factory", return_value=_FakeCk()):
         with patch("salt.cache.factory", return_value=_FakeCache()):
             keys = [
                 next(iter(chunk))

@@ -28,7 +28,7 @@ def mmatch(
     if not opts:
         opts = __opts__
 
-    ckminions = salt.utils.minions.CkMinions(opts)
+    ckminions = salt.utils.minions.CkMinions.factory(opts)
 
     return ckminions._check_cache_minions(
         expr,

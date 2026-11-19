@@ -1889,7 +1889,7 @@ def _seed_local_cache_for_forwarded_publish(load, matched=None):
             # master actually published to (the ones that will later
             # issue ``_return``).  Peer-master minions are routed via
             # their own masters' cache files.
-            ckminions = salt.utils.minions.CkMinions(_OPTS)
+            ckminions = salt.utils.minions.CkMinions.factory(_OPTS)
             resolved = ckminions.check_minions(
                 load.get("tgt"), load.get("tgt_type", "glob")
             )
@@ -2294,7 +2294,7 @@ def _resolve_local_match(load):
     try:
         import salt.utils.minions  # pylint: disable=import-outside-toplevel
 
-        ckminions = salt.utils.minions.CkMinions(_OPTS)
+        ckminions = salt.utils.minions.CkMinions.factory(_OPTS)
         resolved = ckminions.check_minions(stripped_tgt, load.get("tgt_type", "glob"))
     except Exception:  # pylint: disable=broad-except
         log.debug(

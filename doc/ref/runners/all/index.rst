@@ -36,6 +36,7 @@ runner modules
     salt
     saltutil
     sdb
+    sqlalchemy
     ssh
     state
     survey
