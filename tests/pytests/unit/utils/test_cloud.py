@@ -785,7 +785,7 @@ def test_check_name():
     try:
         cloud.check_name("test", string.ascii_letters)
     except SaltCloudException as exc:
-        assert False, f"cloud.check_name rasied SaltCloudException: {exc}"
+        raise AssertionError(f"cloud.check_name rasied SaltCloudException: {exc}")
 
     with pytest.raises(SaltCloudException):
         cloud.check_name("test", string.digits)
