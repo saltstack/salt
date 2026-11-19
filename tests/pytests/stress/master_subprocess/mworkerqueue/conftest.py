@@ -118,8 +118,8 @@ def _run_mworkerqueue(opts: dict) -> None:
     # stack (and its C extensions) until it has to -- but also so that by
     # the time ``zmq_device()`` binds its sockets, the slow salt.master
     # import it does mid-flight is already cached.
-    import salt.master  # noqa: WPS433 pylint: disable=unused-import,import-outside-toplevel
-    import salt.transport.zeromq as _z  # noqa: WPS433 pylint: disable=import-outside-toplevel
+    import salt.master  # noqa: F401  # pylint: disable=unused-import,import-outside-toplevel
+    import salt.transport.zeromq as _z  # pylint: disable=import-outside-toplevel
 
     server = _z.RequestServer(opts)
     try:

@@ -96,10 +96,10 @@ class LogEntry(NamedTuple):
     term: int
     index: int
     cmd: bytes  # Can also be memoryview for zero-copy access
-    node_id: str = None  # noqa: TYP005
-    type: int = 0  # 0 = COMMAND, 1 = CONFIG  # noqa: TYP005
-    client_id: str = None  # noqa: TYP005
-    sequence_num: int = None  # noqa: TYP005
+    node_id: str = None
+    type: int = 0  # 0 = COMMAND, 1 = CONFIG
+    client_id: str = None
+    sequence_num: int = None
 
     @property
     def cmd_bytes(self):
@@ -125,7 +125,7 @@ class LogEntry(NamedTuple):
             return self.cmd
         return memoryview(self.cmd)
 
-    def info(self, include_commits=False):  # noqa: TYP004
+    def info(self, include_commits=False):
         """Return a serializable representation of the entry."""
         # Convert bytes/memoryview cmd to string for JSON serialization
         cmd_str = self.cmd_bytes
