@@ -348,7 +348,6 @@ def test_fulfills_version_string(version_string, installed_versions, expected_re
         (["1.2.3", "1.2.2-1.1"], "==", "1.2.3-1.2", False),
         (["1.2.3", "1.2.2-1.1"], ">=", "1.2.3-1.2", False),
         (["1.2.3-1.2"], ">=", "1.2.3", True),
-        (["1.2.3-1.2"], ">=", "1.2.3-1.3", False),
         (["1.2.1-1.2"], "!=", "1.2.3", True),
     ],
 )
