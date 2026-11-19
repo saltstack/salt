@@ -208,3 +208,28 @@ def test_creds_with_role_arn_should_always_call_assumed_creds():
             )
             assert mock_get_metadata.call_count == 0
             assert result == assumed_creds_ret
+
+
+def test_query_returns_the_error_when_all_retries_are_used():
+    """
+    Once every retry of a retryable error is used up, query returns the error
+    instead of failing with an UnboundLocalError.
+    """
+    response = MagicMock(status_code=503)
+    response.content = (
+        b"<Response><Errors><Error><Code>RequestLimitExceeded</Code>"
+        b"</Error></Errors></Response>"
+    )
+    result = MagicMock()
+    result.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        response=response
+    )
+    opts = {"providers": {"aws": {"ec2": {"id": "id", "key": "key"}}}}
+    with patch("requests.get", return_value=result) as get, patch.object(
+        aws, "sig2", return_value={}
+    ), patch.object(aws, "sleep_exponential_backoff"):
+        ret = aws.query(
+            opts=opts, provider="aws", location="us-east-1", requesturl="https://x/"
+        )
+    assert get.call_count == aws.AWS_MAX_RETRIES
+    assert "error" in ret
