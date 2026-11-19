@@ -139,6 +139,54 @@ def test_check_queue_queues_job_when_conflict():
         assert final_path.endswith(f"_{my_jid}.p"), final_path
 
 
+def test_show_lowstate_returns_queued_result_when_conflict():
+    """
+    With queue=True and another state run active, show_lowstate queues the
+    job and returns the "queued" result, like the other state functions.
+
+    It used to raise AssertionError after the job was already queued, because
+    of a leftover ``assert False`` in the conflict branch.
+    """
+    kwargs = {
+        "__pub_jid": "20230101000000100000",
+        "__pub_fun": "state.show_lowstate",
+        "__pub_arg": [],
+        "__pub_tgt": "*",
+        "__pub_ret": "",
+        "__pub_user": "root",
+    }
+    active_jobs = [{"jid": "20230101000000000000", "pid": 1234, "fun": "state.apply"}]
+
+    mock_lock = MagicMock()
+    mock_lock.__enter__ = MagicMock(return_value=None)
+    mock_lock.__exit__ = MagicMock(return_value=None)
+
+    with patch.dict(
+        state.__opts__, {"cachedir": "/tmp/salt_test_cache", "master": "master-a"}
+    ), patch(
+        "salt.modules.state.__salt__",
+        {"saltutil.is_running": MagicMock(return_value=active_jobs)},
+    ), patch(
+        "salt.utils.state.acquire_queue_lock", return_value=mock_lock
+    ), patch(
+        "os.path.exists", return_value=True
+    ), patch(
+        "salt.utils.files.fopen", mock_open()
+    ), patch(
+        "salt.payload.dump"
+    ) as mock_dump, patch(
+        "salt.utils.atomicfile.atomic_rename"
+    ) as mock_rename:
+        ret = state.show_lowstate(queue=True, **kwargs)
+
+        assert ret["queued"] is True
+        assert ret["result"] is True
+        assert "Job queued for execution" in ret["comment"]
+        # The job was queued before the function returned.
+        assert mock_dump.call_args[0][0]["fun"] == "state.show_lowstate"
+        assert mock_rename.called
+
+
 def test_check_queue_preserves_master_jid_69386():
     """
     Regression test for #69386: queued state runs must NOT mint a new JID
