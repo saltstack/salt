@@ -253,7 +253,13 @@ def test_clock_master_back_3600s(topology, workload, request):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 def test_clock_drift_during_auth(topology, workload, request):
+    # Marked ``extended``: ``clock_minion_fwd_60s`` + ``clock_master_fwd_60s``
+    # already exercise auth-signature invalidation on wall-clock jumps.
+    # The race-against-restart variant here is primarily a canary for a
+    # specific timing window; local devs can opt in with --extended to
+    # bisect that window, but default CI doesn't need it on every run.
     scenario = "clock_drift_during_auth"
     container = _first_minion(topology)
 

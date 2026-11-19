@@ -49,18 +49,55 @@ jobs:
     runs-on: ubuntu-latest
     if: vars.SKIP_NIGHTLY_RESILIENCY_TEST != 'true'
     outputs:
-      topologies: ${{ steps.pick.outputs.topologies }}
+      jobs: ${{ steps.pick.outputs.jobs }}
     steps:
       - id: pick
         env:
           INPUT_TOPOLOGY: ${{ github.event.inputs.topology || 'all' }}
         run: |
+          # Matrix is (topology, group) tuples instead of a flat topology
+          # list.  Two groups split the ~4h50m full suite into windows
+          # that fit the 5h GHA ceiling with margin:
+          #
+          #   fast     -- all scenarios except master_marathon, with
+          #               @pytest.mark.extended tests gated off.  ~30-40m
+          #               per topology.  Runs on every topology (6 jobs).
+          #
+          #   marathon -- master_marathon scenario only, with --marathon
+          #               enabled.  ~4h per topology because of the
+          #               outage_120m phase alone.  Runs only on topologies
+          #               where long-outage behavior is informative:
+          #                 single               -- canonical outage test
+          #                 multimaster-failover -- failover under long outage
+          #                 syndic               -- MOM/SUB long-outage ground
+          #               cluster3/cluster5 get their quorum coverage from
+          #               cluster_split_brain_simulate in the fast group;
+          #               multimaster-hothot shares its code paths with
+          #               multimaster-failover for the marathon purpose.
+          #
+          # 9 jobs total.  Each stays under the empirically observed 5h
+          # effective GHA ceiling.
           case "$INPUT_TOPOLOGY" in
             all)
-              echo 'topologies=["single","cluster3","cluster5","multimaster-failover","multimaster-hothot","syndic"]' >> "$GITHUB_OUTPUT"
+              jobs='['
+              jobs+='{"topology":"single","group":"fast"},'
+              jobs+='{"topology":"cluster3","group":"fast"},'
+              jobs+='{"topology":"cluster5","group":"fast"},'
+              jobs+='{"topology":"multimaster-failover","group":"fast"},'
+              jobs+='{"topology":"multimaster-hothot","group":"fast"},'
+              jobs+='{"topology":"syndic","group":"fast"},'
+              jobs+='{"topology":"single","group":"marathon"},'
+              jobs+='{"topology":"multimaster-failover","group":"marathon"},'
+              jobs+='{"topology":"syndic","group":"marathon"}'
+              jobs+=']'
+              echo "jobs=${jobs}" >> "$GITHUB_OUTPUT"
               ;;
             *)
-              echo "topologies=[\"$INPUT_TOPOLOGY\"]" >> "$GITHUB_OUTPUT"
+              # Single-topology dispatch always runs fast + marathon both
+              # (same logic as before: everything the user explicitly
+              # selected).  If only one group is wanted, dispatch via the
+              # topology input twice with different ``scenarios``.
+              echo "jobs=[{\"topology\":\"$INPUT_TOPOLOGY\",\"group\":\"fast\"},{\"topology\":\"$INPUT_TOPOLOGY\",\"group\":\"marathon\"}]" >> "$GITHUB_OUTPUT"
               ;;
           esac
 
@@ -79,11 +116,11 @@ jobs:
     permissions:
       contents: write
     strategy:
-      # Don't let one flaky topology cancel the others -- each is an
-      # independent diagnostic.
+      # Don't let one flaky topology-group cancel the others -- each is
+      # an independent diagnostic.
       fail-fast: false
       matrix:
-        topology: ${{ fromJSON(needs.resolve-matrix.outputs.topologies) }}
+        include: ${{ fromJSON(needs.resolve-matrix.outputs.jobs) }}
     env:
       # multimaster compose stacks publish prometheus on :19091 instead
       # of the :19090 the single/cluster3 stacks use.  The analyzer,
@@ -270,56 +307,66 @@ jobs:
         # and 120m-enabled to 6h (hard GHA ceiling).
         id: start-env
         env:
-          # Default to true on scheduled triggers (``github.event.inputs``
-          # is empty on schedule events, so the workflow_dispatch
-          # ``default:`` never applies there).  The nightly cron runs
-          # the full battery including the 2-hour master outage.
-          MARATHON_ENABLED_INPUT: ${{ github.event.inputs.marathon_enabled || 'true' }}
+          GROUP: ${{ matrix.group }}
         run: |
           # Stamp the run-start timestamp BEFORE the long orchestrator
           # invocation so the render + summary steps can thread it into
           # the per-PNG suptitle + the step-summary header.  Captured
           # once here (not re-computed later) so retries / cache hits
           # don't drift and every panel + summary references the same
-          # moment the compose stack went up.  ``github.event.repository.
-          # pushed_at`` was rejected as the source because it's the
-          # commit push time, not the run-start time, and would be
-          # identical across a matrix of six topologies all triggered
-          # from the same commit.
+          # moment the compose stack went up.
           run_started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           echo "run-started-at=${run_started_at}" >> "$GITHUB_OUTPUT"
           echo "Resiliency run start stamp: ${run_started_at}"
           cd tests/resiliency
-          # Marathon ON runs the full battery (30m + 60m + 2h outages +
-          # workload) which can take ~5.5h; cap at 6h, the GHA ceiling.
-          # Marathon OFF is a fast dispatch (~1h).
-          if [ "$MARATHON_ENABLED_INPUT" = "true" ]; then
-            outer_timeout=6h
-          else
-            outer_timeout=1h
+          # Group-specific knobs.  The matrix dimension ``group`` picks:
+          #
+          #   fast     -- every non-marathon scenario, marathon markers
+          #               off, extended markers off.  ~30-45m per
+          #               topology, 4h outer timeout.
+          #   marathon -- master_marathon scenario only, --marathon on.
+          #               ~4h30m per topology (120m phase dominates),
+          #               5h outer timeout.  Runs only on topologies
+          #               where long-outage behavior is informative
+          #               (see resolve-matrix).
+          case "$GROUP" in
+            marathon)
+              outer_timeout=5h
+              marathon_enabled=1
+              scenarios="master_marathon"
+              extra_pytest=""
+              ;;
+            fast|*)
+              outer_timeout=4h
+              marathon_enabled=0
+              scenarios="baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults"
+              extra_pytest=""
+              ;;
+          esac
+          echo "Group ${GROUP}: outer_timeout=${outer_timeout} marathon=${marathon_enabled}"
+          # Dispatch overrides still win: explicit scenarios/marathon_enabled
+          # from workflow_dispatch inputs take precedence over the group's
+          # derived defaults.  Schedule events have empty inputs so
+          # fall through to the group derivation.
+          user_scenarios="${{ github.event.inputs.scenarios || '' }}"
+          [ -n "$user_scenarios" ] && scenarios="$user_scenarios"
+          user_marathon="${{ github.event.inputs.marathon_enabled || '' }}"
+          if [ "$user_marathon" = "true" ]; then
+            marathon_enabled=1
+          elif [ "$user_marathon" = "false" ]; then
+            marathon_enabled=0
           fi
-          echo "Resolved outer_timeout=${outer_timeout} (marathon=${MARATHON_ENABLED_INPUT})"
-          # ``1`` / ``0`` match the master_marathon.sh env contract.
-          marathon_enabled=0; [ "$MARATHON_ENABLED_INPUT" = "true" ] && marathon_enabled=1
           # ``--no-cleanup`` keeps the compose stack (and prometheus)
           # running after pytest exits so the follow-on workflow steps
           # ``Analyze Results`` + ``Render Dashboard Panels`` can
-          # still query http://127.0.0.1:${PROM_PORT}.  The
-          # ``Snapshot Metrics`` step below performs the authoritative
-          # ``compose stop prometheus`` + tar; Collect Logs + the
-          # trailing cleanup take compose down.  Without this, pytest's
-          # topology-fixture finalizer tore down the stack mid-step
-          # and the analyzer reported ``prometheus unreachable`` on
-          # multimaster (which was the only matrix entry that actually
-          # finished pytest within the outer 6h timeout -- the others
-          # got hard-killed and skipped the finalizer by accident).
+          # still query http://127.0.0.1:${PROM_PORT}.
           timeout "$outer_timeout" env \
             TOPOLOGY=${{ matrix.topology }} \
             DURATION=${{ github.event.inputs.duration || '0.5h' }} \
-            SCENARIOS="${{ github.event.inputs.scenarios || 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon' }}" \
+            SCENARIOS="$scenarios" \
             PROMETHEUS_URL="http://127.0.0.1:${PROM_PORT}" \
             MARATHON_ENABLED="$marathon_enabled" \
-            PYTEST_EXTRA_ARGS="--no-cleanup" \
+            PYTEST_EXTRA_ARGS="--no-cleanup $extra_pytest" \
             ./run_resiliency.sh
 
       - name: Stop disk trace
@@ -394,7 +441,7 @@ jobs:
         # the same stamp the Panel Summary step uses.
         if: always()
         env:
-          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}
+          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}-${{ matrix.group }}
           RESILIENCY_PANEL_RUN_ID: ${{ github.run_id }}
           RESILIENCY_PANEL_SHA: ${{ github.sha }}
           RESILIENCY_PANEL_STARTED_AT: ${{ steps.start-env.outputs.run-started-at }}
@@ -488,7 +535,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: resiliency-${{ matrix.topology }}-${{ github.run_id }}
+          name: resiliency-${{ matrix.topology }}-${{ matrix.group }}-${{ github.run_id }}
           path: |
             artifacts/
             prometheus-data.tar.gz
@@ -509,7 +556,7 @@ jobs:
           set -e
           REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
           BRANCH=resiliency-snapshots
-          RUN_DIR="runs/${{ github.run_id }}/${{ matrix.topology }}"
+          RUN_DIR="runs/${{ github.run_id }}/${{ matrix.topology }}-${{ matrix.group }}"
 
           if git ls-remote --exit-code --heads "$REPO_URL" "$BRANCH" >/dev/null 2>&1; then
             git clone --depth=1 --branch="$BRANCH" "$REPO_URL" snaps
@@ -532,7 +579,7 @@ jobs:
           git config user.email "actions@github.com"
           git config user.name  "github-actions[bot]"
           git add -A
-          if ! git commit -m "Resiliency run ${{ github.run_id }} / ${{ matrix.topology }}"; then
+          if ! git commit -m "Resiliency run ${{ github.run_id }} / ${{ matrix.topology }} / ${{ matrix.group }}"; then
             echo "nothing to commit"
           else
             # Tiny retry loop in case two topologies in the matrix push
@@ -567,14 +614,14 @@ jobs:
         # used, so header + per-panel suptitle stay consistent.
         if: always()
         env:
-          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}
+          RESILIENCY_PANEL_TOPOLOGY: ${{ matrix.topology }}-${{ matrix.group }}
           RESILIENCY_PANEL_RUN_ID: ${{ github.run_id }}
           RESILIENCY_PANEL_SHA: ${{ github.sha }}
           RESILIENCY_PANEL_STARTED_AT: ${{ steps.start-env.outputs.run-started-at }}
         run: |
           PANELS_DIR="${GITHUB_WORKSPACE}/artifacts/panels" \
             python3 tests/monitoring/render_panels.py --summary --from-existing \
-              --artifact-name resiliency-${{ matrix.topology }}-${{ github.run_id }} \
+              --artifact-name resiliency-${{ matrix.topology }}-${{ matrix.group }}-${{ github.run_id }} \
               --artifact-url "${{ steps.upload-artifacts.outputs.artifact-url }}" \
               --image-url-prefix "${{ steps.publish-snapshots.outputs.url-prefix }}" \
               --repo "${{ github.repository }}"

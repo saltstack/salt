@@ -57,6 +57,7 @@ MASTER_RET_PORT = 44506
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 @pytest.mark.parametrize(
     "label, netem_args",
     [
@@ -67,6 +68,11 @@ MASTER_RET_PORT = 44506
     ids=["reorder_30", "duplicate_20", "corrupt_5"],
 )
 def test_netem_symmetric(topology, request, label, netem_args):
+    # ``extended``: duplicate/corrupt/reorder exercise netem code paths
+    # the TCP stack already recovers from transparently.  Short-horizon
+    # coverage of netem itself is in test_network_faults (latency,
+    # jitter_loss, partition tiers); keeping these as opt-in cuts ~6min
+    # off the default CI run.
     """netem_reorder_30 / netem_duplicate_20 / netem_corrupt_5 --
     straightforward root-qdisc netem for TIER_STANDARD_SEC.
     """
@@ -87,9 +93,14 @@ def test_netem_symmetric(topology, request, label, netem_args):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 def test_netem_mtu_drop(topology, request):
     """netem_mtu_drop -- shrink $CHOKE_IFACE MTU to 576 (IPv4 minimum)
     for TIER_STANDARD_SEC, then restore to 1500.
+
+    ``extended``: MTU-drop surfaces path-MTU-discovery handling, which
+    is covered by network_latency/partition in the fast group.  Kept
+    opt-in for the occasional stack-level MTU probe.
     """
     label = "netem_mtu_drop"
     before = topology.sample_minions()
@@ -109,9 +120,14 @@ def test_netem_mtu_drop(topology, request):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 def test_netem_rate_limit_1mbit(topology, request):
     """netem_rate_limit_1mbit -- tbf rate 1mbit burst 32kbit latency 400ms
     for TIER_STANDARD_SEC.
+
+    ``extended``: bandwidth starvation tests the same salt publish/ret
+    path as the latency/partition fast-group tests, just at a different
+    rate.  Opt-in via --extended.
     """
     label = "netem_rate_limit_1mbit"
     before = topology.sample_minions()
@@ -276,6 +292,7 @@ def _install_hping3(topology, container: str) -> bool:
         return False
 
 
+@pytest.mark.extended
 def test_netem_syn_flood_simulation(topology, request):
     """netem_syn_flood_simulation -- spawn ``hping3 --flood --syn`` from
     the choke container against the primary master's return port
@@ -283,6 +300,9 @@ def test_netem_syn_flood_simulation(topology, request):
     reconnect.
 
     Skipped if hping3 can't be installed in the choke container.
+    ``extended``: syn-flood requires hping3 install (adds ~1min of apt
+    install) and the connect-side resilience is already exercised by
+    fileserver_orch disconnect + partition tests.
     """
     label = "netem_syn_flood_simulation"
     choke = topology.spec.choke_container

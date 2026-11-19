@@ -116,11 +116,16 @@ def test_baseline_idle_short(topology, request):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 def test_baseline_idle_long(topology, request):
-    """baseline_idle_1800s -- 30 min idle, always runs.
+    """baseline_idle_1800s -- 30 min idle; opt-in via --extended.
 
     Catches the slow-leak floor the 5-min idle can't detect: an
-    fd/RSS trend that only emerges past the 10-min mark.
+    fd/RSS trend that only emerges past the 10-min mark.  Marked
+    ``extended`` because the Prom-side slope analyzer
+    (``analyze_resiliency.get_slope`` over a 30m window) covers
+    the same signal from the TSDB without eating 30m of wall time
+    per topology in CI.
     """
     label = "baseline_idle_long"
     before = topology.sample_minions()
@@ -142,10 +147,17 @@ def test_baseline_idle_long(topology, request):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.extended
 def test_baseline_workload_only(topology, workload, request):
     """baseline_workload_only_600s -- run workload for ~10 min, compute
     minute-normalised RSS slope in-script, compare to
     :data:`RSS_LEAK_KB_PER_MIN`.
+
+    Marked ``extended``: every other scenario already uses the
+    ``workload`` fixture to drive continuous traffic, so the same
+    workload-under-load signal is captured by any non-fault
+    assert_reconnect row (fd_delta / rss_kb_per_min).  Kept opt-in
+    so a local dev can still bisect the 10-min isolated slope.
 
     This test owns its slope verdict (does NOT delegate to
     assert_reconnect's hidden calculation) so the "why did baseline

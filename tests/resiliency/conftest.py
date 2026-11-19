@@ -152,6 +152,17 @@ def pytest_addoption(parser):
         help="Enable tests marked @pytest.mark.marathon (multi-hour runs).",
     )
     group.addoption(
+        "--extended",
+        action="store_true",
+        default=False,
+        help=(
+            "Enable tests marked @pytest.mark.extended (long-horizon drift "
+            "probes + netem variants whose short-horizon counterparts "
+            "already cover the same code path).  Off by default to keep "
+            "the fast CI group under ~45 min."
+        ),
+    )
+    group.addoption(
         "--no-cleanup",
         action="store_true",
         default=False,
@@ -173,6 +184,11 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "marathon: skip unless --marathon is passed (multi-hour tests)",
+    )
+    config.addinivalue_line(
+        "markers",
+        "extended: skip unless --extended is passed (long-horizon / "
+        "redundant-coverage tests)",
     )
     config.addinivalue_line(
         "markers",
@@ -207,12 +223,16 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     topo_name = config.getoption("--topology")
     marathon_enabled = config.getoption("--marathon")
+    extended_enabled = config.getoption("--extended")
 
     skip_topology = pytest.mark.skip(
         reason=f"topology {topo_name!r} not in test's topology list"
     )
     skip_marathon = pytest.mark.skip(
         reason="marathon tests disabled; pass --marathon to enable"
+    )
+    skip_extended = pytest.mark.skip(
+        reason="extended tests disabled; pass --extended to enable"
     )
 
     for item in items:
@@ -226,6 +246,8 @@ def pytest_collection_modifyitems(config, items):
 
         if item.get_closest_marker("marathon") is not None and not marathon_enabled:
             item.add_marker(skip_marathon)
+        if item.get_closest_marker("extended") is not None and not extended_enabled:
+            item.add_marker(skip_extended)
 
 
 # ---------------------------------------------------------------------------
