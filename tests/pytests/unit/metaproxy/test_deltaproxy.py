@@ -7,6 +7,7 @@ sub-proxy's own proxymodule, not whatever was loaded the first time through
 the parent (control) proxy's loader.
 """
 
+import asyncio
 import logging
 
 import pytest
@@ -48,6 +49,88 @@ def fake_main_proxy():
 @pytest.fixture
 def fake_main_utils():
     return _FakeLoader()
+
+
+@pytest.mark.parametrize("parallel_startup", [False, True])
+@pytest.mark.parametrize("failed_ids", [[], ["minion1"], ["minion1", "minion2"]])
+def test_post_master_init_logs_subproxy_failures(
+    parallel_startup, failed_ids, caplog, monkeypatch, tmp_path
+):
+    """Failures are visible at WARNING level while healthy sub-proxies start."""
+    ids = ["minion1", "minion2"]
+    opts = {
+        "id": "control_proxy",
+        "pillar": {},
+        "proxy": {"proxytype": "deltaproxy", "ids": ids},
+        "saltenv": "base",
+        "cachedir": str(tmp_path),
+        "mine_enabled": False,
+        "transport": "tcp",
+        "master": "master",
+        "proxy_keep_alive": False,
+    }
+    if parallel_startup:
+        opts["proxy"]["parallel_startup"] = True
+    functions = _FakeLoader(
+        {
+            "saltutil.sync_all": MagicMock(),
+            "saltutil.sync_grains": MagicMock(),
+        }
+    )
+    proxy = _FakeLoader(
+        {"deltaproxy.init": MagicMock(), "deltaproxy.shutdown": MagicMock()}
+    )
+    control = MagicMock(connected=False, opts=opts)
+    control._load_modules.return_value = functions, {}, {}, {}
+    monkeypatch.setattr(deltaproxy.salt.loader, "utils", MagicMock())
+    monkeypatch.setattr(deltaproxy.salt.loader, "proxy", MagicMock(return_value=proxy))
+    monkeypatch.setattr(deltaproxy.salt.loader, "grains", MagicMock(return_value={}))
+    monkeypatch.setattr(deltaproxy.salt.loader, "matchers", MagicMock())
+    monkeypatch.setattr(deltaproxy.salt.beacons, "Beacon", MagicMock())
+    monkeypatch.setattr(
+        deltaproxy.salt.utils.user, "get_uid", MagicMock(return_value=0)
+    )
+    monkeypatch.setattr(deltaproxy.salt.minion, "get_proc_dir", MagicMock())
+    attach_channel = MagicMock()
+    monkeypatch.setattr(deltaproxy, "attach_req_channel", attach_channel)
+    attempted = []
+    subproxies = {minion_id: MagicMock() for minion_id in ids}
+
+    async def init_subproxy(minion_id, *args):
+        attempted.append(minion_id)
+        if minion_id in failed_ids:
+            raise RuntimeError("proxy initialization failed")
+        return {
+            "proxy_opts": {"id": minion_id},
+            "proxy_minion": subproxies[minion_id],
+        }
+
+    monkeypatch.setattr(deltaproxy, "subproxy_post_master_init", init_subproxy)
+    with caplog.at_level(logging.WARNING, logger=deltaproxy.__name__):
+        asyncio.run(deltaproxy.post_master_init(control, "master"))
+
+    assert attempted == ids
+    assert control.ready is True
+    assert control.deltaproxy_objs == {
+        minion_id: subproxies[minion_id]
+        for minion_id in ids
+        if minion_id not in failed_ids
+    }
+    assert attach_channel.call_count == len(ids) - len(failed_ids)
+    expected_messages = [
+        f"An exception occured during initialization for {minion_id}, "
+        "skipping: proxy initialization failed"
+        for minion_id in failed_ids
+    ]
+    if failed_ids:
+        expected_messages.append(
+            f"The following sub proxies failed to initialize: {failed_ids}"
+        )
+    assert [
+        (record.levelno, record.getMessage())
+        for record in caplog.records
+        if record.name == deltaproxy.__name__
+    ] == [(logging.ERROR, message) for message in expected_messages]
 
 
 @pytest.fixture

@@ -400,8 +400,9 @@ propcache==0.4.1
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
@@ -659,6 +660,10 @@ typing-extensions==4.15.0
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pytest-system-statistics
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.14/freebsd.lock
+    #   -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
@@ -670,7 +675,7 @@ urllib3==2.8.0
     #   responses
 vcert==0.9.1 ; sys_platform != 'win32'
     # via -r requirements/static/ci/common.txt
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/pkg/py3.14/freebsd.lock
     #   -r requirements/base.txt

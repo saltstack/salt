@@ -398,8 +398,9 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
@@ -676,7 +677,7 @@ urllib3==2.8.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt

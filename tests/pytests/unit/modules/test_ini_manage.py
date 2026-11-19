@@ -6,6 +6,7 @@ import pytest
 import salt.modules.ini_manage as ini
 import salt.utils.files
 import salt.utils.stringutils
+from tests.support.mock import patch
 
 
 @pytest.fixture
@@ -196,6 +197,53 @@ def test_get_ini(encoding, linesep, ini_file, ini_content):
         "option1": "main1",
     }
     assert dict(ini.get_ini(str(ini_file), encoding=encoding)) == expected
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_get_ini_with_warnings(encoding, linesep, ini_file, ini_content):
+    """
+    Test get_ini method.
+    """
+    extra_content = [
+        "",
+        "[SectionD]",
+        "# The following options are duplicated",
+        "double_option=one",
+        "double_option=two",
+    ]
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content + extra_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    expected_contents = {
+        "SectionD": {
+            "double_option": "two",
+        },
+        "SectionC": {
+            "empty_option": "",
+        },
+        "SectionB": {
+            "test1": "value 1B",
+            "test3": "value 3B",
+        },
+        "main": {
+            "test1": "value 1",
+            "test2": "value 2",
+        },
+        "option2": "main2",
+        "option1": "main1",
+    }
+    expected_warnings = [
+        "'double_option' in 'SectionD' is duplicated, actual value is 'two'."
+    ]
+
+    ini_with_warnings = ini.get_ini_with_warnings(str(ini_file), encoding=encoding)
+    assert ini_with_warnings["contents"] == expected_contents
+    assert ini_with_warnings["warnings"] == expected_warnings
 
 
 @pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
@@ -602,3 +650,64 @@ def test_section_refresh_keeps_continuation_lines_36354():
     assert sect.get("key2") == "value2"
     # The continuation line must not have become its own entry
     assert len(sect) == 2
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_no_write_if_option_not_removed(encoding, linesep, ini_file, ini_content):
+    """
+    Test if remove_option do not write the .ini file no option is removed
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    assert ini.get_option(str(ini_file), "SectionB", "test2", encoding=encoding) is None
+
+    # Check that flush is not called when removing a non existent option
+    with patch.object(ini._Ini, "flush") as mock_flush:
+        ini.remove_option(str(ini_file), "SectionB", "test2", encoding=encoding)
+        mock_flush.assert_not_called()
+
+        # Check if the flush *is* called when an empty option is removed
+        ini.remove_option(str(ini_file), "SectionC", "empty_option", encoding=encoding)
+        mock_flush.assert_called()
+
+        # To cover all paths, check if the flush *is* called when an option is removed
+        ini.remove_option(str(ini_file), "SectionB", "test1", encoding=encoding)
+        mock_flush.assert_called()
+
+
+@pytest.mark.parametrize("linesep", ["\r", "\n", "\r\n"])
+@pytest.mark.parametrize(
+    "encoding", [None, "cp1252" if sys.platform == "win32" else "ISO-2022-JP"]
+)
+def test_no_write_if_option_not_set(encoding, linesep, ini_file, ini_content):
+    """
+    Test if remove_option do not write the .ini file no option is removed
+    """
+    content = salt.utils.stringutils.to_bytes(
+        linesep.join(ini_content), encoding=encoding
+    )
+    ini_file.write_bytes(content)
+
+    assert (
+        ini.get_option(str(ini_file), "SectionB", "test1", encoding=encoding)
+        == "value 1B"
+    )
+
+    # Check that flush is not called when option is not updated
+    with patch.object(ini._Ini, "flush") as mock_flush:
+        ini.set_option(
+            str(ini_file), {"SectionB": {"test1": "value 1B"}}, encoding=encoding
+        )
+        mock_flush.assert_not_called()
+
+        # To cover all paths, check if the flush *is* called when an option is updated
+        ini.set_option(
+            str(ini_file), {"SectionB": {"test1": "value 2B"}}, encoding=encoding
+        )
+        mock_flush.assert_called()

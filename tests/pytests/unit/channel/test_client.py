@@ -60,6 +60,74 @@ async def test_async_pub_channel_key_overwritten_by_bad_data(minion_opts, tmp_pa
         salt.channel.client.AsyncPubChannel.factory(minion_opts, crypt="aes")
 
 
+class _StubPubTransport:
+    """Transport stub that records the port passed to ``connect``."""
+
+    ttype = "zeromq"
+
+    def __init__(self):
+        self.connected_port = None
+
+    async def connect(self, port, connect_callback, disconnect_callback):
+        self.connected_port = port
+
+
+class _StubPubAuth:
+    """Auth stub with a pre-populated ``creds['publish_port']``."""
+
+    def __init__(self, publish_port):
+        self.authenticated = True
+        self.creds = {"publish_port": publish_port}
+
+    async def authenticate(self):  # pragma: no cover - not exercised
+        return None
+
+
+async def test_async_pub_channel_connect_uses_master_reported_publish_port_at_default():
+    """
+    Regression test: when the minion has the *default* ``publish_port`` (4505),
+    ``AsyncPubChannel.connect()`` must use the master-reported ``publish_port``
+    from ``self.auth.creds`` and not the minion-side value.
+
+    Prior to the fix the fallback-detection default was ``4506`` (the ret port),
+    so a minion with the real default ``publish_port: 4505`` always looked like
+    an "explicit override" and the master-reported port was ignored.
+    """
+    channel = object.__new__(salt.channel.client.AsyncPubChannel)
+    channel.opts = {"publish_port": 4505}
+    channel.auth = _StubPubAuth(publish_port=44505)
+    transport = _StubPubTransport()
+    channel.transport = transport
+    channel.connect_callback = None
+    channel.disconnect_callback = None
+
+    await channel.connect()
+
+    assert transport.connected_port == 44505
+
+
+async def test_async_pub_channel_connect_respects_explicit_override():
+    """
+    Regression test: when the operator sets ``publish_port`` to something other
+    than the default (4505), ``AsyncPubChannel.connect()`` must use the minion-
+    side value and ignore the master-reported one. This keeps the "explicit
+    override wins" semantic intact after fixing the wrong default.
+    """
+    channel = object.__new__(salt.channel.client.AsyncPubChannel)
+    # 4506 is deliberate here: it is a valid non-default override the operator
+    # could pick (and was the buggy sentinel before the fix).
+    channel.opts = {"publish_port": 4506}
+    channel.auth = _StubPubAuth(publish_port=44505)
+    transport = _StubPubTransport()
+    channel.transport = transport
+    channel.connect_callback = None
+    channel.disconnect_callback = None
+
+    await channel.connect()
+
+    assert transport.connected_port == 4506
+
+
 async def test_async_pub_channel_decode_payload_drops_undecrypted_payload():
     """
     When a payload cannot be decrypted even after re-authenticating the master it
@@ -435,6 +503,7 @@ async def test_connected_event_does_not_gate_connection_callback(
     request.__aexit__ = AsyncMock(return_value=None)
     try:
         with patch("salt.channel.client.AsyncReqChannel.factory", return_value=request):
+            # pylint: disable-next=not-callable
             await asyncio.wait_for(channel.connect_callback(True), 1)
         await asyncio.wait_for(started.wait(), 1)
         assert channel.connected

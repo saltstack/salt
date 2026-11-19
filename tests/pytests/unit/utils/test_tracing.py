@@ -536,3 +536,25 @@ def test_shutdown_tolerates_force_flush_exception(monkeypatch, caplog):
     with caplog.at_level(logging.DEBUG, logger="salt.utils.tracing"):
         tracing.shutdown()
     assert calls == ["flush", "shutdown"]
+
+
+def test_otlp_http_exporter_gets_requests_session(monkeypatch):
+    """
+    Without a ``requests.Session`` opentelemetry >= 1.45 uses a urllib3
+    transport that ignores HTTP(S)_PROXY, so the session must be passed.
+    """
+    import requests
+
+    tracing._load_otel()
+    created = {}
+
+    def _fake_exporter(**kwargs):
+        created.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(tracing._otel, "OTLPSpanExporterHTTP", _fake_exporter)
+    tracing._build_exporter(
+        {"exporter": "otlp-http", "endpoint": "http://collector:4318/v1/traces"}
+    )
+    assert isinstance(created["session"], requests.Session)
+    assert created["endpoint"] == "http://collector:4318/v1/traces"

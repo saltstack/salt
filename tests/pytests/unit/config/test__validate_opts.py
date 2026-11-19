@@ -425,3 +425,20 @@ def test_bool_int_types(option_value, expected):
     """
     result = salt.config._validate_opts({"state_queue": option_value})
     assert result is expected
+
+
+@pytest.mark.parametrize(
+    "option_value,expected",
+    [
+        ([{"salt/minion/*/start": ["salt://reactor/start.sls"]}], True),  # list
+        ("/etc/salt/master.d/reactor.yaml", True),  # path to a YAML file
+        ({"key": "value"}, False),  # dict
+    ],
+)
+def test_reactor_types(option_value, expected):
+    """
+    The reactor option may be a list of mappings or a str path to a YAML file
+    containing them (see salt.utils.reactor.Reactor.list_reactors).
+    """
+    result = salt.config._validate_opts({"reactor": option_value})
+    assert result is expected

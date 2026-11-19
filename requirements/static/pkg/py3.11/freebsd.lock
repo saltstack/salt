@@ -173,8 +173,9 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
+    #   -c requirements/constraints.txt
     #   googleapis-common-protos
     #   opentelemetry-proto
 psutil==7.2.2
@@ -266,11 +267,13 @@ typing-extensions==4.14.1
     #   opentelemetry-sdk
     #   opentelemetry-semantic-conventions
     #   pyopenssl
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via -r requirements/base.txt
 urllib3==2.8.0
     # via
     #   -r requirements/base.txt
     #   requests
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via -r requirements/base.txt
 wmi==1.5.1 ; sys_platform == 'win32'
     # via -r requirements/base.txt

@@ -523,3 +523,13 @@ def test_exception_raised():
         mock.assert_called_once()
         assert "failhard" in mock.call_args.kwargs
         assert mock.call_args.kwargs["failhard"] is True
+
+
+def test_roster_file():
+    """
+    Test saltmod function passes roster_file to saltutil.cmd
+    """
+    cmd_mock = MagicMock()
+    with patch.dict(saltmod.__salt__, {"saltutil.cmd": cmd_mock}):
+        saltmod.function("state", tgt="*", ssh=True, roster_file="/tmp/my_roster")
+    assert cmd_mock.call_args.kwargs["roster_file"] == "/tmp/my_roster"

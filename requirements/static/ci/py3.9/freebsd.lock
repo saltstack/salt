@@ -590,8 +590,15 @@ propcache==0.3.2
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==6.33.6 ; python_full_version < '3.10'
     # via
+    #   -c requirements/constraints.txt
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   googleapis-common-protos
+    #   opentelemetry-proto
+protobuf==7.36.2 ; python_full_version >= '3.10'
+    # via
+    #   -c requirements/constraints.txt
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   googleapis-common-protos
     #   opentelemetry-proto
@@ -952,6 +959,10 @@ typing-extensions==4.16.0
     #   pytest-system-statistics
     #   referencing
     #   virtualenv
+tzdata==2026.6 ; sys_platform == 'win32'
+    # via
+    #   -c requirements/static/pkg/py3.9/freebsd.lock
+    #   -r requirements/base.txt
 urllib3==1.26.20 ; python_full_version < '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
@@ -978,7 +989,7 @@ virtualenv==21.5.0 ; python_full_version < '3.10'
     #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
     #   pytest-salt-factories
-virtualenv==21.15.2 ; python_full_version >= '3.10'
+virtualenv==21.15.6 ; python_full_version >= '3.10'
     # via
     #   -c requirements/static/pkg/py3.9/freebsd.lock
     #   -r requirements/base.txt

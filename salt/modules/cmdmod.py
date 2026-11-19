@@ -95,7 +95,7 @@ def _check_cb(cb_):
     the value passed.
     """
     if cb_ is not None:
-        if hasattr(cb_, "__call__"):
+        if callable(cb_):
             return cb_
         else:
             log.error("log_callback is not callable, ignoring")
@@ -3312,7 +3312,7 @@ def script(
                 "cache_error": True,
             }
     if not salt.utils.platform.is_windows():
-        os.chmod(path, 320)
+        os.chmod(path, 0o500)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if args:
