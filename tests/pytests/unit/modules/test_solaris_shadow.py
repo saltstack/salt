@@ -236,7 +236,7 @@ def test_set_password_should_return_False_if_passwd_in_info_is_different_than_ne
             name="roscivs", password=failed_set_password
         )
 
-        assert actual_result == False
+        assert actual_result is False
 
 
 def test_when_set_password_and_name_in_shadow_then_password_should_be_changed_for_that_user(
@@ -260,7 +260,7 @@ def test_when_set_password_and_name_in_shadow_then_password_should_be_changed_fo
         )
 
     assert fake_fopen_has_etc_shadow.getvalue() == expected_shadow_contents
-    assert actual_result == True
+    assert actual_result is True
 
 
 @skip_on_missing_pwd

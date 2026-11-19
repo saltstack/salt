@@ -12,7 +12,7 @@ try:
     import netaddr
 
     HAS_NETADDR = True
-except ImportError as e:
+except ImportError:
     HAS_NETADDR = False
 
 

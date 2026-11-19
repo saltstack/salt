@@ -854,9 +854,6 @@ class SPMClient:
                     log.debug("%s has been deleted", file_)
                 except OSError:
                     log.error("Unable to delete %s", file_)
-                except OSError:  # pylint: disable=duplicate-except
-                    # The file has already been deleted
-                    pass
 
     def _remove(self, args):
         """

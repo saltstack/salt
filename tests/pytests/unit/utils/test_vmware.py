@@ -15,6 +15,9 @@ try:
     HAS_PYVMOMI = True
 except ImportError:
     HAS_PYVMOMI = False
+    # Prevent NameError during parametrization
+    # of test_stale_service_instance_reconnects
+    vim = MagicMock()
 
 pytestmark = [
     pytest.mark.skipif(not HAS_PYVMOMI, reason="The 'pyvmomi' library is missing"),

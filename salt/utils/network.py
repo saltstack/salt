@@ -300,7 +300,8 @@ def is_reachable_host(entity_name):
     :return:
     """
     try:
-        assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
+        # getaddrinfo raises when the name cannot be resolved, the result is not used
+        socket.getaddrinfo(entity_name, 0, 0, 0, 0)
         ret = True
     except (socket.gaierror, UnicodeError):
         # UnicodeError is raised (not a subclass of socket.gaierror) when the
@@ -2300,7 +2301,7 @@ def parse_host_port(host_port):
             host, _hostport_separator_, port = _s_.partition(":")
             try:
                 port = int(port)
-            except ValueError as _e_:
+            except ValueError:
                 errmsg = 'host_port "{}" port value "{}" is not an integer.'.format(
                     host_port, port
                 )
@@ -2380,6 +2381,27 @@ def ip_bracket(addr, strip=False):
     addr = addr.rstrip("]")
     addr = ipaddress.ip_address(addr)
     return ("[{}]" if addr.version == 6 and not strip else "{}").format(addr)
+
+
+def nm_managed():
+    """
+    Return ``True`` when this host is managed by NetworkManager without the
+    legacy ``network-scripts`` tooling: ``nmcli`` is on ``PATH``, NetworkManager
+    is running (``/run/NetworkManager`` exists) and neither ``ifup`` nor
+    ``ifdown`` is available.
+
+    This is the load-time-safe condition that decides whether the
+    :py:mod:`nm_ip <salt.modules.nm_ip>` or :py:mod:`rh_ip
+    <salt.modules.rh_ip>` execution module owns the ``ip`` provider on the
+    RedHat os_family. Both modules call this single helper from their
+    ``__virtual__`` so exactly one of them claims ``ip`` and no runtime service
+    call is needed.
+    """
+    return (
+        bool(salt.utils.path.which("nmcli"))
+        and os.path.isdir("/run/NetworkManager")
+        and not (salt.utils.path.which("ifup") or salt.utils.path.which("ifdown"))
+    )
 
 
 def neigh_expand_warning(func_name, expand):

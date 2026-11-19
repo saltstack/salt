@@ -235,6 +235,57 @@ class LoadedCoro(LoadedFunc):
         return ret
 
 
+def _parse_whitelist(whitelist):
+    """
+    Normalize ``whitelist_modules`` / ``whitelist_state_modules`` into a
+    ``{module: None | frozenset[str]}`` map used by :class:`LazyLoader`.
+
+    Each operator-supplied entry is one of:
+
+    * a bare module name (``cmd``) -- every public function of the
+      module is allowed (underscore-prefixed names are already treated
+      as private by the loader itself).  Represented as ``None``.
+    * a ``module.func`` string (``cmd.run``) -- only that one function
+      is allowed.  Represented as a frozenset of allowed function names.
+
+    **Dotted entries always win.**  As soon as any ``module.func``
+    entry is present for a module the whitelist is interpreted as
+    function-scoped for that module: the sibling bare ``module`` entry
+    (if any) only conveys "the module is allowed to load".  So
+
+    * ``[cmd]``                 -> whole module allowed
+    * ``[cmd.run]``             -> only ``cmd.run``
+    * ``[cmd, cmd.run]``        -> only ``cmd.run``
+    * ``[cmd.run, cmd.retcode]`` -> only ``cmd.run`` + ``cmd.retcode``
+
+    This asymmetry means an operator who narrows from a bare entry to
+    a function-level entry gets tightening behavior without having to
+    remove the bare entry -- the stricter rule applies.
+
+    Returns ``None`` for an empty / falsy whitelist so callers can
+    continue to use the classic ``if self.whitelist:`` short-circuit.
+    """
+    if not whitelist:
+        return None
+    bare_modules = set()
+    dotted_funcs = {}  # mod_name -> set[str]
+    for entry in whitelist:
+        if "." in entry:
+            mod_name, func_name = entry.split(".", 1)
+            dotted_funcs.setdefault(mod_name, set()).add(func_name)
+        else:
+            bare_modules.add(entry)
+    result = {}
+    for mod_name in bare_modules | set(dotted_funcs):
+        if mod_name in dotted_funcs:
+            # Dotted wins: narrow to just the listed functions even if
+            # a bare entry also mentions the module.
+            result[mod_name] = frozenset(dotted_funcs[mod_name])
+        else:
+            result[mod_name] = None
+    return result
+
+
 class LoadedMod:
     """
     This class is used as a proxy to a loaded module
@@ -360,6 +411,15 @@ class LazyLoader(salt.utils.lazy.LazyDict):
                 self.pack[k] = {}
 
         self.whitelist = whitelist
+        # Granular whitelist index: ``{module: None | frozenset[str]}``.
+        # ``None`` means "bare module entry -- every public function
+        # allowed" (the classic ``whitelist_modules: [cmd]`` behaviour;
+        # underscore-prefixed names are already filtered as private by
+        # the loader itself).  A frozenset means "only these functions
+        # of this module are allowed" (``whitelist_modules: [cmd.run]``).
+        # When both shapes appear for the same module the dotted entries
+        # win -- see :func:`_parse_whitelist` for the full rules.
+        self._whitelist_funcs = _parse_whitelist(whitelist)
         self.virtual_enable = virtual_enable
         self.initial_load = True
 
@@ -533,11 +593,68 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # Always remove from tracking set, even if an exception occurs
             _cleaning_loaders.discard(loader_id)
 
+    def _whitelist_allows_module(self, mod_name):
+        """
+        Module-level gate.  ``True`` when no whitelist is configured or
+        the module name appears in the whitelist (either as a bare
+        ``module`` entry or as the prefix of a ``module.func`` entry --
+        either form implies "the module must load so a gated function
+        from it can be served").
+        """
+        if not self.whitelist:
+            return True
+        return mod_name in self._whitelist_funcs
+
+    def _whitelist_allows_key(self, key):
+        """
+        Function-level gate.  ``True`` when no whitelist is configured
+        or the full ``module.func`` key is admissible per the
+        normalized map produced by :func:`_parse_whitelist`.
+
+        Keys without a ``.`` are rejected -- every LazyLoader entry is a
+        dotted ``module.func``, so a bare key is never a valid lookup.
+        """
+        if not self.whitelist:
+            return True
+        if "." not in key:
+            return False
+        mod_name, func_name = key.split(".", 1)
+        if mod_name not in self._whitelist_funcs:
+            return False
+        allowed = self._whitelist_funcs[mod_name]
+        return allowed is None or func_name in allowed
+
     def __getitem__(self, item):
         """
         Override the __getitem__ in order to decorate the returned function if we need
         to last-minute inject globals
         """
+        # Function-level whitelist gate -- only enforced when the
+        # module in ``item`` has dotted (``module.func``) entries in the
+        # whitelist.  ``_load`` gates at module granularity on first
+        # access, but once a module has loaded every ``module.func`` from
+        # that module sits in ``self._dict`` and ``LazyDict.__getitem__``
+        # skips ``_load`` entirely, so for granular entries we MUST re-
+        # check here or a sibling function of an allowed function would
+        # be reachable just because the first allowed call loaded the
+        # module.
+        #
+        # We deliberately do NOT enforce a module-level check here when
+        # ``item``'s module is absent from the whitelist map.  The
+        # classic coarse whitelist (bare module entries only) has always
+        # tolerated post-``_load_all`` access to non-whitelisted keys
+        # (``_load_all`` loads every module on disk, then ``_dict``
+        # subscripts bypass ``_load``) -- many test helpers rely on that
+        # to iterate a whitelisted loader (``dict(target.__utils__)`` via
+        # ``patch.dict``).  Tightening it would be correct in principle
+        # but out of scope for the function-scoped syntax this PR adds;
+        # it would belong in a dedicated follow-up that also audits the
+        # callers.
+        if self.whitelist and "." in item:
+            mod_name, func_name = item.split(".", 1)
+            allowed = self._whitelist_funcs.get(mod_name)
+            if allowed is not None and func_name not in allowed:
+                raise KeyError(item)
         _ = super().__getitem__(item)  # try to get the item from the dictionary
         if not isinstance(_, LoadedFunc) and inspect.iscoroutinefunction(_):
             return LoadedCoro(item, self)
@@ -565,8 +682,11 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # ``LoadedMod`` whose per-function ``getattr`` never touches the
         # gate.  Reject non-whitelisted modules here with ``AttributeError``
         # so ``hasattr(salt, 'cmd')`` / Jinja's ``undefined`` fallthrough
-        # behave correctly.
-        if self.whitelist and mod_name not in self.whitelist:
+        # behave correctly.  Function-level filtering (``module.func``
+        # entries) is still enforced downstream: ``LoadedMod.__getattr__``
+        # routes every call through ``self.loader[key]`` which hits the
+        # function-level gate in ``LazyLoader.__getitem__``.
+        if self.whitelist and not self._whitelist_allows_module(mod_name):
             raise AttributeError(mod_name)
 
         # otherwise we assume its jinja template access
@@ -1346,8 +1466,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             # acquiring the lock due to another thread loading it.
             if mod_name in self.missing_modules or key in self._dict:
                 return True
-            # if the modulename isn't in the whitelist, don't bother
-            if self.whitelist and mod_name not in self.whitelist:
+            # if the modulename isn't in the whitelist, don't bother.
+            # ``_whitelist_allows_module`` also returns ``True`` when the
+            # module appears only as the prefix of a ``module.func``
+            # entry -- the module still has to load so the gated
+            # function can be served; function-level rejection happens
+            # at ``LazyLoader.__getitem__`` on every lookup.
+            if self.whitelist and not self._whitelist_allows_module(mod_name):
                 log.error(
                     "Failed to load function %s because its module (%s) is "
                     "not in the whitelist: %s",

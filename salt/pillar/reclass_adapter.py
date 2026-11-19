@@ -67,7 +67,7 @@ def __virtual__(retry=False):
 
         return __virtualname__
 
-    except ImportError as e:
+    except ImportError:
         if retry:
             return False
 

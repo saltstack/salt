@@ -1002,7 +1002,7 @@ class Schedule:
                         )
                     try:
                         event.fire_event(load, "__schedule_return")
-                    except Exception as exc:  # pylint: disable=broad-except
+                    except Exception:  # pylint: disable=broad-except
                         log.exception(
                             "Unhandled exception firing __schedule_return event"
                         )

@@ -1777,7 +1777,7 @@ def ping_master(master):
         try:
             payload = channel.send(load, tries=0, timeout=timeout)
             result = True
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             pass
 
         if result:

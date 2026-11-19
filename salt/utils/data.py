@@ -182,7 +182,7 @@ def _remove_circular_refs(ob, _seen=None):
     if id(ob) in _seen:
         # Here we caught a circular reference.
         # Alert user and cleanup to continue.
-        log.exception(
+        log.error(
             "Caught a circular reference in data structure below."
             "Cleaning and continuing execution.\n%r\n",
             ob,
@@ -426,7 +426,7 @@ def decode_dict(
                     preserve_tuples,
                     to_str,
                 )
-            except TypeError as e:
+            except TypeError:
                 # to_unicode raises a TypeError when input is not a
                 # string/bytestring/bytearray. This is expected and simply
                 # means we are going to leave the value as-is.

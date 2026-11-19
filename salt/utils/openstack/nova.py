@@ -701,7 +701,7 @@ class SaltNova:
                 response = self._volume_get(volume["id"])
                 if response["status"] == "available":
                     return response
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.debug("Volume is detaching: %s", name)
                 time.sleep(1)
                 if time.time() - start > timeout:
@@ -732,7 +732,7 @@ class SaltNova:
                 response = self._volume_get(volume["id"])
                 if response["status"] == "in-use":
                     return response
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.debug("Volume is attaching: %s", name)
                 time.sleep(1)
                 if time.time() - start > timeout:

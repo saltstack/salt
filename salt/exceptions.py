@@ -479,6 +479,13 @@ class TemplateError(SaltException):
     """
 
 
+class ServiceNotFoundError(CommandExecutionError):
+    """
+    Raised by service execution modules when the named service does not
+    exist on the system, as opposed to a failure to query the init system.
+    """
+
+
 class ArgumentValueError(CommandExecutionError):
     """
     Used when an invalid argument was passed to a command execution

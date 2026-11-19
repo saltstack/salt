@@ -37,7 +37,7 @@ def start_ssh_server():
     subprocess.call(["powershell.exe", f"{install_script}"])
     with open("fwrule.ps1", "w") as fp:
         fp.write(fwrule.format(install_script.parent / "sshd.exe"))
-    subprocess.call(["powershell.exe", f"fwrule.ps1"])
+    subprocess.call(["powershell.exe", "fwrule.ps1"])
 
 
 if __name__ == "__main__":

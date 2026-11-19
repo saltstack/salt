@@ -616,7 +616,7 @@ urllib3==2.8.0
     #   responses
 vcert==0.9.1
     # via -r requirements/static/ci/common.txt
-virtualenv==21.15.2
+virtualenv==21.15.6
     # via
     #   -c requirements/static/pkg/py3.12/darwin.lock
     #   -r requirements/base.txt

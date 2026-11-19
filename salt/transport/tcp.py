@@ -61,10 +61,36 @@ async def _null_callback(*args, **kwargs):
     pass
 
 
-def _get_socket(opts):
-    family = socket.AF_INET
-    if opts.get("ipv6", False):
-        family = socket.AF_INET6
+def _normalize_bind_host(host):
+    """
+    Strip ZeroMQ-style brackets from an IP literal (master startup adds
+    them to ``interface`` for ZeroMQ URIs; see salt/cli/daemons.py).
+    Anything that is not an IP literal (e.g. a hostname) is returned
+    unchanged so it can still be resolved by name.
+    """
+    if host is None:
+        return None
+    try:
+        return ip_bracket(host, strip=True)
+    except ValueError:
+        return host
+
+
+def _get_socket(opts, host=None):
+    """
+    Return a TCP socket for binding or connecting to *host*.
+
+    When *host* is given, the address family is derived from the actual
+    address (after stripping ZeroMQ-style brackets added at startup), so
+    an IPv4 literal does not end up on an AF_INET6 socket when ``ipv6`` is
+    enabled.  Without *host*, the family follows the ``ipv6`` config flag.
+    """
+    if host is not None:
+        family = _socket_family(_normalize_bind_host(host))
+    else:
+        family = socket.AF_INET
+        if opts.get("ipv6", False):
+            family = socket.AF_INET6
     return socket.socket(family, socket.SOCK_STREAM)
 
 
@@ -232,7 +258,7 @@ class LoadBalancerServer(salt.utils.process.SignalHandlingProcess):
         """
         Start the load balancer
         """
-        self._socket = _get_socket(self.opts)
+        self._socket = _get_socket(self.opts, self.opts["interface"])
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         _set_tcp_keepalive(self._socket, self.opts)
         self._socket.setblocking(1)
@@ -647,7 +673,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 try:
                     # XXX This is handled better in the websocket transport work
                     tasks.append(asyncio.create_task(callback(msg)))
-                except Exception as exc:  # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
@@ -814,7 +840,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                     self._socket.bind(ipc_path)
                     os.chmod(ipc_path, 0o600)
             else:
-                self._socket = _get_socket(self.opts)
+                self._socket = _get_socket(self.opts, self.opts["interface"])
                 self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 _set_tcp_keepalive(self._socket, self.opts)
                 self._socket.setblocking(0)
@@ -873,7 +899,7 @@ class RequestServer(salt.transport.base.DaemonizedRequestServer):
                 )
             else:
                 if salt.utils.platform.is_windows():
-                    self._socket = _get_socket(self.opts)
+                    self._socket = _get_socket(self.opts, self.opts["interface"])
                     self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     _set_tcp_keepalive(self._socket, self.opts)
                     self._socket.setblocking(0)
@@ -1527,13 +1553,13 @@ class PubServer(tornado.tcpserver.TCPServer):
                             # runs. Sync callbacks return a value directly.
                             if asyncio.iscoroutine(result):
                                 await result
-                except _StreamClosedError as e:
+                except _StreamClosedError:
                     log.debug("tcp stream to %s closed, unable to recv", client.address)
                     client.close()
                     self.remove_presence_callback(client)
                     self.clients.discard(client)
                     break
-                except Exception as e:  # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     log.error(
                         "Exception parsing response from %s",
                         client.address,
@@ -1670,13 +1696,13 @@ class PubServer(tornado.tcpserver.TCPServer):
         cert = None
         try:
             cert = stream.socket.getpeercert()
-        except AttributeError as exc:
+        except AttributeError:
             # AttributeError: socket has no SSL
             if self.ssl is not None:
                 # Server requires SSL but client didn't provide it
                 stream.close()
                 return
-        except ValueError as exc:
+        except ValueError:
             # ValueError: SSL handshake not done yet
             # When SSL is required, we need to wait for the handshake to complete
             # to verify the client provided a valid certificate
@@ -1742,16 +1768,16 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # ``Unpacker`` local.  See ``handle_stream`` for details.
                 client._read_task = self.io_loop.create_task(self._stream_read(client))
                 return
-            except AttributeError as exc:
+            except AttributeError:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
                 stream.close()
                 return
-            except ValueError as exc:
+            except ValueError:
                 # SSL handshake not done yet - wait a bit and retry
                 if attempt < 9:  # Don't sleep on last attempt
                     await asyncio.sleep(0.05)  # Short delay
                 continue
-            except ssl.SSLError as exc:
+            except ssl.SSLError:
                 # SSL handshake failed
                 stream.close()
                 return
@@ -2316,11 +2342,15 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
                 self.pub_port,
                 self.ssl,
             )
-            sock = _get_socket(self.opts)
+            # The master startup brackets IPv6 ``interface`` values for
+            # ZeroMQ URIs (salt/cli/daemons.py); normalize before binding
+            # and let the address family follow the actual address.
+            pub_host = _normalize_bind_host(self.pub_host)
+            sock = _get_socket(self.opts, pub_host)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             _set_tcp_keepalive(sock, self.opts)
             sock.setblocking(0)
-            sock.bind((self.pub_host, self.pub_port))
+            sock.bind((pub_host, self.pub_port))
         sock.listen(self.backlog)
         # pub_server will take ownership of the socket
         self.pub_server.add_socket(sock)

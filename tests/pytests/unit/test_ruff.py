@@ -249,10 +249,262 @@ def test_inherited_git_hook_environment_is_isolated(
             "callbacks = []\nfor index in range(3):\n    callbacks.append(lambda: index)\n",
             "B023",
         ),
+        ("print(missing_name)\n", "F821"),
+        ("def f():\n    pass\n\n\ndef f():\n    pass\n", "F811"),
+        ("try:\n    pass\nexcept:\n    pass\n", "E722"),
+        ("def f(x):\n    return x == None\n", "E711"),
+        ("def f(x, y):\n    return not x in y\n", "E713"),
+        ("def f(a, b):\n    return type(a) == type(b)\n", "E721"),
+        ("import asyncio\n\n\nasync def f(c):\n    asyncio.create_task(c)\n", "RUF006"),
+        ("def f():\n    raise\n", "PLE0704"),
+        ("import pytest\n\nwith pytest.raises(Exception):\n    pass\n", "B017"),
     ],
 )
 def test_additional_rules_are_enforced(repo: Path, source: str, code: str) -> None:
     write(repo, "new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
+def test_salt_injected_globals_are_not_undefined(repo: Path) -> None:
+    write(repo, "new.py", "def f():\n    return __salt__, __opts__, __context__\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_unused_local_variable_is_reported_outside_tests(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f(g):\n    ret = g()\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "F841" in result.stdout
+
+
+def test_underscore_is_allowed_for_unused_values(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f(g):\n    _ = g()\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_unused_local_variable_is_allowed_in_tests(repo: Path) -> None:
+    write(repo, "tests/test_new.py", "def test_f(g):\n    ret = g()\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+# One example per rule that has no violation in the code base today.
+NEW_RULE_CASES = [
+    ("B002", "def f(n):\n    return ++n\n"),
+    ("B003", "import os\n\nos.environ = {}\n"),
+    ("B012", "def f():\n    try:\n        pass\n    finally:\n        return 1\n"),
+    ("B013", "try:\n    pass\nexcept (ValueError,):\n    pass\n"),
+    ("B014", "try:\n    pass\nexcept (ValueError, ValueError):\n    pass\n"),
+    ("B016", 'def f():\n    raise "error"\n'),
+    (
+        "B019",
+        "import functools\n\n\nclass A:\n    @functools.lru_cache\n    def m(self):\n        return 1\n",
+    ),
+    ("B021", 'def f(x):\n    f"""doc {x}"""\n'),
+    ("B022", "import contextlib\n\nwith contextlib.suppress():\n    pass\n"),
+    ("B029", "try:\n    pass\nexcept ():\n    pass\n"),
+    ("B030", "try:\n    pass\nexcept 1:\n    pass\n"),
+    (
+        "B031",
+        "import itertools\n\nfor _, g in itertools.groupby([1, 2]):\n    a = list(g)\n    b = list(g)\n    print(a, b)\n",
+    ),
+    ("B032", 'd = {}\nd["a"]: 1\n'),
+    ("B033", "s = {1, 2, 1}\n"),
+    ("B035", 'd = {"k": v for v in range(3)}\n'),
+    ("PLW0127", "def f(x):\n    x = x\n    return x\n"),
+    ("PLW0128", "a, a = 1, 2\n"),
+    ("PLW0131", "(a := 1)\n"),
+    ("PLW0133", 'def f():\n    ValueError("x")\n'),
+    ("PLW0177", 'def f(x):\n    return x == float("nan")\n'),
+    ("PLW0211", "class A:\n    @staticmethod\n    def m(self):\n        pass\n"),
+    ("PLW0245", "class A:\n    def m(self):\n        super.m()\n"),
+    ("PLW0604", "global x\nx = 1\n"),
+    ("PLW0642", "class A:\n    def m(self):\n        self = 1\n"),
+    ("PLW0711", "try:\n    pass\nexcept ValueError or TypeError:\n    pass\n"),
+    ("PLW1501", 'def f(p):\n    return open(p, "rz")\n'),
+    ("PLW1507", "import copy\nimport os\n\nenv = copy.copy(os.environ)\n"),
+    ("PLW2101", "import threading\n\nwith threading.Lock():\n    pass\n"),
+    ("PGH003", "x = 1  # type: ignore\n"),
+    ("PGH005", "def test_f(m):\n    assert m.called_once_with(1)\n"),
+    ("LOG001", 'import logging\n\nlog = logging.Logger("x")\n'),
+    (
+        "LOG007",
+        'import logging\n\nlog = logging.getLogger()\ntry:\n    pass\nexcept Exception:\n    log.exception("x", exc_info=False)\n',
+    ),
+    (
+        "LOG014",
+        'import logging\n\nlog = logging.getLogger()\nlog.warning("x", exc_info=True)\n',
+    ),
+    (
+        "G101",
+        'import logging\n\nlog = logging.getLogger()\nlog.info("x", extra={"name": 1})\n',
+    ),
+    ("YTT101", "import sys\n\nv = sys.version[:3]\n"),
+    ("YTT102", "import sys\n\nv = sys.version[2]\n"),
+    ("YTT103", 'import sys\n\nv = sys.version > "3.9"\n'),
+    ("YTT201", "import sys\n\nv = sys.version_info[0] == 3\n"),
+    ("YTT202", "import six\n\nv = six.PY3\n"),
+    ("YTT301", "import sys\n\nv = sys.version[0]\n"),
+    ("YTT302", 'import sys\n\nv = sys.version >= "3"\n'),
+    ("YTT303", "import sys\n\nv = sys.version[:1]\n"),
+    (
+        "RUF008",
+        "from dataclasses import dataclass\n\n\n@dataclass\nclass A:\n    x: list = []\n",
+    ),
+    (
+        "RUF009",
+        "from dataclasses import dataclass\n\n\ndef make():\n    return []\n\n\n@dataclass\nclass A:\n    x: list = make()\n",
+    ),
+    ("RUF016", 'def f():\n    return [1, 2, 3]["a"]\n'),
+    ("RUF018", "def f(g):\n    assert (x := g())\n    return x\n"),
+    ("RUF024", 'd = dict.fromkeys(["a"], [])\n'),
+    (
+        "RUF026",
+        "from collections import defaultdict\n\nd = defaultdict(default_factory=list)\n",
+    ),
+    (
+        "RUF033",
+        "from dataclasses import dataclass\n\n\n@dataclass\nclass A:\n    x: int\n\n    def __post_init__(self, y=1):\n        pass\n",
+    ),
+    ("RUF060", "x = 1 in []\n"),
+    ("RUF068", '__all__ = ["a", "a"]\n'),
+    (
+        "ASYNC210",
+        'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
+    ),
+    (
+        "ASYNC220",
+        'import subprocess\n\n\nasync def f():\n    subprocess.Popen(["ls"])\n',
+    ),
+    ("ASYNC222", "import os\n\n\nasync def f():\n    os.wait()\n"),
+    ("ASYNC230", 'async def f():\n    open("x")\n'),
+    ("ASYNC250", 'async def f():\n    input("x")\n'),
+    ("S313", 'from xml.etree.cElementTree import parse\n\nparse("x")\n'),
+    (
+        "S315",
+        "from xml.sax.expatreader import create_parser\n\nparser = create_parser()\n",
+    ),
+    ("S316", 'from xml.dom.expatbuilder import parse\n\nparse("x")\n'),
+    ("S317", 'import xml.sax\n\nxml.sax.parse("x")\n'),
+    ("S319", 'from xml.dom.pulldom import parse\n\nparse("x")\n'),
+    (
+        "S304",
+        'from cryptography.hazmat.primitives.ciphers import Cipher, algorithms\n\ncipher = Cipher(algorithms.ARC4(b"k"), mode=None)\n',
+    ),
+    (
+        "S305",
+        'from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes\n\nCipher(algorithms.AES(b"k"), modes.ECB())\n',
+    ),
+    ("S302", 'import marshal\n\nmarshal.loads(b"x")\n'),
+    ("S501", 'import requests\n\nrequests.get("https://x", verify=False)\n'),
+    ("S502", "import ssl\n\nssl.wrap_socket(None, ssl_version=ssl.PROTOCOL_SSLv3)\n"),
+    ("S503", "import ssl\n\n\ndef f(ctx=ssl.PROTOCOL_SSLv2):\n    pass\n"),
+    (
+        "S505",
+        "from cryptography.hazmat.primitives.asymmetric import dsa\n\ndsa.generate_private_key(key_size=512)\n",
+    ),
+    ("S609", 'import subprocess\n\nsubprocess.Popen("chmod 600 *", shell=True)\n'),
+    ("S612", "import logging.config\n\nlogging.config.listen(9999)\n"),
+    (
+        "SIM107",
+        "def f():\n    try:\n        return 1\n    finally:\n        return 2\n",
+    ),
+    ("SIM220", "def f(a):\n    return a and not a\n"),
+    ("SIM221", "def f(a):\n    return a or not a\n"),
+    ("SIM223", "def f(x, y):\n    return x and [] and y\n"),
+    ("PIE794", "class A:\n    x = 1\n    x = 2\n"),
+    ("PIE796", "import enum\n\n\nclass E(enum.Enum):\n    A = 1\n    B = 1\n"),
+    ("PLC0205", 'class A:\n    __slots__ = "a"\n'),
+    ("PLC0208", "for x in {1, 2, 3}:\n    print(x)\n"),
+    ("PLC3002", "x = (lambda: 1)()\n"),
+    ("PLR0133", "x = 1 < 2\n"),
+    ("PLR1708", "def f():\n    raise StopIteration\n    yield 1\n"),
+    ("RUF030", 'def f(x):\n    assert x, print("bad")\n'),
+    ("RUF032", "from decimal import Decimal\n\nx = Decimal(0.1)\n"),
+    ("RUF048", 'v = tuple(map(int, __version__.split(".")))\n'),
+    ("RUF101", "import os  # noqa: PGH001\n"),
+    ("RUF103", "# ruff: disable\nx = 1\n"),
+    ("S601", 'import paramiko\n\nparamiko.exec_command("ls")\n'),
+    ("S606", 'import os\n\nos.execl("/bin/ls", "ls")\n'),
+    (
+        "S704",
+        'from markupsafe import Markup\n\n\ndef f(text):\n    return Markup("<b>" + text + "</b>")\n',
+    ),
+    ("S312", 'import telnetlib\n\ntelnetlib.Telnet("host")\n'),
+    (
+        "G002",
+        'import logging\n\nlog = logging.getLogger(__name__)\nlog.info("%s" % "x")\n',
+    ),
+    ("SIM202", "def f(a, b):\n    return not a != b\n"),
+    ("RUF034", "def f(x):\n    return 1 if x else 1\n"),
+    ("RUF057", "a = round(1, 0)\n"),
+    ("PIE790", 'def f():\n    """Doc."""\n    pass\n'),
+    ("E742", "class l:\n    pass\n"),
+    ("E743", "def l():\n    pass\n"),
+    (
+        "PT010",
+        "import pytest\n\n\ndef test_f():\n    with pytest.raises():\n        pass\n",
+    ),
+    ("PT016", "import pytest\n\n\ndef test_f():\n    pytest.fail()\n"),
+    (
+        "PT031",
+        "import pytest\n\n\ndef test_f():\n    with pytest.warns(UserWarning):\n        a = 1\n        b = 2\n",
+    ),
+]
+
+
+@pytest.mark.parametrize(("code", "source"), NEW_RULE_CASES, ids=lambda v: v[:8])
+def test_rules_without_existing_violations(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.py", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
+def test_module_importing_itself_is_reported(repo: Path) -> None:
+    write(repo, "pkg/__init__.py", "")
+    write(repo, "pkg/mod.py", "import pkg.mod\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "PLW0406" in result.stdout
+
+
+# One example per rule that reports some existing violations.
+RULES_WITH_EXISTING_VIOLATIONS = [
+    ("PLW0129", 'def f(x):\n    assert "x must be set"\n'),
+    (
+        "PLW0120",
+        'def f(items):\n    for i in items:\n        print(i)\n    else:\n        print("done")\n',
+    ),
+    ("PLW1641", "class A:\n    def __eq__(self, other):\n        return True\n"),
+    ("LOG002", "import logging\n\nlog = logging.getLogger(__file__)\n"),
+    (
+        "LOG004",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    log.exception("failed")\n',
+    ),
+    ("G010", 'import logging\n\nlog = logging.getLogger(__name__)\nlog.warn("x")\n'),
+    (
+        "G202",
+        'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    try:\n        pass\n    except Exception:\n        log.exception("x", exc_info=True)\n',
+    ),
+    ("RUF064", 'import os\n\nos.chmod("/tmp/x", 644)\n'),
+    ("RUF040", "def f(result):\n    assert result, None\n"),
+    ("DTZ003", "import datetime\n\nnow = datetime.datetime.utcnow()\n"),
+    ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
+    ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
+    ("PGH004", "import os  # noqa\n"),
+]
+
+
+@pytest.mark.parametrize(
+    ("code", "source"), RULES_WITH_EXISTING_VIOLATIONS, ids=lambda v: v[:8]
+)
+def test_rules_with_existing_violations(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.py", source)
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert code in result.stdout

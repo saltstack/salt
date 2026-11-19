@@ -103,6 +103,24 @@ def test_missing_localtime():
             pytest.raises(CommandExecutionError, timezone.zone_compare, "foo")
 
 
+def test_zone_compare_missing_localtime_with_timedatectl():
+    """
+    Regression test for #69803.
+
+    On systemd-managed hosts (e.g. Debian 12) ``/etc/localtime`` may be
+    absent while ``timedatectl`` still reports a valid zone. In that case
+    ``zone_compare`` must trust ``get_zone`` rather than failing on the
+    missing ``/etc/localtime`` file.
+    """
+    mock_get_zone = MagicMock(return_value="Europe/Zurich")
+    with patch.object(timezone, "get_zone", mock_get_zone):
+        with patch.dict(timezone.__grains__, {"os_family": "Debian"}):
+            with patch(GET_LOCALTIME_PATH, lambda: "/nonexistent/localtime"):
+                assert timezone.zone_compare("Europe/Zurich") is True
+                assert timezone.zone_compare("America/Denver") is False
+                mock_get_zone.assert_called()
+
+
 def create_tempfile_with_contents(contents, tempfiles=None):
     temp = NamedTemporaryFile(delete=False)
     temp.write(salt.utils.stringutils.to_bytes(contents))

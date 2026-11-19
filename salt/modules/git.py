@@ -2819,7 +2819,7 @@ def list_worktrees(
                 password=password,
                 output_encoding=output_encoding,
             )
-        except CommandExecutionError as exc:
+        except CommandExecutionError:
             msg = "Failed to find worktree location for " + cwd
             log.error(msg, exc_info_on_loglevel=logging.DEBUG)
             raise CommandExecutionError(msg)

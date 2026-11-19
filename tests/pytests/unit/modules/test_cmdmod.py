@@ -1577,3 +1577,22 @@ def test_prepare_bg_script_cmd(tmp_path):
     assert str(script) in content
     assert "SALT_BG_SCRIPT" in content
     os.remove(ret[0])
+
+
+def test_check_cb_returns_a_callable_unchanged():
+    def callback(line):
+        return line.upper()
+
+    assert cmdmod._check_cb(callback) is callback
+
+
+@pytest.mark.parametrize("not_callable", ["not a function", 42, {"a": 1}])
+def test_check_cb_ignores_a_value_that_is_not_callable(not_callable, caplog):
+    with caplog.at_level(logging.ERROR):
+        callback = cmdmod._check_cb(not_callable)
+    assert callback("text") == "text"
+    assert "log_callback is not callable, ignoring" in caplog.text
+
+
+def test_check_cb_without_a_callback_returns_the_value_unchanged():
+    assert cmdmod._check_cb(None)("text") == "text"

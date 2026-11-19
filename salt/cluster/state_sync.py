@@ -80,6 +80,15 @@ PILLAR_ROOTS_CHANNEL = "pillar_roots"
 # join-time channels above.
 BANK_CHANNEL_PREFIX = "bank:"
 
+# Channel prefix for the join-time catch-up of replicate-mode cache
+# banks.  Distinct from ``bank:`` so the receiver's install path can
+# distinguish an operator-triggered collect pull (apply with the normal
+# ``cache.store`` -- triggers replication) from a join-time catch-up
+# (apply with ``_already_replicated=True`` so the chunks the sender
+# already put on the wire don't trigger another round-trip).  See
+# :func:`install_bank_sync_chunk`.
+BANK_SYNC_CHANNEL_PREFIX = "bank_sync:"
+
 
 def bank_channel(bank):
     """Return the wire channel name for *bank*."""
@@ -91,6 +100,18 @@ def bank_from_channel(channel):
     if not channel or not channel.startswith(BANK_CHANNEL_PREFIX):
         return None
     return channel[len(BANK_CHANNEL_PREFIX) :]
+
+
+def bank_sync_channel(bank):
+    """Return the join-time catch-up wire channel name for *bank*."""
+    return f"{BANK_SYNC_CHANNEL_PREFIX}{bank}"
+
+
+def bank_from_sync_channel(channel):
+    """Return the bank name a ``bank_sync:`` channel was made from, or None."""
+    if not channel or not channel.startswith(BANK_SYNC_CHANNEL_PREFIX):
+        return None
+    return channel[len(BANK_SYNC_CHANNEL_PREFIX) :]
 
 
 ALL_CHANNELS = (
@@ -110,9 +131,22 @@ DEFAULT_KEY_CHUNK_COUNT = 200
 # enough that a typical SLS tree fits in a handful of chunks.
 DEFAULT_ROOTS_CHUNK_BYTES = 1 * 1024 * 1024
 
+# Default per-chunk byte budget for a cache bank sync stream.  Banks
+# like ``resource_grains`` can hold tens of MB on a production master;
+# 2 MB per chunk keeps each state-sync-chunk event well under the
+# transport's single-frame limit while shipping a 70 MB bank in ~35
+# chunks rather than one message.
+DEFAULT_BANK_SYNC_CHUNK_BYTES = 2 * 1024 * 1024
+
 # Default deadline (seconds) the joiner waits for all four channels to
 # eof before falling back to event-driven replication.
 DEFAULT_RECEIVE_TIMEOUT = 30
+
+# Internal top-level banks that MUST NOT be shipped by the join-time
+# cache-bank sync: ``jobs`` is ring-routed (shipping would duplicate the
+# owner's authoritative copy), the two ``cluster/`` subtrees own their
+# own replication transport (Raft + state-sync-chunks).
+BANK_SYNC_SKIP_PREFIXES = ("jobs", "cluster/consensus", "cluster/state_sync")
 
 
 def new_session_id():
@@ -217,6 +251,139 @@ def iter_root_chunks(roots_map, byte_budget=DEFAULT_ROOTS_CHUNK_BYTES):
             chunk_bytes += entry_bytes
     if chunk:
         yield chunk
+
+
+def enumerate_replicate_banks(opts):
+    """
+    Return the sorted list of top-level cache banks on this master
+    whose cross-master routing resolves to ``"replicate"``.
+
+    Enumerates by walking the on-disk cachedir (one subdirectory per
+    top-level bank).  Driver-independent for the localfs / mmap_key
+    paths that all isolated-FS deployments use today.
+
+    Banks whose names start with any entry in
+    :data:`BANK_SYNC_SKIP_PREFIXES` (``jobs``, ``cluster/consensus``,
+    ``cluster/state_sync``) are always excluded even if the routing
+    map accidentally lists them as ``replicate``.  The ``cluster``
+    subtree is skipped wholesale because its subtrees own their own
+    replication transport.
+    """
+    import os  # pylint: disable=import-outside-toplevel
+
+    import salt.cache  # pylint: disable=import-outside-toplevel
+    import salt.config  # pylint: disable=import-outside-toplevel
+
+    cachedir = opts.get("cachedir")
+    if not cachedir or not os.path.isdir(cachedir):
+        return []
+
+    routing = salt.config.get_cluster_cache_routing(opts)
+    banks = []
+    for entry in sorted(os.listdir(cachedir)):
+        if entry.startswith("."):
+            continue
+        if entry == "cluster":
+            continue
+        full = os.path.join(cachedir, entry)
+        if not os.path.isdir(full):
+            continue
+        if any(
+            entry == pref or entry.startswith(pref + "/")
+            for pref in BANK_SYNC_SKIP_PREFIXES
+        ):
+            continue
+        mode = salt.cache._resolve_bank_routing(routing, entry)
+        if mode == "replicate":
+            banks.append(entry)
+    return banks
+
+
+def iter_cache_bank_chunks(opts, bank, byte_budget=DEFAULT_BANK_SYNC_CHUNK_BYTES):
+    """
+    Yield ``items`` lists for a :class:`salt.cache.Cache` bank, chunked
+    by cumulative serialized-value byte budget.
+
+    Each item is ``{"key": str, "value": any}``.  A bank with no
+    entries still yields one empty list so the receiver's eof flag
+    fires uniformly.
+
+    Chunking approximates bytes by ``len(repr(value))`` -- cheap and
+    good enough for ordering-of-magnitude bounding; the real wire
+    size is paid by the Crypticle+msgpack path that encrypts each
+    enclosing chunk payload.
+    """
+    cache_driver = opts.get("cache") or opts.get("keys.cache_driver")
+    cache = salt.cache.Cache(opts, driver=cache_driver)
+
+    pairs = []
+    try:
+        dump = cache.list_all(bank, include_data=True)
+        pairs = list((dump or {}).items())
+    except (AttributeError, salt.exceptions.SaltCacheError):
+        try:
+            for key in cache.list(bank):
+                value = cache.fetch(bank, key)
+                pairs.append((key, value))
+        except salt.exceptions.SaltCacheError:
+            pairs = []
+
+    if not pairs:
+        yield []
+        return
+
+    chunk = []
+    chunk_bytes = 0
+    for key, value in pairs:
+        try:
+            entry_bytes = len(repr(value)) + len(key)
+        except Exception:  # pylint: disable=broad-except
+            entry_bytes = 1024
+        if chunk and chunk_bytes + entry_bytes > byte_budget:
+            yield chunk
+            chunk = []
+            chunk_bytes = 0
+        chunk.append({"key": key, "value": value})
+        chunk_bytes += entry_bytes
+    if chunk:
+        yield chunk
+
+
+def install_bank_sync_chunk(opts, bank, items):
+    """
+    Apply one join-time cache-bank catch-up chunk locally.
+
+    Writes via ``cache.store(..., _already_replicated=True)`` so the
+    receiver does NOT re-broadcast the state-sync payload -- the
+    sender already put it on the wire exactly once.  Returns the
+    number of entries written.
+
+    Mirrors :func:`install_bank_chunk` but with the replication-off
+    flag set.  The two installers stay separate so a future tweak to
+    the catch-up path (quorum ack, resume offset, ...) doesn't leak
+    into the operator-triggered collect pull.
+    """
+    if not bank:
+        raise ValueError("install_bank_sync_chunk: bank is required")
+    cache_driver = opts.get("cache") or opts.get("keys.cache_driver")
+    cache = salt.cache.Cache(opts, driver=cache_driver)
+    written = 0
+    for entry in items or []:
+        if not isinstance(entry, dict):
+            continue
+        key = entry.get("key")
+        if key is None:
+            continue
+        try:
+            cache.store(bank, key, entry.get("value"), _already_replicated=True)
+            written += 1
+        except Exception:  # pylint: disable=broad-except
+            log.exception(
+                "state-sync: failed to install bank-sync entry %s/%s",
+                bank,
+                key,
+            )
+    return written
 
 
 def iter_bank_chunks(opts, bank, count=DEFAULT_KEY_CHUNK_COUNT, key_filter=None):

@@ -46,7 +46,7 @@ def _load_state(opts):
         state = _initial_state()
         _save_state(opts, state)
     except Exception as exc:  # pylint: disable=broad-except
-        log.exception("Failed to load state: %s", exc, exc_info=True)
+        log.exception("Failed to load state: %s", exc)
         state = _initial_state()
         _save_state(opts, state)
     log.warning("Dummy Proxy Loaded State(%s):\n%s", cachefile, pprint.pformat(state))

@@ -991,7 +991,7 @@ class SaltAPIHandler(BaseSaltAPIHandler):  # pylint: disable=W0223
         try:
             self.write(self.serialize({"return": ret}))
             self.finish()
-        except RuntimeError as exc:
+        except RuntimeError:
             log.exception("Encountered Runtime Error")
 
     @tornado.gen.coroutine

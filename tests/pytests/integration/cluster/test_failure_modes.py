@@ -243,3 +243,137 @@ def test_isolated_master_with_unreachable_peers_self_elects(
 )
 def test_disruptive_candidate_blocked_by_lease():
     """Placeholder for a real-process pre-vote / lease defense test."""
+
+
+def test_late_joiner_through_non_founder_receives_committed_cluster_keys(
+    cluster_master_1_isolated,
+    cluster_master_2_isolated,
+    cluster_master_3_isolated,
+    cluster_master_4_isolated_factory,
+):
+    """
+    Regression test for the commit-6 (``6acb1653613``) founder-only
+    ``cluster_aes`` sender gate's **late-joiner flaw**.
+
+    Scenario:
+
+    1. Isolated-FS masters A (127.0.0.1 -- founder), B (.2), C (.3)
+       bootstrap.  The unified cluster-key propagation state machine
+       commits all three masters to A's authoritative ``cluster_aes``
+       + ``cluster.pem`` within the founder-wait window.
+    2. A is killed.
+    3. A fourth master D (127.0.0.4) starts only AFTER A is dead --
+       ``cluster_master_4_isolated_factory`` returns the factory
+       without starting it, so the test body wraps
+       ``factory.started(...)`` after ``master_a.terminate()``.
+       D's ``cluster_peers`` still lists A, but A is unreachable --
+       D's discover must land on B (or C).
+    4. The non-founder peer that replies ships its COMMITTED bytes
+       (A's authoritative ``cluster_aes`` + ``cluster.pem``); D
+       receives them via ``cluster/peer/join-reply``, the state
+       machine installs on BOOTSTRAP and commits.
+    5. Assertions: D's ``.aes`` and ``cluster.pem`` on disk match
+       those on B.
+
+    Why the test must start D AFTER killing A:
+
+        Earlier versions of this test depended on the started
+        ``cluster_master_4_isolated`` fixture, which spun D up while A
+        was still alive.  Under commit-6-only (pre-state-machine) the
+        founder A's join-reply is the one carrying ``cluster_aes``;
+        D received it from A and everything looked fine even though
+        the regression was not actually exercised.  Starting D AFTER
+        A.terminate() forces D's handshake to pick a non-founder,
+        which is the bug surface commit 6 alone does not close.
+
+    Pre-fix (commit 6 alone) this fails because non-founders omit
+    ``cluster_aes`` from their join-reply by identity -- D stays on
+    its locally-generated bootstrap AES and cannot decrypt
+    cross-cluster cache events.  Post-fix the sender ships
+    unconditionally and the receiver's state machine honours the
+    install because the surviving non-founder is in COMMITTED state
+    with the authoritative bytes.
+    """
+    master_a = cluster_master_1_isolated
+    master_b = cluster_master_2_isolated
+    master_c = cluster_master_3_isolated
+
+    # Precondition: A, B, C must have converged on the founder's
+    # cluster_aes + cluster.pem before we kill A.  Poll for up to 60s.
+    deadline = time.monotonic() + 60
+    converged = False
+    while time.monotonic() < deadline:
+        pki_a = pathlib.Path(master_a.config["cluster_pki_dir"])
+        pki_b = pathlib.Path(master_b.config["cluster_pki_dir"])
+        pki_c = pathlib.Path(master_c.config["cluster_pki_dir"])
+        try:
+            a_aes = (pki_a / ".aes").read_bytes()
+            b_aes = (pki_b / ".aes").read_bytes()
+            c_aes = (pki_c / ".aes").read_bytes()
+            a_pem = (pki_a / "cluster.pem").read_bytes()
+            b_pem = (pki_b / "cluster.pem").read_bytes()
+            c_pem = (pki_c / "cluster.pem").read_bytes()
+        except FileNotFoundError:
+            time.sleep(0.5)
+            continue
+        if a_aes == b_aes == c_aes and a_pem == b_pem == c_pem:
+            converged = True
+            break
+        time.sleep(0.5)
+    assert converged, (
+        "A/B/C did not converge on cluster_aes + cluster.pem within 60s "
+        "-- this test's precondition is not met"
+    )
+
+    # Record B's committed values; D must receive these from a
+    # surviving non-founder after A dies.
+    pki_b = pathlib.Path(master_b.config["cluster_pki_dir"])
+    expected_aes = (pki_b / ".aes").read_bytes()
+    expected_pem = (pki_b / "cluster.pem").read_bytes()
+
+    # Kill the founder BEFORE D starts, so D's discover/join must
+    # resolve against a non-founder.
+    master_a.terminate()
+
+    # Now start D.  Its handshake lands on B or C (A is dead).  The
+    # state machine on D should install B's committed values on
+    # BOOTSTRAP and commit.
+    with cluster_master_4_isolated_factory.started(start_timeout=120):
+        pki_d = pathlib.Path(
+            cluster_master_4_isolated_factory.config["cluster_pki_dir"]
+        )
+        deadline = time.monotonic() + 60
+        d_aes = d_pem = None
+        while time.monotonic() < deadline:
+            try:
+                d_aes = (pki_d / ".aes").read_bytes()
+                d_pem = (pki_d / "cluster.pem").read_bytes()
+            except FileNotFoundError:
+                time.sleep(0.5)
+                continue
+            if d_aes == expected_aes and d_pem == expected_pem:
+                break
+            time.sleep(0.5)
+
+        assert d_aes == expected_aes, (
+            "late-joiner master_d did not receive the committed cluster_aes "
+            f"from a surviving non-founder (got {d_aes!r}, expected "
+            f"{expected_aes!r}).  Likely a regression of the commit-6 "
+            "late-joiner flaw: a non-founder sender must ship cluster_aes "
+            "unconditionally and the receiver state machine must honour the "
+            "install on BOOTSTRAP."
+        )
+        assert d_pem == expected_pem, (
+            "late-joiner master_d did not receive the committed cluster.pem "
+            f"from a surviving non-founder (got {d_pem!r}, expected "
+            f"{expected_pem!r})."
+        )
+
+        # Sanity: C stayed in sync with B after A died (the test's
+        # scope is key convergence, not event-bus traffic -- the
+        # key-identity assertion above is sufficient for the
+        # regression, but a C-divergence here would mask a separate
+        # bug).
+        assert (
+            pathlib.Path(master_c.config["cluster_pki_dir"]) / ".aes"
+        ).read_bytes() == expected_aes, "C diverged from B after A died"

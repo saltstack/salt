@@ -519,7 +519,7 @@ def _merge_dict(stack, obj):
                     stack_k = stack[k]
                     stack[k] = _cleanup(v)
                     v = stack_k
-                if type(stack[k]) != type(v):
+                if type(stack[k]) is not type(v):
                     log.debug(
                         "Force overwrite, types differ: '%s' != '%s'", stack[k], v
                     )
@@ -560,6 +560,6 @@ def _parse_stack_cfg(content):
         obj = salt.utils.yaml.safe_load(content)
         if isinstance(obj, list):
             return obj
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         pass
     return content.splitlines()

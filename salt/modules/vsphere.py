@@ -477,7 +477,7 @@ def _gets_service_instance_via_proxy(fn):
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)
             return ret
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             # Disconnect if connected in the decorator
             if local_service_instance:
                 salt.utils.vmware.disconnect(local_service_instance)

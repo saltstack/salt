@@ -563,7 +563,7 @@ class DeleteOption(TypeOption):
                 os.remove(fullpath)
             elif os.path.isdir(fullpath):
                 shutil.rmtree(fullpath)
-        except OSError as exc:
+        except OSError:
             return None
         return fullpath
 

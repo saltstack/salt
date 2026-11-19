@@ -186,7 +186,7 @@ def minion_process():
         minion = salt.cli.daemons.Minion()
         signal.signal(signal.SIGHUP, functools.partial(handle_hup, minion))
         minion.start()
-    except (SaltClientError, SaltReqTimeoutError, SaltSystemExit) as exc:
+    except (SaltClientError, SaltReqTimeoutError, SaltSystemExit):
         lock.acquire(blocking=True)
         log.warning(
             "Fatal functionality error caught by minion handler:\n", exc_info=True
@@ -362,7 +362,7 @@ def proxy_minion_process(queue):
         SaltClientError,
         SaltReqTimeoutError,
         SaltSystemExit,
-    ) as exc:
+    ):
         # pylint: enable=broad-except
         log.error("Proxy Minion failed to start: ", exc_info=True)
         restart = True
