@@ -390,7 +390,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
                 opts["cachedir"], uid=uid
             )
 
-    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+    if isinstance(data["fun"], (tuple, list)):
         ProxyMinion._thread_multi_return(minion_instance, opts, data)
     else:
         ProxyMinion._thread_return(minion_instance, opts, data)
