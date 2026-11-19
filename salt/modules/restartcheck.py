@@ -285,13 +285,14 @@ def _kernel_versions_debian():
     except IndexError:
         kernel = kernels[0]
 
-    kernel = kernel.rstrip("\t\tinstall")
+    # dpkg prints "<package>\t\t<status>", keep only the package name
+    kernel = kernel.split()[0]
 
     kernel_get_version = __salt__["cmd.run"]("apt-cache policy " + kernel)
 
     for line in kernel_get_version.splitlines():
         if line.startswith("  Installed: "):
-            kernel_v = line.strip("  Installed: ")
+            kernel_v = line[len("  Installed: ") :].strip()
             kernel_versions.append(kernel_v)
             break
 
@@ -319,7 +320,8 @@ def _kernel_versions_redhat():
             kernels.append(line)
 
     kernel = kernels[0].split(" ", 1)[0]
-    kernel = kernel.strip("kernel-")
+    if kernel.startswith("kernel-"):
+        kernel = kernel[len("kernel-") :]
     kernel_versions.append(kernel)
 
     return kernel_versions
