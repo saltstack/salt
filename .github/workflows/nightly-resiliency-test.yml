@@ -30,15 +30,15 @@ on:
           - '1.5h'
           - '2h'
       scenarios:
-        description: Space-separated subset of all scenarios (default = full battery)
+        description: Override group's default SCENARIOS list (empty = use group default = fast or marathon derived by matrix tuple)
         required: false
-        default: 'baseline master_restart network_faults minion_churn signal_pause resource_pressure disk_faults clock_skew salt_ops netem_advanced fileserver_orch cluster_faults master_marathon'
+        default: ''
         type: string
       marathon_enabled:
-        description: Run master_marathon phases (30m + 60m + 2h master outages). Defaults ON for nightly; flip to false for a fast dispatch.
+        description: Override group's default --marathon flag ('' = use group default, 'true' / 'false' to force)
         required: false
-        default: true
-        type: boolean
+        default: ''
+        type: string
 
 jobs:
   resolve-matrix:
