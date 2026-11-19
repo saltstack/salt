@@ -7,6 +7,7 @@ Tests that requests are routed to the correct pool based on command classificati
 import ctypes
 import logging
 import multiprocessing
+import re
 import time
 
 import pytest
@@ -340,7 +341,7 @@ def test_pool_config_validation(pool_config):
     }
 
     with pytest.raises(
-        ValueError, match="Command 'test.ping' mapped to multiple pools"
+        ValueError, match=re.escape("Command 'test.ping' mapped to multiple pools")
     ):
         validate_worker_pools_config(invalid_config)
 

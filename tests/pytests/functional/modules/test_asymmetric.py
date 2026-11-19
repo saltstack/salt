@@ -601,7 +601,7 @@ def test_verify_signed_by_any_pub_url_fail(
 
 
 def test_verify_sig_url_all_fail(state_tree, signed_data, pub_rsa, pub_ec, asymm):
-    with pytest.raises(CommandExecutionError, match="Unable to locate .* signatures"):
+    with pytest.raises(CommandExecutionError, match=r"Unable to locate .* signatures"):
         asymm.verify(
             text=signed_data,
             signature=["salt://sig_ec", "salt://sig_rsa"],
@@ -822,13 +822,13 @@ def test_verify_parameter_validation(
 def test_verify_single_pubkey_no_signature_list(pub_ec, sig_ec, signed_data, asymm):
     with pytest.raises(
         SaltInvocationError,
-        match=".*must be a string or bytes when verifying a single.*",
+        match=r".*must be a string or bytes when verifying a single.*",
     ):
         asymm.verify(text=signed_data, pubkey=pub_ec, signature=[sig_ec])
 
 
 def test_verify_missing_filename(pub_ec, sig_ec, tmp_path, asymm):
-    with pytest.raises(CommandExecutionError, match="Path .*does not exist.*"):
+    with pytest.raises(CommandExecutionError, match=r"Path .*does not exist.*"):
         asymm.verify(
             filename=str(tmp_path / "missing"), pubkey=pub_ec, signature=sig_ec
         )
