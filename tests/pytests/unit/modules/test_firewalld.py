@@ -432,3 +432,38 @@ def test_remove_rich_rule():
             )
             == "success"
         )
+
+
+def test_firewall_cmd_uses_offline_cmd_in_transaction(monkeypatch):
+    """
+    Inside a transaction dbus is unavailable, so firewall-offline-cmd is used
+    and --permanent is dropped.
+    """
+    monkeypatch.setenv("TRANSACTIONAL_UPDATE", "true")
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": "ok", "stderr": ""})
+    which = {
+        "firewall-cmd": "/usr/bin/firewall-cmd",
+        "firewall-offline-cmd": "/usr/bin/firewall-offline-cmd",
+    }
+    with patch.dict(firewalld.__salt__, {"cmd.run_all": run_all}), patch(
+        "salt.utils.path.which", side_effect=which.get
+    ):
+        assert firewalld.__firewall_cmd("--add-port=6443/tcp --permanent") == "ok"
+        run_all.assert_called_once_with(
+            "/usr/bin/firewall-offline-cmd --add-port=6443/tcp"
+        )
+        run_all.reset_mock()
+        assert firewalld.reload_rules() == "success"
+        run_all.assert_not_called()
+
+
+def test_firewall_cmd_unchanged_outside_transaction(monkeypatch):
+    monkeypatch.delenv("TRANSACTIONAL_UPDATE", raising=False)
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": "ok", "stderr": ""})
+    with patch.dict(firewalld.__salt__, {"cmd.run_all": run_all}), patch(
+        "salt.utils.path.which", return_value="/usr/bin/firewall-cmd"
+    ):
+        firewalld.__firewall_cmd("--add-port=6443/tcp --permanent")
+        run_all.assert_called_once_with(
+            "/usr/bin/firewall-cmd --add-port=6443/tcp --permanent"
+        )
