@@ -681,7 +681,7 @@ def dacl(obj_name=None, obj_type="file"):
                         sid,
                     )
                 else:
-                    log.exception("Invalid access mode: %s", access_mode)
+                    log.error("Invalid access mode: %s", access_mode)
                     raise SaltInvocationError(f"Invalid access mode: {access_mode}")
             except Exception as exc:  # pylint: disable=broad-except
                 return False, f"Error: {exc}"
