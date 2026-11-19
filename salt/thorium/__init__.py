@@ -111,7 +111,7 @@ class ThorState(salt.state.HighState):
         err = []
         try:
             top = self.get_top()
-        except SaltRenderError as err:
+        except SaltRenderError:
             return ret
         except Exception:  # pylint: disable=broad-except
             trb = traceback.format_exc()

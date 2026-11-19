@@ -216,7 +216,7 @@ def wait_for_successful_query(name, wait_for=300, **kwargs):
             ret = query(name, **kwargs)
             if ret["result"]:
                 return ret
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             exception_type, caught_exception, stacktrace = sys.exc_info()
 
         if time.time() > starttime + wait_for:

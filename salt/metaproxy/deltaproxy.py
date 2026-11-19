@@ -185,7 +185,7 @@ async def post_master_init(self, master):
             specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
-            except TypeError as terr:
+            except TypeError:
                 log.error(
                     "Unable to merge mine functions from the pillar in the opts, for proxy %s",
                     self.opts["id"],

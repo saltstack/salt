@@ -673,7 +673,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 try:
                     # XXX This is handled better in the websocket transport work
                     tasks.append(asyncio.create_task(callback(msg)))
-                except Exception as exc:  # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     log.error(
                         "Unhandled exception while running callback %r",
                         self,
@@ -1553,13 +1553,13 @@ class PubServer(tornado.tcpserver.TCPServer):
                             # runs. Sync callbacks return a value directly.
                             if asyncio.iscoroutine(result):
                                 await result
-                except _StreamClosedError as e:
+                except _StreamClosedError:
                     log.debug("tcp stream to %s closed, unable to recv", client.address)
                     client.close()
                     self.remove_presence_callback(client)
                     self.clients.discard(client)
                     break
-                except Exception as e:  # pylint: disable=broad-except
+                except Exception:  # pylint: disable=broad-except
                     log.error(
                         "Exception parsing response from %s",
                         client.address,
@@ -1696,13 +1696,13 @@ class PubServer(tornado.tcpserver.TCPServer):
         cert = None
         try:
             cert = stream.socket.getpeercert()
-        except AttributeError as exc:
+        except AttributeError:
             # AttributeError: socket has no SSL
             if self.ssl is not None:
                 # Server requires SSL but client didn't provide it
                 stream.close()
                 return
-        except ValueError as exc:
+        except ValueError:
             # ValueError: SSL handshake not done yet
             # When SSL is required, we need to wait for the handshake to complete
             # to verify the client provided a valid certificate
@@ -1768,16 +1768,16 @@ class PubServer(tornado.tcpserver.TCPServer):
                 # ``Unpacker`` local.  See ``handle_stream`` for details.
                 client._read_task = self.io_loop.create_task(self._stream_read(client))
                 return
-            except AttributeError as exc:
+            except AttributeError:
                 # Socket has no SSL - this shouldn't happen here but reject just in case
                 stream.close()
                 return
-            except ValueError as exc:
+            except ValueError:
                 # SSL handshake not done yet - wait a bit and retry
                 if attempt < 9:  # Don't sleep on last attempt
                     await asyncio.sleep(0.05)  # Short delay
                 continue
-            except ssl.SSLError as exc:
+            except ssl.SSLError:
                 # SSL handshake failed
                 stream.close()
                 return
