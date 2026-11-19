@@ -1350,6 +1350,214 @@ async def test_authenticate_during_done_callback_gap_does_not_respawn_sign_in(
         crypt.AsyncAuth.creds_map.pop(credskey, None)
 
 
+async def test_authenticate_caller_cancel_drains_sign_in_task_70857(
+    minion_root, io_loop
+):
+    """
+    Regression test for the deadlock hazard described in issue #70857.
+
+    When the sole caller of ``AsyncAuth.authenticate()`` gives up -- for
+    example via ``asyncio.wait_for`` timing out -- the shared sign-in
+    task holds a zmq REQ socket.  The task is only *cancel-requested*
+    by ``_on_waiter_done``; the actual unwind (``with AsyncReqChannel``
+    __exit__ -> ``socket.close()``) runs on subsequent event-loop
+    iterations.  If the loop stops before those iterations run -- as
+    happens on minion shutdown or ``MinionManager.close()`` -- the task
+    is left orphaned in ``cancelling`` state with the socket still
+    open.  Cyclic garbage collection eventually walks the leftover
+    frame and calls ``_finalize_zmq_context``, which blocks in
+    ``zmq_ctx_term()`` waiting for the still-open socket, deadlocking
+    the thread doing the GC (typically the minion's ioloop).
+
+    The contract this test pins: when the caller's ``authenticate()``
+    frame exits via cancellation and no other caller is waiting on the
+    shared task, ``_sign_in_task`` must be fully ``done()`` (not just
+    ``cancelling()``) by the time control returns to the caller.  That
+    guarantees the task's ``with`` block has run its ``__exit__`` and
+    the socket has been closed before any process-level teardown can
+    observe the context.
+
+    Currently fails: after the caller's ``wait_for`` raises
+    ``TimeoutError``, the shared sign-in task is still mid-cancel
+    (``done() is False``, ``cancelling()`` > 0).
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    # ``sign_in`` parks forever so the task is guaranteed to be in
+    # flight when the caller cancels.  The test does not rely on any
+    # particular timing of the shared task reaching an await point --
+    # the contract is: by the time ``wait_for`` raises, the task is
+    # *done*, regardless of where in its coroutine body it was when
+    # the cancel landed.
+    never = _asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        await never.wait()
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        # Capture the shared task before the cancel so we can assert
+        # on its ``done()`` state after ``wait_for`` returns.
+        awaitable = auth.authenticate()
+        # Give the sign-in coroutine time to start and reach its
+        # ``await never.wait()`` parking point.
+        for _ in range(10):
+            await _asyncio.sleep(0)
+            if auth._sign_in_task is not None:
+                break
+        shared_task = auth._sign_in_task
+        assert shared_task is not None, "sign_in_task must be running"
+        assert not shared_task.done(), "sign_in_task must not be done yet"
+
+        # Caller gives up.  Under the drain-on-cancel contract, by the
+        # time ``wait_for`` raises ``TimeoutError``, the shared task has
+        # completed its cancellation unwind.
+        with pytest.raises(_asyncio.TimeoutError):
+            await _asyncio.wait_for(awaitable, timeout=0.2)
+
+        # The key assertion: shared task is DONE, not just
+        # cancelling.  A failing test here (``done() is False``, or
+        # ``cancelling() > 0``) means the ``with AsyncReqChannel``
+        # block's __exit__ has not yet run -- which is the orphan
+        # state behind the #70857 deadlock.
+        assert shared_task.done(), (
+            "shared sign-in task must be fully drained before "
+            "caller's wait_for returns; got done=False (orphan task "
+            "with open socket)"
+        )
+        if hasattr(shared_task, "cancelling"):
+            assert shared_task.cancelling() == 0, (
+                "shared sign-in task must have finished cancelling "
+                "before caller's wait_for returns"
+            )
+        assert auth._sign_in_task is None
+        assert auth._last_result is None
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
+async def test_authenticate_mid_caller_cancel_does_not_force_drain_on_others_70857(
+    minion_root, io_loop
+):
+    """
+    Partial-cancel regression for the drain-on-cancel contract (#70857).
+
+    Three concurrent callers A, B, C.  A cancels first; A's
+    cancellation must NOT drag B or C into the drain path -- they are
+    still waiting on a sign-in that other callers want.  Only the
+    *last* caller to leave triggers the drain.
+
+    This pins the "drain on last-waiter cancel" semantics: a mid-chain
+    cancel is a cheap per-caller operation; the expensive drain only
+    runs when no caller wants the result any more.
+    """
+    import asyncio as _asyncio
+
+    pki_dir = minion_root / "etc" / "salt" / "pki"
+    opts = {
+        "id": "minion",
+        "__role": "minion",
+        "pki_dir": str(pki_dir),
+        "master_uri": "tcp://127.0.0.1:4505",
+        "keysize": 4096,
+        "acceptance_wait_time": 0,
+        "acceptance_wait_time_max": 0,
+        "keys.cache_driver": "localfs_key",
+    }
+    priv, pub = crypt.gen_keys(opts["keysize"])
+    keypath = pki_dir / "minion"
+    keypath.with_suffix(".pem").write_text(priv)
+    keypath.with_suffix(".pub").write_text(pub)
+    credskey = (
+        opts["pki_dir"],
+        opts["id"],
+        opts["master_uri"],
+        str(os.path.getmtime(os.path.join(opts["pki_dir"], "minion.pem"))),
+    )
+    crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+    aes = crypt.Crypticle.generate_key_string()
+    session = crypt.Crypticle.generate_key_string()
+
+    auth = crypt.AsyncAuth(opts, io_loop)
+
+    release = _asyncio.Event()
+
+    async def mock_sign_in(*args, **kwargs):
+        await release.wait()
+        return {"enc": "pub", "aes": aes, "session": session}
+
+    auth.sign_in = mock_sign_in
+
+    try:
+        a = _asyncio.ensure_future(auth.authenticate())
+        b = _asyncio.ensure_future(auth.authenticate())
+        c = _asyncio.ensure_future(auth.authenticate())
+
+        # Let the sign-in task start.
+        for _ in range(10):
+            await _asyncio.sleep(0)
+            if auth._sign_in_task is not None:
+                break
+        shared_task = auth._sign_in_task
+        assert shared_task is not None
+        assert not shared_task.done()
+
+        # A cancels.  Must complete promptly -- B and C still want the
+        # result, so no drain is triggered.
+        a.cancel()
+        # A single yield is enough to deliver the cancel; the drain
+        # contract explicitly says mid-caller cancels do *not* wait on
+        # the shared task.
+        for _ in range(5):
+            await _asyncio.sleep(0)
+            if a.done():
+                break
+        assert a.done()
+        assert a.cancelled()
+        # Shared task is still live and in flight -- B and C are
+        # still waiting on it.
+        assert shared_task is auth._sign_in_task
+        assert not shared_task.done()
+
+        # Finish the sign-in cleanly.  B and C both resolve to True.
+        release.set()
+        assert await _asyncio.wait_for(b, timeout=5) is True
+        assert await _asyncio.wait_for(c, timeout=5) is True
+    finally:
+        crypt.AsyncAuth.creds_map.pop(credskey, None)
+
+
 async def test_authenticate_cached_creds_fast_path_via_authenticated_property(
     minion_root, io_loop
 ):
