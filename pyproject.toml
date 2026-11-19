@@ -255,7 +255,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Unused local variables are not checked in tests for now.
-"tests/**" = ["F841"]
+# "assert False" is allowed in tests: with "python -O" every assert in the test
+# suite is removed, so replacing this one would not protect anything.
+"tests/**" = ["F841", "B011"]
 
 [tool.towncrier]
     package = "salt"

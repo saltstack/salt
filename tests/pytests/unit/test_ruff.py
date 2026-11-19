@@ -292,6 +292,19 @@ def test_unused_local_variable_is_allowed_in_tests(repo: Path) -> None:
     assert result.returncode == 0, result.stderr + result.stdout
 
 
+def test_assert_false_is_allowed_in_tests(repo: Path) -> None:
+    write(repo, "tests/test_new.py", "def test_f():\n    assert False\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_assert_false_is_reported_outside_tests(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f():\n    assert False\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "B011" in result.stdout
+
+
 # One example per rule that has no violation in the code base today.
 NEW_RULE_CASES = [
     ("B002", "def f(n):\n    return ++n\n"),
