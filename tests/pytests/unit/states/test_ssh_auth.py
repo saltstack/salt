@@ -4,13 +4,24 @@
 
 import pytest
 
+import salt.modules.ssh as ssh
+import salt.modules.test as salt_test
 import salt.states.ssh_auth as ssh_auth
+import salt.utils.files
 from tests.support.mock import MagicMock, call, patch
+
+# Real ed25519 key body. base64.b64decode(..., validate=True) accepts it.
+_PUBKEY = "AAAAC3NzaC1lZDI1NTE5AAAAINEIiNXlqUlqiVg69lJkzMfyBWAansuwqW6bw7zox7kR"
+_OMIT = object()
 
 
 @pytest.fixture
 def configure_loader_modules():
-    return {ssh_auth: {"__env__": "base"}}
+    return {
+        ssh_auth: {"__env__": "base"},
+        ssh: {"__salt__": {}, "__context__": {}},
+        salt_test: {"__context__": {}},
+    }
 
 
 @pytest.fixture()
@@ -416,3 +427,160 @@ def test_manage():
                     "comment": "",
                 }
                 assert ssh_auth.manage("sshid", ["newkey", "somekey"], user) == ret
+
+
+def _write_pubkey(path, options=None):
+    prefix = ""
+    if options:
+        prefix = ",".join(options) + " "
+    line = f"{prefix}ssh-ed25519 {_PUBKEY} root@domain\n"
+    with salt.utils.files.fopen(path, "w") as key_fh:
+        key_fh.write(line)
+
+
+def _present_test_mode(home, source, options=_OMIT):
+    """
+    Run ssh_auth.present in test mode against real key files.
+    """
+    kwargs = {}
+    if options is not _OMIT:
+        kwargs["options"] = options
+    with patch.dict(
+        ssh.__salt__,
+        {
+            "cp.cache_file": MagicMock(return_value=str(source)),
+            "user.info": MagicMock(return_value={"home": str(home)}),
+        },
+    ):
+        with patch.dict(
+            ssh_auth.__salt__,
+            {
+                "ssh.check_key_file": ssh.check_key_file,
+                "test.ping": salt_test.ping,
+            },
+        ):
+            with patch.dict(ssh_auth.__opts__, {"test": True}):
+                return ssh_auth.present(
+                    "sshkeys", "user", source="salt://key.pub", **kwargs
+                )
+
+
+def test_present_test_options_differ_reports_change(tmp_path):
+    """
+    State options that differ from the authorized_keys entry must preview
+    a change under test=True. A real apply would replace the key.
+    """
+    home = tmp_path / "home"
+    source = tmp_path / "key.pub"
+    auth = home / ".ssh" / "authorized_keys"
+    auth.parent.mkdir(parents=True)
+    _write_pubkey(source)
+    _write_pubkey(auth)
+
+    ret = _present_test_mode(home, source, options=["no-pty"])
+
+    assert ret["result"] is None
+    assert "update" in ret["comment"]
+
+
+def test_present_test_options_equal_reports_no_change(tmp_path):
+    """
+    Matching state options are already present, even when the source file
+    itself does not carry those options.
+    """
+    home = tmp_path / "home"
+    source = tmp_path / "key.pub"
+    auth = home / ".ssh" / "authorized_keys"
+    auth.parent.mkdir(parents=True)
+    _write_pubkey(source)
+    _write_pubkey(auth, options=["no-pty"])
+
+    ret = _present_test_mode(home, source, options=["no-pty"])
+
+    assert ret["result"] is True
+    assert "already present" in ret["comment"]
+
+
+def test_present_test_options_omitted_keeps_old_behavior(tmp_path):
+    """
+    Omitting state options still compares the source file. Identical files
+    are a no-op. Options that live only in the source file still count.
+    """
+    home = tmp_path / "home"
+    source = tmp_path / "key.pub"
+    auth = home / ".ssh" / "authorized_keys"
+    auth.parent.mkdir(parents=True)
+    _write_pubkey(source)
+    _write_pubkey(auth)
+
+    ret = _present_test_mode(home, source)
+
+    assert ret["result"] is True
+    assert "already present" in ret["comment"]
+
+    _write_pubkey(source, options=["no-pty"])
+    ret = _present_test_mode(home, source)
+
+    assert ret["result"] is None
+    assert "update" in ret["comment"]
+
+
+def test__present_test_passes_options_to_check_key_file():
+    """
+    The test-mode preview must hand state options to ssh.check_key_file.
+    """
+    key = "abc"
+    mock_check = MagicMock(return_value={key: "update"})
+    with patch.dict(ssh_auth.__salt__, {"ssh.check_key_file": mock_check}):
+        result, comment = ssh_auth._present_test(
+            "user",
+            "name",
+            "ssh-rsa",
+            "",
+            ["no-pty"],
+            "salt://key.pub",
+            ".ssh/authorized_keys",
+            None,
+        )
+
+    assert result is None
+    assert comment == f"Set to update: {key}\n"
+    mock_check.assert_called_once_with(
+        "user",
+        "salt://key.pub",
+        ".ssh/authorized_keys",
+        saltenv="base",
+        fingerprint_hash_type=None,
+        options=["no-pty"],
+    )
+
+
+def test__absent_test_passes_options_to_check_key_file():
+    """
+    Absent test mode forwards options the same way present does.
+    A key that would be updated is still removed.
+    """
+    key = "abc"
+    mock_check = MagicMock(return_value={key: "update"})
+    with patch.dict(ssh_auth.__salt__, {"ssh.check_key_file": mock_check}):
+        result, comment = ssh_auth._absent_test(
+            "user",
+            "name",
+            "ssh-rsa",
+            "",
+            ["no-pty"],
+            "salt://key.pub",
+            ".ssh/authorized_keys",
+            None,
+        )
+
+    assert result is None
+    assert comment == f"Set to remove: {key}\n"
+    mock_check.assert_called_once_with(
+        "user",
+        "salt://key.pub",
+        ".ssh/authorized_keys",
+        saltenv="base",
+        fingerprint_hash_type=None,
+        options=["no-pty"],
+    )
