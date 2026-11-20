@@ -288,17 +288,47 @@ def test_saltop_master_pem_truncate_recover(
     # assert_reconnect baseline is post-revive steady state, not the
     # cold-start reconnect churn.  Same supervisor-simulation pattern
     # test_resource_oom_squeeze uses.
+    #
+    # CI run 44698695931 job 136161591789 (multimaster-hothot) showed
+    # this test "PASSED" via mm-salt-master-b while mm-salt-master-a
+    # stayed dead -- ``wait_initial_auth`` iterates ALL masters, so a
+    # hot-hot fleet routes via the surviving peer and the revive looks
+    # successful even when ``docker restart`` on master-a failed.
+    # Verify ``inspect_running(primary)`` explicitly so downstream tests
+    # that direct-exec ``primary_master`` don't cascade-fail.  A dead
+    # primary after this test runs 180s of wait_initial_auth is an
+    # unrecoverable condition that should fail the test rather than
+    # silently poison the rest of the suite.
     notes = f"master.pem truncated for {PEM_TRUNCATE_HOLD_SEC}s"
+    restart_exc: Exception | None = None
     try:
         topology.restart(primary)
-    except Exception:  # noqa: BLE001
-        # Fall through -- assert_reconnect will produce a proper failure
-        # record with missing minions and the cause will be visible in
-        # compose.log.
-        pass
-    if topology.wait_initial_auth(timeout=180):
+    except Exception as exc:  # noqa: BLE001
+        restart_exc = exc
+    fleet_ok = topology.wait_initial_auth(timeout=180)
+    primary_up = topology.inspect_running(primary)
+    if fleet_ok:
         before = topology.sample_minions()
-        notes += " revived=1"
+        if primary_up:
+            notes += " revived=1"
+        else:
+            notes += " revived=0 primary_dead_post_restart=1"
+    if not primary_up:
+        # Final safety net: try one more docker start.  If still dead,
+        # fail the test -- downstream tests that direct-exec primary
+        # will cascade-fail with less-diagnostic errors.
+        try:
+            topology.start(primary)
+        except Exception:  # noqa: BLE001
+            pass
+        time.sleep(5)
+        primary_up = topology.inspect_running(primary)
+        if not primary_up:
+            pytest.fail(
+                f"{scenario}: {primary} still not running after revive attempt "
+                f"(restart_exc={restart_exc!r}); cascading container-dead "
+                "errors in downstream tests are expected without this guard"
+            )
 
     fault_sec = int(time.monotonic() - fault_start)
     topology.assert_reconnect(
