@@ -1485,6 +1485,29 @@ repos:
           - -c=requirements/static/pkg/py3.14/windows.lock
           - -o=requirements/static/ci/py3.14/windows.lock
 
+      # Windows arm64 CI lock; see the windows-arm64 packaging hook above.
+      - id: pip-compile
+        alias: compile-ci-windows-arm64-3.14-zmq-requirements
+        name: Windows arm64 CI Py3.14 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.lock|static/((ci|pkg)/(windows|common)\.txt|py3\.14/windows-arm64\.lock))$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/base.txt
+          - requirements/pytest.txt
+          - requirements/windows.txt
+          - requirements/zeromq.txt
+          - requirements/static/ci/common.txt
+          - requirements/static/ci/windows.txt
+          - --python-platform=aarch64-pc-windows-msvc
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/pkg/py3.14/windows-arm64.lock
+          - -o=requirements/static/ci/py3.14/windows-arm64.lock
+
       - id: pip-compile
         alias: compile-ci-windows-3.13-zmq-requirements
         name: Windows CI Py3.13 ZeroMQ Requirements
