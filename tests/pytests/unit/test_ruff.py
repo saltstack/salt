@@ -343,6 +343,21 @@ NEW_RULE_CASES = [
     ("PLW2101", "import threading\n\nwith threading.Lock():\n    pass\n"),
     ("PGH003", "x = 1  # type: ignore\n"),
     ("PGH005", "def test_f(m):\n    assert m.called_once_with(1)\n"),
+    ("PT002", 'import pytest\n\n\n@pytest.fixture("module")\ndef f():\n    pass\n'),
+    ("PT008", 'from unittest import mock\n\nmock.patch("os.getcwd", lambda: "/tmp")\n'),
+    ("PT020", "import pytest\n\n\n@pytest.yield_fixture\ndef f():\n    yield 1\n"),
+    (
+        "PT024",
+        "import pytest\n\n\n@pytest.mark.asyncio\n@pytest.fixture\nasync def f():\n    pass\n",
+    ),
+    (
+        "PT025",
+        'import pytest\n\n\n@pytest.mark.usefixtures("a")\n@pytest.fixture\ndef f():\n    pass\n',
+    ),
+    (
+        "PT026",
+        "import pytest\n\n\n@pytest.mark.usefixtures()\ndef test_f():\n    pass\n",
+    ),
     ("LOG001", 'import logging\n\nlog = logging.Logger("x")\n'),
     (
         "LOG007",

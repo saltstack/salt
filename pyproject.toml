@@ -170,6 +170,12 @@ select = [
     "PLW2101",  # lock created inside with
     "PGH003",  # blanket "type: ignore"
     "PGH005",  # wrong mock assertion attribute
+    "PT002",  # fixture configuration as positional arguments
+    "PT008",  # patching with a lambda
+    "PT020",  # pytest.yield_fixture
+    "PT024",  # pytest.mark.asyncio on a fixture
+    "PT025",  # pytest.mark.usefixtures on a fixture
+    "PT026",  # pytest.mark.usefixtures without arguments
     "LOG001",  # logging.Logger() instantiated directly
     "LOG007",  # logging.exception(exc_info=False)
     "LOG014",  # exc_info outside an exception handler
