@@ -413,22 +413,28 @@ def write_step_summary(
         prefix = image_url_prefix
         if not prefix.endswith("/"):
             prefix = prefix + "/"
-        # Two-column HTML grid so panels fit side-by-side in the step
+        # Three-column HTML grid so panels fit side-by-side in the step
         # summary pane.  GitHub's markdown sanitizer allows <table>, <tr>,
         # <td>, <img width=..>, <a>, and <br>; a plain markdown image
         # (``![...](...)``) always consumes a full row, which doesn't
-        # scale when there are 10+ panels.
+        # scale when there are 10+ panels.  Width-capped so three cells
+        # fit a ~1024-px summary pane.
+        cols = 3
         lines.append("<table>")
-        for i in range(0, len(rendered), 2):
+        for i in range(0, len(rendered), cols):
             lines.append("<tr>")
-            for title, path in rendered[i : i + 2]:
+            row = rendered[i : i + cols]
+            for title, path in row:
                 url = prefix + path.name
                 lines.append(
                     f'<td valign="top"><b>{title}</b><br>'
                     f'<a href="{url}"><img src="{url}" alt="{title}" '
-                    f'width="480"></a></td>'
+                    f'width="320"></a></td>'
                 )
-            if len(rendered) - i == 1:
+            # Pad trailing short row with empty cells so the grid stays
+            # rectangular (prevents the browser from stretching the last
+            # populated cell to fill the width).
+            for _ in range(cols - len(row)):
                 lines.append("<td></td>")
             lines.append("</tr>")
         lines.append("</table>")

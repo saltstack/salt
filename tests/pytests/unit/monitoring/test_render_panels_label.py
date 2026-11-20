@@ -184,19 +184,19 @@ def test_write_step_summary_provenance_header(
     assert (
         "- **Artifact**: [workflow artifact](https://example.invalid/artifact)" in text
     )
-    # Panels are embedded in a two-column HTML table so GitHub renders
-    # at least two per row.  Width-capped so they don't blow out the
+    # Panels are embedded in a three-column HTML table so GitHub renders
+    # at least three per row.  Width-capped so they don't blow out the
     # step-summary pane; links wrap back to the full-resolution PNG.
     assert "<table>" in text
     assert "<b>Master Memory</b>" in text
     assert 'alt="Master Memory"' in text
-    assert 'width="480"' in text
+    assert 'width="320"' in text
 
 
-def test_write_step_summary_grid_pairs_panels_per_row(
+def test_write_step_summary_grid_triples_panels_per_row(
     render_panels, clean_env, monkeypatch, tmp_path
 ):
-    """Three panels → two full rows with a trailing empty <td> pad."""
+    """Four panels → two rows: first full triple, second short + 2 pads."""
     summary_path = tmp_path / "step_summary.md"
     monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary_path))
 
@@ -204,6 +204,7 @@ def test_write_step_summary_grid_pairs_panels_per_row(
         ("Panel A", tmp_path / "001_A.png"),
         ("Panel B", tmp_path / "002_B.png"),
         ("Panel C", tmp_path / "003_C.png"),
+        ("Panel D", tmp_path / "004_D.png"),
     ]
     render_panels.write_step_summary(
         rendered,
@@ -211,15 +212,15 @@ def test_write_step_summary_grid_pairs_panels_per_row(
         image_url_prefix="https://example.invalid/snaps/",
     )
     text = summary_path.read_text(encoding="utf-8")
-    # Two <tr> rows wrapping three cells + one padding <td></td>.
     assert text.count("<tr>") == 2
-    # First row: A and B share a row.
     first_tr = text.split("<tr>")[1].split("</tr>")[0]
-    assert "<b>Panel A</b>" in first_tr and "<b>Panel B</b>" in first_tr
-    # Second row: C alone, padded with empty cell to keep grid rectangular.
+    assert "<b>Panel A</b>" in first_tr
+    assert "<b>Panel B</b>" in first_tr
+    assert "<b>Panel C</b>" in first_tr
+    # Second row: D alone + 2 padding cells to keep the grid rectangular.
     second_tr = text.split("<tr>")[2].split("</tr>")[0]
-    assert "<b>Panel C</b>" in second_tr
-    assert "<td></td>" in second_tr
+    assert "<b>Panel D</b>" in second_tr
+    assert second_tr.count("<td></td>") == 2
 
 
 def test_write_step_summary_no_env_keeps_old_header(
