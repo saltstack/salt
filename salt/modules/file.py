@@ -2766,7 +2766,7 @@ def replace(
                 except OSError:
                     os.remove(symlink_backup)
                     os.symlink(target_backup, symlink_backup)
-                except Exception:  # pylint: disable=broad-except
+                except Exception as exc:  # pylint: disable=broad-except
                     raise CommandExecutionError(
                         "Unable create backup symlink '{}'. "
                         "Target was '{}'. "
@@ -2978,7 +2978,7 @@ def replace(
             except OSError:
                 os.remove(symlink_backup)
                 os.symlink(target_backup, symlink_backup)
-            except Exception:  # pylint: disable=broad-except
+            except Exception as exc:  # pylint: disable=broad-except
                 raise CommandExecutionError(
                     "Unable create backup symlink '{}'. "
                     "Target was '{}'. "
