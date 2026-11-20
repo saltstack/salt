@@ -917,3 +917,13 @@ def test_nested_output():
     assert "              Succeeded: 2 (changed=1)" in ret
     assert "              Failed:    0" in ret
     assert "              Total states run:     2" in ret
+
+
+def test_format_host_with_string_data_outputs_one_line_per_line():
+    """
+    A string is the output of saltmod.function. Each of its lines is output
+    and it counts as a change.
+    """
+    output, has_changes = highstate._format_host("minion", "line one\nline two")
+    assert has_changes is True
+    assert output == "minion:\n    line one\n    line two"
