@@ -2696,12 +2696,12 @@ def _verify_session(payload):
 
     An ``_master_auth`` tag is permitted without a session (it is
     the handshake itself).  Every other tag must carry an
-    ``origin_cluster_id`` whose server-side inbound record's
-    ``session_generation`` matches the payload's.
+    ``origin_cluster_id`` whose server-side inbound record was
+    established by a real ``_master_auth`` handshake (``session_aes``
+    non-None) AND whose ``session_generation`` matches the payload's.
 
     Match against :data:`_INBOUND[origin]` (the server-side record
-    established at ``_master_auth`` handshake time and kept current
-    by :func:`_maybe_lazy_register_inbound`), NEVER
+    established at ``_master_auth`` handshake time), NEVER
     :data:`_LINKS[origin]`.  The two counters are independent:
 
     * ``_INBOUND[origin].session_generation`` -- *origin's* own
@@ -2722,6 +2722,12 @@ def _verify_session(payload):
     ``{"failed": True}`` for every minion more than one hop out --
     LocalClient's "no return within timeout" marker, because the
     transit's forwarded publishes never ran.
+
+    The ``session_aes is not None`` requirement is a defense-in-depth
+    guard: a record without a handshake-established AES must never
+    verify, so any future reintroduction of a lazy-register-style
+    bootstrap path cannot establish a verify-passing session from an
+    attacker-supplied frame alone.
     """
     if not isinstance(payload, dict):
         return False
@@ -2738,6 +2744,9 @@ def _verify_session(payload):
         return False
     inbound = _INBOUND.get(origin)
     if inbound is None:
+        return False
+    if getattr(inbound, "session_aes", None) is None:
+        # Record was not established by a real handshake -- reject.
         return False
     expected = getattr(inbound, "session_generation", None)
     if expected is None:
@@ -2797,24 +2806,28 @@ async def _handle_inbound(payload):
     if handler is None:
         log.debug("topology inbound: unknown tag %r dropped", tag)
         return None
-    # Lazy inbound registration: when a frame arrives from a peer whose
-    # key is accepted on disk but ``_INBOUND[origin]`` is empty in this
-    # process, auto-register.  Covers the common zmq REQ-REP survival
-    # pattern where the client's socket silently reconnects after the
-    # server restarts -- the client never learns the session is dead
-    # (zmq delivers the queued send to the fresh server), so the server
-    # must bootstrap state from the authenticated key on disk rather
-    # than wait for a re-handshake that will not come.
+    # Lazy inbound registration was previously performed here with the
+    # rationale that a peer whose ``masters/<origin>.pub`` sits on disk
+    # should be able to bootstrap an ``_INBOUND`` record without an
+    # explicit ``_master_auth`` round trip -- "the on-disk key is the
+    # authentication boundary."  That reasoning is wrong: the on-disk
+    # key is an identity anchor (whose public half we have), not proof
+    # that THIS sender holds the matching private half for THIS frame.
+    # An attacker with network reach to ``topology_link_port`` and
+    # knowledge of any one accepted peer's ``cluster_id`` string could
+    # therefore inject a self-signed session into ``_INBOUND`` by
+    # choosing their own ``session_generation`` and letting the lazy
+    # path write it.  The injected record then satisfied
+    # :func:`_verify_session`, which compared against the record the
+    # attacker just created.
     #
-    # The accepted-key check is the authentication boundary.  The
-    # frame's self-reported ``origin_cluster_id`` is only trusted
-    # because the peer could not have reached us on
-    # ``topology_link_port`` without previously completing a
-    # ``_master_auth`` whose cluster_id key is now in
-    # ``masters/<cluster_id>.pub`` -- a stranger with no accepted key
-    # cannot forge an entry here.
-    if tag not in ("_master_auth", "topology/_master_auth"):
-        _maybe_lazy_register_inbound(inner)
+    # The gate is now: every non-handshake frame requires a prior
+    # ``_master_auth``-established ``_INBOUND[origin]`` record.  If a
+    # peer loses the server-side session (server restart, process
+    # replacement) its frames are dropped here with WARNING until
+    # :meth:`PeerMasterLink.connect` completes a fresh handshake --
+    # the outbound-connect path already retries, so recovery is just
+    # delayed, not blocked.
     if not _verify_session(inner):
         log.warning(
             "topology inbound: dropping %r with bad/missing session (origin=%r, gen=%r)",
