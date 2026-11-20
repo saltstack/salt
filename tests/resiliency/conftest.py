@@ -646,10 +646,18 @@ def topology(request):
     _launch_exporters(topo_name, spec, workdir)
 
     # --- wait for initial auth ----------------------------------------
+    # Topologies that declare per-minion ``dummy_resource_count`` (cluster3)
+    # take longer to reach the first-ping bar because each minion parses
+    # its full resource list during start-up before the auth channel is
+    # ready.  5 min is comfortable for every non-registry topology; bump
+    # to 15 min when resources are declared so a slow runner doesn't
+    # false-negative the whole suite.
+    expected_total = _expected_resource_total(spec)
+    auth_timeout = 900 if expected_total > 0 else 300
     topology_handle = Topology(spec)
     auth_ok = False
     try:
-        auth_ok = topology_handle.wait_initial_auth(300)
+        auth_ok = topology_handle.wait_initial_auth(auth_timeout)
     except Exception as exc:  # noqa: BLE001 -- surface + record anything
         _record_setup_error_row(
             "topology_setup",
@@ -658,7 +666,8 @@ def topology(request):
     if not auth_ok:
         _record_setup_error_row(
             "topology_setup",
-            "wait_initial_auth(300) did not confirm every minion is ping-reachable",
+            f"wait_initial_auth({auth_timeout}) did not confirm every "
+            f"minion is ping-reachable",
         )
         _snapshot_compose_logs(spec, workdir)
         if not config.getoption("--no-cleanup"):
@@ -669,7 +678,7 @@ def topology(request):
                 check=False,
             )
         pytest.fail(
-            f"wait_initial_auth(300) timed out for topology={topo_name!r}",
+            f"wait_initial_auth({auth_timeout}) timed out for topology={topo_name!r}",
             pytrace=False,
         )
 
@@ -695,7 +704,8 @@ def topology(request):
     # total.  For topologies that don't declare resources (single /
     # cluster5 / multimaster / syndic) the expected total is 0 and we
     # fall back to the short sleep-based warmup.
-    expected_total = _expected_resource_total(spec)
+    # ``expected_total`` was already resolved above for the auth-timeout
+    # branch; reuse it rather than re-running the compose-dir scan.
     if expected_total > 0:
         _wait_resource_register_complete(
             spec,
