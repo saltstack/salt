@@ -17,16 +17,15 @@ def test_deprecation_58638():
     pytest.raises(TypeError, manage.list_state, show_ipv4="data")
 
     # check that show_ipv4 will raise an error
-    try:
+    # Python 3.13+ appends a ``. Did you mean 'show_ip'?`` suggestion to
+    # the TypeError when an unexpected kwarg matches a similar parameter.
+    # The pattern only anchors the start, so it accepts both the older bare
+    # message and the newer one with the trailing suggestion.
+    with pytest.raises(
+        TypeError,
+        match=r"^list_state\(\) got an unexpected keyword argument 'show_ipv4'",
+    ):
         manage.list_state(show_ipv4="data")  # pylint: disable=unexpected-keyword-arg
-    except TypeError as no_show_ipv4:
-        # Python 3.13+ appends a ``. Did you mean 'show_ip'?`` suggestion to
-        # the TypeError when an unexpected kwarg matches a similar parameter.
-        # ``startswith`` accepts both the older bare message and the newer
-        # one with the trailing suggestion.
-        assert str(no_show_ipv4).startswith(
-            "list_state() got an unexpected keyword argument 'show_ipv4'"
-        )
 
 
 def test_status_reports_unresponsive_minion_as_down():
