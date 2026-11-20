@@ -614,13 +614,29 @@ class Topology:
     def salt_key_accepted_on(self, master: str) -> list[str]:
         """Return minion ids that are in the "Accepted Keys" section
         of ``salt-key -L`` on ``master``.  Returns ``[]`` if the command
-        fails for any reason (container down, cli not ready).
+        fails for any reason (container down, cli not ready, or the
+        30s subprocess cap is exceeded).
+
+        ``salt-key -L`` cold-imports the full salt loader and takes
+        15-20s even on an idle master; when the master has just come up
+        on a cold GHA runner (``wait_initial_auth`` first poll on
+        cluster3) or has queued-return backlog from a recent fault, a
+        single invocation can push past the 30s cap.  Treat
+        ``TimeoutExpired`` as "no accepted keys visible from this master
+        yet" rather than letting it propagate -- the caller
+        (``wait_initial_auth``'s poll loop) retries on its own
+        schedule.  Without this guard the exception crashes the fixture
+        setup before the ping gate is ever tried, every test ERRORs
+        with ``wait_initial_auth(N) timed out`` on cluster3.
         """
-        proc = self._run(
-            ["docker", "exec", master, "salt-key", "-L", "--out=json"],
-            check=False,
-            timeout=30,
-        )
+        try:
+            proc = self._run(
+                ["docker", "exec", master, "salt-key", "-L", "--out=json"],
+                check=False,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            return []
         if proc.returncode != 0 or not proc.stdout.strip():
             return []
         try:
@@ -1250,8 +1266,13 @@ class Topology:
         deadline = time.monotonic() + timeout
         expected = set(self.spec.minion_ids)
         masters = tuple(self.spec.masters)
+        start = time.monotonic()
+        iteration = 0
+        last_keys_seen: set[str] = set()
+        last_ping_seen: set[str] = set()
 
         while time.monotonic() < deadline:
+            iteration += 1
             # Gate 1: every expected id is an accepted key on some
             # master.  Cheap -- one salt-key -L per master.
             keys_seen: set[str] = set()
@@ -1259,7 +1280,21 @@ class Topology:
                 for mid in self.salt_key_accepted_on(m):
                     if mid in expected:
                         keys_seen.add(mid)
+            last_keys_seen = keys_seen
             if not expected.issubset(keys_seen):
+                # Periodic progress so a stuck gate isn't silent for
+                # the full timeout window -- helps diagnose cluster3
+                # bringup regressions without having to rummage in the
+                # compose.log snapshot.
+                if iteration % 6 == 0:
+                    elapsed = int(time.monotonic() - start)
+                    log.info(
+                        "wait_initial_auth[%ss] gate1 keys: %d/%d accepted (missing=%s)",
+                        elapsed,
+                        len(keys_seen),
+                        len(expected),
+                        sorted(expected - keys_seen),
+                    )
                 time.sleep(5)
                 continue
 
@@ -1271,9 +1306,33 @@ class Topology:
                 for mid, ok in pings.items():
                     if ok and mid in expected:
                         ping_seen.add(mid)
+            last_ping_seen = ping_seen
             if expected.issubset(ping_seen):
                 return True
 
+            if iteration % 6 == 0:
+                elapsed = int(time.monotonic() - start)
+                log.info(
+                    "wait_initial_auth[%ss] gate2 pings: %d/%d responded (missing=%s)",
+                    elapsed,
+                    len(ping_seen),
+                    len(expected),
+                    sorted(expected - ping_seen),
+                )
+
             time.sleep(5)
 
+        # Timeout: emit the final observed state so the setup-error row
+        # includes actionable context instead of just "timed out".
+        log.error(
+            "wait_initial_auth timed out after %ds: "
+            "keys_seen=%d/%d (missing=%s) pings_seen=%d/%d (missing=%s)",
+            timeout,
+            len(last_keys_seen),
+            len(expected),
+            sorted(expected - last_keys_seen),
+            len(last_ping_seen),
+            len(expected),
+            sorted(expected - last_ping_seen),
+        )
         return False
