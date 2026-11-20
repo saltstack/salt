@@ -227,7 +227,7 @@ def test_when_event_finishes_but_is_finished_is_done_then_result_should_be_True(
         f.set_exception(saltnado.TimeoutException())
         is_finished.set_result("This is done")
         yield f
-        assert False, "Never should make it here"
+        raise AssertionError("Never should make it here")
 
     minions = {expected_minion_id: expected_minion_value}
 

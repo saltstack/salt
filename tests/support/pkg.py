@@ -1011,14 +1011,14 @@ class SaltPkgInstall:
         parser = configparser.ConfigParser(interpolation=None)
         if not parser.read(repo_path, encoding="utf-8"):
             log.error("Could not read Salt repo file at %s", repo_path)
-            assert False, f"Missing or unreadable repo file: {repo_path}"
+            raise AssertionError(f"Missing or unreadable repo file: {repo_path}")
         if not parser.has_section(repo_id):
             log.error(
                 "Salt repo file %s has no [%s] stanza (upstream salt.repo changed?)",
                 repo_path,
                 repo_id,
             )
-            assert False, f"Repo file {repo_path} missing [{repo_id}]"
+            raise AssertionError(f"Repo file {repo_path} missing [{repo_id}]")
         parser.set(repo_id, "enabled", "1" if enabled else "0")
         with salt.utils.files.fopen(repo_path, "w", encoding="utf-8") as fp:
             parser.write(fp)

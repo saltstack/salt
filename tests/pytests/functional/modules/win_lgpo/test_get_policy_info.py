@@ -41,7 +41,7 @@ def test_62058_whitespace(lgpo):
                 "Allow Settings to retrieve online tips." in element["element_aliases"]
             )
             return
-    assert False
+    raise AssertionError()
 
 
 def test_61859(lgpo):

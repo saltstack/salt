@@ -74,7 +74,7 @@ class TestEventReturn(AdaptedConfigurationTestCaseMixin, ScriptPathMixin, TestCa
         try:
             while True:
                 if time.time() > max_time:
-                    assert False, "Max timeout ocurred"
+                    raise AssertionError("Max timeout ocurred")
                 time.sleep(0.5)
                 _out = proc.recv()
                 _err = proc.recv_err()

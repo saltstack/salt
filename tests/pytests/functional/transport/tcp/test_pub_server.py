@@ -187,7 +187,7 @@ async def test_pub_channel(master_opts, minion_opts, io_loop):
         while not publishes:
             await tornado.gen.sleep(0.3)
             if time.monotonic() - start > 30:
-                assert False, "Message not published after 30 seconds"
+                raise AssertionError("Message not published after 30 seconds")
     finally:
         server.close()
         client.close()
@@ -276,7 +276,7 @@ async def test_pub_channel_raw_payload_passthrough(master_opts, minion_opts, io_
             while not publishes:
                 await tornado.gen.sleep(0.3)
                 if time.monotonic() - start > 30:
-                    assert False, "Message not published after 30 seconds"
+                    raise AssertionError("Message not published after 30 seconds")
         finally:
             server.close()
             client.close()

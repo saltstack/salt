@@ -282,7 +282,7 @@ class TestSignalHandlingProcess(TestCase):
                 proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
-            assert False, "psutil.NoSuchProcess raised"
+            raise AssertionError("psutil.NoSuchProcess raised")
 
     def test_process_children_do_not_exist(self):
         try:
@@ -290,7 +290,7 @@ class TestSignalHandlingProcess(TestCase):
                 proc = salt.utils.process.SignalHandlingProcess(target=self.target)
                 proc.start()
         except psutil.NoSuchProcess:
-            assert False, "psutil.NoSuchProcess raised"
+            raise AssertionError("psutil.NoSuchProcess raised")
 
     @staticmethod
     def run_forever_sub_target(evt):
@@ -584,7 +584,7 @@ class TestDup2(TestCase):
             try:
                 salt.utils.process.dup2(f1, f2)
             except io.UnsupportedOperation:
-                assert False, "io.UnsupportedOperation was raised"
+                raise AssertionError("io.UnsupportedOperation was raised")
         assert not dup_mock.called
 
 

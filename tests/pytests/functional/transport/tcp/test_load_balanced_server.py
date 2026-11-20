@@ -55,7 +55,7 @@ def test_tcp_load_balancer_server(master_opts, io_loop):
 
     try:
         if time.monotonic() - start > 30:
-            assert False, "Took longer than 30 seconds to receive message"
+            raise AssertionError("Took longer than 30 seconds to receive message")
 
         assert [package] == messages
     finally:
