@@ -274,11 +274,11 @@ class TestPoolNameSpecialCharacters:
             config["pool_name"] = pool_name_with_null
             transport = salt.transport.zeromq.RequestServer(config)
             uri = transport.get_worker_uri()
-            # The validation above normally rejects the null byte, which ends
-            # in the except below. If it is ever relaxed and we get here, the
-            # uri must not contain the null byte: libzmq cuts an ipc path at
-            # the null byte without an error, which would let two differently
-            # named pools share one socket.
+            # If we reach here without raising, the null byte must not have
+            # survived into the uri; a uri that still contains it would
+            # silently truncate at bind time (pool_name becomes the IPC path
+            # at salt/transport/zeromq.py) and let two differently-named
+            # pools collide on the same socket.
             assert (
                 "\x00" not in uri
             ), f"Null byte survived into {uri!r}; risks path truncation at bind"
