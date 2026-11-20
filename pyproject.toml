@@ -170,6 +170,12 @@ select = [
     "PLW2101",  # lock created inside with
     "PGH003",  # blanket "type: ignore"
     "PGH005",  # wrong mock assertion attribute
+    "PT002",  # fixture configuration as positional arguments
+    "PT008",  # patching with a lambda
+    "PT020",  # pytest.yield_fixture
+    "PT024",  # pytest.mark.asyncio on a fixture
+    "PT025",  # pytest.mark.usefixtures on a fixture
+    "PT026",  # pytest.mark.usefixtures without arguments
     "LOG001",  # logging.Logger() instantiated directly
     "LOG007",  # logging.exception(exc_info=False)
     "LOG014",  # exc_info outside an exception handler
@@ -191,6 +197,13 @@ select = [
     "RUF033",  # default in __post_init__
     "RUF060",  # "in" test on an empty collection
     "RUF068",  # duplicate entry in __all__
+    "T100",  # debugger call left in the code
+    "B024",  # abstract base class without abstract methods
+    "B027",  # empty method in an abstract base class without @abstractmethod
+    "RUF028",  # formatter suppression comment that has no effect
+    "RUF049",  # @dataclass on an Enum
+    "RUF058",  # itertools.starmap on zip
+    "RUF104",  # range suppression comment without a matching enable
     # Bugs with a few existing violations. Only new ones block a PR.
     "PLW0129",  # assert on a string literal
     "PLW0120",  # else on a loop without break
@@ -225,6 +238,12 @@ select = [
     "S505",  # weak cryptographic key
     "S609",  # wildcard in a shell command
     "S612",  # logging.config.listen
+    "S201",  # Flask app run with debug=True
+    "S308",  # mark_safe() with a variable
+    "S508",  # insecure SNMP version
+    "S509",  # SNMP without encryption
+    "S610",  # Django extra() with a variable
+    "S611",  # Django RawSQL with a variable
     "SIM107",  # return in try/finally
     "SIM220",  # x and not x
     "SIM221",  # x or not x
