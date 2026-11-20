@@ -1193,7 +1193,7 @@ def enumerate_tokens(sid=None, session_id=None, privs=None):
             if exc.winerror == 5:
                 log.debug("Unable to OpenProcess pid=%d name=%s", p.pid, p.name())
                 continue
-            raise exc
+            raise
         try:
             access = (
                 win32security.TOKEN_DUPLICATE

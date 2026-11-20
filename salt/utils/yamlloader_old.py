@@ -183,7 +183,7 @@ class SaltYamlSafeLoader(yaml.SafeLoader):
                         self.column = problem_column
                         self.pointer = problem_pointer
             # Raise the caught exception
-            raise exc
+            raise
 
     def flatten_mapping(self, node):
         merge = []

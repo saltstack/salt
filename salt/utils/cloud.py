@@ -945,7 +945,7 @@ class Client:
             except SCMRException as exc:
                 log.debug("Exception encountered while deleting service %s", repr(exc))
                 if time.time() - wait_start > wait_timeout:
-                    raise exc
+                    raise
                 time.sleep(sleep_wait)
                 continue
             break
@@ -966,7 +966,7 @@ class Client:
             except SMBResponseException as exc:
                 log.debug("Exception deleting file %s %s", self._exe_file, repr(exc))
                 if time.time() - wait_start > wait_timeout:
-                    raise exc
+                    raise
                 time.sleep(sleep_wait)
                 continue
             break
