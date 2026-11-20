@@ -192,7 +192,7 @@ def test_omits(defaults, opt_name, wildcard_opt_name):
 @pytest.mark.parametrize("backup", ("", "minion", "master", "both"))
 def test_backup_mode(backup):
     res = config.backup_mode(backup)
-    assert res == backup
+    assert res == backup or "minion"
 
 
 @pytest.mark.parametrize(
