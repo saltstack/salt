@@ -171,10 +171,19 @@ def master_pem_backup(topology):
 
     yield PEM_BACKUP_INSIDE
 
-    # Safety-net restore on teardown.  Idempotent: if the test body
-    # already restored, this is a no-op cp over an identical file.  We
-    # do this unconditionally because the fallout of NOT doing it is a
-    # master with no private key.
+    # Safety-net restore on teardown.  Only needed if the test body
+    # aborted before its own restore (pytest.fail in the truncate phase,
+    # KeyboardInterrupt, etc.).  Idempotent: if the test body already
+    # restored, this is a no-op cp over an identical file.
+    #
+    # Do NOT send SIGHUP from the teardown.  The test body's revive
+    # path has already docker-restart-ed the master to a clean state;
+    # a second SIGHUP here races the running salt-master and crashes it
+    # (observed locally 2026-11-20: test PASSED, then teardown SIGHUP
+    # exited the master with 129, leaving every subsequent test in the
+    # suite with a dead master).  If the master IS down when teardown
+    # runs (test body never executed its revive), bring the container
+    # back via docker start so following tests have a live master.
     try:
         topology.exec(
             primary,
@@ -184,7 +193,6 @@ def master_pem_backup(topology):
                 f"if [ -s '{PEM_BACKUP_INSIDE}' ]; then "
                 f"  cp '{PEM_BACKUP_INSIDE}' '{pem_path}'; "
                 f"  chmod 400 '{pem_path}'; "
-                f"  pkill -HUP -f salt-master || true; "
                 f"fi"
             ),
             check=False,
@@ -193,6 +201,15 @@ def master_pem_backup(topology):
         # Fixture teardown must never raise; a surprise here would mask
         # the real failure.
         pass
+
+    # If the test body's own revive never ran (early abort), the master
+    # container may still be exited after SIGHUP crashed it.  Bring it
+    # back so the next test has a live master.  Idempotent if already up.
+    if not topology.inspect_running(primary):
+        try:
+            topology.start(primary)
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def test_saltop_master_pem_truncate_recover(
@@ -259,12 +276,36 @@ def test_saltop_master_pem_truncate_recover(
         except Exception:  # noqa: BLE001
             pass
 
+    # Revive the master container deterministically.  Observed locally
+    # and in CI run 44698695931: salt-master reads the zero-byte pem,
+    # exits with 129 (SIGHUP from pkill or its own crash handler), tini
+    # brings the container down.  ``inspect_running`` right after the
+    # pkill returns True because the exit hasn't propagated through tini
+    # yet, so a conditional ``if not running: start`` loses the race.
+    # Just ``docker restart`` the container -- idempotent whether the
+    # SIGHUP already killed it or not, and cheap compared to the 180s
+    # reconnect window.  Then wait_initial_auth + resample before so the
+    # assert_reconnect baseline is post-revive steady state, not the
+    # cold-start reconnect churn.  Same supervisor-simulation pattern
+    # test_resource_oom_squeeze uses.
+    notes = f"master.pem truncated for {PEM_TRUNCATE_HOLD_SEC}s"
+    try:
+        topology.restart(primary)
+    except Exception:  # noqa: BLE001
+        # Fall through -- assert_reconnect will produce a proper failure
+        # record with missing minions and the cause will be visible in
+        # compose.log.
+        pass
+    if topology.wait_initial_auth(timeout=180):
+        before = topology.sample_minions()
+        notes += " revived=1"
+
     fault_sec = int(time.monotonic() - fault_start)
     topology.assert_reconnect(
         scenario,
         fault_sec=fault_sec,
         before=before,
-        notes=f"master.pem truncated for {PEM_TRUNCATE_HOLD_SEC}s",
+        notes=notes,
         item=request.node,
     )
 
