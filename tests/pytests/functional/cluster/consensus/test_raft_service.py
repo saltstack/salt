@@ -404,7 +404,7 @@ class TestFoundingConfig:
 
             # Simulate what _heartbeat_tick does: call _maybe_commit_founding_config.
             # We use the service helper directly on a minimal RaftService wrapper.
-            from salt.cluster.consensus.raft.log import LogEntryType  # noqa
+            from salt.cluster.consensus.raft.log import LogEntryType
 
             # Manually invoke the method logic (the node itself is what matters).
             voters = [leader_cn.node.node_id] + [
@@ -439,7 +439,7 @@ class TestFoundingConfig:
             svc._node.become_candidate()
             svc._node.become_leader()
             # Put something in the log first.
-            from salt.cluster.consensus.raft.log import LogEntryType  # noqa
+            from salt.cluster.consensus.raft.log import LogEntryType
 
             svc._node.log_add(
                 {"voters": ["m1", "m2"], "learners": []},
