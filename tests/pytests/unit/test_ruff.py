@@ -422,6 +422,27 @@ NEW_RULE_CASES = [
     ),
     ("S609", 'import subprocess\n\nsubprocess.Popen("chmod 600 *", shell=True)\n'),
     ("S612", "import logging.config\n\nlogging.config.listen(9999)\n"),
+    ("S201", "from flask import Flask\n\napp = Flask(__name__)\napp.run(debug=True)\n"),
+    (
+        "S308",
+        "from django.utils.safestring import mark_safe\n\n\ndef f(text):\n    return mark_safe(text)\n",
+    ),
+    (
+        "S508",
+        'from pysnmp.hlapi import CommunityData\n\nCommunityData("public", mpModel=0)\n',
+    ),
+    (
+        "S509",
+        'from pysnmp.hlapi import UsmUserData\n\nUsmUserData("user", "authkey")\n',
+    ),
+    (
+        "S610",
+        'from django.contrib.auth.models import User\n\n\ndef f(q):\n    return User.objects.all().extra(select={"a": q})\n',
+    ),
+    (
+        "S611",
+        "from django.db.models.expressions import RawSQL\n\n\ndef f(q):\n    return RawSQL(q, [])\n",
+    ),
     (
         "SIM107",
         "def f():\n    try:\n        return 1\n    finally:\n        return 2\n",

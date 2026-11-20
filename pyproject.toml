@@ -225,6 +225,12 @@ select = [
     "S505",  # weak cryptographic key
     "S609",  # wildcard in a shell command
     "S612",  # logging.config.listen
+    "S201",  # Flask app run with debug=True
+    "S308",  # mark_safe() with a variable
+    "S508",  # insecure SNMP version
+    "S509",  # SNMP without encryption
+    "S610",  # Django extra() with a variable
+    "S611",  # Django RawSQL with a variable
     "SIM107",  # return in try/finally
     "SIM220",  # x and not x
     "SIM221",  # x or not x
