@@ -13,6 +13,8 @@ also be used to coordinate between masters.
 import logging
 import sys
 
+log = logging.getLogger(__name__)
+
 try:
     from socket import gethostname
 
@@ -279,10 +281,10 @@ def lock(
 
     # block waiting for lock acquisition
     if timeout:
-        logging.info("Acquiring lock %s with timeout=%s", path, timeout)
+        log.info("Acquiring lock %s with timeout=%s", path, timeout)
         __context__["semaphore_map"][path].acquire(timeout=timeout)
     else:
-        logging.info("Acquiring lock %s with no timeout", path)
+        log.info("Acquiring lock %s with no timeout", path)
         __context__["semaphore_map"][path].acquire()
 
     return __context__["semaphore_map"][path].is_acquired
@@ -351,7 +353,7 @@ def unlock(
         del __context__["semaphore_map"][path]
         return True
     else:
-        logging.error("Unable to find lease for path %s", path)
+        log.error("Unable to find lease for path %s", path)
         return False
 
 
