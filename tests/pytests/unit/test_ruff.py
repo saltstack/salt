@@ -385,6 +385,19 @@ NEW_RULE_CASES = [
     ),
     ("RUF060", "x = 1 in []\n"),
     ("RUF068", '__all__ = ["a", "a"]\n'),
+    ("T100", "breakpoint()\n"),
+    ("B024", "import abc\n\n\nclass A(abc.ABC):\n    def f(self):\n        return 1\n"),
+    ("B027", "import abc\n\n\nclass A(abc.ABC):\n    def f(self):\n        pass\n"),
+    ("RUF028", "# fmt: skip\nx = 1\n"),
+    (
+        "RUF049",
+        "from dataclasses import dataclass\nfrom enum import Enum\n\n\n@dataclass\nclass E(Enum):\n    A = 1\n",
+    ),
+    (
+        "RUF058",
+        "import itertools\n\nx = list(itertools.starmap(lambda a, b: a + b, zip([1], [2])))\n",
+    ),
+    ("RUF104", "# ruff: disable[F401]\nimport sys\n"),
     (
         "ASYNC210",
         'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
