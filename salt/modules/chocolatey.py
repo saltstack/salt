@@ -415,7 +415,7 @@ def unbootstrap():
     removed = []
     known_paths = []
     # Get the install location from the registry first
-    if os.environ.get("ChocolateyInstall", False):
+    if os.environ.get("ChocolateyInstall"):
         known_paths.append(os.environ.get("ChocolateyInstall"))
     known_paths.extend(
         [
