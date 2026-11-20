@@ -503,7 +503,7 @@ class Maintenance(salt.utils.process.SignalHandlingProcess):
         self.presence_events = False
         if self.opts.get("presence_events", False):
             tcp_only = True
-            for transport, _ in iter_transport_opts(self.opts):
+            for transport, _ in iter_transport_opts(self.opts, SMaster.secrets):
                 if transport != "tcp":
                     tcp_only = False
             if not tcp_only:
@@ -1202,7 +1202,7 @@ class Master(SMaster):
 
             pub_channels = []
             log.info("Creating master publisher process")
-            for _, opts in iter_transport_opts(self.opts):
+            for _, opts in iter_transport_opts(self.opts, SMaster.secrets):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 chan.pre_fork(self.process_manager, kwargs={"secrets": SMaster.secrets})
                 if not chan.transport.started.wait(60):
@@ -1417,7 +1417,9 @@ class EventMonitor(salt.utils.process.SignalHandlingProcess):
                     data.get("jid", "no jid"),
                 )
                 if not self.channels:
-                    for transport, opts in iter_transport_opts(self.opts):
+                    for transport, opts in iter_transport_opts(
+                        self.opts, SMaster.secrets
+                    ):
                         chan = salt.channel.server.PubServerChannel.factory(opts)
                         self.channels.append(chan)
                 tasks = []
@@ -1938,7 +1940,7 @@ class RequestServer(salt.utils.process.SignalHandlingProcess):
 
             worker_pools = get_worker_pools_config(self.opts)
 
-        for transport, opts in iter_transport_opts(self.opts):
+        for transport, opts in iter_transport_opts(self.opts, SMaster.secrets):
             chan = salt.channel.server.ReqServerChannel.factory(opts)
             # Pass worker_pools to pre_fork. Transports that support it (ZeroMQ)
             # will start the router/device. Others will just bind/initialize.
@@ -5962,7 +5964,7 @@ class ClearFuncs(TransportMethods):
         Take a load and send it across the network to connected minions
         """
         if not self.channels:
-            for transport, opts in iter_transport_opts(self.opts):
+            for transport, opts in iter_transport_opts(self.opts, SMaster.secrets):
                 chan = salt.channel.server.PubServerChannel.factory(opts)
                 self.channels.append(chan)
         tasks = set()
@@ -6317,6 +6319,6 @@ class ClearFuncs(TransportMethods):
     def connect(self):
         if self.channels:
             return
-        for transport, opts in iter_transport_opts(self.opts):
+        for transport, opts in iter_transport_opts(self.opts, SMaster.secrets):
             chan = salt.channel.server.PubServerChannel.factory(opts)
             self.channels.append(chan)
