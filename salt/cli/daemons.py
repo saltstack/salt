@@ -7,6 +7,7 @@ import os
 import warnings
 
 import salt.utils.kinds as kinds
+import salt.utils.state
 from salt.exceptions import SaltClientError, SaltSystemExit, get_error_message
 from salt.utils import migrations
 from salt.utils import ostruststore as _ostruststore
@@ -322,6 +323,15 @@ class Minion(
             # Late import so logging works correctly
             import salt.minion
 
+            # Queue-lock + orphaned-running-file recovery runs here --
+            # once per salt-minion daemon process, before any Minion
+            # instances are constructed. Running it from Minion.__init__
+            # (its previous home) also fired it inside per-job spawn
+            # subprocesses on Windows, stomping on locks held by live
+            # siblings. Fans out across the master list in multimaster
+            # so each per-master queue_base_dir is cleaned.
+            salt.utils.state.cleanup_queue_state(self.config)
+
             # If the minion key has not been accepted, then Salt enters a loop
             # waiting for it, if we daemonize later then the minion could halt
             # the boot process waiting for a key to be accepted on the master.
@@ -548,6 +558,10 @@ class ProxyMinion(
         # TODO: AIO core is separate from transport
         # Late import so logging works correctly
         import salt.minion
+
+        # Queue-lock + orphaned-running-file recovery runs once per daemon.
+        # See the salt-minion branch of prepare() for the rationale.
+        salt.utils.state.cleanup_queue_state(self.config)
 
         # If the minion key has not been accepted, then Salt enters a loop
         # waiting for it, if we daemonize later then the minion could halt

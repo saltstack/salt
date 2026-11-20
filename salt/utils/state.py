@@ -7,6 +7,8 @@ Utility functions for state functions
 import errno
 import logging
 import os
+import stat
+import time
 
 import salt.payload
 import salt.state
@@ -14,6 +16,11 @@ import salt.utils.files
 import salt.utils.optsdict
 import salt.utils.process
 from salt.exceptions import CommandExecutionError
+
+# How long an empty lock file is assumed to belong to a concurrent acquirer
+# that has created the file but not yet written its PID. See
+# cleanup_stale_queue_lock().
+_EMPTY_LOCK_GRACE_SECONDS = 5.0
 
 log = logging.getLogger(__name__)
 
@@ -45,11 +52,26 @@ def _sanitize_master_id(master):
 
 def queue_base_dir(opts):
     """
-    Return the per-master queue base directory.
+    Return the per-master (and per-proxy, if applicable) queue base
+    directory.
+
+    ``salt-proxy`` daemons share a default cachedir
+    (``/var/cache/salt/proxy``) across every proxy running on a host. The
+    master-name component alone is therefore not enough to keep two
+    proxies' locks and queues isolated: two proxies against the same
+    master would collide. When ``opts["proxyid"]`` is present, namespace
+    the queue tree under it so each proxy has its own lock path.
     """
-    return os.path.join(
-        opts["cachedir"], "queues", _sanitize_master_id(opts.get("master"))
-    )
+    master_part = _sanitize_master_id(opts.get("master"))
+    proxyid = opts.get("proxyid")
+    if proxyid:
+        return os.path.join(
+            opts["cachedir"],
+            "queues",
+            _sanitize_master_id(proxyid),
+            master_part,
+        )
+    return os.path.join(opts["cachedir"], "queues", master_part)
 
 
 def queue_lock_path(opts):
@@ -101,6 +123,180 @@ def acquire_async_queue_lock(opts):
     return salt.utils.files.await_lock(
         lock_path, lock_fn=lock_path, timeout=5.0, sleep=0.1
     )
+
+
+def _pid_is_alive(pid):
+    """
+    Return True if ``pid`` names a currently-running process.
+
+    Delegates to ``salt.utils.process.os_is_running`` which uses
+    ``psutil.pid_exists`` when available. **Do not** call
+    ``os.kill(pid, 0)`` directly: on Windows, Python implements
+    ``os.kill`` via ``TerminateProcess``, which actually kills the
+    target even for signal 0.
+    """
+    try:
+        return salt.utils.process.os_is_running(pid)
+    except Exception:  # pylint: disable=broad-except
+        return False
+
+
+def _pid_is_lock_holder(pid, lock_mtime):
+    """
+    Return True if the process at ``pid`` can plausibly be the holder
+    that wrote the lock file.
+
+    The lock file's mtime is the moment the holder wrote its PID. If the
+    current process at ``pid`` was started AFTER that moment its PID has
+    been reused by an unrelated process and the recorded holder is gone.
+    Without this check, a SIGKILLed holder's PID being reclaimed (e.g.
+    on a PID-wrap-around or ``kernel.ns_last_pid`` manipulation) would
+    make cleanup skip the lock and the next ``wait_lock`` acquirer
+    would sit on the 24 h timeout.
+
+    When ``psutil`` is unavailable we fall back to pure liveness; the
+    PID-reuse window is unprotected but no false negatives beyond that.
+    """
+    if not _pid_is_alive(pid):
+        return False
+    try:
+        import psutil  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return True
+    try:
+        return psutil.Process(pid).create_time() <= lock_mtime
+    except psutil.NoSuchProcess:
+        return False
+    except psutil.Error:
+        # Permission denied or other psutil error -- cannot determine
+        # start time, be conservative and assume live holder.
+        return True
+
+
+def cleanup_stale_queue_lock(opts):
+    """
+    Remove a leftover ``queue.lock`` file, but only when it is no longer
+    held by a live process.
+
+    ``salt.utils.files.wait_lock`` writes the holder's PID into the lock
+    file. The cleanup reads that PID and probes it. Decision matrix:
+
+    - PID parses and is alive -> lock is in use, skip.
+    - PID parses and is dead  -> safe to remove at any age.
+    - File is empty (acquirer crashed or raced between O_EXCL and the
+      PID write) -> assume a concurrent live acquirer during the first
+      ``_EMPTY_LOCK_GRACE_SECONDS``; remove only once the file is
+      older than that.
+
+    The grace window closes the microsecond race between ``O_CREAT|O_EXCL``
+    and the PID write inside ``wait_lock``. A legitimate acquire will
+    always finish its PID write well before the grace expires.
+
+    Safe to call from daemon ``prepare()`` and from
+    ``salt.cli.caller.BaseCaller.__init__``. Must NOT be called from
+    inside per-job subprocesses -- the cleanup still shouldn't fire
+    repeatedly on every spawn-start Minion construction.
+    """
+    lock_path = queue_lock_path(opts)
+    try:
+        st = os.stat(lock_path)
+    except OSError:
+        return
+    if not stat.S_ISREG(st.st_mode):
+        return
+    try:
+        with salt.utils.files.fopen(lock_path, encoding="utf-8") as fp:
+            content = fp.read().strip()
+    except OSError:
+        return
+
+    if content:
+        try:
+            pid = int(content)
+        except ValueError:
+            pid = None
+        if pid is not None and _pid_is_lock_holder(pid, st.st_mtime):
+            log.debug(
+                "queue.lock %s held by live pid %d; skipping stale cleanup",
+                lock_path,
+                pid,
+            )
+            return
+    else:
+        age = time.time() - st.st_mtime
+        if age < _EMPTY_LOCK_GRACE_SECONDS:
+            log.debug(
+                "queue.lock %s is empty and only %.3fs old; assume a "
+                "concurrent acquirer has not yet written its PID",
+                lock_path,
+                age,
+            )
+            return
+
+    try:
+        os.remove(lock_path)
+        log.info("Removed stale lock file: %s", lock_path)
+    except OSError:
+        pass
+
+
+def cleanup_queue_state(opts):
+    """
+    Per-daemon queue cleanup: remove any stale ``queue.lock`` and orphaned
+    ``running_*.p`` files for every master this daemon serves.
+
+    In a multimaster configuration, ``opts["master"]`` is a list, and each
+    per-master ``Minion`` instance uses its OWN ``queue_lock_path`` keyed
+    on the single master name. Calling the cleanup helpers with the
+    top-level opts would sanitize the list-joined master name and miss
+    the real per-master lock paths, so this wrapper fans out across the
+    list.
+    """
+    masters = opts.get("master")
+    if isinstance(masters, (list, tuple)) and masters:
+        for master in masters:
+            per_master_opts = dict(opts)
+            per_master_opts["master"] = master
+            cleanup_stale_queue_lock(per_master_opts)
+            cleanup_orphaned_queue_files(per_master_opts)
+    else:
+        cleanup_stale_queue_lock(opts)
+        cleanup_orphaned_queue_files(opts)
+
+
+def cleanup_orphaned_queue_files(opts):
+    """
+    Remove orphaned ``running_*.p`` files in the state_queue and job_queue
+    directories that are older than five minutes.
+
+    Called once per daemon from ``prepare()`` to recover from a minion that
+    crashed between the queued-to-running rename and the job completion
+    cleanup.
+    """
+    for queue_dir in (state_queue_dir(opts), job_queue_dir(opts)):
+        if not os.path.exists(queue_dir):
+            continue
+        try:
+            entries = os.listdir(queue_dir)
+        except OSError as exc:
+            log.debug("Could not list queue directory %s: %s", queue_dir, exc)
+            continue
+        for fn in entries:
+            if not fn.startswith("running_") or not fn.endswith(".p"):
+                continue
+            path = os.path.join(queue_dir, fn)
+            try:
+                stat_info = os.stat(path)
+                age_seconds = time.time() - stat_info.st_mtime
+                if age_seconds > 300:
+                    log.info(
+                        "Removing orphaned running queue file: %s (age: %.1fs)",
+                        path,
+                        age_seconds,
+                    )
+                    os.remove(path)
+            except OSError as exc:
+                log.debug("Could not check/cleanup running file %s: %s", path, exc)
 
 
 def get_active_states(opts):
