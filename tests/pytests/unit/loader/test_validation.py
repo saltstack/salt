@@ -183,16 +183,30 @@ class TestValidateReturn:
             return {"malformed": True}
 
         ret = validation.validate_return(
-            f, {"malformed": True}, validation.StateReturn, "off"
+            f, "fake.f", {"malformed": True}, validation.StateReturn, None, "off"
         )
         assert ret == {"malformed": True}
 
-    def test_no_contract_is_noop(self):
+    def test_no_contract_warn_passes_through(self):
         def f():
             return "anything"
 
-        ret = validation.validate_return(f, "anything", None, "strict")
+        ret = validation.validate_return(f, "fake.f", "anything", None, None, "warn")
         assert ret == "anything"
+
+    def test_no_contract_enforce_passes_through(self):
+        def f():
+            return "anything"
+
+        ret = validation.validate_return(f, "fake.f", "anything", None, None, "enforce")
+        assert ret == "anything"
+
+    def test_no_contract_strict_raises(self):
+        def f():
+            return "anything"
+
+        with pytest.raises(SaltInvocationError, match="requires a contract"):
+            validation.validate_return(f, "fake.f", "anything", None, None, "strict")
 
     @pytest.mark.parametrize("mode", ["enforce", "strict"])
     def test_raising_modes_raise(self, mode):
@@ -202,8 +216,10 @@ class TestValidateReturn:
         with pytest.raises(SaltInvocationError):
             validation.validate_return(
                 present,
+                "fake.present",
                 {"name": "n", "changes": {}, "result": True},
                 validation.StateReturn,
+                None,
                 mode,
             )
 
@@ -214,8 +230,10 @@ class TestValidateReturn:
         with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
             ret = validation.validate_return(
                 present,
+                "fake.present",
                 {"name": "n", "changes": {}, "result": True},
                 validation.StateReturn,
+                None,
                 "warn",
             )
         assert ret == {"name": "n", "changes": {}, "result": True}
@@ -232,11 +250,164 @@ class TestValidateReturn:
 
         ret = validation.validate_return(
             present,
+            "fake.present",
             {"name": "n", "changes": {"a": 1}, "result": True, "comment": "ok"},
             validation.StateReturn,
+            None,
             "strict",
         )
         assert ret["result"] is True
+
+
+class TestContractResolution:
+    """Two-tier contract lookup + module-declared refinement."""
+
+    def test_registry_lookup_by_name(self):
+        """Per-function registry provides a contract when no factory contract."""
+        from pydantic import BaseModel
+
+        class RunnerReturn(BaseModel):
+            retcode: int
+            result: str
+
+        def update():
+            return {"retcode": 0, "result": "ok"}
+
+        registry = {"saltutil.update": RunnerReturn}
+        # Valid return passes.
+        validation.validate_return(
+            update,
+            "saltutil.update",
+            {"retcode": 0, "result": "ok"},
+            None,
+            registry,
+            "enforce",
+        )
+        # Invalid return raises.
+        with pytest.raises(SaltInvocationError, match="return contract violation"):
+            validation.validate_return(
+                update,
+                "saltutil.update",
+                {"retcode": "zero"},  # missing result, wrong type
+                None,
+                registry,
+                "enforce",
+            )
+
+    def test_registry_miss_strict_raises(self):
+        """Function not in registry + strict mode = failure."""
+
+        def unknown():
+            return {}
+
+        with pytest.raises(SaltInvocationError, match="requires a"):
+            validation.validate_return(
+                unknown, "something.unknown", {}, None, {}, "strict"
+            )
+
+    def test_module_refinement_subclass_honored(self):
+        """A module declaring a subclass of StateReturn gets validated
+        against the more-specific type."""
+
+        class FileManagedReturn(validation.StateReturn):
+            pchanges: dict | None = None
+            diff: str | None = None
+
+        def managed() -> FileManagedReturn:
+            return FileManagedReturn(
+                name="n",
+                changes={},
+                result=True,
+                comment="ok",
+                pchanges={"mode": "0644"},
+                diff="...",
+            )
+
+        # Full valid payload including the refinement fields.
+        validation.validate_return(
+            managed,
+            "file.managed",
+            {
+                "name": "n",
+                "changes": {},
+                "result": True,
+                "comment": "ok",
+                "pchanges": {"mode": "0644"},
+                "diff": "...",
+            },
+            validation.StateReturn,
+            None,
+            "enforce",
+        )
+
+    def test_module_refinement_not_subclass_raises(self):
+        """A module declaring an unrelated return type fails at
+        dispatch time."""
+        from pydantic import BaseModel
+
+        class Unrelated(BaseModel):
+            foo: str
+
+        def bogus() -> Unrelated:
+            return Unrelated(foo="bar")
+
+        with pytest.raises(SaltInvocationError, match="not a subclass"):
+            validation.validate_return(
+                bogus,
+                "fake.bogus",
+                {"foo": "bar"},
+                validation.StateReturn,
+                None,
+                "enforce",
+            )
+
+    def test_declaration_without_salt_contract_is_honored(self):
+        """When Salt has no contract and no registry, a module's declared
+        return type is still enforced (opt-in before registry entry)."""
+        from pydantic import BaseModel
+
+        class CustomReturn(BaseModel):
+            value: int
+
+        def custom() -> CustomReturn:
+            return CustomReturn(value=1)
+
+        validation.validate_return(
+            custom,
+            "custom.custom",
+            {"value": 1},
+            None,
+            None,
+            "enforce",
+        )
+        with pytest.raises(SaltInvocationError, match="return contract violation"):
+            validation.validate_return(
+                custom,
+                "custom.custom",
+                {"value": "not-an-int-or-numeric"},
+                None,
+                None,
+                "enforce",
+            )
+
+    def test_contract_cached_on_function(self):
+        """First call resolves contract; second reads from the cache."""
+
+        def present() -> validation.StateReturn:
+            return validation.StateReturn(
+                name="n", changes={}, result=True, comment="ok"
+            )
+
+        validation.validate_return(
+            present,
+            "fake.present",
+            {"name": "n", "changes": {}, "result": True, "comment": "ok"},
+            validation.StateReturn,
+            None,
+            "enforce",
+        )
+        cached = getattr(present, "__salt_return_contract__", None)
+        assert cached is validation.StateReturn
 
 
 class TestBuildInputModel:

@@ -1208,14 +1208,17 @@ VALID_OPTS = immutabletypes.freeze(
         #           raise on the first call to any function that doesn't.
         "loader_validate_input_mode": str,
         # Loader-level return validation mode: one of 'off', 'warn',
-        # 'enforce'. Governs validate_return() called from
-        # LoadedFunc.__call__ against the loader's output_contract (pinned
-        # per-factory -- e.g. states() pins StateReturn).
+        # 'enforce', 'strict'. Governs validate_return() called from
+        # LoadedFunc.__call__ using the loader's output_contract (factory-
+        # pinned, e.g. states() pins StateReturn), per-function
+        # return_registry, or module-declared refinement.
         # 'off' (default): return validation is skipped.
         # 'warn': validate, log + pass return through on failure.
         # 'enforce': raise SaltInvocationError on contract violation.
-        # No 'strict' here -- contracts are factory-pinned, not annotation-
-        # driven, so the stricter semantic doesn't apply.
+        # 'strict': like 'enforce', plus require every loader-dispatched
+        #           function to have *some* contract (factory, registry
+        #           entry, or declared annotation); raise on functions
+        #           Salt doesn't yet have a contract for.
         "loader_validate_return_mode": str,
         # django auth
         "django_auth_path": str,

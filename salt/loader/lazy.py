@@ -199,13 +199,19 @@ class LoadedFunc:
             self.func, args, kwargs, input_mode
         )
         ret = self.loader.run(run_func, *args, **kwargs)
-        # Return validation: enforce the loader's output_contract (pinned
-        # per loader-kind by the factory in salt/loader/__init__.py).
-        # Governed independently of input validation.
-        if self.loader.output_contract is not None:
-            return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
+        # Return validation: factory-pinned output_contract (universal
+        # per loader-kind) or per-function return_registry lookup, with
+        # module-declared subclass refinements honored. Governed
+        # independently of input validation.
+        return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
+        if return_mode != "off":
             salt.loader.validation.validate_return(
-                self.func, ret, self.loader.output_contract, return_mode
+                self.func,
+                self.name,
+                ret,
+                self.loader.output_contract,
+                self.loader.return_registry,
+                return_mode,
             )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
@@ -251,10 +257,15 @@ class LoadedCoro(LoadedFunc):
             self.func, args, kwargs, input_mode
         )
         ret = await self.loader.run(run_func, *args, **kwargs)
-        if self.loader.output_contract is not None:
-            return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
+        return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
+        if return_mode != "off":
             salt.loader.validation.validate_return(
-                self.func, ret, self.loader.output_contract, return_mode
+                self.func,
+                self.name,
+                ret,
+                self.loader.output_contract,
+                self.loader.return_registry,
+                return_mode,
             )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
@@ -391,6 +402,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         extra_module_dirs=None,
         pack_self=None,
         output_contract=None,
+        return_registry=None,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
@@ -425,10 +437,16 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         self.tag = tag
         # Optional pydantic model that every function's return value must
         # satisfy. Factories pin this per loader-kind (e.g. states() passes
-        # salt.loader.validation.StateReturn). None means no return
-        # contract. Enforced at call time in LoadedFunc.__call__ when
-        # opts["loader_validate_return_mode"] is not "off".
+        # salt.loader.contracts.StateReturn). None means no universal
+        # return contract -- per-function contracts can still apply via
+        # return_registry below. Enforced at call time in
+        # LoadedFunc.__call__ when opts["loader_validate_return_mode"]
+        # is not "off".
         self.output_contract = output_contract
+        # Optional {"module.func": ReturnModel} dict for loader kinds
+        # where return shapes vary per function (runners, wheels, etc.).
+        # Owned by salt.loader.contracts, not by individual modules.
+        self.return_registry = return_registry
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type

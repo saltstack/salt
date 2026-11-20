@@ -14,16 +14,17 @@ loader dispatch. Behavior is split across two independent options:
   Raises on the first call to any function that doesn't meet the bar.
   Intended for dev / CI environments that want "the whole surface typed."
 
-``loader_validate_return_mode`` -- governs ``validate_return()`` against
-the loader's ``output_contract`` (pinned per-factory, e.g. ``states()``
-pins :class:`StateReturn`):
+``loader_validate_return_mode`` -- governs ``validate_return()``:
 
 * ``off`` (default) -- return validation is skipped.
-* ``warn`` -- validate, log + pass return through on failure.
+* ``warn`` -- validate when a contract applies, log + pass through on
+  failure.
 * ``enforce`` -- raise ``SaltInvocationError`` on contract violation.
-
-Return mode has no ``strict`` -- contracts are factory-pinned, not
-annotation-driven, so the stricter semantic doesn't apply.
+* ``strict`` -- like ``enforce``, additionally require that every
+  loader-dispatched function be reachable through *some* contract
+  (factory-pinned, registry entry, or module-declared refinement).
+  Functions with none of those raise -- the discovery sensor for
+  "Salt does not yet know what this returns."
 
 Annotation-driven -- no per-function decorators required. A module author
 writes a plain Python function with type hints and the loader validates
@@ -31,11 +32,21 @@ on dispatch. The input model is built lazily from the signature on first
 call and cached on the function via ``__salt_validate_model__``, so only
 functions actually invoked pay the model-build cost.
 
-Return contracts are pinned per loader-kind by the factories in
-``salt/loader/__init__.py`` -- for example ``salt.loader.states()`` passes
-``output_contract=StateReturn`` so every state function's return is
-checked against that model. Other factories pass no contract and only
-input validation applies.
+Return contracts are Salt-owned, defined in
+:mod:`salt.loader.contracts`. Two tiers:
+
+* **Factory-pinned contract** (``LazyLoader.output_contract``) -- a
+  single model that every function in a loader kind must satisfy.
+  Factories pin this (e.g. ``states()`` passes ``StateReturn``).
+* **Per-function registry** (``LazyLoader.return_registry``) -- a
+  ``{"module.func": ReturnModel}`` dict for loader kinds where returns
+  vary per function.
+
+Modules **cannot** declare their own return contract wholesale. They
+*may* declare a more-specific return type via ``-> SomeSubModel`` as
+long as it's a pydantic subclass of the base contract -- in which case
+validation uses the refined model. Declarations not compatible with
+the base raise at dispatch time.
 
 Reserved kwargs injected by the publish layer and state compiler
 (``__pub_*``, ``__id__``, ``__sls__``, ...) are filtered out of the
@@ -97,28 +108,16 @@ if HAS_PYDANTIC:
         # extras tolerant for anything we missed.
         extra="ignore",
     )
-
-    class StateReturn(BaseModel):
-        """Universal contract for ``salt.states.*`` function returns.
-
-        Every state function's return must satisfy this shape. Pinned on
-        the states loader by ``salt.loader.states()`` so a module returning
-        ``result='True'`` (string) rather than ``result=True`` (bool) is
-        caught at the module, not three layers downstream in ``State.call``.
-        """
-
-        model_config = SALT_VALIDATE_CONFIG
-
-        name: str
-        changes: dict
-        result: bool | None
-        comment: str | list
-        warnings: list | None = None
-        pchanges: dict | None = None
-
 else:  # pragma: no cover
     SALT_VALIDATE_CONFIG = None
-    StateReturn = None
+
+
+# Re-exported from salt.loader.contracts for backward compat with earlier
+# versions of this module that defined StateReturn in-place.
+# pylint: disable=unused-import,wrong-import-position
+from salt.loader.contracts.states import StateReturn  # noqa: F401
+
+# pylint: enable=unused-import,wrong-import-position
 
 
 def _is_reserved(name, reserved_set):
@@ -338,17 +337,167 @@ def validate_inputs(fn, args, kwargs, mode):
     return new_pos, new_kwargs
 
 
-def validate_return(fn, ret, contract, mode):
-    """Validate ``fn``'s return against the loader's ``output_contract``.
+# Sentinel attached to a function when contract resolution has decided
+# no validation is applicable (and we don't want to re-resolve on every
+# call).
+_NO_CONTRACT = object()
 
-    Returns ``ret`` unchanged (we never mutate the payload). On failure
-    raises ``SaltInvocationError`` in ``enforce`` / ``strict`` mode, logs
-    in ``warn`` mode.
+
+def _return_annotation(fn):
+    """Return the resolved return annotation of ``fn``, or None.
+
+    Resolution handles string annotations (``from __future__ import
+    annotations`` style), silently returns None on failure rather than
+    propagating -- a function with an unresolvable annotation just doesn't
+    get refinement support.
     """
-    if mode == "off" or not HAS_PYDANTIC or contract is None:
-        return ret
     try:
-        contract.model_validate(ret)
+        hints = inspect.get_annotations(fn, eval_str=True)
+    except (TypeError, ValueError, NameError):
+        return None
+    return hints.get("return")
+
+
+def _check_refinement(fn, declared, base):
+    """Raise if the module-declared return is incompatible with the base.
+
+    Only enforced when both are pydantic ``BaseModel`` subclasses. For
+    non-class or non-BaseModel contracts (generics, type aliases,
+    primitives), refinement isn't supported in this cut -- the base
+    contract is used and the declaration is silently ignored.
+    """
+    if not HAS_PYDANTIC:
+        return
+    if declared is None or base is None:
+        return
+    if not (inspect.isclass(declared) and inspect.isclass(base)):
+        return
+    if not (issubclass(base, BaseModel) and issubclass(declared, BaseModel)):
+        return
+    if not issubclass(declared, base):
+        raise SaltInvocationError(
+            f"{fn.__module__}.{fn.__name__}: declared return type "
+            f"{declared.__name__} is not a subclass of Salt's contract "
+            f"{base.__name__}"
+        )
+
+
+def _is_refined_subclass(declared, base):
+    """True when ``declared`` strictly refines ``base`` via BaseModel
+    subclassing (not equal, not the same class)."""
+    return (
+        HAS_PYDANTIC
+        and declared is not None
+        and base is not None
+        and inspect.isclass(declared)
+        and inspect.isclass(base)
+        and issubclass(base, BaseModel)
+        and issubclass(declared, BaseModel)
+        and issubclass(declared, base)
+        and declared is not base
+    )
+
+
+def _resolve_return_contract(fn, fn_name, factory_contract, registry, mode):
+    """Decide which return model (if any) to validate ``fn``'s return against.
+
+    Precedence:
+
+    1. Factory contract + compatible module refinement -> module's type
+       (more specific).
+    2. Factory contract alone -> factory contract.
+    3. Registry entry for ``fn_name`` + compatible module refinement ->
+       module's type.
+    4. Registry entry alone -> registry entry.
+    5. Module declared alone (no factory, no registry) -> module's type.
+    6. Nothing: ``strict`` raises; other modes return None (no validation).
+
+    Incompatible refinements (declared type not a subclass of the base)
+    raise ``SaltInvocationError``.
+    """
+    declared = _return_annotation(fn)
+
+    # Factory contract (universal-per-loader-kind) takes priority.
+    if factory_contract is not None:
+        _check_refinement(fn, declared, factory_contract)
+        if _is_refined_subclass(declared, factory_contract):
+            return declared
+        return factory_contract
+
+    # Per-function registry (Salt-owned) covers varying-shape loaders.
+    if registry is not None and fn_name is not None:
+        registry_contract = registry.get(fn_name)
+        if registry_contract is not None:
+            _check_refinement(fn, declared, registry_contract)
+            if _is_refined_subclass(declared, registry_contract):
+                return declared
+            return registry_contract
+
+    # Module-declared annotation, no Salt-side contract. Accepted so
+    # module authors can opt in before a registry entry lands.
+    if declared is not None:
+        return declared
+
+    # Nothing to validate against.
+    if mode == "strict":
+        raise SaltInvocationError(
+            f"{fn.__module__}.{fn.__name__}: strict return mode requires a "
+            "contract (factory, registry entry, or declared annotation)"
+        )
+    return None
+
+
+def _get_or_resolve_return_contract(fn, fn_name, factory_contract, registry, mode):
+    """Return the resolved contract, caching on the function.
+
+    Incompatible-refinement errors are not cached -- they're raised afresh
+    on every call so the error is loud and visible every time.
+    """
+    cached = getattr(fn, "__salt_return_contract__", None)
+    if cached is _NO_CONTRACT:
+        if mode == "strict":
+            # Re-resolve so strict's "missing contract" raise fires even
+            # after a non-strict call cached _NO_CONTRACT.
+            return _resolve_return_contract(
+                fn, fn_name, factory_contract, registry, mode
+            )
+        return None
+    if cached is not None:
+        return cached
+    resolved = _resolve_return_contract(fn, fn_name, factory_contract, registry, mode)
+    if resolved is None:
+        try:
+            fn.__salt_return_contract__ = _NO_CONTRACT
+        except (AttributeError, TypeError):  # pragma: no cover
+            pass
+    else:
+        try:
+            fn.__salt_return_contract__ = resolved
+        except (AttributeError, TypeError):  # pragma: no cover
+            pass
+    return resolved
+
+
+def validate_return(fn, fn_name, ret, contract, registry, mode):
+    """Validate ``fn``'s return against the effective return contract.
+
+    The effective contract is the most-specific of: module's declared
+    return type (if a strict pydantic subclass of the factory/registry
+    base), the factory ``output_contract``, or the per-function
+    ``registry`` entry. If no contract applies and mode is ``strict``,
+    raises -- otherwise no-op.
+
+    Returns ``ret`` unchanged (payload is never mutated).
+    """
+    if mode == "off" or not HAS_PYDANTIC:
+        return ret
+
+    effective = _get_or_resolve_return_contract(fn, fn_name, contract, registry, mode)
+    if effective is None:
+        return ret
+
+    try:
+        effective.model_validate(ret)
     except ValidationError as exc:
         msg = f"return contract violation in {fn.__module__}.{fn.__name__}: {exc}"
         if mode in _RAISING_MODES:
