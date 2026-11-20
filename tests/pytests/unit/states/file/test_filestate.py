@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 
 import msgpack
 import pytest
@@ -682,7 +683,9 @@ def test_decode_contents_pillar_missing_key_still_errors_69709(tmp_path):
             "hashutil.base64_decodefile": decodefile,
         },
     ):
-        with pytest.raises(CommandExecutionError, match="Pillar data not found."):
+        with pytest.raises(
+            CommandExecutionError, match=re.escape("Pillar data not found.")
+        ):
             filestate.decode(str(tmp_path / "out.bin"), contents_pillar="missing_blob")
 
     decodefile.assert_not_called()
