@@ -3,6 +3,8 @@ Salt-idiomatic pydantic types for use in module signatures.
 
 These exist so a module author can write a plain Python signature like::
 
+    from salt.loader.annotations import Duration, ByteSize, MinionID
+
     def retry(interval: Duration = "30s",
               max_memory: ByteSize = "500MB",
               target: MinionID = "*"): ...
@@ -10,6 +12,11 @@ These exist so a module author can write a plain Python signature like::
 and get CLI-string coercion, validation, and JSON Schema emission for
 free -- all via the loader-level validation layer in
 :mod:`salt.loader.validation`.
+
+Named ``annotations`` (rather than the more natural ``types``) because
+``salt.types`` or ``salt.loader.types`` as a package shadows Python's
+stdlib ``types`` module in Salt code paths that depend on it (e.g.
+``salt/loader/__init__.py`` uses ``types.SimpleNamespace``).
 
 Two patterns are used here:
 

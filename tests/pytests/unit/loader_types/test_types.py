@@ -1,12 +1,13 @@
 """
-Tests for salt.types -- custom pydantic types for Salt module signatures.
+Tests for salt.loader.types -- custom pydantic types for Salt module
+signatures.
 """
 
 from datetime import timedelta
 
 import pytest
 
-import salt.types as salt_types
+import salt.loader.annotations as salt_types
 
 pytestmark = pytest.mark.skipif(
     not salt_types.HAS_PYDANTIC, reason="pydantic not installed"
