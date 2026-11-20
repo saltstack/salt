@@ -53,7 +53,7 @@ class DefaultOrderedDict(OrderedDict):
             copy.deepcopy(list(self.items()), memo),
         )
 
-    def __repr__(self, _repr_running={}):  # pylint: disable=dangerous-default-value
+    def __repr__(self):
         return f"DefaultOrderedDict({self.default_factory}, {super().__repr__()})"
 
 
