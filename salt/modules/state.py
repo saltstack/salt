@@ -1928,7 +1928,6 @@ def show_lowstate(queue=None, **kwargs):
     """
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
-        assert False
         return conflict
 
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)

@@ -554,7 +554,7 @@ def test_show_lowstate():
     """
     mock = MagicMock(side_effect=["A", None])
     with patch.object(state, "_check_queue", mock):
-        pytest.raises(AssertionError, state.show_lowstate)
+        assert state.show_lowstate() == "A"
 
         assert state.show_lowstate()
 
