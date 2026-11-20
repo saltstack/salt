@@ -33,7 +33,7 @@ def download_remote(url, dir):
         with salt.utils.files.fopen(
             full_directory, "wb"
         ) as file, urllib.request.urlopen(url) as response:
-            file.write(response.rease())
+            file.write(response.read())
 
         return full_directory
 
