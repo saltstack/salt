@@ -85,7 +85,7 @@ if IS_WINDOWS:
 else:
     ONEDIR_PYTHON_PATH = ONEDIR_ARTIFACT_PATH / "bin" / "python3"
 # Python versions to run against
-_PYTHON_VERSIONS = ("3", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14")
+_PYTHON_VERSIONS = ("3", "3.11", "3.12", "3.13", "3.14")
 
 # Nox options
 #  Reuse existing virtualenvs
@@ -188,8 +188,8 @@ def _get_session_python_version_info(session):
 
 def _get_pydir(session):
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 8):
-        session.error("Only Python >= 3.8 is supported")
+    if version_info < (3, 11):
+        session.error("Only Python >= 3.11 is supported")
     return "py{}.{}".format(*version_info)
 
 
@@ -1504,9 +1504,9 @@ def pre_archive_cleanup(session, pkg):
     if session.posargs:
         session.error("No additional arguments can be passed to 'pre-archive-cleanup'")
     version_info = _get_session_python_version_info(session)
-    if version_info < (3, 10):
+    if version_info < (3, 11):
         session.error(
-            "The nox session 'pre-archive-cleanup' needs Python 3.10+ to run."
+            "The nox session 'pre-archive-cleanup' needs Python 3.11+ to run."
         )
 
     if _upgrade_pip_setuptools_and_wheel(session):

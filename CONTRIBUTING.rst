@@ -165,7 +165,7 @@ version of Python:
 
 ::
 
-   pyenv install 3.9.18
+   pyenv install 3.14.10
 
 If that fails, don't panic! You're probably just missing some build
 dependencies. Check out `pyenv common build
@@ -176,7 +176,7 @@ new virtual environment with this command:
 
 ::
 
-   pyenv virtualenv 3.9.18 salt
+   pyenv virtualenv 3.14.10 salt
 
 Then activate it:
 
@@ -392,14 +392,13 @@ documentation:
 
        rm -rf .nox
 
-#. Install `pyenv` for the version of Python needed to run the docs. As of the
-   time of writing, the Salt docs theme is not compatible with Python 3.10, so
-   you'll need to run 3.9 or earlier. For example:
+#. Install `pyenv` for the version of Python needed to run the docs. Use the
+   same version as the one Salt's CI uses. For example:
 
    ::
 
-       pyenv install 3.9.18
-       pyenv virtualenv 3.9.18 salt-docs
+       pyenv install 3.14.10
+       pyenv virtualenv 3.14.10 salt-docs
        echo 'salt-docs' > .python-version
 
 #. Activate `pyenv` if it's not auto-activated:

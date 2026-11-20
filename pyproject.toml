@@ -13,7 +13,7 @@ backend-path = ["tools/pkg"]
 name = "salt"
 description = "Portable, distributed, remote execution and configuration management system"
 readme = "README.rst"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = {text = "Apache Software License 2.0"}
 authors = [
   {name = "Thomas S Hatch", email = "thatch45@gmail.com"},
@@ -23,9 +23,10 @@ classifiers = [
     "Programming Language :: Cython",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: Developers",
@@ -63,7 +64,7 @@ known_third_party = [
 
 [tool.ruff]
 # Match the minimum Python version declared by this project.
-target-version = "py38"
+target-version = "py311"
 line-length = 88
 extend-exclude = ["salt/ext", "templates"]
 # Names Salt injects into modules at load time. Keep in sync with
