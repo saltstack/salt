@@ -273,11 +273,10 @@ class TestPoolNameSpecialCharacters:
 
             config["pool_name"] = pool_name_with_null
             transport = salt.transport.zeromq.RequestServer(config)
-            uri = transport.get_worker_uri()
-
-            # Null byte should not truncate the path or cause issues
-            # OS will reject paths with null bytes
-            assert "\x00" not in uri or True  # Either stripped or will fail at bind
+            # The null byte is either stripped or the bind fails later (the OS
+            # rejects paths with null bytes), so there is nothing to check on
+            # the uri. Only the errors caught below are accepted.
+            transport.get_worker_uri()
         except (ValueError, OSError):
             # Expected - null bytes should be rejected somewhere
             pass
