@@ -3468,7 +3468,7 @@ class Minion(MinionBase):
                 minion_instance.proc_dir = get_proc_dir(opts["cachedir"], uid=uid)
 
         with salt.utils.ctx.request_context({"data": data, "opts": opts}):
-            if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+            if isinstance(data["fun"], (tuple, list)):
                 return Minion._thread_multi_return(minion_instance, opts, data)
             else:
                 return Minion._thread_return(minion_instance, opts, data)

@@ -411,12 +411,7 @@ def _is_simple_type(value):
     Returns True, if the given parameter value is an instance of either
     int, str, float or bool.
     """
-    return (
-        isinstance(value, str)
-        or isinstance(value, int)
-        or isinstance(value, float)
-        or isinstance(value, bool)
-    )
+    return isinstance(value, (str, int, float, bool))
 
 
 def _get_type_id_options(name, configuration):
