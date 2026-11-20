@@ -65,6 +65,7 @@ import salt.utils.process
 import salt.utils.resource_warnings
 import salt.utils.resources
 import salt.utils.schedule
+import salt.utils.secret
 import salt.utils.ssdp
 import salt.utils.state
 import salt.utils.stringutils
@@ -4284,6 +4285,10 @@ class Minion(MinionBase):
         if ret.get("comment") == "Job queued for execution":
             log.warning("Sending 'Job Queued' return for job %s", jid)
         log.trace("Return data: %s", ret)
+        if self.opts.get("pillar_mask_output", False) and "return" in ret:
+            # Pillar returned by execution modules is only wrapped, not
+            # redacted. Redact it where the job return leaves the minion.
+            ret["return"] = salt.utils.secret.mask_output(ret["return"])
         if ret_cmd == "_syndic_return":
             load = {
                 "cmd": ret_cmd,

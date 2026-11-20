@@ -2898,6 +2898,44 @@ minion config file or via the CLI, it will override this option.
 
     pillarenv_from_saltenv: True
 
+.. conf_minion:: pillar_mask_output
+
+``pillar_mask_output``
+----------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+Feature flag for pillar masking.
+
+When ``False`` (the default), pillar is never masked. The ``pillar`` execution
+module functions (``get``, ``item``, ``items``, ``raw``, ``ext`` and the others)
+return the real values, received pillar containers are plain dicts and lists,
+and ``repr()`` and ``str()`` show real values.
+
+When ``True``, the values are still real when read, but pillar containers
+are redacted (``**********``) where they are output: the job return of a
+minion, ``salt-call`` and other CLI output, and ``repr()``, ``str()`` and
+logging. A single value that a function returns by itself, such as the result of
+``pillar.get password``, is a plain string and is not redacted.
+
+The ``unmask`` argument of the ``pillar`` functions has no effect with either
+setting and is kept for compatibility.
+
+.. versionchanged:: 3008.4
+    The default is now ``False``. Before, the default was ``True``, and masked
+    values were returned by the ``pillar`` functions unless ``unmask=True`` was
+    passed.
+
+This option does **not** change ``no_log``. It is an explicit per-state
+setting rather than pillar masking, so a state with ``no_log: True`` still has
+its ``name``, ``comment`` and ``changes`` redacted.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_minion:: pillar_raise_on_missing
 
 ``pillar_raise_on_missing``
