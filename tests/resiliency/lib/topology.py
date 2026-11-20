@@ -687,6 +687,16 @@ class Topology:
         multi-object form and caused ``wait_initial_auth`` to time
         out at 300s even though all minions had answered.
         """
+        # Subprocess wall-clock budget: salt CLI cold-imports the full
+        # loader (~15-20s on an idle master, longer on registry-heavy
+        # topologies like cluster3 with 100k dummy_resources), then runs
+        # the ``--timeout`` publish/return window on top.  The default
+        # ``+15s`` cushion worked for single/multimaster but was too tight
+        # for cluster3 on cold GHA runners -- subprocess killed the salt
+        # process BEFORE it could print, wait_initial_auth saw {} and
+        # looped until its own timeout.  Bump the cushion to 45s for
+        # a comfortable cold-import headroom.
+        subprocess_timeout = timeout + 45
         try:
             proc = self._run(
                 [
@@ -701,20 +711,36 @@ class Topology:
                     "test.ping",
                 ],
                 check=False,
-                # Give subprocess a bit over the salt timeout to let it
-                # print and flush before we bail.
-                timeout=timeout + 15,
+                timeout=subprocess_timeout,
             )
-        except subprocess.TimeoutExpired:
-            # Subprocess wall-clock exceeded -- common on the syndic
-            # topology where ``salt '*' test.ping`` on the MoM has to
-            # round-trip through the syndic and its downstream
-            # minions.  Don't crash wait_initial_auth's outer loop --
-            # return empty so the caller falls through to the next
-            # master or next poll iteration.
+        except subprocess.TimeoutExpired as exc:
+            # Subprocess wall-clock exceeded.  Log once per call so
+            # wait_initial_auth's periodic progress line shows the real
+            # failure mode (timeout vs rc!=0 vs empty-json) instead of a
+            # silent {} that reads as "no minions responded".
+            partial_out = (exc.output or b"")[:200].decode("utf-8", errors="replace")
+            partial_err = (exc.stderr or b"")[:200].decode("utf-8", errors="replace")
+            log.warning(
+                "salt_ping_all[%s]: subprocess timed out after %ss "
+                "(cold-import on registry topology?) partial_stdout=%r "
+                "partial_stderr=%r",
+                master,
+                subprocess_timeout,
+                partial_out,
+                partial_err,
+            )
             return {}
         stdout = proc.stdout.strip()
         if not stdout:
+            # Non-timeout empty output: usually rc!=0 from salt itself
+            # (publish refused, master down, etc).  Log once so the caller
+            # has signal instead of a silent {}.
+            log.warning(
+                "salt_ping_all[%s]: empty stdout (rc=%d) stderr=%r",
+                master,
+                proc.returncode,
+                (proc.stderr or "")[:200],
+            )
             return {}
 
         # Fast path: output is a single wrapping dict.
