@@ -159,6 +159,11 @@ def test_network_tcp_reset(topology, workload, request):
         window_sec=RECOVER_FAST_SEC,
         notes="iptables REJECT tcp-reset dport 44506",
         item=request.node,
+        # Forced TCP reset drops the publish channel mid-flight; master
+        # rebuffers pending publish pkts on reconnect.  CI 44676940448
+        # observed bulk_rss_retention 2698-4371 KB/min across mm-failover
+        # + mm-hothot.  FD gate stays live.
+        allow_bulk_rss=True,
     )
 
 

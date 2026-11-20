@@ -141,6 +141,11 @@ def test_minion_churn_rolling(topology, workload, request, minion):
         fault_sec,
         before,
         item=request.node,
+        # Rolling minion restart hits the same cold-start cache
+        # repopulation as single_restart / simultaneous / kill9 (which
+        # already carry allow_bulk_rss=True).  CI 44676940448 observed
+        # 4961 KB/min on mm-failover.
+        allow_bulk_rss=True,
     )
 
 

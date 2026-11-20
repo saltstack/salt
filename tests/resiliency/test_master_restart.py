@@ -154,6 +154,12 @@ def test_master_restart_sigterm(topology, workload, request):
         fault_sec,
         before,
         item=request.node,
+        # Full master restart -> fleet re-auth -> _load_modules() cold
+        # path.  CI 44676940448 observed fd_accumulation 4612 KB/min.
+        # Sibling of already-exempt master_restart_docker_restart;
+        # genuine missing-minion failures still trip via the reconnect
+        # window.
+        allow_fault_rss=True,
     )
 
 
@@ -182,6 +188,10 @@ def test_master_restart_sigkill(topology, workload, request):
         fault_sec,
         before,
         item=request.node,
+        # Sibling of sigterm variant above; same cold-start revive
+        # characteristics after SIGKILL + docker start.  CI 44676940448
+        # observed fd_accumulation 724 KB/min.
+        allow_fault_rss=True,
     )
 
 

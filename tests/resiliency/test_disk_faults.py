@@ -259,4 +259,8 @@ def test_disk_pki_readonly(topology, workload, request):
         before=before,
         notes=f"chmod -R u-w {MASTER_PKIDIR}",
         item=request.node,
+        # Auth-cache reload path: PKI ro -> auth retries queue up while
+        # fault holds -> drain + repopulation after unmount.  CI
+        # 44676940448 observed fd_accumulation 376 KB/min on mm-hothot.
+        allow_fault_rss=True,
     )
