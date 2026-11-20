@@ -67,9 +67,10 @@ def test_state_with_import_dir(salt_ssh_cli, state_tree_dir, ssh_cmd):
         )
     assert ret.returncode == 0
     if ssh_cmd == "state.show_top":
-        assert ret.data == {"base": ["testdir", "master_tops_test"]} or {
-            "base": ["testdir"]
-        }
+        assert ret.data in (
+            {"base": ["testdir", "master_tops_test"]},
+            {"base": ["testdir"]},
+        )
     elif ssh_cmd in ("state.show_highstate", "state.show_sls"):
         assert ret.data == {
             "Ok with def": {
