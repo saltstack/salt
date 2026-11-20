@@ -554,7 +554,7 @@ def test_show_lowstate():
     """
     mock = MagicMock(side_effect=["A", None])
     with patch.object(state, "_check_queue", mock):
-        pytest.raises(AssertionError, state.show_lowstate)
+        assert state.show_lowstate() == "A"
 
         assert state.show_lowstate()
 
@@ -1316,6 +1316,43 @@ def test__check_queue(queue, wait_called, ret_value):
         assert ret is ret_value
         if ret_value is True:
             assert state.__context__["retcode"] == 1
+
+
+def test_load_args_and_kwargs_propagates_pub_jid_for_state_modules():
+    """
+    Companion invariant for the queue=<int> flag-file design.
+
+    salt-call, orchestration, and master-published calls all route
+    through ``salt.minion.load_args_and_kwargs``. When the target
+    function accepts ``**kwargs`` (all state module entry points do),
+    ``load_args_and_kwargs`` packs the publish data into kwargs as
+    ``__pub_<key>``. ``_check_queue`` therefore always sees a non-None
+    ``__pub_jid`` -- no mint fallback is needed -- and the on-disk flag
+    file key will match the jid recorded in the proc file.
+
+    If a future refactor removes ``**kwargs`` from a state entry point
+    (or stops passing ``data=`` to ``load_args_and_kwargs``), this test
+    fails and the queue=<int> flag-file lookup would silently miss.
+    """
+    import salt.minion
+    import salt.modules.state as state_mod
+
+    sdata = {
+        "fun": "state.single",
+        "pid": 42,
+        "jid": "20261118010101000001",
+        "tgt": "salt-call",
+    }
+    _, kwargs = salt.minion.load_args_and_kwargs(
+        state_mod.single,
+        ["cmd.run", "name=sleep 1", "queue=10"],
+        data=sdata,
+    )
+    assert kwargs.get("__pub_jid") == sdata["jid"], (
+        "load_args_and_kwargs did not inject __pub_jid for state.single. "
+        "The queue=<int> flag file would be written under a different "
+        "jid than the proc file, and sibling waiters would deadlock."
+    )
 
 
 class TestCheckPriorRunningStates:

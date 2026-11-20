@@ -14,8 +14,8 @@ import salt.modules.file as filemod
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from salt.exceptions import SaltInvocationError
-from tests.support.mock import MagicMock
+from salt.exceptions import CommandExecutionError, SaltInvocationError
+from tests.support.mock import MagicMock, patch
 
 log = logging.getLogger(__name__)
 
@@ -248,3 +248,19 @@ def test_replace_binary_without_encoding_raises(tmp_path):
             pattern=r"binary",
             repl="text",
         )
+
+
+@pytest.mark.skipif(
+    salt.utils.platform.is_windows(), reason="Symlinks need privileges on Windows"
+)
+@pytest.mark.parametrize("encoding", [None, "utf-8"])
+def test_replace_backup_symlink_failure_reports_the_error(utf8_file, encoding):
+    """
+    A failure to create the backup symlink is reported as a
+    CommandExecutionError that includes the original error, not as a NameError.
+    """
+    link = utf8_file.parent / "link.txt"
+    link.symlink_to(utf8_file)
+    with patch("os.symlink", side_effect=RuntimeError("boom")):
+        with pytest.raises(CommandExecutionError, match="boom"):
+            filemod.replace(str(link), "hello", "bye", backup=".bak", encoding=encoding)

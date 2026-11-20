@@ -302,7 +302,8 @@ def test_call_function_kwarg_overrides(fun, args, kwargs, expected):
             (1, 2, 3, 4, 5, 6),
             {},
             pytest.raises(
-                SaltInvocationError, match=".*only takes 4 positional parameters, got 6"
+                SaltInvocationError,
+                match=r".*only takes 4 positional parameters, got 6",
             ),
             id="posonly_poskw_too_many_positional",
         ),

@@ -101,13 +101,13 @@ def test_path_exists(inpt, expected):
         (
             ("green", "notfound"),
             None,
-            pytest.raises(SaltInvocationError, match="Starting path not found.*"),
+            pytest.raises(SaltInvocationError, match=r"Starting path not found.*"),
         ),
         (
             ("red", 1234),
             None,
             pytest.raises(
-                SaltInvocationError, match=".*must be a string or list of strings.*"
+                SaltInvocationError, match=r".*must be a string or list of strings.*"
             ),
         ),
     ],
@@ -162,5 +162,5 @@ def test_update_merge(a, b, merge_lists, expected, func):
 
 
 def test_renderer_requires_either_path_or_string():
-    with pytest.raises(SaltInvocationError, match=".*either path or string.*"):
+    with pytest.raises(SaltInvocationError, match=r".*either path or string.*"):
         slsutil.renderer()

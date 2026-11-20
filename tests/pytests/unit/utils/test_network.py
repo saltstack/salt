@@ -1,4 +1,5 @@
 import logging
+import re
 import socket
 import subprocess
 import sys
@@ -516,7 +517,7 @@ def test_dns_check_errors():
     ):
         with pytest.raises(
             salt.exceptions.SaltSystemExit,
-            match="DNS lookup or connection check of 'foo' failed.",
+            match=re.escape("DNS lookup or connection check of 'foo' failed."),
         ) as exc_info:
             network.dns_check("foo", "1")
 

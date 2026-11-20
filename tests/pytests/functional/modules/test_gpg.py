@@ -744,7 +744,6 @@ def test_gpg_verify_signed_by_any(
         ("a", "a", True),
         ("bd", "a", False),
         ("ad", "ad", True),
-        ("ad", "ad", True),
         ("ad", "ac", False),
         (["a", "c_fail"], "ac", False),
         # Bad signatures partly overwrite the preceding good one currently.

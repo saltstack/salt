@@ -117,7 +117,7 @@ class TestMakeSingle:
             return {}
 
         with patch("salt.client.ssh.mod_data", fake_mod_data):
-            with pytest.raises(AttributeError, match="NoneType.*opts"):
+            with pytest.raises(AttributeError, match=r"NoneType.*opts"):
                 fake_mod_data(None)
 
             # With a real fsclient it works fine

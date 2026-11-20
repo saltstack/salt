@@ -241,6 +241,12 @@ select = [
     "RUF048",  # map(int, version.split())
     "RUF101",  # redirected noqa code
     "RUF103",  # invalid ruff suppression comment
+    # Test patterns with existing violations. Only new ones block a PR.
+    "RUF043",  # unescaped regex metacharacters in pytest match=
+    "PT030",  # pytest.warns() without match
+    "PT017",  # assert on an exception inside except
+    "PT014",  # duplicate parametrize case
+    "B011",  # assert False
 ]
 ignore = [
     "F403",  # star imports
@@ -249,7 +255,9 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 # Unused local variables are not checked in tests for now.
-"tests/**" = ["F841"]
+# "assert False" is allowed in tests: with "python -O" every assert in the test
+# suite is removed, so replacing this one would not protect anything.
+"tests/**" = ["F841", "B011"]
 
 [tool.towncrier]
     package = "salt"

@@ -441,7 +441,7 @@ def test_create_certificate_write_to_path_overwrite_false(
     assert tgt.exists()
     with pytest.raises(
         salt.exceptions.CommandExecutionError,
-        match=".*exists and overwrite was set to false.*",
+        match=r".*exists and overwrite was set to false.*",
     ):
         ssh.create_certificate(
             "user",
@@ -718,7 +718,7 @@ def test_create_private_key_write_to_path_not_overwrite(ssh, tmp_path):
     assert tgt.exists()
     with pytest.raises(
         salt.exceptions.CommandExecutionError,
-        match=".*exists and overwrite was set to false.*",
+        match=r".*exists and overwrite was set to false.*",
     ):
         ssh.create_private_key(overwrite=False, path=str(tgt))
     assert tgt.read_text() == "occupied"

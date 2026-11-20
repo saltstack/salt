@@ -142,7 +142,7 @@ def test_warn_until_bad_version_name_raises_runtime_error():
         assert "Deprecation Message!" == str(recorded_warnings[0].message)
 
     with pytest.raises(
-        RuntimeError, match="Incorrect spelling for the release name in .*"
+        RuntimeError, match=r"Incorrect spelling for the release name in .*"
     ):
         salt.utils.versions.warn_until(
             "Sudium", "Deprecation Message!", _version_info_=(3000, 0)

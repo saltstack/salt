@@ -210,7 +210,16 @@ def test_find_libcrypto_darwin_catalina():
 
     with patch.object(salt.utils.platform, "is_darwin", lambda: True), patch.object(
         platform, "mac_ver", lambda: ("10.15.2", (), "")
-    ), patch.object(sys, "platform", "macosx"), patch.object(glob, "glob", test_glob):
+    ), patch.object(sys, "platform", "macosx"), patch.object(
+        glob, "glob", test_glob
+    ), patch.object(
+        # _find_libcrypto() also looks for libcrypto.dylib relative to the python
+        # binary. When using /usr/bin/python, that resolves to
+        # /usr/lib/libcrypto.dylib, which is in the fake list above.
+        sys,
+        "executable",
+        "/some/other/prefix/bin/python3",
+    ):
         lib_path = _find_libcrypto()
     assert "/usr/lib/libcrypto.44.dylib" == lib_path
 

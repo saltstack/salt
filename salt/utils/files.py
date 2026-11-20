@@ -370,8 +370,16 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 time.sleep(sleep)
             else:
-                # Write the lock file
-                with os.fdopen(fh_, "w"):
+                # Write the holder's PID into the lock file so stale-lock
+                # recovery (``salt.utils.state.cleanup_stale_queue_lock``)
+                # can liveness-probe us instead of blindly stomping. Any
+                # exception while writing is swallowed -- an empty lock
+                # file is backward-compatible with the pre-PID-write
+                # cleanup behavior.
+                try:
+                    with os.fdopen(fh_, "w") as f:
+                        f.write(str(os.getpid()))
+                except OSError:
                     pass
                 # Lock successfully acquired
                 log.trace("Write lock %s obtained", lock_fn)
@@ -395,8 +403,22 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
     finally:
         if obtained_lock:
-            os.remove(lock_fn)
-            log.trace("Write lock for %s (%s) released", path, lock_fn)
+            try:
+                os.remove(lock_fn)
+            except FileNotFoundError:
+                # The lock file was removed out from under us. A concurrent
+                # stale-lock cleanup is the usual cause. Downgrade to a
+                # warning instead of letting FileNotFoundError propagate
+                # out of the ``with wait_lock(...)`` block and turn a
+                # normal state run into a traceback.
+                log.warning(
+                    "Lock file %s vanished while it was held; another "
+                    "process may have run stale-lock cleanup against a "
+                    "live holder.",
+                    lock_fn,
+                )
+            else:
+                log.trace("Write lock for %s (%s) released", path, lock_fn)
 
 
 @asynccontextmanager
@@ -452,8 +474,16 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
                 log.trace("Lock file %s exists, sleeping %f seconds", lock_fn, sleep)
                 await tornado.gen.sleep(sleep)
             else:
-                # Write the lock file
-                with os.fdopen(fh_, "w"):
+                # Write the holder's PID into the lock file so stale-lock
+                # recovery (``salt.utils.state.cleanup_stale_queue_lock``)
+                # can liveness-probe us instead of blindly stomping. Any
+                # exception while writing is swallowed -- an empty lock
+                # file is backward-compatible with the pre-PID-write
+                # cleanup behavior.
+                try:
+                    with os.fdopen(fh_, "w") as f:
+                        f.write(str(os.getpid()))
+                except OSError:
                     pass
                 # Lock successfully acquired
                 log.trace("Write lock %s obtained", lock_fn)
@@ -477,8 +507,22 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
 
     finally:
         if obtained_lock:
-            os.remove(lock_fn)
-            log.trace("Write lock for %s (%s) released", path, lock_fn)
+            try:
+                os.remove(lock_fn)
+            except FileNotFoundError:
+                # The lock file was removed out from under us. A concurrent
+                # stale-lock cleanup is the usual cause. Downgrade to a
+                # warning instead of letting FileNotFoundError propagate
+                # out of the ``with wait_lock(...)`` block and turn a
+                # normal state run into a traceback.
+                log.warning(
+                    "Lock file %s vanished while it was held; another "
+                    "process may have run stale-lock cleanup against a "
+                    "live holder.",
+                    lock_fn,
+                )
+            else:
+                log.trace("Write lock for %s (%s) released", path, lock_fn)
 
 
 def get_umask():

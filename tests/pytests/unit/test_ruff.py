@@ -292,6 +292,19 @@ def test_unused_local_variable_is_allowed_in_tests(repo: Path) -> None:
     assert result.returncode == 0, result.stderr + result.stdout
 
 
+def test_assert_false_is_allowed_in_tests(repo: Path) -> None:
+    write(repo, "tests/test_new.py", "def test_f():\n    assert False\n")
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
+
+
+def test_assert_false_is_reported_outside_tests(repo: Path) -> None:
+    write(repo, "salt/new.py", "def f():\n    assert False\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "B011" in result.stdout
+
+
 # One example per rule that has no violation in the code base today.
 NEW_RULE_CASES = [
     ("B002", "def f(n):\n    return ++n\n"),
@@ -497,6 +510,23 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("DTZ004", "import datetime\n\nt = datetime.datetime.utcfromtimestamp(0)\n"),
     ("ASYNC251", "import time\n\n\nasync def f():\n    time.sleep(1)\n"),
     ("PGH004", "import os  # noqa\n"),
+    (
+        "RUF043",
+        'import pytest\n\n\ndef test_f():\n    with pytest.raises(ValueError, match="a.b"):\n        pass\n',
+    ),
+    (
+        "PT030",
+        "import pytest\n\n\ndef test_f():\n    with pytest.warns(DeprecationWarning):\n        pass\n",
+    ),
+    (
+        "PT017",
+        "def test_f():\n    try:\n        pass\n    except ValueError as exc:\n        assert exc.args\n",
+    ),
+    (
+        "PT014",
+        'import pytest\n\n\n@pytest.mark.parametrize("a", [1, 1])\ndef test_f(a):\n    pass\n',
+    ),
+    ("B011", "def test_f():\n    assert False\n"),
 ]
 
 
