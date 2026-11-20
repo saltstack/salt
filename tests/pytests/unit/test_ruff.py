@@ -343,6 +343,21 @@ NEW_RULE_CASES = [
     ("PLW2101", "import threading\n\nwith threading.Lock():\n    pass\n"),
     ("PGH003", "x = 1  # type: ignore\n"),
     ("PGH005", "def test_f(m):\n    assert m.called_once_with(1)\n"),
+    ("PT002", 'import pytest\n\n\n@pytest.fixture("module")\ndef f():\n    pass\n'),
+    ("PT008", 'from unittest import mock\n\nmock.patch("os.getcwd", lambda: "/tmp")\n'),
+    ("PT020", "import pytest\n\n\n@pytest.yield_fixture\ndef f():\n    yield 1\n"),
+    (
+        "PT024",
+        "import pytest\n\n\n@pytest.mark.asyncio\n@pytest.fixture\nasync def f():\n    pass\n",
+    ),
+    (
+        "PT025",
+        'import pytest\n\n\n@pytest.mark.usefixtures("a")\n@pytest.fixture\ndef f():\n    pass\n',
+    ),
+    (
+        "PT026",
+        "import pytest\n\n\n@pytest.mark.usefixtures()\ndef test_f():\n    pass\n",
+    ),
     ("LOG001", 'import logging\n\nlog = logging.Logger("x")\n'),
     (
         "LOG007",
@@ -385,6 +400,20 @@ NEW_RULE_CASES = [
     ),
     ("RUF060", "x = 1 in []\n"),
     ("RUF068", '__all__ = ["a", "a"]\n'),
+    ("T100", "breakpoint()\n"),
+    ("B024", "import abc\n\n\nclass A(abc.ABC):\n    def f(self):\n        return 1\n"),
+    ("B027", "import abc\n\n\nclass A(abc.ABC):\n    def f(self):\n        pass\n"),
+    ("RUF028", "# fmt: skip\nx = 1\n"),
+    (
+        "RUF049",
+        "from dataclasses import dataclass\nfrom enum import Enum\n\n\n@dataclass\nclass E(Enum):\n    A = 1\n",
+    ),
+    (
+        "RUF058",
+        "import itertools\n\nx = list(itertools.starmap(lambda a, b: a + b, zip([1], [2])))\n",
+    ),
+    ("RUF104", "# ruff: disable[F401]\nimport sys\n"),
+    ("PLW1508", 'import os\n\nx = os.environ.get("FOO", 1)\n'),
     (
         "ASYNC210",
         'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
@@ -422,6 +451,27 @@ NEW_RULE_CASES = [
     ),
     ("S609", 'import subprocess\n\nsubprocess.Popen("chmod 600 *", shell=True)\n'),
     ("S612", "import logging.config\n\nlogging.config.listen(9999)\n"),
+    ("S201", "from flask import Flask\n\napp = Flask(__name__)\napp.run(debug=True)\n"),
+    (
+        "S308",
+        "from django.utils.safestring import mark_safe\n\n\ndef f(text):\n    return mark_safe(text)\n",
+    ),
+    (
+        "S508",
+        'from pysnmp.hlapi import CommunityData\n\nCommunityData("public", mpModel=0)\n',
+    ),
+    (
+        "S509",
+        'from pysnmp.hlapi import UsmUserData\n\nUsmUserData("user", "authkey")\n',
+    ),
+    (
+        "S610",
+        'from django.contrib.auth.models import User\n\n\ndef f(q):\n    return User.objects.all().extra(select={"a": q})\n',
+    ),
+    (
+        "S611",
+        "from django.db.models.expressions import RawSQL\n\n\ndef f(q):\n    return RawSQL(q, [])\n",
+    ),
     (
         "SIM107",
         "def f():\n    try:\n        return 1\n    finally:\n        return 2\n",
