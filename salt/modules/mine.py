@@ -153,6 +153,17 @@ def update(clear=False, mine_functions=None):
     The function cache will be populated with information from executing these
     functions
 
+    Each configured function is dispatched through the whitelist-gated
+    loader (``__wire_salt__``), so if ``whitelist_modules`` is set a
+    ``mine_functions`` entry referring to a non-whitelisted function
+    will fail and is skipped.  Whitelist the specific functions the
+    mine needs to publish.
+
+    .. versionchanged:: 3008.7
+
+        Previously dispatched via the unfiltered inner ``__salt__``;
+        the mine is now subject to ``whitelist_modules``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -182,10 +193,14 @@ def update(clear=False, mine_functions=None):
         if not _mine_function_available(function_name or function_alias):
             continue
         try:
+            # Dispatch via the whitelist-gated loader so a mine entry
+            # cannot reach a non-whitelisted execution function.
+            target = function_name or function_alias
+            # pylint: disable=undefined-variable
+            fun = __wire_salt__[target]  # noqa: F821
+            # pylint: enable=undefined-variable
             res = salt.utils.functools.call_function(
-                __salt__[function_name or function_alias],
-                *function_args,
-                **function_kwargs,
+                fun, *function_args, **function_kwargs
             )
         except Exception:  # pylint: disable=broad-except
             trace = traceback.format_exc()
@@ -235,6 +250,17 @@ def send(name, *args, **kwargs):
         minions are allowed to access this function.
         See :ref:`targeting` for more information about targeting.
 
+    Dispatch goes through the whitelist-gated loader
+    (``__wire_salt__``), so ``whitelist_modules`` applies to
+    ``name`` / ``mine_function``: a non-whitelisted target makes
+    ``mine.send`` return ``False`` without publishing.
+
+    .. versionchanged:: 3008.7
+
+        Previously dispatched via the unfiltered inner ``__salt__``,
+        which let ``mine.send`` reach any execution function.  The
+        target function is now subject to ``whitelist_modules``.
+
     CLI Example:
 
     .. code-block:: bash
@@ -249,9 +275,14 @@ def send(name, *args, **kwargs):
     allow_tgt_type = kwargs.pop("allow_tgt_type", None)
     mine_data = {}
     try:
-        res = salt.utils.functools.call_function(
-            __salt__[mine_function or name], *args, **kwargs
-        )
+        # Dispatch via the whitelist-gated loader so ``mine_function``
+        # (a caller-supplied name) cannot reach a non-whitelisted
+        # execution function.
+        target = mine_function or name
+        # pylint: disable=undefined-variable
+        fun = __wire_salt__[target]  # noqa: F821
+        # pylint: enable=undefined-variable
+        res = salt.utils.functools.call_function(fun, *args, **kwargs)
     except Exception:  # pylint: disable=broad-except
         trace = traceback.format_exc()
         log.error("Function %s in mine.send failed to execute", mine_function or name)
