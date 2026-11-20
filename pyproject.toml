@@ -208,6 +208,7 @@ select = [
     "PLW0129",  # assert on a string literal
     "PLW0120",  # else on a loop without break
     "PLW1641",  # __eq__ without __hash__
+    "PLW1508",  # os.environ.get() default that is not a string
     "LOG002",  # getLogger(__file__)
     "LOG004",  # logger.exception() outside an except block
     "G010",  # logger.warn()

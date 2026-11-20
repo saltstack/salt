@@ -413,6 +413,7 @@ NEW_RULE_CASES = [
         "import itertools\n\nx = list(itertools.starmap(lambda a, b: a + b, zip([1], [2])))\n",
     ),
     ("RUF104", "# ruff: disable[F401]\nimport sys\n"),
+    ("PLW1508", 'import os\n\nx = os.environ.get("FOO", 1)\n'),
     (
         "ASYNC210",
         'import requests\n\n\nasync def f():\n    requests.get("https://x")\n',
