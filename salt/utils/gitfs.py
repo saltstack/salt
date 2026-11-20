@@ -2179,7 +2179,8 @@ class Pygit2(GitProvider):
                 warnings.warn(
                     "pygit2 ignores proxy settings if the git url "
                     '(currently {}) does not have an "https" scheme. '
-                    "Fetches will connect directly to the repository.".format(self.url)
+                    "Fetches will connect directly to the repository.".format(self.url),
+                    stacklevel=1,
                 )
 
         return new
@@ -2488,7 +2489,8 @@ class Pygit2(GitProvider):
                 warnings.warn(
                     "pygit2 does not support disabling the SSL certificate "
                     f"check in versions prior to 0.23.2 (installed: {PYGIT2_VERSION}). "
-                    "Fetches for self-signed certificates will fail."
+                    "Fetches for self-signed certificates will fail.",
+                    stacklevel=1,
                 )
 
     def verify_auth(self):

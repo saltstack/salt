@@ -134,6 +134,7 @@ def loader_mock(*args, **kwargs):
             "'request' is not longer an accepted argument to 'loader_mock()'. Please"
             " stop passing it.",
             category=DeprecationWarning,
+            stacklevel=2,
         )
     else:
         loader_modules = args[0]

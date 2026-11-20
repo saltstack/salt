@@ -310,6 +310,7 @@ class Transport:
             warnings.warn(
                 f"Unclosed transport! {self!r} \n{self._trace}",
                 TransportWarning,
+                stacklevel=1,
                 source=self,
             )
 

@@ -40,7 +40,7 @@ def warn_until_close(message, source, category=ResourceWarning, log=None):
     Called from ``__del__`` finalizers -- must never raise.
     """
     try:
-        warnings.warn(message, category, source=source)
+        warnings.warn(message, category, stacklevel=1, source=source)
     except Exception:  # pylint: disable=broad-except
         # ``warnings.warn`` can raise during interpreter shutdown when
         # the ``warnings`` module has already been torn down.  A
