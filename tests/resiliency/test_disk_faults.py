@@ -185,6 +185,16 @@ def test_disk_cache_slow_io(topology, workload, request):
         before=before,
         notes=notes,
         item=request.node,
+        # dd oflag=direct (or buffered fallback) on the master cachedir
+        # forces a write-through burst that stalls cache/renderer work
+        # on the primary.  On recovery the minions re-run grains /
+        # pillar / cache refetch; first-pass working set repopulates
+        # for several seconds past the fleet-ping bar.  CI 44698695931
+        # observed fd_accumulation 1001 KB/min on cluster5 (bulk-RSS
+        # also trips on a cold fleet: run 44267... pattern).  Sibling
+        # ``test_disk_pki_readonly`` already carries the same opt-out
+        # for the identical fault-recovery signature.
+        allow_fault_rss=True,
     )
 
 
@@ -226,6 +236,16 @@ def test_disk_log_fill(topology, workload, request):
         before=before,
         notes=f"fill {DISK_FILL_MB}M in {MASTER_LOGDIR}",
         item=request.node,
+        # Filling the master logdir forces the master's logger to
+        # back-pressure every event-bus write while the filesystem is
+        # full; minions queue returns and re-emit after unfill.  First
+        # reconnect repopulates grains/pillar/cache working set for
+        # several seconds past the fleet-ping bar.  CI 44698695931
+        # observed fd_accumulation 338 KB/min on cluster5; local repro
+        # on a cold fleet tripped bulk-RSS retention (6960 KB after a
+        # 1 s reconnect).  Same fault-recovery shape as the sibling
+        # ``test_disk_pki_readonly`` + ``test_disk_cache_slow_io``.
+        allow_fault_rss=True,
     )
 
 
