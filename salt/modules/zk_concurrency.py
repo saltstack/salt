@@ -275,7 +275,7 @@ def lock(
     # forcibly get the lock regardless of max_concurrency
     if force:
         __context__["semaphore_map"][path].assured_path = True
-        __context__["semaphore_map"][path].max_leases = sys.maxint
+        __context__["semaphore_map"][path].max_leases = sys.maxsize
 
     # block waiting for lock acquisition
     if timeout:
