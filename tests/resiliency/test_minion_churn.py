@@ -160,7 +160,21 @@ def test_minion_churn_rolling(topology, workload, request, minion):
         # repopulation as single_restart / simultaneous / kill9 (which
         # already carry allow_bulk_rss=True).  CI 44676940448 observed
         # 4961 KB/min on mm-failover.
-        allow_bulk_rss=True,
+        #
+        # On syndic the FIRST minion in the rolling order also trips
+        # the fd branch -- the cold-restarted minion re-auths to the
+        # sub-master, which fans the auth upward to MoM, leaving
+        # per-minion auth-sock + return-channel fds briefly held past
+        # the first successful ping.  CI 44698695931 captured the
+        # diagnostic: minion-1 trips with fd_delta=62, rss=8737 KB/min
+        # reason=fd_accumulation; minion-2 that follows recovers with
+        # fd_delta=-992, rss_delta=-21432 KB -- the fleet-sum fd
+        # count goes NEGATIVE as minion-1's transients drain.  That
+        # one-shot / self-draining signature is the fault-work pattern,
+        # not a leak.  Upgrade to ``allow_fault_rss`` so the fd branch
+        # is also exempt; a true auth-sock leak would still fail via
+        # the reconnect-window ``missing`` check.
+        allow_fault_rss=True,
     )
 
 
