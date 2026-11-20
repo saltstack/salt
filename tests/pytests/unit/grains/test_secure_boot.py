@@ -96,8 +96,6 @@ def test_secure_boot_vars(tmp_path, setting_secure, extra_file, expected_enabled
     (
         (True, True),
         (False, False),
-        (False, False),
-        (False, False),
     ),
 )
 def test_secure_boot_efivars_and_vars(tmp_path, setting_secure, expected_enabled):
