@@ -33,6 +33,14 @@ def funcs(temp_salt_master):
     return funcs
 
 
+@pytest.fixture
+def mine_funcs(master_opts):
+    salt.cache.MemCache.data.clear()
+    funcs = masterapi.RemoteFuncs(master_opts)
+    funcs.cache = FakeCache()
+    return funcs
+
+
 def test_mine_get(funcs, tgt_type_key="tgt_type"):
     """
     Asserts that ``mine_get`` gives the expected results.
@@ -206,3 +214,59 @@ def test_mine_get_acl_rejected(funcs):
             }
         )
     assert ret == {}
+
+
+def test_mine_clear_replaces_existing_data(mine_funcs):
+    """
+    ``clear=True`` must replace mine data so stale functions are removed.
+    """
+    mine_funcs.opts["minion_data_cache"] = True
+    mine_funcs.cache.store(
+        "mine",
+        "minion1",
+        {"stale.fun": "old", "grains.items": {"os": "Linux"}},
+    )
+    new_data = {"grains.items": {"os": "Linux", "kernel": "5.15"}}
+    ret = mine_funcs._mine(
+        {"id": "minion1", "data": new_data, "clear": True},
+        skip_verify=True,
+    )
+    assert ret is True
+    assert mine_funcs.cache.fetch("mine", "minion1") == new_data
+
+
+def test_mine_merge_updates_existing_dict(mine_funcs):
+    """
+    ``clear=False`` (default) must merge new data into existing mine data.
+    """
+    mine_funcs.opts["minion_data_cache"] = True
+    mine_funcs.cache.store(
+        "mine",
+        "minion1",
+        {"grains.items": {"os": "Linux"}, "other.fun": "keep"},
+    )
+    new_data = {"grains.items": {"kernel": "5.15"}}
+    ret = mine_funcs._mine(
+        {"id": "minion1", "data": new_data},
+        skip_verify=True,
+    )
+    assert ret is True
+    assert mine_funcs.cache.fetch("mine", "minion1") == {
+        "grains.items": {"kernel": "5.15"},
+        "other.fun": "keep",
+    }
+
+
+def test_mine_merge_replaces_non_dict_cached_value(mine_funcs):
+    """
+    When cached mine data is not a dict, store the incoming payload as-is.
+    """
+    mine_funcs.opts["minion_data_cache"] = True
+    mine_funcs.cache.store("mine", "minion1", "not-a-dict")
+    new_data = {"grains.items": {"os": "Linux"}}
+    ret = mine_funcs._mine(
+        {"id": "minion1", "data": new_data},
+        skip_verify=True,
+    )
+    assert ret is True
+    assert mine_funcs.cache.fetch("mine", "minion1") == new_data
