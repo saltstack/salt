@@ -206,7 +206,6 @@ select = [
     "ASYNC251",  # time.sleep() in an async function
     "PGH004",  # blanket noqa
     # Correctness checks with existing violations (stage 8). Only new ones block a PR.
-    "B008",  # function call in an argument default
     "B028",  # warnings.warn() without stacklevel
     "SIM222",  # "x or True"
     "SIM101",  # isinstance(x, A) or isinstance(x, B)

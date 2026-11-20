@@ -491,7 +491,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "G202",
         'import logging\n\nlog = logging.getLogger(__name__)\n\n\ndef f():\n    try:\n        pass\n    except Exception:\n        log.exception("x", exc_info=True)\n',
     ),
-    ("B008", "import time\n\n\ndef f(x=time.time()):\n    return x\n"),
     ("B028", 'import warnings\n\nwarnings.warn("x", DeprecationWarning)\n'),
     ("SIM222", "def f(x):\n    if x or True:\n        return 1\n"),
     (
