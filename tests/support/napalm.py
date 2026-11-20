@@ -460,7 +460,7 @@ class MockNapalmDevice:
         return TEST_BGP_CONFIG.copy()
 
     def get_bgp_neighbors_detail(self, neighbor_address=None, **kwargs):
-        assert neighbor_address is None or "test_address"
+        assert neighbor_address in (None, "test_address")
         return TEST_BGP_NEIGHBORS.copy()
 
     def get_ntp_peers(self, **kwargs):
