@@ -65,7 +65,7 @@ def chocolatey_mod(modules):
         assert result["retcode"] == 0
 
     def uninstall():
-        choco_dir = os.environ.get("ChocolateyInstall", False)
+        choco_dir = os.environ.get("ChocolateyInstall")
         if choco_dir:
             # Remove Chocolatey Directory
             modules.file.remove(path=choco_dir, force=True)
