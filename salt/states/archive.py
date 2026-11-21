@@ -1742,7 +1742,15 @@ def extracted(
                 enforce_links = []
         else:
             if contents is not None:
-                enforce_dirs = contents["top_level_dirs"]
+                enforce_dirs = list(contents["top_level_dirs"])
+                # A top-level directory which isn't an archive member of its
+                # own is only in top_level_dirs when it is the only one, so
+                # derive the rest from the paths of the archive's members.
+                for path in contents["dirs"] + contents["files"] + contents["links"]:
+                    top_level_dir = path.split("/")[0]
+                    if "/" in path.rstrip("/") and top_level_dir not in ("", ".."):
+                        if top_level_dir + "/" not in enforce_dirs:
+                            enforce_dirs.append(top_level_dir + "/")
                 enforce_files = contents["top_level_files"]
                 enforce_links = contents["top_level_links"]
 
