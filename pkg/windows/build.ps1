@@ -9,6 +9,7 @@ and are called in this order:
 
 - clean_env.ps1
 - install_nsis.ps1
+- install_openssl.ps1
 - build_python.ps1
 - install_salt.ps1
 - build_pkg.ps1
@@ -178,6 +179,23 @@ if ( $CICD ) {
 & "$SCRIPT_DIR\install_vs_buildtools.ps1" @KeywordArguments
 if ( ! $? ) {
     Write-Host "Failed to install Visual Studio Build Tools"
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Install OpenSSL dev headers (arm64 only — cryptography ships no
+# win_arm64 wheel so pip builds from source and needs OPENSSL_DIR)
+#-------------------------------------------------------------------------------
+
+$KeywordArguments = @{
+    Architecture = $Architecture
+}
+if ( $CICD ) {
+    $KeywordArguments["CICD"] = $true
+}
+& "$SCRIPT_DIR\install_openssl.ps1" @KeywordArguments
+if ( ! $? ) {
+    Write-Host "Failed to install OpenSSL development headers"
     exit 1
 }
 
