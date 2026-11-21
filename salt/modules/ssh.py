@@ -415,10 +415,16 @@ def check_key_file(
     config=".ssh/authorized_keys",
     saltenv="base",
     fingerprint_hash_type=None,
+    options=None,
 ):
     """
     Check a keyfile from a source destination against the local keys and
     return the keys to change
+
+    options
+        List of options applied to every key in the source file. When set,
+        these replace the options parsed from the file, matching
+        ``set_auth_key_from_file``. When omitted, file options are used.
 
     CLI Example:
 
@@ -438,12 +444,15 @@ def check_key_file(
     else:
         ret = {}
         for key in s_keys:
+            # Same override as set_auth_key_from_file: state options win when
+            # provided, otherwise keep the options parsed from the source file.
+            key_options = options or s_keys[key]["options"]
             ret[key] = check_key(
                 user,
                 key,
                 s_keys[key]["enc"],
                 s_keys[key]["comment"],
-                s_keys[key]["options"],
+                key_options,
                 config=config,
                 fingerprint_hash_type=fingerprint_hash_type,
             )
