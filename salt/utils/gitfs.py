@@ -266,6 +266,10 @@ class GitProvider:
     # the master lock should be used when ever git provider reads or writes to one if it locks
     _master_lock = multiprocessing.Lock()
 
+    # Bare providers set this when their checkout() writes git_pillar and
+    # winrepo files to the salt working dir instead of the cache dir.
+    checks_out_to_working_dir = False
+
     def __init__(
         self,
         opts,
@@ -699,11 +703,10 @@ class GitProvider:
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        cache_dir = self._cachedir
-        if self.provider == "gitcli" and self.role in ("git_pillar", "winrepo"):
-            # GitCLI keeps a bare repository, and git_pillar and winrepo read
-            # files from disk, so GitCLI.checkout() writes them to the working dir.
+        if self.checks_out_to_working_dir and self.role in ("git_pillar", "winrepo"):
             cache_dir = self._salt_working_dir
+        else:
+            cache_dir = self._cachedir
         root_dir = salt.utils.path.join(cache_dir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
@@ -2646,6 +2649,8 @@ class GitCLI(GitProvider):
     Designed for high-concurrency and low memory footprint at scale.
     Supports shallow clones via gitfs_depth.
     """
+
+    checks_out_to_working_dir = True
 
     def __init__(
         self,
