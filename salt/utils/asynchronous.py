@@ -350,6 +350,10 @@ class SyncWrapper:
         types.MethodType,
         types.BuiltinMethodType,
     )
+    if hasattr(asyncio, "Timeout"):
+        # A timeout context retains the current task while it waits, but does
+        # not make an otherwise abandoned task user-owned.
+        _ORPHAN_TASK_REFERRER_TYPES += (asyncio.Timeout,)
 
     @classmethod
     def _task_is_orphan(cls, task, exclude):
@@ -366,6 +370,17 @@ class SyncWrapper:
         for ref in gc.get_referrers(task):
             if id(ref) in exclude:
                 continue
+            if isinstance(ref, dict):
+                # CPython may expose an attribute through the instance's
+                # dictionary rather than the instance itself. Such a task is
+                # still owned; dispatch bookkeeping dictionaries are not.
+                for owner in gc.get_referrers(ref):
+                    if id(owner) in exclude or isinstance(
+                        owner, cls._ORPHAN_TASK_REFERRER_TYPES
+                    ):
+                        continue
+                    if getattr(owner, "__dict__", None) is ref:
+                        return False
             if isinstance(ref, cls._ORPHAN_TASK_REFERRER_TYPES):
                 continue
             # ``TaskStepMethWrapper`` is a C-level asyncio internal used
@@ -389,6 +404,19 @@ class SyncWrapper:
             pre_existing = set(asyncio.all_tasks(asyncio_loop))
         except RuntimeError:
             pre_existing = set()
+        previous_factory = asyncio_loop.get_task_factory()
+        task_parents = {}
+
+        def track_task(loop, coro, **kwargs):
+            parent = asyncio.current_task(loop=loop)
+            if previous_factory is None:
+                task = asyncio.Task(coro, loop=loop, **kwargs)
+            else:
+                task = previous_factory(loop, coro, **kwargs)
+            task_parents[task] = parent
+            return task
+
+        asyncio_loop.set_task_factory(track_task)
         try:
             result = io_loop.run_sync(lambda: getattr(self.obj, key)(*args, **kwargs))
             results.append(True)
@@ -397,6 +425,7 @@ class SyncWrapper:
             results.append(False)
             results.append(sys.exc_info())
         finally:
+            asyncio_loop.set_task_factory(previous_factory)
             # Reap ``asyncio.Task`` objects the wrapped coroutine scheduled
             # on ``asyncio_loop`` but did not await -- e.g. pyzmq's
             # future-based sockets and tornado's asyncio bridge fire tasks
@@ -429,11 +458,26 @@ class SyncWrapper:
                     ]
                     if new_tasks:
                         exclude = {id(new_tasks), id(current), id(pre_existing)}
-                        orphans = [
+                        owned = pre_existing | {
                             task
                             for task in new_tasks
-                            if self._task_is_orphan(task, exclude)
-                        ]
+                            if not self._task_is_orphan(task, exclude)
+                        }
+                        # wait_for(), gather(), and shield() can create child
+                        # tasks with no direct user-object reference. Preserve
+                        # descendants of retained workers as well as the
+                        # workers themselves. Track creation rather than
+                        # relying on private asyncio waiter/callback layouts.
+                        while True:
+                            children = {
+                                task
+                                for task, parent in task_parents.items()
+                                if parent in owned and task not in owned
+                            }
+                            if not children:
+                                break
+                            owned.update(children)
+                        orphans = [task for task in new_tasks if task not in owned]
                         if orphans:
                             for task in orphans:
                                 task.cancel()

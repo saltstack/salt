@@ -35,6 +35,30 @@ def key_data():
     ]
 
 
+@pytest.mark.parametrize("verified", [True, False])
+@pytest.mark.parametrize("deltaproxy", [True, False, None])
+async def test_presence_identifies_authenticated_deltaproxy(verified, deltaproxy):
+    """Only a verified subscriber may request DeltaProxy publication routing."""
+    channel = MagicMock(spec=server.PubServerChannel)
+    channel.opts = {}
+    channel.aes_funcs = MagicMock()
+    channel.aes_funcs.verify_minion.return_value = verified
+    subscriber = MagicMock(id_=None, deltaproxy=False)
+    load = {"id": "controller", "tok": b"token"}
+    if deltaproxy is not None:
+        load["deltaproxy"] = deltaproxy
+    with patch("salt.channel.server._get_crypticle") as crypticle:
+        crypticle.return_value.loads.return_value = load
+        await server.PubServerChannel.presence_callback(
+            channel, subscriber, {"enc": "aes", "load": b"encrypted"}
+        )
+    assert subscriber.deltaproxy is (verified and deltaproxy is True)
+    if verified:
+        channel._add_client_present.assert_called_once_with(subscriber)
+    else:
+        channel._add_client_present.assert_not_called()
+
+
 @pytest.mark.parametrize("linesep", ["\r\n", "\r", "\n"])
 def test_compare_keys(key_data, linesep):
     src_key = linesep.join(key_data)

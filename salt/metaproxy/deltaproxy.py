@@ -475,6 +475,10 @@ async def post_master_init(self, master):
 
     if _failed:
         log.error("The following sub proxies failed to initialize: %s", _failed)
+    if self.opts.get("transport", "zeromq") == "zeromq" and self.opts.get(
+        "zmq_filtering"
+    ):
+        self.pub_channel.transport.add_subscriptions(list(self.deltaproxy_objs))
     self.ready = True
 
 
