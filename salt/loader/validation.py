@@ -57,14 +57,13 @@ so module authors never have to declare them in signatures.
 import inspect
 import logging
 
-try:
-    from pydantic import BaseModel, ConfigDict, ValidationError, create_model
-
-    HAS_PYDANTIC = True
-except ImportError:  # pragma: no cover
-    HAS_PYDANTIC = False
-
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import reqs
+
+if reqs.pydantic:
+    from pydantic import BaseModel, ConfigDict, ValidationError, create_model
+else:  # pragma: no cover
+    BaseModel = ConfigDict = ValidationError = create_model = None
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +98,7 @@ def __getattr__(name):
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-if HAS_PYDANTIC:
+if reqs.pydantic:
     SALT_VALIDATE_CONFIG = ConfigDict(
         arbitrary_types_allowed=True,
         # Lax coercion: CLI strings ("30", "true") coerce to declared type.
@@ -193,7 +192,7 @@ def _build_input_model(fn):
     ``**kwargs`` can accept anything, and pydantic ``extra='ignore'`` takes
     care of forwarded kwargs beyond what's declared.
     """
-    if not HAS_PYDANTIC:
+    if not reqs.pydantic:
         return None, None
     try:
         sig = inspect.signature(fn)
@@ -295,7 +294,7 @@ def validate_inputs(fn, args, kwargs, mode):
     ``warn`` mode the original args/kwargs are returned unchanged and the
     error is logged.
     """
-    if mode == "off" or not HAS_PYDANTIC:
+    if mode == "off" or not reqs.pydantic:
         return args, kwargs
 
     if mode == "strict":
@@ -366,7 +365,7 @@ def _check_refinement(fn, declared, base):
     primitives), refinement isn't supported in this cut -- the base
     contract is used and the declaration is silently ignored.
     """
-    if not HAS_PYDANTIC:
+    if not reqs.pydantic:
         return
     if declared is None or base is None:
         return
@@ -386,7 +385,7 @@ def _is_refined_subclass(declared, base):
     """True when ``declared`` strictly refines ``base`` via BaseModel
     subclassing (not equal, not the same class)."""
     return (
-        HAS_PYDANTIC
+        bool(reqs.pydantic)
         and declared is not None
         and base is not None
         and inspect.isclass(declared)
@@ -489,7 +488,7 @@ def validate_return(fn, fn_name, ret, contract, registry, mode):
 
     Returns ``ret`` unchanged (payload is never mutated).
     """
-    if mode == "off" or not HAS_PYDANTIC:
+    if mode == "off" or not reqs.pydantic:
         return ret
 
     effective = _get_or_resolve_return_contract(fn, fn_name, contract, registry, mode)

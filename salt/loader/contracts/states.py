@@ -2,15 +2,13 @@
 Return contract for ``salt.states.*`` functions.
 """
 
-try:
+from salt.utils.versions import reqs
+
+if reqs.pydantic:
     from pydantic import BaseModel, ConfigDict
 
-    HAS_PYDANTIC = True
-except ImportError:  # pragma: no cover
-    HAS_PYDANTIC = False
 
-
-if HAS_PYDANTIC:
+if reqs.pydantic:
     _CFG = ConfigDict(
         arbitrary_types_allowed=True,
         strict=False,

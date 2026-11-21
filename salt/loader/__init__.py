@@ -1251,7 +1251,8 @@ def states(
     # validate every state function's return against it when
     # opts["loader_validate_return_mode"] is not "off". Imported lazily so
     # this module doesn't require pydantic at import time.
-    from salt.loader.contracts.states import HAS_PYDANTIC, StateReturn
+    from salt.loader.contracts.states import StateReturn
+    from salt.utils.versions import reqs
 
     return LazyLoader(
         _module_dirs(opts, "states"),
@@ -1262,7 +1263,7 @@ def states(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",
         loaded_base_name=loaded_base_name,
-        output_contract=StateReturn if HAS_PYDANTIC else None,
+        output_contract=StateReturn if reqs.pydantic else None,
     )
 
 

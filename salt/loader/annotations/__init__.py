@@ -38,16 +38,14 @@ import re
 from datetime import timedelta
 from typing import Annotated
 
-try:
+from salt.utils.versions import reqs
+
+if reqs.pydantic:
     from pydantic import AfterValidator, Field, GetJsonSchemaHandler
     from pydantic_core import CoreSchema, core_schema
 
-    HAS_PYDANTIC = True
-except ImportError:  # pragma: no cover
-    HAS_PYDANTIC = False
 
-
-if HAS_PYDANTIC:
+if reqs.pydantic:
     # -----------------------------------------------------------------
     # Annotated pattern: trivial declarative types.
     # -----------------------------------------------------------------

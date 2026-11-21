@@ -9,10 +9,9 @@ import pytest
 
 import salt.loader.validation as validation
 from salt.exceptions import SaltInvocationError
+from salt.utils.versions import reqs
 
-pytestmark = pytest.mark.skipif(
-    not validation.HAS_PYDANTIC, reason="pydantic not installed"
-)
+pytestmark = pytest.mark.skipif(not reqs.pydantic, reason="pydantic not installed")
 
 
 class TestSplitReserved:

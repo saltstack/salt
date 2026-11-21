@@ -8,10 +8,9 @@ from datetime import timedelta
 import pytest
 
 import salt.loader.annotations as salt_types
+from salt.utils.versions import reqs
 
-pytestmark = pytest.mark.skipif(
-    not salt_types.HAS_PYDANTIC, reason="pydantic not installed"
-)
+pytestmark = pytest.mark.skipif(not reqs.pydantic, reason="pydantic not installed")
 
 
 try:
