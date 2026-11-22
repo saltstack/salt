@@ -271,7 +271,7 @@ def test_ssh_pre_flight_perms(salt_ssh_cli, caplog, _create_roster, account):
         # pylint: disable=W1509
         ret = subprocess.Popen(
             ["sh", f"{run_script}"],
-            preexec_fn=demote(account.info.uid, account.info.gid),
+            preexec_fn=demote(account.info.uid, account.info.gid),  # noqa: PLW1509
             stdout=None,
             stderr=None,
             stdin=None,
