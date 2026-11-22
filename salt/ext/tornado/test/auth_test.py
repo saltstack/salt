@@ -11,7 +11,7 @@ from salt.ext.tornado.concurrent import Future
 from salt.ext.tornado.escape import json_decode
 from salt.ext.tornado import gen
 from salt.ext.tornado.httputil import url_concat
-from salt.ext.tornado.log import gen_log
+from salt.ext.tornado.log import access_log, gen_log
 from salt.ext.tornado.testing import AsyncHTTPTestCase, ExpectLog
 from salt.ext.tornado.web import RequestHandler, Application, asynchronous, HTTPError
 
@@ -36,11 +36,33 @@ class OpenIdClientLoginHandler(RequestHandler, OpenIdMixin):
         self.finish(user)
 
 
+class OpenIdSubstringClientLoginHandler(OpenIdClientLoginHandler):
+    def initialize(self, test):
+        self._OPENID_ENDPOINT = test.get_url('/openid/server/substring')
+
+    @gen.coroutine
+    def get(self):
+        try:
+            yield self.get_authenticated_user(
+                http_client=self.settings['http_client'])
+        except AuthError:
+            self.set_status(401)
+            self.finish("invalid")
+        else:
+            self.finish("valid")
+
+
 class OpenIdServerAuthenticateHandler(RequestHandler):
     def post(self):
         if self.get_argument('openid.mode') != 'check_authentication':
             raise Exception("incorrect openid.mode %r")
         self.write('is_valid:true')
+
+
+class OpenIdServerSubstringHandler(RequestHandler):
+    def post(self):
+        # Contains "is_valid:true" but is not an is_valid:true response.
+        self.write('is_valid:false\nnote:not_is_valid:true\n')
 
 
 class OAuth1ClientLoginHandler(RequestHandler, OAuthMixin):
@@ -277,6 +299,7 @@ class AuthTest(AsyncHTTPTestCase):
             [
                 # test endpoints
                 ('/openid/client/login', OpenIdClientLoginHandler, dict(test=self)),
+                ('/openid/client/substring', OpenIdSubstringClientLoginHandler, dict(test=self)),
                 ('/oauth10/client/login', OAuth1ClientLoginHandler,
                  dict(test=self, version='1.0')),
                 ('/oauth10/client/request_params',
@@ -302,6 +325,7 @@ class AuthTest(AsyncHTTPTestCase):
 
                 # simulated servers
                 ('/openid/server/authenticate', OpenIdServerAuthenticateHandler),
+                ('/openid/server/substring', OpenIdServerSubstringHandler),
                 ('/oauth1/server/request_token', OAuth1ServerRequestTokenHandler),
                 ('/oauth1/server/access_token', OAuth1ServerAccessTokenHandler),
 
@@ -322,6 +346,20 @@ class AuthTest(AsyncHTTPTestCase):
         self.assertEqual(response.code, 302)
         self.assertTrue(
             '/openid/server/authenticate?' in response.headers['Location'])
+
+    def test_openid_substring_is_not_valid(self):
+        # The check_authentication response must be parsed, not searched for
+        # a substring.
+        # The access log is only emitted when the application logger is
+        # enabled, so do not require it.
+        with ExpectLog(access_log, ".*401 GET", required=False):
+            response = self.fetch(
+                '/openid/client/substring?openid.mode=blah'
+                '&openid.ns.ax=http://openid.net/srv/ax/1.0'
+                '&openid.ax.type.email=http://axschema.org/contact/email'
+                '&openid.ax.value.email=foo@example.com')
+        self.assertEqual(response.code, 401)
+        self.assertEqual(response.body, b"invalid")
 
     def test_openid_get_user(self):
         response = self.fetch('/openid/client/login?openid.mode=blah&openid.ns.ax=http://openid.net/srv/ax/1.0&openid.ax.type.email=http://axschema.org/contact/email&openid.ax.value.email=foo@example.com')
