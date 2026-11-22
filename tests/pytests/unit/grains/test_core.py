@@ -3808,7 +3808,7 @@ def test_linux_gpus(caplog):
     ), patch(
         "salt.grains.core.subprocess.run", MagicMock(return_value=bad_gpu_proc)
     ), caplog.at_level(
-        logging.WARN
+        logging.WARNING
     ):
         core._linux_gpu_data()
         assert (
