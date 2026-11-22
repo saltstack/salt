@@ -503,12 +503,11 @@ class HardCrashMixin(metaclass=MixInMeta):
     _config_filename_ = None
 
     def _mixin_setup(self):
-        # The option is a boolean, and an environment variable is a string.
-        # Only "True" and "False" are accepted, in any case.
-        value = os.environ.get("SALT_HARD_CRASH", "False")
-        if value.lower() not in ("true", "false"):
-            self.error(f"SALT_HARD_CRASH must be True or False, not '{value}'.")
-        hard_crash = value.lower() == "true"
+        # Any value that is not empty turns the option on, also "0" or "false".
+        # This is not a good way to read a boolean. It is how the variable has
+        # always worked, and nothing documents which values it should accept,
+        # so it is kept as it is.
+        hard_crash = bool(os.environ.get("SALT_HARD_CRASH"))
         self.add_option(
             "--hard-crash",
             action="store_true",

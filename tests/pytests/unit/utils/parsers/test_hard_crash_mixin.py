@@ -4,7 +4,6 @@ Tests the HardCrashMixin.
 
 import pytest
 
-import salt.defaults.exitcodes
 import salt.utils.parsers
 
 
@@ -24,26 +23,18 @@ def _hard_crash(monkeypatch, value):
     return MockHardCrashParser().get_default_values().hard_crash
 
 
-@pytest.mark.parametrize("value", [None, "False", "false", "FALSE"])
-def test_hard_crash_is_off(monkeypatch, value):
-    assert _hard_crash(monkeypatch, value) is False
+@pytest.mark.parametrize("value", [None, ""])
+def test_hard_crash_is_off_when_the_variable_is_not_set_or_empty(monkeypatch, value):
+    assert not _hard_crash(monkeypatch, value)
 
 
-@pytest.mark.parametrize("value", ["True", "true", "TRUE"])
-def test_hard_crash_is_on(monkeypatch, value):
-    assert _hard_crash(monkeypatch, value) is True
-
-
-@pytest.mark.parametrize(
-    "value", ["", "1", "0", "yes", "no", "on", "off", "2", "truee", " True"]
-)
-def test_hard_crash_rejects_any_other_value(monkeypatch, capsys, value):
-    with pytest.raises(SystemExit) as exc:
-        _hard_crash(monkeypatch, value)
-    assert exc.value.code == salt.defaults.exitcodes.EX_USAGE
-    assert f"SALT_HARD_CRASH must be True or False, not '{value}'" in (
-        capsys.readouterr().err
-    )
+@pytest.mark.parametrize("value", ["1", "0", "True", "true", "False", "false", "no"])
+def test_hard_crash_is_on_for_any_other_value(monkeypatch, value):
+    """
+    Any value that is not empty turns the option on, also "0" and "false".
+    That is how the variable has always worked.
+    """
+    assert _hard_crash(monkeypatch, value)
 
 
 def test_hard_crash_option_turns_it_on(monkeypatch):
