@@ -24,7 +24,8 @@ def start_ssh_server():
     """
     Pretty print the GH Actions event.
     """
-    resp = requests.get(
+    # Only used by the manual ssh-debug workflow, so no timeout is set.
+    resp = requests.get(  # noqa: S113
         "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.8.1.0p1-Preview/OpenSSH-Win64.zip",
         allow_redirects=True,
     )

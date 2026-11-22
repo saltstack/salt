@@ -660,7 +660,8 @@ class Client:
                 raise MinionError(f"Could not fetch from {url}. Exception: {exc}")
         if url_data.scheme == "ftp":
             try:
-                ftp = ftplib.FTP()  # nosec
+                # The user asked for an ftp:// source, so plain FTP is expected.
+                ftp = ftplib.FTP()  # nosec  # noqa: S321
                 ftp_port = url_data.port
                 if not ftp_port:
                     ftp_port = 21
