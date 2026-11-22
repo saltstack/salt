@@ -205,6 +205,16 @@ select = [
     "DTZ004",  # datetime.utcfromtimestamp()
     "ASYNC251",  # time.sleep() in an async function
     "PGH004",  # blanket noqa
+    # Correctness checks with existing violations (stage 8). Only new ones block a PR.
+    "B028",  # warnings.warn() without stacklevel
+    "SIM222",  # "x or True"
+    "SIM101",  # isinstance(x, A) or isinstance(x, B)
+    "RUF102",  # noqa with an invalid rule code
+    "LOG015",  # call on the root logger
+    "TRY201",  # "raise e" instead of "raise"
+    "ASYNC110",  # asyncio.sleep() in a while loop
+    "ASYNC221",  # blocking process call in an async function
+    "ASYNC240",  # os.path / pathlib call in an async function
     # Bugs and unsafe calls that are not present in the code base today.
     "ASYNC210",  # blocking requests call in async function
     "ASYNC220",  # subprocess started in async function
