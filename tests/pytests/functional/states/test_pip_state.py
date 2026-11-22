@@ -459,10 +459,10 @@ def test_issue_6833_pip_upgrade_pip(tmp_path, create_virtualenv, modules, states
         "New python executable" in ret["stdout"]
         or "created virtual environment" in ret["stdout"]
     ):
-        assert (
-            False
-        ), "Expected STDOUT did not match. Full return dictionary:\n{}".format(
-            pprint.pformat(ret)
+        raise AssertionError(
+            "Expected STDOUT did not match. Full return dictionary:\n{}".format(
+                pprint.pformat(ret)
+            )
         )
 
     # Download wheels to avoid PyPI slowness/timeouts during test

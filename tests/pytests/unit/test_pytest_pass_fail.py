@@ -13,7 +13,7 @@ import pytest
     reason="This test should always fail. If it passes, we messed up pytest",
 )
 def test_should_always_fail():
-    assert False
+    raise AssertionError()
 
 
 def test_should_always_pass():

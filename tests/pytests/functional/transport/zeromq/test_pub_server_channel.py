@@ -277,7 +277,7 @@ async def test_pub_channel(master_opts, io_loop):
         while not payloads:
             await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
-                assert False, "No message received after 30 seconds"
+                raise AssertionError("No message received after 30 seconds")
         assert payloads
     finally:
         server.close()
@@ -314,7 +314,7 @@ async def test_pub_channel_filtering(master_opts, io_loop):
         while not payloads:
             await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
-                assert False, "No message received after 30 seconds"
+                raise AssertionError("No message received after 30 seconds")
     finally:
         server.close()
 
@@ -350,6 +350,6 @@ async def test_pub_channel_filtering_topic(master_opts, io_loop):
         while not payloads:
             await asyncio.sleep(0.3)
             if time.monotonic() - start > 30:
-                assert False, "No message received after 30 seconds"
+                raise AssertionError("No message received after 30 seconds")
     finally:
         server.close()
