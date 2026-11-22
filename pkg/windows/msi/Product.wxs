@@ -22,11 +22,20 @@ IMCAC - Immediate Custom Action - It's immediate
     Language     = "1033">
 
     <!--  Install per Machine -->
+    <!-- Platform defaults to x86 when omitted, regardless of the -arch
+         switch passed to candle.exe - without it explicitly here,
+         light.exe rejects the 64-bit VC++ CRT merge module with "is a
+         64-bit merge module but the product consuming it is 32-bit."
+         sys.BUILDARCH did NOT fix this in practice (confirmed live -
+         same failure, same value) for reasons undetermined; use the
+         ARCHITECTURE define build_pkg.ps1 passes explicitly instead,
+         which is exactly the string passed to candle's own -arch. -->
     <Package
       InstallScope      = "perMachine"
       InstallerVersion  = "500"
       Compressed        = "yes"
       InstallPrivileges = "elevated"
+      Platform          = "$(var.ARCHITECTURE)"
     />
 
     <!-- Prevent downgrade -->
@@ -246,6 +255,11 @@ IMCAC - Immediate Custom Action - It's immediate
       <Custom Action="PreserveRootDirVarCache_IMCAC"  Before="RemoveExistingProducts"        >WIX_UPGRADE_DETECTED</Custom>
       <Custom Action="RestoreRootDirVarCache_IMCAC"   After="CreateFolders"                  >WIX_UPGRADE_DETECTED</Custom>
 
+      <?if $(var.ARCHITECTURE) = "arm64" ?>
+      <!-- Replaces the VC143 MergeRef feature's install for arm64 - see the CustomAction declaration. -->
+      <Custom Action="InstallVCRedist"           After="InstallFiles"              >(NOT VCREDIST_INSTALLED) AND (NOT Installed)</Custom>
+      <?endif ?>
+
     </InstallExecuteSequence>
 
     <!-- Declare Immediate (*_IMCAC) and Deferred (*_DECAC) Custom Actions. -->
@@ -271,14 +285,26 @@ IMCAC - Immediate Custom Action - It's immediate
     <CustomAction Id="MoveInsecureConfig_CADH" Property="MoveInsecureConfig_DECAC" Value="INSECURE_CONFIG_FOUND=[INSECURE_CONFIG_FOUND];" />
 
     <!-- Install VC++ runtime -->
+    <!-- Visual C++ runtimes depend on the target platform. Merge modules
+         enforce exact architecture matching at build time (a Windows
+         Installer rule, not a WiX limitation) - an x64 merge module
+         cannot be merged into an arm64-declared product even though
+         the resulting DLLs run fine under Windows 11 on Arm's x64
+         emulation (confirmed live: WiX's own binder rejects it with
+         LGHT0345). No native arm64 merge module is published anywhere
+         yet, so arm64 instead launches the standalone vcredist
+         installer EXE via a CustomAction below rather than merging an
+         .msm. Replace with a native Microsoft_VC143_CRT_arm64.msm
+         (reverting to the merge-module approach) once one exists. -->
+    <?if $(var.ARCHITECTURE) != "arm64" ?>
     <DirectoryRef Id="TARGETDIR">
-    <!-- Visual C++ runtimes depend on the target platform -->
     <?if $(var.WIN64)=yes ?>
       <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x64.msm" DiskId="1" Language="0" />
     <?else ?>
       <Merge Id="MSM_VC143_CRT" SourceFile="$(var.WEBCACHE_DIR)\Microsoft_VC143_CRT_x86.msm" DiskId="1" Language="0" />
     <?endif ?>
     </DirectoryRef>
+    <?endif ?>
     <!-- Add INSTALLDIR to the system Path -->
     <DirectoryRef Id="TARGETDIR">
       <Component Id="INSTALLDIR_System_Path" Guid="A9F54641-91F8-4AFB-B812-9409E6EA0192">
@@ -286,15 +312,29 @@ IMCAC - Immediate Custom Action - It's immediate
       </Component>
     </DirectoryRef>
 
+    <?if $(var.ARCHITECTURE) = "arm64" ?>
+    <!-- vcredist_x64_2022.exe embedded as Binary data rather than a
+         merge module - see the comment above the (skipped) Merge
+         block. Deferred + Impersonate=no runs it elevated; Return=
+         ignore because vcredist installers commonly exit non-zero for
+         soft conditions (3010 reboot-required, 1638 already installed
+         at a different version) that shouldn't fail the whole Salt
+         install. -->
+    <Binary Id="VCRedistExe" SourceFile="$(var.WEBCACHE_DIR)\vcredist_x64_2022.exe" />
+    <CustomAction Id="InstallVCRedist" BinaryKey="VCRedistExe" ExeCommand="/install /quiet /norestart" Execute="deferred" Impersonate="no" Return="ignore" />
+    <?endif ?>
+
     <!-- Assemble fixed and conditional features -->
     <!-- Conditional features need attention for install and uninstall -->
     <!-- Leaving registry keys would mean the product is still installed -->
     <Feature Id="ProductFeature" Title="Minion" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
+      <?if $(var.ARCHITECTURE) != "arm64" ?>
       <Feature Id="VC143" Title="VC++ 2022" AllowAdvertise="no" Display="hidden">
         <MergeRef Id="MSM_VC143_CRT" />
         <Condition Level="0"><![CDATA[VCREDIST_INSTALLED = "#1"]]></Condition>
       </Feature>
+      <?endif ?>
     </Feature>
 
     <!-- Get the config file template from the msi store only if no config is present -->

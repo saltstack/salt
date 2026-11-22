@@ -53,19 +53,29 @@ def _set_pip_constraint_env(env: dict[str, str]) -> None:
     env["PIP_BUILD_CONSTRAINT"] = env["PIP_CONSTRAINT"]
 
 
-def _pkg_lock_file(platform: str, python_version: str) -> pathlib.Path:
+def _pkg_lock_file(
+    platform: str, python_version: str, arch: str | None = None
+) -> pathlib.Path:
     """
     Return the static package lockfile for *platform* and a ``X.Y`` (or
     longer) *python_version*.
+
+    Windows arm64 has its own lockfile, resolved by uv for
+    ``aarch64-pc-windows-msvc``, because ``windows.lock`` is resolved for
+    x86_64 and so evaluates ``platform_machine`` markers for that target
+    (e.g. it pins pymssql, which has no win_arm64 wheel).
     """
     major, minor = python_version.split(".")[:2]
+    name = platform if platform != "macos" else "darwin"
+    if platform == "windows" and arch == "arm64":
+        name = "windows-arm64"
     return (
         tools.utils.REPO_ROOT
         / "requirements"
         / "static"
         / "pkg"
         / f"py{major}.{minor}"
-        / f"{platform if platform != 'macos' else 'darwin'}.lock"
+        / f"{name}.lock"
     )
 
 
@@ -509,7 +519,7 @@ def macos(
         },
         "arch": {
             "help": "The architecture to build the package for",
-            "choices": ("amd64",),
+            "choices": ("amd64", "arm64"),
             "required": True,
         },
         "sign": {
@@ -746,7 +756,9 @@ def onedir_dependencies(
     if platform == "darwin":
         platform = "macos"
 
-    if platform != "macos" and arch == "arm64":
+    if platform == "linux" and arch == "arm64":
+        # relenv's linux arches use "aarch64"; macos and windows both use
+        # "arm64" literally (confirmed against relenv's arches dict).
         arch = "aarch64"
 
     shared_constants = tools.utils.get_cicd_shared_context()
@@ -843,6 +855,14 @@ def onedir_dependencies(
     # Cryptography needs openssl dir set to link to the proper openssl libs.
     if platform == "macos":
         env["OPENSSL_DIR"] = f"{dest}"
+    elif platform == "windows" and arch == "arm64":
+        # No prebuilt wheel exists for cryptography on this target yet,
+        # so pip falls back to compiling it, and openssl-sys has no
+        # other way to find an OpenSSL to link against. relenv bundles a
+        # copy of the OpenSSL dev tree it built from source for arm64
+        # into the onedir at OpenSSL/ for exactly this. amd64/x86 always
+        # have a prebuilt wheel and never reach this build path.
+        env["OPENSSL_DIR"] = str(dest / "OpenSSL")
 
     if platform == "linux":
         # This installs the ppbt package. We'll remove it after installing all
@@ -862,7 +882,7 @@ def onedir_dependencies(
         capture=True,
     )
     requirements_version = version_info.stdout.strip().decode()
-    requirements_file = _pkg_lock_file(platform, requirements_version)
+    requirements_file = _pkg_lock_file(platform, requirements_version, arch)
     _check_pkg_build_files_exist(ctx, requirements_file=requirements_file)
 
     # This matters here since install_args enables --no-binary=:all: for
