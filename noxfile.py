@@ -28,7 +28,7 @@ if __name__ == "__main__":
         "Do not execute this file directly. Use nox instead, it will know how to handle this file\n"
     )
     sys.stderr.flush()
-    exit(1)
+    sys.exit(1)
 # fmt: on
 
 import nox  # isort:skip

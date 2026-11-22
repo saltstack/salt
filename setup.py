@@ -270,7 +270,7 @@ class GenerateSaltSyspaths(Command):
         # Write the syspaths file
         if getattr(self.distribution, "salt_syspaths_hardcoded_path", None) is None:
             print("This command is not meant to be called on it's own")
-            exit(1)
+            sys.exit(1)
 
         # Write the system paths file
         open(
@@ -320,7 +320,7 @@ class WriteSaltSshPackagingFile(Command):
             # Write the salt-ssh packaging file
             if getattr(self.distribution, "salt_ssh_packaging_file", None) is None:
                 print("This command is not meant to be called on it's own")
-                exit(1)
+                sys.exit(1)
 
             # pylint: disable=E0602
             open(
