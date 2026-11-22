@@ -503,15 +503,12 @@ class HardCrashMixin(metaclass=MixInMeta):
     _config_filename_ = None
 
     def _mixin_setup(self):
-        # An environment variable is a string: only the values that mean "no"
-        # turn the option off, like "0" or "false".
-        hard_crash = os.environ.get("SALT_HARD_CRASH", "").strip().lower() not in (
-            "",
-            "0",
-            "false",
-            "no",
-            "off",
-        )
+        # The option is a boolean, and an environment variable is a string.
+        # Only "True" and "False" are accepted, in any case.
+        value = os.environ.get("SALT_HARD_CRASH", "False")
+        if value.lower() not in ("true", "false"):
+            self.error(f"SALT_HARD_CRASH must be True or False, not '{value}'.")
+        hard_crash = value.lower() == "true"
         self.add_option(
             "--hard-crash",
             action="store_true",

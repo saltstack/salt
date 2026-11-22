@@ -4,6 +4,7 @@ Tests the HardCrashMixin.
 
 import pytest
 
+import salt.defaults.exitcodes
 import salt.utils.parsers
 
 
@@ -23,14 +24,26 @@ def _hard_crash(monkeypatch, value):
     return MockHardCrashParser().get_default_values().hard_crash
 
 
-@pytest.mark.parametrize("value", [None, "", "0", "false", "False", "no", "off"])
-def test_hard_crash_is_off_when_the_variable_says_no(monkeypatch, value):
-    assert not _hard_crash(monkeypatch, value)
+@pytest.mark.parametrize("value", [None, "False", "false", "FALSE"])
+def test_hard_crash_is_off(monkeypatch, value):
+    assert _hard_crash(monkeypatch, value) is False
 
 
-@pytest.mark.parametrize("value", ["1", "true", "True", "yes", "on"])
-def test_hard_crash_is_on_when_the_variable_says_yes(monkeypatch, value):
-    assert _hard_crash(monkeypatch, value)
+@pytest.mark.parametrize("value", ["True", "true", "TRUE"])
+def test_hard_crash_is_on(monkeypatch, value):
+    assert _hard_crash(monkeypatch, value) is True
+
+
+@pytest.mark.parametrize(
+    "value", ["", "1", "0", "yes", "no", "on", "off", "2", "truee", " True"]
+)
+def test_hard_crash_rejects_any_other_value(monkeypatch, capsys, value):
+    with pytest.raises(SystemExit) as exc:
+        _hard_crash(monkeypatch, value)
+    assert exc.value.code == salt.defaults.exitcodes.EX_USAGE
+    assert f"SALT_HARD_CRASH must be True or False, not '{value}'" in (
+        capsys.readouterr().err
+    )
 
 
 def test_hard_crash_option_turns_it_on(monkeypatch):
