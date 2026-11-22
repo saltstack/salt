@@ -181,12 +181,13 @@ class ListDictDiffer:
         return changes
 
     @property
-    def changes_str2(self, tab_string="  "):
+    def changes_str2(self):
         """
         Returns a string in a more compact format describing the changes.
 
         The output better alligns with the one in recursive_diff.
         """
+        tab_string = "  "
         changes = []
         for item in self._get_recursive_difference(type="intersect"):
             if item.diffs:
