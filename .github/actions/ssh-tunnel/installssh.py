@@ -27,6 +27,7 @@ def start_ssh_server():
     resp = requests.get(
         "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.8.1.0p1-Preview/OpenSSH-Win64.zip",
         allow_redirects=True,
+        timeout=60,
     )
     with open("openssh.zip", "wb") as fp:
         fp.write(resp.content)
