@@ -58,7 +58,7 @@ typing-extensions==4.14.1
     #   -c requirements/static/ci/py3.10/darwin.lock
     #   -c requirements/static/pkg/py3.10/darwin.lock
     #   astroid
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.10/darwin.lock
     #   -c requirements/static/pkg/py3.10/darwin.lock

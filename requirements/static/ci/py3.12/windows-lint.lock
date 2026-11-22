@@ -59,7 +59,7 @@ toml==0.10.2
     #   -r requirements/static/ci/lint.txt
 tomlkit==0.15.1
     # via pylint
-urllib3==2.7.0
+urllib3==2.8.0
     # via
     #   -c requirements/static/ci/py3.12/windows.lock
     #   -c requirements/static/pkg/py3.12/windows.lock
