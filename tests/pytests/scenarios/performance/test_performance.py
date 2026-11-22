@@ -546,7 +546,7 @@ def test_performance(
     perf_state_name,
 ):
     # Let's now apply the states
-    applies = os.environ.get("SALT_PERFORMANCE_TEST_APPLIES", 3)
+    applies = int(os.environ.get("SALT_PERFORMANCE_TEST_APPLIES", "3"))
 
     def _gather_durations(ret, minion_id):
         """
