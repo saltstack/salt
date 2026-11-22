@@ -154,9 +154,8 @@ def main(argv=None):
 
     data, counts, commits_by_contributor = parse_gitlog(filename=args[0])
 
-    if len(opts) > 0:
-        if "-c" or "--contributor-detail":
-            print(counts_by_contributor(commits_by_contributor, data))
+    if any(opt in ("-c", "--contributor-detail") for opt, _ in opts):
+        print(counts_by_contributor(commits_by_contributor, data))
     else:
         print(count_results(data, counts))
 

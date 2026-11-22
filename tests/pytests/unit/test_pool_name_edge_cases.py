@@ -274,10 +274,14 @@ class TestPoolNameSpecialCharacters:
             config["pool_name"] = pool_name_with_null
             transport = salt.transport.zeromq.RequestServer(config)
             uri = transport.get_worker_uri()
-
-            # Null byte should not truncate the path or cause issues
-            # OS will reject paths with null bytes
-            assert "\x00" not in uri or True  # Either stripped or will fail at bind
+            # If we reach here without raising, the null byte must not have
+            # survived into the uri; a uri that still contains it would
+            # silently truncate at bind time (pool_name becomes the IPC path
+            # at salt/transport/zeromq.py) and let two differently-named
+            # pools collide on the same socket.
+            assert (
+                "\x00" not in uri
+            ), f"Null byte survived into {uri!r}; risks path truncation at bind"
         except (ValueError, OSError):
             # Expected - null bytes should be rejected somewhere
             pass
