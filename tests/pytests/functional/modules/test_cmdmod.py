@@ -594,7 +594,7 @@ def test_windows_env_handling(cmdmod):
     Ensure that nt.environ is used properly with cmd.run*
     """
     out = cmdmod.run("cmd /c set", env={"abc": "123", "ABC": "456"}).splitlines()
-    if sys.version_info.major == 3 and sys.version_info.minor < 11:
+    if sys.version_info < (3, 11):
         assert "abc=123" in out
         assert "ABC=456" in out
     else:
