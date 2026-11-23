@@ -85,14 +85,6 @@ def _provider_params():
         ),
         pytest.param(
             "gitcli",
-            marks=pytest.mark.xfail(
-                strict=False,
-                reason=(
-                    "GitCLI does not write worktree files to disk for "
-                    "git_pillar on 3008.x; fix lands with #70852. When that "
-                    "lands these params will XPASS; remove this marker."
-                ),
-            ),
             id="gitcli",
         ),
     ]
