@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # master: full version + security updates, grouped weekly
   - package-ecosystem: "pip"
     directories:
       - "/"
@@ -24,6 +25,8 @@ updates:
         patterns:
           - "*"
 
+  # 3008.x: security advisories only. open-pull-requests-limit: 0 disables
+  # version-update PRs; security-update PRs still fire on GHSA advisories.
   - package-ecosystem: "pip"
     directories:
       - "/"
@@ -34,17 +37,14 @@ updates:
     target-branch: 3008.x
     labels:
       - "test:full"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
         versions: [">=4.0.0"]
-    groups:
-      all-pip-updates:
-        patterns:
-          - "*"
 
+  # 3007.x: security advisories only.
   - package-ecosystem: "pip"
     directories:
       - "/"
@@ -55,17 +55,14 @@ updates:
     target-branch: 3007.x
     labels:
       - "test:full"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
         versions: [">=4.0.0"]
-    groups:
-      all-pip-updates:
-        patterns:
-          - "*"
 
+  # 3006.x: security advisories only.
   - package-ecosystem: "pip"
     directories:
       - "/"
@@ -76,13 +73,9 @@ updates:
     target-branch: 3006.x
     labels:
       - "test:full"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
         versions: [">=4.0.0"]
-    groups:
-      all-pip-updates:
-        patterns:
-          - "*"
