@@ -37,3 +37,45 @@ structure, so fields such as grains remain queryable through SQL JSON operators.
 Values JSON cannot represent directly, including bytes, sets, dates, non-string
 dictionary keys and strings containing NUL, use reversible tagged objects.
 Dictionaries containing the reserved ``__salt_sqlalchemy__`` key are escaped.
+
+Grain and pillar targeting on PostgreSQL
+----------------------------------------
+
+With ``minion_data_cache`` enabled on PostgreSQL, grain and pillar targets
+(``-G``, ``-P``, ``-I``, ``-J`` and those engines in compound targets) are
+answered from an index instead of reading every cached document. When a master
+stores grains or pillar, it records what Salt's matcher could match in the
+document as an array of terms: values and list members at each path,
+dictionary keys, and markers for data the terms cannot describe. A GIN index
+over ``array_to_tsvector(terms)`` on each bank partition serves the lookup; it
+treats each term as one lexeme, so it finds exact terms and terms starting
+with a given prefix of any length.
+
+Results always equal Salt's Python matcher. Documents a term proves to match
+are returned directly; documents the terms cannot decide, such as ones with
+lists of dictionaries, floats, or a glob with wildcards inside it, are fetched
+and checked with the matcher. Targets the terms cannot restrict at all, such
+as ``*:`` wildcard path segments, scan the cached data; each such fallback is
+logged at info level and counted by the ``salt.targeting.sql.fallback``
+metric with the reason. Exact values, list members, key existence, and globs
+or regular expressions that are a literal followed by a trailing wildcard
+(``ubu*``, ``ubu.*``) are answered by the index alone. Other globs and regular
+expressions check every document whose value starts with their literal start;
+those with no literal start, such as ``*buntu``, check every document with the
+path, and remain slow on large fleets.
+
+Checks and scans fetch only the top-level keys the target can read, but still
+cost roughly a millisecond per minion they examine; a target on a path without
+terms scans every minion that has the path's first key.
+
+A document whose terms would exceed about 1 MB, the limit of a PostgreSQL
+``tsvector``, stores only a marker and is checked with the matcher for every
+target.
+
+Upgrading
+~~~~~~~~~
+
+``salt-run sqlalchemy.upgrade`` adds the terms (migration ``0002``) and
+computes them for existing rows. Offline upgrades (``sql=True``) cannot compute
+terms; rows without terms are rechecked on every lookup until a master stores
+them again.

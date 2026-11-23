@@ -9,6 +9,7 @@ import re
 import time
 
 import salt.cache
+import salt.exceptions
 import salt.key
 import salt.payload
 import salt.roster
@@ -17,6 +18,7 @@ import salt.transport
 import salt.utils.args
 import salt.utils.data
 import salt.utils.grain_target_cache
+import salt.utils.metrics
 import salt.utils.mmap_trie_index
 import salt.utils.network
 import salt.utils.resource_registry
@@ -2150,12 +2152,34 @@ class CkMinions:
 
 
 try:
-    from sqlalchemy import ARRAY, any_, case, func, literal, or_, select
+    from sqlalchemy import (
+        ARRAY,
+        Boolean,
+        Text,
+        any_,
+        case,
+        cast,
+        column,
+        false,
+        func,
+        literal,
+        null,
+        or_,
+        select,
+        table,
+        text,
+        type_coerce,
+        union_all,
+    )
+    from sqlalchemy.dialects.postgresql import TSQUERY
 
+    from salt.sqlalchemy import terms
     from salt.sqlalchemy.models import model_for, utcnow
 except ImportError:
     # stubs to appease pyright
     model_for = utcnow = select = func = or_ = ARRAY = any_ = case = literal = print
+    Boolean = Text = null = text = type_coerce = union_all = terms = print
+    cast = false = TSQUERY = column = table = print
 
 
 class SQLAlchemyCkMinions(CkMinions):
@@ -2179,80 +2203,221 @@ class SQLAlchemyCkMinions(CkMinions):
         exact_match=False,
         minions=None,
     ):
-        """Stream candidate rows, then apply Salt's matcher semantics."""
-        if (
-            self.dialect_name != "postgresql"
-            or not self.opts.get("minion_data_cache", False)
-            or not isinstance(expr, str)
-            or not isinstance(delimiter, str)
-            or not delimiter
-            or "*" in delimiter
-        ):
-            return super()._check_cache_minions(
-                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
-            )
+        """
+        Match cached grains or pillar through their indexed terms.
 
-        first_token, separator, _ = expr.partition(delimiter)
-        if not separator or first_token == "*" or "\0" in first_token:
-            return super()._check_cache_minions(
-                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
-            )
-
+        Rows the terms cannot decide are checked with ``subdict_match``.
+        Targets the terms cannot restrict are matched by scanning.
+        """
         bank = "pillar" if search_type.startswith("pillar") else "grains"
-        Cache = model_for("Cache")
-        first_key = Cache.data.has_key(first_token)
-        loaded_token = salt.utils.args.yamlify_arg(first_token)
-        if isinstance(loaded_token, str) and loaded_token != first_token:
-            if "\0" in loaded_token:
-                return super()._check_cache_minions(
+        stmt = plan = None
+        if self.dialect_name == "postgresql" and self.opts.get(
+            "minion_data_cache", False
+        ):
+            plan = terms.compile_target(expr, delimiter, regex_match, exact_match)
+            if plan.never:
+                return {"minions": [], "missing": []}
+            if not plan.fallback:
+                stmt = self._terms_statement(bank, plan)
+            else:
+                log.info(
+                    "Matching %s target %r by scanning cached data: %s",
+                    bank,
                     expr,
-                    delimiter,
-                    greedy,
-                    search_type,
-                    regex_match,
-                    exact_match,
-                    minions,
+                    plan.fallback,
                 )
-            # Traversal retries missing literal keys through YAML normalization.
-            first_key = or_(first_key, Cache.data.has_key(loaded_token))
-        stmt = select(Cache.key, Cache.data).where(
+                salt.utils.metrics.counter(
+                    "salt.targeting.sql.fallback",
+                    description="Grain and pillar targets the cache terms cannot answer.",
+                ).add(1, attributes={"bank": bank, "reason": plan.fallback})
+                stmt = self._scan_statement(
+                    bank, expr, delimiter, minions if greedy else None
+                )
+        if stmt is None:
+            return super()._check_cache_minions(
+                expr, delimiter, greedy, search_type, regex_match, exact_match, minions
+            )
+        hits = self._stream_matches(
+            stmt,
+            expr,
+            delimiter,
+            regex_match,
+            exact_match,
+            indexed=not plan.fallback,
+        )
+        if greedy:
+            hits &= set(minions) if minions else self._pki_minions()
+        # Unsorted: callers combine results as sets, and sorting a large
+        # result costs more than the rest of the lookup.
+        return {"minions": list(hits), "missing": []}
+
+    @staticmethod
+    def _readable_document(data, keys):
+        """
+        Select only the top-level keys of ``data`` that subdict_match can read
+        for a target.
+
+        Tagged documents need the codec on the whole value.
+        """
+        entry = func.jsonb_each(data).table_valued("key", "value")
+        subtree = (
+            select(
+                func.coalesce(
+                    func.jsonb_object_agg(entry.c.key, entry.c.value),
+                    func.jsonb_build_object(),
+                )
+            )
+            .where(entry.c.key == any_(literal(sorted(keys), type_=ARRAY(Text))))
+            .scalar_subquery()
+        )
+        return type_coerce(
+            case(
+                (
+                    or_(
+                        func.jsonb_typeof(data) != "object",
+                        data.has_key(salt.sqlalchemy._JSON_TAG),
+                    ),
+                    data,
+                ),
+                else_=subtree,
+            ),
+            data.type,
+        )
+
+    def _terms_statement(self, bank, plan):
+        """
+        Select (key, certain, readable subtrees) for rows a plan's terms find.
+        """
+        Cache = model_for("Cache")
+        # Query the bank's partition directly, with no bank condition, so the
+        # terms index is the only access path for the term conditions.
+        # Otherwise, when most rows match, the planner picks the bank index
+        # and builds every row's tsvector to filter it.
+        partition = table(
+            f"cache_{bank}",
+            column("key", Cache.key.type),
+            column("cluster", Cache.cluster.type),
+            column("data", Cache.data.type),
+            column("expires_at", Cache.expires_at.type),
+            column("terms", Cache.terms.type),
+            schema=salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"].get("schema")
+            or None,
+        )
+        rows = partition.c
+        vector = func.array_to_tsvector(rows.terms)
+
+        def matching(exact, prefixes):
+            query = terms.tsquery(exact, prefixes)
+            if query is None:
+                return false()
+            return vector.op("@@")(cast(literal(query), TSQUERY))
+
+        live = (
+            rows.cluster == self.cache.kwargs["cluster_id"],
+            or_(rows.expires_at.is_(None), rows.expires_at > utcnow()),
+        )
+        # Certain rows only return their key, so their terms and documents are
+        # never read from storage. They come first, so their keys skip
+        # rechecks.
+        certain = select(
+            rows.key,
+            type_coerce(literal(True), Boolean).label("certain"),
+            type_coerce(null(), Cache.data.type).label("data"),
+        ).where(*live, matching(plan.certain, plan.certain_prefixes))
+        candidates = select(
+            rows.key,
+            type_coerce(literal(False), Boolean).label("certain"),
+            self._readable_document(rows.data, plan.keys).label("data"),
+        ).where(
+            *live,
+            or_(
+                matching(plan.candidates, plan.candidate_prefixes),
+                # Rows stored without terms are always rechecked.
+                rows.terms.is_(None),
+            ),
+        )
+        return union_all(certain, candidates)
+
+    def _scan_statement(self, bank, expr, delimiter, minions):
+        """
+        Select (key, certain, readable subtrees) for every row a target may
+        match, or None when the base matcher has to evaluate it.
+        """
+        if not isinstance(expr, str) or not isinstance(delimiter, str):
+            return None
+        first_token, separator, _ = expr.partition(delimiter)
+        if not separator or not delimiter or "*" in delimiter or "\0" in first_token:
+            return None
+        Cache = model_for("Cache")
+        readable = None
+        conditions = []
+        if first_token != "*":
+            # Traversal only reads the subtree under the first segment, and
+            # retries a missing literal key through YAML normalization.
+            readable = {first_token}
+            loaded_token = salt.utils.args.yamlify_arg(first_token)
+            if isinstance(loaded_token, str) and loaded_token != first_token:
+                if "\0" in loaded_token:
+                    return None
+                readable.add(loaded_token)
+            conditions.append(
+                or_(
+                    *(Cache.data.has_key(key) for key in sorted(readable)),
+                    # Non-string/NUL dictionary keys and reserved tags use the
+                    # codec.
+                    Cache.data.has_key(salt.sqlalchemy._JSON_TAG),
+                    # traverse_dict_and_list also searches dictionaries inside
+                    # lists.
+                    func.jsonb_typeof(Cache.data) == "array",
+                )
+            )
+        if minions:
+            conditions.append(
+                Cache.key == any_(literal(list(minions), type_=ARRAY(Cache.key.type)))
+            )
+        return select(
+            Cache.key,
+            type_coerce(literal(False), Boolean).label("certain"),
+            (
+                Cache.data
+                if readable is None
+                else self._readable_document(Cache.data, readable)
+            ).label("data"),
+        ).where(
             Cache.bank == bank,
             Cache.cluster == self.cache.kwargs["cluster_id"],
             or_(Cache.expires_at.is_(None), Cache.expires_at > utcnow()),
-            or_(
-                first_key,
-                # Non-string/NUL dictionary keys and reserved tags use the codec.
-                Cache.data.has_key(salt.sqlalchemy._JSON_TAG),
-                # traverse_dict_and_list also searches dictionaries inside lists.
-                func.jsonb_typeof(Cache.data) == "array",
-            ),
+            *conditions,
         )
-        if greedy:
-            candidates = set(minions or self._pki_minions())
-            if not candidates:
-                return {"minions": [], "missing": []}
-            stmt = stmt.where(
-                Cache.key
-                == any_(literal(list(candidates), type_=ARRAY(Cache.key.type)))
-            )
 
-        # JSON containment cannot express case folding, prefix regexes, string
-        # coercion, delimiters in values, or the reversible JSON codec safely.
+    def _stream_matches(self, stmt, expr, delimiter, regex_match, exact_match, indexed):
+        """
+        Return the keys of rows from ``stmt`` that are certain or that
+        subdict_match accepts, streaming rather than holding every document.
+        """
+        hits = set()
+        stmt = stmt.execution_options(yield_per=500)
         with salt.sqlalchemy.ROSession() as session:
-            with session.execute(stmt.execution_options(yield_per=500)) as rows:
-                hits = [
-                    id_
-                    for id_, data in rows
-                    if salt.utils.data.subdict_match(
+            if indexed:
+                # When most rows match, the planner prefers a sequential or
+                # primary key scan, which decompresses every row's terms.
+                session.execute(text("SET LOCAL enable_seqscan = off"))
+                session.execute(text("SET LOCAL enable_indexscan = off"))
+            with session.execute(stmt) as result:
+                for key, certain, data in result:
+                    if certain:
+                        hits.add(key)
+                        continue
+                    if key not in hits and salt.utils.data.subdict_match(
                         data,
                         expr,
                         delimiter=delimiter,
                         regex_match=regex_match,
                         exact_match=exact_match,
-                    )
-                ]
+                    ):
+                        hits.add(key)
             session.commit()
-        return {"minions": hits, "missing": []}
+        return hits
 
     def _iter_minion_grains_addresses(self, subset=None):
         """Yield live cached addresses in bulk, retaining their address family."""

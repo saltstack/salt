@@ -1,5 +1,6 @@
 import pytest
 
+import salt.utils.data
 import salt.utils.minions
 from tests.support.mock import patch
 from tests.support.pytest.database import (
@@ -531,3 +532,179 @@ def test_cache_match_across_streaming_batches(ckminions):
     ck = ckminions(data)
     result = ck._check_cache_minions("os:ubuntu", ":", True, "grains")
     assert set(result["minions"]) == set(data)
+
+
+def _require_terms(ck):
+    if getattr(ck, "dialect_name", None) != "postgresql":
+        pytest.skip("Cache terms are PostgreSQL-only")
+
+
+TERMS_DATA = {
+    "ubuntu": {
+        "os": "Ubuntu",
+        "roles": ["web", "db"],
+        "bb": {"bbcpu": {"rhsttag": True}},
+        "systemd": {"version": "252"},
+        "ipv4": ["10.0.0.1", "127.0.0.1"],
+        "virtual": True,
+        "osrelease": 22.04,
+    },
+    "centos": {
+        "os": "CentOS",
+        "roles": ["db"],
+        "bb": {"bbcpu": "rhsttag"},
+        "ipv6": "fe80::1",
+        "nested": [{"name": "eth0"}],
+    },
+    "bare": {"os": "Debian", "bb": {"bbcpu": {"other": 1}}},
+}
+
+TERMS_TARGETS = [
+    ("os:ubuntu", {}),
+    ("OS:Ubuntu", {}),
+    ("roles:web", {}),
+    ("bb:bbcpu:rhsttag", {}),
+    ("systemd:version", {}),
+    ("virtual:True", {}),
+    ("osrelease:22.04", {}),
+    ("ipv6:fe80::1", {}),
+    ("ipv4:1:127.0.0.1", {}),
+    ("nested:name:eth0", {}),
+    ("'os':ubuntu", {}),
+    ("os:*", {}),
+    ("os:cen*", {}),
+    ("os:deb?an", {}),
+    ("os:*buntu", {}),
+    ("os:ubu.*", {"regex_match": True}),
+    ("os:(ubu|deb).*", {"regex_match": True}),
+    ("os:centos", {"exact_match": True}),
+    ("*:bbcpu:rhsttag", {}),
+    ("os", {}),
+]
+
+
+@pytest.mark.parametrize("greedy", [False, True])
+@pytest.mark.parametrize("expr,options", TERMS_TARGETS)
+def test_terms_match_python_matcher(ckminions, expr, options, greedy):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    kwargs = {"delimiter": ":", "greedy": greedy, "search_type": "grains", **options}
+    result = ck._check_cache_minions(expr, **kwargs)
+    reference = salt.utils.minions.CkMinions._check_cache_minions(ck, expr, **kwargs)
+    assert set(result["minions"]) == set(reference["minions"])
+
+
+@pytest.mark.parametrize(
+    "expr,options",
+    [
+        target
+        for target in TERMS_TARGETS
+        if target[0] not in ("os:*buntu", "*:bbcpu:rhsttag")
+    ],
+)
+def test_terms_targets_do_not_scan(ckminions, expr, options):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    with patch.object(ck, "_scan_statement", side_effect=AssertionError("scan")):
+        ck._check_cache_minions(expr, ":", True, "grains", **options)
+
+
+@pytest.mark.parametrize("greedy", [False, True])
+def test_wildcard_root_targets_scan_documents(ckminions, greedy):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    expr = "*:bbcpu:rhsttag"
+    reference = salt.utils.minions.CkMinions._check_cache_minions(
+        ck, expr, ":", greedy, "grains"
+    )
+    # The base matcher would fetch every minion separately.
+    with patch.object(
+        salt.utils.minions.CkMinions,
+        "_check_cache_minions",
+        side_effect=AssertionError("base matcher"),
+    ):
+        result = ck._check_cache_minions(expr, ":", greedy, "grains")
+    assert set(result["minions"]) == set(reference["minions"]) == {"ubuntu", "centos"}
+
+
+def test_terms_lookup_uses_gin_index(ckminions):
+    ck = ckminions({f"minion-{idx}": {"os": f"os-{idx}"} for idx in range(500)})
+    _require_terms(ck)
+    engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
+    with engine.begin() as connection:
+        connection.exec_driver_sql("ANALYZE cache_grains")
+    statements = []
+
+    def capture(conn, cursor, statement, parameters, context, executemany):
+        if "@@" in statement:
+            statements.append((statement, parameters))
+
+    sqlalchemy.event.listen(engine, "before_cursor_execute", capture)
+    try:
+        ck._check_cache_minions("os:os-7", ":", True, "grains")
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", capture)
+    statement, parameters = statements[-1]
+    with engine.connect() as connection:
+        plan = connection.exec_driver_sql(f"EXPLAIN {statement}", parameters).all()
+    plan = "\n".join(row[0] for row in plan)
+    assert "ix_cache_grains_terms" in plan, plan
+
+
+def test_rows_without_terms_are_rechecked(ckminions):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            "UPDATE cache SET terms = NULL WHERE bank = 'grains' AND key = 'ubuntu'"
+        )
+    result = ck._check_cache_minions("os:ubuntu", ":", True, "grains")
+    assert result["minions"] == ["ubuntu"]
+
+
+STORAGE_DATA = {
+    "floats": {
+        "neg_zero": -0.0,
+        "big": 1e20,
+        "small": 1.5e-07,
+        "release": 22.04,
+        "members": [-0.0, 2.5],
+    },
+    "ints": {"neg_zero": 0, "big": 100000000000000000000, "release": "22.04"},
+}
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "neg_zero:0.0",
+        "neg_zero:-0.0",
+        "neg_zero:0",
+        "big:1e+20",
+        "big:100000000000000000000",
+        "small:1.5e-07",
+        "release:22.04",
+        "members:0.0",
+        "members:-0.0",
+    ],
+)
+def test_terms_match_values_as_stored(ckminions, expr):
+    # The reference matcher reads documents back from the database, so it
+    # sees values after JSONB normalized them.
+    ck = ckminions(STORAGE_DATA)
+    _require_terms(ck)
+    kwargs = {"delimiter": ":", "greedy": True, "search_type": "grains"}
+    result = ck._check_cache_minions(expr, **kwargs)
+    reference = salt.utils.minions.CkMinions._check_cache_minions(ck, expr, **kwargs)
+    assert set(result["minions"]) == set(reference["minions"])
+
+
+def test_oversized_documents_still_match(ckminions):
+    # Terms past the tsvector size limit; only the recheck marker is stored.
+    data = {"a" * 90: {"b" * 70: {f"k{i:05}": "x" for i in range(3200)}}}
+    ck = ckminions({"big": data, "small": {"os": "Ubuntu"}})
+    _require_terms(ck)
+    for key in ("k03000", "k03199", "k00000"):
+        expr = ":".join(("a" * 90, "b" * 70, key, "x"))
+        assert ck._check_cache_minions(expr, ":", True, "grains")["minions"] == ["big"]

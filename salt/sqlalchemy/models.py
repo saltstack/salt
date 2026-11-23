@@ -18,7 +18,7 @@ try:
     from sqlalchemy.dialects.mysql import JSON as MySQL_JSON
     from sqlalchemy.dialects.mysql import TEXT as MySQL_TEXT
     from sqlalchemy.dialects.mysql import VARCHAR as MySQL_VARCHAR
-    from sqlalchemy.dialects.postgresql import JSONB
+    from sqlalchemy.dialects.postgresql import ARRAY, JSONB
     from sqlalchemy.engine import Dialect
     from sqlalchemy.ext.compiler import compiles
     from sqlalchemy.orm import DeclarativeBase, Mapped, configure_mappers, mapped_column
@@ -46,6 +46,7 @@ except ImportError:
 
 import salt.exceptions
 import salt.sqlalchemy
+from salt.sqlalchemy import terms
 
 log = logging.getLogger(__name__)
 
@@ -274,6 +275,14 @@ def _create_cache_partitions(table, connection, **kwargs):
         )
 
 
+def _create_term_indexes(table, connection, **kwargs):
+    schema, _ = _table_name(table, connection)
+    for statement in terms.index_statements(
+        connection.dialect.identifier_preparer, schema
+    ):
+        connection.exec_driver_sql(statement)
+
+
 def _create_partman_parent(table, connection, opts):
     version = connection.scalar(
         text(
@@ -401,6 +410,9 @@ def populate_model_registry(opts, name, engine):
             nullable=False,
         )
         expires_at: Mapped[Optional[datetime]] = mapped_column(DateTimeUTC)
+        if is_postgres:
+            # Searchable grain and pillar terms; see salt.sqlalchemy.terms.
+            terms: Mapped[Optional[list]] = mapped_column(ARRAY(Text))
 
     class Events(Base):
         __tablename__ = "events"
@@ -532,6 +544,7 @@ def populate_model_registry(opts, name, engine):
         )
     if is_postgres:
         event.listen(Cache.__table__, "after_create", _create_cache_partitions)
+        event.listen(Cache.__table__, "after_create", _create_term_indexes)
         if opts["partman.enabled"]:
             for model in (Events, Jids, JidMinions, Returns):
                 event.listen(

@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 import salt.sqlalchemy
 from salt.exceptions import SaltCacheError
-from salt.sqlalchemy import model_for
+from salt.sqlalchemy import model_for, terms
 
 try:
     import sqlalchemy.exc
@@ -122,6 +122,8 @@ def store(bank, key, data, expires=None, cluster_id=None, engine_name=None):
         "expires_at": expires_at,
     }
     with salt.sqlalchemy.Session(engine_name) as session:
+        if session.bind.dialect.name == "postgresql" and bank in terms.BANKS:
+            values["terms"] = terms.flatten(data)
         stmt = _upsert_statement(Cache, session.bind.dialect.name, values)
         if stmt is None:
             _store_fallback(session, Cache, values)
@@ -149,6 +151,8 @@ def _upsert_statement(Cache, dialect, values):
         "expires_at": incoming.expires_at,
         "created_at": utcnow(),
     }
+    if "terms" in values:
+        changes["terms"] = incoming.terms
     if mysql:
         return stmt.on_duplicate_key_update(**changes)
     return stmt.on_conflict_do_update(

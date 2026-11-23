@@ -1,3 +1,4 @@
+import json
 import multiprocessing
 import os
 
@@ -7,7 +8,10 @@ import salt.exceptions
 import salt.runners.sqlalchemy
 import salt.sqlalchemy
 import salt.sqlalchemy.migrations
-from tests.support.pytest.database import available_databases
+from salt.sqlalchemy import terms
+from tests.support.pytest.database import available_databases, database_backend
+
+__all__ = ["database_backend"]
 
 sqlalchemy = pytest.importorskip("sqlalchemy")
 autogenerate = pytest.importorskip("alembic.autogenerate")
@@ -31,6 +35,8 @@ pytestmark = [
         indirect=True,
     ),
 ]
+
+HEAD = "0002"
 
 TABLES = (
     "jid_minions",
@@ -132,7 +138,7 @@ def _tables(schema=None):
 
 
 def test_upgrade_matches_models(configured):
-    assert salt.sqlalchemy.migrations.upgrade() == ["0001"]
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
     assert _schema_diff() == []
     with _engine().connect() as connection:
         settings = connection.exec_driver_sql(
@@ -142,8 +148,8 @@ def test_upgrade_matches_models(configured):
 
 
 def test_upgrade_is_idempotent(configured):
-    assert salt.sqlalchemy.migrations.upgrade() == ["0001"]
-    assert salt.sqlalchemy.migrations.upgrade() == ["0001"]
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
 
 
 def test_downgrade_removes_schema(configured):
@@ -154,7 +160,7 @@ def test_downgrade_removes_schema(configured):
 
 def test_runner_create_and_drop_all(configured):
     assert salt.runners.sqlalchemy.create_all() is True
-    assert salt.runners.sqlalchemy.current() == ["0001"]
+    assert salt.runners.sqlalchemy.current() == [HEAD]
     assert {"cache", "jids", "returns"} <= _tables()
     assert salt.runners.sqlalchemy.drop_all() is True
     assert salt.runners.sqlalchemy.current() == []
@@ -163,8 +169,8 @@ def test_runner_create_and_drop_all(configured):
 
 def test_history_and_stamp(configured):
     history = salt.sqlalchemy.migrations.history()
-    assert [revision["revision"] for revision in history] == ["0001"]
-    assert salt.sqlalchemy.migrations.stamp("head") == ["0001"]
+    assert [revision["revision"] for revision in history] == [HEAD, "0001"]
+    assert salt.sqlalchemy.migrations.stamp("head") == [HEAD]
     assert "cache" not in _tables()
     assert salt.sqlalchemy.migrations.stamp("base") == []
 
@@ -204,7 +210,7 @@ def test_structural_setting_change(configured, database_backend):
             salt.sqlalchemy.migrations.upgrade()
     else:
         # The setting has no structural effect outside PostgreSQL.
-        assert salt.sqlalchemy.migrations.upgrade() == ["0001"]
+        assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
 
 
 def test_configured_schema(configured, database_backend):
@@ -214,7 +220,7 @@ def test_configured_schema(configured, database_backend):
     opts = {**configured, "sqlalchemy.schema": schema}
     _reset(opts, schema=schema)
     try:
-        assert salt.sqlalchemy.migrations.upgrade() == ["0001"]
+        assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
         tables = _tables(schema)
         assert {"cache", "cache_grains", "jids", "alembic_version"} <= tables
         assert not _tables() & {"cache", "jids", "alembic_version"}
@@ -242,4 +248,41 @@ def test_concurrent_upgrade_waits_for_lock(configured, database_backend):
             assert salt.sqlalchemy.migrations.current() == []
         child.join(120)
     assert child.exitcode == 0
-    assert salt.sqlalchemy.migrations.current() == ["0001"]
+    assert salt.sqlalchemy.migrations.current() == [HEAD]
+
+
+def test_terms_backfill(configured, database_backend):
+    if database_backend.dialect != "postgresql":
+        pytest.skip("Cache terms are PostgreSQL-only")
+    salt.sqlalchemy.migrations.upgrade("0001")
+    grains = {"os": "Ubuntu", "roles": ["web"]}
+    with _engine().begin() as connection:
+        connection.execute(
+            sqlalchemy.text(
+                "INSERT INTO cache (bank, key, cluster, data) VALUES "
+                "('grains', 'minion', 'c', CAST(:data AS jsonb)), "
+                "('mine', 'minion', 'c', CAST(:data AS jsonb))"
+            ),
+            {"data": json.dumps(grains)},
+        )
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
+    with _engine().connect() as connection:
+        rows = dict(connection.exec_driver_sql("SELECT bank, terms FROM cache").all())
+        indexes = {
+            row[0]
+            for row in connection.exec_driver_sql(
+                "SELECT indexname FROM pg_indexes WHERE tablename = 'cache_grains'"
+            )
+        }
+    assert rows == {"grains": terms.flatten(grains), "mine": None}
+    assert {"ix_cache_grains_terms", "ix_cache_grains_terms_missing"} <= indexes
+    assert salt.sqlalchemy.migrations.downgrade("0001") == ["0001"]
+    with _engine().connect() as connection:
+        columns = {
+            row[0]
+            for row in connection.exec_driver_sql(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'cache'"
+            )
+        }
+    assert "terms" not in columns
