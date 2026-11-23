@@ -555,6 +555,57 @@ def test_cancel_and_drain_does_not_log_failed_cleanups_as_unretrieved(caplog):
     assert "never retrieved" not in caplog.text
 
 
+def test_cancel_and_drain_closes_a_zmq_socket_held_by_the_task():
+    """
+    The reason for draining: a task closes its socket only while it unwinds
+    after the cancel.  If the loop is closed right after the cancel, the socket
+    stays open and the garbage collector later blocks in ``zmq_ctx_term()``.
+    """
+    zmq = pytest.importorskip("zmq")
+    zmq_asyncio = pytest.importorskip("zmq.asyncio")
+    loop = asyncio.new_event_loop()
+    context = zmq_asyncio.Context()
+    socket = context.socket(zmq.REQ)
+    socket.setsockopt(zmq.LINGER, 0)
+    # nothing listens here, connecting does not block
+    socket.connect("tcp://127.0.0.1:1")
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # like ``close_async()``, the socket is closed after an ``await``
+            await asyncio.sleep(0)
+            socket.close()
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        assert not socket.closed
+        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        assert socket.closed
+    finally:
+        loop.close()
+        context.destroy(linger=0)
+
+
+def test_cancel_and_drain_ignores_finished_tasks_and_can_run_twice():
+    loop = asyncio.new_event_loop()
+
+    async def quick():
+        return 1
+
+    task = loop.create_task(quick())
+    loop.run_until_complete(task)
+    try:
+        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        assert not task.cancelled()
+        assert task.result() == 1
+        assert asynchronous.cancel_and_drain(loop, [task]) == []
+    finally:
+        loop.close()
+
+
 def test_cancel_and_drain_leaves_other_tasks_alone():
     """
     The code that owns a task may close it later and expect that it was not

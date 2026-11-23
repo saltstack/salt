@@ -5186,3 +5186,47 @@ def test_tune_in_closes_the_loop_when_draining_fails():
     ):
         salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
     assert loop.is_closed()
+
+
+def test_tune_in_closes_the_loop_when_a_task_does_not_finish(caplog):
+    """
+    A task that ignores the cancel must not keep the minion from stopping.
+    """
+    loop = asyncio.new_event_loop()
+    stop = []
+    real_drain = salt.utils.asynchronous.cancel_and_drain
+
+    async def stubborn():
+        while not stop:
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                pass
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(stubborn())
+        manager._background_tasks.add(task)
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    # the real timeout is 5 seconds, do not wait that long in a test
+    with patch(
+        "salt.utils.asynchronous.cancel_and_drain",
+        side_effect=lambda lp, tasks: real_drain(lp, tasks, timeout=0.2),
+    ):
+        with caplog.at_level(logging.WARNING):
+            salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    stop.append(True)
+    assert loop.is_closed()
+    assert "did not finish" in caplog.text
+
+
+def test_tune_in_does_not_wait_when_there_is_nothing_to_drain():
+    loop = asyncio.new_event_loop()
+
+    def spawn(manager):
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    start = time.monotonic()
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert time.monotonic() - start < 2
+    assert loop.is_closed()
