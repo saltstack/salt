@@ -32,10 +32,11 @@ frozenlist>=1.5.0; python_version >= '3.11'
 gitpython>=3.1.62
 idna>=3.18
 immutables>=0.21; python_version < '3.7'
-# importlib-metadata 9.x drops py3.9 support. Cap on py3.9, allow 8.7+ on
-# py3.10, and let py>=3.11 use the existing 8.7+ floor.
+# importlib-metadata 9.x drops py3.9 support and 10.x drops py3.10 support.
+# Cap py3.9 <9, cap py3.10 <10, let py>=3.11 float forward on the latest line.
 importlib-metadata>=3.3.0,<9.0.0; python_version < '3.10'
-importlib-metadata>=8.7.0; python_version >= '3.10'
+importlib-metadata>=8.7.0,<10.0.0; python_version >= '3.10' and python_version < '3.11'
+importlib-metadata>=8.7.0; python_version >= '3.11'
 # jaraco.functools 4.5.0 and jaraco.context 6.1.2 drop Python 3.9; keep the
 # last 3.9-compatible releases there and let py>=3.10 float forward.
 jaraco.functools>=4.4.0,<4.5.0; python_version < '3.10'
@@ -56,7 +57,10 @@ msgpack>=1.2.3 ; python_version >= '3.10'
 # multidict 6.0.4 fails to source-build under clang 17+ with strict int/pointer
 # conversion checks (macOS 15 onedir builds compile from sdist via
 # --no-binary=:all:). 6.6+ fixed the C source compatibility.
-multidict>=6.6.0
+# Cap <7.0 on py<3.10: the last aiohttp line that supports py3.9 (3.13.x)
+# requires multidict<7.0, so py3.9 cannot pull multidict 7.x.
+multidict>=6.6.0,<7.0.0; python_version < '3.10'
+multidict>=6.6.0; python_version >= '3.10'
 # opentelemetry 1.43.0 (and exporter-prometheus 0.64b0) drop Python 3.9; keep
 # the last 3.9-compatible releases there and let py>=3.10 float forward.
 opentelemetry-api>=1.41.1,<1.43.0; python_version < '3.10'
