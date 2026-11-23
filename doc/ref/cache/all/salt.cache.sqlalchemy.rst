@@ -67,6 +67,15 @@ path, and remain slow on large fleets.
 Checks and scans fetch only the top-level keys the target can read, but still
 cost roughly a millisecond per minion they examine; a target on a path without
 terms scans every minion that has the path's first key.
+``sqlalchemy.targeting_timeout`` bounds each grain or pillar target in
+milliseconds, covering the database and the master's checking (30000 by
+default, 0 to disable). A target that runs out, or whose lookup fails, fails
+as a whole rather than matching no minions: ``check_minions`` raises, so the
+publish, compound expression or ACL check that needed it fails with an error.
+Matching nothing would be unsafe, because a compound ``not`` would then match
+every minion and an empty target passes ACL checks. Timeouts are logged as
+errors and counted by the ``salt.targeting.sql.timeout`` metric. The limit is
+checked between documents, so one very slow regular expression can overrun it.
 
 A document whose terms would exceed about 1 MB, the limit of a PostgreSQL
 ``tsvector``, stores only a marker and is checked with the matcher for every

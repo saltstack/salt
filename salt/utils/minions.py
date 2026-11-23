@@ -1738,6 +1738,10 @@ class CkMinions:
                     _res["minions"].extend(ssh_minions)
                     _res["ssh_minions"] = True
                 roster.destroy()
+        except TargetingError:
+            # Matching nothing instead would make a compound "not" match every
+            # minion and pass ACL subset checks.
+            raise
         except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Failed matching available minions with %s pattern: %s", tgt_type, expr
@@ -2181,6 +2185,27 @@ except ImportError:
     Boolean = Text = null = text = type_coerce = union_all = terms = print
     cast = false = TSQUERY = column = table = print
 
+# SQLSTATE PostgreSQL reports when statement_timeout cancels a query.
+QUERY_CANCELED = "57014"
+
+
+class _TargetingTimeout(Exception):
+    """A cache lookup ran past sqlalchemy.targeting_timeout."""
+
+
+class TargetingError(salt.exceptions.SaltException):
+    """
+    A grain or pillar target could not be evaluated from the cache.
+
+    Raised rather than matching nothing: an empty operand inside a compound
+    ``not`` would match every minion, and an empty requested set passes ACL
+    subset checks.
+    """
+
+
+class TargetingTimeout(TargetingError):
+    """A grain or pillar target ran past sqlalchemy.targeting_timeout."""
+
 
 class SQLAlchemyCkMinions(CkMinions):
     """Use bulk SQL queries while retaining Salt's Python matcher semantics."""
@@ -2207,9 +2232,58 @@ class SQLAlchemyCkMinions(CkMinions):
         Match cached grains or pillar through their indexed terms.
 
         Rows the terms cannot decide are checked with ``subdict_match``.
-        Targets the terms cannot restrict are matched by scanning.
+        Targets the terms cannot restrict are matched by scanning. Failures,
+        including running past ``sqlalchemy.targeting_timeout``, raise
+        TargetingError, which check_minions lets through.
         """
         bank = "pillar" if search_type.startswith("pillar") else "grains"
+        budget = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"].get(
+            "targeting_timeout"
+        )
+        deadline = time.monotonic() + budget / 1000 if budget else None
+        try:
+            return self._match_cache(
+                bank,
+                expr,
+                delimiter,
+                greedy,
+                search_type,
+                regex_match,
+                exact_match,
+                minions,
+                deadline,
+            )
+        except TargetingError:
+            raise
+        except Exception as exc:  # pylint: disable=broad-except
+            canceled = getattr(getattr(exc, "orig", None), "sqlstate", None)
+            if not isinstance(exc, _TargetingTimeout) and canceled != QUERY_CANCELED:
+                raise TargetingError(
+                    f"Could not evaluate {bank} target {expr!r}: {exc}"
+                ) from exc
+            message = (
+                f"Matching {bank} target {expr!r} took longer than "
+                f"sqlalchemy.targeting_timeout ({budget} ms)"
+            )
+            log.error("%s; the target fails", message)
+            salt.utils.metrics.counter(
+                "salt.targeting.sql.timeout",
+                description="Grain and pillar targets abandoned after the time limit.",
+            ).add(1, attributes={"bank": bank})
+            raise TargetingTimeout(message) from exc
+
+    def _match_cache(
+        self,
+        bank,
+        expr,
+        delimiter,
+        greedy,
+        search_type,
+        regex_match,
+        exact_match,
+        minions,
+        deadline,
+    ):
         stmt = plan = None
         if self.dialect_name == "postgresql" and self.opts.get(
             "minion_data_cache", False
@@ -2246,13 +2320,31 @@ class SQLAlchemyCkMinions(CkMinions):
             delimiter,
             regex_match,
             exact_match,
+            deadline,
             indexed=not plan.fallback,
         )
         if greedy:
-            hits &= set(minions) if minions else self._pki_minions()
+            if minions:
+                hits &= set(minions)
+            else:
+                self._check_deadline(deadline)
+                hits &= self._pki_minions()
+                self._check_deadline(deadline)
         # Unsorted: callers combine results as sets, and sorting a large
         # result costs more than the rest of the lookup.
         return {"minions": list(hits), "missing": []}
+
+    @staticmethod
+    def _check_deadline(deadline):
+        if deadline is not None and time.monotonic() > deadline:
+            raise _TargetingTimeout()
+
+    @staticmethod
+    def _limit_session(session, deadline):
+        """Bound the session's statements by what remains of the deadline."""
+        if deadline is not None:
+            remaining = max(int((deadline - time.monotonic()) * 1000), 1)
+            session.execute(text(f"SET LOCAL statement_timeout = {remaining}"))
 
     @staticmethod
     def _readable_document(data, keys):
@@ -2404,7 +2496,9 @@ class SQLAlchemyCkMinions(CkMinions):
             *conditions,
         )
 
-    def _stream_matches(self, stmt, expr, delimiter, regex_match, exact_match, indexed):
+    def _stream_matches(
+        self, stmt, expr, delimiter, regex_match, exact_match, deadline, indexed
+    ):
         """
         Return the keys of rows from ``stmt`` that are certain or that
         subdict_match accepts, streaming rather than holding every document.
@@ -2417,11 +2511,16 @@ class SQLAlchemyCkMinions(CkMinions):
                 # primary key scan, which decompresses every row's terms.
                 session.execute(text("SET LOCAL enable_seqscan = off"))
                 session.execute(text("SET LOCAL enable_indexscan = off"))
+            self._limit_session(session, deadline)
             with session.execute(stmt) as result:
-                for key, certain, data in result:
+                for count, (key, certain, data) in enumerate(result):
+                    if count % 500 == 0:
+                        # statement_timeout only bounds each fetch.
+                        self._check_deadline(deadline)
                     if certain:
                         hits.add(key)
                         continue
+                    self._check_deadline(deadline)
                     if key not in hits and salt.utils.data.subdict_match(
                         data,
                         expr,
@@ -2431,6 +2530,7 @@ class SQLAlchemyCkMinions(CkMinions):
                     ):
                         hits.add(key)
             session.commit()
+        self._check_deadline(deadline)
         return hits
 
     def _iter_minion_grains_addresses(self, subset=None):

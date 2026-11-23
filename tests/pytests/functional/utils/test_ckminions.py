@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 import salt.utils.data
@@ -617,7 +619,7 @@ def test_wildcard_root_targets_scan_documents(ckminions, greedy):
     reference = salt.utils.minions.CkMinions._check_cache_minions(
         ck, expr, ":", greedy, "grains"
     )
-    # The base matcher would fetch every minion separately.
+    # The base matcher fetches every minion separately, without the deadline.
     with patch.object(
         salt.utils.minions.CkMinions,
         "_check_cache_minions",
@@ -712,6 +714,86 @@ def test_untagged_data_updates_clear_terms(ckminions):
     assert stored is not None
 
 
+class _Canceled(Exception):
+    sqlstate = "57014"
+
+
+class _Broken(Exception):
+    sqlstate = "08006"
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        salt.utils.minions._TargetingTimeout(),
+        sqlalchemy.exc.OperationalError("SELECT", {}, _Canceled()),
+    ],
+)
+def test_timed_out_targets_fail_whole_target(ckminions, caplog, error):
+    ck = ckminions(TERMS_DATA)
+    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+        pytest.skip("The time limit is part of the SQLAlchemy matcher")
+    with patch.object(ck, "_match_cache", side_effect=error):
+        with pytest.raises(salt.utils.minions.TargetingTimeout):
+            ck._check_cache_minions("os:ubuntu", ":", True, "grains")
+        with caplog.at_level("ERROR", logger="salt.utils.minions"):
+            # An empty operand would make the negation match every minion,
+            # and an empty requested set would pass ACL subset checks.
+            for tgt, tgt_type in (
+                ("not G@os:ubuntu", "compound"),
+                ("G@os:debian or not G@os:ubuntu", "compound"),
+                ("os:ubuntu", "grain"),
+            ):
+                with pytest.raises(salt.utils.minions.TargetingTimeout):
+                    ck.check_minions(tgt, tgt_type)
+            with pytest.raises(salt.utils.minions.TargetingTimeout):
+                ck.auth_check(
+                    [{"web": ["test.*"]}], "test.ping", [], "os:ubuntu", "grain"
+                )
+            with pytest.raises(salt.utils.minions.TargetingTimeout):
+                ck.validate_tgt("web", "os:ubuntu", "grain")
+    assert "sqlalchemy.targeting_timeout" in caplog.text
+
+
+def test_other_database_errors_are_raised(ckminions):
+    ck = ckminions(TERMS_DATA)
+    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+        pytest.skip("The time limit is part of the SQLAlchemy matcher")
+    error = sqlalchemy.exc.OperationalError("SELECT", {}, _Broken())
+    with patch.object(ck, "_match_cache", side_effect=error):
+        with pytest.raises(salt.utils.minions.TargetingError) as raised:
+            ck._check_cache_minions("os:ubuntu", ":", True, "grains")
+        assert raised.value.__cause__ is error
+        assert not isinstance(raised.value, salt.utils.minions.TargetingTimeout)
+        with pytest.raises(salt.utils.minions.TargetingError):
+            ck.check_minions("not G@os:ubuntu", "compound")
+
+
+@pytest.mark.parametrize(
+    "expr",
+    [
+        "os:deb?an",  # rechecked candidates
+        "os:*:x",  # wildcard segment, matched by scanning
+        "*:os:x",  # wildcard root, matched by scanning whole documents
+    ],
+)
+def test_targeting_deadline_stops_slow_matching(ckminions, expr):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    config = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"]
+    real = salt.utils.data.subdict_match
+
+    def slow(*args, **kwargs):
+        time.sleep(0.05)
+        return real(*args, **kwargs)
+
+    with patch.dict(config, {"targeting_timeout": 10}), patch.object(
+        salt.utils.data, "subdict_match", side_effect=slow
+    ):
+        with pytest.raises(salt.utils.minions.TargetingTimeout):
+            ck._check_cache_minions(expr, ":", True, "grains")
+
+
 STORAGE_DATA = {
     "floats": {
         "neg_zero": -0.0,
@@ -757,3 +839,22 @@ def test_oversized_documents_still_match(ckminions):
     for key in ("k03000", "k03199", "k00000"):
         expr = ":".join(("a" * 90, "b" * 70, key, "x"))
         assert ck._check_cache_minions(expr, ":", True, "grains")["minions"] == ["big"]
+
+
+def test_deadline_checked_for_certain_rows(ckminions):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    config = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"]
+    # The clock stands still until the rows stream, so the statement gets the
+    # whole budget and only the deadline checks while streaming can fire.
+    ticks = iter([0, 0])
+
+    def clock():
+        return next(ticks, 60)
+
+    with patch.dict(config, {"targeting_timeout": 1000}), patch.object(
+        salt.utils.minions.time, "monotonic", side_effect=clock
+    ):
+        # os:ubuntu is answered by certain rows only, with no rechecks.
+        with pytest.raises(salt.utils.minions.TargetingTimeout):
+            ck._check_cache_minions("os:ubuntu", ":", False, "grains")
