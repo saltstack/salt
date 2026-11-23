@@ -1286,7 +1286,6 @@ def safe_opts_copy(opts: Any, name: str | None = None) -> OptsDict:
 
     # Converting from regular dict
     # Check if we've already created a root for this specific dict object
-    global _dict_to_root  # pylint: disable=global-variable-not-assigned
     opts_id = id(opts)
     if opts_id in _dict_to_root:
         # Reuse existing root - this ensures all OptsDict instances

@@ -434,7 +434,7 @@ def get_load(jid):
                 if minions_data is not None:
                     try:
                         all_minions.update(minions_data)
-                    except (TypeError, ValueError) as e:
+                    except (TypeError, ValueError):
                         log.warning(
                             "Job cache file %s contains invalid minion data, skipping.",
                             minions_path,

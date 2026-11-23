@@ -32,7 +32,6 @@ STRIP_INITIAL_NON_NUMBERS_REGEX = re.compile(r"(?:[^\d]+)?(?P<vs>.*)")
             "0.11.1+3.ga0afcbd",
         ),
         ("0.12.1", (0, 12, 1, 0, "", 0, 0, None), None),
-        ("0.12.1", (0, 12, 1, 0, "", 0, 0, None), None),
         ("0.17.0rc1", (0, 17, 0, 0, "rc", 1, 0, None), None),
         ("v0.17.0rc1-1-g52ebdfd", (0, 17, 0, 0, "rc", 1, 1, "g52ebdfd"), None),
         ("v2014.1.4.1", (2014, 1, 4, 1, "", 0, 0, None), None),

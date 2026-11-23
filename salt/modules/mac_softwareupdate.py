@@ -486,7 +486,7 @@ def set_catalog(url):
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
-    except CommandExecutionError as exc:
+    except CommandExecutionError:
         pass
 
     return get_catalog() == url
@@ -514,7 +514,7 @@ def reset_catalog():
 
     try:
         salt.utils.mac_utils.execute_return_success(cmd)
-    except CommandExecutionError as exc:
+    except CommandExecutionError:
         pass
 
     return get_catalog() == "Default"

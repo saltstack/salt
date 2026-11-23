@@ -654,7 +654,7 @@ def latest(
             if "salt://" in ident_path:
                 try:
                     ident_path = __salt__["cp.cache_file"](ident_path, __env__)
-                except OSError as exc:
+                except OSError:
                     log.exception("Failed to cache %s", ident_path)
                     return _fail(ret, f"identity '{ident_path}' does not exist.")
             if not os.path.isabs(ident_path):

@@ -2,6 +2,8 @@
 unittests for table outputter
 """
 
+from collections import OrderedDict
+
 import pytest
 
 import salt.output.table_out as table_out
@@ -40,3 +42,34 @@ def test_output(data):
         "    | спам, спам, спам, яйца и спам |  3.99 |\n"
         "    -----------------------------------------"
     )
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        [{"Food": "spam", "Price": 1}, {"Food": "eggs", "Price": 2}],
+        [{"Food": "spam"}],
+        ["spam", "eggs"],
+    ],
+    ids=["dicts", "one-row", "strings"],
+)
+def test_display_rows_with_rows_of_one_type(rows):
+    assert table_out.TableDisplay().display_rows(rows, None, 4)
+
+
+@pytest.mark.parametrize(
+    "rows",
+    [
+        [{"Food": "spam"}, ["eggs"]],
+        ["spam", 3],
+        # A dict and an OrderedDict are not the same type
+        [{"Food": "spam"}, OrderedDict([("Food", "eggs")])],
+    ],
+    ids=["dict-and-list", "str-and-int", "dict-and-ordereddict"],
+)
+def test_display_rows_with_rows_of_different_types_outputs_nothing(rows):
+    assert table_out.TableDisplay().display_rows(rows, None, 4) == []
+
+
+def test_display_rows_without_rows_outputs_nothing():
+    assert table_out.TableDisplay().display_rows([], None, 4) == []

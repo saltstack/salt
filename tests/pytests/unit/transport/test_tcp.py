@@ -111,6 +111,134 @@ def test_get_socket():
     assert int(socket.family) == 2
 
 
+def _run_publisher_with_fake_socket(server, payload=lambda *args, **kwargs: None):
+    """
+    Drive ``PublishServer.publisher()`` with the socket machinery mocked out,
+    returning the sockets created through ``salt.transport.tcp.socket.socket``.
+    """
+    created_sockets = []
+
+    def fake_socket(family, *args, **kwargs):
+        sock = MagicMock()
+        sock.family = family
+        created_sockets.append(sock)
+        return sock
+
+    io_loop = tornado.ioloop.IOLoop()
+
+    async def run():
+        with patch("salt.transport.tcp.socket.socket", side_effect=fake_socket):
+            with patch("salt.transport.tcp.PubServer"), patch(
+                "salt.transport.tcp.TCPPuller"
+            ):
+                await server.publisher(payload, io_loop=io_loop)
+
+    try:
+        io_loop.run_sync(run, timeout=5)
+    finally:
+        io_loop.close()
+    return created_sockets
+
+
+def test_publish_server_publisher_binds_stripped_ipv6(tmp_path):
+    """
+    PublishServer.publisher() normalizes a bracketed IPv6 pub_host before
+    binding. The master startup brackets IPv6 ``interface`` values for
+    ZeroMQ URIs (salt/cli/daemons.py); without normalization the TCP
+    publisher crashes with gaierror and the publish port never opens.
+
+    Regression test for https://github.com/saltstack/salt/issues/66567
+    """
+    opts = {"ipv6": True, "publish_port": 4506, "sock_dir": str(tmp_path)}
+    server = salt.transport.tcp.PublishServer(
+        opts, pub_host="[::1]", pub_port=4512, pull_path=str(tmp_path / "pull.ipc")
+    )
+
+    created_sockets = _run_publisher_with_fake_socket(server)
+
+    assert created_sockets[0].family == socket.AF_INET6
+    created_sockets[0].bind.assert_called_once_with(("::1", 4512))
+
+
+def test_publish_server_publisher_binds_ipv4_with_ipv6_flag(tmp_path):
+    """
+    With ``ipv6: True`` but an IPv4 ``interface`` (for example the default
+    0.0.0.0), the publisher must bind an AF_INET socket to the actual
+    address instead of crashing with gaierror on an AF_INET6 socket.
+
+    Regression test for https://github.com/saltstack/salt/issues/66567
+    """
+    opts = {"ipv6": True, "publish_port": 4506, "sock_dir": str(tmp_path)}
+    server = salt.transport.tcp.PublishServer(
+        opts, pub_host="127.0.0.1", pub_port=4512, pull_path=str(tmp_path / "pull.ipc")
+    )
+
+    created_sockets = _run_publisher_with_fake_socket(server)
+
+    assert created_sockets[0].family == socket.AF_INET
+    created_sockets[0].bind.assert_called_once_with(("127.0.0.1", 4512))
+
+
+def test_get_socket_with_host_derives_family_from_address():
+    """
+    When a host is given, the socket family follows the actual address,
+    not the ``ipv6`` config flag - an IPv4 literal must not end up on an
+    AF_INET6 socket, and bracketed ZeroMQ-style IPv6 literals are
+    normalized. Regression test for
+    https://github.com/saltstack/salt/issues/66567
+    """
+    sock = salt.transport.tcp._get_socket({"ipv6": True}, "0.0.0.0")
+    assert sock.family == socket.AF_INET
+    sock.close()
+
+    sock = salt.transport.tcp._get_socket({"ipv6": True}, "[::]")
+    assert sock.family == socket.AF_INET6
+    sock.close()
+
+    sock = salt.transport.tcp._get_socket({"ipv6": False}, "::1")
+    assert sock.family == socket.AF_INET6
+    sock.close()
+
+
+def test_get_socket_with_hostname_does_not_raise():
+    """
+    Non-literal hosts (hostnames) are resolved by name instead of raising
+    in ip_bracket, preserving the pre-existing contract for callers that
+    pass resolvable names.
+    """
+    sock = salt.transport.tcp._get_socket({"ipv6": True}, "localhost")
+    assert sock.family in (socket.AF_INET, socket.AF_INET6)
+    sock.close()
+
+    # Unresolvable non-literal: _socket_family falls back to the
+    # colon heuristic (no ":" here) -> AF_INET, mirroring prior
+    # flag-independent behavior for unknown names.
+    sock = salt.transport.tcp._get_socket({"ipv6": True}, "nonexistent.invalid")
+    assert sock.family == socket.AF_INET
+    sock.close()
+
+
+def test_req_server_bind_pattern_matches_family_and_address():
+    """
+    The request-server / load-balancer binds (Unix pre-fork and Windows
+    post-fork share this exact pattern) must produce a socket whose
+    family matches the normalized bind address for both the bracketed
+    IPv6 wildcard the master startup produces and an IPv4 interface used
+    together with ``ipv6: True``.
+    """
+    opts = {"ipv6": True, "interface": "[::]", "ret_port": 4505}
+    sock = salt.transport.tcp._get_socket(opts, opts["interface"])
+    assert sock.family == socket.AF_INET6
+    assert salt.transport.tcp._get_bind_addr(opts, "ret_port") == ("::", 4505)
+    sock.close()
+
+    opts = {"ipv6": True, "interface": "0.0.0.0", "ret_port": 4505}
+    sock = salt.transport.tcp._get_socket(opts, opts["interface"])
+    assert sock.family == socket.AF_INET
+    assert salt.transport.tcp._get_bind_addr(opts, "ret_port") == ("0.0.0.0", 4505)
+    sock.close()
+
+
 def test_get_bind_addr():
     opts = {"interface": "192.168.0.1", "tcp": 1}
     res = salt.transport.tcp._get_bind_addr(opts=opts, port_type="tcp")

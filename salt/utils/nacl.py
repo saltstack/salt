@@ -61,7 +61,7 @@ def _get_config(**kwargs):
     config_key = f"{__virtualname__}.config"
     try:
         config.update(__salt__["config.get"](config_key, {}))
-    except (NameError, KeyError) as e:
+    except (NameError, KeyError):
         # likely using salt-run so fallback to __opts__
         config.update(kwargs["opts"].get(config_key, {}))
     # pylint: disable=C0201
@@ -235,7 +235,7 @@ def enc_file(name, out=None, **kwargs):
     """
     try:
         data = __salt__["cp.get_file_str"](name)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, "rb") as f:
             data = salt.utils.stringutils.to_unicode(f.read())
@@ -307,7 +307,7 @@ def dec_file(name, out=None, **kwargs):
     """
     try:
         data = __salt__["cp.get_file_str"](name)
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         # likly using salt-run so fallback to local filesystem
         with salt.utils.files.fopen(name, "rb") as f:
             data = salt.utils.stringutils.to_unicode(f.read())

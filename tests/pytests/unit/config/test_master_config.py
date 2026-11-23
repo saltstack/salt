@@ -123,3 +123,38 @@ def test___cli_path_is_expanded():
         opts = salt.config.apply_master_config(overrides, defaults)
         assert expand_mock.called
         assert opts["__cli"] == "testcli"
+
+
+def test_mminion_config_reuses_caller_grains(tmp_path):
+    """
+    ``mminion_config`` should reuse a grains dict the caller already
+    computed instead of running ``salt.loader.grains`` again -- otherwise
+    every ``MasterMinion`` instantiation (and there are many during
+    ``salt-master`` startup) repeats the full grain refresh.  See #62168.
+    """
+    conf_file = tmp_path / "minion"
+    conf_file.write_text("")
+    caller_grains = {"os": "Fake", "fqdns": ["cached.example.com"]}
+    overrides = {"conf_file": str(conf_file), "grains": caller_grains}
+    with patch("salt.loader.grains") as loader_grains:
+        opts = salt.config.mminion_config(str(conf_file), overrides)
+    assert loader_grains.call_count == 0, (
+        "salt.loader.grains should not be invoked when the caller already "
+        "supplied a populated grains dict"
+    )
+    assert opts["grains"] is caller_grains
+
+
+def test_mminion_config_computes_grains_when_caller_omits_them(tmp_path):
+    """
+    When no grains are provided, ``mminion_config`` must still compute
+    them via ``salt.loader.grains`` so first-time startup works.
+    """
+    conf_file = tmp_path / "minion"
+    conf_file.write_text("")
+    overrides = {"conf_file": str(conf_file)}
+    sentinel = {"os": "Sentinel"}
+    with patch("salt.loader.grains", return_value=sentinel) as loader_grains:
+        opts = salt.config.mminion_config(str(conf_file), overrides)
+    assert loader_grains.call_count == 1
+    assert opts["grains"] is sentinel

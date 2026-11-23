@@ -118,10 +118,8 @@ TableTest:
     # Verify it returns OrderedDict (the whole point of yamlordereddictloader)
     from collections import OrderedDict
 
-    assert isinstance(result, OrderedDict) or isinstance(result, dict)
-    assert isinstance(result["TableTest"], OrderedDict) or isinstance(
-        result["TableTest"], dict
-    )
+    assert isinstance(result, (OrderedDict, dict))
+    assert isinstance(result["TableTest"], (OrderedDict, dict))
 
 
 def test_compare_unsafe_vs_safe_loader():

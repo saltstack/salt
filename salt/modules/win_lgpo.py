@@ -5962,7 +5962,7 @@ def _delAccountRights(sidObject, user_right):
             _polHandle, sidObject, False, user_rights_list
         )
         return True
-    except Exception as e:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         log.exception("Error attempting to delete account right")
         return False
 

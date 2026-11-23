@@ -571,7 +571,7 @@ def test_load_cert_pkcs12_superfluous_passphrase(cert_pkcs12):
 def test_load_cert_unknown_data():
     data = b"cafebabe"
     with pytest.raises(
-        x509.CertDeserializationError, match="Could not deserialize binary.*"
+        x509.CertDeserializationError, match=r"Could not deserialize binary.*"
     ):
         x509.load_cert(data)
 
@@ -587,7 +587,7 @@ def test_load_cert_broken_pem(cert_pem):
 def test_load_cert_broken_pkcs7_pem(cert_pkcs7_pem):
     data = cert_pkcs7_pem[:33] + "#" + cert_pkcs7_pem[34:]
     with pytest.raises(
-        x509.CertDeserializationError, match="Could not load PEM-encoded PKCS.*"
+        x509.CertDeserializationError, match=r"Could not load PEM-encoded PKCS.*"
     ):
         x509.load_cert(data)
 
@@ -821,7 +821,7 @@ def test_order_certs_naively_works(certs, order, request):
 )
 def test_order_certs_naively_no_allow_orphans(certs, expected, request):
     if expected is False:
-        ctx = pytest.raises(ValueError, match=".*did not contain a singular chain.*")
+        ctx = pytest.raises(ValueError, match=r".*did not contain a singular chain.*")
         ordered_bundle = []
     else:
         ordered_bundle = [

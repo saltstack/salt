@@ -35,9 +35,6 @@ import salt.utils.url
 import salt.utils.user
 import salt.utils.versions
 import salt.utils.vt
-import salt.utils.win_chcp
-import salt.utils.win_dacl
-import salt.utils.win_reg
 from salt._logging import LOG_LEVELS
 from salt.exceptions import (
     CommandExecutionError,
@@ -55,7 +52,13 @@ except ImportError:
 if salt.utils.platform.is_windows():
     import pywintypes
 
-    import salt.platform.win
+    # Deferred: keep salt.utils.win_chcp / win_dacl / win_reg (~230 kB
+    # combined) + their transitive imports off the Linux minion baseline.
+    # All use sites in this module are inside ``is_windows()`` branches.
+    import salt.platform.win  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+    import salt.utils.win_chcp  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+    import salt.utils.win_dacl  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+    import salt.utils.win_reg  # noqa: PLC0415  pylint: disable=import-outside-toplevel
     from salt.utils.win_functions import escape_argument as _cmd_quote
     from salt.utils.win_runas import runas as win_runas
 
@@ -95,7 +98,7 @@ def _check_cb(cb_):
     the value passed.
     """
     if cb_ is not None:
-        if hasattr(cb_, "__call__"):
+        if callable(cb_):
             return cb_
         else:
             log.error("log_callback is not callable, ignoring")
@@ -3312,7 +3315,7 @@ def script(
                 "cache_error": True,
             }
     if not salt.utils.platform.is_windows():
-        os.chmod(path, 320)
+        os.chmod(path, 0o500)
         os.chown(path, __salt__["file.user_to_uid"](runas), -1)
 
     if args:
@@ -4227,7 +4230,7 @@ def shell_info(shell, list_modules=False):
             }
         try:
             proc.run()
-        except TimedProcTimeoutError as exc:
+        except TimedProcTimeoutError:
             return {
                 "error": "Unable to run command '{}' Reason: Timed out.".format(
                     " ".join(shell_data)

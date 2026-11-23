@@ -8,6 +8,6 @@ try:
     __all__ = ["Authenticate", "RackspaceQueues"]
 
     HAS_PYRAX = True
-except ImportError as err:
+except ImportError:
     HAS_PYRAX = False
 # pylint: enable=import-error

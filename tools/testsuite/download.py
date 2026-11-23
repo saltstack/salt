@@ -279,8 +279,8 @@ def test_artifacts(
     """
 
     platdef = None
-    for platform in PLATFORMS:
-        for _ in TEST_SALT_LISTING[platform]:
+    for plat in PLATFORMS:
+        for _ in TEST_SALT_LISTING[plat]:
             if _.slug == slug:
                 ctx.info(f"Found platform definition {slug}")
                 platdef = _
@@ -290,8 +290,8 @@ def test_artifacts(
     # ``test-salt-pkg-listing`` but not ``test-salt-listing``. Re-use the pkg
     # row for onedir/nox artifact globs (platform + arch).
     if not platdef:
-        for platform in PLATFORMS:
-            for _ in TEST_SALT_PKG_LISTING[platform]:
+        for plat in PLATFORMS:
+            for _ in TEST_SALT_PKG_LISTING[plat]:
                 if _.slug == slug:
                     ctx.info(f"Found package-matrix definition {slug}")
                     platdef = _
@@ -304,14 +304,14 @@ def test_artifacts(
         ctx.exit(1)
 
     pkgdef = []
-    for platform in PLATFORMS:
-        for _ in TEST_SALT_PKG_LISTING[platform]:
+    for plat in PLATFORMS:
+        for _ in TEST_SALT_PKG_LISTING[plat]:
             if _.slug == slug:
                 ctx.info(f"Found pkg definition {slug}")
                 pkgdef.append(_)
                 # Shortcut since all non windows paltforms have only one
                 # package type.
-                if platform != "windows":
+                if plat != "windows":
                     break
 
     if not pkgdef:

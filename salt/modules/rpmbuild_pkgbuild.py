@@ -527,7 +527,7 @@ def build(
         srpms = make_src_pkg(
             srpm_build_dir, spec, sources, env, template, saltenv, runas
         )
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         shutil.rmtree(srpm_build_dir)
         log.error("Failed to make src package")
         return ret

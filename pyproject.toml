@@ -97,94 +97,129 @@ builtins = [
 ]
 
 [tool.ruff.lint]
-# Correctness checks, alongside Salt's pylint plugins. Only new violations
-# block a PR (see tools/precommit/ruff.py). Black remains the formatter, so no
-# style rules are enabled. Type checking is a separate rollout.
-select = [
-    "F",     # pyflakes
-    "B004",  # unreliable callable check
-    "B005",  # strip() with multi-character strings
-    "B006",  # mutable argument defaults
-    "B015",  # useless comparisons
-    "B017",  # assertRaises/pytest.raises(Exception)
-    "B018",  # useless expressions
-    "B020",  # loop variable overrides the iterable
-    "B023",  # loop variables captured without binding
-    "B025",  # duplicate exception in try/except
-    "B026",  # star-arg unpacking after a keyword argument
-    "B034",  # re.sub/split/subn positional count or flags
-    "B039",  # mutable ContextVar default
-    "E711",  # comparison to None
-    "E712",  # comparison to True/False
-    "E713",  # "not x in y"
-    "E714",  # "not x is y"
-    "E721",  # type comparison with ==
-    "E722",  # bare except
-    "PLE",   # pylint errors
-    "RUF006",  # asyncio task reference dropped
-    "W605",  # invalid escape sequence
-    # Bugs that are not present in the code base today.
-    "B002",  # ++x / --x do nothing
-    "B003",  # assignment to os.environ
-    "B012",  # return/break/continue in finally
-    "B013",  # one-element tuple in except
-    "B014",  # duplicate exception in one except
-    "B016",  # raise of a literal
-    "B019",  # lru_cache on a method
-    "B021",  # f-string docstring
-    "B022",  # contextlib.suppress() without arguments
-    "B029",  # except with an empty tuple
-    "B030",  # except with a non-exception class
-    "B031",  # itertools.groupby group used twice
-    "B032",  # annotation instead of assignment
-    "B033",  # duplicate item in a set literal
-    "B035",  # static key in a dict comprehension
-    "PLW0127",  # variable assigned to itself
-    "PLW0128",  # same name twice in one assignment
-    "PLW0131",  # walrus used as a statement
-    "PLW0133",  # exception created but not raised
-    "PLW0177",  # comparison with NaN
-    "PLW0211",  # staticmethod with self/cls
-    "PLW0245",  # super without ()
-    "PLW0406",  # module imports itself
-    "PLW0604",  # global at module level
-    "PLW0642",  # self/cls reassigned
-    "PLW0711",  # "except A or B"
-    "PLW1501",  # invalid open() mode
-    "PLW1507",  # shallow copy of os.environ
-    "PLW2101",  # lock created inside with
-    "PGH003",  # blanket "type: ignore"
-    "PGH005",  # wrong mock assertion attribute
-    "LOG001",  # logging.Logger() instantiated directly
-    "LOG007",  # logging.exception(exc_info=False)
-    "LOG014",  # exc_info outside an exception handler
-    "G101",  # extra key clashes with a LogRecord attribute
-    "YTT101",  # sys.version[:3]
-    "YTT102",  # sys.version[2]
-    "YTT103",  # sys.version compared to a string
-    "YTT201",  # sys.version_info[0] == 3
-    "YTT202",  # six.PY3
-    "YTT301",  # sys.version[0]
-    "YTT302",  # sys.version compared to a string
-    "YTT303",  # sys.version[:1]
-    "RUF008",  # mutable dataclass default
-    "RUF009",  # function call in a dataclass default
-    "RUF016",  # list/str/tuple index of the wrong type
-    "RUF018",  # walrus inside assert
-    "RUF024",  # dict.fromkeys with a mutable value
-    "RUF026",  # defaultdict(default_factory=...)
-    "RUF033",  # default in __post_init__
-    "RUF060",  # "in" test on an empty collection
-    "RUF068",  # duplicate entry in __all__
-]
+# Only new violations block a PR (see tools/precommit/ruff.py), so a rule can be
+# enabled while old code still breaks it. Black remains the formatter.
+#
+# Every stable rule is selected with "ALL" and the ones that are not enabled yet
+# are listed in "ignore" below, in groups. To enable a rule, delete it from the
+# list and add a case for it to tests/pytests/unit/test_ruff.py. Ruff is pinned in
+# .pre-commit-config.yaml, so a new Ruff release does not add rules by itself.
+select = ["ALL"]
 ignore = [
     "F403",  # star imports
     "F405",  # names from star imports
+
+    # Not enabled on purpose.
+    # COM: conflicts with the formatter (trailing commas)
+    # Q: conflicts with the formatter (quotes)
+    # ISC: implicit string concatenation, formatter decides
+    # D: docstring style, Salt has its own docstring checks
+    # DOC: docstring contents, Salt has its own docstring checks
+    # CPY: copyright header
+    # FIX: FIXME and TODO markers
+    # TD: TODO format
+    # ERA: commented-out code
+    # INP: implicit namespace packages
+    # EM: error message in a variable
+    # FBT: boolean positional arguments
+    # T20: print and pprint
+    # N: naming, renaming changes the public API
+    # ARG: unused arguments, Salt functions have fixed signatures
+    # E501: line length, black does not wrap long strings and comments
+    # W191: conflicts with the formatter (tab indentation)
+    # S101: assert, used throughout the tests
+    # TRY003: long messages in exceptions
+    # PLR2004: magic values
+    # C901, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917: complexity threshold
+    # A002: parameter names that shadow builtins are part of the API
+    "A002", "ARG", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX", "INP",
+    "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004", "Q",
+    "S101", "TD", "TRY003", "W191",
+
+    # Not decided yet.
+    # ANN: type annotations
+    # SLF001: private member access, mostly in tests
+    # PT009: unittest style assertions in tests
+    "ANN", "PT009", "SLF001",
+
+    # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
+    "S102", "S103", "S104", "S105", "S106", "S107", "S108", "S110", "S112", "S113",
+    "S201", "S202", "S301", "S303", "S306", "S307", "S308", "S310", "S311", "S314",
+    "S318", "S321", "S323", "S324", "S504", "S506", "S507", "S508", "S509", "S602",
+    "S603", "S604", "S605", "S607", "S608", "S610", "S611", "S701", "S702",
+
+    # Result depends on the Python version Ruff checks for, to be enabled after the
+    # minimum Python version is raised.
+    "ASYNC109", "B905", "B912", "FA102", "FURB188", "I001", "PERF203", "PTH115",
+    "RUF007", "TC003", "UP001", "UP003", "UP004", "UP005", "UP006", "UP007", "UP008",
+    "UP009", "UP010", "UP011", "UP012", "UP013", "UP014", "UP015", "UP017", "UP018",
+    "UP019", "UP020", "UP021", "UP022", "UP023", "UP024", "UP025", "UP026", "UP028",
+    "UP029", "UP030", "UP031", "UP032", "UP033", "UP034", "UP035", "UP036", "UP037",
+    "UP039", "UP040", "UP041", "UP042", "UP043", "UP044", "UP045", "UP046", "UP047",
+    "UP049", "UP050",
+
+    # Wave 1: no violation in the code today.
+    "A005", "A006", "AIR001", "AIR002", "AIR301", "AIR302", "AIR303", "AIR311",
+    "AIR312", "ASYNC100", "ASYNC105", "ASYNC115", "ASYNC116", "ASYNC212", "ASYNC221",
+    "B024", "B027", "B911", "C401", "C402", "C403", "C404", "C405", "C410", "C411",
+    "C415", "C417", "DJ001", "DJ003", "DJ006", "DJ007", "DJ008", "DJ012", "DJ013",
+    "DTZ901", "E101", "E401", "E701", "E702", "E703", "E731", "E902", "EXE002",
+    "EXE003", "EXE004", "EXE005", "FA100", "FAST001", "FAST002", "FAST003", "FURB161",
+    "FURB162", "FURB163", "FURB164", "FURB166", "FURB168", "FURB169", "FURB181",
+    "FURB187", "G003", "I002", "ICN002", "ICN003", "INT001", "INT002", "INT003",
+    "NPY001", "NPY002", "NPY003", "NPY201", "PD002", "PD003", "PD004", "PD007", "PD008",
+    "PD009", "PD010", "PD011", "PD012", "PD013", "PD015", "PD101", "PLC0105", "PLC0131",
+    "PLC0132", "PLC0414", "PLC1802", "PLC2401", "PLC2403", "PLW1510", "PLW3301",
+    "PT002", "PT008", "PT020", "PT024", "PT025", "PT026", "PTH124", "PTH201", "PTH203",
+    "PTH210", "PYI001", "PYI002", "PYI003", "PYI004", "PYI005", "PYI007", "PYI008",
+    "PYI009", "PYI010", "PYI011", "PYI012", "PYI013", "PYI014", "PYI015", "PYI016",
+    "PYI017", "PYI018", "PYI019", "PYI020", "PYI021", "PYI026", "PYI029", "PYI030",
+    "PYI032", "PYI033", "PYI035", "PYI041", "PYI042", "PYI043", "PYI044", "PYI045",
+    "PYI046", "PYI047", "PYI048", "PYI049", "PYI050", "PYI051", "PYI052", "PYI053",
+    "PYI054", "PYI055", "PYI056", "PYI057", "PYI058", "PYI059", "PYI061", "PYI062",
+    "PYI063", "PYI064", "PYI066", "RUF020", "RUF028", "RUF036", "RUF037", "RUF041",
+    "RUF049", "RUF053", "RUF058", "RUF063", "RUF104", "RUF200", "SIM911", "T100",
+    "TC004", "TC005", "TC007", "TC010", "TID251", "TID252", "TID253", "W291", "W292",
+    "W293", "W505",
+
+    # Wave 2: 1 to 10 violations.
+    "A003", "A004", "B028", "C400", "C406", "C409", "C413", "C418", "DTZ012", "FURB105",
+    "FURB116", "FURB122", "FURB129", "FURB132", "FURB136", "FURB157", "FURB177",
+    "FURB192", "G001", "ICN001", "LOG009", "LOG015", "PERF101", "PIE800", "PIE807",
+    "PLC0207", "PLR0124", "PLR0206", "PLR1716", "PLR1722", "PLR1736", "PLW0108",
+    "PLW0602", "PLW1508", "PLW1509", "PT013", "PT021", "PT023", "PTH121", "PTH205",
+    "PTH206", "PYI006", "PYI025", "PYI034", "PYI036", "RUF017", "RUF022", "RUF023",
+    "RUF102", "SIM109", "SIM116", "SIM208", "SIM211", "SIM222", "SIM905", "SLOT000",
+    "SLOT001", "SLOT002", "T203", "TC001", "TC002", "TC006", "TRY201", "TRY203",
+    "YTT203", "YTT204",
+
+    # Wave 3: 11 to 100 violations.
+    "A001", "ASYNC110", "ASYNC240", "B008", "B009", "B010", "C414", "C416", "C419",
+    "C420", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "E402", "E741",
+    "EXE001", "FURB110", "FURB167", "FURB171", "G004", "G201", "PERF102", "PERF402",
+    "PERF403", "PIE804", "PIE808", "PIE810", "PLC0206", "PLR1704", "PLR1711", "PLR1714",
+    "PLR1730", "PLR1733", "PLR2044", "PT001", "PT003", "PT011", "PT012", "PT015",
+    "PT018", "PT028", "PTH100", "PTH101", "PTH102", "PTH104", "PTH105", "PTH106",
+    "PTH108", "PTH109", "PTH114", "PTH117", "PTH122", "PTH123", "PTH202", "PTH204",
+    "PTH207", "PTH211", "PYI024", "RET501", "RET502", "RET507", "RET508", "RSE102",
+    "RUF001", "RUF002", "RUF003", "RUF010", "RUF013", "RUF015", "RUF021", "RUF046",
+    "RUF051", "RUF100", "SIM101", "SIM110", "SIM112", "SIM113", "SIM115", "SIM118",
+    "SIM201", "SIM210", "SIM212", "SIM401", "SIM910", "TRY002", "TRY004", "TRY301",
+
+    # Wave 4: more than 100 violations.
+    "B007", "B904", "BLE001", "C408", "FLY002", "PERF401", "PLC0415", "PLR0402",
+    "PLR5501", "PLW0603", "PLW2901", "PT006", "PT007", "PT019", "PT022", "PT027",
+    "PTH103", "PTH107", "PTH110", "PTH111", "PTH112", "PTH113", "PTH116", "PTH118",
+    "PTH119", "PTH120", "PTH208", "RET503", "RET504", "RET505", "RET506", "RUF005",
+    "RUF012", "RUF019", "RUF059", "RUF061", "SIM102", "SIM103", "SIM105", "SIM108",
+    "SIM114", "SIM117", "SIM300", "T201", "TRY300", "TRY400", "TRY401",
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # Unused local variables are not checked in tests for now.
-"tests/**" = ["F841"]
+# "assert False" is allowed in tests: with "python -O" every assert in the test
+# suite is removed, so replacing this one would not protect anything.
+"tests/**" = ["F841", "B011"]
 
 [tool.towncrier]
     package = "salt"

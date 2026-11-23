@@ -21,7 +21,6 @@ import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.master
 import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
@@ -179,7 +178,7 @@ class RemotePillarMixin:
         extra_data = {}
         if "pass_to_ext_pillars" in opts:
             if not isinstance(opts["pass_to_ext_pillars"], list):
-                log.exception("'pass_to_ext_pillars' config is malformed.")
+                log.error("'pass_to_ext_pillars' config is malformed.")
                 raise SaltClientError("'pass_to_ext_pillars' config is malformed.")
             for key in opts["pass_to_ext_pillars"]:
                 salt.utils.dictupdate.update(
@@ -833,7 +832,7 @@ class Pillar:
         tops, errors = self.get_tops()
         try:
             merged_tops = self.merge_tops(tops)
-        except TypeError as err:
+        except TypeError:
             merged_tops = OrderedDict()
             errors.append("Error encountered while rendering pillar top file.")
         return merged_tops, errors
@@ -1464,6 +1463,10 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
+    async def aclose(self):
+        """Async-aware teardown."""
+        self.destroy()
+
     async def compile_pillar(
         self, ext=True
     ):  # pylint: disable=invalid-overridden-method

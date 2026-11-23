@@ -1,5 +1,8 @@
 import logging
+import re
 import socket
+import subprocess
+import sys
 import textwrap
 import warnings
 
@@ -11,6 +14,7 @@ import salt.utils.network as network
 import salt.utils.platform
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
+from tests.support.paths import CODE_DIR
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -513,7 +517,7 @@ def test_dns_check_errors():
     ):
         with pytest.raises(
             salt.exceptions.SaltSystemExit,
-            match="DNS lookup or connection check of 'foo' failed.",
+            match=re.escape("DNS lookup or connection check of 'foo' failed."),
         ) as exc_info:
             network.dns_check("foo", "1")
 
@@ -1766,3 +1770,26 @@ def test_is_reachable_host_resolvable_returns_true():
         MagicMock(return_value=[(socket.AF_INET, 0, 0, "", ("127.0.0.1", 0))]),
     ):
         assert network.is_reachable_host("localhost") is True
+
+
+def test_is_reachable_host_looks_the_name_up_with_python_O():
+    """
+    ``python -O`` removes assert statements. The name has to be looked up also
+    then, and a name that does not resolve is not reachable.
+    """
+    code = (
+        "import socket\n"
+        "from unittest.mock import patch\n"
+        "import salt.utils.network as network\n"
+        "with patch.object(socket, 'getaddrinfo', side_effect=socket.gaierror):\n"
+        "    print(network.is_reachable_host('nope.invalid'))\n"
+    )
+    ret = subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        cwd=CODE_DIR,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert ret.returncode == 0, ret.stderr
+    assert ret.stdout.strip() == "False"

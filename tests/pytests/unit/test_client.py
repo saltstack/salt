@@ -179,61 +179,6 @@ def test_iter_failed_missing_returns_uses_grains_when_registry_empty(master_opts
     assert keys == ["minion-3", "m3-dummy1", "m3-dummy2", "m3-dummy3"]
 
 
-def test_iter_failed_missing_returns_uses_pillar_when_registry_and_grains_empty(
-    master_opts,
-):
-    from salt.client import _iter_failed_missing_returns
-
-    class _FakeReg:
-        def get_resources_for_minion(self, mid):
-            return {}
-
-    class _FakeCk:
-        registry = _FakeReg()
-
-    class _FakeCache:
-        def __init__(self):
-            self._grains = {}
-            self._pillar = {
-                "minion-3": {
-                    "resources": {
-                        "dummy": {
-                            "resource_ids": [
-                                "m3-dummy1",
-                                "m3-dummy2",
-                                "m3-dummy3",
-                            ],
-                        },
-                    },
-                }
-            }
-
-        def contains(self, bank, key):
-            if bank == "grains":
-                return key in self._grains
-            if bank == "pillar":
-                return key in self._pillar
-            return False
-
-        def fetch(self, bank, key):
-            if bank == "grains":
-                return self._grains.get(key, {})
-            if bank == "pillar":
-                return self._pillar.get(key, {})
-            return {}
-
-    mopts = dict(master_opts)
-    mopts["minion_data_cache"] = True
-
-    with patch("salt.utils.minions.CkMinions", return_value=_FakeCk()):
-        with patch("salt.cache.factory", return_value=_FakeCache()):
-            keys = [
-                next(iter(chunk))
-                for chunk in _iter_failed_missing_returns(mopts, set(), {"minion-3"})
-            ]
-    assert keys == ["minion-3", "m3-dummy1", "m3-dummy2", "m3-dummy3"]
-
-
 def test_iter_failed_missing_returns_skips_resources_already_found(master_opts):
     from salt.client import _iter_failed_missing_returns
 

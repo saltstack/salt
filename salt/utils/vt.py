@@ -407,7 +407,8 @@ class Terminal:
             child_name = os.ttyname(child)
             proc = subprocess.Popen(  # pylint: disable=subprocess-popen-preexec-fn
                 self.args,
-                preexec_fn=functools.partial(
+                # The child must set up its own session and terminal before exec.
+                preexec_fn=functools.partial(  # noqa: PLW1509
                     self._preexec, child_name, self.rows, self.cols, self.preexec_fn
                 ),
                 shell=self.shell,  # nosec

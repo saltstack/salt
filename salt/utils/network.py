@@ -28,11 +28,18 @@ from salt.exceptions import SaltClientError, SaltSystemExit
 from salt.utils.decorators.jinja import jinja_filter
 from salt.utils.versions import Version, warn_until
 
-try:
-    import salt.utils.win_network
+# Deferred: only import salt.utils.win_network (+ transitive win_reg
+# etc.) on Windows.  The module is importable on Linux too, so every
+# minion process previously paid the cost even though
+# ``get_interface_info`` is Windows-only.
+if salt.utils.platform.is_windows():
+    try:
+        import salt.utils.win_network
 
-    WIN_NETWORK_LOADED = True
-except ImportError:
+        WIN_NETWORK_LOADED = True
+    except ImportError:
+        WIN_NETWORK_LOADED = False
+else:
     WIN_NETWORK_LOADED = False
 
 log = logging.getLogger(__name__)
@@ -300,7 +307,8 @@ def is_reachable_host(entity_name):
     :return:
     """
     try:
-        assert type(socket.getaddrinfo(entity_name, 0, 0, 0, 0)) == list
+        # getaddrinfo raises when the name cannot be resolved, the result is not used
+        socket.getaddrinfo(entity_name, 0, 0, 0, 0)
         ret = True
     except (socket.gaierror, UnicodeError):
         # UnicodeError is raised (not a subclass of socket.gaierror) when the
@@ -2300,7 +2308,7 @@ def parse_host_port(host_port):
             host, _hostport_separator_, port = _s_.partition(":")
             try:
                 port = int(port)
-            except ValueError as _e_:
+            except ValueError:
                 errmsg = 'host_port "{}" port value "{}" is not an integer.'.format(
                     host_port, port
                 )

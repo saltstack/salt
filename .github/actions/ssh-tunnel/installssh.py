@@ -24,7 +24,8 @@ def start_ssh_server():
     """
     Pretty print the GH Actions event.
     """
-    resp = requests.get(
+    # Only used by the manual ssh-debug workflow, so no timeout is set.
+    resp = requests.get(  # noqa: S113
         "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.8.1.0p1-Preview/OpenSSH-Win64.zip",
         allow_redirects=True,
     )
@@ -37,7 +38,7 @@ def start_ssh_server():
     subprocess.call(["powershell.exe", f"{install_script}"])
     with open("fwrule.ps1", "w") as fp:
         fp.write(fwrule.format(install_script.parent / "sshd.exe"))
-    subprocess.call(["powershell.exe", f"fwrule.ps1"])
+    subprocess.call(["powershell.exe", "fwrule.ps1"])
 
 
 if __name__ == "__main__":

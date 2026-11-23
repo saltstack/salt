@@ -21,7 +21,7 @@ PROM_URL = "http://127.0.0.1:19090"
 # like a leak to a linear fit, which made the nightly fail on RSS slope.
 # The first ~5 minutes are known to be unusable; 10 minutes leaves a
 # margin.  Override with ``STRESS_WARMUP_SECONDS`` if that needs tuning.
-WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", 10 * 60))
+WARMUP_SECONDS = int(os.environ.get("STRESS_WARMUP_SECONDS", str(10 * 60)))
 
 # Master RSS slope (bytes/sec) above which the run fails.  The limit falls
 # with the length of the run.  Master RSS is not flat even without a leak: it
@@ -57,7 +57,7 @@ MASTER_RSS_SLOPE_LIMITS = (
 # of a run are taken while the stress is being stopped and prometheus is
 # still scraping, and they are not representative of the steady state.
 # Override with ``STRESS_TAIL_SECONDS`` if that needs tuning.
-TAIL_SECONDS = int(os.environ.get("STRESS_TAIL_SECONDS", 2 * 60))
+TAIL_SECONDS = int(os.environ.get("STRESS_TAIL_SECONDS", str(2 * 60)))
 
 # Smallest slice of data the check will judge on, taken between the
 # warm-up and the tail.  Fewer points make the slope too noisy to compare

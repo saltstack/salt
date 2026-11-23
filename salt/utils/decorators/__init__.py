@@ -107,7 +107,7 @@ class Depends:
                     frame,
                     self.params,
                 )
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception(
                 "Exception encountered when attempting to inspect frame in "
                 "dependency decorator"
@@ -648,17 +648,13 @@ class _WithDeprecated(_DeprecationDecorator):
             in self._globals.get("__pillar__").get(self.CFG_USE_DEPRECATED, list())
             or (
                 self._policy == self.OPT_IN
-                and not (
-                    func_path
-                    in self._globals.get("__opts__", {}).get(
-                        self.CFG_USE_SUPERSEDED, list()
-                    )
+                and func_path
+                not in self._globals.get("__opts__", {}).get(
+                    self.CFG_USE_SUPERSEDED, list()
                 )
-                and not (
-                    func_path
-                    in self._globals.get("__pillar__", {}).get(
-                        self.CFG_USE_SUPERSEDED, list()
-                    )
+                and func_path
+                not in self._globals.get("__pillar__", {}).get(
+                    self.CFG_USE_SUPERSEDED, list()
                 )
             ),
             func_path,

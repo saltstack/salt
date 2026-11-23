@@ -563,6 +563,12 @@ def _check_queue(queue, kwargs):
         queue_ret = False
         if not isinstance(queue, bool) and isinstance(queue, int):
             jid = kwargs.get("__pub_jid")
+            # salt-call, orchestration, and master-published calls all
+            # route through salt.minion.load_args_and_kwargs, which packs
+            # the publish data (including the JID) into **kwargs for any
+            # function that accepts **kwargs. All state module entry
+            # points do, so __pub_jid is always populated here; no mint
+            # fallback is needed.
             # For max_queue (int), we retain blocking behavior but use lock
             _set_queue_flag(jid)
             try:
@@ -1928,7 +1934,6 @@ def show_lowstate(queue=None, **kwargs):
     """
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
-        assert False
         return conflict
 
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)

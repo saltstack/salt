@@ -76,7 +76,7 @@ def match(tgt, opts=None, minion_id=None):
                     log.error('Invalid beginning operator after "(": %s', word)
                     return False
                 if word == "not":
-                    if not results[-1] in ("and", "or", "("):
+                    if results[-1] not in ("and", "or", "("):
                         results.append("and")
                 results.append(word)
             else:

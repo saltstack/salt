@@ -77,6 +77,7 @@ def _present_test(
             config,
             saltenv=__env__,
             fingerprint_hash_type=fingerprint_hash_type,
+            options=options,
         )
         if keys:
             comment = ""
@@ -153,6 +154,7 @@ def _absent_test(
             config,
             saltenv=__env__,
             fingerprint_hash_type=fingerprint_hash_type,
+            options=options,
         )
         if keys:
             comment = ""

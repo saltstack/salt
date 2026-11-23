@@ -412,7 +412,7 @@ def get_device(opts, salt_obj=None):
         #   provider: napalm_base_example
         try:
             provider_lib = importlib.import_module(network_device.get("PROVIDER"))
-        except ImportError as ierr:
+        except ImportError:
             log.error(
                 "Unable to import %s", network_device.get("PROVIDER"), exc_info=True
             )

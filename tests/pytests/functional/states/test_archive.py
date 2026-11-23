@@ -7,7 +7,6 @@ import random
 import shutil
 import socket
 import subprocess
-import sys
 from contextlib import closing
 from pathlib import Path
 
@@ -34,10 +33,7 @@ class TestRequestHandler(http.server.SimpleHTTPRequestHandler):
         if directory is None:
             directory = os.getcwd()
         self.directory = directory
-        if sys.version_info.minor < 7:
-            super().__init__(*args, **kwargs)
-        else:
-            super().__init__(*args, directory=directory, **kwargs)
+        super().__init__(*args, directory=directory, **kwargs)
 
     def do_GET(self):
         """

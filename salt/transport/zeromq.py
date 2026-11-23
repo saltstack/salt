@@ -475,7 +475,7 @@ class PublishClient(salt.transport.base.PublishClient):
                 while running.is_set():
                     try:
                         msg = await self.recv(timeout=0.3)
-                    except zmq.error.ZMQError as exc:
+                    except zmq.error.ZMQError:
                         # We've disconnected just die
                         break
                     except (asyncio.TimeoutError, asyncio.exceptions.TimeoutError):

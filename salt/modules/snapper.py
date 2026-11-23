@@ -751,7 +751,7 @@ def undo(config="root", files=None, num_pre=None, num_post=None):
             key, val = comp.split(":")
             ret[key] = val
         return ret
-    except ValueError as exc:
+    except ValueError:
         raise CommandExecutionError(
             f"Error while processing Snapper response: {cmdret}"
         )

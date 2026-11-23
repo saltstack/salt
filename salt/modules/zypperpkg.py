@@ -255,14 +255,20 @@ class _Zypper:
         """
         if salt.utils.files.is_fcntl_available():
             if self.exit_code > 0 and os.path.exists(self.RPM_LOCK):
-                with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
-                    try:
-                        fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    except OSError as err:
-                        if err.errno == errno.EAGAIN:
-                            return True
-                    else:
-                        fcntl.lockf(rfh, fcntl.LOCK_UN)
+                try:
+                    with salt.utils.files.fopen(self.RPM_LOCK, mode="w+") as rfh:
+                        try:
+                            fcntl.lockf(rfh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        except OSError as err:
+                            if err.errno == errno.EAGAIN:
+                                return True
+                        else:
+                            fcntl.lockf(rfh, fcntl.LOCK_UN)
+                except OSError as err:
+                    # e.g. read-only root filesystem on transactional systems
+                    if err.errno not in (errno.EROFS, errno.EACCES, errno.EPERM):
+                        raise
+                    log.debug("Unable to open %s: %s", self.RPM_LOCK, err)
 
         return False
 
@@ -943,7 +949,9 @@ def list_pkgs(versions_as_list=False, root=None, includes=None, **kwargs):
             salt.utils.pkg.rpm.QUERYFORMAT.replace("%{REPOID}", "(none)") + "\n",
         ]
     )
-    output = __salt__["cmd.run"](cmd, python_shell=False, output_loglevel="trace")
+    output = __salt__["cmd.run_all"](cmd, python_shell=False, output_loglevel="trace")[
+        "stdout"
+    ]
     for line in output.splitlines():
         pkginfo = salt.utils.pkg.rpm.parse_pkginfo(line, osarch=__grains__["osarch"])
         if pkginfo:
@@ -3137,9 +3145,9 @@ def list_provides(root=None, **kwargs):
             cmd.extend(["--root", root])
         cmd.extend(["-qa", "--queryformat", "%{PROVIDES}_|-%{NAME}\n"])
         ret = dict()
-        for line in __salt__["cmd.run"](
+        for line in __salt__["cmd.run_all"](
             cmd, output_loglevel="trace", python_shell=False
-        ).splitlines():
+        )["stdout"].splitlines():
             provide, realname = line.split("_|-")
 
             if provide == realname:

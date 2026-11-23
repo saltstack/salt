@@ -74,7 +74,7 @@ def _parse_quota(mount, opts):
         elif mode == "quotas":
             if len(comps) < 8:
                 continue
-            if not comps[0] in ret[quotatype]:
+            if comps[0] not in ret[quotatype]:
                 ret[quotatype][comps[0]] = {}
             ret[quotatype][comps[0]]["block-used"] = comps[2]
             ret[quotatype][comps[0]]["block-soft-limit"] = comps[3]

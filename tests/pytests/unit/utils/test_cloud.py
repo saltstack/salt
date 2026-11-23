@@ -782,10 +782,8 @@ def test_is_public_ip():
 
 
 def test_check_name():
-    try:
-        cloud.check_name("test", string.ascii_letters)
-    except SaltCloudException as exc:
-        assert False, f"cloud.check_name rasied SaltCloudException: {exc}"
+    # A valid name must not raise
+    cloud.check_name("test", string.ascii_letters)
 
     with pytest.raises(SaltCloudException):
         cloud.check_name("test", string.digits)
@@ -812,10 +810,9 @@ def test_salt_cloud_force_asciii():
     with pytest.raises(TypeError):
         cloud._salt_cloud_force_ascii("not the thing")
 
-    try:
+    with pytest.raises(UnicodeEncodeError) as excinfo:
         "\xa0\u2013".encode("iso-8859-15")
-    except UnicodeEncodeError as exc:
-        assert cloud._salt_cloud_force_ascii(exc) == ("-", 2)
+    assert cloud._salt_cloud_force_ascii(excinfo.value) == ("-", 2)
 
 
 def test__unwrap_dict():

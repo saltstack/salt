@@ -199,7 +199,7 @@ class Reactor(salt.utils.process.SignalHandlingProcess, salt.state.Compiler):
                         reactors,
                     )
                     return []  # We'll return nothing since there was an error
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             log.exception("Exception encountered while compiling reactions")
 
         self.resolve_aliases(chunks)

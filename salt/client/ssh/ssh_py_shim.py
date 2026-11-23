@@ -262,7 +262,7 @@ def get_executable():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ).communicate()
-        if sys.version_info[0] == 2 and sys.version_info[1] < 7:
+        if sys.version_info < (2, 7):
             stdout = stdout.decode(get_system_encoding(), "replace").strip()
         else:
             stdout = stdout.decode(
