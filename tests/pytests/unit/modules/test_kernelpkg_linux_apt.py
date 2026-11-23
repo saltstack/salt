@@ -50,7 +50,9 @@ def test_issue_68204_debian_bookworm_format():
             # Should not crash and should return a properly formatted version
             assert isinstance(result, str)
             assert "6.1.147" in result
-            assert "cloud-amd64" in result  # kernel type should be preserved
+            # kernel type is the last "-([^-]+)$" segment of kernelrelease;
+            # for "6.1.0-38-cloud-amd64" that is "amd64", not "cloud-amd64".
+            assert "amd64" in result
 
 
 @pytest.mark.skipif(not HAS_MODULES, reason="Salt modules could not be loaded")
