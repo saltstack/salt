@@ -6,8 +6,10 @@ import logging
 import os
 import pathlib
 import signal
+import sys
 import threading
 import time
+import types
 import uuid
 
 import pytest
@@ -5100,3 +5102,87 @@ async def test_pillar_refresh_marks_request_as_regular_fetch():
     assert kwargs["snapshot"] is True
     assert kwargs["pillarenv"] == "dev"
     assert kwargs["clean_cache"] is True
+
+
+def _tune_in_manager(loop, spawn):
+    """
+    The parts of a MinionManager that ``tune_in`` uses, without building a real one.
+    """
+    manager = types.SimpleNamespace(
+        io_loop=loop, _bind=lambda: None, _background_tasks=set()
+    )
+    manager._spawn_minions = lambda: spawn(manager)
+    return manager
+
+
+def test_tune_in_lets_background_tasks_finish_before_closing_the_loop():
+    """
+    ``tune_in()`` can return before ``MinionManager.destroy()`` runs, which then
+    finds a closed loop.  The background tasks must be able to run their cleanup
+    before the loop is closed, otherwise the sockets they hold stay open
+    (#70624, #70857).
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # a channel that is closed with ``await`` needs more loop iterations
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(background())
+        manager._background_tasks.add(task)
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert cleaned == [True]
+    assert loop.is_closed()
+
+
+def test_tune_in_waits_for_tasks_that_destroy_cancelled_already():
+    """
+    SIGTERM: ``destroy()`` cancels the background tasks and forgets them, then
+    ``SystemExit`` ends ``run_forever()`` before they could unwind.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0.2)
+            cleaned.append(True)
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(background())
+        manager._background_tasks.add(task)
+
+        def destroy():
+            for background_task in list(manager._background_tasks):
+                background_task.cancel()
+            manager._background_tasks.clear()
+            sys.exit()
+
+        manager.io_loop.call_later(0.05, destroy)
+
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert cleaned == [True]
+    assert loop.is_closed()
+
+
+def test_tune_in_closes_the_loop_when_draining_fails():
+    loop = asyncio.new_event_loop()
+
+    def spawn(manager):
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    with patch(
+        "salt.utils.asynchronous.cancel_and_drain", side_effect=RuntimeError("boom")
+    ):
+        salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert loop.is_closed()

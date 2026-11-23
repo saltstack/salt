@@ -12,6 +12,7 @@ back every master-initiated job) raised
 
 import asyncio
 import gc
+import time
 import warnings
 
 import pytest
@@ -464,3 +465,132 @@ def test_syncwrapper_del_forked_child_does_not_touch_parent_resources_70175(
         "forked-child SyncWrapper.__del__ must NOT close the shared asyncio_loop "
         "(fork-safety guard broken -- parent's transport would be destroyed)"
     )
+
+
+def test_cancel_and_drain_lets_cancelled_tasks_unwind():
+    """
+    A cancelled task only runs its ``finally`` block while the loop keeps
+    running.  ``cancel_and_drain`` must keep the loop running until the
+    cleanup is done, so that the caller can close the loop afterwards.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # cleanup that needs several more loop iterations, like closing a
+            # channel with ``await``
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        left = asynchronous.cancel_and_drain(loop, [task])
+    finally:
+        loop.close()
+    assert left == []
+    assert cleaned == [True]
+    assert task.cancelled()
+
+
+def test_cancel_and_drain_waits_for_tasks_cancelled_as_a_consequence():
+    """
+    Cancelling a caller can make a done callback cancel another task, like the
+    sign-in task when its last caller goes away.  That task has to unwind too.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+    waiter = loop.create_future()
+
+    async def sign_in():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            cleaned.append("sign_in")
+
+    async def caller():
+        await waiter
+
+    sign_in_task = loop.create_task(sign_in())
+    waiter.add_done_callback(lambda _: sign_in_task.cancel())
+    caller_task = loop.create_task(caller())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        left = asynchronous.cancel_and_drain(loop, [caller_task])
+    finally:
+        loop.close()
+    assert left == []
+    assert cleaned == ["sign_in"]
+
+
+def test_cancel_and_drain_leaves_other_tasks_alone():
+    """
+    The code that owns a task may close it later and expect that it was not
+    cancelled (``MinionManager.destroy()`` and the event publisher).
+    """
+    loop = asyncio.new_event_loop()
+    mine = loop.create_task(asyncio.sleep(3600))
+    other = loop.create_task(asyncio.sleep(3600))
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        left = asynchronous.cancel_and_drain(loop, [mine])
+        assert left == []
+        assert mine.cancelled()
+        assert not other.done()
+        assert other.cancelling() == 0
+    finally:
+        other.cancel()
+        loop.run_until_complete(asyncio.gather(other, return_exceptions=True))
+        loop.close()
+
+
+def test_cancel_and_drain_gives_up_after_the_timeout():
+    """
+    A task that does not stop must not keep the caller from going on.
+    """
+    loop = asyncio.new_event_loop()
+    stop = []
+
+    async def stubborn():
+        while not stop:
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                pass
+
+    task = loop.create_task(stubborn())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        start = time.monotonic()
+        left = asynchronous.cancel_and_drain(loop, [task], timeout=0.3)
+        elapsed = time.monotonic() - start
+        assert left == [task]
+        assert elapsed < 5
+    finally:
+        # let the task finish so that the loop can be closed cleanly
+        stop.append(True)
+        asynchronous.cancel_and_drain(loop, [task])
+        loop.close()
+    assert task.done()
+
+
+def test_cancel_and_drain_leaves_unusable_loops_alone():
+    assert asynchronous.cancel_and_drain(None, []) == []
+
+    loop = asyncio.new_event_loop()
+    assert asynchronous.cancel_and_drain(loop, []) == []
+
+    # a running loop cannot be driven from the inside
+    async def inside():
+        return asynchronous.cancel_and_drain(loop, [])
+
+    assert loop.run_until_complete(inside()) == []
+
+    loop.close()
+    assert asynchronous.cancel_and_drain(loop, []) == []

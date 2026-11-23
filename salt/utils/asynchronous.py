@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 import threading
+import time
 import types
 
 import tornado.concurrent
@@ -33,6 +34,95 @@ def aioloop(io_loop, warn=False):
         return io_loop.asyncio_loop
     else:
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
+
+
+def _unwinding_tasks(loop, roots):
+    """
+    The tasks of ``loop`` that have not finished and either are one of
+    ``roots`` or have been asked to cancel (by anyone).
+    """
+    return [
+        task
+        for task in asyncio.all_tasks(loop)
+        if not task.done() and (task in roots or task.cancelling())
+    ]
+
+
+def cancel_and_drain(loop, tasks, timeout=5.0):
+    """
+    Cancel ``tasks`` and run ``loop`` until they, and every other task that has
+    been asked to cancel, have finished, or until ``timeout`` seconds have
+    passed.
+
+    Call it right before ``loop.close()``.  A cancelled task only unwinds
+    (``finally`` blocks, ``async with`` exits, closing its sockets) while the
+    loop keeps running.  A loop that is closed straight after the cancel
+    leaves such a task suspended with its resources still open, and the
+    garbage collector later blocks in ``zmq_ctx_term()`` waiting for a
+    socket that nobody can close any more.
+
+    Only ``tasks`` are cancelled here.  Cancelling one of them can make code
+    cancel others, for example a done callback that cancels the sign-in task
+    when its last caller goes away.  Those tasks are waited for as well.
+    Tasks that nobody asked to cancel are left alone, because the code that
+    owns them may still close them later and expect them not to be cancelled.
+
+    ``loop`` must not be running, so this is meant for the code that owns
+    the loop and has just left ``run_forever()``.  A loop that is closed or
+    running is left alone.
+
+    The time limit only helps with tasks that wait for something that never
+    comes.  It cannot interrupt a task that blocks the thread.
+
+    :param loop: the event loop that is about to be closed
+    :param tasks: the tasks to cancel
+    :param float timeout: seconds to wait for the tasks to finish
+    :return: the tasks that were still unfinished when the time ran out
+    """
+    if loop is None or loop.is_closed() or loop.is_running():
+        return []
+    roots = {task for task in tasks if not task.done()}
+    for task in roots:
+        task.cancel()
+    deadline = time.monotonic() + timeout
+    pending = _unwinding_tasks(loop, roots)
+    cancelled = set(pending)
+    while pending:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+
+        # Build the coroutine inside a function so it is only created when the
+        # loop can run it, see ``SyncWrapper._loop_can_run_until_complete``.
+        async def _wait(waited, limit):
+            await asyncio.wait(waited, timeout=limit)
+
+        wait = _wait(pending, remaining)
+        try:
+            loop.run_until_complete(wait)
+        except Exception:  # pylint: disable=broad-except
+            wait.close()
+            log.debug("Could not drain the event loop", exc_info=True)
+            break
+        pending = _unwinding_tasks(loop, roots)
+        cancelled.update(pending)
+    for task in cancelled:
+        # Mark the outcome as retrieved, otherwise asyncio logs "Task exception
+        # was never retrieved" when the task is garbage collected.
+        if task.done() and not task.cancelled() and task.exception() is not None:
+            log.debug(
+                "Task %s raised while the event loop was drained: %r",
+                task.get_name(),
+                task.exception(),
+            )
+    if pending:
+        log.warning(
+            "%d task(s) did not finish within %s seconds of being cancelled: %s",
+            len(pending),
+            timeout,
+            ", ".join(sorted(task.get_name() for task in pending)),
+        )
+    return pending
 
 
 @contextlib.contextmanager

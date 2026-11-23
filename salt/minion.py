@@ -2162,7 +2162,23 @@ class MinionManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
-                self.io_loop.close()
+                try:
+                    # A background task, for example a sign-in that waits for a
+                    # master that is down, holds sockets that it only closes
+                    # while it unwinds.  That needs the loop to keep running
+                    # after the cancel, so cancel the tasks and let them finish
+                    # before the loop is closed.  Without this their sockets
+                    # stay open and the garbage collector later blocks in
+                    # zmq_ctx_term() (#70624, #70857).  ``destroy()`` may have
+                    # cancelled the tasks already (SIGTERM); those are waited
+                    # for as well.
+                    salt.utils.asynchronous.cancel_and_drain(
+                        self.io_loop, list(self._background_tasks)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning("Error draining the event loop", exc_info=True)
+                finally:
+                    self.io_loop.close()
 
     @property
     def restart(self):
