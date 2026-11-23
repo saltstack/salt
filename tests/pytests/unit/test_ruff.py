@@ -627,6 +627,27 @@ NEW_RULE_CASES = [
     ("W291", "x = 1 \n"),
     ("W292", "x = 1"),
     ("W293", "class A:\n    \n    x = 1\n"),
+    # Rules of the second wave that nothing in the code breaks any more.
+    ("C417", "map(lambda x: x + 1, iterable)\n"),
+    ("LOG009", "import logging\n\n\nlogging.basicConfig(level=logging.WARN)\n"),
+    ("PLR0206", "class Cat:\n    @property\n    def purr(self, volume): ...\n"),
+    (
+        "PLW0602",
+        'DEBUG = True\n\n\ndef foo():\n    global DEBUG\n    if DEBUG:\n        print("foo() called")\n    ...\n',
+    ),
+    ("PLW1508", 'import os\n\nint(os.getenv("FOO", 1))\n'),
+    (
+        "PLW1509",
+        "import os, subprocess\n\nsubprocess.Popen(foo, preexec_fn=os.setsid)\nsubprocess.Popen(bar, preexec_fn=os.setpgid(0, 0))\n",
+    ),
+    (
+        "YTT203",
+        'import sys\n\nif sys.version_info[1] < 7:\n    print("Python 3.6 or earlier.")  # This will be printed on Python 4.0.\n',
+    ),
+    (
+        "YTT204",
+        'import sys\n\nif sys.version_info.minor < 7:\n    print("Python 3.6 or earlier.")  # This will be printed on Python 4.0.\n',
+    ),
 ]
 
 
@@ -705,6 +726,117 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         'import pytest\n\n\n@pytest.mark.parametrize("a", [1, 1])\ndef test_f(a):\n    pass\n',
     ),
     ("B011", "def test_f():\n    assert False\n"),
+    # Rules enabled in the second wave: a few existing violations. Only new ones
+    # block a PR.
+    (
+        "A003",
+        "class Class:\n    @staticmethod\n    def list() -> None:\n        pass\n\n    @staticmethod\n    def repeat(value: int, times: int) -> list[int]:\n        return [value] * times\n",
+    ),
+    ("A004", 'from rich import print\n\nprint("Some message")\n'),
+    ("B028", 'import warnings\n\nwarnings.warn("This is a warning")\n'),
+    ("C400", "list(f(x) for x in foo)\nlist(x for x in foo)\nlist((x for x in foo))\n"),
+    ("C406", "dict([(1, 2), (3, 4)])\ndict(((1, 2), (3, 4)))\ndict([])\n"),
+    ("C409", "tuple([1, 2])\ntuple((1, 2))\n"),
+    ("C413", "reversed(sorted(iterable))\n"),
+    ("C418", 'dict({})\ndict({"a": 1})\n'),
+    ("DTZ012", "import datetime\n\ndatetime.date.fromtimestamp(946684800)\n"),
+    ("FURB105", 'print("")\n'),
+    ("FURB116", "print(bin(1337)[2:])\n"),
+    (
+        "FURB122",
+        'from pathlib import Path\n\nwith Path("file").open("w") as f:\n    for line in lines:\n        f.write(line)\n\nwith Path("file").open("wb") as f_b:\n    for line_b in lines_b:\n        f_b.write(line_b.encode())\n',
+    ),
+    (
+        "FURB129",
+        'with open("file.txt") as fp:\n    for line in fp.readlines():\n        ...\n',
+    ),
+    ("FURB132", "nums = {123, 456}\n\nif 123 in nums:\n    nums.remove(123)\n"),
+    (
+        "FURB136",
+        "score1, score2 = 4, 5\n\nhighest_score = score1 if score1 > score2 else score2\n",
+    ),
+    (
+        "FURB157",
+        'from decimal import Decimal\n\nDecimal("0")\nDecimal(float("Infinity"))\n',
+    ),
+    ("FURB177", "from pathlib import Path\n\ncwd = Path().resolve()\n"),
+    (
+        "FURB192",
+        "nums = [3, 1, 4, 1, 5]\nlowest = sorted(nums)[0]\nhighest = sorted(nums)[-1]\nhighest = sorted(nums, reverse=True)[0]\n",
+    ),
+    (
+        "G001",
+        'import logging\n\nlogging.basicConfig(format="%(message)s", level=logging.INFO)\n\nuser = "Maria"\n\nlogging.info("{} - Something happened".format(user))\n',
+    ),
+    ("LOG015", 'import logging\n\nlogging.info("Foobar")\n'),
+    ("PERF101", "items = (1, 2, 3)\nfor i in list(items):\n    print(i)\n"),
+    ("PIE800", 'foo = {"A": 1, "B": 2}\nbar = {**foo, **{"C": 3}}\n'),
+    (
+        "PIE807",
+        "from dataclasses import dataclass, field\n\n\n@dataclass\nclass Foo:\n    bar: list[int] = field(default_factory=lambda: [])\n",
+    ),
+    ("PLC0207", 'url = "www.example.com"\nprefix = url.split(".")[0]\n'),
+    ("PLR0124", "foo == foo\n"),
+    (
+        "PLR1716",
+        "a = int(input())\nb = int(input())\nc = int(input())\nif a < b and b < c:\n    pass\n",
+    ),
+    ("PLR1722", 'if __name__ == "__main__":\n    exit()\n'),
+    (
+        "PLR1736",
+        'letters = ["a", "b", "c"]\n\nfor index, letter in enumerate(letters):\n    print(letters[index])\n',
+    ),
+    ("PLW0108", "df.apply(lambda x: str(x))\n"),
+    ("PT013", "import pytest as pt\nfrom pytest import fixture\n"),
+    (
+        "PT021",
+        "import pytest\n\n\n@pytest.fixture()\ndef my_fixture(request):\n    resource = acquire_resource()\n    request.addfinalizer(resource.release)\n    return resource\n",
+    ),
+    ("PT023", "import pytest\n\n\n@pytest.mark.foo()\ndef test_something(): ...\n"),
+    ("PTH121", 'import os\n\nos.path.samefile("f1.py", "f2.py")\n'),
+    ("PTH205", "import os\n\nos.path.getctime(__file__)\n"),
+    (
+        "PTH206",
+        'import os\n\n"path/to/file_name.txt".split(os.sep)[-1]\n\n"path/to/file_name.txt".split(os.sep)[-2]\n\n# Iterating over the path parts\nif any(part in blocklist for part in "my/file/path".split(os.sep)):\n    ...\n',
+    ),
+    ("PYI006", "import sys\n\nif sys.version_info > (3, 0):\n    pass\n"),
+    ("PYI025", "from collections.abc import Set\n"),
+    (
+        "PYI034",
+        'class Foo:\n    def __new__(cls, *args, **kwargs) -> "Foo":\n        return super().__new__(cls)\n',
+    ),
+    ("PYI036", "class Foo:\n    def __exit__(self):\n        pass\n"),
+    ("RUF017", "lists = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]\njoined = sum(lists, [])\n"),
+    (
+        "RUF022",
+        'import sys\n\n__all__ = [\n    "b",\n    "c",\n    "a",\n]\n\nif sys.platform == "win32":\n    __all__ += ["z", "y"]\n',
+    ),
+    ("RUF023", 'class Dog:\n    __slots__ = "name", "breed"\n'),
+    ("RUF102", "import os  # noqa: XYZ999\n"),
+    ("SIM109", "if foo == x or foo == y:\n    ...\n"),
+    (
+        "SIM116",
+        'def find_phrase(x):\n    if x == 1:\n        return "Hello"\n    elif x == 2:\n        return "Goodbye"\n    elif x == 3:\n        return "Good morning"\n    else:\n        return "Goodnight"\n',
+    ),
+    ("SIM208", "not (not a)\n"),
+    ("SIM211", "False if a else True\n"),
+    ("SIM222", "if x or [1] or y:\n    pass\n\na = x or [1] or y\n"),
+    ("SIM905", '"a,b,c,d".split(",")\n'),
+    ("SLOT000", "class Foo(str):\n    pass\n"),
+    ("SLOT001", "class Foo(tuple):\n    pass\n"),
+    (
+        "SLOT002",
+        'from collections import namedtuple\n\n\nclass Foo(namedtuple("foo", ["str", "int"])):\n    pass\n',
+    ),
+    ("TC006", "from typing import cast\n\nx = cast(dict[str, int], foo)\n"),
+    (
+        "TRY201",
+        "def foo():\n    try:\n        ...\n    except ValueError as exc:\n        raise exc\n",
+    ),
+    (
+        "TRY203",
+        "def foo():\n    try:\n        bar()\n    except NotImplementedError:\n        raise\n",
+    ),
 ]
 
 

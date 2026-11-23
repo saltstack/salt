@@ -132,9 +132,12 @@ ignore = [
     # PLR2004: magic values
     # C901, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917: complexity threshold
     # A002: parameter names that shadow builtins are part of the API
-    "A002", "ARG", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX", "INP",
-    "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004", "Q",
-    "S101", "TD", "TRY003", "W191",
+    # TC001, TC002: moving an import into a TYPE_CHECKING block breaks code that reads
+    # the annotations at run time
+    # ICN001: import alias conventions are not part of the Salt style
+    "A002", "ARG", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX",
+    "ICN001", "INP", "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
+    "PLR2004", "Q", "S101", "T201", "T203", "TC001", "TC002", "TD", "TRY003", "W191",
 
     # Rules for libraries and file types that Salt does not use: Airflow, Django,
     # FastAPI, gettext, NumPy, pandas, and the type stubs (.pyi) rules.
@@ -177,17 +180,6 @@ ignore = [
     "UP034", "UP035", "UP036", "UP037", "UP039", "UP040", "UP041", "UP042", "UP043",
     "UP044", "UP045", "UP046", "UP047", "UP049", "UP050",
 
-    # Wave 2: 1 to 10 violations.
-    "A003", "A004", "B028", "C400", "C406", "C409", "C413", "C417", "C418", "DTZ012",
-    "FURB105", "FURB116", "FURB122", "FURB129", "FURB132", "FURB136", "FURB157",
-    "FURB177", "FURB192", "G001", "ICN001", "LOG009", "LOG015", "PERF101", "PIE800",
-    "PIE807", "PLC0207", "PLR0124", "PLR0206", "PLR1716", "PLR1722", "PLR1736",
-    "PLW0108", "PLW0602", "PLW1508", "PLW1509", "PT013", "PT021", "PT023", "PTH121",
-    "PTH205", "PTH206", "PYI006", "PYI025", "PYI034", "PYI036", "RUF017", "RUF022",
-    "RUF023", "RUF102", "SIM109", "SIM116", "SIM208", "SIM211", "SIM222", "SIM905",
-    "SLOT000", "SLOT001", "SLOT002", "T203", "TC001", "TC002", "TC006", "TRY201",
-    "TRY203", "YTT203", "YTT204",
-
     # Wave 3: 11 to 100 violations.
     "A001", "ASYNC110", "ASYNC240", "B008", "B009", "B010", "C414", "C416", "C419",
     "C420", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "E402", "E741",
@@ -207,7 +199,7 @@ ignore = [
     "PTH103", "PTH107", "PTH110", "PTH111", "PTH112", "PTH113", "PTH116", "PTH118",
     "PTH119", "PTH120", "PTH208", "RET503", "RET504", "RET505", "RET506", "RUF005",
     "RUF012", "RUF019", "RUF059", "RUF061", "SIM102", "SIM103", "SIM105", "SIM108",
-    "SIM114", "SIM117", "SIM300", "T201", "TRY300", "TRY400", "TRY401",
+    "SIM114", "SIM117", "SIM300", "TRY300", "TRY400", "TRY401",
 ]
 
 [tool.ruff.lint.per-file-ignores]
