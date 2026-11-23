@@ -920,3 +920,17 @@ def test_deadline_checked_for_certain_rows(ckminions):
         # os:ubuntu is answered by certain rows only, with no rechecks.
         with pytest.raises(salt.utils.minions.TargetingTimeout):
             ck._check_cache_minions("os:ubuntu", ":", False, "grains")
+
+
+def test_compound_operands_with_unusual_ids(ckminions):
+    ck = ckminions(
+        {
+            "o'brien": {"role": "web"},
+            'x{y}"z': {"role": "web"},
+            "plain": {"role": "db"},
+        }
+    )
+    result = ck.check_minions("G@role:web and not L@plain", "compound")
+    assert sorted(result["minions"]) == sorted(["o'brien", 'x{y}"z'])
+    result = ck.check_minions("G@role:web and not L@o'brien", "compound")
+    assert result["minions"] == ['x{y}"z']

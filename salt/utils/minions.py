@@ -1237,6 +1237,16 @@ class CkMinions:
 
             return _deferred_minions_scope["minions"]
 
+        # Operand sets are passed to eval as variables. Writing them into the
+        # expression as set literals made Python parse every minion id again,
+        # over a second and 170 MiB for two 100,000-minion operands.
+        operands = {}
+
+        def operand(matched):
+            name = f"_m{len(operands)}"
+            operands[name] = set(matched)
+            return name
+
         log.debug("expr: %s, delimiter: %s, minions: %s", expr, delimiter, minions)
 
         nodegroups = self.opts.get("nodegroups", {})
@@ -1364,7 +1374,7 @@ class CkMinions:
                     if target_info["engine"] == "T":
                         engine_kwargs["fun"] = fun
                     _results = engine(*engine_args, **engine_kwargs)
-                    results.append(str(set(_results["minions"])))
+                    results.append(operand(_results["minions"]))
                     missing.extend(_results["missing"])
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
@@ -1372,7 +1382,7 @@ class CkMinions:
 
                 else:
                     _results = self._check_glob_minions(word, True, minions=minions)
-                    results.append(str(set(_results["minions"])))
+                    results.append(operand(_results["minions"]))
                     if unmatched and unmatched[-1] == "-":
                         results.append(")")
                         unmatched.pop()
@@ -1389,6 +1399,7 @@ class CkMinions:
                         {
                             "all_minions": _deferred_minions,
                             "_deferred_minions_scope": _deferred_minions_scope,
+                            **operands,
                         },
                     )
                 )  # pylint: disable=W0123
