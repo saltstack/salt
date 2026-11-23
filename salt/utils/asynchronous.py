@@ -36,6 +36,20 @@ def aioloop(io_loop, warn=False):
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
+def _describe_task(task):
+    """
+    The coroutine of a task and the line where it is suspended, for log
+    messages.  The name of a task is mostly just ``Task-<number>``.
+    """
+    name = getattr(task.get_coro(), "__qualname__", None) or task.get_name()
+    stack = task.get_stack(limit=1)
+    if not stack:
+        return name
+    return "{} ({}:{})".format(
+        name, os.path.basename(stack[0].f_code.co_filename), stack[0].f_lineno
+    )
+
+
 async def _wait_for_unwinding_tasks(roots, timeout):
     """
     Wait until every task that is one of ``roots`` or has been asked to cancel
@@ -104,7 +118,7 @@ def cancel_and_drain(loop, tasks, timeout=5.0):
             "%d task(s) did not finish within %s seconds of being cancelled: %s",
             len(pending),
             timeout,
-            ", ".join(sorted(task.get_name() for task in pending)),
+            ", ".join(sorted(_describe_task(task) for task in pending)),
         )
     return pending
 

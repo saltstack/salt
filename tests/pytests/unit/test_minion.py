@@ -5218,6 +5218,8 @@ def test_tune_in_closes_the_loop_when_a_task_does_not_finish(caplog):
     stop.append(True)
     assert loop.is_closed()
     assert "did not finish" in caplog.text
+    # the message says which coroutine is stuck, not just ``Task-<number>``
+    assert "stubborn" in caplog.text
 
 
 def test_tune_in_does_not_wait_when_there_is_nothing_to_drain():
