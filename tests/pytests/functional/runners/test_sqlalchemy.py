@@ -267,15 +267,23 @@ def test_terms_backfill(configured, database_backend):
         )
     assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
     with _engine().connect() as connection:
-        rows = dict(connection.exec_driver_sql("SELECT bank, terms FROM cache").all())
+        rows = {
+            bank: (stored, config)
+            for bank, stored, config in connection.exec_driver_sql(
+                "SELECT bank, terms, terms_config FROM cache"
+            )
+        }
         indexes = {
             row[0]
             for row in connection.exec_driver_sql(
                 "SELECT indexname FROM pg_indexes WHERE tablename = 'cache_grains'"
             )
         }
-    assert rows == {"grains": terms.flatten(grains), "mine": None}
-    assert {"ix_cache_grains_terms", "ix_cache_grains_terms_missing"} <= indexes
+    assert rows == {
+        "grains": (terms.flatten(grains), terms.ALL.fingerprint),
+        "mine": (None, None),
+    }
+    assert {"ix_cache_grains_terms", "ix_cache_grains_terms_config"} <= indexes
     assert salt.sqlalchemy.migrations.downgrade("0001") == ["0001"]
     with _engine().connect() as connection:
         columns = {

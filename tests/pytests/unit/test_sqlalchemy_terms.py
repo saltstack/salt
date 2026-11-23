@@ -22,9 +22,9 @@ def _hit(flat, exact, prefixes):
 
 
 def _assert_plan_agrees(
-    data, expr, delimiter=":", regex_match=False, exact_match=False
+    data, expr, delimiter=":", regex_match=False, exact_match=False, paths=terms.ALL
 ):
-    plan = terms.compile_target(expr, delimiter, regex_match, exact_match)
+    plan = terms.compile_target(expr, delimiter, regex_match, exact_match, paths)
     expected = bool(
         salt.utils.data.subdict_match(
             data,
@@ -39,7 +39,7 @@ def _assert_plan_agrees(
     if plan.never:
         assert not expected
         return plan
-    flat = set(terms.flatten(data))
+    flat = set(terms.flatten(data, paths))
     certain = _hit(flat, plan.certain, plan.certain_prefixes)
     candidate = _hit(flat, plan.candidates, plan.candidate_prefixes)
     if certain:
@@ -61,7 +61,8 @@ def _assert_plan_agrees(
 
 def _certain(data, expr, **kwargs):
     plan = _assert_plan_agrees(data, expr, **kwargs)
-    flat = set(terms.flatten(data))
+    paths = kwargs.get("paths", terms.ALL)
+    flat = set(terms.flatten(data, paths))
     return _hit(flat, plan.certain, plan.certain_prefixes)
 
 
@@ -136,6 +137,49 @@ def test_readings_are_not_repeated():
 
 def test_no_delimiter_never_matches():
     assert terms.compile_target("os").never
+
+
+GRAINS = {
+    "os": "Ubuntu",
+    "bb": {"bbcpu": {"rhsttag": True}, "tier": "prod"},
+    "sor": {"sec": {"f": "value"}, "items": ["a", "b"]},
+}
+
+
+def test_excluded_paths_fall_back():
+    paths = terms.paths({"term_exclude": ["sor"]})
+    flat = set(terms.flatten(GRAINS, paths))
+    # The key itself stays indexed at its covered parent.
+    assert terms.term(terms.KEY, (), "sor") in flat
+    assert not any(entry.startswith(terms.VALUE + terms.SEP + "sor") for entry in flat)
+    assert _certain(GRAINS, "os:ubuntu", paths=paths)
+    assert _certain(GRAINS, "x:sor", paths=paths) is False
+    plan = terms.compile_target("sor:sec:f:value", paths=paths)
+    assert plan.fallback == "path-not-indexed"
+
+
+def test_included_paths_index_only_their_subtrees():
+    paths = terms.paths({"term_paths": ["bb:bbcpu"]})
+    flat = set(terms.flatten(GRAINS, paths))
+    assert terms.term(terms.KEY, (), "bb") in flat
+    assert terms.term(terms.KEY, ("bb",), "bbcpu") in flat
+    # Ancestors describe their own keys, not the subtrees outside the list.
+    assert terms.term(terms.KEY, ("bb",), "tier") in flat
+    assert terms.term(terms.VALUE, ("bb", "tier"), "prod") not in flat
+    assert _certain(GRAINS, "bb:bbcpu:rhsttag", paths=paths)
+    for expr in ("os:ubuntu", "bb:tier:prod"):
+        plan = terms.compile_target(expr, paths=paths)
+        assert plan.fallback == "path-not-indexed"
+
+
+def test_fingerprint_follows_configuration():
+    assert terms.paths({}) == terms.ALL
+    assert terms.paths({"term_paths": None, "term_exclude": []}) == terms.ALL
+    excluded = terms.paths({"term_exclude": ["sor"]})
+    assert excluded.fingerprint != terms.ALL.fingerprint
+    assert terms.paths({"term_exclude": ["sor", "sor"]}) == excluded
+    with pytest.raises(ValueError):
+        terms.paths({"term_paths": "sor"})
 
 
 @pytest.mark.parametrize(
@@ -299,7 +343,17 @@ def derived_targets(draw):
     path, node = draw(st.sampled_from(paths))
     tokens = [_perturb(draw, segment) for segment in path]
     tokens.append(_perturb(draw, draw(st.sampled_from(_tails(node)))))
-    return data, ":".join(tokens)
+    # Term paths drawn from the document so they cut real subtrees.
+    configurable = sorted(
+        {":".join(path) for path, _ in paths if not any(":" in s for s in path)}
+    )
+    term_paths = term_exclude = None
+    if configurable and draw(st.booleans()):
+        pick = st.lists(st.sampled_from(configurable), max_size=2)
+        term_paths = draw(pick) if draw(st.booleans()) else None
+        term_exclude = draw(pick)
+    config = terms.paths({"term_paths": term_paths, "term_exclude": term_exclude})
+    return data, ":".join(tokens), config
 
 
 @settings(max_examples=5000, deadline=None)
@@ -309,8 +363,8 @@ def derived_targets(draw):
     exact_match=st.booleans(),
 )
 def test_derived_plan_agrees_with_subdict_match(target, regex_match, exact_match):
-    data, expr = target
-    _assert_plan_agrees(data, expr, ":", regex_match, exact_match)
+    data, expr, paths = target
+    _assert_plan_agrees(data, expr, ":", regex_match, exact_match, paths)
 
 
 @settings(max_examples=5000, deadline=None)

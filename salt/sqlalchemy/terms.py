@@ -24,9 +24,17 @@ Term layout: a kind character, ``SEP`` before each path segment, then
 ``VALUE_SEP`` and the value where the kind has one. Paths keep the case of
 dictionary keys, which traversal matches exactly; values and keys matched
 at the end of a path are lowercased like ``subdict_match`` does.
+
+``sqlalchemy.term_paths`` limits terms to listed subtrees and
+``sqlalchemy.term_exclude`` leaves subtrees out. Targets reading a path
+without terms are matched by scanning. Each row records the fingerprint of
+the configuration its terms were built with; rows built with another
+configuration are always rechecked.
 """
 
+import functools
 import hashlib
+import json
 from typing import NamedTuple, Optional
 
 import salt.utils.args
@@ -43,6 +51,8 @@ MAX_TERM = 200
 MAX_TERMS_BYTES = 1_000_000
 # Bound on the number of path interpretations a target expands into.
 MAX_READINGS = 64
+# Changes whenever the meaning of terms changes, invalidating stored terms.
+VERSION = 1
 
 VALUE = "v"  # scalar value or list member at a path
 KEY = "k"  # dictionary key at a path
@@ -87,7 +97,71 @@ def _plain(text):
     return SEP not in text and VALUE_SEP not in text and "\0" not in text
 
 
-def flatten(data):
+class Paths(NamedTuple):
+    """Which document paths carry terms."""
+
+    # None indexes every path; otherwise only these subtrees.
+    include: Optional[tuple]
+    exclude: tuple = ()
+    fingerprint: str = ""
+
+    def covered(self, path):
+        """Whether the node at ``path`` and its subtree have terms."""
+        if any(path[: len(prefix)] == prefix for prefix in self.exclude):
+            return False
+        if self.include is None:
+            return True
+        return any(path[: len(prefix)] == prefix for prefix in self.include)
+
+    def leads_to_covered(self, path):
+        """
+        Whether ``path`` is an ancestor of an included subtree.
+
+        Ancestors carry terms for their own value, list members and keys, but
+        not for children outside the included subtrees.
+        """
+        return self.include is not None and any(
+            len(prefix) > len(path) and prefix[: len(path)] == path
+            for prefix in self.include
+            if not any(prefix[: len(other)] == other for other in self.exclude)
+        )
+
+
+def _parse_paths(value, setting):
+    if value is None:
+        return None
+    if isinstance(value, str) or not all(isinstance(item, str) for item in value):
+        raise ValueError(f"sqlalchemy.{setting} must be a list of paths")
+    # Paths use the default delimiter, like grain targets.
+    return tuple(sorted({tuple(item.split(":")) for item in value}))
+
+
+@functools.lru_cache(maxsize=8)
+def _paths(include, exclude):
+    included = _parse_paths(include, "term_paths")
+    excluded = _parse_paths(exclude, "term_exclude") or ()
+    fingerprint = hashlib.sha256(
+        json.dumps([VERSION, included, excluded]).encode("utf-8")
+    ).hexdigest()[:16]
+    return Paths(included, excluded, fingerprint)
+
+
+def paths(config):
+    """Return the term paths from an engine configuration."""
+    include = config.get("term_paths")
+    exclude = config.get("term_exclude") or ()
+    if isinstance(include, str) or isinstance(exclude, str):
+        raise ValueError("sqlalchemy.term_paths and term_exclude must be lists")
+    return _paths(
+        None if include is None else tuple(include),
+        tuple(exclude),
+    )
+
+
+ALL = _paths(None, ())
+
+
+def flatten(data, paths=ALL):
     """Return the sorted terms describing a grains or pillar document."""
     terms = set()
 
@@ -105,6 +179,8 @@ def flatten(data):
         _add_term(terms, VALUE, path, text)
 
     def walk(node, path):
+        if not (paths.covered(path) or paths.leads_to_covered(path)):
+            return
         if isinstance(node, dict):
             for key, value in node.items():
                 if not isinstance(key, str) or not _plain(key):
@@ -206,7 +282,9 @@ def _literal_prefix(pattern, regex):
     return pattern, True
 
 
-def compile_target(expr, delimiter=":", regex_match=False, exact_match=False):
+def compile_target(
+    expr, delimiter=":", regex_match=False, exact_match=False, paths=ALL
+):
     """Compile a grain or pillar target into a lookup plan."""
     if not isinstance(expr, str) or not isinstance(delimiter, str) or not delimiter:
         return Plan(fallback="unsupported-arguments")
@@ -224,6 +302,8 @@ def compile_target(expr, delimiter=":", regex_match=False, exact_match=False):
         keys = set()
         for path, pattern in readings:
             for variant in _path_variants(path):
+                if not (paths.covered(variant) or paths.leads_to_covered(variant)):
+                    raise _Fallback("path-not-indexed")
                 exact = variant == path
                 keys.add(variant[0])
                 _pattern_terms(
@@ -282,9 +362,9 @@ def index_statements(preparer, schema, banks=BANKS):
     """
     Return DDL indexing terms on each bank partition.
 
-    A GIN index answers term lookups. A partial index lists rows without
-    terms, such as rows a master without term support wrote, which lookups
-    recheck.
+    A GIN index answers term lookups. An index on the configuration
+    fingerprint finds rows whose terms are missing or were built with another
+    configuration, which lookups recheck.
     """
     prefix = f"{preparer.quote_schema(schema)}." if schema else ""
     statements = []
@@ -300,8 +380,8 @@ def index_statements(preparer, schema, banks=BANKS):
         )
         statements.append(
             f"CREATE INDEX IF NOT EXISTS "
-            f"{preparer.quote(f'ix_{partition}_terms_missing')} "
-            f"ON {table} (key) WHERE terms IS NULL"
+            f"{preparer.quote(f'ix_{partition}_terms_config')} "
+            f"ON {table} (terms_config)"
         )
     return statements
 

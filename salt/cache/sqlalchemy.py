@@ -123,7 +123,10 @@ def store(bank, key, data, expires=None, cluster_id=None, engine_name=None):
     }
     with salt.sqlalchemy.Session(engine_name) as session:
         if session.bind.dialect.name == "postgresql" and bank in terms.BANKS:
-            values["terms"] = terms.flatten(data)
+            name = salt.sqlalchemy._engine_name(engine_name)
+            paths = terms.paths(salt.sqlalchemy.ENGINE_REGISTRY[name]["config"])
+            values["terms"] = terms.flatten(data, paths)
+            values["terms_config"] = paths.fingerprint
         stmt = _upsert_statement(Cache, session.bind.dialect.name, values)
         if stmt is None:
             _store_fallback(session, Cache, values)
@@ -153,6 +156,7 @@ def _upsert_statement(Cache, dialect, values):
     }
     if "terms" in values:
         changes["terms"] = incoming.terms
+        changes["terms_config"] = incoming.terms_config
     if mysql:
         return stmt.on_duplicate_key_update(**changes)
     return stmt.on_conflict_do_update(

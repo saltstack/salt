@@ -413,6 +413,8 @@ def populate_model_registry(opts, name, engine):
         if is_postgres:
             # Searchable grain and pillar terms; see salt.sqlalchemy.terms.
             terms: Mapped[Optional[list]] = mapped_column(ARRAY(Text))
+            # Fingerprint of the term paths the terms were built with.
+            terms_config: Mapped[Optional[str]] = mapped_column(Text)
 
     class Events(Base):
         __tablename__ = "events"

@@ -2214,11 +2214,14 @@ class SQLAlchemyCkMinions(CkMinions):
         if self.dialect_name == "postgresql" and self.opts.get(
             "minion_data_cache", False
         ):
-            plan = terms.compile_target(expr, delimiter, regex_match, exact_match)
+            paths = terms.paths(salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"])
+            plan = terms.compile_target(
+                expr, delimiter, regex_match, exact_match, paths
+            )
             if plan.never:
                 return {"minions": [], "missing": []}
             if not plan.fallback:
-                stmt = self._terms_statement(bank, plan)
+                stmt = self._terms_statement(bank, plan, paths)
             else:
                 log.info(
                     "Matching %s target %r by scanning cached data: %s",
@@ -2284,15 +2287,15 @@ class SQLAlchemyCkMinions(CkMinions):
             data.type,
         )
 
-    def _terms_statement(self, bank, plan):
+    def _terms_statement(self, bank, plan, paths):
         """
         Select (key, certain, readable subtrees) for rows a plan's terms find.
         """
         Cache = model_for("Cache")
         # Query the bank's partition directly, with no bank condition, so the
         # terms index is the only access path for the term conditions.
-        # Otherwise, when most rows match, the planner picks the bank index
-        # and builds every row's tsvector to filter it.
+        # Otherwise, when most rows match, the planner picks the bank or
+        # fingerprint index and builds every row's tsvector to filter it.
         partition = table(
             f"cache_{bank}",
             column("key", Cache.key.type),
@@ -2300,6 +2303,7 @@ class SQLAlchemyCkMinions(CkMinions):
             column("data", Cache.data.type),
             column("expires_at", Cache.expires_at.type),
             column("terms", Cache.terms.type),
+            column("terms_config", Cache.terms_config.type),
             schema=salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"].get("schema")
             or None,
         )
@@ -2323,7 +2327,13 @@ class SQLAlchemyCkMinions(CkMinions):
             rows.key,
             type_coerce(literal(True), Boolean).label("certain"),
             type_coerce(null(), Cache.data.type).label("data"),
-        ).where(*live, matching(plan.certain, plan.certain_prefixes))
+        ).where(
+            *live,
+            matching(plan.certain, plan.certain_prefixes),
+            # Not indexable on purpose, for the same reason as the bank:
+            # nearly every row has the current fingerprint.
+            func.coalesce(rows.terms_config, "") == paths.fingerprint,
+        )
         candidates = select(
             rows.key,
             type_coerce(literal(False), Boolean).label("certain"),
@@ -2332,8 +2342,12 @@ class SQLAlchemyCkMinions(CkMinions):
             *live,
             or_(
                 matching(plan.candidates, plan.candidate_prefixes),
-                # Rows stored without terms are always rechecked.
-                rows.terms.is_(None),
+                # Rows without terms, or with terms built for other term
+                # paths, are always rechecked. Two ranges keep this on the
+                # fingerprint index.
+                rows.terms_config.is_(None),
+                rows.terms_config < paths.fingerprint,
+                rows.terms_config > paths.fingerprint,
             ),
         )
         return union_all(certain, candidates)

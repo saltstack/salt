@@ -72,6 +72,38 @@ A document whose terms would exceed about 1 MB, the limit of a PostgreSQL
 ``tsvector``, stores only a marker and is checked with the matcher for every
 target.
 
+Choosing indexed paths
+~~~~~~~~~~~~~~~~~~~~~~
+
+By default every grain and pillar path has terms. The index costs roughly the
+number of distinct values per minion: values unique to each host, such as
+serial numbers or inventory records, are the most expensive and rarely
+targeted. Two settings choose what is indexed:
+
+.. code-block:: yaml
+
+    # leave subtrees out of the index
+    sqlalchemy.term_exclude:
+      - sor
+      - cpu_flags
+
+    # or index only these subtrees
+    sqlalchemy.term_paths:
+      - os
+      - roles
+      - bb:bbcpu
+
+Paths use ``:`` between keys. Targets reading a path without terms still match
+correctly by scanning. On synthetic grains shaped like a large production
+fleet, 41 KB per minion with about 2,100 leaves, indexing everything cost about
+145 KB per minion; excluding one large inventory subtree cut that to about
+24 KB per minion, or 23 GB for one million minions.
+
+Each row records a fingerprint of the configuration its terms were built
+with, and rows built with another configuration are always rechecked until a
+master stores them again, so targeting stays correct after changing either
+setting, only slower.
+
 Upgrading
 ~~~~~~~~~
 

@@ -651,16 +651,37 @@ def test_terms_lookup_uses_gin_index(ckminions):
     assert "ix_cache_grains_terms" in plan, plan
 
 
-def test_rows_without_terms_are_rechecked(ckminions):
+@pytest.mark.parametrize(
+    "update",
+    [
+        "terms = NULL, terms_config = NULL",
+        # Terms built for other term paths are not trusted.
+        "terms = '{}', terms_config = 'stale'",
+    ],
+)
+def test_rows_without_current_terms_are_rechecked(ckminions, update):
     ck = ckminions(TERMS_DATA)
     _require_terms(ck)
     engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
     with engine.begin() as connection:
         connection.exec_driver_sql(
-            "UPDATE cache SET terms = NULL WHERE bank = 'grains' AND key = 'ubuntu'"
+            f"UPDATE cache SET {update} WHERE bank = 'grains' AND key = 'ubuntu'"
         )
     result = ck._check_cache_minions("os:ubuntu", ":", True, "grains")
     assert result["minions"] == ["ubuntu"]
+
+
+@pytest.mark.parametrize("expr,options", TERMS_TARGETS)
+def test_excluded_term_paths_match_python_matcher(ckminions, expr, options):
+    config = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"]
+    with patch.dict(config, {"term_exclude": ["bb", "nested"]}):
+        ck = ckminions(TERMS_DATA)
+        _require_terms(ck)
+        kwargs = {"delimiter": ":", "greedy": True, "search_type": "grains"}
+        kwargs.update(options)
+        result = ck._check_cache_minions(expr, **kwargs)
+    reference = salt.utils.minions.CkMinions._check_cache_minions(ck, expr, **kwargs)
+    assert set(result["minions"]) == set(reference["minions"])
 
 
 STORAGE_DATA = {

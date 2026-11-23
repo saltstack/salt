@@ -1428,6 +1428,8 @@ VALID_OPTS = immutabletypes.freeze(
         "sqlalchemy.partman.interval": str,
         "sqlalchemy.partman.jobmon": bool,
         "sqlalchemy.partman.retention": (type(None), str),
+        "sqlalchemy.term_paths": (type(None), list),
+        "sqlalchemy.term_exclude": list,
         "returner.sqlalchemy.max_retries": (type(None), int),
         "returner.sqlalchemy.retry_delay": (type(None), int),
     }
@@ -2419,6 +2421,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "sqlalchemy.ro_disable_connection_pool": False,
         "sqlalchemy.partman.enabled": False,
         "sqlalchemy.partman.retention": None,
+        # grain and pillar paths with targeting terms; None indexes all paths
+        "sqlalchemy.term_paths": None,
+        # grain and pillar paths left out of targeting terms
+        "sqlalchemy.term_exclude": [],
         "sqlalchemy.partman.schema": "pgpartman",
         "sqlalchemy.partman.interval": "weekly",
         "sqlalchemy.partman.jobmon": True,

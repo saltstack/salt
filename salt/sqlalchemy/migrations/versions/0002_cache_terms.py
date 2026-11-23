@@ -29,6 +29,7 @@ def upgrade():
         return
     schema = context.config.attributes["schema"]
     op.add_column("cache", sa.Column("terms", ARRAY(sa.Text)), schema=schema)
+    op.add_column("cache", sa.Column("terms_config", sa.Text), schema=schema)
     preparer = op.get_context().dialect.identifier_preparer
     for statement in terms.index_statements(preparer, schema, BANKS):
         op.execute(statement)
@@ -36,10 +37,10 @@ def upgrade():
         # Rows without terms are rechecked until a master stores them again.
         log.warning("Offline SQL does not compute terms for existing cache rows")
         return
-    _backfill(schema)
+    _backfill(schema, terms.paths(context.config.attributes["engine_config"]))
 
 
-def _backfill(schema):
+def _backfill(schema, paths):
     """Compute terms for existing rows with the Python flattener."""
     cache = sa.table(
         "cache",
@@ -48,6 +49,7 @@ def _backfill(schema):
         sa.column("cluster", sa.Text),
         sa.column("data", JSONB),
         sa.column("terms", ARRAY(sa.Text)),
+        sa.column("terms_config", sa.Text),
         schema=schema,
     )
     bind = op.get_bind()
@@ -73,12 +75,12 @@ def _backfill(schema):
                     cache.c.cluster == sa.bindparam("b_cluster"),
                     cache.c.key == sa.bindparam("b_key"),
                 )
-                .values(terms=sa.bindparam("b_terms")),
+                .values(terms=sa.bindparam("b_terms"), terms_config=paths.fingerprint),
                 [
                     {
                         "b_cluster": cluster,
                         "b_key": key,
-                        "b_terms": terms.flatten(data),
+                        "b_terms": terms.flatten(data, paths),
                     }
                     for cluster, key, data in rows
                 ],
@@ -90,4 +92,5 @@ def downgrade():
     if op.get_context().dialect.name != "postgresql":
         return
     schema = context.config.attributes["schema"]
+    op.drop_column("cache", "terms_config", schema=schema)
     op.drop_column("cache", "terms", schema=schema)
