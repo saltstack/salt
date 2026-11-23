@@ -490,10 +490,9 @@ def test_cancel_and_drain_lets_cancelled_tasks_unwind():
     task = loop.create_task(worker())
     loop.run_until_complete(asyncio.sleep(0))
     try:
-        left = asynchronous.cancel_and_drain(loop, [task])
+        asynchronous.cancel_and_drain(loop, [task])
     finally:
         loop.close()
-    assert left == []
     assert cleaned == [True]
     assert task.cancelled()
 
@@ -523,10 +522,9 @@ def test_cancel_and_drain_waits_for_tasks_cancelled_as_a_consequence():
     caller_task = loop.create_task(caller())
     loop.run_until_complete(asyncio.sleep(0))
     try:
-        left = asynchronous.cancel_and_drain(loop, [caller_task])
+        asynchronous.cancel_and_drain(loop, [caller_task])
     finally:
         loop.close()
-    assert left == []
     assert cleaned == ["sign_in"]
 
 
@@ -546,7 +544,7 @@ def test_cancel_and_drain_does_not_log_failed_cleanups_as_unretrieved(caplog):
     task = loop.create_task(worker())
     loop.run_until_complete(asyncio.sleep(0))
     try:
-        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        asynchronous.cancel_and_drain(loop, [task])
     finally:
         loop.close()
     del task
@@ -582,7 +580,7 @@ def test_cancel_and_drain_closes_a_zmq_socket_held_by_the_task():
     loop.run_until_complete(asyncio.sleep(0))
     try:
         assert not socket.closed
-        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        asynchronous.cancel_and_drain(loop, [task])
         assert socket.closed
     finally:
         loop.close()
@@ -598,10 +596,10 @@ def test_cancel_and_drain_ignores_finished_tasks_and_can_run_twice():
     task = loop.create_task(quick())
     loop.run_until_complete(task)
     try:
-        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        asynchronous.cancel_and_drain(loop, [task])
         assert not task.cancelled()
         assert task.result() == 1
-        assert asynchronous.cancel_and_drain(loop, [task]) == []
+        asynchronous.cancel_and_drain(loop, [task])
     finally:
         loop.close()
 
@@ -616,8 +614,7 @@ def test_cancel_and_drain_leaves_other_tasks_alone():
     other = loop.create_task(asyncio.sleep(3600))
     loop.run_until_complete(asyncio.sleep(0))
     try:
-        left = asynchronous.cancel_and_drain(loop, [mine])
-        assert left == []
+        asynchronous.cancel_and_drain(loop, [mine])
         assert mine.cancelled()
         assert not other.done()
         assert other.cancelling() == 0
@@ -627,9 +624,10 @@ def test_cancel_and_drain_leaves_other_tasks_alone():
         loop.close()
 
 
-def test_cancel_and_drain_gives_up_after_the_timeout():
+def test_cancel_and_drain_gives_up_after_the_timeout(caplog):
     """
-    A task that does not stop must not keep the caller from going on.
+    A task that does not stop must not keep the caller from going on, and the
+    warning says which coroutine it is.
     """
     loop = asyncio.new_event_loop()
     stop = []
@@ -645,10 +643,13 @@ def test_cancel_and_drain_gives_up_after_the_timeout():
     loop.run_until_complete(asyncio.sleep(0))
     try:
         start = time.monotonic()
-        left = asynchronous.cancel_and_drain(loop, [task], timeout=0.3)
+        with caplog.at_level(logging.WARNING):
+            asynchronous.cancel_and_drain(loop, [task], timeout=0.3)
         elapsed = time.monotonic() - start
-        assert left == [task]
+        assert not task.done()
         assert elapsed < 5
+        assert "did not finish" in caplog.text
+        assert "stubborn" in caplog.text
     finally:
         # let the task finish so that the loop can be closed cleanly
         stop.append(True)
@@ -658,16 +659,20 @@ def test_cancel_and_drain_gives_up_after_the_timeout():
 
 
 def test_cancel_and_drain_leaves_unusable_loops_alone():
-    assert asynchronous.cancel_and_drain(None, []) == []
+    asynchronous.cancel_and_drain(None, [])
 
     loop = asyncio.new_event_loop()
-    assert asynchronous.cancel_and_drain(loop, []) == []
+    task = loop.create_task(asyncio.sleep(3600))
+    loop.run_until_complete(asyncio.sleep(0))
 
-    # a running loop cannot be driven from the inside
+    # a running loop cannot be driven from the inside, nothing is cancelled
     async def inside():
-        return asynchronous.cancel_and_drain(loop, [])
+        asynchronous.cancel_and_drain(loop, [task])
 
-    assert loop.run_until_complete(inside()) == []
+    loop.run_until_complete(inside())
+    assert not task.cancelling()
 
+    task.cancel()
+    loop.run_until_complete(asyncio.gather(task, return_exceptions=True))
     loop.close()
-    assert asynchronous.cancel_and_drain(loop, []) == []
+    asynchronous.cancel_and_drain(loop, [])

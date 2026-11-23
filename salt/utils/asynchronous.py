@@ -102,13 +102,15 @@ def cancel_and_drain(loop, tasks, timeout=5.0):
     The time limit only helps with tasks that wait for something that never
     comes.  It cannot interrupt a task that blocks the thread.
 
+    Tasks that are still unfinished when the time runs out are logged as a
+    warning.
+
     :param loop: the event loop that is about to be closed
     :param tasks: the tasks to cancel
     :param float timeout: seconds to wait for the tasks to finish
-    :return: the tasks that were still unfinished when the time ran out
     """
     if loop is None or loop.is_closed() or loop.is_running():
-        return []
+        return
     roots = {task for task in tasks if not task.done()}
     for task in roots:
         task.cancel()
@@ -120,7 +122,6 @@ def cancel_and_drain(loop, tasks, timeout=5.0):
             timeout,
             ", ".join(sorted(_describe_task(task) for task in pending)),
         )
-    return pending
 
 
 @contextlib.contextmanager
