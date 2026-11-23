@@ -209,6 +209,32 @@ def pytest_configure(config):
     # Exported for scenarios / lib.topology to consume without re-parsing argv.
     os.environ["TOPOLOGY"] = topo_name
 
+    # Topology-aware recovery-window defaults.  cluster3's 100k resource
+    # registry means any fleet disruption triggers a derived-index
+    # rebuild (~6-9s per cycle) + a queued publish backlog that compounds
+    # with fault recovery.  The default 60s/180s/600s windows (tuned for
+    # single/multimaster/syndic) are too tight -- minions don't answer
+    # the first post-fault ping within that window because the master is
+    # still draining the rebuild queue.  Scale defaults 3x on registry
+    # topologies.  Operators can still override explicitly via env.
+    if topo_name == "cluster3":
+        os.environ.setdefault("RECOVER_FAST_SEC", "180")
+        os.environ.setdefault("RECOVER_STANDARD_SEC", "540")
+        os.environ.setdefault("RECOVER_MARATHON_SEC", "1800")
+        # Topology-aware post-workload-pause settle before the ``after``
+        # minion sample.  Default 2s is adequate for non-registry
+        # topologies.  On cluster3 the ``workload`` fixture's wildcard
+        # ``salt '*' test.ping`` loops fan out via resource-registry
+        # ``_resolve_resource_targets`` into ~2k per-resource worker
+        # dispatches per minion per publish.  At process_count_max=5
+        # that queue takes minutes to drain -- 2s after pause_workload
+        # catches a stochastic in-flight worker population and reports
+        # it as an fd/RSS LEAK.  Verified on test_disk_cache_enospc and
+        # test_minion_churn_kill9 (SAMPLE_SETTLE_SEC=60: fd_delta +8/+33
+        # vs +67/+17 and rss_delta +288/-13708 KB vs +42644/+40772
+        # at the 2s default; see agents/scratch/enospc-leak-probe/).
+        os.environ.setdefault("SAMPLE_SETTLE_SEC", "60")
+
     config._resiliency_workdir = workdir  # type: ignore[attr-defined]
     config._resiliency_results_file = results_file  # type: ignore[attr-defined]
     config._resiliency_prom_url = prom_url  # type: ignore[attr-defined]
