@@ -31,7 +31,9 @@ def upgrade():
     op.add_column("cache", sa.Column("terms", ARRAY(sa.Text)), schema=schema)
     op.add_column("cache", sa.Column("terms_config", sa.Text), schema=schema)
     preparer = op.get_context().dialect.identifier_preparer
-    for statement in terms.index_statements(preparer, schema, BANKS):
+    for statement in terms.index_statements(
+        preparer, schema, BANKS
+    ) + terms.trigger_statements(preparer, schema, BANKS):
         op.execute(statement)
     if context.is_offline_mode():
         # Rows without terms are rechecked until a master stores them again.
@@ -92,5 +94,9 @@ def downgrade():
     if op.get_context().dialect.name != "postgresql":
         return
     schema = context.config.attributes["schema"]
+    preparer = op.get_context().dialect.identifier_preparer
+    # The trigger function refers to the columns by name.
+    for statement in terms.drop_trigger_statements(preparer, schema, BANKS):
+        op.execute(statement)
     op.drop_column("cache", "terms_config", schema=schema)
     op.drop_column("cache", "terms", schema=schema)

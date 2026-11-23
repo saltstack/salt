@@ -127,6 +127,8 @@ def store(bank, key, data, expires=None, cluster_id=None, engine_name=None):
             paths = terms.paths(salt.sqlalchemy.ENGINE_REGISTRY[name]["config"])
             values["terms"] = terms.flatten(data, paths)
             values["terms_config"] = paths.fingerprint
+            # Tell the guard trigger these terms describe the new data.
+            session.execute(select(func.set_config(terms.WRITER_SETTING, "on", True)))
         stmt = _upsert_statement(Cache, session.bind.dialect.name, values)
         if stmt is None:
             _store_fallback(session, Cache, values)

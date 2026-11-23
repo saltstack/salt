@@ -284,6 +284,7 @@ def test_terms_backfill(configured, database_backend):
         "mine": (None, None),
     }
     assert {"ix_cache_grains_terms", "ix_cache_grains_terms_config"} <= indexes
+    assert _guard_triggers() == {"cache_grains", "cache_pillar"}
     assert salt.sqlalchemy.migrations.downgrade("0001") == ["0001"]
     with _engine().connect() as connection:
         columns = {
@@ -294,3 +295,15 @@ def test_terms_backfill(configured, database_backend):
             )
         }
     assert "terms" not in columns
+    assert _guard_triggers() == set()
+
+
+def _guard_triggers():
+    with _engine().connect() as connection:
+        return {
+            row[0]
+            for row in connection.exec_driver_sql(
+                "SELECT event_object_table FROM information_schema.triggers "
+                f"WHERE trigger_name = '{terms.GUARD}'"
+            )
+        }

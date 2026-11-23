@@ -684,6 +684,34 @@ def test_excluded_term_paths_match_python_matcher(ckminions, expr, options):
     assert set(result["minions"]) == set(reference["minions"])
 
 
+def test_untagged_data_updates_clear_terms(ckminions):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
+    # A master without term support updates the data but not the terms.
+    with engine.begin() as connection:
+        connection.exec_driver_sql(
+            'UPDATE cache SET data = \'{"os": "Gentoo"}\' '
+            "WHERE bank = 'grains' AND key = 'ubuntu'"
+        )
+        stored = connection.exec_driver_sql(
+            "SELECT terms, terms_config FROM cache "
+            "WHERE bank = 'grains' AND key = 'ubuntu'"
+        ).one()
+    assert tuple(stored) == (None, None)
+    assert ck._check_cache_minions("os:gentoo", ":", True, "grains")["minions"] == [
+        "ubuntu"
+    ]
+    assert ck._check_cache_minions("os:ubuntu", ":", True, "grains")["minions"] == []
+    # Stores through the cache keep the terms they wrote.
+    ck.cache.store("grains", "ubuntu", {"os": "Arch"})
+    with engine.connect() as connection:
+        stored = connection.exec_driver_sql(
+            "SELECT terms_config FROM cache WHERE bank = 'grains' AND key = 'ubuntu'"
+        ).scalar()
+    assert stored is not None
+
+
 STORAGE_DATA = {
     "floats": {
         "neg_zero": -0.0,

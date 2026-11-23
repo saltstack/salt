@@ -111,3 +111,7 @@ Upgrading
 computes them for existing rows. Offline upgrades (``sql=True``) cannot compute
 terms; rows without terms are rechecked on every lookup until a master stores
 them again.
+
+During a rolling upgrade, masters without term support keep writing grains
+and pillar. A trigger clears the terms of rows they update, so lookups
+recheck those rows until an upgraded master stores them again.

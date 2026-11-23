@@ -53,6 +53,10 @@ MAX_TERMS_BYTES = 1_000_000
 MAX_READINGS = 64
 # Changes whenever the meaning of terms changes, invalidating stored terms.
 VERSION = 1
+# Writers maintaining terms set this for their transaction; see
+# trigger_statements.
+WRITER_SETTING = "salt.cache_terms"
+GUARD = "salt_cache_terms_guard"
 
 VALUE = "v"  # scalar value or list member at a path
 KEY = "k"  # dictionary key at a path
@@ -383,6 +387,57 @@ def index_statements(preparer, schema, banks=BANKS):
             f"{preparer.quote(f'ix_{partition}_terms_config')} "
             f"ON {table} (terms_config)"
         )
+    return statements
+
+
+def _qualify(preparer, schema, name):
+    prefix = f"{preparer.quote_schema(schema)}." if schema else ""
+    return prefix + preparer.quote(name)
+
+
+def trigger_statements(preparer, schema, banks=BANKS):
+    """
+    Return DDL clearing terms that a write did not maintain.
+
+    A master without term support, such as one not yet upgraded, updates
+    data but leaves the terms describing the old data. Writers maintaining
+    terms set ``WRITER_SETTING`` for their transaction; other updates of data
+    clear the terms so lookups recheck the row.
+    """
+    function = _qualify(preparer, schema, GUARD)
+    statements = [
+        f"""
+        CREATE OR REPLACE FUNCTION {function}() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+            IF current_setting('{WRITER_SETTING}', true) IS DISTINCT FROM 'on'
+               AND NEW.data IS DISTINCT FROM OLD.data THEN
+                NEW.terms := NULL;
+                NEW.terms_config := NULL;
+            END IF;
+            RETURN NEW;
+        END
+        $$
+        """
+    ]
+    for bank in banks:
+        table = _qualify(preparer, schema, f"cache_{bank}")
+        statements.append(f"DROP TRIGGER IF EXISTS {preparer.quote(GUARD)} ON {table}")
+        statements.append(
+            f"CREATE TRIGGER {preparer.quote(GUARD)} BEFORE UPDATE OF data "
+            f"ON {table} FOR EACH ROW EXECUTE FUNCTION {function}()"
+        )
+    return statements
+
+
+def drop_trigger_statements(preparer, schema, banks=BANKS):
+    """Return DDL removing the triggers and function trigger_statements makes."""
+    statements = [
+        f"DROP TRIGGER IF EXISTS {preparer.quote(GUARD)} "
+        f"ON {_qualify(preparer, schema, f'cache_{bank}')}"
+        for bank in banks
+    ]
+    statements.append(f"DROP FUNCTION IF EXISTS {_qualify(preparer, schema, GUARD)}()")
     return statements
 
 
