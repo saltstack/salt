@@ -582,7 +582,10 @@ def test_handle_inbound_bad_session_dropped(opts, clean_state, caplog, monkeypat
             result = loop.run_until_complete(
                 link_manager._handle_inbound(payload)
             )  # pylint: disable=protected-access
-        assert result is None
+        # Verify-fail returns the ``session_expired`` sentinel so the
+        # sender's :meth:`PeerMasterLink._send_with_fault_handling`
+        # picks up the signal to re-handshake.
+        assert result == {"session_expired": True}
         assert (
             not fake.forward_publish_calls
         ), "stale-session payload should NOT dispatch"
@@ -925,8 +928,11 @@ def test_handle_inbound_forged_pub_without_prior_handshake_does_not_forward(
             result = loop.run_until_complete(
                 link_manager._handle_inbound(forged)  # pylint: disable=protected-access
             )
-        assert (
-            result is None
+        # Drop paths return either None or the ``session_expired`` sentinel
+        # that triggers the sender's re-handshake; both block dispatch.
+        assert result in (
+            None,
+            {"session_expired": True},
         ), f"forged frame dispatched past the session guard: {result!r}"
         assert fake.forward_publish_calls == [], (
             "router.forward_publish fired for a frame whose origin never "
@@ -1144,8 +1150,9 @@ def test_handle_inbound_forged_side_channel_without_prior_handshake_is_dropped(
             result = loop.run_until_complete(
                 link_manager._handle_inbound(forged)  # pylint: disable=protected-access
             )
-        assert (
-            result is None
+        assert result in (
+            None,
+            {"session_expired": True},
         ), f"forged {tag!r} dispatched past the session guard: {result!r}"
         calls = getattr(fake, sink_attr)
         assert calls == [], (

@@ -1234,7 +1234,10 @@ def test_handle_inbound_rejects_forged_pub_with_no_prior_inbound(
         result = asyncio.new_event_loop().run_until_complete(
             link_manager._handle_inbound(forged)  # pylint: disable=protected-access
         )
-    assert result is None, (
+    # Drop paths return either ``None`` (non-dispatch drop) or the
+    # ``session_expired`` sentinel (verify-fail -- signals the sender
+    # to re-handshake).  Both indicate the dispatcher was not consulted.
+    assert result in (None, {"session_expired": True}), (
         "forged frame with no prior handshake must not dispatch "
         f"(got result={result!r}, dispatched={dispatched!r})"
     )
@@ -1292,7 +1295,7 @@ def test_handle_inbound_rejects_forged_pub_when_prior_inbound_mismatches(
         result = asyncio.new_event_loop().run_until_complete(
             link_manager._handle_inbound(forged)  # pylint: disable=protected-access
         )
-    assert result is None
+    assert result in (None, {"session_expired": True})
     assert dispatched == [], (
         "bumped-gen frame dispatched past verify -- lazy-register "
         f"accepted an unauthenticated gen bump: {dispatched!r}"
@@ -1441,7 +1444,7 @@ def test_handle_inbound_rejects_forged_side_channel_without_prior_inbound(
         result = asyncio.new_event_loop().run_until_complete(
             link_manager._handle_inbound(forged)  # pylint: disable=protected-access
         )
-    assert result is None, (
+    assert result in (None, {"session_expired": True}), (
         f"forged {tag!r} frame with no prior handshake must not dispatch "
         f"(result={result!r}, dispatched={dispatched!r})"
     )

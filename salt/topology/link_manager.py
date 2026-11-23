@@ -2824,10 +2824,14 @@ async def _handle_inbound(payload):
     # The gate is now: every non-handshake frame requires a prior
     # ``_master_auth``-established ``_INBOUND[origin]`` record.  If a
     # peer loses the server-side session (server restart, process
-    # replacement) its frames are dropped here with WARNING until
-    # :meth:`PeerMasterLink.connect` completes a fresh handshake --
-    # the outbound-connect path already retries, so recovery is just
-    # delayed, not blocked.
+    # replacement) its frames are dropped here with WARNING, and the
+    # drop reply carries a ``session_expired`` sentinel that the
+    # sender's :meth:`PeerMasterLink._send_with_fault_handling` picks
+    # up to mark its outbound link DISCONNECTED; the
+    # :func:`_reconnect_loop` sweeper then re-handshakes within one
+    # interval.  Without the sentinel the sender's ZMQ socket survives
+    # the server restart silently (REQ-REP reconnect semantics) and
+    # the sender has no signal that its session is dead.
     if not _verify_session(inner):
         log.warning(
             "topology inbound: dropping %r with bad/missing session (origin=%r, gen=%r)",
@@ -2835,7 +2839,7 @@ async def _handle_inbound(payload):
             inner.get("origin_cluster_id"),
             inner.get("session_generation"),
         )
-        return None
+        return {"session_expired": True}
     result = handler(inner)
     if asyncio.iscoroutine(result):
         result = await result
