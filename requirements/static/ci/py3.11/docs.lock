@@ -248,6 +248,10 @@ packaging==26.3
     #   -r requirements/base.txt
     #   sphinx
     #   virtualenv
+passlib==1.9.5
+    # via
+    #   -c requirements/static/ci/py3.11/linux.lock
+    #   -r requirements/base.txt
 platformdirs==4.5.1
     # via
     #   -c requirements/static/ci/py3.11/linux.lock

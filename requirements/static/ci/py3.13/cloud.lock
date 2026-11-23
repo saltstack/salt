@@ -470,9 +470,11 @@ paramiko==5.0.0
     #   -r requirements/static/ci/common.txt
     #   ncclient
     #   scp
-passlib==1.7.4
+passlib==1.9.5
     # via
     #   -c requirements/static/ci/py3.13/linux.lock
+    #   -c requirements/static/pkg/py3.13/linux.lock
+    #   -r requirements/base.txt
     #   -r requirements/static/ci/common.txt
 pbr==7.1.3
     # via

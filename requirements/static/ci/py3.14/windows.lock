@@ -323,8 +323,11 @@ packaging==26.3
     #   -r requirements/base.txt
     #   pytest
     #   virtualenv
-passlib==1.7.4
-    # via -r requirements/static/ci/common.txt
+passlib==1.9.5
+    # via
+    #   -c requirements/static/pkg/py3.14/windows.lock
+    #   -r requirements/base.txt
+    #   -r requirements/static/ci/common.txt
 patch==1.16
     # via -r requirements/static/ci/windows.txt
 pathspec==1.0.3
