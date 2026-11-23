@@ -2237,7 +2237,7 @@ def line(
         If ``True``, do not write any changes (or create a backup); only work
         out and return what would change. Default is ``False``
 
-        .. versionadded:: 3008.0
+        .. versionadded:: 3008.7
 
     CLI Example:
 
