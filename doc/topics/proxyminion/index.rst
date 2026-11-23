@@ -147,17 +147,17 @@ defaults to ``True`` in the **2017.7.0** release.
 New in 2015.8.2
 ---------------
 
-*BREAKING CHANGE*: Adding the `proxymodule` variable  to __opts__ is deprecated.
-The `proxymodule` variable has been moved a new globally-injected variable
-called `__proxy__`.  A related configuration option called
-`add_proxymodule_to_opts` has been added and defaults to `True`.  In the next
+*BREAKING CHANGE*: Adding the ``proxymodule`` variable to __opts__ is deprecated.
+The ``proxymodule`` variable has been moved to a new globally-injected variable
+called ``__proxy__``.  A related configuration option called
+``add_proxymodule_to_opts`` has been added and defaults to ``True``.  In the next
 major release, 2016.3.0, this variable will default to False.
 
 In the meantime, proxies that functioned under 2015.8.0 and .1 should continue
 to work under 2015.8.2.  You should rework your proxy code to use `__proxy__` as
 soon as possible.
 
-The `rest_sample` example proxy minion has been updated to use `__proxy__`.
+The ``rest_sample`` example proxy minion has been updated to use ``__proxy__``.
 
 This change was made because proxymodules are a LazyLoader object, but
 LazyLoaders cannot be serialized.  `__opts__` gets serialized, and so things
@@ -168,7 +168,7 @@ to be placed in ``salt://_proxy``.  Proxy minions that need these modules
 will need to be restarted to pick up any changes.  A corresponding utility function,
 ``saltutil.sync_proxymodules``, has been added to sync these modules to minions.
 
-In addition, a salt.utils helper function called `is_proxy()` was added to make
+In addition, a salt.utils helper function called ``is_proxy()`` was added to make
 it easier to tell when the running minion is a proxy minion. **NOTE: This
 function was renamed to salt.utils.platform.is_proxy() for the 2018.3.0
 release**
@@ -207,7 +207,7 @@ looks like just another minion to the Salt master.
 
 To create support for a proxied device one needs to create four things:
 
-1. The `proxy_connection_module`_ (located in salt/proxy).
+1. The `proxy connection module`_ (located in salt/proxy).
 2. The `grains support code`_ (located in salt/grains).
 3. :ref:`Salt modules <all-salt.modules>` specific to the controlled
    device.
@@ -295,17 +295,17 @@ based on the diagram above:
 
 .. code-block:: yaml
 
-      proxy:
-        proxytype: i2c_lightshow
-        i2c_address: 2
+    proxy:
+      proxytype: i2c_lightshow
+      i2c_address: 2
 
 
 ``/srv/pillar/433wireless-device6.sls``
 
 .. code-block:: yaml
 
-      proxy:
-        proxytype: 433mhz_wireless
+    proxy:
+      proxytype: 433mhz_wireless
 
 
 ``/srv/pillar/smsgate-device7.sls``
@@ -354,14 +354,14 @@ Another reason to divide proxy services might be security.  In more secure
 environments only certain machines may have a network path to certain devices.
 
 
-.. _proxy_connection_module:
+.. _proxy connection module:
 
 Proxymodules
 ############
 
 A proxy module encapsulates all the code necessary to interface with a device.
 Proxymodules are located inside the salt.proxy module, or can be placed in
-the ``_proxy`` directory in your file_roots (default is ``/srv/salt/_proxy``.
+the ``_proxy`` directory in your file_roots (default is ``/srv/salt/_proxy``).
 At a minimum a proxymodule object must implement the following functions:
 
 ``__virtual__()``: This function performs the same duty that it does for other
@@ -666,23 +666,26 @@ This function will only be called automatically if the configuration variable
 release code-named *2017.7.0*.
 
 
-.. code: python::
+.. code-block:: python
 
     # -*- coding: utf-8 -*-
-    '''
+    """
     Generate baseline proxy minion grains
-    '''
+    """
     from __future__ import absolute_import
     import salt.utils.platform
 
-    __proxyenabled__ = ['rest_sample']
+    __proxyenabled__ = ["rest_sample"]
 
-    __virtualname__ = 'rest_sample'
+    __virtualname__ = "rest_sample"
 
 
     def __virtual__():
         try:
-            if salt.utils.platform.is_proxy() and __opts__['proxy']['proxytype'] == 'rest_sample':
+            if (
+                salt.utils.platform.is_proxy()
+                and __opts__["proxy"]["proxytype"] == "rest_sample"
+            ):
                 return __virtualname__
         except KeyError:
             pass
@@ -691,34 +694,34 @@ release code-named *2017.7.0*.
 
 
     def kernel():
-        return {'kernel': 'proxy'}
+        return {"kernel": "proxy"}
 
 
     def proxy_functions(proxy):
-        '''
+        """
         The loader will execute functions with one argument and pass
         a reference to the proxymodules LazyLoader object.  However,
         grains sometimes get called before the LazyLoader object is setup
         so `proxy` might be None.
-        '''
+        """
         if proxy:
-            return {'proxy_functions': proxy['rest_sample.fns']()}
+            return {"proxy_functions": proxy["rest_sample.fns"]()}
 
 
     def os():
-        return {'os': 'RestExampleOS'}
+        return {"os": "RestExampleOS"}
 
 
     def location():
-        return {'location': 'In this darn virtual machine.  Let me out!'}
+        return {"location": "In this darn virtual machine.  Let me out!"}
 
 
     def os_family():
-        return {'os_family': 'proxy'}
+        return {"os_family": "proxy"}
 
 
     def os_data():
-        return {'os_data': 'funkyHttp release 1.0.a.4.g'}
+        return {"os_data": "funkyHttp release 1.0.a.4.g"}
 
 
 The __proxyenabled__ directive
