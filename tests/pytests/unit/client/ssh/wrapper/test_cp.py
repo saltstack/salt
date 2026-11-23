@@ -1037,11 +1037,11 @@ def test_get_template_file_to_dir(client, cache_root, caplog):
     [
         (
             ("foo/bar", "/foo/bar"),
-            pytest.raises(ValueError, match=".*must be absolute.*as src"),
+            pytest.raises(ValueError, match=r".*must be absolute.*as src"),
         ),
         (
             ("/foo/bar", "foo/bar"),
-            pytest.raises(ValueError, match=".*must be absolute.*as dest"),
+            pytest.raises(ValueError, match=r".*must be absolute.*as dest"),
         ),
     ],
 )
@@ -1075,7 +1075,7 @@ def test_send_file_sanity_checks(client, raises, arg):
             "/some/path/not/in/cache/dir",
             pytest.raises(
                 ValueError,
-                match="Not recursively deleting a path outside of the cachedir.*",
+                match=r"Not recursively deleting a path outside of the cachedir.*",
             ),
         ),
     ],
@@ -1093,7 +1093,7 @@ def test_rmpath_can_delete_minion_cache_dir(client, cache_root):
 
 def test_rmpath_does_not_delete_minion_cache_dir_parent(client, cache_root):
     with pytest.raises(
-        ValueError, match="Not recursively deleting a path outside of the cachedir.*"
+        ValueError, match=r"Not recursively deleting a path outside of the cachedir.*"
     ):
         client._rmpath(Path(cache_root).parent)
     client.shell.exec_cmd.assert_not_called()

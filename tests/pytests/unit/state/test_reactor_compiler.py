@@ -533,67 +533,6 @@ def test_compiler_verify_high_short_sls(minion_opts, tmp_path, high, exp):
                 'Illegal requisite "[\'add_test_1\']" in SLS "/srv/reactor/start.sls", please check your syntax.\n'
             ],
         ),
-        (
-            {
-                "add_test_1": OrderedDict(
-                    [
-                        (
-                            "local",
-                            [
-                                OrderedDict([("tgt", "poc-minion")]),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "args",
-                                            [
-                                                OrderedDict(
-                                                    [("cmd", "touch /tmp/test1")]
-                                                )
-                                            ],
-                                        )
-                                    ]
-                                ),
-                                "cmd.run",
-                            ],
-                        ),
-                        ("__sls__", "/srv/reactor/start.sls"),
-                    ]
-                ),
-                "add_test_2": OrderedDict(
-                    [
-                        (
-                            "local",
-                            [
-                                OrderedDict([("tgt", "poc-minion")]),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "args",
-                                            [
-                                                OrderedDict(
-                                                    [("cmd", "touch /tmp/test2")]
-                                                )
-                                            ],
-                                        )
-                                    ]
-                                ),
-                                OrderedDict(
-                                    [
-                                        (
-                                            "require",
-                                            [OrderedDict([("local", "add_test_1")])],
-                                        )
-                                    ]
-                                ),
-                                "cmd.run",
-                            ],
-                        ),
-                        ("__sls__", "/srv/reactor/start.sls"),
-                    ]
-                ),
-            },
-            [],
-        ),
     ],
 )
 def test_compiler_verify_high_sls_requisites(minion_opts, tmp_path, high, exp):

@@ -325,7 +325,7 @@ def change_xml(doc, data, mapping):
             new_value = value_item["value"]
 
             # Only handle simple type values. Use multiple entries or a custom get for dict or lists
-            if isinstance(new_value, list) or isinstance(new_value, dict):
+            if isinstance(new_value, (list, dict)):
                 continue
 
             if new_value is not None:

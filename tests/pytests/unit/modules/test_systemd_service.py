@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 
@@ -92,7 +93,9 @@ def test_systemctl_reload():
     with patch.dict(systemd.__salt__, {"cmd.run_all": mock}):
         with pytest.raises(
             CommandExecutionError,
-            match="Problem performing systemctl daemon-reload: Who knows why?",
+            match=re.escape(
+                "Problem performing systemctl daemon-reload: Who knows why?"
+            ),
         ):
             systemd.systemctl_reload()
         assert systemd.systemctl_reload() is True
@@ -812,7 +815,7 @@ def test_systemctl_cmd_with_scope_and_systemd_run_not_found():
             with patch("salt.utils.path.which", which_side_effect):
                 with pytest.raises(
                     CommandExecutionError,
-                    match="systemd-run is required.*but it was not found.*",
+                    match=r"systemd-run is required.*but it was not found.*",
                 ):
                     systemd._systemctl_cmd("status", "sshd", systemd_scope=True)
 

@@ -193,7 +193,7 @@ gitdb==4.0.12
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   gitpython
-gitpython==3.2.0
+gitpython==3.2.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -371,7 +371,7 @@ msgpack==1.2.4
     #   -c requirements/static/pkg/py3.12/linux.lock
     #   -r requirements/base.txt
     #   pytest-salt-factories
-multidict==6.7.1
+multidict==7.2.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -510,7 +510,7 @@ py-cpuinfo==9.0.0
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   pytest-benchmark
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
@@ -809,7 +809,7 @@ toml==0.10.2
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -r requirements/static/ci/common.txt
-tornado==6.5.10
+tornado==6.6.1
     # via
     #   -c requirements/static/ci/py3.12/linux.lock
     #   -c requirements/static/pkg/py3.12/linux.lock
