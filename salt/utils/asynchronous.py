@@ -42,14 +42,22 @@ async def _wait_for_unwinding_tasks(roots, timeout):
     (by anyone) has finished.  Return the ones that are left after ``timeout``.
     """
     deadline = time.monotonic() + timeout
+    seen = set(roots)
     while True:
         pending = [
             task
             for task in asyncio.all_tasks()
             if not task.done() and (task in roots or task.cancelling())
         ]
+        seen.update(pending)
         remaining = deadline - time.monotonic()
         if not pending or remaining <= 0:
+            for task in seen:
+                # A task whose cleanup failed has an exception that nobody
+                # retrieves, so asyncio would log "Task exception was never
+                # retrieved" at shutdown.  Looking at it marks it as retrieved.
+                if task.done() and not task.cancelled():
+                    task.exception()
             return pending
         await asyncio.wait(pending, timeout=remaining)
 

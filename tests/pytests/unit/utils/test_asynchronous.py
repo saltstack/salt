@@ -12,6 +12,7 @@ back every master-initiated job) raised
 
 import asyncio
 import gc
+import logging
 import time
 import warnings
 
@@ -527,6 +528,31 @@ def test_cancel_and_drain_waits_for_tasks_cancelled_as_a_consequence():
         loop.close()
     assert left == []
     assert cleaned == ["sign_in"]
+
+
+def test_cancel_and_drain_does_not_log_failed_cleanups_as_unretrieved(caplog):
+    """
+    A task whose cleanup raises must not make asyncio log "Task exception was
+    never retrieved" at shutdown.
+    """
+    loop = asyncio.new_event_loop()
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            raise ValueError("cleanup failed")
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        assert asynchronous.cancel_and_drain(loop, [task]) == []
+    finally:
+        loop.close()
+    del task
+    with caplog.at_level(logging.ERROR, logger="asyncio"):
+        gc.collect()
+    assert "never retrieved" not in caplog.text
 
 
 def test_cancel_and_drain_leaves_other_tasks_alone():
