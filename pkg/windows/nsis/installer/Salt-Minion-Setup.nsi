@@ -41,7 +41,7 @@ ${StrStrAdv}
 !endif
 
 # Get architecture from CLI argument /DPythonArchitecture
-# Should be x64, AMD64, or x86
+# Should be x64, AMD64, ARM64, or x86
 !ifdef PythonArchitecture
     !define PYTHON_ARCHITECTURE "${PythonArchitecture}"
 !else
@@ -57,17 +57,32 @@ ${StrStrAdv}
     !define ESTIMATED_SIZE 0
 !endif
 
-# x64 and AMD64 are AMD64, all others are x86
+# CPUARCH drives every arch-dispatch site below: AMD64 means "64-bit install
+# class" (lives under $PROGRAMFILES64, 64-bit registry view, bundled x64
+# vcredist).  Windows 11 ARM runs amd64 binaries under emulation and places
+# every 64-bit app under C:\Program Files, so native arm64 installs reuse the
+# AMD64 code paths unchanged.  BUILD_ARCH is distinct from CPUARCH on purpose
+# so arm64 artifacts get a dedicated filename suffix instead of masquerading
+# as AMD64 on disk.
 !if "${PYTHON_ARCHITECTURE}" == "x64"
     !define CPUARCH "AMD64"
+    !define BUILD_ARCH "AMD64"
 !else if "${PYTHON_ARCHITECTURE}" == "AMD64"
     !define CPUARCH "AMD64"
+    !define BUILD_ARCH "AMD64"
+!else if "${PYTHON_ARCHITECTURE}" == "arm64"
+    !define CPUARCH "AMD64"
+    !define BUILD_ARCH "ARM64"
+!else if "${PYTHON_ARCHITECTURE}" == "ARM64"
+    !define CPUARCH "AMD64"
+    !define BUILD_ARCH "ARM64"
 !else
     !define CPUARCH "x86"
+    !define BUILD_ARCH "x86"
 !endif
 
 !define BUILD_TYPE "Python 3"
-!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py3-${CPUARCH}-Setup.exe"
+!define OUTFILE "Salt-Minion-${PRODUCT_VERSION}-Py3-${BUILD_ARCH}-Setup.exe"
 
 VIProductVersion "1.0.0.0"  # This actually updates File Version
 VIAddVersionKey FileVersion "1.0.0.0"  # This doesn't seem to do anything, but you'll get a warning without it
