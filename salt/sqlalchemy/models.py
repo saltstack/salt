@@ -278,9 +278,11 @@ def _create_cache_partitions(table, connection, **kwargs):
 def _create_term_indexes(table, connection, **kwargs):
     schema, _ = _table_name(table, connection)
     preparer = connection.dialect.identifier_preparer
-    for statement in terms.index_statements(
-        preparer, schema
-    ) + terms.trigger_statements(preparer, schema):
+    for statement in (
+        terms.index_statements(preparer, schema)
+        + terms.trigger_statements(preparer, schema)
+        + terms.fillfactor_statements(preparer, schema)
+    ):
         connection.exec_driver_sql(statement)
 
 

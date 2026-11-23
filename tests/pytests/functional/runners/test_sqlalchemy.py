@@ -286,6 +286,7 @@ def test_terms_backfill(configured, database_backend):
     }
     assert {"ix_cache_grains_terms", "ix_cache_grains_terms_config"} <= indexes
     assert _guard_triggers() == {"cache_grains", "cache_pillar"}
+    assert _fillfactors() == {"cache_grains": "80", "cache_pillar": "80"}
     assert salt.sqlalchemy.migrations.downgrade("0001") == ["0001"]
     with _engine().connect() as connection:
         columns = {
@@ -297,6 +298,20 @@ def test_terms_backfill(configured, database_backend):
         }
     assert "terms" not in columns
     assert _guard_triggers() == set()
+    assert _fillfactors() == {"cache_grains": None, "cache_pillar": None}
+
+
+def _fillfactors():
+    with _engine().connect() as connection:
+        return {
+            name: (dict(o.split("=") for o in options) if options else {}).get(
+                "fillfactor"
+            )
+            for name, options in connection.exec_driver_sql(
+                "SELECT relname, reloptions FROM pg_class "
+                "WHERE relname IN ('cache_grains', 'cache_pillar')"
+            )
+        }
 
 
 def _guard_triggers():

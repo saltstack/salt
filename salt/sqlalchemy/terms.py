@@ -57,6 +57,9 @@ VERSION = 1
 # trigger_statements.
 WRITER_SETTING = "salt.cache_terms"
 GUARD = "salt_cache_terms_guard"
+# Free space left in each page of a bank partition, so storing an unchanged
+# document can update the row in place (a HOT update) without index entries.
+FILLFACTOR = 80
 
 VALUE = "v"  # scalar value or list member at a path
 KEY = "k"  # dictionary key at a path
@@ -394,6 +397,19 @@ def index_statements(preparer, schema, banks=BANKS, concurrently=False):
 def _qualify(preparer, schema, name):
     prefix = f"{preparer.quote_schema(schema)}." if schema else ""
     return prefix + preparer.quote(name)
+
+
+def fillfactor_statements(preparer, schema, banks=BANKS, fillfactor=FILLFACTOR):
+    """Return DDL setting, or with None resetting, the bank partitions' fill factor."""
+    setting = (
+        "RESET (fillfactor)"
+        if fillfactor is None
+        else f"SET (fillfactor = {int(fillfactor)})"
+    )
+    return [
+        f"ALTER TABLE {_qualify(preparer, schema, f'cache_{bank}')} {setting}"
+        for bank in banks
+    ]
 
 
 def trigger_statements(preparer, schema, banks=BANKS):

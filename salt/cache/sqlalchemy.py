@@ -15,7 +15,7 @@ from salt.sqlalchemy import model_for, terms
 
 try:
     import sqlalchemy.exc
-    from sqlalchemy import delete, func, insert, or_, select, tuple_, update
+    from sqlalchemy import case, delete, func, insert, or_, select, tuple_, update
     from sqlalchemy.dialects.mysql import insert as mysql_insert
     from sqlalchemy.dialects.postgresql import insert as pg_insert
     from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -151,13 +151,19 @@ def _upsert_statement(Cache, dialect, values):
     stmt = make_insert(Cache).values(**values)
     mysql = dialect in {"mysql", "mariadb"}
     incoming = stmt.inserted if mysql else stmt.excluded
+    data_changed = Cache.data.is_distinct_from(incoming.data)
     changes = {
-        "data": incoming.data,
+        # Keep the stored value when it is unchanged. On PostgreSQL that
+        # reuses the TOASTed value and lets the update skip index maintenance.
+        "data": case((data_changed, incoming.data), else_=Cache.data),
         "expires_at": incoming.expires_at,
         "created_at": utcnow(),
     }
     if "terms" in values:
-        changes["terms"] = incoming.terms
+        # Compare the terms themselves: data outside the indexed paths can
+        # change without changing them, and the update can then stay HOT.
+        terms_changed = Cache.terms.is_distinct_from(incoming.terms)
+        changes["terms"] = case((terms_changed, incoming.terms), else_=Cache.terms)
         changes["terms_config"] = incoming.terms_config
     if mysql:
         return stmt.on_duplicate_key_update(**changes)

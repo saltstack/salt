@@ -1,4 +1,6 @@
+import hashlib
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from threading import Barrier
@@ -9,6 +11,7 @@ import salt.cache
 import salt.key
 import salt.sqlalchemy
 from tests.pytests.functional.cache.helpers import run_common_cache_tests
+from tests.support.mock import patch
 from tests.support.pytest.database import available_databases, database_backend
 
 __all__ = ["database_backend"]
@@ -259,3 +262,79 @@ def test_bank_hierarchy_is_case_sensitive(cache):
     cache.flush("Foo")
     assert not cache.contains("Foo")
     assert cache.fetch("foo/lower", "key") == "lower"
+
+
+def _hot_updates(engine, partition):
+    with engine.connect() as connection:
+        return connection.execute(
+            sqlalchemy.text(
+                "SELECT n_tup_upd, n_tup_hot_upd FROM pg_stat_user_tables "
+                "WHERE relname = :partition"
+            ),
+            {"partition": partition},
+        ).one()
+
+
+def test_unchanged_refresh_is_hot_update(cache, database_backend):
+    if database_backend.dialect != "postgresql":
+        pytest.skip("HOT updates are a PostgreSQL feature")
+    engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
+    grains = {"os": "Ubuntu", "roles": ["web"], "big": "x" * 5000}
+    cache.store("grains", "minion", grains)
+    before = _hot_updates(engine, "cache_grains")
+    first_update = cache.updated("grains", "minion")
+    cache.store("grains", "minion", dict(grains))
+    # Statistics reach pg_stat_user_tables after the writing backend reports.
+    deadline = time.time() + 10
+    after = before
+    while time.time() < deadline and after[0] == before[0]:
+        time.sleep(0.2)
+        after = _hot_updates(engine, "cache_grains")
+    assert after[0] == before[0] + 1
+    assert after[1] == before[1] + 1
+    assert cache.updated("grains", "minion") >= first_update
+    cache.store("grains", "minion", {**grains, "os": "Debian"})
+    assert cache.fetch("grains", "minion")["os"] == "Debian"
+    with engine.connect() as connection:
+        stored = connection.exec_driver_sql(
+            "SELECT terms FROM cache WHERE bank = 'grains' AND key = 'minion'"
+        ).scalar()
+    assert "v\x1fos\x1edebian" in stored
+
+
+def test_unindexed_change_keeps_terms_and_is_hot(cache, database_backend):
+    if database_backend.dialect != "postgresql":
+        pytest.skip("HOT updates are a PostgreSQL feature")
+    engine = salt.sqlalchemy.ENGINE_REGISTRY["default"]["engine"]
+    config = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"]
+    # Enough distinct indexed values that the terms are stored out of line,
+    # where rewriting even an identical array prevents a HOT update.
+    grains = {
+        "os": "Ubuntu",
+        "inventory": {"asset": "A1"},
+        "packages": {
+            f"pkg{idx:04}": hashlib.sha256(str(idx).encode()).hexdigest()
+            for idx in range(400)
+        },
+    }
+
+    def stored_terms():
+        with engine.connect() as connection:
+            return connection.exec_driver_sql(
+                "SELECT terms FROM cache WHERE bank = 'grains' AND key = 'minion'"
+            ).scalar()
+
+    with patch.dict(config, {"term_exclude": ["inventory"]}):
+        cache.store("grains", "minion", grains)
+        terms = stored_terms()
+        before = _hot_updates(engine, "cache_grains")
+        cache.store("grains", "minion", {**grains, "inventory": {"asset": "A2"}})
+        deadline = time.time() + 10
+        after = before
+        while time.time() < deadline and after[0] == before[0]:
+            time.sleep(0.2)
+            after = _hot_updates(engine, "cache_grains")
+    assert after[0] == before[0] + 1
+    assert after[1] == before[1] + 1
+    assert stored_terms() == terms
+    assert cache.fetch("grains", "minion")["inventory"] == {"asset": "A2"}

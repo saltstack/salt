@@ -33,7 +33,9 @@ def upgrade():
     # every step here tolerates that.
     op.execute(f"ALTER TABLE {cache} ADD COLUMN IF NOT EXISTS terms text[]")
     op.execute(f"ALTER TABLE {cache} ADD COLUMN IF NOT EXISTS terms_config text")
-    for statement in terms.trigger_statements(preparer, schema, BANKS):
+    for statement in terms.trigger_statements(
+        preparer, schema, BANKS
+    ) + terms.fillfactor_statements(preparer, schema, BANKS):
         op.execute(statement)
     # Batches and concurrent index builds commit on their own, so a large
     # cache stays writable and is not rewritten in one transaction.
@@ -88,7 +90,9 @@ def downgrade():
     schema = context.config.attributes["schema"]
     preparer = op.get_context().dialect.identifier_preparer
     # The trigger function refers to the columns by name.
-    for statement in terms.drop_trigger_statements(preparer, schema, BANKS):
+    for statement in terms.drop_trigger_statements(
+        preparer, schema, BANKS
+    ) + terms.fillfactor_statements(preparer, schema, BANKS, fillfactor=None):
         op.execute(statement)
     op.drop_column("cache", "terms_config", schema=schema)
     op.drop_column("cache", "terms", schema=schema)
