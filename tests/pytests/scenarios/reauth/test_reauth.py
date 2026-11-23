@@ -44,7 +44,7 @@ def minion_func(salt_minion, stop_event):
 
 @pytest.fixture(scope="module")
 def timeout():
-    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", 60))
+    return int(os.environ.get("SALT_CI_REAUTH_MASTER_WAIT", "60"))
 
 
 def test_reauth(salt_cli, salt_minion, salt_master, timeout, event_listener):

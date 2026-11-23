@@ -267,7 +267,7 @@ def wrap_tmpl_func(render_str):
                 if newline:
                     output += os.linesep
 
-        except SaltRenderError as exc:
+        except SaltRenderError:
             log.exception("Rendering exception occurred")
             # return dict(result=False, data=str(exc))
             raise
@@ -670,7 +670,9 @@ def render_mako_tmpl(tmplstr, context, tmplpath=None):
             context["opts"], saltenv, pillar_rend=context.get("_pillar_rend", False)
         )
     try:
-        return Template(
+        # Salt renders text (state and config files), not HTML, so no HTML
+        # escaping is wanted here.
+        return Template(  # noqa: S702
             tmplstr,
             strict_undefined=True,
             uri=context["sls"].replace(".", "/") if "sls" in context else None,

@@ -185,7 +185,7 @@ async def post_master_init(self, master):
             specific_proxy_mines = self.opts["pillar"]["mine_functions"]
             try:
                 self.opts["mine_functions"] = general_proxy_mines + specific_proxy_mines
-            except TypeError as terr:
+            except TypeError:
                 log.error(
                     "Unable to merge mine functions from the pillar in the opts, for proxy %s",
                     self.opts["id"],
@@ -700,7 +700,7 @@ def target(cls, minion_instance, opts, data, connected, creds_map):
         uid = salt.utils.user.get_uid(user=opts.get("user", None))
         minion_instance.proc_dir = salt.minion.get_proc_dir(opts["cachedir"], uid=uid)
 
-    if isinstance(data["fun"], tuple) or isinstance(data["fun"], list):
+    if isinstance(data["fun"], (tuple, list)):
         ProxyMinion._thread_multi_return(minion_instance, opts, data)
     else:
         ProxyMinion._thread_return(minion_instance, opts, data)

@@ -20,6 +20,7 @@ import salt.utils.files
 import salt.utils.jid
 import salt.utils.minion
 import salt.utils.profile
+import salt.utils.state
 import salt.utils.stringutils
 from salt._logging import LOG_LEVELS
 from salt.exceptions import (
@@ -53,6 +54,18 @@ class BaseCaller:
         """
         self.opts = opts
         self.opts["caller"] = True
+
+        # salt-call never runs ``salt.cli.daemons.Minion.prepare`` and
+        # therefore has no daemon-lifecycle hook for recovering a
+        # ``queue.lock`` left behind by a SIGKILLed prior invocation.
+        # Run the per-master cleanup here. The PID-liveness guard in
+        # ``cleanup_stale_queue_lock`` makes this safe to call even when
+        # a concurrent salt-call already holds the lock.
+        try:
+            salt.utils.state.cleanup_queue_state(self.opts)
+        except Exception:  # pylint: disable=broad-except
+            log.debug("queue.lock cleanup from salt-call failed", exc_info=True)
+
         # Handle this here so other deeper code which might
         # be imported as part of the salt api doesn't do  a
         # nasty sys.exit() and tick off our developer users
@@ -322,8 +335,11 @@ class BaseCaller:
         tgt_type = self.opts.get("resources_tgt_type", "glob")
 
         # Resolve resources via the inherited helper (set up on MinionBase
-        # so SMinion sees it). The helper consults the minion's pillar
-        # (``opts["resources"]``) and per-resource grains cache.
+        # so SMinion sees it). The helper streams per-type IDs from the
+        # opts-driven inventory API (``resource_types`` + each type's
+        # ``discover(opts)`` via ``salt.utils.resources.enabled_resource_types``
+        # and ``Minion._iter_resource_ids``) and renders per-resource
+        # grains on demand.
         load = {"fun": fun, "tgt": tgt, "tgt_type": tgt_type}
         try:
             resource_targets = self.minion._resolve_resource_targets(load)

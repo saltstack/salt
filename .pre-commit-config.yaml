@@ -681,6 +681,28 @@ repos:
           - --no-emit-index-url
           - -o=requirements/static/pkg/py3.14/windows.lock
 
+      # Windows arm64 needs its own lock: windows.lock is resolved for x86_64, so
+      # platform_machine markers (e.g. pymssql, which has no win_arm64 wheel) are
+      # evaluated for the wrong machine. Only 3.14 is built for arm64.
+      - id: pip-compile
+        alias: compile-pkg-windows-arm64-3.14-zmq-requirements
+        name: Windows arm64 Packaging Py3.14 ZeroMQ Requirements
+        files: ^requirements/(constraints\.lock|(base|zeromq|crypto|windows)\.lock|static/pkg/(windows\.txt|py3\.14/windows-arm64\.lock))$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/base.txt
+          - requirements/zeromq.txt
+          - requirements/crypto.txt
+          - requirements/windows.txt
+          - requirements/static/pkg/windows.txt
+          - --python-platform=aarch64-pc-windows-msvc
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - -o=requirements/static/pkg/py3.14/windows-arm64.lock
+
   # <---- Packaging Requirements -------------------------------------------------------------------------------------
 
   # ----- CI Requirements ------------------------------------------------------------------------------------------->
@@ -1462,6 +1484,29 @@ repos:
           - --unsafe-package=setuptools
           - -c=requirements/static/pkg/py3.14/windows.lock
           - -o=requirements/static/ci/py3.14/windows.lock
+
+      # Windows arm64 CI lock; see the windows-arm64 packaging hook above.
+      - id: pip-compile
+        alias: compile-ci-windows-arm64-3.14-zmq-requirements
+        name: Windows arm64 CI Py3.14 ZeroMQ Requirements
+        files: requirements/((base|zeromq|pytest)\.lock|static/((ci|pkg)/(windows|common)\.txt|py3\.14/windows-arm64\.lock))$
+        pass_filenames: false
+        additional_dependencies: ["pip<26.0"]
+        args:
+          - requirements/base.txt
+          - requirements/pytest.txt
+          - requirements/windows.txt
+          - requirements/zeromq.txt
+          - requirements/static/ci/common.txt
+          - requirements/static/ci/windows.txt
+          - --python-platform=aarch64-pc-windows-msvc
+          - --python-version=3.14
+          - --constraint
+          - requirements/constraints.txt
+          - --no-emit-index-url
+          - --unsafe-package=setuptools
+          - -c=requirements/static/pkg/py3.14/windows-arm64.lock
+          - -o=requirements/static/ci/py3.14/windows-arm64.lock
 
       - id: pip-compile
         alias: compile-ci-windows-3.13-zmq-requirements
@@ -2759,6 +2804,31 @@ repos:
 
   - repo: local
     hooks:
+      - id: contributing-rst
+        name: Check contributor guide RST
+        entry: python -m pytest -c pyproject.toml --noconftest -q tests/pytests/unit/test_contributing.py
+        language: python
+        additional_dependencies: ["docutils==0.22.4", "pytest==8.4.2"]
+        files: ^(CONTRIBUTING\.rst|tests/pytests/unit/test_contributing\.py|pyproject\.toml|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+
+      - id: ruff-incremental
+        name: Check new Ruff violations
+        entry: python tools/precommit/ruff.py
+        language: python
+        additional_dependencies: ["ruff==0.16.2"]
+        types_or: [python, pyi]
+        exclude: ^(salt/ext/|templates/)
+        require_serial: true
+
+      - id: ruff-incremental-tests
+        name: Test incremental Ruff checks
+        entry: python -m pytest -c pyproject.toml --noconftest -q tests/pytests/unit/test_ruff.py
+        language: python
+        additional_dependencies: ["ruff==0.16.2", "pytest==8.4.2"]
+        files: ^(tools/precommit/ruff\.py|tests/pytests/unit/test_ruff\.py|pyproject\.toml|\.pre-commit-config\.yaml)$
+        pass_filenames: false
+
       - id: lint-salt
         name: Lint Salt
         entry: bash -c 'env -u NOX_FORCE_COLOR -u NOX_NO_COLOR -u FORCE_COLOR -u NO_COLOR nox "$@"' --

@@ -94,7 +94,7 @@ def _blkid(fs_type=None):
 
     data = dict()
     for dev_meta in flt(
-        os.popen("blkid -o full").read().split(os.linesep)
+        os.popen("blkid -o full").read().split(os.linesep)  # noqa: S605
     ):  # No __salt__ around at this point.
         dev_meta = dev_meta.strip()
         if not dev_meta:

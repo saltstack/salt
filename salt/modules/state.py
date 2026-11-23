@@ -563,6 +563,12 @@ def _check_queue(queue, kwargs):
         queue_ret = False
         if not isinstance(queue, bool) and isinstance(queue, int):
             jid = kwargs.get("__pub_jid")
+            # salt-call, orchestration, and master-published calls all
+            # route through salt.minion.load_args_and_kwargs, which packs
+            # the publish data (including the JID) into **kwargs for any
+            # function that accepts **kwargs. All state module entry
+            # points do, so __pub_jid is always populated here; no mint
+            # fallback is needed.
             # For max_queue (int), we retain blocking behavior but use lock
             _set_queue_flag(jid)
             try:
@@ -1928,7 +1934,6 @@ def show_lowstate(queue=None, **kwargs):
     """
     conflict = _check_queue(queue, kwargs)
     if conflict is not None:
-        assert False
         return conflict
 
     opts = salt.utils.state.get_sls_opts(__opts__, **kwargs)
@@ -2421,11 +2426,21 @@ def graph(mods, test=None, queue=None, **kwargs):
 
 
 def sls_exists(mods, test=None, queue=None, **kwargs):
-    """
+    r"""
     Tests for the existence of a specific SLS or list of SLS files on the
     master. Similar to :py:func:`state.show_sls <salt.modules.state.show_sls>`,
     rather than returning state details, returns True or False. The default
     environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. note::
+        This function checks whether the SLS *renders to valid state data*,
+        not merely whether the file is present. It returns ``False`` if the
+        file does not exist, **and also** if it (or anything it ``include``\ s,
+        directly or indirectly) fails to render, has a syntax error, or
+        references a missing include. Such errors are not raised. To see why
+        an SLS is reported as missing, run
+        :py:func:`state.show_sls <salt.modules.state.show_sls>`, which returns
+        the rendering errors.
 
     .. versionadded:: 2019.2.0
 
@@ -2447,7 +2462,11 @@ def id_exists(ids, mods, test=None, queue=None, **kwargs):
     Tests for the existence of a specific ID or list of IDs within the
     specified SLS file(s). Similar to :py:func:`state.sls_exists
     <salt.modules.state.sls_exists>`, returns True or False. The default
-    environment is base``, use ``saltenv`` to specify a different environment.
+    environment is ``base``, use ``saltenv`` to specify a different environment.
+
+    .. note::
+        As with :py:func:`state.sls_exists <salt.modules.state.sls_exists>`,
+        an SLS that fails to render is not reported as an error here.
 
     .. versionadded:: 2019.2.0
 

@@ -100,6 +100,8 @@ import shutil
 import sys
 import tempfile
 
+import packaging.version
+
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -1832,7 +1834,11 @@ def list_all_versions(
     pip_version = version(bin_env=bin_env, cwd=cwd, user=user)
     if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="21.2"):
         regex = re.compile(r"\s*Available versions: (.*)")
-        cmd.extend(["index", "versions", pkg])
+        # pre-release versions are not included by default
+        if any([include_alpha, include_beta, include_rc]):
+            cmd.extend(["index", "versions", "--pre", pkg])
+        else:
+            cmd.extend(["index", "versions", pkg])
     else:
         if salt.utils.versions.compare(ver1=pip_version, oper=">=", ver2="20.3"):
             cmd.append("--use-deprecated=legacy-resolver")
@@ -1878,9 +1884,16 @@ def list_all_versions(
     for line in result["stdout"].splitlines():
         match = regex.search(line)
         if match:
-            versions = [
-                v for v in match.group(1).split(", ") if v and excludes.match(v)
-            ]
+            for v in match.group(1).split(", "):
+                if v and excludes.match(v):
+                    try:
+                        salt.utils.versions.parse(v)
+                    except packaging.version.InvalidVersion as e:
+                        logger.info(
+                            "%s for package %s, skipping this version...", e, pkg
+                        )
+                        continue
+                    versions.append(v)
             versions.sort(key=salt.utils.versions.parse)
             break
     if not versions:

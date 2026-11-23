@@ -84,7 +84,7 @@ def loads(s, **kwargs):
     json_module = kwargs.pop("_json_module", json)
     try:
         return json_module.loads(s, **kwargs)
-    except TypeError as exc:
+    except TypeError:
         # json.loads cannot load bytestrings in Python < 3.6
         if isinstance(s, bytes):
             return json_module.loads(salt.utils.stringutils.to_unicode(s), **kwargs)

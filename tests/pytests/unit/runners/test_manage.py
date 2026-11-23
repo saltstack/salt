@@ -1,5 +1,6 @@
 import pytest
 
+from salt.exceptions import SaltInvocationError
 from salt.runners import manage
 from tests.support.mock import MagicMock, patch
 
@@ -16,16 +17,15 @@ def test_deprecation_58638():
     pytest.raises(TypeError, manage.list_state, show_ipv4="data")
 
     # check that show_ipv4 will raise an error
-    try:
+    # Python 3.13+ appends a ``. Did you mean 'show_ip'?`` suggestion to
+    # the TypeError when an unexpected kwarg matches a similar parameter.
+    # The pattern only anchors the start, so it accepts both the older bare
+    # message and the newer one with the trailing suggestion.
+    with pytest.raises(
+        TypeError,
+        match=r"^list_state\(\) got an unexpected keyword argument 'show_ipv4'",
+    ):
         manage.list_state(show_ipv4="data")  # pylint: disable=unexpected-keyword-arg
-    except TypeError as no_show_ipv4:
-        # Python 3.13+ appends a ``. Did you mean 'show_ip'?`` suggestion to
-        # the TypeError when an unexpected kwarg matches a similar parameter.
-        # ``startswith`` accepts both the older bare message and the newer
-        # one with the trailing suggestion.
-        assert str(no_show_ipv4).startswith(
-            "list_state() got an unexpected keyword argument 'show_ipv4'"
-        )
 
 
 def test_status_reports_unresponsive_minion_as_down():
@@ -61,3 +61,51 @@ def test_status_reports_unresponsive_minion_as_down():
     # The fix: _ping must opt out of the per-target timeout placeholders.
     _, kwargs = mock_client.get_cli_event_returns.call_args
     assert kwargs.get("expect_minions") is False
+
+
+@pytest.mark.parametrize("removekeys", ["minion-a", "web*", 1, ["minion-a"]])
+def test_down_rejects_non_boolean_removekeys(removekeys):
+    """
+    ``salt-run manage.down <minion_id>`` binds the minion id to ``removekeys``
+    (the first positional argument). It must not be taken as "delete keys"
+    for every down minion.
+    """
+    with patch.object(
+        manage, "status", MagicMock(return_value={"down": ["minion-a", "minion-b"]})
+    ) as status, patch("salt.wheel.Wheel") as wheel:
+        with pytest.raises(
+            SaltInvocationError, match="removekeys must be True or False"
+        ):
+            manage.down(removekeys)
+    status.assert_not_called()
+    wheel.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "removekeys,deleted",
+    [
+        (True, ["minion-a", "minion-b"]),
+        ("True", ["minion-a", "minion-b"]),
+        ("true", ["minion-a", "minion-b"]),
+        (False, []),
+        ("False", []),
+    ],
+)
+def test_down_removekeys_boolean(removekeys, deleted):
+    with patch.object(
+        manage, "status", MagicMock(return_value={"down": ["minion-a", "minion-b"]})
+    ), patch("salt.wheel.Wheel") as wheel:
+        assert manage.down(removekeys=removekeys) == ["minion-a", "minion-b"]
+    calls = [
+        call.kwargs["match"] for call in wheel.return_value.call_func.call_args_list
+    ]
+    assert calls == deleted
+
+
+def test_down_default_does_not_delete_keys():
+    with patch.object(
+        manage, "status", MagicMock(return_value={"down": ["minion-a"]})
+    ) as status, patch("salt.wheel.Wheel") as wheel:
+        assert manage.down(tgt="minion-a") == ["minion-a"]
+    assert status.call_args.kwargs["tgt"] == "minion-a"
+    wheel.assert_not_called()

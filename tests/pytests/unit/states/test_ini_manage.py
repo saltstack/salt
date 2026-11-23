@@ -22,6 +22,7 @@ def configure_loader_modules():
                 "ini.set_option": mod_ini_manage.set_option,
                 "ini.remove_option": mod_ini_manage.remove_option,
                 "ini.remove_section": mod_ini_manage.remove_section,
+                "ini.get_ini_with_warnings": mod_ini_manage.get_ini_with_warnings,
             },
             "__opts__": {"test": False},
         },
@@ -182,25 +183,33 @@ def test_options_absent():
 
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-    with patch.dict(ini_manage.__opts__, {"test": True}):
-        comt = "No changes detected."
-        ret.update({"comment": comt, "result": True})
-        assert ini_manage.options_absent(name) == ret
-
-    with patch.dict(ini_manage.__opts__, {"test": False}):
-        comt = "No anomaly detected"
-        ret.update({"comment": comt, "result": True})
-        assert ini_manage.options_absent(name) == ret
-    sections = {"Tables": ["key2", "key3"]}
-    changes = {"Tables": {"key2": "2", "key3": "3"}}
     with patch.dict(
         ini_manage.__salt__,
-        {"ini.remove_option": MagicMock(side_effect=["2", "3"])},
+        {
+            "ini.get_ini_with_warnings": MagicMock(
+                return_value={"contents": "", "warnings": []}
+            )
+        },
     ):
+        with patch.dict(ini_manage.__opts__, {"test": True}):
+            comt = "No changes detected."
+            ret.update({"comment": comt, "result": True})
+            assert ini_manage.options_absent(name) == ret
+
         with patch.dict(ini_manage.__opts__, {"test": False}):
-            comt = "Changes take effect"
-            ret.update({"comment": comt, "result": True, "changes": changes})
-            assert ini_manage.options_absent(name, sections) == ret
+            comt = "No anomaly detected"
+            ret.update({"comment": comt, "result": True})
+            assert ini_manage.options_absent(name) == ret
+        sections = {"Tables": ["key2", "key3"]}
+        changes = {"Tables": {"key2": "2", "key3": "3"}}
+        with patch.dict(
+            ini_manage.__salt__,
+            {"ini.remove_option": MagicMock(side_effect=["2", "3"])},
+        ):
+            with patch.dict(ini_manage.__opts__, {"test": False}):
+                comt = "Changes take effect"
+                ret.update({"comment": comt, "result": True, "changes": changes})
+                assert ini_manage.options_absent(name, sections) == ret
 
 
 def test_sections_present():
@@ -211,26 +220,34 @@ def test_sections_present():
 
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-    with patch.dict(ini_manage.__opts__, {"test": True}):
-        with patch.dict(
-            ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
-        ):
-            comt = "No changes detected."
-            ret.update({"comment": comt, "result": True})
-            assert ini_manage.sections_present(name) == ret
-
-    changes = {
-        "first": "who is on",
-        "second": "what is on",
-        "third": "I don't know",
-    }
     with patch.dict(
-        ini_manage.__salt__, {"ini.set_option": MagicMock(return_value=changes)}
+        ini_manage.__salt__,
+        {
+            "ini.get_ini_with_warnings": MagicMock(
+                return_value={"contents": {}, "warnings": []}
+            )
+        },
     ):
-        with patch.dict(ini_manage.__opts__, {"test": False}):
-            comt = "Changes take effect"
-            ret.update({"comment": comt, "result": True, "changes": changes})
-            assert ini_manage.sections_present(name) == ret
+        with patch.dict(ini_manage.__opts__, {"test": True}):
+            with patch.dict(
+                ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
+            ):
+                comt = "No changes detected."
+                ret.update({"comment": comt, "result": True})
+                assert ini_manage.sections_present(name) == ret
+
+        changes = {
+            "first": "who is on",
+            "second": "what is on",
+            "third": "I don't know",
+        }
+        with patch.dict(
+            ini_manage.__salt__, {"ini.set_option": MagicMock(return_value=changes)}
+        ):
+            with patch.dict(ini_manage.__opts__, {"test": False}):
+                comt = "Changes take effect"
+                ret.update({"comment": comt, "result": True, "changes": changes})
+                assert ini_manage.sections_present(name) == ret
 
 
 def test_sections_absent():
@@ -241,15 +258,66 @@ def test_sections_absent():
 
     ret = {"name": name, "result": None, "comment": "", "changes": {}}
 
-    with patch.dict(ini_manage.__opts__, {"test": True}):
-        with patch.dict(
-            ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
-        ):
-            comt = "No changes detected."
+    with patch.dict(
+        ini_manage.__salt__,
+        {
+            "ini.get_ini_with_warnings": MagicMock(
+                return_value={"contents": {}, "warnings": []}
+            )
+        },
+    ):
+        with patch.dict(ini_manage.__opts__, {"test": True}):
+            with patch.dict(
+                ini_manage.__salt__, {"ini.get_ini": MagicMock(return_value=None)}
+            ):
+                comt = "No changes detected."
+                ret.update({"comment": comt, "result": True})
+                assert ini_manage.sections_absent(name) == ret
+
+        with patch.dict(ini_manage.__opts__, {"test": False}):
+            comt = "No anomaly detected"
             ret.update({"comment": comt, "result": True})
             assert ini_manage.sections_absent(name) == ret
 
-    with patch.dict(ini_manage.__opts__, {"test": False}):
-        comt = "No anomaly detected"
-        ret.update({"comment": comt, "result": True})
-        assert ini_manage.sections_absent(name) == ret
+
+def test_warnings_being_passed_on(tmp_path, sections):
+    """
+    Test to verify if parser warnings are shown in the
+    state return
+    """
+    name = str(tmp_path / "test.ini")
+
+    ret = {
+        "name": name,
+        "result": None,
+        "comment": "",
+        "changes": {},
+        "warnings": "Fake Warning",
+    }
+
+    with patch.dict(
+        ini_manage.__salt__,
+        {
+            "ini.get_ini_with_warnings": MagicMock(
+                return_value={"contents": {}, "warnings": ["Fake Warning"]}
+            )
+        },
+    ):
+
+        exp_ret = {
+            "name": name,
+            "changes": {"general": {"before": None, "after": sections["general"]}},
+            "result": True,
+            "comment": "Changes take effect",
+            "warnings": ["Fake Warning"],
+        }
+        assert ini_manage.options_present(name, sections) == exp_ret
+
+        exp_ret["changes"] = {"general": {"port": "1234"}}
+        assert ini_manage.options_absent(name, {"general": ["port"]}) == exp_ret
+
+        exp_ret["changes"] = {"NewSection": {"after": {}, "before": None}}
+        assert ini_manage.sections_present(name, ["NewSection"]) == exp_ret
+
+        exp_ret["changes"] = {"general": {"hostname": "myserver.com"}}
+        assert ini_manage.sections_absent(name, ["general"]) == exp_ret

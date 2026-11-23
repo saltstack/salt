@@ -2926,7 +2926,7 @@ class State:
                         else:
                             return "run"
                         time.sleep(1)
-            except Exception as exc:  # pylint: disable=broad-except
+            except Exception:  # pylint: disable=broad-except
                 log.error(
                     "Failed to read in pause data for file located at: %s", pause_path
                 )
@@ -4040,7 +4040,7 @@ class BaseHighState:
         try:
             merge_attr = f"_merge_tops_{merging_strategy}"
             merge_func = getattr(self, merge_attr)
-            if not hasattr(merge_func, "__call__"):
+            if not callable(merge_func):
                 msg = f"'{merge_attr}' is not callable"
                 log.error(msg)
                 raise TypeError(msg)

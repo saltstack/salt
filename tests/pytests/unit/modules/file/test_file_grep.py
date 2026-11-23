@@ -111,7 +111,7 @@ def test_grep_query_not_exists_opt(multiline_file, multiline_string):
 
 def test_grep_query_too_many_opts(multiline_file):
     with pytest.raises(
-        SaltInvocationError, match="^Passing multiple command line arg"
+        SaltInvocationError, match=r"^Passing multiple command line arg"
     ) as cm:
         result = filemod.grep(multiline_file, "Lorem Lorem", "-i -b2")
 

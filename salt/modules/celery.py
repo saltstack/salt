@@ -114,7 +114,7 @@ def run_task(
                         interval=interval,
                         no_ack=no_ack,
                     )
-                except TimeoutError as ex:
+                except TimeoutError:
                     log.error(
                         "Waiting for the result of a celery task execution timed out."
                     )

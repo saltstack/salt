@@ -302,7 +302,7 @@ def output(data, **kwargs):  # pylint: disable=unused-argument
                 data = _data.get("return", {}).get("data", data)
 
     # output() is recursive, if we aren't passed a dict just return it
-    if isinstance(data, int) or isinstance(data, str):
+    if isinstance(data, (int, str)):
         return data
 
     if data is None:

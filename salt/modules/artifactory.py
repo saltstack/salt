@@ -407,7 +407,7 @@ def _get_snapshot_url(
             snapshot_version = snapshot_version_metadata["snapshot_versions"][
                 packaging_with_classifier
             ]
-        except CommandExecutionError as err:
+        except CommandExecutionError:
             log.error(
                 "Could not fetch maven-metadata.xml. Assuming snapshot_version=%s.",
                 version,

@@ -14,6 +14,7 @@ import gzip
 import json
 import os
 import pathlib
+import platform
 import shutil
 import sqlite3
 import sys
@@ -199,11 +200,20 @@ def _get_pip_requirements_file(session, crypto=None, requirements_type="ci"):
 
     if IS_WINDOWS:
         if crypto is None:
+            # Windows arm64 has its own lockfile; windows.lock is resolved
+            # for x86_64 and pins packages with no win_arm64 wheel (pymssql).
+            # Must match _pkg_lock_file() in tools/pkg/build.py.
+            if platform.machine().upper() == "ARM64":
+                _lock_name = "windows-arm64.lock"
+            else:
+                _lock_name = "windows.lock"
             _requirements_file = os.path.join(
-                "requirements", "static", requirements_type, pydir, "windows.lock"
+                "requirements", "static", requirements_type, pydir, _lock_name
             )
             if os.path.exists(_requirements_file):
                 return _requirements_file
+            if _lock_name == "windows-arm64.lock":
+                session.error(f"Could not find {_requirements_file}")
         _requirements_file = os.path.join(
             "requirements", "static", requirements_type, pydir, "windows-crypto.lock"
         )

@@ -32,7 +32,7 @@ try:
     import click
 
     HAS_CLICK = True
-except ImportError as ie:
+except ImportError:
     HAS_CLICK = False
 
 TEMPLATE_FILE_NAME = "template.yml"

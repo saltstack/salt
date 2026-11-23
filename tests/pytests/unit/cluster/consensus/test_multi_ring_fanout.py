@@ -60,6 +60,13 @@ def _make_channel(opts=None):
     ch = MasterPubServerChannel.__new__(MasterPubServerChannel)
     ch.opts = opts or {"id": "test-master"}
     ch.pushers = []
+    # NEW-7a adds a sender-side handshake gate on the multi-ring
+    # fan-out.  These tests predate the gate and assume every peer
+    # receives the envelope; set the require-joined opt to False so
+    # the gate is inactive (back-compat escape hatch).
+    ch.opts.setdefault("cluster_cache_replicate_require_joined", False)
+    ch._discover_replies = set()
+    ch.peer_keys = {}
     return ch
 
 

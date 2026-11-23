@@ -205,12 +205,7 @@ class TableDisplay:
 
         first_row_type = type(rows[0])
         # all rows must have the same datatype
-        consistent = True
-        for row in rows[1:]:
-            if type(row) != first_row_type:
-                consistent = False
-
-        if not consistent:
+        if len({type(row) for row in rows}) != 1:
             return out
 
         if isinstance(labels, dict):

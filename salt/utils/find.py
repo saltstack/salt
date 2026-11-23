@@ -563,7 +563,7 @@ class DeleteOption(TypeOption):
                 os.remove(fullpath)
             elif os.path.isdir(fullpath):
                 shutil.rmtree(fullpath)
-        except OSError as exc:
+        except OSError:
             return None
         return fullpath
 
@@ -670,7 +670,10 @@ class Finder:
                     if match:
                         yield from self._perform_actions(fullpath, fstat=fstat)
 
-            if self.maxdepth is not None and depth > self.maxdepth:
+            # depth counts this directory's entries. Once it reaches maxdepth,
+            # do not descend: clearing dirs is applied to the real os.walk list
+            # by salt.utils.path.os_walk.
+            if self.maxdepth is not None and depth >= self.maxdepth:
                 dirs[:] = []
 
     def _check_criteria(self, dirpath, name, fullpath, fstat=None):

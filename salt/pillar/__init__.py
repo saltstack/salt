@@ -21,7 +21,6 @@ import salt.utils.args
 import salt.utils.crypt
 import salt.utils.data
 import salt.utils.dictupdate
-import salt.utils.master
 import salt.utils.secret
 import salt.utils.url
 from salt.exceptions import SaltClientError
@@ -179,7 +178,7 @@ class RemotePillarMixin:
         extra_data = {}
         if "pass_to_ext_pillars" in opts:
             if not isinstance(opts["pass_to_ext_pillars"], list):
-                log.exception("'pass_to_ext_pillars' config is malformed.")
+                log.error("'pass_to_ext_pillars' config is malformed.")
                 raise SaltClientError("'pass_to_ext_pillars' config is malformed.")
             for key in opts["pass_to_ext_pillars"]:
                 salt.utils.dictupdate.update(
@@ -269,8 +268,20 @@ class AsyncRemotePillar(RemotePillarMixin):
                 dictkey="pillar",
             )
         except salt.crypt.AuthenticationError as exc:
-            log.error(exc.message)
-            raise SaltClientError("Exception getting pillar.")
+            # ``AsyncReqChannel`` tags transient cluster-bringup deferrals
+            # with a sentinel suffix (see
+            # ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).  Those races
+            # are expected on every bringup of a clustered master while Raft
+            # is still catching up, and the caller retries them, so keep the
+            # log noise down.  Real auth failures still surface at ERROR.
+            if salt.channel.client._is_cluster_not_ready_message(exc.message):
+                log.debug(exc.message)
+            else:
+                log.error(exc.message)
+            # ``raise ... from exc`` lets the outer ``_connect_minion`` retry
+            # loop distinguish the cluster-not-ready sentinel (quiet INFO +
+            # retry) from genuine ``SaltClientError``s (ERROR + traceback).
+            raise SaltClientError("Exception getting pillar.") from exc
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
                 f"Pillar timed out after {int(time.monotonic() - start)} seconds"
@@ -407,8 +418,20 @@ class RemotePillar(RemotePillarMixin):
                 dictkey="pillar",
             )
         except salt.crypt.AuthenticationError as exc:
-            log.error(exc.message)
-            raise SaltClientError("Exception getting pillar.")
+            # ``AsyncReqChannel`` tags transient cluster-bringup deferrals
+            # with a sentinel suffix (see
+            # ``salt.channel.client.CLUSTER_NOT_READY_SUFFIX``).  Those races
+            # are expected on every bringup of a clustered master while Raft
+            # is still catching up, and the caller retries them, so keep the
+            # log noise down.  Real auth failures still surface at ERROR.
+            if salt.channel.client._is_cluster_not_ready_message(exc.message):
+                log.debug(exc.message)
+            else:
+                log.error(exc.message)
+            # ``raise ... from exc`` lets the outer ``_connect_minion`` retry
+            # loop distinguish the cluster-not-ready sentinel (quiet INFO +
+            # retry) from genuine ``SaltClientError``s (ERROR + traceback).
+            raise SaltClientError("Exception getting pillar.") from exc
         except salt.exceptions.SaltReqTimeoutError:
             raise SaltClientError(
                 f"Pillar timed out after {int(time.monotonic() - start)} seconds"
@@ -809,7 +832,7 @@ class Pillar:
         tops, errors = self.get_tops()
         try:
             merged_tops = self.merge_tops(tops)
-        except TypeError as err:
+        except TypeError:
             merged_tops = OrderedDict()
             errors.append("Error encountered while rendering pillar top file.")
         return merged_tops, errors
@@ -1440,6 +1463,10 @@ class Pillar:
 # TODO: actually migrate from Pillar to AsyncPillar to allow for futures in
 # ext_pillar etc.
 class AsyncPillar(Pillar):
+    async def aclose(self):
+        """Async-aware teardown."""
+        self.destroy()
+
     async def compile_pillar(
         self, ext=True
     ):  # pylint: disable=invalid-overridden-method

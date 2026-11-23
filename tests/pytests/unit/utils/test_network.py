@@ -1,5 +1,8 @@
 import logging
+import re
 import socket
+import subprocess
+import sys
 import textwrap
 import warnings
 
@@ -11,6 +14,7 @@ import salt.utils.network as network
 import salt.utils.platform
 from salt._compat import ipaddress
 from tests.support.mock import MagicMock, create_autospec, mock_open, patch
+from tests.support.paths import CODE_DIR
 
 pytestmark = [
     pytest.mark.windows_whitelisted,
@@ -513,7 +517,7 @@ def test_dns_check_errors():
     ):
         with pytest.raises(
             salt.exceptions.SaltSystemExit,
-            match="DNS lookup or connection check of 'foo' failed.",
+            match=re.escape("DNS lookup or connection check of 'foo' failed."),
         ) as exc_info:
             network.dns_check("foo", "1")
 
@@ -1638,6 +1642,43 @@ def test_ip_addrs(linux_interfaces_dict):
         assert ret == ["fe80::e23f:49ff:fe85:6aaf"]
 
 
+def test_nm_managed_detects_networkmanager_without_network_scripts():
+    """
+    nm_managed is what nm_ip and rh_ip call from __virtual__; it must exist and
+    be True only with nmcli + /run/NetworkManager + no ifup/ifdown.
+    """
+
+    def _which(cmd):
+        return "/usr/bin/nmcli" if cmd == "nmcli" else None
+
+    with patch("salt.utils.path.which", MagicMock(side_effect=_which)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is True
+        with patch("os.path.isdir", MagicMock(return_value=False)):
+            assert network.nm_managed() is False
+    with patch("salt.utils.path.which", MagicMock(return_value="/usr/sbin/ifup")):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
+    with patch("salt.utils.path.which", MagicMock(return_value=None)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
+
+
+@pytest.mark.parametrize("present", ["ifup", "ifdown"])
+def test_nm_managed_false_when_only_one_legacy_tool_present(present):
+    """
+    Either ifup or ifdown alone means the legacy tooling is (partly) there, so
+    rh_ip keeps the ip provider and nm_managed must be False.
+    """
+
+    def _which(cmd):
+        return f"/usr/sbin/{cmd}" if cmd in ("nmcli", present) else None
+
+    with patch("salt.utils.path.which", MagicMock(side_effect=_which)):
+        with patch("os.path.isdir", MagicMock(return_value=True)):
+            assert network.nm_managed() is False
+
+
 def test_neighs_flatten_maps_mac_to_ip():
     """
     neighs_flatten collapses neighbour entry dicts into the legacy
@@ -1729,3 +1770,26 @@ def test_is_reachable_host_resolvable_returns_true():
         MagicMock(return_value=[(socket.AF_INET, 0, 0, "", ("127.0.0.1", 0))]),
     ):
         assert network.is_reachable_host("localhost") is True
+
+
+def test_is_reachable_host_looks_the_name_up_with_python_O():
+    """
+    ``python -O`` removes assert statements. The name has to be looked up also
+    then, and a name that does not resolve is not reachable.
+    """
+    code = (
+        "import socket\n"
+        "from unittest.mock import patch\n"
+        "import salt.utils.network as network\n"
+        "with patch.object(socket, 'getaddrinfo', side_effect=socket.gaierror):\n"
+        "    print(network.is_reachable_host('nope.invalid'))\n"
+    )
+    ret = subprocess.run(
+        [sys.executable, "-O", "-c", code],
+        cwd=CODE_DIR,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert ret.returncode == 0, ret.stderr
+    assert ret.stdout.strip() == "False"

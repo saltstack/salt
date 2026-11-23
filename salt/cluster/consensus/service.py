@@ -89,11 +89,23 @@ class RaftService:
         # multi-process Salt masters running over real sockets — a single
         # delayed heartbeat in CI can cause a follower to step up and fight
         # the existing leader for the term.  At ``_HEARTBEAT_INTERVAL`` =
-        # 50 ms the rule of thumb is election >= 10× heartbeat, so default
-        # to 750–1500 ms here.  ``cluster_election_min`` /
-        # ``cluster_election_max`` opts let deployments tune further.
-        election_min = opts.get("cluster_election_min", 750)
-        election_max = opts.get("cluster_election_max", 1500)
+        # 50 ms the rule of thumb is election >= 10× heartbeat.
+        #
+        # The previous 750–1500 ms default (15–30× heartbeat) proved too
+        # tight on constrained arm64 CI runners (2 vCPU / 8 GB).  Under
+        # load the 50 ms heartbeat tick is delayed by hundreds of ms by
+        # process scheduling; elections fire before the "late" heartbeat
+        # arrives, term bumps, cascading churn.  We observed 7-minute
+        # join-reply stalls on the ``test_isolated_multi_minion_targetable_from_every_master``
+        # arm64 reproduction (term 16 reached in seconds; join-reply only
+        # transmitted once Raft finally stabilised).  Triple the window
+        # to 2250–4500 ms (45–90× heartbeat) so arm64 runners have the
+        # scheduling headroom they need.  x86 fast boxes rarely hit the
+        # election timer at all, so the bump is benign there.  Legitimate
+        # failover of a dead leader now takes a few extra seconds, which
+        # is an acceptable trade for CI-stable bootstrap.
+        election_min = opts.get("cluster_election_min", 2250)
+        election_max = opts.get("cluster_election_max", 4500)
         # ``cluster_max_log_size`` (default ``None``) gates Raft log
         # compaction.  When unset, the log keeps every committed entry
         # forever and snapshots never fire — fine for small clusters
@@ -431,8 +443,8 @@ class RaftService:
         # Election windows reuse the same opts as the cluster Node —
         # if the operator tuned them for their environment, the
         # per-ring nodes inherit the tuning automatically.
-        election_min = self.opts.get("cluster_election_min", 750)
-        election_max = self.opts.get("cluster_election_max", 1500)
+        election_min = self.opts.get("cluster_election_min", 2250)
+        election_max = self.opts.get("cluster_election_max", 4500)
         ring_node = Node(
             node_id,
             storage=storage,

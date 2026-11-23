@@ -18,9 +18,6 @@ from tests.support.pkg import ApiRequest, SaltMaster, SaltMasterWindows, SaltPkg
 
 log = logging.getLogger(__name__)
 
-# Variable defining a FIPS test run or not
-FIPS_TESTRUN = os.environ.get("FIPS_TESTRUN", "0") == "1"
-
 
 def pytest_configure(config):
     if (

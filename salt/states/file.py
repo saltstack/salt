@@ -1985,7 +1985,7 @@ def symlink(
         # Make sure the passed owner exists
         try:
             salt.utils.win_functions.get_sid_from_name(win_owner)
-        except CommandExecutionError as exc:
+        except CommandExecutionError:
             preflight_errors.append(f"User {win_owner} does not exist")
 
         # Make sure users passed in win_perms exist
@@ -1993,7 +1993,7 @@ def symlink(
             for name_check in win_perms:
                 try:
                     salt.utils.win_functions.get_sid_from_name(name_check)
-                except CommandExecutionError as exc:
+                except CommandExecutionError:
                     preflight_errors.append(f"User {name_check} does not exist")
 
         # Make sure users passed in win_deny_perms exist
@@ -2001,7 +2001,7 @@ def symlink(
             for name_check in win_deny_perms:
                 try:
                     salt.utils.win_functions.get_sid_from_name(name_check)
-                except CommandExecutionError as exc:
+                except CommandExecutionError:
                     preflight_errors.append(f"User {name_check} does not exist")
     else:
         uid = __salt__["file.user_to_uid"](user)
@@ -4006,10 +4006,7 @@ def _depth_limited_walk(top, max_depth=None):
 
         if max_depth is not None:
             if rel_depth >= max_depth:
-                # This clear does nothing because os_walk returns copies of data from os.walk,
-                # so modifying this list has no effect on recursion.
-                # If os_walk ever returns the "real" dirs list, this will speed up execution
-                # by preventing recursion into directories deeper than max_depth.
+                # Copied back onto the list os.walk recurses into.
                 dirs.clear()
                 continue
 
@@ -5771,6 +5768,7 @@ def line(
         backup=backup,
         quiet=quiet,
         indent=indent,
+        dry_run=__opts__["test"],
     )
     if changes:
         ret["changes"]["diff"] = changes

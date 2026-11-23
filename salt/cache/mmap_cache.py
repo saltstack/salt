@@ -201,6 +201,52 @@ def store(bank, key, data, cachedir, **kwargs):
         )
 
 
+def store_many(bank, items, cachedir, **kwargs):
+    """
+    Bulk-store many ``(key, data)`` pairs under *bank* in a single
+    :meth:`~salt.utils.mmap_cache.MmapCache.put_many` call.
+
+    Equivalent in effect to looping ``store(bank, k, v)`` over *items*,
+    but pays the flock + fsync + msync cost once for the whole batch
+    instead of once per entry.  Required for batched hot paths like
+    the master's resource-grain register handler to keep up with
+    5 concurrent minion registers.
+
+    :param bank: cache bank (same semantics as :func:`store`).
+    :param items: iterable of ``(key, data)`` pairs. May be a dict, in
+        which case ``dict.items()`` is used.
+    :param cachedir: driver cachedir (injected by the facade's
+        :attr:`salt.cache.Cache.kwargs`).
+
+    :raises SaltCacheError: if any value fails to msgpack-serialise
+        (the batch is aborted before the ``put_many`` call and no
+        items are written) or if the underlying ``put_many`` reports
+        a failure.
+    """
+    if isinstance(items, dict):
+        items = items.items()
+
+    packed = []
+    for key, data in items:
+        try:
+            raw = msgpack.packb(data, **_PACK_OPTS)
+        except Exception as exc:  # pylint: disable=broad-except
+            raise SaltCacheError(
+                f"Failed to serialise cache data for bank={bank!r} key={key!r}: {exc}"
+            )
+        packed.append((key, raw))
+
+    if not packed:
+        return
+
+    cache = _get_cache(bank, cachedir)
+    if not cache.put_many(packed):
+        raise SaltCacheError(
+            f"Failed to bulk-write mmap cache entries bank={bank!r} "
+            f"(count={len(packed)})"
+        )
+
+
 def fetch(bank, key, cachedir, **kwargs):
     """
     Return the deserialised value for *bank*/*key*, or ``{}`` if not found.

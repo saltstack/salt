@@ -23,7 +23,10 @@ on:
     branches:
       - 3006.x
       - 3007.x
-      - 3008.x
+      # 3008.x removed: branch CI runs periodically via a dispatcher on
+      # master (run-branch-ci.yml) so pushes don't contend with PR runners.
+      # Release/patch variants (3008.1-1, 3008.x-patch) still match the
+      # patterns below and keep push-triggered CI.
       - '[0-9][0-9][0-9][0-9].[0-9]*-[0-9]*'
       - '[0-9][0-9][0-9][0-9].[0-9]*-patch'
       - master
@@ -34,6 +37,12 @@ on:
       - opened
       - reopened
       - synchronize
+  workflow_dispatch:
+    inputs:
+      reason:
+        type: string
+        required: false
+        description: Free-text reason recorded in the run name (e.g. "periodic 3008.x batch").
 
 <%- endblock on %>
 

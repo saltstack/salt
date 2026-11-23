@@ -161,6 +161,16 @@ try:
         GitError = pygit2.errors.GitError
     except AttributeError:
         GitError = Exception
+
+    # pygit2 1.14.0 replaced the GIT_* constants with pygit2.enums, and 1.20.0
+    # removed the old names, including GIT_FETCH_PRUNE. Fetch pruning itself
+    # is only available in pygit2 0.26.2 and newer.
+    try:
+        from pygit2.enums import FetchPrune
+
+        PYGIT2_FETCH_PRUNE = FetchPrune.PRUNE
+    except ImportError:
+        PYGIT2_FETCH_PRUNE = getattr(pygit2, "GIT_FETCH_PRUNE", None)
 except Exception as exc:  # pylint: disable=broad-except
     # Exceptions other than ImportError can be raised in cases where there is a
     # problem with cffi (such as when python-cffi is upgraded and pygit2 tries
@@ -169,6 +179,7 @@ except Exception as exc:  # pylint: disable=broad-except
     # than an ImportError.
     PYGIT2_VERSION = None
     LIBGIT2_VERSION = None
+    PYGIT2_FETCH_PRUNE = None
     if not isinstance(exc, ImportError):
         log.exception("Failed to import pygit2")
 
@@ -254,6 +265,10 @@ class GitProvider:
     # master lock should only be locked for very short periods of times "seconds"
     # the master lock should be used when ever git provider reads or writes to one if it locks
     _master_lock = multiprocessing.Lock()
+
+    # Bare providers set this when their checkout() writes git_pillar and
+    # winrepo files to the salt working dir instead of the cache dir.
+    checks_out_to_working_dir = False
 
     def __init__(
         self,
@@ -688,7 +703,11 @@ class GitProvider:
         # No need to pass an environment to self.root() here since per-saltenv
         # configuration is a gitfs-only feature and check_root() is not used
         # for gitfs.
-        root_dir = salt.utils.path.join(self._cachedir, self.root()).rstrip(os.sep)
+        if self.checks_out_to_working_dir and self.role in ("git_pillar", "winrepo"):
+            cache_dir = self._salt_working_dir
+        else:
+            cache_dir = self._cachedir
+        root_dir = salt.utils.path.join(cache_dir, self.root()).rstrip(os.sep)
         if os.path.isdir(root_dir):
             return root_dir
         log.error(
@@ -2119,13 +2138,9 @@ class Pygit2(GitProvider):
         """
         Clean stale local refs so they don't appear as fileserver environments
         """
-        try:
-            if pygit2.GIT_FETCH_PRUNE:
-                # Don't need to clean anything, pygit2 can do it by itself
-                return []
-        except AttributeError:
-            # However, only in 0.26.2 and newer
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            # Don't need to clean anything, pygit2 can do it by itself
+            return []
         if self.credentials is not None:
             log.debug(
                 "The installed version of pygit2 (%s) does not support "
@@ -2163,9 +2178,6 @@ class Pygit2(GitProvider):
 
         self.gitdir = salt.utils.path.join(self.repo.workdir, ".git")
         self.enforce_git_config()
-        git_config = os.path.join(self.gitdir, "config")
-        if os.path.exists(git_config) and PYGIT2_VERSION >= Version("0.28.0"):
-            self.repo.config.add_file(git_config)
 
         if self.proxy:
             transport, _, _ = self.url.partition("://")
@@ -2266,11 +2278,8 @@ class Pygit2(GitProvider):
         else:
             if self.credentials is not None:
                 origin.credentials = self.credentials
-        try:
-            fetch_kwargs["prune"] = pygit2.GIT_FETCH_PRUNE
-        except AttributeError:
-            # pruning only available in pygit2 >= 0.26.2
-            pass
+        if PYGIT2_FETCH_PRUNE is not None:
+            fetch_kwargs["prune"] = PYGIT2_FETCH_PRUNE
         try:
             fetch_results = origin.fetch(**fetch_kwargs)
 
@@ -2338,21 +2347,21 @@ class Pygit2(GitProvider):
             the file paths and symlink info in the "blobs" dict
             """
             for entry in iter(tree):
-                if entry.id not in self.repo:
-                    # Entry is a submodule, skip it
-                    continue
-                obj = self.repo[entry.id]
-                if isinstance(obj, pygit2.Blob):
+                # Decide from the tree entry's filemode instead of loading each
+                # object, which is very slow for large repositories. Submodules
+                # (gitlinks) are neither files, symlinks nor trees, skip them.
+                mode = entry.filemode
+                if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
                     repo_path = salt.utils.path.join(
                         prefix, entry.name, use_posixpath=True
                     )
                     blobs.setdefault("files", []).append(repo_path)
-                    if stat.S_ISLNK(tree[entry.name].filemode):
-                        link_tgt = self.repo[tree[entry.name].id].data
+                    if stat.S_ISLNK(mode):
+                        link_tgt = self.repo[entry.id].data
                         blobs.setdefault("symlinks", {})[repo_path] = link_tgt
-                elif isinstance(obj, pygit2.Tree):
+                elif stat.S_ISDIR(mode):
                     _traverse(
-                        obj,
+                        self.repo[entry.id],
                         blobs,
                         salt.utils.path.join(prefix, entry.name, use_posixpath=True),
                     )
@@ -2641,6 +2650,8 @@ class GitCLI(GitProvider):
     Supports shallow clones via gitfs_depth.
     """
 
+    checks_out_to_working_dir = True
+
     def __init__(
         self,
         opts,
@@ -2817,20 +2828,61 @@ class GitCLI(GitProvider):
 
     def checkout(self, fetch_on_fail=True):
         """
-        GitCLI is a 'bare' provider, it doesn't do checkouts to a worktree.
-        It always operates on the ODB.
-        Return the cache root to indicate success.
+        GitCLI is a 'bare' provider and serves gitfs straight from the ODB.
+        git_pillar and winrepo read files from disk, so for those roles the
+        target ref is written to the working dir.
+        Return the root dir to indicate success.
         """
         # We still want to ensure the ref exists
         tgt_ref = self.get_checkout_target()
         git_ref = f"origin/{tgt_ref}"
         res = self._run_git(["rev-parse", "--verify", git_ref])
         if res.returncode != 0:
-            res = self._run_git(["rev-parse", "--verify", tgt_ref])
+            git_ref = tgt_ref
+            res = self._run_git(["rev-parse", "--verify", git_ref])
             if res.returncode != 0:
                 if fetch_on_fail:
                     self.fetch()
                     return self.checkout(fetch_on_fail=False)
+                return None
+        if self.role in ("git_pillar", "winrepo"):
+            head = self._run_git(["rev-parse", "--verify", "-q", "HEAD"])
+            target = self._run_git(["rev-parse", f"{git_ref}^{{commit}}"])
+            if head.returncode == 0 and head.stdout == target.stdout:
+                return self.check_root()
+            try:
+                with self.gen_lock(lock_type="checkout"):
+                    res = self._run_git(
+                        [
+                            "--work-tree",
+                            self._salt_working_dir,
+                            "checkout",
+                            "--force",
+                            git_ref,
+                        ]
+                    )
+            except GitLockError as exc:
+                if exc.errno == errno.EEXIST:
+                    # Re-raise with a different strerror containing a more
+                    # meaningful error message for the calling function.
+                    raise GitLockError(
+                        exc.errno,
+                        f"Checkout lock exists for {self.role} remote '{self.id}'",
+                    )
+                log.error(
+                    "Error %d encountered obtaining checkout lock for %s remote '%s'",
+                    exc.errno,
+                    self.role,
+                    self.id,
+                )
+                return None
+            if res.returncode != 0:
+                log.error(
+                    "GitCLI checkout failed for %s remote '%s': %s",
+                    self.role,
+                    self.id,
+                    res.stderr.decode(),
+                )
                 return None
         return self.check_root()
 
@@ -3803,9 +3855,7 @@ class GitBase:
                 f"{self.role} is configured, but the libgit2 version is earlier than "
                 f"{LIBGIT2_MINVER}. Version {LIBGIT2_VERSION} detected."
             )
-        if not getattr(pygit2, "GIT_FETCH_PRUNE", False) and not salt.utils.path.which(
-            "git"
-        ):
+        if PYGIT2_FETCH_PRUNE is None and not salt.utils.path.which("git"):
             errors.append(
                 "The git command line utility is required when using the "
                 f"'pygit2' {self.role}_provider."
@@ -4387,21 +4437,18 @@ class GitPillar(GitBase):
                         tgt = repo.get_checkout_target()
                         env = "base" if tgt == repo.base else tgt
                 if repo._mountpoint:
-                    if self.link_mountpoint(repo):
+                    if self.link_mountpoint(repo, cachedir):
                         self.pillar_dirs[repo.get_linkdir()] = env
                         self.pillar_linked_dirs.append(repo.get_linkdir())
                 else:
                     self.pillar_dirs[cachedir] = env
 
-    def link_mountpoint(self, repo):
+    def link_mountpoint(self, repo, lcachedest):
         """
         Ensure that the mountpoint is present in the correct location and
-        points at the correct path
+        points at lcachedest, the root dir returned by the checkout
         """
         lcachelink = salt.utils.path.join(repo.get_linkdir(), repo._mountpoint)
-        lcachedest = salt.utils.path.join(repo.get_cachedir(), repo.root()).rstrip(
-            os.sep
-        )
         wipe_linkdir = False
         create_link = False
         try:

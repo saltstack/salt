@@ -1227,8 +1227,8 @@ def test_pillar_file_client_master_remote(tmp_pki, grains):
         }
     )
     pillar = salt.pillar.get_pillar(opts, grains, mocked_minion)
-    assert type(pillar) == salt.pillar.RemotePillar
-    assert type(pillar) != salt.pillar.PillarCache
+    assert isinstance(pillar, salt.pillar.RemotePillar)
+    assert not isinstance(pillar, salt.pillar.PillarCache)
 
 
 def test_pillar_send_extra_minion_data_from_config(tmp_pki, grains):

@@ -69,15 +69,31 @@ $SITE_PKGS_DIR  = "$BUILD_DIR\Lib\site-packages"
 $PYTHON_BIN     = "$SCRIPTS_DIR\python.exe"
 $PY_VERSION     = [Version]((Get-Command $PYTHON_BIN).FileVersionInfo.ProductVersion)
 $PY_VERSION     = "$($PY_VERSION.Major).$($PY_VERSION.Minor)"
-$PY_ARCH        = $(. $PYTHON_BIN -c "import platform; print(platform.architecture()[0])")
+# platform.architecture()[0] only reports pointer width (64bit/32bit),
+# which can't distinguish arm64 from amd64 - both are "64bit". Use
+# platform.machine() instead, which reports the actual ISA the running
+# interpreter was built for.
+$PY_MACHINE     = $(. $PYTHON_BIN -c "import platform; print(platform.machine())")
 $DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main"
 
-if ( $PY_ARCH -eq "64bit" ) {
+if ( $PY_MACHINE -eq "ARM64" ) {
+    $ARCH         = "arm64"
+    # No native arm64 build of ssm.exe or vcredist exists in
+    # salt-windows-deps yet. Windows 11 on Arm runs x64 binaries under
+    # emulation, so fall back to the x64 builds until native ones are
+    # published upstream. DOWNLOAD_ARCH tracks the artifact to fetch,
+    # separately from ARCH (the true target architecture).
+    $DOWNLOAD_ARCH = "x64"
+    $SSM_URL      = "$DEPS_URL/ssm/64/ssm-2.24-103-gdee49fc.exe"
+    $VCREDIST_URL = "$DEPS_URL/vcredist"
+} elseif ( $PY_MACHINE -eq "AMD64" ) {
     $ARCH         = "x64"
+    $DOWNLOAD_ARCH = "x64"
     $SSM_URL      = "$DEPS_URL/ssm/64/ssm-2.24-103-gdee49fc.exe"
     $VCREDIST_URL = "$DEPS_URL/vcredist"
 } else {
     $ARCH         = "x86"
+    $DOWNLOAD_ARCH = "x86"
     $SSM_URL      = "$DEPS_URL/ssm/32/ssm-2.24-103-gdee49fc.exe"
     $VCREDIST_URL = "$DEPS_URL/vcredist"
 }
@@ -155,7 +171,7 @@ if ( $PKG ) {
 
 # Make sure ssm.exe is present. This is needed for VMtools
 if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
-    Write-Host "Copying SSM $ARCH to Root: " -NoNewline
+    Write-Host "Copying SSM $DOWNLOAD_ARCH to Root: " -NoNewline
     Invoke-WebRequest -Uri "$SSM_URL" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
         Write-Result "Success" -ForegroundColor Green
@@ -185,8 +201,8 @@ $scripts | ForEach-Object {
 
 # Copy VCRedist 2022 to the prereqs directory
 New-Item -Path $PREREQ_DIR -ItemType Directory | Out-Null
-Write-Host "Copying VCRedist 2022 $ARCH to prereqs: " -NoNewline
-$file = "vcredist_$ARCH`_2022.exe"
+Write-Host "Copying VCRedist 2022 $DOWNLOAD_ARCH to prereqs: " -NoNewline
+$file = "vcredist_$DOWNLOAD_ARCH`_2022.exe"
 Invoke-WebRequest -Uri "$VCREDIST_URL\$file" -OutFile "$PREREQ_DIR\$file"
 if ( Test-Path -Path "$PREREQ_DIR\$file" ) {
     Write-Result "Success" -ForegroundColor Green

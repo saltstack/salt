@@ -80,7 +80,15 @@ $ARCH          = $(. $PYTHON_BIN -c "import platform; print(platform.architectur
 
 # Script Variables
 $PROJECT_DIR     = $(git rev-parse --show-toplevel)
-$SALT_DEPS       = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.lock"
+# Windows arm64 has its own lockfile; windows.lock is resolved for x86_64 and
+# pins packages with no win_arm64 wheel (pymssql). Must match _pkg_lock_file()
+# in tools/pkg/build.py.
+$MACHINE         = $(. $PYTHON_BIN -c "import platform; print(platform.machine().upper())")
+if ( $MACHINE -eq "ARM64" ) {
+  $SALT_DEPS = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows-arm64.lock"
+} else {
+  $SALT_DEPS = "$PROJECT_DIR\requirements\static\pkg\py$PY_VERSION\windows.lock"
+}
 
 if ( ! $SkipInstall ) {
   #-------------------------------------------------------------------------------
@@ -123,10 +131,19 @@ if ( ! $SkipInstall ) {
   # Installing dependencies
   #-------------------------------------------------------------------------------
   Write-Host "Installing dependencies: " -NoNewline
-  Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", "-r", "$SALT_DEPS", "-U" `
-                -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+  # Same as the Salt install below: stream pip's real output and fail on its
+  # exit code, rather than hiding it behind Start-Process -WindowStyle Hidden.
+  Push-Location "$PROJECT_DIR"
+  try {
+      & "$SCRIPTS_DIR\pip3.exe" install -r "$SALT_DEPS" -U
+      $pipExitCode = $LASTEXITCODE
+  } finally {
+      Pop-Location
+  }
+  if ( $pipExitCode -ne 0 ) {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
+  }
   if ( Test-Path -Path "$SCRIPTS_DIR\distro.exe" ) {
       Write-Result "Success" -ForegroundColor Green
   } else {
@@ -257,14 +274,23 @@ if ( ! $SkipInstall ) {
       New-Item -Path .\doc\man\salt-cp.1 -Type File -Force | Out-Null
       New-Item -Path .\doc\man\salt-minion.1 -Type File -Force | Out-Null
   }
+  # Start-Process -WindowStyle Hidden discards pip's output entirely, so a
+  # failure here used to show only "Failed" with no indication of why.
+  # Push-Location/call-operator streams pip's real output to the log
+  # instead, and $LASTEXITCODE lets us fail on the actual pip error
+  # rather than only inferring failure from a missing salt-minion.exe.
+  Push-Location "$PROJECT_DIR"
   try {
       $env:RELENV_PIP_DIR = "yes"
-      Start-Process -FilePath $SCRIPTS_DIR\pip3.exe `
-                -ArgumentList "install", $InstallPath `
-                -WorkingDirectory "$PROJECT_DIR" `
-                -Wait -WindowStyle Hidden
+      & "$SCRIPTS_DIR\pip3.exe" install $InstallPath
+      $pipExitCode = $LASTEXITCODE
   } finally {
       Remove-Item env:\RELENV_PIP_DIR
+      Pop-Location
+  }
+  if ( $pipExitCode -ne 0 ) {
+      Write-Result "Failed" -ForegroundColor Red
+      exit 1
   }
   if ( Test-Path -Path "$BUILD_DIR\salt-minion.exe" ) {
       Write-Result "Success" -ForegroundColor Green

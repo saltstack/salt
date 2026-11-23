@@ -8,6 +8,7 @@ and the like, but also useful for basic HTTP testing.
 import email.message
 import gzip
 import http.cookiejar
+import inspect
 import io
 import logging
 import os
@@ -64,19 +65,18 @@ except ImportError:
             HAS_MATCHHOSTNAME = False
     # pylint: enable=no-name-in-module
 
-try:
-    import requests
+import importlib.util as _importlib_util
 
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-try:
-    import certifi
-
-    HAS_CERTIFI = True
-except ImportError:
-    HAS_CERTIFI = False
+# Defer the actual ``import requests`` (~25 MB of transitive imports: urllib3,
+# charset_normalizer, idna, certifi) until a caller reaches a code path that
+# uses it (only ``backend == "requests"`` and the ``session()`` helper).  On a
+# minion that never fetches ``http://`` / ``https://`` URLs (the common case --
+# ``salt://`` file sources use the master transport instead) this saves the
+# entire ~25 MB from baseline RSS.  Same rationale for ``certifi``; only
+# ``get_ca_bundle`` uses ``certifi.where()``.  Presence flags use
+# ``find_spec`` so we can advertise availability without importing.
+HAS_REQUESTS = _importlib_util.find_spec("requests") is not None
+HAS_CERTIFI = _importlib_util.find_spec("certifi") is not None
 
 log = logging.getLogger(__name__)
 USERAGENT = f"Salt/{salt.version.__version__}"
@@ -146,6 +146,28 @@ def _decode_result(result_text, result_headers, backend, decode_body=None, resul
     )
 
     return result_text, result_headers
+
+
+def _tornado_streaming_callback(callback):
+    """
+    Wrap a ``streaming_callback`` for tornado so that its return value is
+    discarded unless it is awaitable.
+
+    Tornado 6.6 awaits whatever a streaming_callback returns so that coroutines
+    can be used. Callers commonly pass something like ``file.write``, which
+    returns the number of bytes written, and awaiting that raises ``TypeError``
+    and aborts the download after the first chunk.
+    """
+    if callback is None:
+        return None
+
+    def wrapper(chunk):
+        ret = callback(chunk)
+        if inspect.isawaitable(ret):
+            return ret
+        return None
+
+    return wrapper
 
 
 @jinja_filter("http_query")
@@ -268,6 +290,11 @@ def query(
             log.error(ret["error"])
             return ret
         else:
+            # Deferred import: pulls in ~25 MB of transitive deps
+            # (urllib3, charset_normalizer, idna, certifi). Only executes
+            # when a caller opts into ``backend="requests"``.
+            import requests  # noqa: F401,PLC0415  pylint: disable=import-outside-toplevel
+
             requests_log = logging.getLogger("requests")
             requests_log.setLevel(logging.WARNING)
 
@@ -624,7 +651,7 @@ def query(
                 "body": data,
                 "validate_cert": verify_ssl,
                 "allow_nonstandard_methods": True,
-                "streaming_callback": streaming_callback,
+                "streaming_callback": _tornado_streaming_callback(streaming_callback),
                 "header_callback": header_callback,
                 "connect_timeout": connect_timeout,
                 "request_timeout": timeout,
@@ -844,6 +871,10 @@ def get_ca_bundle(opts=None):
             return path
 
     if salt.utils.platform.is_windows() and HAS_CERTIFI:
+        # Deferred import: keep certifi out of baseline RSS.  Only the
+        # Windows path hits this branch; ~5-6 MB saved on Linux.
+        import certifi  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
         return certifi.where()
 
     return None
@@ -1098,6 +1129,11 @@ def session(user=None, password=None, verify_ssl=True, ca_bundle=None, headers=N
     """
     create a requests session
     """
+    # Deferred import: ~25 MB of transitive deps materialize here rather
+    # than at module import time.  Only callers that opt in to a requests
+    # Session pay the cost.
+    import requests  # noqa: PLC0415  pylint: disable=import-outside-toplevel
+
     session = requests.session()
     if user and password:
         session.auth = (user, password)

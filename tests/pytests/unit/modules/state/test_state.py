@@ -334,7 +334,7 @@ def test_low():
         assert not state.low({"state": "pkg", "fun": "installed", "name": "vi"})
 
         MockState.State.flag = False
-        assert state.low({"state": "pkg", "fun": "installed", "name": "vi"}) == list
+        assert state.low({"state": "pkg", "fun": "installed", "name": "vi"}) is list
 
         MockState.State.flag = True
         assert state.low({"state": "pkg", "fun": "installed", "name": "vi"})
@@ -554,7 +554,7 @@ def test_show_lowstate():
     """
     mock = MagicMock(side_effect=["A", None])
     with patch.object(state, "_check_queue", mock):
-        pytest.raises(AssertionError, state.show_lowstate)
+        assert state.show_lowstate() == "A"
 
         assert state.show_lowstate()
 
@@ -1318,6 +1318,43 @@ def test__check_queue(queue, wait_called, ret_value):
             assert state.__context__["retcode"] == 1
 
 
+def test_load_args_and_kwargs_propagates_pub_jid_for_state_modules():
+    """
+    Companion invariant for the queue=<int> flag-file design.
+
+    salt-call, orchestration, and master-published calls all route
+    through ``salt.minion.load_args_and_kwargs``. When the target
+    function accepts ``**kwargs`` (all state module entry points do),
+    ``load_args_and_kwargs`` packs the publish data into kwargs as
+    ``__pub_<key>``. ``_check_queue`` therefore always sees a non-None
+    ``__pub_jid`` -- no mint fallback is needed -- and the on-disk flag
+    file key will match the jid recorded in the proc file.
+
+    If a future refactor removes ``**kwargs`` from a state entry point
+    (or stops passing ``data=`` to ``load_args_and_kwargs``), this test
+    fails and the queue=<int> flag-file lookup would silently miss.
+    """
+    import salt.minion
+    import salt.modules.state as state_mod
+
+    sdata = {
+        "fun": "state.single",
+        "pid": 42,
+        "jid": "20261118010101000001",
+        "tgt": "salt-call",
+    }
+    _, kwargs = salt.minion.load_args_and_kwargs(
+        state_mod.single,
+        ["cmd.run", "name=sleep 1", "queue=10"],
+        data=sdata,
+    )
+    assert kwargs.get("__pub_jid") == sdata["jid"], (
+        "load_args_and_kwargs did not inject __pub_jid for state.single. "
+        "The queue=<int> flag file would be written under a different "
+        "jid than the proc file, and sibling waiters would deadlock."
+    )
+
+
 class TestCheckPriorRunningStates:
     """
     Test the check_prior_running_states function race condition fixes.
@@ -1438,6 +1475,47 @@ class TestCheckPriorRunningStates:
         # Only the strictly older queued placeholder should block.
         assert len(result) == 1
         assert result[0]["jid"] == "20260718005609000000"
+
+    def test_check_prior_running_states_waiting_job_blocks_only_younger(self, tmp_path):
+        """
+        Regression test for issue #70580.
+
+        A running state.* job that is itself waiting in ``_wait()`` (the
+        ``queue=<int>`` path) has a PID, but also a queue flag file named
+        after its JID. It must block only jobs with a higher JID, otherwise
+        two waiting jobs block each other forever once a third run exists.
+        """
+        opts = {"cachedir": str(tmp_path)}
+        queue_dir = salt.utils.state.state_queue_dir(opts)
+        os.makedirs(queue_dir)
+        older, newer = "20260718005609000000", "20260718005611000000"
+        for jid in (older, newer):
+            with salt.utils.files.fopen(os.path.join(queue_dir, jid), "w") as fp_:
+                fp_.write("12345")
+        active_jobs = [
+            {"jid": older, "fun": "state.apply", "pid": 111},
+            {"jid": newer, "fun": "state.apply", "pid": 222},
+        ]
+
+        # The oldest waiting job is not blocked by the younger one...
+        result = salt.utils.state.check_prior_running_states(opts, older, active_jobs)
+        assert result == []
+
+        # ...while the younger one still waits on the older one.
+        result = salt.utils.state.check_prior_running_states(opts, newer, active_jobs)
+        assert [job["jid"] for job in result] == [older]
+
+    def test_check_prior_running_states_running_job_without_flag_blocks(self, tmp_path):
+        """
+        A running job with no queue flag is actually executing and must
+        still block regardless of JID order (issue #69825).
+        """
+        opts = {"cachedir": str(tmp_path)}
+        active_jobs = [{"jid": "20260718005611000000", "fun": "state.apply", "pid": 7}]
+        result = salt.utils.state.check_prior_running_states(
+            opts, "20260718005610000000", active_jobs
+        )
+        assert len(result) == 1
 
 
 @pytest.mark.usefixtures("mocked_tcp_pub_client")

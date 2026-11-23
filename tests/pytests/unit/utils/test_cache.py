@@ -350,9 +350,9 @@ def test_unicode_error(cache_dir, data, caplog):
         # this test used to rely on msgpack throwing errors if attempt to read an empty file
         # code now checks if file empty and returns, so we should never attempt msgpack load
         assert cd._dict == {}
-        assert not (
+        assert (
             f"Error reading cache file at '{path}': Unpack failed: incomplete input"
-            in caplog.messages
+            not in caplog.messages
         )
 
 

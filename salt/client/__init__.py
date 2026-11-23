@@ -93,36 +93,6 @@ def _resource_ids_from_minion_grains_cache(opts, minion_id):
     )
 
 
-def _resource_ids_from_minion_pillar_cache(opts, minion_id):
-    """
-    Return bare resource IDs from the minion's cached pillar subtree under
-    :func:`~salt.utils.resources.resource_pillar_key` (default ``resources``).
-
-    ``salt_resources`` is often absent from grains even when pillar (and thus
-    ``resource_ids``) was synced to the master — this path closes that gap.
-    """
-    if not opts.get("minion_data_cache"):
-        return []
-    try:
-        cache = salt.cache.factory(opts)
-        if not cache.contains("pillar", minion_id):
-            return []
-        pillar = cache.fetch("pillar", minion_id) or {}
-    except Exception as exc:  # pylint: disable=broad-except
-        log.debug(
-            "Pillar cache read for minion %s failed while expanding missing returns: %s",
-            minion_id,
-            exc,
-            exc_info=True,
-        )
-        return []
-    key = salt.utils.resources.resource_pillar_key(opts)
-    subtree = pillar.get(key)
-    if not isinstance(subtree, dict):
-        return []
-    return salt.utils.resources.bare_resource_ids_from_decl(subtree)
-
-
 def _job_ret_display_id(data):
     """
     Key for one job return in CLI / nested job-return events.
@@ -147,8 +117,8 @@ def _iter_failed_missing_returns(opts, found, missing_root_ids):
 
     Resource IDs are taken from the master's resource registry when present,
     then merged with IDs from :conf_master:`minion_data_cache` **grains**
-    (``salt_resources``) and **pillar** (``resources`` / ``resource_pillar_key``),
-    so offline minions still expand to their last-known resource rows.
+    (``salt_resources``) so offline minions still expand to their last-known
+    resource rows.
     """
     ck = salt.utils.minions.CkMinions(opts)
     reported = set()
@@ -195,11 +165,6 @@ def _iter_failed_missing_returns(opts, found, missing_root_ids):
                     rid_order.append(rid)
                     seen_rid.add(rid)
         for rid in _resource_ids_from_minion_grains_cache(opts, mid):
-            if rid in seen_rid:
-                continue
-            rid_order.append(rid)
-            seen_rid.add(rid)
-        for rid in _resource_ids_from_minion_pillar_cache(opts, mid):
             if rid in seen_rid:
                 continue
             rid_order.append(rid)
@@ -550,9 +515,9 @@ class LocalClient:
             raise SaltClientError(
                 "The salt master could not be contacted. Is master running?"
             )
-        except AuthenticationError as err:
+        except AuthenticationError:
             raise
-        except AuthorizationError as err:
+        except AuthorizationError:
             raise
         except Exception as general_exception:  # pylint: disable=broad-except
             # Convert to generic client error and pass along message
@@ -1870,7 +1835,7 @@ class LocalClient:
             return_count = return_count + 1
             if progress:
                 for id_, min_ret in ret.items():
-                    if not min_ret.get("failed") is True:
+                    if min_ret.get("failed") is not True:
                         yield {
                             "minion_count": len(minions),
                             "return_count": return_count,

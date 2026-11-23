@@ -69,7 +69,7 @@ import time
 
 import salt.utils.data
 import salt.utils.platform
-from salt.exceptions import CommandExecutionError
+from salt.exceptions import CommandExecutionError, ServiceNotFoundError
 from salt.utils.args import get_function_argspec as _argspec
 from salt.utils.systemd import booted
 
@@ -263,6 +263,11 @@ def _disable(name, started, result=True, **kwargs):
         if not _available(name, ret):
             ret["result"] = True
             return ret
+    except ServiceNotFoundError:
+        # A service that is not present is, by definition, not enabled
+        ret["result"] = True
+        ret["comment"] = f"The named service {name} is not available"
+        return ret
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = exc.strerror
@@ -706,17 +711,15 @@ def dead(name, enable=None, sig=None, init_delay=None, **kwargs):
     # Check if the service is available
     try:
         if not _available(name, ret):
-            if __opts__.get("test"):
-                ret["result"] = None
-                ret["comment"] = (
-                    "Service {} not present; if created in this state run, "
-                    "it would have been stopped".format(name)
-                )
-            else:
-                # A non-available service is OK here, don't let the state fail
-                # because of it.
-                ret["result"] = True
+            # A non-available service is OK here, don't let the state fail
+            # because of it. It is already not running (nor enabled), also
+            # in test mode.
+            ret["result"] = True
             return ret
+    except ServiceNotFoundError:
+        ret["result"] = True
+        ret["comment"] = f"The named service {name} is not available"
+        return ret
     except CommandExecutionError as exc:
         ret["result"] = False
         ret["comment"] = exc.strerror

@@ -1033,3 +1033,17 @@ def test__to_unicode_int():
     Should return a unicode value, which is str in PY3.
     """
     assert isinstance(win_reg._to_unicode(1), str)
+
+
+def test_registry_import_error_in_message():
+    """
+    When the pywin32 modules fail to import, the underlying ImportError should
+    be included in the exception message
+    """
+    with patch.object(win_reg, "HAS_WINDOWS_MODULES", False), patch.object(
+        win_reg, "IMPORT_ERROR", "DLL load failed while importing win32api"
+    ):
+        with pytest.raises(CommandExecutionError) as exc:
+            win_reg.Registry()
+    assert "requires 'pywin32' to be installed" in str(exc.value)
+    assert "DLL load failed while importing win32api" in str(exc.value)

@@ -8,10 +8,7 @@ import traceback
 
 import salt.channel.client
 import salt.crypt
-import salt.payload
-import salt.transport
 import salt.utils.args
-import salt.utils.dictupdate
 import salt.utils.event
 import salt.utils.functools
 import salt.utils.mine
@@ -252,7 +249,7 @@ def send(name, *args, **kwargs):
         res = salt.utils.functools.call_function(
             __salt__[mine_function or name], *args, **kwargs
         )
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         trace = traceback.format_exc()
         log.error("Function %s in mine.send failed to execute", mine_function or name)
         log.debug("Error: %s", trace)
