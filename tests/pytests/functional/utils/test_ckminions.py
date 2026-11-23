@@ -714,6 +714,29 @@ def test_untagged_data_updates_clear_terms(ckminions):
     assert stored is not None
 
 
+def test_accepted_minions_listed_once_per_request(ckminions):
+    ck = ckminions({"web": {"role": "web"}, "db": {"role": "database"}})
+    if not isinstance(ck, salt.utils.minions.SQLAlchemyCkMinions):
+        pytest.skip("Memoization is part of the SQLAlchemy matcher")
+    with patch.object(ck.key, "list_status", wraps=ck.key.list_status) as listed:
+        ck.check_minions("G@role:web or G@role:database or web*", "compound")
+    assert listed.call_count <= 1
+    with patch.object(ck.key, "list_status", wraps=ck.key.list_status) as listed:
+        assert ck.auth_check(
+            [{"G@role:web": ["test.*"]}, {"web*": ["test.*"]}],
+            "test.ping",
+            [],
+            "G@role:web",
+            "compound",
+        )
+    assert listed.call_count <= 1
+    # Outside a request every call lists the keys again.
+    with patch.object(ck.key, "list_status", wraps=ck.key.list_status) as listed:
+        ck._pki_minions()
+        ck._pki_minions()
+    assert listed.call_count == 2
+
+
 class _Canceled(Exception):
     sqlstate = "57014"
 
@@ -829,6 +852,45 @@ def test_terms_match_values_as_stored(ckminions, expr):
     result = ck._check_cache_minions(expr, **kwargs)
     reference = salt.utils.minions.CkMinions._check_cache_minions(ck, expr, **kwargs)
     assert set(result["minions"]) == set(reference["minions"])
+
+
+@pytest.mark.parametrize(
+    "limit,bulk,lists_all",
+    [
+        (10000, True, False),
+        (0, True, True),
+        (10000, False, False),
+        (0, False, True),
+    ],
+)
+def test_greedy_targets_check_only_matched_keys(ckminions, limit, bulk, lists_all):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    # A deleted minion's grains stay cached and must not match.
+    ck.key.cache.flush("keys", "centos")
+    limit_name = "BULK_ACCEPTED_LOOKUP_LIMIT" if bulk else "ACCEPTED_LOOKUP_LIMIT"
+    with patch.object(ck, limit_name, limit), patch.object(
+        ck, "_bulk_key_lookup", return_value=bulk
+    ), patch.object(
+        ck.key, "list_status", wraps=ck.key.list_status
+    ) as listed, patch.object(
+        ck.key, "list_match", wraps=ck.key.list_match
+    ) as looked:
+        for expr in ("os:centos", "nested:*:eth0"):  # indexed, then scanned
+            assert ck._check_cache_minions(expr, ":", True, "grains")["minions"] == []
+        result = ck._check_cache_minions("roles:db", ":", True, "grains")
+    assert result["minions"] == ["ubuntu"]
+    assert bool(listed.call_count) is lists_all
+    assert bool(looked.call_count) is not lists_all
+
+
+def test_key_lookup_errors_fail_target(ckminions):
+    ck = ckminions(TERMS_DATA)
+    _require_terms(ck)
+    with patch.object(ck.key, "list_match", side_effect=OSError("unreadable")):
+        for tgt, tgt_type in (("not G@os:ubuntu", "compound"), ("os:ubuntu", "grain")):
+            with pytest.raises(salt.utils.minions.TargetingError):
+                ck.check_minions(tgt, tgt_type)
 
 
 def test_oversized_documents_still_match(ckminions):

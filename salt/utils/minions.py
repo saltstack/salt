@@ -3,9 +3,11 @@ This module contains routines used to verify the matcher against the minions
 expected to return
 """
 
+import contextlib
 import fnmatch
 import logging
 import re
+import threading
 import time
 
 import salt.cache
@@ -2215,8 +2217,40 @@ class SQLAlchemyCkMinions(CkMinions):
             salt.sqlalchemy.configure_orm(opts)
 
         self.dialect_name = salt.sqlalchemy.get_engine().dialect.name
+        # Per-thread request state: accepted minions memoized for one request.
+        self._local = threading.local()
 
         super().__init__(opts)
+
+    @contextlib.contextmanager
+    def _request_scope(self):
+        """Share accepted minions across one target or ACL evaluation."""
+        depth = getattr(self._local, "depth", 0)
+        if not depth:
+            self._local.pki = None
+        self._local.depth = depth + 1
+        try:
+            yield
+        finally:
+            self._local.depth = depth
+            if not depth:
+                self._local.pki = None
+
+    def _pki_minions(self):
+        """Memoize accepted minions within a request; each call lists every key."""
+        if not getattr(self._local, "depth", 0):
+            return super()._pki_minions()
+        if self._local.pki is None:
+            self._local.pki = super()._pki_minions()
+        return set(self._local.pki)
+
+    def check_minions(self, *args, **kwargs):
+        with self._request_scope():
+            return super().check_minions(*args, **kwargs)
+
+    def auth_check(self, *args, **kwargs):
+        with self._request_scope():
+            return super().auth_check(*args, **kwargs)
 
     def _check_cache_minions(
         self,
@@ -2328,11 +2362,48 @@ class SQLAlchemyCkMinions(CkMinions):
                 hits &= set(minions)
             else:
                 self._check_deadline(deadline)
-                hits &= self._pki_minions()
+                hits = self._accepted(hits)
                 self._check_deadline(deadline)
         # Unsorted: callers combine results as sets, and sorting a large
         # result costs more than the rest of the lookup.
         return {"minions": list(hits), "missing": []}
+
+    # Above this many matches, listing every accepted key once is cheaper than
+    # looking up each match. Backends reading a file per key reach that much
+    # sooner than one bulk query, which costs about 15 us per key against 6 us
+    # per key for a full listing at a million minions.
+    ACCEPTED_LOOKUP_LIMIT = 10000
+    BULK_ACCEPTED_LOOKUP_LIMIT = 250000
+
+    def _bulk_key_lookup(self):
+        """Whether the key backend looks up many keys in one query."""
+        return isinstance(self.key, salt.key.SqlAlchemyKey)
+
+    def _accepted(self, keys):
+        """
+        Return the minions among ``keys`` whose key is accepted.
+
+        Greedy targets only match accepted minions, since cached data outlives
+        deleted, rejected and pending keys. Looking up just the matched keys
+        costs what the result costs, rather than listing the whole fleet.
+        """
+        keys = set(keys)
+        listed = getattr(self._local, "pki", None)
+        if listed is not None and getattr(self._local, "depth", 0):
+            return keys & listed
+        limit = (
+            self.BULK_ACCEPTED_LOOKUP_LIMIT
+            if self._bulk_key_lookup()
+            else self.ACCEPTED_LOOKUP_LIMIT
+        )
+        if len(keys) > limit:
+            return keys & self._pki_minions()
+        if not keys:
+            return keys
+        # Errors propagate: treating them as no accepted minions would make a
+        # compound "not" match every minion.
+        found = self.key.list_match(list(keys))
+        return keys & set(found.get(self.key.ACC, ()))
 
     @staticmethod
     def _check_deadline(deadline):
