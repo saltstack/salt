@@ -649,3 +649,50 @@ def test_extracted_enforces_ownership_on_implicit_top_level_dirs(tmp_path):
         if call.kwargs.get("recurse")
     ]
     assert enforced == [os.path.join(name, ".cache/"), os.path.join(name, ".config/")]
+
+
+@pytest.mark.skip_on_windows(reason="Ownership is not enforced this way on Windows")
+def test_extracted_skips_symlinked_implicit_top_level_dirs(tmp_path):
+    """
+    Ownership must not be enforced through a top-level directory which is a
+    symlink, as that would change the ownership of the symlink's target.
+    """
+    source = tmp_path / "profiles.tar.gz"
+    name = tmp_path / "home"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    name.mkdir()
+    (name / ".config").symlink_to(outside)
+    with tarfile.open(source, "w:gz") as tar:
+        for dirname in (".cache/a", ".config/a"):
+            info = tarfile.TarInfo(name=dirname)
+            info.type = tarfile.DIRTYPE
+            tar.addfile(info)
+    contents = {
+        "dirs": [".cache/a/", ".config/a/"],
+        "files": [],
+        "links": [],
+        "top_level_dirs": [],
+        "top_level_files": [],
+        "top_level_links": [],
+    }
+
+    file_directory = MagicMock(return_value={"result": True, "changes": {}})
+    with patch.dict(
+        archive.__salt__,
+        {
+            "file.user_to_uid": MagicMock(return_value=1000),
+            "file.group_to_gid": MagicMock(return_value=1000),
+            "file.source_list": MagicMock(return_value=(str(source), None)),
+            "archive.list": MagicMock(return_value=contents),
+        },
+    ), patch.dict(archive.__states__, {"file.directory": file_directory}):
+        ret = archive.extracted(str(name), str(source), user="user", group="user")
+
+    assert ret["result"] is True, ret["comment"]
+    enforced = [
+        call.args[0]
+        for call in file_directory.call_args_list
+        if call.kwargs.get("recurse")
+    ]
+    assert enforced == [os.path.join(name, ".cache/")]
