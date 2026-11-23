@@ -2176,6 +2176,9 @@ class MinionManager(MinionBase):
                         self.io_loop, list(self._background_tasks)
                     )
                 except Exception:  # pylint: disable=broad-except
+                    # Best effort.  Whatever goes wrong while draining, for
+                    # example something stopping the loop, the loop must still
+                    # be closed and the minion must go on stopping.
                     log.warning("Error draining the event loop", exc_info=True)
                 finally:
                     self.io_loop.close()
