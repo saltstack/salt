@@ -36,16 +36,22 @@ def aioloop(io_loop, warn=False):
         raise RuntimeError("Loop must be AbstractEventLoop (prefered) or IOLoop")
 
 
-def _unwinding_tasks(loop, roots):
+async def _wait_for_unwinding_tasks(roots, timeout):
     """
-    The tasks of ``loop`` that have not finished and either are one of
-    ``roots`` or have been asked to cancel (by anyone).
+    Wait until every task that is one of ``roots`` or has been asked to cancel
+    (by anyone) has finished.  Return the ones that are left after ``timeout``.
     """
-    return [
-        task
-        for task in asyncio.all_tasks(loop)
-        if not task.done() and (task in roots or task.cancelling())
-    ]
+    deadline = time.monotonic() + timeout
+    while True:
+        pending = [
+            task
+            for task in asyncio.all_tasks()
+            if not task.done() and (task in roots or task.cancelling())
+        ]
+        remaining = deadline - time.monotonic()
+        if not pending or remaining <= 0:
+            return pending
+        await asyncio.wait(pending, timeout=remaining)
 
 
 def cancel_and_drain(loop, tasks, timeout=5.0):
@@ -84,37 +90,7 @@ def cancel_and_drain(loop, tasks, timeout=5.0):
     roots = {task for task in tasks if not task.done()}
     for task in roots:
         task.cancel()
-    deadline = time.monotonic() + timeout
-    pending = _unwinding_tasks(loop, roots)
-    cancelled = set(pending)
-    while pending:
-        remaining = deadline - time.monotonic()
-        if remaining <= 0:
-            break
-
-        # Build the coroutine inside a function so it is only created when the
-        # loop can run it, see ``SyncWrapper._loop_can_run_until_complete``.
-        async def _wait(waited, limit):
-            await asyncio.wait(waited, timeout=limit)
-
-        wait = _wait(pending, remaining)
-        try:
-            loop.run_until_complete(wait)
-        except Exception:  # pylint: disable=broad-except
-            wait.close()
-            log.debug("Could not drain the event loop", exc_info=True)
-            break
-        pending = _unwinding_tasks(loop, roots)
-        cancelled.update(pending)
-    for task in cancelled:
-        # Mark the outcome as retrieved, otherwise asyncio logs "Task exception
-        # was never retrieved" when the task is garbage collected.
-        if task.done() and not task.cancelled() and task.exception() is not None:
-            log.debug(
-                "Task %s raised while the event loop was drained: %r",
-                task.get_name(),
-                task.exception(),
-            )
+    pending = loop.run_until_complete(_wait_for_unwinding_tasks(roots, timeout))
     if pending:
         log.warning(
             "%d task(s) did not finish within %s seconds of being cancelled: %s",
