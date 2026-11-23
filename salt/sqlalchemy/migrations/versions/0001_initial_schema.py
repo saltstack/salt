@@ -100,7 +100,6 @@ def upgrade():
     op.create_index("ix_cache_bank", "cache", ["bank"], schema=schema)
     op.create_index("ix_cache_key", "cache", ["key"], schema=schema)
     if is_postgres:
-        _gin_index("cache", "data", schema)
         preparer = dialect.identifier_preparer
         parent = _qualified(preparer, schema, cache.name)
         for suffix, values in CACHE_PARTITIONS.items():

@@ -385,18 +385,7 @@ def populate_model_registry(opts, name, engine):
 
     class Cache(Base):
         __tablename__ = "cache"
-        table_args = []
-        if is_postgres:
-            table_args.append(
-                Index(
-                    None,
-                    "data",
-                    postgresql_using="gin",
-                    postgresql_with={"FASTUPDATE": "OFF"},
-                )
-            )
-        table_args.append({"postgresql_partition_by": "LIST (bank)"})
-        __table_args__ = tuple(table_args)
+        __table_args__ = ({"postgresql_partition_by": "LIST (bank)"},)
 
         bank: Mapped[str] = mapped_column(
             get_text_type(engine), primary_key=True, index=True
