@@ -21,6 +21,7 @@ modules. These state functions wrap Salt's :ref:`Python API <python-api>`.
     * :py:func:`The Orchestrate runner <salt.runners.state.orchestrate>`
 """
 
+import contextvars
 import fnmatch
 import logging
 import sys
@@ -83,7 +84,14 @@ def _parallel_map(func, inputs):
             except:  # pylint: disable=bare-except
                 errors[index] = sys.exc_info()
 
-        thread = threading.Thread(target=run_thread)
+        # A bare Thread starts with an empty contextvars context, so the
+        # loader context (and therefore __salt__) is missing in the worker
+        # and __salt__["saltutil.runner"] raises TypeError (#66022, #70742).
+        # Copy the calling thread's context here, once per worker: a Context
+        # cannot be entered by two threads at the same time. Same shape as
+        # salt.master._ContextThreadPoolExecutor.submit.
+        ctx = contextvars.copy_context()
+        thread = threading.Thread(target=ctx.run, args=(run_thread,))
         thread.start()
         return thread
 
@@ -1012,13 +1020,16 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
 
     # If each of the runners returned its output in the format compatible with
     # the 'highstate' outputter, we can leverage this fact when merging the
-    # outputs.
-    highstate_output = all(
-        [
-            out.get("outputter", "") == "highstate" and "data" in out
-            for out in outputs.values()
-        ]
-    )
+    # outputs. Runners such as test.sleep (bool) and test.stdout_print (str)
+    # do not return a dict; only a dict can be highstate output (#66022).
+    def _is_highstate(out):
+        return (
+            isinstance(out, dict)
+            and out.get("outputter", "") == "highstate"
+            and "data" in out
+        )
+
+    highstate_output = all(_is_highstate(out) for out in outputs.values())
 
     # The following helper function is used to extract changes from highstate
     # output.
@@ -1072,7 +1083,7 @@ def parallel_runners(name, runners, **kwargs):  # pylint: disable=unused-argumen
         failed_runners = [
             runner_id
             for runner_id, out in outputs.items()
-            if out.get("exit_code", 0) != 0
+            if isinstance(out, dict) and out.get("exit_code", 0) != 0
         ]
         all_successful = not failed_runners
         if all_successful:
