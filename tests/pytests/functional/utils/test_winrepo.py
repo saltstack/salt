@@ -188,6 +188,7 @@ def test_gitcli_winrepo_checkout_puts_files_on_disk(winrepo_opts, tmp_path):
     w = _get_winrepo(winrepo_opts, remote.as_uri())
     w.fetch_remotes()
     w.checkout()
-    (winrepo_dir,) = w.winrepo_dirs.values()
+    assert len(w.winrepo_dirs) == 1, w.winrepo_dirs
+    winrepo_dir = next(iter(w.winrepo_dirs.values()))
     sls = pathlib.Path(winrepo_dir) / "firefox.sls"
     assert sls.read_text(encoding="utf-8") == "firefox: {}\n"
