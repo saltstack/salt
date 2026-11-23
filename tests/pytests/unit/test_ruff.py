@@ -467,6 +467,166 @@ NEW_RULE_CASES = [
         "PT031",
         "import pytest\n\n\ndef test_f():\n    with pytest.warns(UserWarning):\n        a = 1\n        b = 2\n",
     ),
+    # Rules enabled in the first wave: nothing in the code reported them.
+    ("A006", "f = lambda print: print\n"),
+    (
+        "ASYNC100",
+        "import asyncio\n\n\nasync def func():\n    async with asyncio.timeout(2):\n        do_something()\n",
+    ),
+    (
+        "ASYNC105",
+        "import trio\n\n\nasync def double_sleep(x):\n    trio.sleep(2 * x)\n",
+    ),
+    ("ASYNC115", "import trio\n\n\nasync def func():\n    await trio.sleep(0)\n"),
+    ("ASYNC116", "import trio\n\n\nasync def func():\n    await trio.sleep(86401)\n"),
+    (
+        "ASYNC212",
+        "import httpx\n\n\nasync def fetch():\n    client = httpx.Client()\n    response = client.get(...)\n",
+    ),
+    ("ASYNC221", "import subprocess\n\n\nasync def foo():\n    subprocess.run(cmd)\n"),
+    (
+        "B024",
+        'from abc import ABC\nfrom typing import ClassVar\n\n\nclass Foo(ABC):\n    class_var: ClassVar[str] = "assigned"\n\n    def method(self):\n        bar()\n',
+    ),
+    ("B027", "from abc import ABC\n\n\nclass Foo(ABC):\n    def method(self): ...\n"),
+    ("C401", "set(f(x) for x in foo)\nset(x for x in foo)\nset((x for x in foo))\n"),
+    ("C402", "dict((x, f(x)) for x in foo)\n"),
+    ("C403", "set([f(x) for x in foo])\n"),
+    ("C404", "dict([(x, f(x)) for x in foo])\n"),
+    ("C405", "set([1, 2])\nset((1, 2))\nset([])\n"),
+    ("C410", "list([1, 2])\nlist((1, 2))\n"),
+    ("C411", "list([f(x) for x in foo])\n"),
+    ("C415", "sorted(iterable[::-1])\nset(iterable[::-1])\nreversed(iterable[::-1])\n"),
+    ("DTZ901", "import datetime\n\ndatetime.datetime.max\n"),
+    ("E401", "import sys, os\n"),
+    ("E701", 'if foo == "blah": do_blah_thing()\n'),
+    ("E702", "do_one(); do_two(); do_three()\n"),
+    ("E703", "do_four();  # useless semicolon\n"),
+    ("E731", "f = lambda x: 2 * x\n"),
+    ("EXE003", "#!/usr/bin/env bash\n"),
+    ("EXE004", " #!/usr/bin/env python3\n"),
+    ("EXE005", "foo = 1\n#!/usr/bin/env python3\n"),
+    (
+        "FA100",
+        "from typing import List, Dict, Optional\n\n\ndef func(obj: Dict[str, Optional[int]]) -> None: ...\n",
+    ),
+    (
+        "FURB163",
+        "import math\n\nmath.log(4, math.e)\nmath.log(4, 2)\nmath.log(4, 10)\n",
+    ),
+    (
+        "FURB164",
+        'from decimal import Decimal\nfrom fractions import Fraction\n\nDecimal.from_float(4.2)\nDecimal.from_float(float("inf"))\nFraction.from_float(4.2)\nFraction.from_decimal(Decimal("4.2"))\n',
+    ),
+    (
+        "FURB166",
+        'num = "0xABC"\n\nif num.startswith("0b"):\n    i = int(num[2:], 2)\nelif num.startswith("0o"):\n    i = int(num[2:], 8)\nelif num.startswith("0x"):\n    i = int(num[2:], 16)\n\nprint(i)\n',
+    ),
+    ("FURB168", "isinstance(obj, type(None))\n"),
+    ("FURB169", "type(obj) is type(None)\n"),
+    (
+        "FURB181",
+        'from hashlib import sha512\n\nhashed = sha512(b"some data").digest().hex()\n',
+    ),
+    (
+        "FURB187",
+        "l = [1, 2, 3]\nl = reversed(l)\n\nl = [1, 2, 3]\nl = list(reversed(l))\n\nl = [1, 2, 3]\nl = l[::-1]\n",
+    ),
+    (
+        "G003",
+        'import logging\n\nlogging.basicConfig(format="%(message)s", level=logging.INFO)\n\nuser = "Maria"\n\nlogging.info(user + " - Something happened")\n',
+    ),
+    (
+        "PLC0105",
+        'from typing import TypeVar\n\nT = TypeVar("T", covariant=True)\nU = TypeVar("U", contravariant=True)\nV_co = TypeVar("V_co")\n',
+    ),
+    (
+        "PLC0131",
+        'from typing import TypeVar\n\nT = TypeVar("T", covariant=True, contravariant=True)\n',
+    ),
+    ("PLC0132", 'from typing import TypeVar\n\nT = TypeVar("U")\n'),
+    ("PLC0414", "import numpy as numpy\n"),
+    (
+        "PLC1802",
+        'fruits = ["orange", "apple"]\nvegetables = []\n\nif len(fruits):\n    print(fruits)\n\nif not len(vegetables):\n    print(vegetables)\n',
+    ),
+    ("PLC2401", "ápple_count: int\n"),
+    ("PLC2403", "import bár\n"),
+    (
+        "PLW1510",
+        'import subprocess\n\nsubprocess.run(["ls", "nonexistent"])  # No exception raised.\n',
+    ),
+    (
+        "PLW3301",
+        "minimum = min(1, 2, min(3, 4, 5))\nmaximum = max(1, 2, max(3, 4, 5))\ndiff = maximum - minimum\n",
+    ),
+    ("PT002", 'import pytest\n\n\n@pytest.fixture("module")\ndef my_fixture(): ...\n'),
+    (
+        "PT008",
+        'def test_foo(mocker):\n    mocker.patch("module.target", lambda x, y: 7)\n',
+    ),
+    (
+        "PT020",
+        "import pytest\n\n\n@pytest.yield_fixture()\ndef my_fixture():\n    obj = SomeClass()\n    yield obj\n    obj.cleanup()\n",
+    ),
+    (
+        "PT024",
+        "import pytest\n\n\n@pytest.mark.asyncio()\n@pytest.fixture()\nasync def my_fixture():\n    return 0\n",
+    ),
+    (
+        "PT025",
+        'import pytest\n\n\n@pytest.fixture()\ndef a():\n    pass\n\n\n@pytest.mark.usefixtures("a")\n@pytest.fixture()\ndef b(a):\n    pass\n',
+    ),
+    (
+        "PT026",
+        "import pytest\n\n\n@pytest.mark.usefixtures()\ndef test_something(): ...\n",
+    ),
+    ("PTH124", 'import py.path\n\np = py.path.local("/foo/bar").join("baz/qux")\n'),
+    ("PTH201", 'from pathlib import Path\n\n_ = Path(".")\n'),
+    ("PTH203", "import os\n\nos.path.getatime(__file__)\n"),
+    ("PTH210", 'from pathlib import Path\n\npath = Path()\n\npath.with_suffix("py")\n'),
+    ("RUF020", "from typing import Never\n\n\ndef func() -> Never | int: ...\n"),
+    (
+        "RUF028",
+        "def decorator():\n    pass\n\n\n@decorator\n# fmt: off\ndef example():\n    if True:\n        # fmt: skip\n        expression = [\n            # fmt: off\n            1,\n            2,\n        ]\n        # yapf: disable\n    # fmt: on\n    # yapf: enable\n",
+    ),
+    ("RUF036", "def func(arg: None | int): ...\n"),
+    (
+        "RUF037",
+        "from collections import deque\n\nqueue = deque(set())\nqueue = deque([], 10)\n",
+    ),
+    ("RUF041", "from typing import Literal\n\nx: Literal[Literal[1], 2]\n"),
+    (
+        "RUF049",
+        "from dataclasses import dataclass\nfrom enum import Enum\n\n\n@dataclass\nclass E(Enum): ...\n",
+    ),
+    (
+        "RUF058",
+        "from itertools import starmap\n\n\nstarmap(func, zip(a, b))\nstarmap(func, zip(a, b, strict=True))\n",
+    ),
+    (
+        "RUF063",
+        'foo.__dict__.get("__annotations__", {})\n# or\nfoo.__dict__["__annotations__"]\n',
+    ),
+    ("RUF104", "# ruff: disable[F401]\nimport sys\n"),
+    (
+        "SIM911",
+        'flag_stars = {"USA": 50, "Slovenia": 3, "Panama": 2, "Australia": 6}\n\nfor country, stars in zip(flag_stars.keys(), flag_stars.values()):\n    print(f"{country}\'s flag has {stars} stars.")\n',
+    ),
+    ("T100", "def foo():\n    breakpoint()\n"),
+    (
+        "TC004",
+        "from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    import foo\n\n\ndef bar() -> None:\n    foo.bar()  # raises NameError: name 'foo' is not defined\n",
+    ),
+    (
+        "TC005",
+        'from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    pass\n\nprint("Hello, world!")\n',
+    ),
+    ("TC010", 'var: "Foo" | None\n\n\nclass Foo: ...\n'),
+    ("TID252", "from .. import foo\n"),
+    ("W291", "x = 1 \n"),
+    ("W292", "x = 1"),
+    ("W293", "class A:\n    \n    x = 1\n"),
 ]
 
 
@@ -476,6 +636,24 @@ def test_rules_without_existing_violations(repo: Path, code: str, source: str) -
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert code in result.stdout
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="No executable bit on Windows")
+def test_executable_file_without_shebang_is_reported(repo: Path) -> None:
+    write(repo, "salt/new.py", "value = 1\n")
+    (repo / "salt/new.py").chmod(0o755)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "EXE002" in result.stdout
+
+
+def test_top_level_module_named_like_a_standard_library_module_is_reported(
+    repo: Path,
+) -> None:
+    write(repo, "json.py", "value = 1\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "A005" in result.stdout
 
 
 def test_module_importing_itself_is_reported(repo: Path) -> None:
