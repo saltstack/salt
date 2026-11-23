@@ -106,7 +106,7 @@ def cancel_and_drain(loop, tasks, timeout=5.0):
             "%d task(s) did not finish within %s seconds of being cancelled: %s",
             len(pending),
             timeout,
-            ", ".join(sorted(repr(task) for task in pending)),
+            ", ".join(repr(task) for task in pending),
         )
 
 
