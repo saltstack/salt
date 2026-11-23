@@ -9,6 +9,7 @@ import salt.runners.sqlalchemy
 import salt.sqlalchemy
 import salt.sqlalchemy.migrations
 from salt.sqlalchemy import terms
+from tests.support.mock import patch
 from tests.support.pytest.database import available_databases, database_backend
 
 __all__ = ["database_backend"]
@@ -307,3 +308,103 @@ def _guard_triggers():
                 f"WHERE trigger_name = '{terms.GUARD}'"
             )
         }
+
+
+def test_rebuild_terms(configured, database_backend):
+    salt.sqlalchemy.migrations.upgrade()
+    if database_backend.dialect != "postgresql":
+        assert salt.runners.sqlalchemy.rebuild_terms() == {}
+        return
+    grains = {"os": "Ubuntu", "bb": {"bbcpu": "x"}}
+    with _engine().begin() as connection:
+        # Rows an offline upgrade or an older master left without terms.
+        connection.execute(
+            sqlalchemy.text(
+                "INSERT INTO cache (bank, key, cluster, data) VALUES "
+                "('grains', 'minion', 'c', CAST(:data AS jsonb))"
+            ),
+            {"data": json.dumps(grains)},
+        )
+
+    def stored():
+        with _engine().connect() as connection:
+            return tuple(
+                connection.exec_driver_sql(
+                    "SELECT terms, terms_config FROM cache WHERE key = 'minion'"
+                ).one()
+            )
+
+    assert salt.runners.sqlalchemy.rebuild_terms() == {"grains": 1, "pillar": 0}
+    assert stored() == (terms.flatten(grains), terms.ALL.fingerprint)
+    assert salt.runners.sqlalchemy.rebuild_terms() == {"grains": 0, "pillar": 0}
+    config = salt.sqlalchemy.ENGINE_REGISTRY["default"]["config"]
+    with patch.dict(config, {"term_exclude": ["bb"]}):
+        excluded = terms.paths(config)
+        assert salt.runners.sqlalchemy.rebuild_terms(batch=1) == {
+            "grains": 1,
+            "pillar": 0,
+        }
+        assert stored() == (terms.flatten(grains, excluded), excluded.fingerprint)
+        assert salt.runners.sqlalchemy.rebuild_terms(full=True) == {
+            "grains": 1,
+            "pillar": 0,
+        }
+
+
+def _term_index_validity():
+    with _engine().connect() as connection:
+        return dict(
+            connection.execute(
+                sqlalchemy.text(
+                    "SELECT c.relname, i.indisvalid FROM pg_index i "
+                    "JOIN pg_class c ON c.oid = i.indexrelid "
+                    "WHERE c.relname LIKE :pattern"
+                ),
+                {"pattern": "ix_cache_%terms%"},
+            ).all()
+        )
+
+
+def test_interrupted_terms_upgrade_resumes(configured, database_backend):
+    if database_backend.dialect != "postgresql":
+        pytest.skip("Cache terms are PostgreSQL-only")
+    salt.sqlalchemy.migrations.upgrade("0001")
+    grains = {"os": "Ubuntu"}
+    with _engine().begin() as connection:
+        connection.execute(
+            sqlalchemy.text(
+                "INSERT INTO cache (bank, key, cluster, data) VALUES "
+                "('grains', 'minion', 'c', CAST(:data AS jsonb))"
+            ),
+            {"data": json.dumps(grains)},
+        )
+    # Interrupted during the backfill, after the columns were committed.
+    with patch.object(terms, "rebuild", side_effect=RuntimeError("interrupted")):
+        with pytest.raises(RuntimeError):
+            salt.sqlalchemy.migrations.upgrade()
+    assert salt.sqlalchemy.migrations.current() == ["0001"]
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
+    with _engine().connect() as connection:
+        stored = connection.exec_driver_sql(
+            "SELECT terms FROM cache WHERE bank = 'grains'"
+        ).scalar()
+    assert stored == terms.flatten(grains)
+    # Interrupted during a concurrent index build, which leaves it invalid.
+    salt.sqlalchemy.migrations.downgrade("0001")
+    with patch.object(
+        terms, "index_statements", side_effect=RuntimeError("interrupted")
+    ):
+        with pytest.raises(RuntimeError):
+            salt.sqlalchemy.migrations.upgrade()
+    preparer = _engine().dialect.identifier_preparer
+    with _engine().begin() as connection:
+        for statement in terms.index_statements(preparer, None, ("grains",)):
+            connection.exec_driver_sql(statement)
+        connection.exec_driver_sql(
+            "UPDATE pg_index SET indisvalid = false "
+            "WHERE indexrelid = 'ix_cache_grains_terms'::regclass"
+        )
+    assert _term_index_validity()["ix_cache_grains_terms"] is False
+    assert salt.sqlalchemy.migrations.upgrade() == [HEAD]
+    validity = _term_index_validity()
+    assert len(validity) == 4 and all(validity.values()), validity

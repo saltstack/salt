@@ -362,7 +362,7 @@ def _pattern_terms(
     sure.add(term(KEY, path, lowered))
 
 
-def index_statements(preparer, schema, banks=BANKS):
+def index_statements(preparer, schema, banks=BANKS, concurrently=False):
     """
     Return DDL indexing terms on each bank partition.
 
@@ -375,15 +375,16 @@ def index_statements(preparer, schema, banks=BANKS):
     for bank in banks:
         partition = f"cache_{bank}"
         table = prefix + preparer.quote(partition)
+        create = "CREATE INDEX CONCURRENTLY" if concurrently else "CREATE INDEX"
         # Each term becomes one lexeme, verbatim, so the index answers exact
         # terms and prefix searches of any length.
         statements.append(
-            f"CREATE INDEX IF NOT EXISTS {preparer.quote(f'ix_{partition}_terms')} "
+            f"{create} IF NOT EXISTS {preparer.quote(f'ix_{partition}_terms')} "
             f"ON {table} USING gin (array_to_tsvector(terms)) "
             f"WITH (fastupdate = off)"
         )
         statements.append(
-            f"CREATE INDEX IF NOT EXISTS "
+            f"{create} IF NOT EXISTS "
             f"{preparer.quote(f'ix_{partition}_terms_config')} "
             f"ON {table} (terms_config)"
         )
@@ -439,6 +440,78 @@ def drop_trigger_statements(preparer, schema, banks=BANKS):
     ]
     statements.append(f"DROP FUNCTION IF EXISTS {_qualify(preparer, schema, GUARD)}()")
     return statements
+
+
+def rebuild(connection, schema, paths, banks=BANKS, stale_only=True, batch=1000):
+    """
+    Compute terms for cached grains and pillar, returning rows processed per bank.
+
+    ``connection`` must autocommit, so each batch commits on its own rather
+    than rewriting every row in one transaction. With ``stale_only``, rows
+    whose terms match ``paths`` are left alone. A row a master stores while
+    this runs keeps the terms that master wrote.
+    """
+    import sqlalchemy as sa
+    from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+
+    cache = sa.table(
+        "cache",
+        sa.column("bank", sa.Text),
+        sa.column("key", sa.Text),
+        sa.column("cluster", sa.Text),
+        sa.column("data", JSONB),
+        sa.column("created_at"),
+        sa.column("terms", ARRAY(sa.Text)),
+        sa.column("terms_config", sa.Text),
+        schema=schema,
+    )
+    update = (
+        sa.update(cache)
+        .where(
+            cache.c.bank == sa.bindparam("b_bank"),
+            cache.c.cluster == sa.bindparam("b_cluster"),
+            cache.c.key == sa.bindparam("b_key"),
+            # Stores refresh created_at, so a changed row is not overwritten.
+            cache.c.created_at == sa.bindparam("b_seen"),
+        )
+        .values(terms=sa.bindparam("b_terms"), terms_config=paths.fingerprint)
+    )
+    rebuilt = {}
+    for bank in banks:
+        rebuilt[bank] = 0
+        last = None
+        while True:
+            # Walk the primary key in batches rather than holding a cursor.
+            stmt = sa.select(
+                cache.c.cluster, cache.c.key, cache.c.created_at, cache.c.data
+            ).where(cache.c.bank == bank)
+            if last is not None:
+                stmt = stmt.where(sa.tuple_(cache.c.cluster, cache.c.key) > last)
+            if stale_only:
+                stmt = stmt.where(
+                    cache.c.terms_config.is_distinct_from(paths.fingerprint)
+                )
+            rows = connection.execute(
+                stmt.order_by(cache.c.cluster, cache.c.key).limit(batch)
+            ).all()
+            if not rows:
+                break
+            connection.execute(
+                update,
+                [
+                    {
+                        "b_bank": bank,
+                        "b_cluster": cluster,
+                        "b_key": key,
+                        "b_seen": seen,
+                        "b_terms": flatten(data, paths),
+                    }
+                    for cluster, key, seen, data in rows
+                ],
+            )
+            rebuilt[bank] += len(rows)
+            last = (rows[-1].cluster, rows[-1].key)
+    return rebuilt
 
 
 def tsquery(exact=(), prefixes=()):

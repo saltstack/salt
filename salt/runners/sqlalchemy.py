@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import salt.sqlalchemy
 import salt.sqlalchemy.migrations
+from salt.sqlalchemy import terms
 
 if TYPE_CHECKING:
     __opts__ = {}
@@ -95,6 +96,47 @@ def stamp(revision, target_engine=None):
         target_engine (str, optional): Name of the engine to use. If None, default target is used.
     """
     return salt.sqlalchemy.migrations.stamp(revision, engine_name=target_engine)
+
+
+def rebuild_terms(full=False, batch=1000, target_engine=None):
+    """
+    Recompute the PostgreSQL targeting terms of cached grains and pillar.
+
+    Run this after changing ``sqlalchemy.term_paths`` or
+    ``sqlalchemy.term_exclude``, or after an offline (``sql=True``) upgrade.
+    Targeting stays correct meanwhile, but rows whose terms do not match the
+    configuration are rechecked on every lookup. Rows commit in batches, so
+    the cache stays writable.
+
+    Args:
+        full (bool, optional): Rebuild every row, not only rows whose terms
+            were built for another configuration.
+        batch (int, optional): Rows per committed batch.
+        target_engine (str, optional): Name of the engine to use. If None, default target is used.
+
+    Returns the number of rows processed per bank. Rows a master stores
+    during the rebuild keep the terms it wrote.
+
+    .. code-block:: bash
+
+        salt-run sqlalchemy.rebuild_terms
+    """
+    registry = salt.sqlalchemy.ENGINE_REGISTRY[
+        salt.sqlalchemy._engine_name(target_engine)
+    ]
+    if registry["engine"].dialect.name != "postgresql":
+        return {}
+    config = registry["config"]
+    with (
+        registry["engine"].connect().execution_options(isolation_level="AUTOCOMMIT")
+    ) as connection:
+        return terms.rebuild(
+            connection,
+            config.get("schema") or None,
+            terms.paths(config),
+            stale_only=not full,
+            batch=batch,
+        )
 
 
 def drop_all(target_engine=None):

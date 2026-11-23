@@ -100,17 +100,19 @@ fleet, 41 KB per minion with about 2,100 leaves, indexing everything cost about
 24 KB per minion, or 23 GB for one million minions.
 
 Each row records a fingerprint of the configuration its terms were built
-with, and rows built with another configuration are always rechecked until a
-master stores them again, so targeting stays correct after changing either
-setting, only slower.
+with, and rows built with another configuration are always rechecked. After
+changing either setting, run ``salt-run sqlalchemy.rebuild_terms`` to rebuild
+those rows; targeting stays correct meanwhile, only slower.
 
 Upgrading
 ~~~~~~~~~
 
-``salt-run sqlalchemy.upgrade`` adds the terms (migration ``0002``) and
-computes them for existing rows. Offline upgrades (``sql=True``) cannot compute
-terms; rows without terms are rechecked on every lookup until a master stores
-them again.
+``salt-run sqlalchemy.upgrade`` adds the terms (migration ``0002``). It computes
+terms for existing rows in committed batches and then builds the indexes
+concurrently, so the cache stays writable. Offline upgrades (``sql=True``)
+cannot compute terms; run ``salt-run sqlalchemy.rebuild_terms`` against the
+database afterwards. Until then, rows without terms are rechecked on every
+lookup.
 
 During a rolling upgrade, masters without term support keep writing grains
 and pillar. A trigger clears the terms of rows they update, so lookups
