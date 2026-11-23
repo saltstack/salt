@@ -8,6 +8,7 @@ import pytest
 
 import salt.config
 import salt.transport.tcp
+import salt.utils.files
 from tests.conftest import FIPS_TESTRUN
 from tests.support.mock import AsyncMock, MagicMock, patch
 from tests.support.runtests import RUNTIME_VARS
@@ -250,7 +251,10 @@ def master_opts(tmp_path):
     Default master configuration with relative temporary paths to not require root permissions.
     """
     root_dir = tmp_path / "master"
-    opts = salt.config.master_config(None)
+    # Set the ID before configuration loading to avoid host DNS discovery.
+    defaults = salt.config.DEFAULT_MASTER_OPTS.copy()
+    defaults["id"] = "unit-test-master"
+    opts = salt.config.master_config(None, defaults=defaults)
     opts["__role"] = "master"
     opts["root_dir"] = str(root_dir)
     for name in ("cachedir", "pki_dir", "sock_dir", "conf_dir"):
@@ -259,6 +263,9 @@ def master_opts(tmp_path):
         opts[name] = str(dirpath)
     opts["log_file"] = "logs/master.log"
     opts["conf_file"] = os.path.join(opts["conf_dir"], "master")
+    # Nested clients and MasterMinion reload this path before applying opts.
+    with salt.utils.files.fopen(opts["conf_file"], "w") as config_file:
+        config_file.write(f"id: {opts['id']}\n")
     opts["fips_mode"] = FIPS_TESTRUN
     opts["publish_signing_algorithm"] = (
         "PKCS1v15-SHA224" if FIPS_TESTRUN else "PKCS1v15-SHA1"

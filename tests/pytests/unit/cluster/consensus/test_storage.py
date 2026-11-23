@@ -17,7 +17,10 @@ from salt.cluster.consensus.storage import SaltStorage
 @pytest.fixture
 def opts(tmp_path):
     """Master opts with a per-test cachedir so storage writes are isolated."""
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "cluster-test-master"},
+    )
     opts["cachedir"] = str(tmp_path)
     return opts
 

@@ -20,7 +20,8 @@ pytestmark = [
 @pytest.fixture
 def master_opts(tmp_path):
     opts = salt.config.master_config(
-        os.path.join(os.path.dirname(client.__file__), "master")
+        os.path.join(os.path.dirname(client.__file__), "master"),
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "client-test-master"},
     )
     opts["cachedir"] = str(tmp_path / "cache")
     opts["pki_dir"] = str(tmp_path / "pki")

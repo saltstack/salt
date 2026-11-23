@@ -117,7 +117,10 @@ def signature():
 def private_key(passphrase, tmp_path):
     keypath = tmp_path / "keys"
     keypath.mkdir()
-    opts = salt.config.master_config(None)
+    opts = salt.config.master_config(
+        None,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "crypt-test-master"},
+    )
     opts["pki_dir"] = keypath
     mk = crypt.MasterKeys(opts, autocreate=False)
     keyname = "test"

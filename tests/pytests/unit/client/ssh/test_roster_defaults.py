@@ -41,7 +41,10 @@ def test_roster_defaults_flat(tmp_path, roster):
                 user: daniel
             """
         )
-    opts = salt.config.master_config(fpath)
+    opts = salt.config.master_config(
+        fpath,
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "client-test-master"},
+    )
     with patch("salt.roster.get_roster_file", MagicMock(return_value=roster)):
         with patch(
             "salt.template.compile_template",

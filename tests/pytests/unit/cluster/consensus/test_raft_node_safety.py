@@ -23,7 +23,10 @@ from salt.cluster.consensus.storage import SaltStorage
 
 def _storage(path):
     """Return a SaltStorage backed by *path* as the cache directory."""
-    opts = salt.config.master_config("/dev/null")
+    opts = salt.config.master_config(
+        "/dev/null",
+        defaults=salt.config.DEFAULT_MASTER_OPTS.copy() | {"id": "cluster-test-master"},
+    )
     opts["cachedir"] = path
     return SaltStorage("test-node", opts)
 
