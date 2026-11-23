@@ -12,14 +12,28 @@ updates:
     labels:
       - "test:full"
     open-pull-requests-limit: 5
-    # vcert 0.18+ hard-pins pynacl/cryptography/six against the rest of CI, and
-    # pylint 4.x turns pre-existing warnings into hard CI failures; both are
-    # deliberately held (see the comments in requirements/static/ci/*.txt).
+    # Deliberately held caps. These exist because the pin comments in
+    # requirements/constraints.txt, requirements/pytest.txt, and
+    # requirements/static/ci/lint.txt document concrete breakage at the
+    # next major (onedir build / cpython 3.14 venv corruption / lint
+    # false-positives / factory compat). Dependabot does not read those
+    # comments, so we must gate each one here.
+    #   vcert 0.18+ hard-pins pynacl/cryptography/six against the rest of CI
+    #   pylint >= 3.2 adds default-on E0601/E0602/E0606; audit pending
+    #   pytest >= 9 needs pytest-salt-factories compat review
+    #   pip >= 26 ships a vendored pygments missing modeline on cpython 3.14
+    #   setuptools-scm >= 10 splits version inference, breaks --no-binary=:all:
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
-        versions: [">=4.0.0"]
+        versions: [">=3.2.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
     groups:
       all-pip-updates:
         patterns:
@@ -42,7 +56,13 @@ updates:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
-        versions: [">=4.0.0"]
+        versions: [">=3.2.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
 
   # 3007.x: security advisories only.
   - package-ecosystem: "pip"
@@ -60,7 +80,13 @@ updates:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
-        versions: [">=4.0.0"]
+        versions: [">=3.2.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
 
   # 3006.x: security advisories only.
   - package-ecosystem: "pip"
@@ -78,4 +104,10 @@ updates:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
       - dependency-name: "pylint"
-        versions: [">=4.0.0"]
+        versions: [">=3.2.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
