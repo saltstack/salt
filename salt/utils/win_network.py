@@ -64,9 +64,11 @@ if IS_WINDOWS:
             # pylint: enable=unused-import
             from System.Net import NetworkInformation
             from System.Net.NetworkInformation import NetworkInterfaceComponent
-        except (ImportError, RuntimeError):
+        except (ImportError, OSError, RuntimeError):
             # ImportError: pythonnet may be absent (e.g. Python versions for
             # which upstream has no released wheel yet).
+            # OSError: clr_loader has no ARM64 ClrLoader.dll; loading the
+            # amd64 DLL on Windows ARM fails with Win32 0xc1.
             # RuntimeError: in some environments, using the Relenv OneDir
             # package, we can't load pythonnet. Uninstalling and reinstalling
             # pythonnet fixes the issue, but it is a manual step. Until we

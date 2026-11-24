@@ -1043,6 +1043,60 @@ def test__repo_process_pkg_sls():
         )
 
 
+def test__repo_process_pkg_sls_skips_none_version_list():
+    """
+    Null version maps (arch-gated Jinja stubs) must not raise or fail the SLS.
+    """
+    rendered = {
+        "goodpkg": {
+            "1.0": {
+                "full_name": "Good Package",
+                "installer": "https://example.com/good.msi",
+            }
+        },
+        "arm_stub": None,
+    }
+    ret = {"repo": {}, "errors": {}, "name_map": {}}
+    patch_render = patch("salt.loader.render")
+    patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
+    patch_compile = patch(
+        "salt.template.compile_template", return_value=rendered
+    )
+    with patch_opts, patch_render, patch_compile:
+        result = win_pkg._repo_process_pkg_sls(
+            filename="stub.sls",
+            short_path_name="stub.sls",
+            ret=ret,
+            successful_verbose={},
+            saltenv="base",
+        )
+    assert result is not False
+    assert "stub.sls" not in ret.get("errors", {})
+    assert "goodpkg" in ret["repo"]
+    assert "arm_stub" not in ret["repo"]
+
+
+def test__repo_process_pkg_sls_rejects_non_dict_version_list():
+    """Non-dict version maps are recorded as errors without raising."""
+    rendered = {"badpkg": ["not", "a", "dict"]}
+    ret = {"repo": {}, "errors": {}, "name_map": {}}
+    patch_render = patch("salt.loader.render")
+    patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
+    patch_compile = patch(
+        "salt.template.compile_template", return_value=rendered
+    )
+    with patch_opts, patch_render, patch_compile:
+        win_pkg._repo_process_pkg_sls(
+            filename="bad.sls",
+            short_path_name="bad.sls",
+            ret=ret,
+            successful_verbose={},
+            saltenv="base",
+        )
+    assert "bad.sls" in ret["errors"]
+    assert "badpkg" not in ret["repo"]
+
+
 def test_pkg_install_uses_opts_saltenv():
     """
     When ``saltenv`` is not passed as a kwarg, install() must derive it from

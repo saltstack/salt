@@ -1500,6 +1500,26 @@ def _repo_process_pkg_sls(
                 )
                 errors.append(f"package '{pkgname}' already defined")
                 break
+            # Arch-gated winrepo Jinja often leaves ``pkgname:`` / null when
+            # the package does not apply (e.g. AMD64-only defs on ARM64).
+            # Skip those without failing the whole refresh.
+            if version_list is None:
+                log.debug(
+                    "package '%s' within '%s' has no versions, skipping",
+                    pkgname,
+                    short_path_name,
+                )
+                continue
+            if not isinstance(version_list, dict):
+                log.error(
+                    "package '%s' within '%s', versions are not defined as a dictionary",
+                    pkgname,
+                    short_path_name,
+                )
+                errors.append(
+                    f"package '{pkgname}', versions are not defined as a dictionary"
+                )
+                continue
             for version_str, repodata in version_list.items():
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, str):
@@ -1535,9 +1555,15 @@ def _repo_process_pkg_sls(
         if errors:
             ret.setdefault("errors", {})[short_path_name] = errors
         else:
-            ret.setdefault("repo", {}).update(config)
+            # Exclude null / non-dict stubs skipped above (arch-gated Jinja).
+            cleaned = {
+                pkgname: versions
+                for pkgname, versions in config.items()
+                if isinstance(versions, dict)
+            }
+            ret.setdefault("repo", {}).update(cleaned)
             ret.setdefault("name_map", {}).update(revmap)
-            successful_verbose[short_path_name] = list(config.keys())
+            successful_verbose[short_path_name] = list(cleaned.keys())
     elif config:
         return _failed_compile("Compiled contents", "not a dictionary/hash")
     else:
