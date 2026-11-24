@@ -679,6 +679,191 @@ NEW_RULE_CASES = [
         "S702",
         'from mako.template import Template\n\nTemplate("${ data }")  # Unescaped: vulnerable to XSS.\n',
     ),
+    # Rules for libraries Salt does not use (Airflow, Django, FastAPI, gettext, NumPy,
+    # pandas, type stubs). Nothing in the code breaks them.
+    (
+        "AIR001",
+        'from airflow.operators import PythonOperator\n\n\nincorrect_name = PythonOperator(task_id="my_task")\n',
+    ),
+    (
+        "AIR002",
+        'from airflow import DAG\n\n\n# Using the implicit default schedule.\ndag = DAG(dag_id="my_dag")\n',
+    ),
+    (
+        "AIR301",
+        "from airflow.utils.dates import days_ago\n\n\nyesterday = days_ago(today, 1)\n",
+    ),
+    (
+        "AIR302",
+        "from airflow.auth.managers.fab.fab_auth_manager import FabAuthManager\n\nfab_auth_manager_app = FabAuthManager().get_fastapi_app()\n",
+    ),
+    (
+        "AIR303",
+        'from airflow.lineage.hook import HookLineageCollector\n\ncollector = HookLineageCollector()\n# Passing positional arguments will raise a runtime error in Airflow 3.0\ncollector.create_asset("s3://bucket/key")\n',
+    ),
+    ("AIR311", 'from airflow import Dataset\n\n\nDataset(uri="test://test/")\n'),
+    (
+        "AIR312",
+        'from airflow.operators.python import PythonOperator\n\n\ndef print_context(ds=None, **kwargs):\n    print(kwargs)\n    print(ds)\n\n\nprint_the_context = PythonOperator(\n    task_id="print_the_context", python_callable=print_context\n)\n',
+    ),
+    (
+        "DJ001",
+        "from django.db import models\n\n\nclass MyModel(models.Model):\n    field = models.CharField(max_length=255, null=True)\n",
+    ),
+    (
+        "DJ003",
+        'from django.shortcuts import render\n\n\ndef index(request):\n    posts = Post.objects.all()\n    return render(request, "app/index.html", locals())\n',
+    ),
+    (
+        "DJ006",
+        'from django.forms import ModelForm\n\n\nclass PostForm(ModelForm):\n    class Meta:\n        model = Post\n        exclude = ["author"]\n',
+    ),
+    (
+        "DJ007",
+        'from django.forms import ModelForm\n\n\nclass PostForm(ModelForm):\n    class Meta:\n        model = Post\n        fields = "__all__"\n',
+    ),
+    (
+        "DJ008",
+        "from django.db import models\n\n\nclass MyModel(models.Model):\n    field = models.CharField(max_length=255)\n",
+    ),
+    (
+        "DJ012",
+        'from django.db import models\n\n\nclass StrBeforeFieldModel(models.Model):\n    class Meta:\n        verbose_name = "test"\n        verbose_name_plural = "tests"\n\n    def __str__(self):\n        return "foobar"\n\n    first_name = models.CharField(max_length=32)\n    last_name = models.CharField(max_length=40)\n',
+    ),
+    (
+        "DJ013",
+        "from django.dispatch import receiver\nfrom django.db.models.signals import post_save\n\n\n@transaction.atomic\n@receiver(post_save, sender=MyModel)\ndef my_handler(sender, instance, created, **kwargs):\n    pass\n",
+    ),
+    (
+        "FAST001",
+        'from fastapi import FastAPI\nfrom pydantic import BaseModel\n\napp = FastAPI()\n\n\nclass Item(BaseModel):\n    name: str\n\n\n@app.post("/items/", response_model=Item)\nasync def create_item(item: Item) -> Item:\n    return item\n',
+    ),
+    (
+        "FAST002",
+        'from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\n\nasync def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):\n    return {"q": q, "skip": skip, "limit": limit}\n\n\n@app.get("/items/")\nasync def read_items(commons: dict = Depends(common_parameters)):\n    return commons\n',
+    ),
+    (
+        "FAST003",
+        'from fastapi import FastAPI\n\napp = FastAPI()\n\n\n@app.get("/things/{thing_id}")\nasync def read_thing(query: str): ...\n',
+    ),
+    (
+        "INT001",
+        'from gettext import gettext as _\n\nname = "Maria"\n_(f"Hello, {name}!")  # Looks for "Hello, Maria!".\n',
+    ),
+    (
+        "INT002",
+        'from gettext import gettext as _\n\nname = "Maria"\n_("Hello, {}!".format(name))  # Looks for "Hello, Maria!".\n',
+    ),
+    (
+        "INT003",
+        'from gettext import gettext as _\n\nname = "Maria"\n_("Hello, %s!" % name)  # Looks for "Hello, Maria!".\n',
+    ),
+    ("NPY001", "import numpy as np\n\nnp.int\n"),
+    ("NPY002", "import numpy as np\n\nnp.random.seed(1337)\nnp.random.normal()\n"),
+    ("NPY003", "import numpy as np\n\nnp.alltrue([True, False])\n"),
+    (
+        "NPY201",
+        "import numpy as np\n\narr1 = [np.Infinity, np.NaN, np.nan, np.PINF, np.inf]\narr2 = [np.float_(1.5), np.float64(5.1)]\nnp.round_(arr2)\n",
+    ),
+    (
+        "PD002",
+        'import pandas as pd\n\nstudents = pd.read_csv("students.csv")\nstudents.sort_values("name", inplace=True)\n',
+    ),
+    (
+        "PD003",
+        'import pandas as pd\n\nanimals_df = pd.read_csv("animals.csv")\npd.isnull(animals_df)\n',
+    ),
+    (
+        "PD004",
+        'import pandas as pd\n\nanimals_df = pd.read_csv("animals.csv")\npd.notnull(animals_df)\n',
+    ),
+    (
+        "PD007",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.ix[0]  # 0th row or row with label 0?\n',
+    ),
+    (
+        "PD008",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.at["Maria"]\n',
+    ),
+    (
+        "PD009",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.iat[0]\n',
+    ),
+    (
+        "PD010",
+        'import pandas as pd\n\ndf = pd.read_csv("cities.csv")\ndf.pivot(index="city", columns="year", values="population")\n',
+    ),
+    (
+        "PD011",
+        'import pandas as pd\n\nanimals = pd.read_csv("animals.csv").values  # Ambiguous.\n',
+    ),
+    (
+        "PD012",
+        'import pandas as pd\n\ncities_df = pd.read_table("cities.csv", sep=",")\n',
+    ),
+    (
+        "PD013",
+        'import pandas as pd\n\ncities_df = pd.read_csv("cities.csv")\ncities_df.set_index("city").stack()\n',
+    ),
+    (
+        "PD015",
+        'import pandas as pd\n\ncats_df = pd.read_csv("cats.csv")\ndogs_df = pd.read_csv("dogs.csv")\nrabbits_df = pd.read_csv("rabbits.csv")\npets_df = pd.merge(pd.merge(cats_df, dogs_df), rabbits_df)  # Hard to read.\n',
+    ),
+    (
+        "PD101",
+        'import pandas as pd\n\ndata = pd.Series(range(1000))\nif data.nunique() <= 1:\n    print("Series is constant")\n',
+    ),
+    ("PYI013", "class Foo:\n    ...\n    value: int\n"),
+    ("PYI016", "foo: str | str\n"),
+    (
+        "PYI018",
+        'import typing\nimport typing_extensions\n\n_T = typing.TypeVar("_T")\n_Ts = typing_extensions.TypeVarTuple("_Ts")\n',
+    ),
+    (
+        "PYI019",
+        'from typing import TypeVar\n\n_S = TypeVar("_S", bound="Foo")\n\nclass Foo:\n    def __new__(cls: type[_S], *args: str, **kwargs: int) -> _S: ...\n    def foo(self: _S, arg: bytes) -> _S: ...\n    @classmethod\n    def bar(cls: type[_S], arg: int) -> _S: ...\n',
+    ),
+    ("PYI030", "from typing import Literal\n\nfield: Literal[1] | Literal[2] | str\n"),
+    (
+        "PYI032",
+        "from typing import Any\n\nclass Foo:\n    def __eq__(self, obj: Any) -> bool: ...\n",
+    ),
+    ("PYI041", "def foo(x: float | int | str) -> None: ...\n"),
+    ("PYI042", "from typing import TypeAlias\n\ntype_alias_name: TypeAlias = int\n"),
+    ("PYI043", "from typing import TypeAlias\n\n_MyTypeT: TypeAlias = int\n"),
+    (
+        "PYI045",
+        "import collections.abc\n\n\nclass Klass:\n    def __iter__(self) -> collections.abc.Iterable[str]: ...\n",
+    ),
+    (
+        "PYI046",
+        "import typing\n\nclass _PrivateProtocol(typing.Protocol):\n    foo: int\n",
+    ),
+    ("PYI047", "import typing\n\n_UnusedTypeAlias: typing.TypeAlias = int\n"),
+    (
+        "PYI049",
+        "import typing\n\nclass _UnusedPrivateTypedDict(typing.TypedDict):\n    foo: list[int]\n",
+    ),
+    ("PYI051", 'from typing import Literal\n\nx: Literal["A", b"B"] | str\n'),
+    (
+        "PYI056",
+        'import sys\n\n__all__ = ["A", "B"]\n\nif sys.version_info >= (3, 10):\n    __all__.append("C")\n\nif sys.version_info >= (3, 11):\n    __all__.remove("B")\n',
+    ),
+    ("PYI057", "from typing import ByteString\n"),
+    (
+        "PYI059",
+        'from typing import Generic, TypeVar\n\nT = TypeVar("T")\n\nclass Foo(Generic[T], list[T]): ...\n',
+    ),
+    (
+        "PYI061",
+        'from typing import Literal\n\nLiteral[None]\nLiteral[1, 2, 3, "foo", 5, None]\n',
+    ),
+    ("PYI062", 'from typing import Literal\n\nfoo: Literal["a", "b", "a"]\n'),
+    ("PYI063", "def foo(__x: int) -> None: ...\n"),
+    (
+        "PYI064",
+        "from typing import Final, Literal\n\nx: Final[Literal[42]]\ny: Final[Literal[42]] = 42\n",
+    ),
 ]
 
 
@@ -706,6 +891,69 @@ def test_top_level_module_named_like_a_standard_library_module_is_reported(
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert "A005" in result.stdout
+
+
+# Rules that only look at the type stub files (.pyi).
+STUB_RULE_CASES = [
+    ("PYI001", 'from typing import TypeVar\n\nT = TypeVar("T")\n'),
+    ("PYI002", "import sys\n\nif (3, 10) <= sys.version_info < (3, 12): ...\n"),
+    ("PYI003", 'import sys\n\nif sys.version_info[0] == "2": ...\n'),
+    ("PYI004", "import sys\n\nif sys.version_info >= (3, 4, 3): ...\n"),
+    ("PYI005", "import sys\n\nif sys.version_info[:2] == (3,): ...\n"),
+    (
+        "PYI007",
+        'import sys\n\nif sys.platform == "xunil"[::-1]:\n    # Linux specific definitions\n    ...\nelse:\n    # Posix specific definitions\n    ...\n',
+    ),
+    ("PYI008", 'import sys\n\nif sys.platform == "linus": ...\n'),
+    ("PYI009", "def foo(bar: int) -> list[int]: pass\n"),
+    ("PYI010", "def double(x: int) -> int:\n    return x * 2\n"),
+    ("PYI011", "def foo(arg: list[int] = list(range(10_000))) -> None: ...\n"),
+    ("PYI012", "class MyClass:\n    x: int\n    pass\n"),
+    ("PYI014", "def foo(arg=bar()) -> None: ...\n"),
+    ("PYI015", "foo: str = bar()\n"),
+    (
+        "PYI017",
+        "from typing import TypeAlias\n\na = b = int\n\nclass Klass: ...\n\nKlass.X: TypeAlias = int\n",
+    ),
+    ("PYI020", 'def function() -> "int": ...\n'),
+    (
+        "PYI021",
+        'def func(param: int) -> str:\n    """This is a docstring."""\n    ...\n',
+    ),
+    ("PYI026", "Vector = list[float]\n"),
+    ("PYI029", "class Foo:\n    def __repr__(self) -> str: ...\n"),
+    ("PYI033", "x = 1  # type: int\n"),
+    ("PYI035", "__all__: list[str]\n"),
+    ("PYI044", "from __future__ import annotations\n"),
+    ("PYI048", "def function():\n    x = 1\n    y = 2\n    return x + y\n"),
+    ("PYI050", "from typing import NoReturn\n\ndef foo(x: NoReturn): ...\n"),
+    ("PYI052", "field = 0\n"),
+    (
+        "PYI053",
+        'def foo(arg: str = "51 character stringgggggggggggggggggggggggggggggggg") -> None: ...\n',
+    ),
+    (
+        "PYI054",
+        "def foo(arg: int = 693568516352839939918568862861217771399698285293568) -> None: ...\n",
+    ),
+    ("PYI055", "field: type[int] | type[float] | str\n"),
+    (
+        "PYI058",
+        "from typing import Generator\n\nclass Foo:\n    def __iter__(self) -> Generator[int, None, None]: ...\n",
+    ),
+    (
+        "PYI066",
+        "import sys\n\nif sys.version_info < (3, 10):\n    def read_data(x, *, preserve_order=True): ...\n\nelse:\n    def read_data(x): ...\n",
+    ),
+]
+
+
+@pytest.mark.parametrize(("code", "source"), STUB_RULE_CASES, ids=lambda v: v[:8])
+def test_rules_for_stub_files(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.pyi", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
 
 
 def test_module_importing_itself_is_reported(repo: Path) -> None:
