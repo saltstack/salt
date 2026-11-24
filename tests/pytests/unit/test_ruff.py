@@ -205,7 +205,7 @@ def test_never_autofixes_files(repo: Path) -> None:
     write(
         repo,
         "pyproject.toml",
-        CONFIG.replace("target-version", "fix = true\ntarget-version"),
+        CONFIG.replace("\ntarget-version", "\nfix = true\ntarget-version", 1),
     )
     source = "import sys\n"
     write(repo, "new.py", source)
@@ -507,10 +507,6 @@ NEW_RULE_CASES = [
     ("EXE004", " #!/usr/bin/env python3\n"),
     ("EXE005", "foo = 1\n#!/usr/bin/env python3\n"),
     (
-        "FA100",
-        "from typing import List, Dict, Optional\n\n\ndef func(obj: Dict[str, Optional[int]]) -> None: ...\n",
-    ),
-    (
         "FURB163",
         "import math\n\nmath.log(4, math.e)\nmath.log(4, 2)\nmath.log(4, 10)\n",
     ),
@@ -622,7 +618,6 @@ NEW_RULE_CASES = [
         "TC005",
         'from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    pass\n\nprint("Hello, world!")\n',
     ),
-    ("TC010", 'var: "Foo" | None\n\n\nclass Foo: ...\n'),
     ("TID252", "from .. import foo\n"),
     ("W291", "x = 1 \n"),
     ("W292", "x = 1"),
@@ -733,10 +728,6 @@ NEW_RULE_CASES = [
     (
         "DJ013",
         "from django.dispatch import receiver\nfrom django.db.models.signals import post_save\n\n\n@transaction.atomic\n@receiver(post_save, sender=MyModel)\ndef my_handler(sender, instance, created, **kwargs):\n    pass\n",
-    ),
-    (
-        "FAST001",
-        'from fastapi import FastAPI\nfrom pydantic import BaseModel\n\napp = FastAPI()\n\n\nclass Item(BaseModel):\n    name: str\n\n\n@app.post("/items/", response_model=Item)\nasync def create_item(item: Item) -> Item:\n    return item\n',
     ),
     (
         "FAST002",
@@ -1051,10 +1042,7 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("B011", "def test_f():\n    assert False\n"),
     # Rules enabled in the second wave: a few existing violations. Only new ones
     # block a PR.
-    (
-        "A003",
-        "class Class:\n    @staticmethod\n    def list() -> None:\n        pass\n\n    @staticmethod\n    def repeat(value: int, times: int) -> list[int]:\n        return [value] * times\n",
-    ),
+    ("A003", "class C:\n    def next(self):\n        pass\n\n    __next__ = next\n"),
     ("A004", 'from rich import print\n\nprint("Some message")\n'),
     ("B028", 'import warnings\n\nwarnings.warn("This is a warning")\n'),
     ("C400", "list(f(x) for x in foo)\nlist(x for x in foo)\nlist((x for x in foo))\n"),

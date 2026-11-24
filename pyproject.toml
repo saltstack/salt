@@ -62,8 +62,8 @@ known_third_party = [
 ]
 
 [tool.ruff]
-# Match the minimum Python version declared by this project.
-target-version = "py38"
+# Salt 3008 runs on the Python 3.14 that it ships.
+target-version = "py314"
 line-length = 88
 extend-exclude = ["salt/ext", "templates"]
 # Names Salt injects into modules at load time. Keep in sync with
@@ -95,6 +95,12 @@ builtins = [
     "__resource_funcs__",
     "napalm_device",
 ]
+
+[tool.ruff.per-file-target-version]
+# These files go into the salt-ssh thin and run on the Python of the target host.
+"salt/client/ssh/ssh_py_shim.py" = "py37"
+"salt/client/ssh/wrapper/pillar.py" = "py37"
+"salt/utils/systemd.py" = "py37"
 
 [tool.ruff.lint]
 # Only new violations block a PR (see tools/precommit/ruff.py), so a rule can be
@@ -258,7 +264,9 @@ ignore = [
     "B905",  # zip-without-explicit-strict
     "B911",  # batched-without-explicit-strict
     "B912",  # map-without-explicit-strict
+    "FA100",  # only reported for Python 3.8; nothing to report on 3.14
     "FA102",  # future-required-type-annotation
+    "FAST001",  # does not report on the 3.14 version, and Salt does not use FastAPI
     "FURB161",  # bit-count
     "FURB162",  # fromisoformat-replace-z
     "FURB188",  # slice-to-remove-prefix-or-suffix
@@ -268,6 +276,7 @@ ignore = [
     "RUF007",  # zip-instead-of-pairwise
     "RUF053",  # class-with-mixed-type-vars
     "TC003",  # typing-only-standard-library-import
+    "TC010",  # only reported up to Python 3.13; annotations are not evaluated at once on 3.14
     "UP001",  # useless-metaclass-type
     "UP003",  # type-of-primitive
     "UP004",  # useless-object-inheritance
