@@ -5966,7 +5966,21 @@ class Minion(MinionBase):
                 self.destroy()
             finally:
                 if not self.io_loop.is_closed():
-                    self.io_loop.close()
+                    try:
+                        # Same hazard as ``MinionManager.tune_in``: a
+                        # background task (sign-in, mine send, reconnect)
+                        # that is still waiting when the loop stops only
+                        # closes its sockets while it unwinds after a
+                        # cancel, which needs more loop iterations.
+                        # Drain here so a later ``gc.collect()`` does not
+                        # block in ``zmq_ctx_term()`` (#70624, #70857).
+                        salt.utils.asynchronous.cancel_and_drain(
+                            self.io_loop, list(self._background_tasks)
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.warning("Error draining the event loop", exc_info=True)
+                    finally:
+                        self.io_loop.close()
 
     async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
@@ -6986,7 +7000,19 @@ class SyndicManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
-                self.io_loop.close()
+                try:
+                    # Same hazard as ``MinionManager.tune_in``: drain
+                    # the syndic's background tasks so their sockets
+                    # close before the loop does, and a later
+                    # ``gc.collect()`` doesn't block in
+                    # ``zmq_ctx_term()`` (#70624, #70857).
+                    salt.utils.asynchronous.cancel_and_drain(
+                        self.io_loop, list(self._background_tasks)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning("Error draining the event loop", exc_info=True)
+                finally:
+                    self.io_loop.close()
 
     async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
