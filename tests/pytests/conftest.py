@@ -575,7 +575,7 @@ def tmp_path_world_rw(request):
     """
     Temporary path which is world read/write for tests that run under a different account
     """
-    tempdir_path = pathlib.Path(basetemp=tempfile.gettempdir()).resolve()
+    tempdir_path = pathlib.Path(tempfile.gettempdir()).resolve()
     path = tempdir_path / f"world-rw-{id(request.node)}"
     path.mkdir(exist_ok=True)
     path.chmod(0o777)
