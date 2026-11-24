@@ -2,7 +2,7 @@
 Description=The Salt Minion
 Documentation=man:salt-minion(1) file:///usr/share/doc/salt/html/contents.html https://docs.saltproject.io/en/latest/contents.html
 After=network.target salt-master.service
-StartLimitBurst=3
+StartLimitBurst=10
 StartLimitIntervalSec=300
 
 [Service]
