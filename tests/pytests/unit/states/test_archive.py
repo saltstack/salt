@@ -663,11 +663,13 @@ def test_extracted_skips_symlinked_implicit_top_level_dirs(tmp_path):
     outside.mkdir()
     name.mkdir()
     (name / ".config").symlink_to(outside)
+    # Only .cache/a is really extracted, as on Python 3.12+ the "data" tarfile
+    # filter refuses to extract .config/a through the symlink. archive.list
+    # still reports both, which is what decides where ownership is enforced.
     with tarfile.open(source, "w:gz") as tar:
-        for dirname in (".cache/a", ".config/a"):
-            info = tarfile.TarInfo(name=dirname)
-            info.type = tarfile.DIRTYPE
-            tar.addfile(info)
+        info = tarfile.TarInfo(name=".cache/a")
+        info.type = tarfile.DIRTYPE
+        tar.addfile(info)
     contents = {
         "dirs": [".cache/a/", ".config/a/"],
         "files": [],
