@@ -611,6 +611,67 @@ def _is_process_alive(proc):
         return False
 
 
+# Upper bound on how long ``_drain_pending_tasks_before_close`` will wait
+# for cancelled asyncio tasks to finish unwinding during shutdown.  A
+# well-behaved task reaches its ``async with __aexit__`` in a handful of
+# loop iterations (sub-millisecond); the timeout is a defensive cap for
+# a misbehaving task that swallows ``CancelledError``.  The bound is the
+# worst-case addition to graceful stop time.
+_SHUTDOWN_DRAIN_TIMEOUT = 5.0
+
+
+def _drain_pending_tasks_before_close(io_loop):
+    """
+    Cancel and await every outstanding task on ``io_loop`` before the
+    caller calls ``io_loop.close()``.
+
+    Without this, ``loop.close()`` discards any task that was mid-flight
+    at shutdown.  For a task inside ``async with AsyncReqChannel`` (or
+    any other ``async with`` on a zmq-backed resource) that means the
+    ``__aexit__`` -- which calls ``close_async()`` to drain the send
+    coroutine and close the REQ socket -- never runs.  The socket stays
+    open, the REQ ``zmq.Context`` is kept alive by the orphaned task's
+    frame, and on the next ``gc.collect()`` the context's
+    ``weakref.finalize`` callback blocks in ``zmq_ctx_term()`` waiting
+    for the socket to close -- the minion deadlock in #70857 (same
+    symptom as #70353, #70624).
+
+    Draining here fixes the hazard class in one place rather than
+    chasing every ``async with``-owning coroutine individually.  Both
+    #70857's call paths are covered: the "cancel-then-close" path where
+    ``destroy()`` ran before ``tune_in``'s ``finally``, and the
+    "close-then-cancel" path where ``tune_in`` exits by exception
+    before any ``destroy()`` ran.
+
+    Cancellation is cooperative; a task that swallows ``CancelledError``
+    or sits in blocking C code could stall this drain.  The bounded
+    ``asyncio.wait`` timeout (``_SHUTDOWN_DRAIN_TIMEOUT``) ensures the
+    worst case is a delayed (but not blocked) shutdown; any remaining
+    pending tasks are then dropped by ``loop.close()`` exactly as
+    today.
+    """
+    try:
+        asyncio_loop = io_loop.asyncio_loop
+    except AttributeError:
+        return
+    if asyncio_loop.is_closed():
+        return
+    try:
+        pending = [t for t in asyncio.all_tasks(asyncio_loop) if not t.done()]
+    except RuntimeError:
+        # No running loop context and ``asyncio.all_tasks`` can't infer
+        # one.  Nothing to drain from our perspective.
+        return
+    if not pending:
+        return
+    for task in pending:
+        task.cancel()
+    try:
+        io_loop.run_sync(lambda: asyncio.wait(pending, timeout=_SHUTDOWN_DRAIN_TIMEOUT))
+    except Exception:  # pylint: disable=broad-except
+        log.debug("Error draining pending tasks before loop close", exc_info=True)
+
+
 def load_args_and_kwargs(func, args, data=None, ignore_invalid=False):
     """
     Detect the args and kwargs that need to be passed to a function call, and
@@ -2161,6 +2222,7 @@ class MinionManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
+                _drain_pending_tasks_before_close(self.io_loop)
                 self.io_loop.close()
 
     @property
@@ -2247,7 +2309,11 @@ class MinionManager(MinionBase):
             self.event.destroy()
             self.event = None
 
-        # Call the parent signal handler
+        # Call the parent signal handler.  It typically raises
+        # ``SystemExit``, which propagates out of this coroutine and
+        # ``run_forever``; ``tune_in``'s ``finally`` then calls
+        # ``_drain_pending_tasks_before_close`` to await any task
+        # ``minion.destroy()`` cancelled above (the fix for #70857).
         parent_sig_handler(signum, None)
 
 
@@ -5944,6 +6010,7 @@ class Minion(MinionBase):
                 self.destroy()
             finally:
                 if not self.io_loop.is_closed():
+                    _drain_pending_tasks_before_close(self.io_loop)
                     self.io_loop.close()
 
     async def _handle_payload(self, payload):
@@ -6964,6 +7031,7 @@ class SyndicManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
+                _drain_pending_tasks_before_close(self.io_loop)
                 self.io_loop.close()
 
     async def _process_event(self, raw):
