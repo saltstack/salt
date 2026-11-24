@@ -128,6 +128,7 @@ extend-select = [
     "ISC002",  # multi-line-implicit-string-concatenation
     "N811",  # constant-imported-as-non-constant
     "N814",  # camelcase-imported-as-constant
+    "Q000",  # bad-quotes-inline-string
     "Q001",  # bad-quotes-multiline-string
     "Q002",  # bad-quotes-docstring
     "Q003",  # avoidable-escaped-quote
@@ -190,7 +191,6 @@ ignore = [
 
     # Report nothing without a setting, or cannot be triggered on their own.
     # They are to be enabled together with their setting.
-    "E101",  # mixed-spaces-and-tabs
     "E902",  # io-error
     "I002",  # missing-required-import
     "ICN002",  # banned-import-alias
@@ -341,8 +341,9 @@ ignore = [
 # suite is removed, so replacing this one would not protect anything.
 # S602, S301 and S106 are for the code that handles data from outside. The tests run
 # commands they wrote themselves, unpickle what they pickled and use made-up passwords.
-# The directories of the tests and the scripts are not packages (INP001).
-"tests/**" = ["F841", "B011", "S106", "S301", "S602", "INP001"]
+# The directories of the tests and the scripts are not packages (INP001). The tests
+# have single quoted strings that black does not touch (Q000); the product code has none.
+"tests/**" = ["F841", "B011", "Q000", "S106", "S301", "S602", "INP001"]
 "tools/**" = ["INP001"]
 ".github/**" = ["INP001"]
 

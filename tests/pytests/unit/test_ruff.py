@@ -977,6 +977,10 @@ NEW_RULE_CASES = [
         "class GenericClass[_T]:\n    var: _T\n\n\ndef generic_function[_T](var: _T) -> list[_T]:\n    return var[0]\n",
     ),
     ("UP050", "class Foo(metaclass=type): ...\n"),
+    # Mixed tabs and spaces in the continuation lines of a bracket, which Python accepts.
+    ("E101", "x = [\n\t    1,\n    \t2,\n]\n"),
+    # Single quoted strings. The product code has none; the tests are exempt, see below.
+    ("Q000", "foo = 'bar'\n"),
 ]
 
 
@@ -1088,6 +1092,7 @@ EXEMPT_CASES = [
     ("tests/newdir/new.py", "value = 1\n"),
     ("tools/newdir/new.py", "value = 1\n"),
     (".github/scripts/new.py", "value = 1\n"),
+    ("tests/pytests/new.py", "value = 'single'\n"),
 ]
 
 
