@@ -1401,6 +1401,14 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         'letters = "ABCD"\nzip(letters, letters[1:])  # ("A", "B"), ("B", "C"), ("C", "D")\n',
     ),
     ("S106", 'connect_to_server(password="hunter2")\n'),
+    # Replacements that give the same result: the old name is the same object.
+    (
+        "FURB188",
+        'def example(filename: str, text: str):\n    filename = filename[:-4] if filename.endswith(".txt") else filename\n\n    if text.startswith("pre"):\n        text = text[3:]\n',
+    ),
+    ("UP017", "import datetime\n\ndatetime.timezone.utc\n"),
+    ("UP024", "raise IOError\n"),
+    ("UP041", "import asyncio\n\nraise asyncio.TimeoutError\n"),
 ]
 
 

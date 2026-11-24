@@ -263,7 +263,6 @@ ignore = [
     "FA100",  # only reported for Python 3.8; nothing to report on 3.14
     "FA102",  # future-required-type-annotation
     "FAST001",  # does not report on the 3.14 version, and Salt does not use FastAPI
-    "FURB188",  # slice-to-remove-prefix-or-suffix
     "I001",  # unsorted-imports
     "PERF203",  # try-except-in-loop
     "PTH115",  # os-readlink
@@ -273,10 +272,8 @@ ignore = [
     "UP010",  # unnecessary-future-import
     "UP013",  # convert-typed-dict-functional-to-class
     "UP015",  # redundant-open-modes
-    "UP017",  # datetime-timezone-utc
     "UP018",  # native-literals
     "UP022",  # replace-stdout-stderr
-    "UP024",  # os-error-alias
     "UP026",  # deprecated-mock-import
     "UP030",  # format-literals
     "UP031",  # printf-string-formatting
@@ -284,7 +281,6 @@ ignore = [
     "UP035",  # deprecated-import
     "UP036",  # outdated-version-block
     "UP037",  # quoted-annotation
-    "UP041",  # timeout-error-alias
     "UP042",  # replace-str-enum
     "UP047",  # non-pep695-generic-function
 
