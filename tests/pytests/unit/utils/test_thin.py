@@ -359,6 +359,33 @@ def test_add_dep_path(thin_ctx):
     assert container == [("/foo/bar.py", None), ("/something/else", None)]
 
 
+def test_add_dep_namespace_package(thin_ctx):
+    """
+    Test thin._add_dependency with a package without __file__
+    """
+    container = [("/already/there", None)]
+    ns_pkg = types.ModuleType("ns_pkg")
+    ns_pkg.__file__ = None
+    ns_pkg.__path__ = ["/site/one/ns_pkg", "/site/two/ns_pkg", "/already/there"]
+    thin._add_dependency(container, ns_pkg)
+
+    assert container == [
+        ("/already/there", None),
+        ("/site/one/ns_pkg", None),
+        ("/site/two/ns_pkg", None),
+    ]
+
+
+def test_add_dep_no_file_no_path(thin_ctx):
+    """
+    Test thin._add_dependency with an object without __file__ or
+    __path__ does not fail and adds nothing to the container
+    """
+    container = []
+    thin._add_dependency(container, types.ModuleType("nothing"))
+    assert container == []
+
+
 def test_thin_path(thin_ctx):
     """
     Test thin.thin_path returns the expected path.
