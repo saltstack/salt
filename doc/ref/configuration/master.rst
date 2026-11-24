@@ -5277,6 +5277,27 @@ configuration options to fully understand the tunable parameters and their impli
     Setting ``pillar_cache: True`` has no effect on
     :ref:`targeting minions with pillar <targeting-pillar>`.
 
+Compiled pillars are stored in the ``pillar_compile`` cache bank, using
+``pillar.cache_driver`` when configured. The separate ``pillar`` bank holds the
+pillar snapshot that :ref:`pillar targeting <targeting-pillar>` reads, stored
+under the plain minion id in the default cache backend.
+
+With ``minion_data_cache`` enabled, the snapshot is refreshed when a minion
+fetches its own regular pillar: on startup, on ``saltutil.refresh_pillar`` and
+during a highstate. This also happens when the compiled pillar was already
+cached. One-off queries such as ``pillar.items pillarenv=dev``, runs that use
+another ``pillarenv`` than the minion config (``state.apply pillarenv=dev``),
+requests with a ``pillar`` override, and direct compilation such as
+``pillar.show_pillar`` do not change the snapshot. Minions older than this change always refresh it.
+
+After upgrading, old compilation entries in the ``pillar`` bank are not reused;
+each requested minion/environment combination is compiled again on first use.
+``pillar.clear_pillar_cache`` and ``pillar.show_pillar_cache`` work on the
+compilation cache and need ``pillar_cache`` enabled. Use ``cache.clear_pillar``
+to clear the targeting snapshots; the next regular pillar fetch of a minion
+restores its snapshot. The asynchronous master request path also writes
+snapshots; its compilation caching support is unchanged.
+
 .. conf_master:: pillar_cache_ttl
 
 ``pillar_cache_ttl``
