@@ -1,4 +1,4 @@
-"""
+r"""
 Send events based on process status.
 
 The config below sets up beacons to check that
@@ -16,7 +16,7 @@ IIS App Pools).
              status: running
           - w3svc.exe:
              status: running
-             username: "DOMAIN\\username1"
+             username: 'DOMAIN\username1'
           - mysql:
              status: stopped
 
@@ -85,7 +85,7 @@ def validate(config: dict[str, Any]) -> tuple[bool, str]:
 
 
 def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
-    """
+    r"""
     Search for given process(es) by name and optionally username, and return
     their status along with per-instance details.
 
@@ -111,7 +111,7 @@ def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
                  status: running
               - w3svc.exe:
                  status: running
-                 username: "DOMAIN\\username1"
+                 username: 'DOMAIN\username1'
               - mysql:
                  status: stopped
 
