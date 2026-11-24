@@ -51,3 +51,55 @@ def test_salt_minion_service_killmode_is_mixed():
     """
     parser = _read_unit("salt-minion.service")
     assert parser.get("Service", "KillMode", fallback=None) == "mixed"
+
+
+def test_salt_minion_service_restarts_on_failure():
+    """
+    Regression test for https://github.com/saltstack/salt/issues/69182.
+
+    An unhandled exception (or worker OOM) in ``salt-minion`` leaves the
+    unit in the ``failed`` state until manual intervention. The shipped
+    unit must ask systemd to restart on failure, with a ``RestartSec`` gap
+    and ``StartLimit*`` bounds so a persistent crash cannot hammer the
+    box in a tight restart loop.
+    """
+    parser = _read_unit("salt-minion.service")
+
+    restart = parser.get("Service", "Restart", fallback=None)
+    assert restart in ("on-failure", "on-abnormal", "always"), (
+        "salt-minion.service must set Restart= so systemd revives the "
+        "minion after a crash. See issue #69182."
+    )
+
+    restart_sec = parser.get("Service", "RestartSec", fallback=None)
+    assert restart_sec is not None, (
+        "salt-minion.service must set RestartSec= to avoid an immediate "
+        "restart storm. See issue #69182."
+    )
+    # RestartSec may carry a systemd time-unit suffix (e.g. "15s"); accept
+    # any leading positive integer.
+    restart_sec_int = int("".join(c for c in restart_sec if c.isdigit()) or 0)
+    assert restart_sec_int > 0, (
+        f"salt-minion.service RestartSec must be a positive interval; "
+        f"got {restart_sec!r}. See issue #69182."
+    )
+
+    burst = parser.get("Service", "StartLimitBurst", fallback=None)
+    interval = parser.get(
+        "Service", "StartLimitIntervalSec", fallback=None
+    ) or parser.get("Service", "StartLimitInterval", fallback=None)
+    # systemd accepts both StartLimitIntervalSec (modern) and
+    # StartLimitInterval (legacy alias) in either [Service] or [Unit].
+    if burst is None:
+        burst = parser.get("Unit", "StartLimitBurst", fallback=None)
+    if interval is None:
+        interval = parser.get(
+            "Unit", "StartLimitIntervalSec", fallback=None
+        ) or parser.get("Unit", "StartLimitInterval", fallback=None)
+    assert burst is not None and interval is not None, (
+        "salt-minion.service must bound restart attempts with "
+        "StartLimitBurst and StartLimitIntervalSec (or the legacy "
+        "StartLimitInterval alias) so a persistent crash cannot hammer "
+        "the box. See issue #69182."
+    )
+    assert int(burst) > 0, f"StartLimitBurst must be positive; got {burst!r}."
