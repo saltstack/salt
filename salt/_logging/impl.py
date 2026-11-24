@@ -1011,6 +1011,32 @@ def setup_log_granular_levels(log_granular_levels):
         _logger.setLevel(get_logging_level_from_string(handler_level))
 
 
+def setup_pillar_redacting_filter(opts):
+    """
+    Install the ``PillarRedactingFilter`` on every currently configured
+    logging handler so that pillar values can be scrubbed at the output
+    boundary.
+
+    When ``opts["pillar_mask_output"]`` is false (the default) the filter is
+    a cheap passthrough.  Imported lazily to keep early-logging bootstrap
+    free of the filter module.
+    """
+    if not opts:
+        return
+    try:
+        # Lazy import so early-bootstrap logging (before salt is importable
+        # as a package) doesn't blow up.
+        from salt._logging.filters.pillar import install_on_handler
+    except Exception:  # pylint: disable=broad-except
+        return
+    for handler in list(logging.root.handlers):
+        try:
+            install_on_handler(handler, opts)
+        except Exception:  # pylint: disable=broad-except
+            # A filter install failure must not take logging offline.
+            continue
+
+
 def setup_logging():
     opts = get_logging_options_dict()
     if not opts:
@@ -1046,6 +1072,11 @@ def setup_logging():
         setup_extended_logging(opts)
     if opts.get("configure_granular_levels", True):
         setup_log_granular_levels(opts["log_granular_levels"])
+
+    # Install the pillar redacting filter on every handler we just set up
+    # (plus any extended handlers that plugins contributed).  Runs last so it
+    # catches handlers added by setup_extended_logging().
+    setup_pillar_redacting_filter(opts)
 
     # Any logging that should be configured, is configured by now. Shutdown the temporary logging handler.
     shutdown_temp_handler()

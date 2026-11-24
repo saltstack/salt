@@ -2902,6 +2902,39 @@ minion config file or via the CLI, it will override this option.
 
     pillarenv_from_saltenv: True
 
+.. conf_minion:: pillar_mask_output
+
+``pillar_mask_output``
+----------------------
+
+.. versionadded:: 3008.3
+
+Default: ``False``
+
+Redact pillar values from log output.
+
+When ``False`` (the default), logging is unchanged.
+
+When ``True``, every string, bytes, integer and float value of the pillar a
+process receives that is at least four characters long is replaced by
+``**********`` in the message and in the arguments of the log records of the
+log handlers that exist when logging is set up. Booleans and shorter values are
+not redacted, because they would also match ordinary text. A value that is also
+ordinary text, such as a user name, is redacted everywhere it appears.
+
+Only the log output changes. The ``pillar`` functions, job returns and the
+output of the CLI always contain the real values, and the ``unmask`` argument
+of the ``pillar`` functions has no effect and gives a deprecation warning.
+
+.. versionchanged:: 3008.4
+    The default is now ``False`` and the option only affects log output. Before,
+    the default was ``True``, and the ``pillar`` functions returned masked
+    values unless ``unmask=True`` was passed.
+
+.. code-block:: yaml
+
+    pillar_mask_output: True
+
 .. conf_minion:: pillar_raise_on_missing
 
 ``pillar_raise_on_missing``
