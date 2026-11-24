@@ -70,6 +70,22 @@ _MMAP_HDR_OCCUPIED_SIZE = 8
 # which costs the enumeration pass but preserves correctness.
 _GEN_UNKNOWN = object()
 
+# Cache drivers that keep each bank as files under ``<cachedir>/<bank>``,
+# the only layout the generation signal can follow.
+_LOCAL_DRIVERS = frozenset({"localfs", "mmap_cache"})
+
+
+def uses_local_files(cache):
+    """
+    Return whether ``cache`` stores its banks under its ``cachedir``.
+
+    Other drivers (SQL, Redis, Consul, ...) write elsewhere, so the bank
+    directory never changes and anything built against its generation
+    would stay stale. Caches without a ``driver`` are taken as local.
+    """
+    driver = getattr(cache, "driver", None)
+    return driver is None or driver in _LOCAL_DRIVERS
+
 
 def fixed_prefix_of(glob_pattern):
     """
@@ -177,7 +193,7 @@ def _bank_generation(cache, bank):
     neither can be derived (correctness-preserving "always rebuild").
     """
     cachedir = getattr(cache, "cachedir", None)
-    if not cachedir:
+    if not cachedir or not uses_local_files(cache):
         return _GEN_UNKNOWN
     mmap_gen = _read_mmap_generation(cachedir, bank)
     if mmap_gen is not None:

@@ -934,3 +934,16 @@ def test_compound_operands_with_unusual_ids(ckminions):
     assert sorted(result["minions"]) == sorted(["o'brien", 'x{y}"z'])
     result = ck.check_minions("G@role:web and not L@o'brien", "compound")
     assert result["minions"] == ['x{y}"z']
+
+
+def test_grain_trie_index_follows_cache_writes(ckminions):
+    ck = ckminions({"m1": {"os": "a"}, "m2": {"os": "b"}})
+    with patch.dict(
+        ck.opts, {"enable_grain_trie_index": True, "grain_trie_mmap_size": 5000}
+    ):
+        # Repeat so a trie, where one is used, is built and then reused.
+        for _ in range(3):
+            assert ck.check_minions("os:a", "grain")["minions"] == ["m1"]
+        ck.cache.store("grains", "m1", {"os": "b"})
+        assert ck.check_minions("os:a", "grain")["minions"] == []
+        assert sorted(ck.check_minions("os:b", "grain")["minions"]) == ["m1", "m2"]

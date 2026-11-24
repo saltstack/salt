@@ -140,6 +140,9 @@ import salt.utils.mmap_cache
 
 log = logging.getLogger(__name__)
 
+# Cache drivers already warned about not supporting the trie.
+_warned_drivers = set()
+
 # Byte sentinels used inside the mmap key. Chosen because:
 #   * They never appear in grain path segments (ascii-identifier keys)
 #     or typical stringified scalar values.
@@ -1397,11 +1400,23 @@ def for_bank(cache, bank, opts):
       1 GiB default.
 
     When the cache driver does not expose ``cachedir`` (some test
-    fakes) the function returns ``None`` -- the caller falls back to
-    the slow path.
+    fakes), or does not store banks there, the function returns
+    ``None`` -- the caller falls back to the slow path.
     """
     cachedir = getattr(cache, "cachedir", None)
     if not cachedir:
+        return None
+    if not salt.utils.grain_target_cache.uses_local_files(cache):
+        # The trie is rebuilt when the bank directory changes, which
+        # never happens for drivers writing elsewhere, so it would keep
+        # answering from its first build.
+        if cache.driver not in _warned_drivers:
+            _warned_drivers.add(cache.driver)
+            log.warning(
+                "enable_grain_trie_index has no effect with the %s cache "
+                "driver; it requires localfs or mmap_cache",
+                cache.driver,
+            )
         return None
     max_list = int(opts.get("grain_trie_max_list_size", DEFAULT_MAX_LIST_SIZE) or 0)
     if max_list <= 0:
