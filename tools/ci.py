@@ -1117,6 +1117,9 @@ def workflow_config(
                     ctx.info("3006.x upgrade/downgrade tests do not work on windows")
                     continue
 
+                # Windows arm64 has no published prior packages to upgrade /
+                # downgrade from yet (download URLs still hardcode AMD64).
+                # Install chunks above still run for those slugs.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1127,6 +1130,7 @@ def workflow_config(
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
                     if _.slug in requested_slugs
+                    and not (platform == "windows" and _.arch == "arm64")
                 ]
                 pkg_test_matrix[platform] += [
                     dict(
@@ -1137,7 +1141,9 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs and "photon" not in _.slug
+                    if _.slug in requested_slugs
+                    and "photon" not in _.slug
+                    and not (platform == "windows" and _.arch == "arm64")
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(escape(pprint.pformat(pkg_test_matrix)))
