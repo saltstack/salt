@@ -204,13 +204,19 @@ ignore = [
     # of rules that are not enabled yet, and asks to delete them.
     "RUF100",
 
-    # Wave 4: more than 100 violations.
-    "B007", "B904", "BLE001", "C408", "FLY002", "PERF401", "PLC0415", "PLR0402",
-    "PLR5501", "PLW0603", "PLW2901", "PT006", "PT007", "PT019", "PT022", "PT027",
-    "PTH103", "PTH107", "PTH110", "PTH111", "PTH112", "PTH113", "PTH116", "PTH118",
-    "PTH119", "PTH120", "PTH208", "RET503", "RET504", "RET505", "RET506", "RUF005",
-    "RUF012", "RUF019", "RUF059", "RUF061", "SIM102", "SIM103", "SIM105", "SIM108",
-    "SIM114", "SIM117", "SIM300", "TRY300", "TRY400", "TRY401",
+    # Waiting for a decision or for another change:
+    # BLE001: pylint reports the same, to be moved with it
+    # TRY400: logging.exception adds a traceback to the logs
+    # RUF059: little value
+    "BLE001", "RUF059", "TRY400",
+
+    # Only a way of writing, nothing that goes wrong without it. Not worth the
+    # change of the line.
+    "C408", "FLY002", "PERF401", "PLC0415", "PLR0402", "PLR5501", "PLW0603", "PT006",
+    "PT007", "PT019", "PT022", "PT027", "PTH103", "PTH107", "PTH110", "PTH111",
+    "PTH112", "PTH113", "PTH116", "PTH118", "PTH119", "PTH120", "PTH208", "RET504",
+    "RET505", "RET506", "RUF005", "RUF019", "RUF061", "SIM102", "SIM103", "SIM105",
+    "SIM108", "SIM114", "SIM117", "SIM300", "TRY300", "TRY401",
 ]
 
 [tool.ruff.lint.per-file-ignores]
