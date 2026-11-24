@@ -1043,9 +1043,10 @@ def test__repo_process_pkg_sls():
         )
 
 
-def test__repo_process_pkg_sls_skips_none_version_list():
+def test__repo_process_pkg_sls_rejects_none_version_list():
     """
-    Null version maps (arch-gated Jinja stubs) must not raise or fail the SLS.
+    Null version maps are validation errors (failhard gate), without raising.
+    The whole SLS is not merged into repo when any package is invalid.
     """
     rendered = {
         "goodpkg": {
@@ -1071,8 +1072,8 @@ def test__repo_process_pkg_sls_skips_none_version_list():
             saltenv="base",
         )
     assert result is not False
-    assert "stub.sls" not in ret.get("errors", {})
-    assert "goodpkg" in ret["repo"]
+    assert "stub.sls" in ret["errors"]
+    assert "goodpkg" not in ret["repo"]
     assert "arm_stub" not in ret["repo"]
 
 

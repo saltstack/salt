@@ -1500,16 +1500,9 @@ def _repo_process_pkg_sls(
                 )
                 errors.append(f"package '{pkgname}' already defined")
                 break
-            # Arch-gated winrepo Jinja often leaves ``pkgname:`` / null when
-            # the package does not apply (e.g. AMD64-only defs on ARM64).
-            # Skip those without failing the whole refresh.
-            if version_list is None:
-                log.debug(
-                    "package '%s' within '%s' has no versions, skipping",
-                    pkgname,
-                    short_path_name,
-                )
-                continue
+            # None/null (e.g. incomplete arch-gated Jinja) and other non-dicts
+            # are validation errors so failhard=True still fails refresh_db
+            # (salt-winrepo-ng CI gate). Do not AttributeError on .items().
             if not isinstance(version_list, dict):
                 log.error(
                     "package '%s' within '%s', versions are not defined as a dictionary",
@@ -1555,15 +1548,9 @@ def _repo_process_pkg_sls(
         if errors:
             ret.setdefault("errors", {})[short_path_name] = errors
         else:
-            # Exclude null / non-dict stubs skipped above (arch-gated Jinja).
-            cleaned = {
-                pkgname: versions
-                for pkgname, versions in config.items()
-                if isinstance(versions, dict)
-            }
-            ret.setdefault("repo", {}).update(cleaned)
+            ret.setdefault("repo", {}).update(config)
             ret.setdefault("name_map", {}).update(revmap)
-            successful_verbose[short_path_name] = list(cleaned.keys())
+            successful_verbose[short_path_name] = list(config.keys())
     elif config:
         return _failed_compile("Compiled contents", "not a dictionary/hash")
     else:
