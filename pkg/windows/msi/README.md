@@ -1,6 +1,29 @@
-# Salt Minion msi installer
+# Salt Minion MSI installer
 
-The installer offers properties for unattended/silent installations.
+Salt publishes two related Windows Installer artifacts per architecture:
+
+| Artifact | Name pattern | VC++ runtime (CRT) |
+| -------- | ------------ | ------------------ |
+| **Burn Bundle (recommended)** | `Salt-Minion-<ver>-Py3-<arch>-Bundle.exe` | Installs matching VCRedist if missing, then the MSI |
+| **Bare MSI** | `Salt-Minion-<ver>-Py3-<arch>.msi` | **Not** included — install VCRedist yourself, or use the Bundle |
+
+Do not confuse the Bundle with the NSIS installer (`Salt-Minion-*-Setup.exe`).
+
+## Bundle (recommended)
+
+Same public properties as the MSI (see below). Silent UI uses Burn flags, not `msiexec`:
+
+In cmd:
+> Salt-Minion-*-Bundle.exe MASTER=salt2 START_MINION="" /quiet
+
+In powershell (escape quotes to disable starting the minion service):
+> .\Salt-Minion-*-Bundle.exe MASTER=salt2 START_MINION=`"`" /quiet
+
+`/passive` shows a simple progress bar. `/quiet` suppresses UI.
+
+## Bare MSI
+
+Use when you deploy VCRedist separately (enterprise images, ConfigMgr, etc.).
 
 Example: install silently, set the master, don't start the service:
 
@@ -15,16 +38,15 @@ Example: uninstall and remove configuration
 
 ##  Notes
 
-- Maintainer notes for `Product.wxs` and C# custom actions: see
+- Maintainer notes for `Product.wxs`, `Bundle.wxs`, and C# custom actions: see
   `Product-README.md` in this directory.
 - The installer requires a privileged user
 - Properties must be upper case
 - Values of properties are case sensitive
 - Values must be quoted when they contain whitespace, or to unset a property, as in ``START_MINION=""``
 - In powershell, you must escape the quotes with a back tick for an empty string, ie: ``START_MINION=`"`"``
-- ``/l*v`` Creates a verbose log file, by default ``%TEMP%\MSIxxxxx.LOG``, where xxxxx is random. The name of the log can be specified with ``msiexec /l*v example.log``
-- ``/qn`` or ``/quiet`` installs quietly, suppressing all dialog boxes
-- ``/qb`` or ``/passive`` installs quietly but displays a simple progress bar
+- Bare MSI: ``/l*v`` creates a verbose log (default ``%TEMP%\MSIxxxxx.LOG``). Bundle: use Burn ``/log <path>``.
+- Bare MSI: ``/qn`` or ``/quiet``; Bundle: Burn ``/quiet``. Bare MSI ``/qb`` ≈ Bundle ``/passive``.
 
 ## Properties
 

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX Burn bootstrapper: install VC++ Redistributable (if needed), then the
+  Salt Minion MSI. Public MSI properties are overridable on the Bundle
+  command line under the same names (e.g. MASTER=, MINION_ID=, START_MINION="").
+
+  Silent UI: Bundle.exe /quiet  (not msiexec /qn)
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <Bundle
+    Name="$(var.PRODUCT) $(var.DisplayVersion)"
+    Version="$(var.InternalVersion)"
+    Manufacturer="$(var.MANUFACTURER)"
+    UpgradeCode="B8E4F2A1-6C3D-4F9E-A017-5E9B1D2C8A40"
+    IconSourceFile="pkg_resources\Product-icon.ico"
+    Copyright="Copyright (c) Salt Project"
+    AboutUrl="https://saltproject.io">
+
+    <BootstrapperApplicationRef Id="WixStandardBootstrapperApplication.RtfLicense">
+      <bal:WixStandardBootstrapperApplication
+        LicenseFile="pkg_resources\LICENSE.rtf"
+        LogoFile="pkg_resources\Product-imgLeft.png"
+        SuppressOptionsUI="yes"
+        SuppressRepair="yes" />
+    </BootstrapperApplicationRef>
+
+    <!-- Detect matching Visual C++ 2022 runtime -->
+    <util:RegistrySearch
+      Root="HKLM"
+      Key="SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\$(var.VCREDIST_REGARCH)"
+      Value="Installed"
+      Variable="VCRedistInstalled"
+      Result="value"
+      Win64="$(var.WIN64)" />
+
+    <!--
+      Public MSI properties — same names as bare msiexec.
+      INSTALLDIR/ROOTDIR default to the same layout as Product.wxs so empty
+      forwarding does not wipe Directory-table defaults. START_MINION and
+      CONFIG_TYPE match Product.wxs Property defaults.
+    -->
+    <Variable Name="MASTER"             bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="MASTER_KEY"         bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="MINION_ID"          bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="MINION_CONFIG"      bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="START_MINION"       bal:Overridable="yes" Type="string" Value="1" />
+    <Variable Name="MOVE_CONF"          bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="REMOVE_CONFIG"      bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="CLEAN_INSTALL"      bal:Overridable="yes" Type="string" Value="" />
+    <Variable Name="CONFIG_TYPE"        bal:Overridable="yes" Type="string" Value="Default" />
+    <Variable Name="CUSTOM_CONFIG"      bal:Overridable="yes" Type="string" Value="" />
+    <?if $(var.WIN64)=yes ?>
+    <Variable Name="INSTALLDIR"         bal:Overridable="yes" Type="string" Value="[ProgramFiles64Folder]$(var.MANUFACTURER)\$(var.PRODUCTDIR)" />
+    <?else ?>
+    <Variable Name="INSTALLDIR"         bal:Overridable="yes" Type="string" Value="[ProgramFilesFolder]$(var.MANUFACTURER)\$(var.PRODUCTDIR)" />
+    <?endif ?>
+    <Variable Name="ROOTDIR"            bal:Overridable="yes" Type="string" Value="[CommonAppDataFolder]$(var.MANUFACTURER)\$(var.PRODUCTDIR)" />
+    <Variable Name="ARPSYSTEMCOMPONENT" bal:Overridable="yes" Type="string" Value="" />
+
+    <Chain>
+      <!-- Permanent: leave CRT installed if Salt is uninstalled via Bundle -->
+      <ExePackage
+        Id="VCRedist"
+        SourceFile="$(var.VCREDIST_PATH)"
+        Name="$(var.VCREDIST_FILENAME)"
+        InstallCommand="/install /quiet /norestart"
+        DetectCondition="VCRedistInstalled"
+        Permanent="yes"
+        Vital="yes"
+        Compressed="yes"
+        PerMachine="yes">
+        <!-- Already installed / reboot required must not fail the chain -->
+        <ExitCode Value="1638" Behavior="success" />
+        <ExitCode Value="3010" Behavior="success" />
+      </ExePackage>
+
+      <MsiPackage
+        Id="SaltMinion"
+        SourceFile="$(var.MSI_PATH)"
+        Name="$(var.MSI_FILENAME)"
+        Compressed="yes"
+        Vital="yes"
+        Visible="yes">
+        <MsiProperty Name="MASTER"             Value="[MASTER]" />
+        <MsiProperty Name="MASTER_KEY"         Value="[MASTER_KEY]" />
+        <MsiProperty Name="MINION_ID"          Value="[MINION_ID]" />
+        <MsiProperty Name="MINION_CONFIG"      Value="[MINION_CONFIG]" />
+        <MsiProperty Name="START_MINION"       Value="[START_MINION]" />
+        <MsiProperty Name="MOVE_CONF"          Value="[MOVE_CONF]" />
+        <MsiProperty Name="REMOVE_CONFIG"      Value="[REMOVE_CONFIG]" />
+        <MsiProperty Name="CLEAN_INSTALL"      Value="[CLEAN_INSTALL]" />
+        <MsiProperty Name="CONFIG_TYPE"        Value="[CONFIG_TYPE]" />
+        <MsiProperty Name="CUSTOM_CONFIG"      Value="[CUSTOM_CONFIG]" />
+        <MsiProperty Name="INSTALLDIR"         Value="[INSTALLDIR]" />
+        <MsiProperty Name="ROOTDIR"            Value="[ROOTDIR]" />
+        <MsiProperty Name="ARPSYSTEMCOMPONENT" Value="[ARPSYSTEMCOMPONENT]" />
+      </MsiPackage>
+    </Chain>
+  </Bundle>
+</Wix>
