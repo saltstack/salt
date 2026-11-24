@@ -663,8 +663,8 @@ class TestOptsDictDeepCopy:
         assert hasattr(copied, "mutate_key")
         assert hasattr(copied, "get_local_keys")
 
-    def test_deepcopy_uses_copy_on_write(self):
-        """Test that deepcopy uses copy-on-write (creates child)."""
+    def test_deepcopy_creates_independent_copy(self):
+        """Test that deepcopy creates a truly independent copy (no parent link)."""
         opts = OptsDict.from_dict(
             {"grains": {"os": "Linux"}, "pillar": {"app": "data"}, "test": False},
             name="parent",
@@ -672,10 +672,11 @@ class TestOptsDictDeepCopy:
 
         copied = copy.deepcopy(opts)
 
-        # Should be a child that shares parent data
-        assert copied._parent is not None
-        assert len(copied.get_local_keys()) == 0  # Nothing local yet
-        assert len(copied.get_shared_keys()) == 3  # All keys shared
+        # Should be an independent root with no parent reference
+        # This is essential to avoid circular references when the copy
+        # is stored inside the original's data (e.g., ext_pillar)
+        assert copied._parent is None
+        assert len(copied) == 3  # All keys present
 
     def test_deepcopy_isolation(self):
         """Test that deepcopy provides proper isolation."""
