@@ -679,17 +679,27 @@ class SaltPkgInstall:
         assert ret.returncode == 0
         return True
 
+    def _windows_pkg(self):
+        """
+        Resolve the Windows package path to install/uninstall.
+
+        The MSI CI artifact can contain both ``*-Bundle.exe`` (Burn) and
+        ``*.msi``. Prefer the path matching ``self.file_ext`` so downgrade
+        / uninstall do not pass the Bundle to ``msiexec``.
+        """
+        if self.file_ext:
+            for p in self.pkgs:
+                if str(p).endswith(self.file_ext):
+                    return str(pathlib.Path(p).resolve())
+        return str(pathlib.Path(self.pkgs[0]).resolve())
+
     def _install_pkgs(self, upgrade=False, downgrade=False):
         if downgrade:
             self.install_previous(downgrade=downgrade)
             return True
-        pkg = None
-        if platform.is_windows() and self.file_ext:
-            for p in self.pkgs:
-                if p.endswith(self.file_ext):
-                    pkg = str(pathlib.Path(p).resolve())
-                    break
-        if pkg is None:
+        if platform.is_windows():
+            pkg = self._windows_pkg()
+        else:
             pkg = str(pathlib.Path(self.pkgs[0]).resolve())
         if platform.is_windows():
             if upgrade:
@@ -1269,7 +1279,7 @@ class SaltPkgInstall:
             self.bin_dir = self.install_dir / "bin"
             self.run_root = self.bin_dir / "salt.exe"
             self.ssm_bin = self.install_dir / "ssm.exe"
-            pkg = str(pathlib.Path(self.pkgs[0]).resolve())
+            pkg = self._windows_pkg()
 
             if self.file_ext == "exe":
                 win_pkg = (
@@ -1293,7 +1303,7 @@ class SaltPkgInstall:
                     # MSI can not be downgraded, we must remove the newer version
                     # before installing the old one.
                     ret = subprocess.run(
-                        f"msiexec.exe /qn /x {pkg} /norestart",
+                        f'msiexec.exe /qn /x "{pkg}" /norestart',
                         shell=True,  # nosec
                         check=False,
                     )
@@ -1381,13 +1391,8 @@ class SaltPkgInstall:
             self.update_process_path()
 
     def uninstall(self):
-        pkg = self.pkgs[0]
-        if platform.is_windows() and self.file_ext:
-            for p in self.pkgs:
-                if p.endswith(self.file_ext):
-                    pkg = p
-                    break
         if platform.is_windows():
+            pkg = self._windows_pkg()
             log.info("Uninstalling %s", pkg)
             if pkg.endswith("exe"):
                 uninst = self.install_dir / "uninst.exe"
