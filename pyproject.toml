@@ -138,10 +138,41 @@ ignore = [
     # B008: calls in default arguments are how Salt sets its path defaults
     # PT015: "assert False" is allowed in tests, as for B011
     # RUF001, RUF002, RUF003: typographic characters and unicode test data
-    "A002", "ARG", "B008", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX",
-    "ICN001", "INP", "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
-    "PLR2004", "PT015", "Q", "RUF001", "RUF002", "RUF003", "S101", "T201", "T203",
-    "TC001", "TC002", "TD", "TRY003", "W191",
+    "A002",  # builtin-argument-shadowing
+    "ARG",  # flake8-unused-arguments (all rules)
+    "B008",  # function-call-in-default-argument
+    "C901",  # complex-structure
+    "COM",  # flake8-commas (all rules)
+    "CPY",  # flake8-copyright (all rules)
+    "D",  # pydocstyle (all rules)
+    "E501",  # line-too-long
+    "EM",  # flake8-errmsg (all rules)
+    "ERA",  # eradicate (all rules)
+    "FBT",  # flake8-boolean-trap (all rules)
+    "FIX",  # flake8-fixme (all rules)
+    "ICN001",  # unconventional-import-alias
+    "INP",  # flake8-no-pep420 (all rules)
+    "ISC",  # flake8-implicit-str-concat (all rules)
+    "N",  # pep8-naming (all rules)
+    "PLR0911",  # too-many-return-statements
+    "PLR0912",  # too-many-branches
+    "PLR0913",  # too-many-arguments
+    "PLR0915",  # too-many-statements
+    "PLR0917",  # too-many-positional-arguments
+    "PLR2004",  # magic-value-comparison
+    "PT015",  # pytest-assert-always-false
+    "Q",  # flake8-quotes (all rules)
+    "RUF001",  # ambiguous-unicode-character-string
+    "RUF002",  # ambiguous-unicode-character-docstring
+    "RUF003",  # ambiguous-unicode-character-comment
+    "S101",  # assert
+    "T201",  # print
+    "T203",  # p-print
+    "TC001",  # typing-only-first-party-import
+    "TC002",  # typing-only-third-party-import
+    "TD",  # flake8-todos (all rules)
+    "TRY003",  # raise-vanilla-args
+    "W191",  # tab-indentation
 
     # The fix is not a habit to change: it changes the behavior, or goes against the
     # way Salt is written.
@@ -151,26 +182,125 @@ ignore = [
     # SIM115: temporary files and tar files that stay open longer than one block
     # TRY004: a TypeError instead of the RuntimeError or ValueError that callers catch
     # TRY301: a raise in a try block that the same try catches
-    "G004", "SIM112", "SIM115", "TRY004", "TRY301",
+    # PLW2901: most of them are x = f(x) on the loop variable (line = line.strip())
+    # PLR2044: a line with only # separates the paragraphs of a comment
+    # RUF015: the fix turns the IndexError of an empty sequence into a StopIteration
+    # E402: imports after sys.path or the environment are set, and the project turned
+    # wrong-import-position off in .pylintrc
+    # ASYNC110, ASYNC240: the fix is a change of the design (an Event, to_thread)
+    "ASYNC110",  # async-busy-wait
+    "ASYNC240",  # blocking-path-method-in-async-function
+    "E402",  # module-import-not-at-top-of-file
+    "G004",  # logging-f-string
+    "PLR2044",  # empty-comment
+    "PLW2901",  # redefined-loop-name
+    "RUF015",  # unnecessary-iterable-allocation-for-first-element
+    "SIM112",  # uncapitalized-environment-variables
+    "SIM115",  # open-file-with-context-handler
+    "TRY004",  # type-check-without-type-error
+    "TRY301",  # raise-within-try
 
     # Rules for libraries and file types that Salt does not use: Airflow, Django,
     # FastAPI, gettext, NumPy, pandas, and the type stubs (.pyi) rules.
-    "AIR001", "AIR002", "AIR301", "AIR302", "AIR303", "AIR311", "AIR312", "DJ001",
-    "DJ003", "DJ006", "DJ007", "DJ008", "DJ012", "DJ013", "FAST001", "FAST002",
-    "FAST003", "INT001", "INT002", "INT003", "NPY001", "NPY002", "NPY003", "NPY201",
-    "PD002", "PD003", "PD004", "PD007", "PD008", "PD009", "PD010", "PD011", "PD012",
-    "PD013", "PD015", "PD101", "PYI001", "PYI002", "PYI003", "PYI004", "PYI005",
-    "PYI007", "PYI008", "PYI009", "PYI010", "PYI011", "PYI012", "PYI013", "PYI014",
-    "PYI015", "PYI016", "PYI017", "PYI018", "PYI019", "PYI020", "PYI021", "PYI026",
-    "PYI029", "PYI030", "PYI032", "PYI033", "PYI035", "PYI041", "PYI042", "PYI043",
-    "PYI044", "PYI045", "PYI046", "PYI047", "PYI048", "PYI049", "PYI050", "PYI051",
-    "PYI052", "PYI053", "PYI054", "PYI055", "PYI056", "PYI057", "PYI058", "PYI059",
-    "PYI061", "PYI062", "PYI063", "PYI064", "PYI066",
+    "AIR001",  # airflow-variable-name-task-id-mismatch
+    "AIR002",  # airflow-dag-no-schedule-argument
+    "AIR301",  # airflow3-removal
+    "AIR302",  # airflow3-moved-to-provider
+    "AIR303",  # airflow3-incompatible-function-signature
+    "AIR311",  # airflow3-suggested-update
+    "AIR312",  # airflow3-suggested-to-move-to-provider
+    "DJ001",  # django-nullable-model-string-field
+    "DJ003",  # django-locals-in-render-function
+    "DJ006",  # django-exclude-with-model-form
+    "DJ007",  # django-all-with-model-form
+    "DJ008",  # django-model-without-dunder-str
+    "DJ012",  # django-unordered-body-content-in-model
+    "DJ013",  # django-non-leading-receiver-decorator
+    "FAST001",  # fast-api-redundant-response-model
+    "FAST002",  # fast-api-non-annotated-dependency
+    "FAST003",  # fast-api-unused-path-parameter
+    "INT001",  # f-string-in-get-text-func-call
+    "INT002",  # format-in-get-text-func-call
+    "INT003",  # printf-in-get-text-func-call
+    "NPY001",  # numpy-deprecated-type-alias
+    "NPY002",  # numpy-legacy-random
+    "NPY003",  # numpy-deprecated-function
+    "NPY201",  # numpy2-deprecation
+    "PD002",  # pandas-use-of-inplace-argument
+    "PD003",  # pandas-use-of-dot-is-null
+    "PD004",  # pandas-use-of-dot-not-null
+    "PD007",  # pandas-use-of-dot-ix
+    "PD008",  # pandas-use-of-dot-at
+    "PD009",  # pandas-use-of-dot-iat
+    "PD010",  # pandas-use-of-dot-pivot-or-unstack
+    "PD011",  # pandas-use-of-dot-values
+    "PD012",  # pandas-use-of-dot-read-table
+    "PD013",  # pandas-use-of-dot-stack
+    "PD015",  # pandas-use-of-pd-merge
+    "PD101",  # pandas-nunique-constant-series-check
+    "PYI001",  # unprefixed-type-param
+    "PYI002",  # complex-if-statement-in-stub
+    "PYI003",  # unrecognized-version-info-check
+    "PYI004",  # patch-version-comparison
+    "PYI005",  # wrong-tuple-length-version-comparison
+    "PYI007",  # unrecognized-platform-check
+    "PYI008",  # unrecognized-platform-name
+    "PYI009",  # pass-statement-stub-body
+    "PYI010",  # non-empty-stub-body
+    "PYI011",  # typed-argument-default-in-stub
+    "PYI012",  # pass-in-class-body
+    "PYI013",  # ellipsis-in-non-empty-class-body
+    "PYI014",  # argument-default-in-stub
+    "PYI015",  # assignment-default-in-stub
+    "PYI016",  # duplicate-union-member
+    "PYI017",  # complex-assignment-in-stub
+    "PYI018",  # unused-private-type-var
+    "PYI019",  # custom-type-var-for-self
+    "PYI020",  # quoted-annotation-in-stub
+    "PYI021",  # docstring-in-stub
+    "PYI026",  # type-alias-without-annotation
+    "PYI029",  # str-or-repr-defined-in-stub
+    "PYI030",  # unnecessary-literal-union
+    "PYI032",  # any-eq-ne-annotation
+    "PYI033",  # legacy-type-comment
+    "PYI035",  # unassigned-special-variable-in-stub
+    "PYI041",  # redundant-numeric-union
+    "PYI042",  # snake-case-type-alias
+    "PYI043",  # t-suffixed-type-alias
+    "PYI044",  # future-annotations-in-stub
+    "PYI045",  # iter-method-return-iterable
+    "PYI046",  # unused-private-protocol
+    "PYI047",  # unused-private-type-alias
+    "PYI048",  # stub-body-multiple-statements
+    "PYI049",  # unused-private-typed-dict
+    "PYI050",  # no-return-argument-annotation-in-stub
+    "PYI051",  # redundant-literal-union
+    "PYI052",  # unannotated-assignment-in-stub
+    "PYI053",  # string-or-bytes-too-long
+    "PYI054",  # numeric-literal-too-long
+    "PYI055",  # unnecessary-type-union
+    "PYI056",  # unsupported-method-call-on-all
+    "PYI057",  # byte-string-usage
+    "PYI058",  # generator-return-from-iter-method
+    "PYI059",  # generic-not-last-base-class
+    "PYI061",  # redundant-none-literal
+    "PYI062",  # duplicate-literal-member
+    "PYI063",  # pep484-style-positional-only-parameter
+    "PYI064",  # redundant-final-literal
+    "PYI066",  # bad-version-info-order
 
     # Report nothing without a setting, or cannot be triggered on their own.
     # They are to be enabled together with their setting.
-    "E101", "E902", "I002", "ICN002", "ICN003", "RUF200", "TC007", "TID251", "TID253",
-    "W505",
+    "E101",  # mixed-spaces-and-tabs
+    "E902",  # io-error
+    "I002",  # missing-required-import
+    "ICN002",  # banned-import-alias
+    "ICN003",  # banned-import-from
+    "RUF200",  # invalid-pyproject-toml
+    "TC007",  # unquoted-type-alias
+    "TID251",  # banned-api
+    "TID253",  # banned-module-level-imports
+    "W505",  # doc-line-too-long
 
     # Not decided yet.
     # ANN: type annotations
@@ -179,44 +309,188 @@ ignore = [
     # DTZ: naive datetimes, making them aware changes the behavior
     # PTH: pathlib
     # PYI024: collections.namedtuple
-    "ANN", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "PT009",
-    "PTH100", "PTH101", "PTH102", "PTH104", "PTH105", "PTH106", "PTH108", "PTH109",
-    "PTH114", "PTH117", "PTH122", "PTH123", "PTH202", "PTH204", "PTH207", "PTH211",
-    "PYI024", "SLF001",
+    "ANN",  # flake8-annotations (all rules)
+    "DTZ001",  # call-datetime-without-tzinfo
+    "DTZ002",  # call-datetime-today
+    "DTZ005",  # call-datetime-now-without-tzinfo
+    "DTZ006",  # call-datetime-fromtimestamp
+    "DTZ007",  # call-datetime-strptime-without-zone
+    "DTZ011",  # call-date-today
+    "PT009",  # pytest-unittest-assertion
+    "PTH100",  # os-path-abspath
+    "PTH101",  # os-chmod
+    "PTH102",  # os-mkdir
+    "PTH104",  # os-rename
+    "PTH105",  # os-replace
+    "PTH106",  # os-rmdir
+    "PTH108",  # os-unlink
+    "PTH109",  # os-getcwd
+    "PTH114",  # os-path-islink
+    "PTH117",  # os-path-isabs
+    "PTH122",  # os-path-splitext
+    "PTH123",  # builtin-open
+    "PTH202",  # os-path-getsize
+    "PTH204",  # os-path-getmtime
+    "PTH207",  # glob
+    "PTH211",  # os-symlink
+    "PYI024",  # collections-named-tuple
+    "SLF001",  # private-member-access
 
     # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
-    "S102", "S103", "S104", "S105", "S106", "S107", "S108", "S110", "S112", "S113",
-    "S201", "S202", "S301", "S303", "S306", "S307", "S308", "S310", "S311", "S314",
-    "S318", "S321", "S323", "S324", "S504", "S506", "S507", "S508", "S509", "S602",
-    "S603", "S604", "S605", "S607", "S608", "S610", "S611", "S701", "S702",
+    "S102",  # exec-builtin
+    "S103",  # bad-file-permissions
+    "S104",  # hardcoded-bind-all-interfaces
+    "S105",  # hardcoded-password-string
+    "S106",  # hardcoded-password-func-arg
+    "S107",  # hardcoded-password-default
+    "S108",  # hardcoded-temp-file
+    "S110",  # try-except-pass
+    "S112",  # try-except-continue
+    "S113",  # request-without-timeout
+    "S201",  # flask-debug-true
+    "S202",  # tarfile-unsafe-members
+    "S301",  # suspicious-pickle-usage
+    "S303",  # suspicious-insecure-hash-usage
+    "S306",  # suspicious-mktemp-usage
+    "S307",  # suspicious-eval-usage
+    "S308",  # suspicious-mark-safe-usage
+    "S310",  # suspicious-url-open-usage
+    "S311",  # suspicious-non-cryptographic-random-usage
+    "S314",  # suspicious-xml-element-tree-usage
+    "S318",  # suspicious-xml-mini-dom-usage
+    "S321",  # suspicious-ftp-lib-usage
+    "S323",  # suspicious-unverified-context-usage
+    "S324",  # hashlib-insecure-hash-function
+    "S504",  # ssl-with-no-version
+    "S506",  # unsafe-yaml-load
+    "S507",  # ssh-no-host-key-verification
+    "S508",  # snmp-insecure-version
+    "S509",  # snmp-weak-cryptography
+    "S602",  # subprocess-popen-with-shell-equals-true
+    "S603",  # subprocess-without-shell-equals-true
+    "S604",  # call-with-shell-equals-true
+    "S605",  # start-process-with-a-shell
+    "S607",  # start-process-with-partial-path
+    "S608",  # hardcoded-sql-expression
+    "S610",  # django-extra
+    "S611",  # django-raw-sql
+    "S701",  # jinja2-autoescape-false
+    "S702",  # mako-templates
 
     # Result depends on the Python version Ruff checks for, to be enabled after the
     # minimum Python version is raised.
-    "ASYNC109", "B905", "B911", "B912", "FA102", "FURB161", "FURB162", "FURB188",
-    "I001", "PERF203", "PTH115", "RUF007", "RUF053", "TC003", "UP001", "UP003", "UP004",
-    "UP005", "UP006", "UP007", "UP008", "UP009", "UP010", "UP011", "UP012", "UP013",
-    "UP014", "UP015", "UP017", "UP018", "UP019", "UP020", "UP021", "UP022", "UP023",
-    "UP024", "UP025", "UP026", "UP028", "UP029", "UP030", "UP031", "UP032", "UP033",
-    "UP034", "UP035", "UP036", "UP037", "UP039", "UP040", "UP041", "UP042", "UP043",
-    "UP044", "UP045", "UP046", "UP047", "UP049", "UP050",
+    "ASYNC109",  # async-function-with-timeout
+    "B905",  # zip-without-explicit-strict
+    "B911",  # batched-without-explicit-strict
+    "B912",  # map-without-explicit-strict
+    "FA102",  # future-required-type-annotation
+    "FURB161",  # bit-count
+    "FURB162",  # fromisoformat-replace-z
+    "FURB188",  # slice-to-remove-prefix-or-suffix
+    "I001",  # unsorted-imports
+    "PERF203",  # try-except-in-loop
+    "PTH115",  # os-readlink
+    "RUF007",  # zip-instead-of-pairwise
+    "RUF053",  # class-with-mixed-type-vars
+    "TC003",  # typing-only-standard-library-import
+    "UP001",  # useless-metaclass-type
+    "UP003",  # type-of-primitive
+    "UP004",  # useless-object-inheritance
+    "UP005",  # deprecated-unittest-alias
+    "UP006",  # non-pep585-annotation
+    "UP007",  # non-pep604-annotation-union
+    "UP008",  # super-call-with-parameters
+    "UP009",  # utf8-encoding-declaration
+    "UP010",  # unnecessary-future-import
+    "UP011",  # lru-cache-without-parameters
+    "UP012",  # unnecessary-encode-utf8
+    "UP013",  # convert-typed-dict-functional-to-class
+    "UP014",  # convert-named-tuple-functional-to-class
+    "UP015",  # redundant-open-modes
+    "UP017",  # datetime-timezone-utc
+    "UP018",  # native-literals
+    "UP019",  # typing-text-str-alias
+    "UP020",  # open-alias
+    "UP021",  # replace-universal-newlines
+    "UP022",  # replace-stdout-stderr
+    "UP023",  # deprecated-c-element-tree
+    "UP024",  # os-error-alias
+    "UP025",  # unicode-kind-prefix
+    "UP026",  # deprecated-mock-import
+    "UP028",  # yield-in-for-loop
+    "UP029",  # unnecessary-builtin-import
+    "UP030",  # format-literals
+    "UP031",  # printf-string-formatting
+    "UP032",  # f-string
+    "UP033",  # lru-cache-with-maxsize-none
+    "UP034",  # extraneous-parentheses
+    "UP035",  # deprecated-import
+    "UP036",  # outdated-version-block
+    "UP037",  # quoted-annotation
+    "UP039",  # unnecessary-class-parentheses
+    "UP040",  # non-pep695-type-alias
+    "UP041",  # timeout-error-alias
+    "UP042",  # replace-str-enum
+    "UP043",  # unnecessary-default-type-args
+    "UP044",  # non-pep646-unpack
+    "UP045",  # non-pep604-annotation-optional
+    "UP046",  # non-pep695-generic-class
+    "UP047",  # non-pep695-generic-function
+    "UP049",  # private-type-parameter
+    "UP050",  # useless-class-metaclass-type
 
     # To be enabled last, when the set of rules is final. It reports the noqa comments
     # of rules that are not enabled yet, and asks to delete them.
-    "RUF100",
+    "RUF100",  # unused-noqa
 
     # Waiting for a decision or for another change:
     # BLE001: pylint reports the same, to be moved with it
     # TRY400: logging.exception adds a traceback to the logs
     # RUF059: little value
-    "BLE001", "RUF059", "TRY400",
+    "BLE001",  # blind-except
+    "RUF059",  # unused-unpacked-variable
+    "TRY400",  # error-instead-of-exception
 
     # Only a way of writing, nothing that goes wrong without it. Not worth the
     # change of the line.
-    "C408", "FLY002", "PERF401", "PLC0415", "PLR0402", "PLR5501", "PLW0603", "PT006",
-    "PT007", "PT019", "PT022", "PT027", "PTH103", "PTH107", "PTH110", "PTH111",
-    "PTH112", "PTH113", "PTH116", "PTH118", "PTH119", "PTH120", "PTH208", "RET504",
-    "RET505", "RET506", "RUF005", "RUF019", "RUF061", "SIM102", "SIM103", "SIM105",
-    "SIM108", "SIM114", "SIM117", "SIM300", "TRY300", "TRY401",
+    "C408",  # unnecessary-collection-call
+    "FLY002",  # static-join-to-f-string
+    "PERF401",  # manual-list-comprehension
+    "PLC0415",  # import-outside-top-level
+    "PLR0402",  # manual-from-import
+    "PLR5501",  # collapsible-else-if
+    "PLW0603",  # global-statement
+    "PT006",  # pytest-parametrize-names-wrong-type
+    "PT007",  # pytest-parametrize-values-wrong-type
+    "PT019",  # pytest-fixture-param-without-value
+    "PT022",  # pytest-useless-yield-fixture
+    "PT027",  # pytest-unittest-raises-assertion
+    "PTH103",  # os-makedirs
+    "PTH107",  # os-remove
+    "PTH110",  # os-path-exists
+    "PTH111",  # os-path-expanduser
+    "PTH112",  # os-path-isdir
+    "PTH113",  # os-path-isfile
+    "PTH116",  # os-stat
+    "PTH118",  # os-path-join
+    "PTH119",  # os-path-basename
+    "PTH120",  # os-path-dirname
+    "PTH208",  # os-listdir
+    "RET504",  # unnecessary-assign
+    "RET505",  # superfluous-else-return
+    "RET506",  # superfluous-else-raise
+    "RUF005",  # collection-literal-concatenation
+    "RUF019",  # unnecessary-key-check
+    "RUF061",  # legacy-form-pytest-raises
+    "SIM102",  # collapsible-if
+    "SIM103",  # needless-bool
+    "SIM105",  # suppressible-exception
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM114",  # if-with-same-arms
+    "SIM117",  # multiple-with-statements
+    "SIM300",  # yoda-conditions
+    "TRY300",  # try-consider-else
+    "TRY401",  # verbose-log-message
 ]
 
 [tool.ruff.lint.per-file-ignores]

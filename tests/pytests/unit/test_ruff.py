@@ -844,14 +844,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "A001",
         "def find_max(list_of_lists):\n    max = 0\n    for flat_list in list_of_lists:\n        for value in flat_list:\n            max = max(max, value)  # TypeError: 'int' object is not callable\n    return max\n",
     ),
-    (
-        "ASYNC110",
-        "import asyncio\n\nDONE = False\n\n\nasync def func():\n    while not DONE:\n        await asyncio.sleep(1)\n",
-    ),
-    (
-        "ASYNC240",
-        'import os\n\n\nasync def func():\n    path = "my_file.txt"\n    file_exists = os.path.exists(path)\n',
-    ),
     ("B009", 'getattr(obj, "foo")\n'),
     ("B010", 'setattr(obj, "foo", 42)\n'),
     ("C414", "list(tuple(iterable))\n"),
@@ -864,7 +856,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "any([x.id for x in bar])\nall([x.id for x in bar])\nsum([x.val for x in bar])\nmin([x.val for x in bar])\nmax([x.val for x in bar])\n",
     ),
     ("C420", "{a: None for a in iterable}\n{a: 1 for a in iterable}\n"),
-    ("E402", '"One string"\n"Two string"\na = 1\nimport os\nfrom sys import x\n'),
     ("E741", "l = 0\nO = 123\nI = 42\n"),
     ("EXE001", "#!/usr/bin/env python\n"),
     ("FURB110", "x, y = 1, 2\n\nz = x if x else y\n"),
@@ -910,7 +901,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "PLR1733",
         'FRUITS = {"apple": 1, "orange": 10, "berry": 22}\n\nfor fruit_name, fruit_count in FRUITS.items():\n    print(FRUITS[fruit_name])\n',
     ),
-    ("PLR2044", "class Foo:  #\n    pass\n"),
     ("PT001", "import pytest\n\n\n@pytest.fixture()\ndef my_fixture(): ...\n"),
     (
         "PT003",
@@ -942,7 +932,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("RSE102", "raise TypeError()\n"),
     ("RUF010", 'a = "some string"\nf"{repr(a)}"\n'),
     ("RUF013", "def foo(arg: int = None):\n    pass\n"),
-    ("RUF015", "head = list(x)[0]\nhead = [x * x for x in range(10)][0]\n"),
     ("RUF021", "a = True\nb = False\nc = True\nx = a and b or c\n"),
     ("RUF046", "int(len([]))\nint(round(foo, None))\n"),
     ("RUF051", "dictionary = {}\nif key in dictionary:\n    del dictionary[key]\n"),
@@ -975,10 +964,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     (
         "B904",
         'try:\n    ...\nexcept FileNotFoundError:\n    if ...:\n        raise RuntimeError("...")\n    else:\n        raise UserWarning("...")\n',
-    ),
-    (
-        "PLW2901",
-        "for i in range(10):\n    i = 9\n    print(i)  # prints 9 every iteration\n\nfor i in range(10):\n    for i in range(10):  # original value overwritten\n        pass\n    print(i)  # also prints 9 every iteration\n\nwith path1.open() as f:\n    with path2.open() as f:\n        f = path2.open()\n    print(f.readline())  # prints a line from path2\n",
     ),
     ("RET503", "def foo(bar):\n    if not bar:\n        return 1\n"),
     (
