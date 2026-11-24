@@ -5248,7 +5248,10 @@ class Minion(MinionBase):
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error firing master request return event: %s", exc)
             else:
-                log.error(
+                # Benign skip: this req was issued against a different master
+                # in a multi-master / failover topology.  Normal routing
+                # behaviour, not an error condition.  See #70891.
+                log.debug(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
                     data["cmd"],
                     job_master,
