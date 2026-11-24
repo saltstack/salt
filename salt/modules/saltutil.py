@@ -1955,8 +1955,7 @@ def cmd_iter(
         client = salt.client.ssh.client.SSHClient(__opts__["conf_file"])
     else:
         client = salt.client.get_local_client(__opts__["conf_file"])
-    for ret in client.cmd_iter(tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs):
-        yield ret
+    yield from client.cmd_iter(tgt, fun, arg, timeout, tgt_type, ret, kwarg, **kwargs)
 
 
 def _master_user_runas(opts):
