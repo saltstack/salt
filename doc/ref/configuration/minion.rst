@@ -2926,7 +2926,7 @@ Only the log output changes. The ``pillar`` functions, job returns and the
 output of the CLI always contain the real values, and the ``unmask`` argument
 of the ``pillar`` functions has no effect and gives a deprecation warning.
 
-.. versionchanged:: 3008.4
+.. versionchanged:: 3008.7
     The default is now ``False`` and the option only affects log output. Before,
     the default was ``True``, and the ``pillar`` functions returned masked
     values unless ``unmask=True`` was passed.
