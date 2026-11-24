@@ -562,7 +562,9 @@ def test_timeout_success(cmdmod):
     """
     if salt.utils.platform.is_windows():
         cmd = 'Start-Sleep 1; Write-Host "hello"'
-        out = cmdmod.run(cmd, timeout=5, python_shell=True, shell="powershell")
+        # Cold PowerShell startup on slow 4-vCPU Windows Arm runners can exceed
+        # a 5s budget even when the command itself only sleeps 1s.
+        out = cmdmod.run(cmd, timeout=30, python_shell=True, shell="powershell")
     else:
         if not salt.utils.path.which("sleep"):
             pytest.skip("sleep cmd not installed")

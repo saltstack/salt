@@ -23,7 +23,17 @@ FILE_MODULE = "PSDesiredStateConfiguration"
 
 
 @pytest.fixture(scope="module")
-def dsc_resource(states):
+def dsc_resource(modules, states):
+    # State module loads on Windows even without pythonnet, but managed()
+    # needs the execution module (pythonnet + PWSH SDK). clr_loader has no
+    # Arm64 ClrLoader.dll, so the exec module does not load on ARM64.
+    try:
+        modules.dsc_resource
+    except AttributeError:
+        pytest.skip(
+            "dsc_resource requires pythonnet/PowerShell SDK "
+            "(unavailable on this platform)"
+        )
     return states.dsc_resource
 
 

@@ -705,6 +705,9 @@ def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
+    # Setup scenarios build cryptography from source; no usable win-arm64 wheel.
+    if osdef.slug == "windows-11-arm" and chunk == "scenarios":
+        return False
     if osdef.platform == "linux" and osdef.arch == "arm64" and not arm_runner:
         return False
     if transport == "tcp" and osdef.slug not in (

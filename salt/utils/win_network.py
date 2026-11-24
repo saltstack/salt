@@ -386,6 +386,13 @@ def _get_ip_wins_info(i_face):
 
 
 def _get_network_interfaces():
+    # When pythonnet / clr_loader is unavailable (e.g. Windows ARM64 has no
+    # Arm64 ClrLoader.dll), USE_WMI is True and NetworkInformation was never
+    # imported. Callers must use get_interface_info_wmi / get_interface_info.
+    if USE_WMI:
+        raise RuntimeError(
+            "pythonnet NetworkInformation is unavailable; use WMI interface helpers"
+        )
     # pylint: disable=used-before-assignment
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 
