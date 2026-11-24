@@ -549,6 +549,34 @@ class Topology:
             return False
         return proc.stdout.strip().lower() == "true"
 
+    def wait_master_ready(self, container: str, timeout: int = 60) -> bool:
+        """Poll until ``container`` has at least one ``MWorker-`` child.
+
+        Used before sending a non-TERM signal to a freshly-started
+        master.  :py:meth:`salt.master.Master.start` installs the
+        SIGUSR1 handler right before :py:class:`ProcessManager` spawns
+        the worker pool; a signal that arrives earlier takes Python's
+        default disposition (SIGUSR1 / SIGHUP = terminate), killing the
+        master.  The autouse ``_ensure_primary_alive`` fixture may
+        have just revived this container (sibling tests like
+        ``test_signal_sighup_master`` terminate it), so gate on an
+        MWorker being visible to prove the handler is wired before
+        firing the signal.
+
+        Returns ``True`` as soon as one or more MWorkers are running,
+        ``False`` on timeout.
+        """
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            proc = self._run(
+                ["docker", "exec", container, "pgrep", "-f", "MWorker-"],
+                check=False,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                return True
+            time.sleep(1)
+        return False
+
     # ------------------------------------------------------------------
     # Sampling (fd + RSS)
     # ------------------------------------------------------------------

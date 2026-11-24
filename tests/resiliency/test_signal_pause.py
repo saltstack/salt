@@ -137,13 +137,28 @@ def test_signal_sigstop_minion(topology, request):
 def test_signal_sighup_master(topology, request):
     """signal_sighup_master -- send SIGHUP to the primary master.
 
-    Minions should keep answering ``test.ping`` throughout (there is no
-    real fault here -- the reload is in-process).
+    salt-master installs no SIGHUP handler (``salt/scripts.py`` wires
+    one only on the minion side for in-process config reload), so the
+    signal takes Python's default disposition and terminates the
+    master; once tini loses its direct child the container exits.
+    This test exercises the operator-recoverable "master was hit by a
+    stray SIGHUP" scenario: revive the container and verify the fleet
+    reconnects cleanly.  If a future salt change adds in-process
+    SIGHUP reload, this test should be re-cast to the no-fault
+    variant.
     """
     label = "signal_sighup_master"
+    primary = topology.spec.primary_master
     before = topology.sample_minions()
     fault_start = time.monotonic()
-    topology.kill_signal(topology.spec.primary_master, "HUP")
+    topology.kill_signal(primary, "HUP")
+    # tini propagates SIGHUP to its child; give the process a moment
+    # to exit so ``inspect_running`` sees the terminal state rather
+    # than racing the exit code.  Then revive unconditionally -- an
+    # already-running container just no-ops at ``docker start``.
+    time.sleep(2)
+    if not topology.inspect_running(primary):
+        topology.start(primary)
     fault_s = int(time.monotonic() - fault_start)
 
     topology.assert_reconnect(
@@ -151,6 +166,12 @@ def test_signal_sighup_master(topology, request):
         fault_sec=fault_s,
         before=before,
         item=request.node,
+        # Cold-starting the master re-runs ``_load_modules()`` + spawns
+        # a fresh MWorker pool and minions re-auth over the new auth
+        # channel; the bulk-RSS ramp + fd spike that result are
+        # legitimate cold-start cost, not retention.  Same rationale
+        # as the minion cold-restart tests in test_minion_churn.py.
+        allow_fault_rss=True,
     )
 
 
@@ -165,6 +186,21 @@ def test_signal_sigusr1_master(topology, request):
     """
     label = "signal_sigusr1_master"
     primary = topology.spec.primary_master
+    # The prior ``test_signal_sighup_master`` terminates this
+    # container; ``_ensure_primary_alive`` revives it before this test
+    # runs, but a ``docker start`` returns well before
+    # ``salt.master.Master.start`` has reached
+    # ``enable_sigusr1_handler()``.  A SIGUSR1 that lands before the
+    # handler is installed takes Python's default disposition and
+    # terminates the master -- not a salt regression, just a startup
+    # race.  Gate on an MWorker being visible, which proves the handler
+    # is wired (ProcessManager spawns workers in the same start()
+    # frame, immediately after the handler registration).
+    if not topology.wait_master_ready(primary, timeout=60):
+        pytest.fail(
+            f"{label}: {primary} did not spawn any MWorker-* child within 60s "
+            "(SIGUSR1 handler would not be installed yet)"
+        )
     before = topology.sample_minions()
     fault_start = time.monotonic()
     topology.kill_signal(primary, "USR1")
@@ -195,6 +231,15 @@ def test_signal_kill_mworker(topology, request):
     """
     label = "signal_kill_mworker"
     primary = topology.spec.primary_master
+    # If the prior signal_* test terminated the master,
+    # ``_ensure_primary_alive`` will have revived it -- but a freshly-
+    # started master takes a few seconds to spawn its MWorker pool,
+    # and ``pkill -f MWorker-`` returning exit 1 on an empty match
+    # would surface as a ``CalledProcessError`` here, masking the
+    # real regression this test is meant to catch (does the process
+    # manager respawn a single downed worker?).
+    if not topology.wait_master_ready(primary, timeout=60):
+        pytest.fail(f"{label}: {primary} did not spawn any MWorker-* child within 60s")
     before = topology.sample_minions()
     fault_start = time.monotonic()
     # -n picks the newest matching PID so we kill ONE worker, not all.
