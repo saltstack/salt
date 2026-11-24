@@ -871,10 +871,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("FURB167", 'import re\n\nif re.search("^hello", "hello world", re.I):\n    ...\n'),
     ("FURB171", "1 in [1]\n"),
     (
-        "G004",
-        'import logging\n\nlogging.basicConfig(format="%(message)s", level=logging.INFO)\n\nuser = "Maria"\n\nlogging.info(f"{user} - Something happened")\n',
-    ),
-    (
         "G201",
         'import logging\n\ntry:\n    ...\nexcept ValueError:\n    logging.error("Exception occurred", exc_info=True)\n',
     ),
@@ -954,12 +950,10 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "SIM110",
         "def foo():\n    for item in iterable:\n        if predicate(item):\n            return True\n    return False\n",
     ),
-    ("SIM112", 'import os\n\nos.environ["foo"]\n'),
     (
         "SIM113",
         'fruits = ["apple", "banana", "cherry"]\ni = 0\nfor fruit in fruits:\n    print(f"{i + 1}. {fruit}")\n    i += 1\n',
     ),
-    ("SIM115", 'file = open("foo.txt")\n...\nfile.close()\n'),
     ("SIM118", "key in foo.keys()\n"),
     ("SIM201", "not a == b\n"),
     ("SIM210", "True if a else False\n"),
@@ -975,14 +969,6 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     (
         "TRY002",
         'def main_function():\n    if not cond:\n        raise Exception()\n\n\ndef consumer_func():\n    try:\n        do_step()\n        prepare()\n        main_function()\n    except Exception:\n        logger.error("Oops")\n',
-    ),
-    (
-        "TRY004",
-        'def foo(n: int):\n    if isinstance(n, int):\n        pass\n    else:\n        raise ValueError("n must be an integer")\n',
-    ),
-    (
-        "TRY301",
-        "def bar():\n    pass\n\n\ndef foo():\n    try:\n        a = bar()\n        if not a:\n            raise ValueError\n    except ValueError:\n        raise\n",
     ),
 ]
 

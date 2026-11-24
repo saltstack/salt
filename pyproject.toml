@@ -143,6 +143,16 @@ ignore = [
     "PLR2004", "PT015", "Q", "RUF001", "RUF002", "RUF003", "S101", "T201", "T203",
     "TC001", "TC002", "TD", "TRY003", "W191",
 
+    # The fix is not a habit to change: it changes the behavior, or goes against the
+    # way Salt is written.
+    # G004: f-strings in logging are allowed (logging-fstring-interpolation is off in .pylintrc)
+    # SIM112: the Windows environment variables are written as Windows names them
+    # (SystemRoot, ProgramFiles)
+    # SIM115: temporary files and tar files that stay open longer than one block
+    # TRY004: a TypeError instead of the RuntimeError or ValueError that callers catch
+    # TRY301: a raise in a try block that the same try catches
+    "G004", "SIM112", "SIM115", "TRY004", "TRY301",
+
     # Rules for libraries and file types that Salt does not use: Airflow, Django,
     # FastAPI, gettext, NumPy, pandas, and the type stubs (.pyi) rules.
     "AIR001", "AIR002", "AIR301", "AIR302", "AIR303", "AIR311", "AIR312", "DJ001",
