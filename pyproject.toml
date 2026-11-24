@@ -135,9 +135,13 @@ ignore = [
     # TC001, TC002: moving an import into a TYPE_CHECKING block breaks code that reads
     # the annotations at run time
     # ICN001: import alias conventions are not part of the Salt style
-    "A002", "ARG", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX",
+    # B008: calls in default arguments are how Salt sets its path defaults
+    # PT015: "assert False" is allowed in tests, as for B011
+    # RUF001, RUF002, RUF003: typographic characters and unicode test data
+    "A002", "ARG", "B008", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX",
     "ICN001", "INP", "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
-    "PLR2004", "Q", "S101", "T201", "T203", "TC001", "TC002", "TD", "TRY003", "W191",
+    "PLR2004", "PT015", "Q", "RUF001", "RUF002", "RUF003", "S101", "T201", "T203",
+    "TC001", "TC002", "TD", "TRY003", "W191",
 
     # Rules for libraries and file types that Salt does not use: Airflow, Django,
     # FastAPI, gettext, NumPy, pandas, and the type stubs (.pyi) rules.
@@ -162,7 +166,13 @@ ignore = [
     # ANN: type annotations
     # SLF001: private member access, mostly in tests
     # PT009: unittest style assertions in tests
-    "ANN", "PT009", "SLF001",
+    # DTZ: naive datetimes, making them aware changes the behavior
+    # PTH: pathlib
+    # PYI024: collections.namedtuple
+    "ANN", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "PT009",
+    "PTH100", "PTH101", "PTH102", "PTH104", "PTH105", "PTH106", "PTH108", "PTH109",
+    "PTH114", "PTH117", "PTH122", "PTH123", "PTH202", "PTH204", "PTH207", "PTH211",
+    "PYI024", "SLF001",
 
     # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
     "S102", "S103", "S104", "S105", "S106", "S107", "S108", "S110", "S112", "S113",
@@ -180,18 +190,9 @@ ignore = [
     "UP034", "UP035", "UP036", "UP037", "UP039", "UP040", "UP041", "UP042", "UP043",
     "UP044", "UP045", "UP046", "UP047", "UP049", "UP050",
 
-    # Wave 3: 11 to 100 violations.
-    "A001", "ASYNC110", "ASYNC240", "B008", "B009", "B010", "C414", "C416", "C419",
-    "C420", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "E402", "E741",
-    "EXE001", "FURB110", "FURB167", "FURB171", "G004", "G201", "PERF102", "PERF402",
-    "PERF403", "PIE804", "PIE808", "PIE810", "PLC0206", "PLR1704", "PLR1711", "PLR1714",
-    "PLR1730", "PLR1733", "PLR2044", "PT001", "PT003", "PT011", "PT012", "PT015",
-    "PT018", "PT028", "PTH100", "PTH101", "PTH102", "PTH104", "PTH105", "PTH106",
-    "PTH108", "PTH109", "PTH114", "PTH117", "PTH122", "PTH123", "PTH202", "PTH204",
-    "PTH207", "PTH211", "PYI024", "RET501", "RET502", "RET507", "RET508", "RSE102",
-    "RUF001", "RUF002", "RUF003", "RUF010", "RUF013", "RUF015", "RUF021", "RUF046",
-    "RUF051", "RUF100", "SIM101", "SIM110", "SIM112", "SIM113", "SIM115", "SIM118",
-    "SIM201", "SIM210", "SIM212", "SIM401", "SIM910", "TRY002", "TRY004", "TRY301",
+    # To be enabled last, when the set of rules is final. It reports the noqa comments
+    # of rules that are not enabled yet, and asks to delete them.
+    "RUF100",
 
     # Wave 4: more than 100 violations.
     "B007", "B904", "BLE001", "C408", "FLY002", "PERF401", "PLC0415", "PLR0402",
