@@ -864,6 +864,50 @@ NEW_RULE_CASES = [
         "PYI064",
         "from typing import Final, Literal\n\nx: Final[Literal[42]]\ny: Final[Literal[42]] = 42\n",
     ),
+    # Rules of families that are not enabled (formatter, docstrings, naming), which nothing in the code breaks.
+    ("COM819", "foo = (1, 2, 3,)\n"),
+    (
+        "D106",
+        'class Foo:\n    """Class Foo."""\n\n    class Bar: ...\n\n\nbar = Foo.Bar()\nbar.__doc__  # None\n',
+    ),
+    (
+        "D201",
+        'def average(values: list[float]) -> float:\n\n    """Return the mean of the given values."""\n',
+    ),
+    (
+        "D204",
+        'class PhotoMetadata:\n    """Metadata about a photo."""\n    def __init__(self, file: Path):\n        ...\n',
+    ),
+    (
+        "D206",
+        'def sort_list(l: list[int]) -> list[int]:\n    """Return a sorted copy of the list.\n\n\tSort the list in ascending order and return a copy of the result using the bubble\n\tsort algorithm.\n    """\n',
+    ),
+    (
+        "D207",
+        'def sort_list(l: list[int]) -> list[int]:\n    """Return a sorted copy of the list.\n\nSort the list in ascending order and return a copy of the result using the bubble sort\nalgorithm.\n    """\n',
+    ),
+    ("D210", 'def factorial(n: int) -> int:\n    """ Return the factorial of n. """\n'),
+    ("D211", 'class PhotoMetadata:\n\n    """Metadata about a photo."""\n'),
+    (
+        "D215",
+        'def calculate_speed(distance: float, time: float) -> float:\n    """Calculate speed as distance divided by time.\n\n    Parameters\n        ----------\n    distance : float\n        Distance traveled.\n    time : float\n        Time spent traveling.\n\n    Returns\n          -------\n    float\n        Speed as distance divided by time.\n\n    Raises\n      ------\n    FasterThanLightError\n        If speed is greater than the speed of light.\n    """\n    try:\n        return distance / time\n    except ZeroDivisionError as exc:\n        raise FasterThanLightError from exc\n',
+    ),
+    (
+        "D408",
+        'def calculate_speed(distance: float, time: float) -> float:\n    """Calculate speed as distance divided by time.\n\n    Parameters\n\n    ----------\n    distance : float\n        Distance traveled.\n    time : float\n        Time spent traveling.\n\n    Returns\n\n    -------\n    float\n        Speed as distance divided by time.\n\n    Raises\n\n    ------\n    FasterThanLightError\n        If speed is greater than the speed of light.\n    """\n    try:\n        return distance / time\n    except ZeroDivisionError as exc:\n        raise FasterThanLightError from exc\n',
+    ),
+    (
+        "D418",
+        'from typing import overload\n\n\n@overload\ndef factorial(n: int) -> int:\n    """Return the factorial of n."""\n\n\n@overload\ndef factorial(n: float) -> float:\n    """Return the factorial of n."""\n\n\ndef factorial(n):\n    """Return the factorial of n."""\n\n\nfactorial.__doc__  # "Return the factorial of n."\n',
+    ),
+    ("ISC002", 'z = "The quick brown fox jumps over the lazy "\\\n    "dog."\n'),
+    ("N811", "from example import CONSTANT_VALUE as ConstantValue\n"),
+    ("N814", "from example import MyClassName as MY_CLASS_NAME\n"),
+    ("Q001", "foo = '''\nbar\n'''\n"),
+    ("Q002", "'''\nbar\n'''\n"),
+    ("Q003", 'foo = "bar\\"s"\n'),
+    ("Q004", 'foo = "bar\\\'s"\n'),
+    ("W191", "if True:\n\tx = 1\n"),
 ]
 
 

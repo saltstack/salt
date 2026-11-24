@@ -105,11 +105,35 @@ builtins = [
 # list and add a case for it to tests/pytests/unit/test_ruff.py. Ruff is pinned in
 # .pre-commit-config.yaml, so a new Ruff release does not add rules by itself.
 select = ["ALL"]
+extend-select = [
+    # Rules of the families that are not enabled (see ignore), which nothing in the code breaks.
+    # A rule that is named here is enabled even if its family is in ignore.
+    "COM819",  # prohibited-trailing-comma
+    "D106",  # undocumented-public-nested-class
+    "D201",  # blank-line-before-function
+    "D204",  # incorrect-blank-line-after-class
+    "D206",  # docstring-tab-indentation
+    "D207",  # under-indentation
+    "D210",  # surrounding-whitespace
+    "D211",  # blank-line-before-class
+    "D215",  # overindented-section-underline
+    "D408",  # missing-section-underline-after-name
+    "D418",  # overload-with-docstring
+    "ISC002",  # multi-line-implicit-string-concatenation
+    "N811",  # constant-imported-as-non-constant
+    "N814",  # camelcase-imported-as-constant
+    "Q001",  # bad-quotes-multiline-string
+    "Q002",  # bad-quotes-docstring
+    "Q003",  # avoidable-escaped-quote
+    "Q004",  # unnecessary-escaped-quote
+    "W191",  # tab-indentation
+]
 ignore = [
     "F403",  # star imports
     "F405",  # names from star imports
 
-    # Not enabled on purpose.
+    # Not enabled on purpose. The rules of these families that nothing breaks are in
+    # extend-select above.
     "A002",  # parameter names that shadow builtins are part of the API
     "ARG",  # unused arguments, Salt functions have fixed signatures
     "B008",  # calls in default arguments are how Salt sets its path defaults
@@ -144,7 +168,6 @@ ignore = [
     "TC002",  # moving an import into a TYPE_CHECKING block breaks code that reads the annotations at run time
     "TD",  # TODO format
     "TRY003",  # long messages in exceptions
-    "W191",  # conflicts with the formatter (tab indentation)
 
     # The fix is not a habit to change: it changes the behavior, or goes against the
     # way Salt is written.
