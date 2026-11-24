@@ -254,69 +254,39 @@ ignore = [
     "S608",  # hardcoded-sql-expression
     "S701",  # jinja2-autoescape-false
 
-    # Result depends on the Python version Ruff checks for, to be enabled after the
-    # minimum Python version is raised.
+    # Rules that depend on the Python version (3.14). The ones that nothing in the code
+    # breaks are enabled. These are left: four that have nothing to report on 3.14, and
+    # the ones with violations, to be decided one by one.
     "ASYNC109",  # async-function-with-timeout
     "B905",  # zip-without-explicit-strict
-    "B911",  # batched-without-explicit-strict
     "B912",  # map-without-explicit-strict
     "FA100",  # only reported for Python 3.8; nothing to report on 3.14
     "FA102",  # future-required-type-annotation
     "FAST001",  # does not report on the 3.14 version, and Salt does not use FastAPI
-    "FURB161",  # bit-count
-    "FURB162",  # fromisoformat-replace-z
     "FURB188",  # slice-to-remove-prefix-or-suffix
     "I001",  # unsorted-imports
     "PERF203",  # try-except-in-loop
     "PTH115",  # os-readlink
-    "RUF053",  # class-with-mixed-type-vars
     "TC003",  # typing-only-standard-library-import
     "TC010",  # only reported up to Python 3.13; annotations are not evaluated at once on 3.14
-    "UP001",  # useless-metaclass-type
-    "UP003",  # type-of-primitive
-    "UP004",  # useless-object-inheritance
-    "UP005",  # deprecated-unittest-alias
-    "UP006",  # non-pep585-annotation
     "UP007",  # non-pep604-annotation-union
-    "UP008",  # super-call-with-parameters
-    "UP009",  # utf8-encoding-declaration
     "UP010",  # unnecessary-future-import
-    "UP011",  # lru-cache-without-parameters
-    "UP012",  # unnecessary-encode-utf8
     "UP013",  # convert-typed-dict-functional-to-class
-    "UP014",  # convert-named-tuple-functional-to-class
     "UP015",  # redundant-open-modes
     "UP017",  # datetime-timezone-utc
     "UP018",  # native-literals
-    "UP019",  # typing-text-str-alias
-    "UP020",  # open-alias
-    "UP021",  # replace-universal-newlines
     "UP022",  # replace-stdout-stderr
-    "UP023",  # deprecated-c-element-tree
     "UP024",  # os-error-alias
-    "UP025",  # unicode-kind-prefix
     "UP026",  # deprecated-mock-import
-    "UP028",  # yield-in-for-loop
-    "UP029",  # unnecessary-builtin-import
     "UP030",  # format-literals
     "UP031",  # printf-string-formatting
     "UP032",  # f-string
-    "UP033",  # lru-cache-with-maxsize-none
-    "UP034",  # extraneous-parentheses
     "UP035",  # deprecated-import
     "UP036",  # outdated-version-block
     "UP037",  # quoted-annotation
-    "UP039",  # unnecessary-class-parentheses
-    "UP040",  # non-pep695-type-alias
     "UP041",  # timeout-error-alias
     "UP042",  # replace-str-enum
-    "UP043",  # unnecessary-default-type-args
-    "UP044",  # non-pep646-unpack
-    "UP045",  # non-pep604-annotation-optional
-    "UP046",  # non-pep695-generic-class
     "UP047",  # non-pep695-generic-function
-    "UP049",  # private-type-parameter
-    "UP050",  # useless-class-metaclass-type
 
     # To be enabled last, when the set of rules is final. It reports the noqa comments
     # of rules that are not enabled yet, and asks to delete them.

@@ -906,6 +906,77 @@ NEW_RULE_CASES = [
         'import pickle\n\nwith open("foo.pickle", "rb") as file:\n    foo = pickle.load(file)\n',
     ),
     ("S602", 'import subprocess\n\nsubprocess.run("ls -l", shell=True)\n'),
+    # Rules that depend on the version Ruff checks for (3.14), which nothing in the code breaks.
+    ("B911", "import itertools\n\nitertools.batched(iterable, n)\n"),
+    ("FURB161", 'x = bin(123).count("1")\ny = bin(0b1111011).count("1")\n'),
+    (
+        "FURB162",
+        'from datetime import datetime\n\n\ndate = "2025-01-01T00:00:00Z"\n\ndatetime.fromisoformat(date.replace("Z", "+00:00"))\ndatetime.fromisoformat(date[:-1] + "-00")\ndatetime.fromisoformat(date.strip("Z", "-0000"))\ndatetime.fromisoformat(date.rstrip("Z", "-00:00"))\n',
+    ),
+    (
+        "RUF053",
+        'from typing import Generic, ParamSpec, TypeVar, TypeVarTuple\n\nU = TypeVar("U")\nP = ParamSpec("P")\nTs = TypeVarTuple("Ts")\n\n\nclass C[T](Generic[U, P, *Ts]): ...\n',
+    ),
+    ("UP001", "class Foo:\n    __metaclass__ = type\n"),
+    ("UP003", "type(1)\n"),
+    ("UP004", "class Foo(object): ...\n"),
+    (
+        "UP005",
+        "from unittest import TestCase\n\n\nclass SomeTest(TestCase):\n    def test_something(self):\n        self.assertEquals(1, 1)\n",
+    ),
+    ("UP006", "from typing import List\n\nfoo: List[int] = [1, 2, 3]\n"),
+    (
+        "UP008",
+        "class A:\n    def foo(self):\n        pass\n\n\nclass B(A):\n    def bar(self):\n        super(B, self).foo()\n",
+    ),
+    ("UP009", '# -*- coding: utf-8 -*-\nprint("Hello, world!")\n'),
+    ("UP011", "import functools\n\n\n@functools.lru_cache()\ndef foo(): ...\n"),
+    ("UP012", '"foo".encode("utf-8")\n'),
+    (
+        "UP014",
+        'from typing import NamedTuple\n\nFoo = NamedTuple("Foo", [("a", int), ("b", str)])\n',
+    ),
+    ("UP019", 'from typing import Text\n\nfoo: Text = "bar"\n'),
+    ("UP020", 'import io\n\nwith io.open("file.txt") as f:\n    ...\n'),
+    (
+        "UP021",
+        'import subprocess\n\nsubprocess.run(["foo"], universal_newlines=True)\n',
+    ),
+    ("UP023", "from xml.etree import cElementTree as ET\n"),
+    ("UP025", 'u"foo"\n'),
+    (
+        "UP028",
+        "def bar():\n    for x in foo:\n        yield x\n\n    global y\n    for y in foo:\n        yield y\n",
+    ),
+    ("UP029", "from builtins import str\n\nstr(1)\n"),
+    (
+        "UP033",
+        "import functools\n\n\n@functools.lru_cache(maxsize=None)\ndef foo(): ...\n",
+    ),
+    ("UP034", 'print(("Hello, world"))\n'),
+    ("UP039", "class Foo():\n    ...\n"),
+    (
+        "UP040",
+        'from typing import Annotated, TypeAlias, TypeAliasType\nfrom annotated_types import Gt\n\nListOfInt: TypeAlias = list[int]\nPositiveInt = TypeAliasType("PositiveInt", Annotated[int, Gt(0)])\n',
+    ),
+    (
+        "UP043",
+        "from collections.abc import Generator, AsyncGenerator\n\n\ndef sync_gen() -> Generator[int, None, None]:\n    yield 42\n\n\nasync def async_gen() -> AsyncGenerator[int, None]:\n    yield 42\n",
+    ),
+    (
+        "UP044",
+        "from typing import Unpack\n\n\ndef foo(*args: Unpack[tuple[int, ...]]) -> None:\n    pass\n",
+    ),
+    ("UP045", "from typing import Optional\n\nfoo: Optional[int] = None\n"),
+    (
+        "UP046",
+        'from typing import Generic, TypeVar\n\nT = TypeVar("T")\n\n\nclass GenericClass(Generic[T]):\n    var: T\n',
+    ),
+    (
+        "UP049",
+        "class GenericClass[_T]:\n    var: _T\n\n\ndef generic_function[_T](var: _T) -> list[_T]:\n    return var[0]\n",
+    ),
+    ("UP050", "class Foo(metaclass=type): ...\n"),
 ]
 
 
