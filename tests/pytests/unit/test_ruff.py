@@ -648,6 +648,8 @@ NEW_RULE_CASES = [
         "YTT204",
         'import sys\n\nif sys.version_info.minor < 7:\n    print("Python 3.6 or earlier.")  # This will be printed on Python 4.0.\n',
     ),
+    # Rules of the third wave that nothing in the code breaks.
+    ("SIM101", "if isinstance(obj, int) or isinstance(obj, float):\n    pass\n"),
 ]
 
 
@@ -836,6 +838,151 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     (
         "TRY203",
         "def foo():\n    try:\n        bar()\n    except NotImplementedError:\n        raise\n",
+    ),
+    # Rules enabled in the third wave: existing violations. Only new ones block a PR.
+    (
+        "A001",
+        "def find_max(list_of_lists):\n    max = 0\n    for flat_list in list_of_lists:\n        for value in flat_list:\n            max = max(max, value)  # TypeError: 'int' object is not callable\n    return max\n",
+    ),
+    (
+        "ASYNC110",
+        "import asyncio\n\nDONE = False\n\n\nasync def func():\n    while not DONE:\n        await asyncio.sleep(1)\n",
+    ),
+    (
+        "ASYNC240",
+        'import os\n\n\nasync def func():\n    path = "my_file.txt"\n    file_exists = os.path.exists(path)\n',
+    ),
+    ("B009", 'getattr(obj, "foo")\n'),
+    ("B010", 'setattr(obj, "foo", 42)\n'),
+    ("C414", "list(tuple(iterable))\n"),
+    (
+        "C416",
+        "{a: b for a, b in iterable}\n[x for x in iterable]\n{x for x in iterable}\n",
+    ),
+    (
+        "C419",
+        "any([x.id for x in bar])\nall([x.id for x in bar])\nsum([x.val for x in bar])\nmin([x.val for x in bar])\nmax([x.val for x in bar])\n",
+    ),
+    ("C420", "{a: None for a in iterable}\n{a: 1 for a in iterable}\n"),
+    ("E402", '"One string"\n"Two string"\na = 1\nimport os\nfrom sys import x\n'),
+    ("E741", "l = 0\nO = 123\nI = 42\n"),
+    ("EXE001", "#!/usr/bin/env python\n"),
+    ("FURB110", "x, y = 1, 2\n\nz = x if x else y\n"),
+    ("FURB167", 'import re\n\nif re.search("^hello", "hello world", re.I):\n    ...\n'),
+    ("FURB171", "1 in [1]\n"),
+    (
+        "G004",
+        'import logging\n\nlogging.basicConfig(format="%(message)s", level=logging.INFO)\n\nuser = "Maria"\n\nlogging.info(f"{user} - Something happened")\n',
+    ),
+    (
+        "G201",
+        'import logging\n\ntry:\n    ...\nexcept ValueError:\n    logging.error("Exception occurred", exc_info=True)\n',
+    ),
+    (
+        "PERF102",
+        'obj = {"a": 1, "b": 2}\nfor key, value in obj.items():\n    print(value)\n',
+    ),
+    (
+        "PERF402",
+        "original = list(range(10000))\nfiltered = []\nfor i in original:\n    filtered.append(i)\n",
+    ),
+    (
+        "PERF403",
+        'pairs = (("a", 1), ("b", 2))\nresult = {}\nfor x, y in pairs:\n    if y % 2:\n        result[x] = y\n',
+    ),
+    (
+        "PIE804",
+        'def foo(bar):\n    return bar + 1\n\n\nprint(foo(**{"bar": 2}))  # prints 3\n\n# No typing errors, but results in an exception at runtime.\nprint(foo(**{"bar": 2, "baz": 3}))\n',
+    ),
+    ("PIE808", "range(0, 3)\n"),
+    (
+        "PIE810",
+        'msg = "Hello, world!"\nif msg.startswith("Hello") or msg.startswith("Hi"):\n    print("Greetings!")\n',
+    ),
+    (
+        "PLC0206",
+        'ORCHESTRA = {\n    "violin": "strings",\n    "oboe": "woodwind",\n    "tuba": "brass",\n    "gong": "percussion",\n}\n\nfor instrument in ORCHESTRA:\n    print(f"{instrument}: {ORCHESTRA[instrument]}")\n',
+    ),
+    (
+        "PLR1704",
+        'def show(host_id=10.11):\n    for host_id, host in [[12.13, "Venus"], [14.15, "Mars"]]:\n        print(host_id, host)\n',
+    ),
+    ("PLR1711", "def f():\n    print(5)\n    return None\n"),
+    ("PLR1714", 'foo == "bar" or foo == "baz" or foo == "qux"\n'),
+    ("PLR1730", "if score > highest_score:\n    highest_score = score\n"),
+    (
+        "PLR1733",
+        'FRUITS = {"apple": 1, "orange": 10, "berry": 22}\n\nfor fruit_name, fruit_count in FRUITS.items():\n    print(FRUITS[fruit_name])\n',
+    ),
+    ("PLR2044", "class Foo:  #\n    pass\n"),
+    ("PT001", "import pytest\n\n\n@pytest.fixture()\ndef my_fixture(): ...\n"),
+    (
+        "PT003",
+        'import pytest\n\n\n@pytest.fixture(scope="function")\ndef my_fixture(): ...\n',
+    ),
+    (
+        "PT011",
+        'import pytest\n\n\ndef test_foo():\n    with pytest.raises(ValueError):\n        ...\n\n    # empty string is also an error\n    with pytest.raises(ValueError, match=""):\n        ...\n',
+    ),
+    (
+        "PT012",
+        "import pytest\n\n\ndef test_foo():\n    with pytest.raises(MyError):\n        setup()\n        func_to_test()  # not executed if `setup()` raises `MyError`\n        assert foo()  # not executed\n",
+    ),
+    (
+        "PT018",
+        "def test_foo():\n    assert something and something_else\n\n\ndef test_bar():\n    assert not (something or something_else)\n",
+    ),
+    ("PT028", "def test_foo(a=1): ...\n"),
+    ("RET501", "def foo(bar):\n    if not bar:\n        return\n    return None\n"),
+    ("RET502", "def foo(bar):\n    if not bar:\n        return\n    return 1\n"),
+    (
+        "RET507",
+        "def foo(bar, baz):\n    for i in bar:\n        if i < baz:\n            continue\n        else:\n            x = 0\n",
+    ),
+    (
+        "RET508",
+        "def foo(bar, baz):\n    for i in bar:\n        if i > baz:\n            break\n        else:\n            x = 0\n",
+    ),
+    ("RSE102", "raise TypeError()\n"),
+    ("RUF010", 'a = "some string"\nf"{repr(a)}"\n'),
+    ("RUF013", "def foo(arg: int = None):\n    pass\n"),
+    ("RUF015", "head = list(x)[0]\nhead = [x * x for x in range(10)][0]\n"),
+    ("RUF021", "a = True\nb = False\nc = True\nx = a and b or c\n"),
+    ("RUF046", "int(len([]))\nint(round(foo, None))\n"),
+    ("RUF051", "dictionary = {}\nif key in dictionary:\n    del dictionary[key]\n"),
+    (
+        "SIM110",
+        "def foo():\n    for item in iterable:\n        if predicate(item):\n            return True\n    return False\n",
+    ),
+    ("SIM112", 'import os\n\nos.environ["foo"]\n'),
+    (
+        "SIM113",
+        'fruits = ["apple", "banana", "cherry"]\ni = 0\nfor fruit in fruits:\n    print(f"{i + 1}. {fruit}")\n    i += 1\n',
+    ),
+    ("SIM115", 'file = open("foo.txt")\n...\nfile.close()\n'),
+    ("SIM118", "key in foo.keys()\n"),
+    ("SIM201", "not a == b\n"),
+    ("SIM210", "True if a else False\n"),
+    ("SIM212", "b if not a else a\n"),
+    (
+        "SIM401",
+        'foo = {}\nif "bar" in foo:\n    value = foo["bar"]\nelse:\n    value = 0\n',
+    ),
+    (
+        "SIM910",
+        'ages = {"Tom": 23, "Maria": 23, "Dog": 11}\nage = ages.get("Cat", None)\n',
+    ),
+    (
+        "TRY002",
+        'def main_function():\n    if not cond:\n        raise Exception()\n\n\ndef consumer_func():\n    try:\n        do_step()\n        prepare()\n        main_function()\n    except Exception:\n        logger.error("Oops")\n',
+    ),
+    (
+        "TRY004",
+        'def foo(n: int):\n    if isinstance(n, int):\n        pass\n    else:\n        raise ValueError("n must be an integer")\n',
+    ),
+    (
+        "TRY301",
+        "def bar():\n    pass\n\n\ndef foo():\n    try:\n        a = bar()\n        if not a:\n            raise ValueError\n    except ValueError:\n        raise\n",
     ),
 ]
 
