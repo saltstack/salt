@@ -337,45 +337,32 @@ ignore = [
     "SLF001",  # private-member-access
 
     # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
-    "S102",  # exec-builtin
     "S103",  # bad-file-permissions
     "S104",  # hardcoded-bind-all-interfaces
     "S105",  # hardcoded-password-string
     "S106",  # hardcoded-password-func-arg
-    "S107",  # hardcoded-password-default
     "S108",  # hardcoded-temp-file
     "S110",  # try-except-pass
     "S112",  # try-except-continue
-    "S113",  # request-without-timeout
-    "S201",  # flask-debug-true
-    "S202",  # tarfile-unsafe-members
     "S301",  # suspicious-pickle-usage
     "S303",  # suspicious-insecure-hash-usage
     "S306",  # suspicious-mktemp-usage
     "S307",  # suspicious-eval-usage
-    "S308",  # suspicious-mark-safe-usage
     "S310",  # suspicious-url-open-usage
     "S311",  # suspicious-non-cryptographic-random-usage
     "S314",  # suspicious-xml-element-tree-usage
     "S318",  # suspicious-xml-mini-dom-usage
-    "S321",  # suspicious-ftp-lib-usage
     "S323",  # suspicious-unverified-context-usage
     "S324",  # hashlib-insecure-hash-function
     "S504",  # ssl-with-no-version
     "S506",  # unsafe-yaml-load
     "S507",  # ssh-no-host-key-verification
-    "S508",  # snmp-insecure-version
-    "S509",  # snmp-weak-cryptography
     "S602",  # subprocess-popen-with-shell-equals-true
     "S603",  # subprocess-without-shell-equals-true
     "S604",  # call-with-shell-equals-true
-    "S605",  # start-process-with-a-shell
     "S607",  # start-process-with-partial-path
     "S608",  # hardcoded-sql-expression
-    "S610",  # django-extra
-    "S611",  # django-raw-sql
     "S701",  # jinja2-autoescape-false
-    "S702",  # mako-templates
 
     # Result depends on the Python version Ruff checks for, to be enabled after the
     # minimum Python version is raised.

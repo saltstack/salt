@@ -650,6 +650,35 @@ NEW_RULE_CASES = [
     ),
     # Rules of the third wave that nothing in the code breaks.
     ("SIM101", "if isinstance(obj, int) or isinstance(obj, float):\n    pass\n"),
+    # Security rules enabled that nothing in the code breaks.
+    ("S113", 'import requests\n\nrequests.get("https://www.example.com/")\n'),
+    ("S201", "from flask import Flask\n\napp = Flask()\n\napp.run(debug=True)\n"),
+    (
+        "S308",
+        'from django.utils.safestring import mark_safe\n\n\ndef render_username(username):\n    return mark_safe(f"<i>{username}</i>")  # Dangerous if username is user-provided.\n',
+    ),
+    ("S321", 'import ftplib\n\nftp = ftplib.FTP("example.com")\n'),
+    (
+        "S508",
+        'from pysnmp.hlapi import CommunityData\n\nCommunityData("public", mpModel=0)\n',
+    ),
+    ("S509", 'from pysnmp.hlapi import UsmUserData\n\nUsmUserData("user")\n'),
+    (
+        "S605",
+        'import os\n\n# Safe usage (literal string)\ncommand = "ls -l"\nos.system(command)\n\n# Potentially unsafe usage (expression)\ncmd = get_user_input()\nos.system(cmd)\n',
+    ),
+    (
+        "S610",
+        'from django.contrib.auth.models import User\n\n# String interpolation creates a security loophole that could be used\n# for SQL injection:\nUser.objects.all().extra(select={"test": "%secure" % "nos"})\n',
+    ),
+    (
+        "S611",
+        'from django.db.models.expressions import RawSQL\nfrom django.contrib.auth.models import User\n\nUser.objects.annotate(val=RawSQL("%s" % input_param, []))\n',
+    ),
+    (
+        "S702",
+        'from mako.template import Template\n\nTemplate("${ data }")  # Unescaped: vulnerable to XSS.\n',
+    ),
 ]
 
 
@@ -969,6 +998,13 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     (
         "RUF012",
         "class A:\n    variable_1: list[int] = []\n    variable_2: set[int] = set()\n    variable_3: dict[str, int] = {}\n",
+    ),
+    # Security rules enabled with existing violations. Only new ones block a PR.
+    ("S102", "exec(\"print('Hello World')\")\n"),
+    ("S107", 'def connect_to_server(password="hunter2"): ...\n'),
+    (
+        "S202",
+        "import tarfile\nimport tempfile\n\ntar = tarfile.open(filename)\ntar.extractall(path=tempfile.mkdtemp())\ntar.close()\n",
     ),
 ]
 
