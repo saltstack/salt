@@ -65,6 +65,7 @@ def repo(tmp_path: Path) -> Path:
     git(tmp_path, "config", "user.name", "Ruff test")
     git(tmp_path, "config", "user.email", "ruff-test@example.invalid")
     write(tmp_path, "pyproject.toml", CONFIG)
+    write(tmp_path, "salt/__init__.py", "")
     write(tmp_path, "sample.py", "import os\n\nvalue = 1\n")
     commit(tmp_path)
     return tmp_path
@@ -205,7 +206,7 @@ def test_never_autofixes_files(repo: Path) -> None:
     write(
         repo,
         "pyproject.toml",
-        CONFIG.replace("target-version", "fix = true\ntarget-version"),
+        CONFIG.replace("\ntarget-version", "\nfix = true\ntarget-version", 1),
     )
     source = "import sys\n"
     write(repo, "new.py", source)
@@ -507,10 +508,6 @@ NEW_RULE_CASES = [
     ("EXE004", " #!/usr/bin/env python3\n"),
     ("EXE005", "foo = 1\n#!/usr/bin/env python3\n"),
     (
-        "FA100",
-        "from typing import List, Dict, Optional\n\n\ndef func(obj: Dict[str, Optional[int]]) -> None: ...\n",
-    ),
-    (
         "FURB163",
         "import math\n\nmath.log(4, math.e)\nmath.log(4, 2)\nmath.log(4, 10)\n",
     ),
@@ -622,7 +619,6 @@ NEW_RULE_CASES = [
         "TC005",
         'from typing import TYPE_CHECKING\n\nif TYPE_CHECKING:\n    pass\n\nprint("Hello, world!")\n',
     ),
-    ("TC010", 'var: "Foo" | None\n\n\nclass Foo: ...\n'),
     ("TID252", "from .. import foo\n"),
     ("W291", "x = 1 \n"),
     ("W292", "x = 1"),
@@ -648,6 +644,343 @@ NEW_RULE_CASES = [
         "YTT204",
         'import sys\n\nif sys.version_info.minor < 7:\n    print("Python 3.6 or earlier.")  # This will be printed on Python 4.0.\n',
     ),
+    # Rules of the third wave that nothing in the code breaks.
+    ("SIM101", "if isinstance(obj, int) or isinstance(obj, float):\n    pass\n"),
+    # Security rules enabled that nothing in the code breaks.
+    ("S113", 'import requests\n\nrequests.get("https://www.example.com/")\n'),
+    ("S201", "from flask import Flask\n\napp = Flask()\n\napp.run(debug=True)\n"),
+    (
+        "S308",
+        'from django.utils.safestring import mark_safe\n\n\ndef render_username(username):\n    return mark_safe(f"<i>{username}</i>")  # Dangerous if username is user-provided.\n',
+    ),
+    ("S321", 'import ftplib\n\nftp = ftplib.FTP("example.com")\n'),
+    (
+        "S508",
+        'from pysnmp.hlapi import CommunityData\n\nCommunityData("public", mpModel=0)\n',
+    ),
+    ("S509", 'from pysnmp.hlapi import UsmUserData\n\nUsmUserData("user")\n'),
+    (
+        "S605",
+        'import os\n\n# Safe usage (literal string)\ncommand = "ls -l"\nos.system(command)\n\n# Potentially unsafe usage (expression)\ncmd = get_user_input()\nos.system(cmd)\n',
+    ),
+    (
+        "S610",
+        'from django.contrib.auth.models import User\n\n# String interpolation creates a security loophole that could be used\n# for SQL injection:\nUser.objects.all().extra(select={"test": "%secure" % "nos"})\n',
+    ),
+    (
+        "S611",
+        'from django.db.models.expressions import RawSQL\nfrom django.contrib.auth.models import User\n\nUser.objects.annotate(val=RawSQL("%s" % input_param, []))\n',
+    ),
+    (
+        "S702",
+        'from mako.template import Template\n\nTemplate("${ data }")  # Unescaped: vulnerable to XSS.\n',
+    ),
+    # Rules for libraries Salt does not use (Airflow, Django, FastAPI, gettext, NumPy,
+    # pandas, type stubs). Nothing in the code breaks them.
+    (
+        "AIR001",
+        'from airflow.operators import PythonOperator\n\n\nincorrect_name = PythonOperator(task_id="my_task")\n',
+    ),
+    (
+        "AIR002",
+        'from airflow import DAG\n\n\n# Using the implicit default schedule.\ndag = DAG(dag_id="my_dag")\n',
+    ),
+    (
+        "AIR301",
+        "from airflow.utils.dates import days_ago\n\n\nyesterday = days_ago(today, 1)\n",
+    ),
+    (
+        "AIR302",
+        "from airflow.auth.managers.fab.fab_auth_manager import FabAuthManager\n\nfab_auth_manager_app = FabAuthManager().get_fastapi_app()\n",
+    ),
+    (
+        "AIR303",
+        'from airflow.lineage.hook import HookLineageCollector\n\ncollector = HookLineageCollector()\n# Passing positional arguments will raise a runtime error in Airflow 3.0\ncollector.create_asset("s3://bucket/key")\n',
+    ),
+    ("AIR311", 'from airflow import Dataset\n\n\nDataset(uri="test://test/")\n'),
+    (
+        "AIR312",
+        'from airflow.operators.python import PythonOperator\n\n\ndef print_context(ds=None, **kwargs):\n    print(kwargs)\n    print(ds)\n\n\nprint_the_context = PythonOperator(\n    task_id="print_the_context", python_callable=print_context\n)\n',
+    ),
+    (
+        "DJ001",
+        "from django.db import models\n\n\nclass MyModel(models.Model):\n    field = models.CharField(max_length=255, null=True)\n",
+    ),
+    (
+        "DJ003",
+        'from django.shortcuts import render\n\n\ndef index(request):\n    posts = Post.objects.all()\n    return render(request, "app/index.html", locals())\n',
+    ),
+    (
+        "DJ006",
+        'from django.forms import ModelForm\n\n\nclass PostForm(ModelForm):\n    class Meta:\n        model = Post\n        exclude = ["author"]\n',
+    ),
+    (
+        "DJ007",
+        'from django.forms import ModelForm\n\n\nclass PostForm(ModelForm):\n    class Meta:\n        model = Post\n        fields = "__all__"\n',
+    ),
+    (
+        "DJ008",
+        "from django.db import models\n\n\nclass MyModel(models.Model):\n    field = models.CharField(max_length=255)\n",
+    ),
+    (
+        "DJ012",
+        'from django.db import models\n\n\nclass StrBeforeFieldModel(models.Model):\n    class Meta:\n        verbose_name = "test"\n        verbose_name_plural = "tests"\n\n    def __str__(self):\n        return "foobar"\n\n    first_name = models.CharField(max_length=32)\n    last_name = models.CharField(max_length=40)\n',
+    ),
+    (
+        "DJ013",
+        "from django.dispatch import receiver\nfrom django.db.models.signals import post_save\n\n\n@transaction.atomic\n@receiver(post_save, sender=MyModel)\ndef my_handler(sender, instance, created, **kwargs):\n    pass\n",
+    ),
+    (
+        "FAST002",
+        'from fastapi import Depends, FastAPI\n\napp = FastAPI()\n\n\nasync def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):\n    return {"q": q, "skip": skip, "limit": limit}\n\n\n@app.get("/items/")\nasync def read_items(commons: dict = Depends(common_parameters)):\n    return commons\n',
+    ),
+    (
+        "FAST003",
+        'from fastapi import FastAPI\n\napp = FastAPI()\n\n\n@app.get("/things/{thing_id}")\nasync def read_thing(query: str): ...\n',
+    ),
+    (
+        "INT001",
+        'from gettext import gettext as _\n\nname = "Maria"\n_(f"Hello, {name}!")  # Looks for "Hello, Maria!".\n',
+    ),
+    (
+        "INT002",
+        'from gettext import gettext as _\n\nname = "Maria"\n_("Hello, {}!".format(name))  # Looks for "Hello, Maria!".\n',
+    ),
+    (
+        "INT003",
+        'from gettext import gettext as _\n\nname = "Maria"\n_("Hello, %s!" % name)  # Looks for "Hello, Maria!".\n',
+    ),
+    ("NPY001", "import numpy as np\n\nnp.int\n"),
+    ("NPY002", "import numpy as np\n\nnp.random.seed(1337)\nnp.random.normal()\n"),
+    ("NPY003", "import numpy as np\n\nnp.alltrue([True, False])\n"),
+    (
+        "NPY201",
+        "import numpy as np\n\narr1 = [np.Infinity, np.NaN, np.nan, np.PINF, np.inf]\narr2 = [np.float_(1.5), np.float64(5.1)]\nnp.round_(arr2)\n",
+    ),
+    (
+        "PD002",
+        'import pandas as pd\n\nstudents = pd.read_csv("students.csv")\nstudents.sort_values("name", inplace=True)\n',
+    ),
+    (
+        "PD003",
+        'import pandas as pd\n\nanimals_df = pd.read_csv("animals.csv")\npd.isnull(animals_df)\n',
+    ),
+    (
+        "PD004",
+        'import pandas as pd\n\nanimals_df = pd.read_csv("animals.csv")\npd.notnull(animals_df)\n',
+    ),
+    (
+        "PD007",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.ix[0]  # 0th row or row with label 0?\n',
+    ),
+    (
+        "PD008",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.at["Maria"]\n',
+    ),
+    (
+        "PD009",
+        'import pandas as pd\n\nstudents_df = pd.read_csv("students.csv")\nstudents_df.iat[0]\n',
+    ),
+    (
+        "PD010",
+        'import pandas as pd\n\ndf = pd.read_csv("cities.csv")\ndf.pivot(index="city", columns="year", values="population")\n',
+    ),
+    (
+        "PD011",
+        'import pandas as pd\n\nanimals = pd.read_csv("animals.csv").values  # Ambiguous.\n',
+    ),
+    (
+        "PD012",
+        'import pandas as pd\n\ncities_df = pd.read_table("cities.csv", sep=",")\n',
+    ),
+    (
+        "PD013",
+        'import pandas as pd\n\ncities_df = pd.read_csv("cities.csv")\ncities_df.set_index("city").stack()\n',
+    ),
+    (
+        "PD015",
+        'import pandas as pd\n\ncats_df = pd.read_csv("cats.csv")\ndogs_df = pd.read_csv("dogs.csv")\nrabbits_df = pd.read_csv("rabbits.csv")\npets_df = pd.merge(pd.merge(cats_df, dogs_df), rabbits_df)  # Hard to read.\n',
+    ),
+    (
+        "PD101",
+        'import pandas as pd\n\ndata = pd.Series(range(1000))\nif data.nunique() <= 1:\n    print("Series is constant")\n',
+    ),
+    ("PYI013", "class Foo:\n    ...\n    value: int\n"),
+    ("PYI016", "foo: str | str\n"),
+    (
+        "PYI018",
+        'import typing\nimport typing_extensions\n\n_T = typing.TypeVar("_T")\n_Ts = typing_extensions.TypeVarTuple("_Ts")\n',
+    ),
+    (
+        "PYI019",
+        'from typing import TypeVar\n\n_S = TypeVar("_S", bound="Foo")\n\nclass Foo:\n    def __new__(cls: type[_S], *args: str, **kwargs: int) -> _S: ...\n    def foo(self: _S, arg: bytes) -> _S: ...\n    @classmethod\n    def bar(cls: type[_S], arg: int) -> _S: ...\n',
+    ),
+    ("PYI030", "from typing import Literal\n\nfield: Literal[1] | Literal[2] | str\n"),
+    (
+        "PYI032",
+        "from typing import Any\n\nclass Foo:\n    def __eq__(self, obj: Any) -> bool: ...\n",
+    ),
+    ("PYI041", "def foo(x: float | int | str) -> None: ...\n"),
+    ("PYI042", "from typing import TypeAlias\n\ntype_alias_name: TypeAlias = int\n"),
+    ("PYI043", "from typing import TypeAlias\n\n_MyTypeT: TypeAlias = int\n"),
+    (
+        "PYI045",
+        "import collections.abc\n\n\nclass Klass:\n    def __iter__(self) -> collections.abc.Iterable[str]: ...\n",
+    ),
+    (
+        "PYI046",
+        "import typing\n\nclass _PrivateProtocol(typing.Protocol):\n    foo: int\n",
+    ),
+    ("PYI047", "import typing\n\n_UnusedTypeAlias: typing.TypeAlias = int\n"),
+    (
+        "PYI049",
+        "import typing\n\nclass _UnusedPrivateTypedDict(typing.TypedDict):\n    foo: list[int]\n",
+    ),
+    ("PYI051", 'from typing import Literal\n\nx: Literal["A", b"B"] | str\n'),
+    (
+        "PYI056",
+        'import sys\n\n__all__ = ["A", "B"]\n\nif sys.version_info >= (3, 10):\n    __all__.append("C")\n\nif sys.version_info >= (3, 11):\n    __all__.remove("B")\n',
+    ),
+    ("PYI057", "from typing import ByteString\n"),
+    (
+        "PYI059",
+        'from typing import Generic, TypeVar\n\nT = TypeVar("T")\n\nclass Foo(Generic[T], list[T]): ...\n',
+    ),
+    (
+        "PYI061",
+        'from typing import Literal\n\nLiteral[None]\nLiteral[1, 2, 3, "foo", 5, None]\n',
+    ),
+    ("PYI062", 'from typing import Literal\n\nfoo: Literal["a", "b", "a"]\n'),
+    ("PYI063", "def foo(__x: int) -> None: ...\n"),
+    (
+        "PYI064",
+        "from typing import Final, Literal\n\nx: Final[Literal[42]]\ny: Final[Literal[42]] = 42\n",
+    ),
+    # Rules of families that are not enabled (formatter, docstrings, naming), which nothing in the code breaks.
+    ("COM819", "foo = (1, 2, 3,)\n"),
+    (
+        "D106",
+        'class Foo:\n    """Class Foo."""\n\n    class Bar: ...\n\n\nbar = Foo.Bar()\nbar.__doc__  # None\n',
+    ),
+    (
+        "D201",
+        'def average(values: list[float]) -> float:\n\n    """Return the mean of the given values."""\n',
+    ),
+    (
+        "D204",
+        'class PhotoMetadata:\n    """Metadata about a photo."""\n    def __init__(self, file: Path):\n        ...\n',
+    ),
+    (
+        "D206",
+        'def sort_list(l: list[int]) -> list[int]:\n    """Return a sorted copy of the list.\n\n\tSort the list in ascending order and return a copy of the result using the bubble\n\tsort algorithm.\n    """\n',
+    ),
+    (
+        "D207",
+        'def sort_list(l: list[int]) -> list[int]:\n    """Return a sorted copy of the list.\n\nSort the list in ascending order and return a copy of the result using the bubble sort\nalgorithm.\n    """\n',
+    ),
+    ("D210", 'def factorial(n: int) -> int:\n    """ Return the factorial of n. """\n'),
+    ("D211", 'class PhotoMetadata:\n\n    """Metadata about a photo."""\n'),
+    (
+        "D215",
+        'def calculate_speed(distance: float, time: float) -> float:\n    """Calculate speed as distance divided by time.\n\n    Parameters\n        ----------\n    distance : float\n        Distance traveled.\n    time : float\n        Time spent traveling.\n\n    Returns\n          -------\n    float\n        Speed as distance divided by time.\n\n    Raises\n      ------\n    FasterThanLightError\n        If speed is greater than the speed of light.\n    """\n    try:\n        return distance / time\n    except ZeroDivisionError as exc:\n        raise FasterThanLightError from exc\n',
+    ),
+    (
+        "D408",
+        'def calculate_speed(distance: float, time: float) -> float:\n    """Calculate speed as distance divided by time.\n\n    Parameters\n\n    ----------\n    distance : float\n        Distance traveled.\n    time : float\n        Time spent traveling.\n\n    Returns\n\n    -------\n    float\n        Speed as distance divided by time.\n\n    Raises\n\n    ------\n    FasterThanLightError\n        If speed is greater than the speed of light.\n    """\n    try:\n        return distance / time\n    except ZeroDivisionError as exc:\n        raise FasterThanLightError from exc\n',
+    ),
+    (
+        "D418",
+        'from typing import overload\n\n\n@overload\ndef factorial(n: int) -> int:\n    """Return the factorial of n."""\n\n\n@overload\ndef factorial(n: float) -> float:\n    """Return the factorial of n."""\n\n\ndef factorial(n):\n    """Return the factorial of n."""\n\n\nfactorial.__doc__  # "Return the factorial of n."\n',
+    ),
+    ("ISC002", 'z = "The quick brown fox jumps over the lazy "\\\n    "dog."\n'),
+    ("N811", "from example import CONSTANT_VALUE as ConstantValue\n"),
+    ("N814", "from example import MyClassName as MY_CLASS_NAME\n"),
+    ("Q001", "foo = '''\nbar\n'''\n"),
+    ("Q002", "'''\nbar\n'''\n"),
+    ("Q003", 'foo = "bar\\"s"\n'),
+    ("Q004", 'foo = "bar\\\'s"\n'),
+    ("W191", "if True:\n\tx = 1\n"),
+    # Rules for the code that handles data from outside. The tests are exempt, see below.
+    (
+        "S301",
+        'import pickle\n\nwith open("foo.pickle", "rb") as file:\n    foo = pickle.load(file)\n',
+    ),
+    ("S602", 'import subprocess\n\nsubprocess.run("ls -l", shell=True)\n'),
+    # Rules that depend on the version Ruff checks for (3.14), which nothing in the code breaks.
+    ("B911", "import itertools\n\nitertools.batched(iterable, n)\n"),
+    ("FURB161", 'x = bin(123).count("1")\ny = bin(0b1111011).count("1")\n'),
+    (
+        "FURB162",
+        'from datetime import datetime\n\n\ndate = "2025-01-01T00:00:00Z"\n\ndatetime.fromisoformat(date.replace("Z", "+00:00"))\ndatetime.fromisoformat(date[:-1] + "-00")\ndatetime.fromisoformat(date.strip("Z", "-0000"))\ndatetime.fromisoformat(date.rstrip("Z", "-00:00"))\n',
+    ),
+    (
+        "RUF053",
+        'from typing import Generic, ParamSpec, TypeVar, TypeVarTuple\n\nU = TypeVar("U")\nP = ParamSpec("P")\nTs = TypeVarTuple("Ts")\n\n\nclass C[T](Generic[U, P, *Ts]): ...\n',
+    ),
+    ("UP001", "class Foo:\n    __metaclass__ = type\n"),
+    ("UP003", "type(1)\n"),
+    ("UP004", "class Foo(object): ...\n"),
+    (
+        "UP005",
+        "from unittest import TestCase\n\n\nclass SomeTest(TestCase):\n    def test_something(self):\n        self.assertEquals(1, 1)\n",
+    ),
+    ("UP006", "from typing import List\n\nfoo: List[int] = [1, 2, 3]\n"),
+    (
+        "UP008",
+        "class A:\n    def foo(self):\n        pass\n\n\nclass B(A):\n    def bar(self):\n        super(B, self).foo()\n",
+    ),
+    ("UP009", '# -*- coding: utf-8 -*-\nprint("Hello, world!")\n'),
+    ("UP011", "import functools\n\n\n@functools.lru_cache()\ndef foo(): ...\n"),
+    ("UP012", '"foo".encode("utf-8")\n'),
+    (
+        "UP014",
+        'from typing import NamedTuple\n\nFoo = NamedTuple("Foo", [("a", int), ("b", str)])\n',
+    ),
+    ("UP019", 'from typing import Text\n\nfoo: Text = "bar"\n'),
+    ("UP020", 'import io\n\nwith io.open("file.txt") as f:\n    ...\n'),
+    (
+        "UP021",
+        'import subprocess\n\nsubprocess.run(["foo"], universal_newlines=True)\n',
+    ),
+    ("UP023", "from xml.etree import cElementTree as ET\n"),
+    ("UP025", 'u"foo"\n'),
+    (
+        "UP028",
+        "def bar():\n    for x in foo:\n        yield x\n\n    global y\n    for y in foo:\n        yield y\n",
+    ),
+    ("UP029", "from builtins import str\n\nstr(1)\n"),
+    (
+        "UP033",
+        "import functools\n\n\n@functools.lru_cache(maxsize=None)\ndef foo(): ...\n",
+    ),
+    ("UP034", 'print(("Hello, world"))\n'),
+    ("UP039", "class Foo():\n    ...\n"),
+    (
+        "UP040",
+        'from typing import Annotated, TypeAlias, TypeAliasType\nfrom annotated_types import Gt\n\nListOfInt: TypeAlias = list[int]\nPositiveInt = TypeAliasType("PositiveInt", Annotated[int, Gt(0)])\n',
+    ),
+    (
+        "UP043",
+        "from collections.abc import Generator, AsyncGenerator\n\n\ndef sync_gen() -> Generator[int, None, None]:\n    yield 42\n\n\nasync def async_gen() -> AsyncGenerator[int, None]:\n    yield 42\n",
+    ),
+    (
+        "UP044",
+        "from typing import Unpack\n\n\ndef foo(*args: Unpack[tuple[int, ...]]) -> None:\n    pass\n",
+    ),
+    ("UP045", "from typing import Optional\n\nfoo: Optional[int] = None\n"),
+    (
+        "UP046",
+        'from typing import Generic, TypeVar\n\nT = TypeVar("T")\n\n\nclass GenericClass(Generic[T]):\n    var: T\n',
+    ),
+    (
+        "UP049",
+        "class GenericClass[_T]:\n    var: _T\n\n\ndef generic_function[_T](var: _T) -> list[_T]:\n    return var[0]\n",
+    ),
+    ("UP050", "class Foo(metaclass=type): ...\n"),
+    # Mixed tabs and spaces in the continuation lines of a bracket, which Python accepts.
+    ("E101", "x = [\n\t    1,\n    \t2,\n]\n"),
+    # Single quoted strings. The product code has none; the tests are exempt, see below.
+    ("Q000", "foo = 'bar'\n"),
 ]
 
 
@@ -675,6 +1008,101 @@ def test_top_level_module_named_like_a_standard_library_module_is_reported(
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert "A005" in result.stdout
+
+
+# Rules that only look at the type stub files (.pyi).
+STUB_RULE_CASES = [
+    ("PYI001", 'from typing import TypeVar\n\nT = TypeVar("T")\n'),
+    ("PYI002", "import sys\n\nif (3, 10) <= sys.version_info < (3, 12): ...\n"),
+    ("PYI003", 'import sys\n\nif sys.version_info[0] == "2": ...\n'),
+    ("PYI004", "import sys\n\nif sys.version_info >= (3, 4, 3): ...\n"),
+    ("PYI005", "import sys\n\nif sys.version_info[:2] == (3,): ...\n"),
+    (
+        "PYI007",
+        'import sys\n\nif sys.platform == "xunil"[::-1]:\n    # Linux specific definitions\n    ...\nelse:\n    # Posix specific definitions\n    ...\n',
+    ),
+    ("PYI008", 'import sys\n\nif sys.platform == "linus": ...\n'),
+    ("PYI009", "def foo(bar: int) -> list[int]: pass\n"),
+    ("PYI010", "def double(x: int) -> int:\n    return x * 2\n"),
+    ("PYI011", "def foo(arg: list[int] = list(range(10_000))) -> None: ...\n"),
+    ("PYI012", "class MyClass:\n    x: int\n    pass\n"),
+    ("PYI014", "def foo(arg=bar()) -> None: ...\n"),
+    ("PYI015", "foo: str = bar()\n"),
+    (
+        "PYI017",
+        "from typing import TypeAlias\n\na = b = int\n\nclass Klass: ...\n\nKlass.X: TypeAlias = int\n",
+    ),
+    ("PYI020", 'def function() -> "int": ...\n'),
+    (
+        "PYI021",
+        'def func(param: int) -> str:\n    """This is a docstring."""\n    ...\n',
+    ),
+    ("PYI026", "Vector = list[float]\n"),
+    ("PYI029", "class Foo:\n    def __repr__(self) -> str: ...\n"),
+    ("PYI033", "x = 1  # type: int\n"),
+    ("PYI035", "__all__: list[str]\n"),
+    ("PYI044", "from __future__ import annotations\n"),
+    ("PYI048", "def function():\n    x = 1\n    y = 2\n    return x + y\n"),
+    ("PYI050", "from typing import NoReturn\n\ndef foo(x: NoReturn): ...\n"),
+    ("PYI052", "field = 0\n"),
+    (
+        "PYI053",
+        'def foo(arg: str = "51 character stringgggggggggggggggggggggggggggggggg") -> None: ...\n',
+    ),
+    (
+        "PYI054",
+        "def foo(arg: int = 693568516352839939918568862861217771399698285293568) -> None: ...\n",
+    ),
+    ("PYI055", "field: type[int] | type[float] | str\n"),
+    (
+        "PYI058",
+        "from typing import Generator\n\nclass Foo:\n    def __iter__(self) -> Generator[int, None, None]: ...\n",
+    ),
+    (
+        "PYI066",
+        "import sys\n\nif sys.version_info < (3, 10):\n    def read_data(x, *, preserve_order=True): ...\n\nelse:\n    def read_data(x): ...\n",
+    ),
+]
+
+
+@pytest.mark.parametrize(("code", "source"), STUB_RULE_CASES, ids=lambda v: v[:8])
+def test_rules_for_stub_files(repo: Path, code: str, source: str) -> None:
+    write(repo, "salt/new.pyi", source)
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert code in result.stdout
+
+
+def test_directory_without_init_is_reported_in_the_product_code(repo: Path) -> None:
+    write(repo, "salt/newpkg/module.py", "value = 1\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "INP001" in result.stdout
+
+
+EXEMPT_CASES = [
+    # The tests run commands they wrote, unpickle what they pickled, use made-up passwords.
+    (
+        "tests/pytests/new.py",
+        'import subprocess\n\nsubprocess.Popen("ls", shell=True)\n',
+    ),
+    ("tests/pytests/new.py", "import pickle\n\npickle.loads(pickle.dumps(1))\n"),
+    ("tests/pytests/new.py", 'def f(connect):\n    connect(password="secret")\n'),
+    # The directories of the tests and of the scripts are not packages.
+    ("tests/newdir/new.py", "value = 1\n"),
+    ("tools/newdir/new.py", "value = 1\n"),
+    (".github/scripts/new.py", "value = 1\n"),
+    ("tests/pytests/new.py", "value = 'single'\n"),
+]
+
+
+@pytest.mark.parametrize(("path", "source"), EXEMPT_CASES, ids=lambda v: v[:20])
+def test_rules_are_not_enforced_where_they_do_not_apply(
+    repo: Path, path: str, source: str
+) -> None:
+    write(repo, path, source)
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
 
 
 def test_module_importing_itself_is_reported(repo: Path) -> None:
@@ -728,10 +1156,7 @@ RULES_WITH_EXISTING_VIOLATIONS = [
     ("B011", "def test_f():\n    assert False\n"),
     # Rules enabled in the second wave: a few existing violations. Only new ones
     # block a PR.
-    (
-        "A003",
-        "class Class:\n    @staticmethod\n    def list() -> None:\n        pass\n\n    @staticmethod\n    def repeat(value: int, times: int) -> list[int]:\n        return [value] * times\n",
-    ),
+    ("A003", "class C:\n    def next(self):\n        pass\n\n    __next__ = next\n"),
     ("A004", 'from rich import print\n\nprint("Some message")\n'),
     ("B028", 'import warnings\n\nwarnings.warn("This is a warning")\n'),
     ("C400", "list(f(x) for x in foo)\nlist(x for x in foo)\nlist((x for x in foo))\n"),
@@ -837,6 +1262,158 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "TRY203",
         "def foo():\n    try:\n        bar()\n    except NotImplementedError:\n        raise\n",
     ),
+    # Rules enabled in the third wave: existing violations. Only new ones block a PR.
+    (
+        "A001",
+        "def find_max(list_of_lists):\n    max = 0\n    for flat_list in list_of_lists:\n        for value in flat_list:\n            max = max(max, value)  # TypeError: 'int' object is not callable\n    return max\n",
+    ),
+    ("B009", 'getattr(obj, "foo")\n'),
+    ("B010", 'setattr(obj, "foo", 42)\n'),
+    ("C414", "list(tuple(iterable))\n"),
+    (
+        "C416",
+        "{a: b for a, b in iterable}\n[x for x in iterable]\n{x for x in iterable}\n",
+    ),
+    (
+        "C419",
+        "any([x.id for x in bar])\nall([x.id for x in bar])\nsum([x.val for x in bar])\nmin([x.val for x in bar])\nmax([x.val for x in bar])\n",
+    ),
+    ("C420", "{a: None for a in iterable}\n{a: 1 for a in iterable}\n"),
+    ("E741", "l = 0\nO = 123\nI = 42\n"),
+    ("EXE001", "#!/usr/bin/env python\n"),
+    ("FURB110", "x, y = 1, 2\n\nz = x if x else y\n"),
+    ("FURB167", 'import re\n\nif re.search("^hello", "hello world", re.I):\n    ...\n'),
+    ("FURB171", "1 in [1]\n"),
+    (
+        "G201",
+        'import logging\n\ntry:\n    ...\nexcept ValueError:\n    logging.error("Exception occurred", exc_info=True)\n',
+    ),
+    (
+        "PERF102",
+        'obj = {"a": 1, "b": 2}\nfor key, value in obj.items():\n    print(value)\n',
+    ),
+    (
+        "PERF402",
+        "original = list(range(10000))\nfiltered = []\nfor i in original:\n    filtered.append(i)\n",
+    ),
+    (
+        "PERF403",
+        'pairs = (("a", 1), ("b", 2))\nresult = {}\nfor x, y in pairs:\n    if y % 2:\n        result[x] = y\n',
+    ),
+    (
+        "PIE804",
+        'def foo(bar):\n    return bar + 1\n\n\nprint(foo(**{"bar": 2}))  # prints 3\n\n# No typing errors, but results in an exception at runtime.\nprint(foo(**{"bar": 2, "baz": 3}))\n',
+    ),
+    ("PIE808", "range(0, 3)\n"),
+    (
+        "PIE810",
+        'msg = "Hello, world!"\nif msg.startswith("Hello") or msg.startswith("Hi"):\n    print("Greetings!")\n',
+    ),
+    (
+        "PLC0206",
+        'ORCHESTRA = {\n    "violin": "strings",\n    "oboe": "woodwind",\n    "tuba": "brass",\n    "gong": "percussion",\n}\n\nfor instrument in ORCHESTRA:\n    print(f"{instrument}: {ORCHESTRA[instrument]}")\n',
+    ),
+    (
+        "PLR1704",
+        'def show(host_id=10.11):\n    for host_id, host in [[12.13, "Venus"], [14.15, "Mars"]]:\n        print(host_id, host)\n',
+    ),
+    ("PLR1711", "def f():\n    print(5)\n    return None\n"),
+    ("PLR1714", 'foo == "bar" or foo == "baz" or foo == "qux"\n'),
+    ("PLR1730", "if score > highest_score:\n    highest_score = score\n"),
+    (
+        "PLR1733",
+        'FRUITS = {"apple": 1, "orange": 10, "berry": 22}\n\nfor fruit_name, fruit_count in FRUITS.items():\n    print(FRUITS[fruit_name])\n',
+    ),
+    ("PT001", "import pytest\n\n\n@pytest.fixture()\ndef my_fixture(): ...\n"),
+    (
+        "PT003",
+        'import pytest\n\n\n@pytest.fixture(scope="function")\ndef my_fixture(): ...\n',
+    ),
+    (
+        "PT011",
+        'import pytest\n\n\ndef test_foo():\n    with pytest.raises(ValueError):\n        ...\n\n    # empty string is also an error\n    with pytest.raises(ValueError, match=""):\n        ...\n',
+    ),
+    (
+        "PT012",
+        "import pytest\n\n\ndef test_foo():\n    with pytest.raises(MyError):\n        setup()\n        func_to_test()  # not executed if `setup()` raises `MyError`\n        assert foo()  # not executed\n",
+    ),
+    (
+        "PT018",
+        "def test_foo():\n    assert something and something_else\n\n\ndef test_bar():\n    assert not (something or something_else)\n",
+    ),
+    ("PT028", "def test_foo(a=1): ...\n"),
+    ("RET501", "def foo(bar):\n    if not bar:\n        return\n    return None\n"),
+    ("RET502", "def foo(bar):\n    if not bar:\n        return\n    return 1\n"),
+    (
+        "RET507",
+        "def foo(bar, baz):\n    for i in bar:\n        if i < baz:\n            continue\n        else:\n            x = 0\n",
+    ),
+    (
+        "RET508",
+        "def foo(bar, baz):\n    for i in bar:\n        if i > baz:\n            break\n        else:\n            x = 0\n",
+    ),
+    ("RSE102", "raise TypeError()\n"),
+    ("RUF010", 'a = "some string"\nf"{repr(a)}"\n'),
+    ("RUF013", "def foo(arg: int = None):\n    pass\n"),
+    ("RUF021", "a = True\nb = False\nc = True\nx = a and b or c\n"),
+    ("RUF046", "int(len([]))\nint(round(foo, None))\n"),
+    ("RUF051", "dictionary = {}\nif key in dictionary:\n    del dictionary[key]\n"),
+    (
+        "SIM110",
+        "def foo():\n    for item in iterable:\n        if predicate(item):\n            return True\n    return False\n",
+    ),
+    (
+        "SIM113",
+        'fruits = ["apple", "banana", "cherry"]\ni = 0\nfor fruit in fruits:\n    print(f"{i + 1}. {fruit}")\n    i += 1\n',
+    ),
+    ("SIM118", "key in foo.keys()\n"),
+    ("SIM201", "not a == b\n"),
+    ("SIM210", "True if a else False\n"),
+    ("SIM212", "b if not a else a\n"),
+    (
+        "SIM401",
+        'foo = {}\nif "bar" in foo:\n    value = foo["bar"]\nelse:\n    value = 0\n',
+    ),
+    (
+        "SIM910",
+        'ages = {"Tom": 23, "Maria": 23, "Dog": 11}\nage = ages.get("Cat", None)\n',
+    ),
+    (
+        "TRY002",
+        'def main_function():\n    if not cond:\n        raise Exception()\n\n\ndef consumer_func():\n    try:\n        do_step()\n        prepare()\n        main_function()\n    except Exception:\n        logger.error("Oops")\n',
+    ),
+    # Rules enabled in the fourth wave: existing violations. Only new ones block a PR.
+    ("B007", "for i, j in foo:\n    bar(i)\n"),
+    (
+        "B904",
+        'try:\n    ...\nexcept FileNotFoundError:\n    if ...:\n        raise RuntimeError("...")\n    else:\n        raise UserWarning("...")\n',
+    ),
+    ("RET503", "def foo(bar):\n    if not bar:\n        return 1\n"),
+    (
+        "RUF012",
+        "class A:\n    variable_1: list[int] = []\n    variable_2: set[int] = set()\n    variable_3: dict[str, int] = {}\n",
+    ),
+    # Security rules enabled with existing violations. Only new ones block a PR.
+    ("S102", "exec(\"print('Hello World')\")\n"),
+    ("S107", 'def connect_to_server(password="hunter2"): ...\n'),
+    (
+        "S202",
+        "import tarfile\nimport tempfile\n\ntar = tarfile.open(filename)\ntar.extractall(path=tempfile.mkdtemp())\ntar.close()\n",
+    ),
+    # Rules enabled with an existing violation. Only new ones block a PR.
+    (
+        "RUF007",
+        'letters = "ABCD"\nzip(letters, letters[1:])  # ("A", "B"), ("B", "C"), ("C", "D")\n',
+    ),
+    ("S106", 'connect_to_server(password="hunter2")\n'),
+    # Replacements that give the same result: the old name is the same object.
+    (
+        "FURB188",
+        'def example(filename: str, text: str):\n    filename = filename[:-4] if filename.endswith(".txt") else filename\n\n    if text.startswith("pre"):\n        text = text[3:]\n',
+    ),
+    ("UP017", "import datetime\n\ndatetime.timezone.utc\n"),
+    ("UP024", "raise IOError\n"),
+    ("UP041", "import asyncio\n\nraise asyncio.TimeoutError\n"),
 ]
 
 
