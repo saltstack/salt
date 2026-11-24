@@ -542,17 +542,24 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         return self._connecting
 
     async def publish(
-        self, payload, timeout=None, **kwargs
+        self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """
         Publish "load" to minions.
 
-        :param int timeout: Optional timeout in seconds for the drain.
-                            A drain that does not complete within
-                            ``timeout`` raises ``TimeoutError`` instead
-                            of waiting forever.  ``None`` (the default)
-                            preserves the pre-#70938 unbounded path.
+        :param int timeout: Optional timeout in seconds for the drain,
+                            passed via ``kwargs``.  A drain that does not
+                            complete within ``timeout`` raises
+                            ``TimeoutError`` instead of waiting forever.
+                            ``None`` (the default) preserves the
+                            pre-#70938 unbounded path.  The kwarg-only
+                            plumbing keeps this method's signature
+                            identical to the abstract
+                            ``DaemonizedPublishServer.publish`` so
+                            ``test_transport_publishserver_has_method_signatures``
+                            still pins a single cross-transport shape.
         """
+        timeout = kwargs.get("timeout")
         if not self.pub_writer:
             await self.connect()
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
@@ -580,14 +587,23 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
             )
         drain.result()  # propagate stream errors
 
-    async def publish_payload(
-        self, payload, topic_list=None, raw_payload=None, timeout=None
-    ):
+    async def publish_payload(self, payload, topic_list=None, raw_payload=None):
         # ``raw_payload`` is accepted for interface parity with the
         # TCP PublishServer, which uses it to skip a redundant
         # msgpack round-trip on the EP fan-out hot path.  The ws
         # transport frames with ``salt.payload.dumps`` below, so the
         # unframed passthrough shortcut doesn't apply here.
+        #
+        # The per-subscriber send timeout is read from
+        # ``self._publish_payload_timeout`` instead of a kwarg so this
+        # method's signature stays identical to the abstract
+        # ``DaemonizedPublishServer.publish_payload``.  That keeps the
+        # cross-transport signature pin
+        # (``test_transport_publishserver_has_method_signatures``)
+        # green while still letting operators or tests bound the
+        # fan-out drain.  ``None`` (the default) preserves the
+        # pre-#70938 unbounded path.
+        timeout = getattr(self, "_publish_payload_timeout", None)
         payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:

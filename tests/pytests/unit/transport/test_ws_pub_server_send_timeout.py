@@ -191,7 +191,11 @@ async def test_publish_payload_drops_stalled_subscriber_and_continues():
     healthy = _InstantWS()
     server = _publish_server(_InstantWriter())
     server.clients = {wedged, healthy}
-    await server.publish_payload({"ok": True}, timeout=0.05)
+    # Per-subscriber timeout is instance-scoped so ``publish_payload``'s
+    # signature stays identical to the abstract base (see
+    # ``test_transport_publishserver_has_method_signatures``).
+    server._publish_payload_timeout = 0.05
+    await server.publish_payload({"ok": True})
     # Wedged client was dropped.
     assert wedged not in server.clients
     # Healthy client stayed and received the payload.
@@ -227,10 +231,11 @@ async def test_publish_payload_wedged_send_is_observed_not_cancelled():
     slow = _SlowWS()
     server = _publish_server(_InstantWriter())
     server.clients = {slow}
+    server._publish_payload_timeout = 0.05
 
     handler = _capture_loop_errors(loop)
     try:
-        await server.publish_payload({"ok": True}, timeout=0.05)
+        await server.publish_payload({"ok": True})
         assert slow not in server.clients
         # Late completion is consumed; no warning.
         send_future.set_result(None)

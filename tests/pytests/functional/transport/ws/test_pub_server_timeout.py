@@ -181,10 +181,13 @@ async def test_publish_payload_drops_wedged_subscriber_and_delivers_to_real_clie
             assert wedged in server.clients
 
             # The wedged peer would otherwise park the fan-out forever;
-            # timeout=0.5 drops it and the real subscriber gets the
-            # payload.
+            # a 0.5s per-subscriber timeout drops it and the real
+            # subscriber gets the payload.  Timeout is instance-scoped
+            # so ``publish_payload`` keeps the base-class signature
+            # (see ``test_transport_publishserver_has_method_signatures``).
+            server._publish_payload_timeout = 0.5
             await asyncio.wait_for(
-                server.publish_payload({"ok": True, "n": 2}, timeout=0.5),
+                server.publish_payload({"ok": True, "n": 2}),
                 timeout=10,
             )
 
@@ -214,8 +217,10 @@ async def test_publish_payload_timeout_none_delivers_to_real_client(tmp_path):
         session, real_ws = await _connect_ws_client(pub_port)
         try:
             await _wait_for_client_registered(server, 1)
+            # Leaving ``_publish_payload_timeout`` unset preserves the
+            # pre-#70938 unbounded path (same as ``timeout=None``).
             await asyncio.wait_for(
-                server.publish_payload({"ok": True, "n": 3}, timeout=None),
+                server.publish_payload({"ok": True, "n": 3}),
                 timeout=10,
             )
             msg = await asyncio.wait_for(real_ws.receive(), timeout=5)
