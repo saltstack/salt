@@ -16,9 +16,7 @@ def pkg_name(salt_call_cli, grains):
             # putty. salt-winrepo-ng CI enforces SLS quality with default
             # failhard. Soft refresh lets ARM64 finish genrepo despite
             # AMD64-only stubs in the cloned winrepo.
-            ret = salt_call_cli.run(
-                "--local", "pkg.refresh_db", "failhard=False"
-            )
+            ret = salt_call_cli.run("--local", "pkg.refresh_db", "failhard=False")
             if ret.returncode:
                 time.sleep(5)
                 continue

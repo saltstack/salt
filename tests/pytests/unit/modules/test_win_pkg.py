@@ -1060,9 +1060,7 @@ def test__repo_process_pkg_sls_rejects_none_version_list():
     ret = {"repo": {}, "errors": {}, "name_map": {}}
     patch_render = patch("salt.loader.render")
     patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
-    patch_compile = patch(
-        "salt.template.compile_template", return_value=rendered
-    )
+    patch_compile = patch("salt.template.compile_template", return_value=rendered)
     with patch_opts, patch_render, patch_compile:
         result = win_pkg._repo_process_pkg_sls(
             filename="stub.sls",
@@ -1083,9 +1081,7 @@ def test__repo_process_pkg_sls_rejects_non_dict_version_list():
     ret = {"repo": {}, "errors": {}, "name_map": {}}
     patch_render = patch("salt.loader.render")
     patch_opts = patch.dict(win_pkg.__opts__, {"renderer": None})
-    patch_compile = patch(
-        "salt.template.compile_template", return_value=rendered
-    )
+    patch_compile = patch("salt.template.compile_template", return_value=rendered)
     with patch_opts, patch_render, patch_compile:
         win_pkg._repo_process_pkg_sls(
             filename="bad.sls",
