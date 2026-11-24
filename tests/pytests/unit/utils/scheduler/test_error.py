@@ -12,7 +12,7 @@ except ImportError:
     HAS_DATEUTIL_PARSER = False
 
 try:
-    import croniter  # pylint: disable=unused-import
+    import croniter
 
     HAS_CRONITER = True
 except ImportError:
@@ -39,7 +39,7 @@ def test_eval_cron_invalid(schedule):
     schedule.opts.update(job)
 
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
+    with patch.object(croniter.croniter, "get_next", MagicMock(return_value=run_time)):
         schedule.eval(now=run_time)
 
     ret = schedule.job_status("job1")

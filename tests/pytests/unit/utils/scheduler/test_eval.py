@@ -18,7 +18,7 @@ except ImportError:
 
 
 try:
-    import croniter  # pylint: disable=unused-import
+    import croniter
 
     HAS_CRONITER = True
 except ImportError:
@@ -288,7 +288,7 @@ def test_eval_cron(schedule):
     schedule.opts.update(job)
 
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
+    with patch.object(croniter.croniter, "get_next", MagicMock(return_value=run_time)):
         schedule.eval(now=run_time)
     assert _check_last_run(schedule, job_name, run_time)
 
@@ -309,7 +309,7 @@ def test_eval_cron_loop_interval(schedule):
     schedule.opts.update(job)
 
     run_time = dateutil.parser.parse("11/29/2017 4:00pm")
-    with patch("croniter.croniter.get_next", MagicMock(return_value=run_time)):
+    with patch.object(croniter.croniter, "get_next", MagicMock(return_value=run_time)):
         schedule.eval(now=run_time)
     assert _check_last_run(schedule, job_name, run_time)
 
