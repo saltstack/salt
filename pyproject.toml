@@ -153,7 +153,6 @@ ignore = [
     "FBT",  # boolean positional arguments
     "FIX",  # FIXME and TODO markers
     "ICN001",  # import alias conventions are not part of the Salt style
-    "INP",  # implicit namespace packages
     "ISC",  # implicit string concatenation, formatter decides
     "N",  # naming, renaming changes the public API
     "PLR0911",  # complexity threshold
@@ -234,11 +233,9 @@ ignore = [
     "S103",  # bad-file-permissions
     "S104",  # hardcoded-bind-all-interfaces
     "S105",  # hardcoded-password-string
-    "S106",  # hardcoded-password-func-arg
     "S108",  # hardcoded-temp-file
     "S110",  # try-except-pass
     "S112",  # try-except-continue
-    "S301",  # suspicious-pickle-usage
     "S303",  # suspicious-insecure-hash-usage
     "S306",  # suspicious-mktemp-usage
     "S307",  # suspicious-eval-usage
@@ -251,7 +248,6 @@ ignore = [
     "S504",  # ssl-with-no-version
     "S506",  # unsafe-yaml-load
     "S507",  # ssh-no-host-key-verification
-    "S602",  # subprocess-popen-with-shell-equals-true
     "S603",  # subprocess-without-shell-equals-true
     "S604",  # call-with-shell-equals-true
     "S607",  # start-process-with-partial-path
@@ -273,7 +269,6 @@ ignore = [
     "I001",  # unsorted-imports
     "PERF203",  # try-except-in-loop
     "PTH115",  # os-readlink
-    "RUF007",  # zip-instead-of-pairwise
     "RUF053",  # class-with-mixed-type-vars
     "TC003",  # typing-only-standard-library-import
     "TC010",  # only reported up to Python 3.13; annotations are not evaluated at once on 3.14
@@ -378,7 +373,12 @@ ignore = [
 # Unused local variables are not checked in tests for now.
 # "assert False" is allowed in tests: with "python -O" every assert in the test
 # suite is removed, so replacing this one would not protect anything.
-"tests/**" = ["F841", "B011"]
+# S602, S301 and S106 are for the code that handles data from outside. The tests run
+# commands they wrote themselves, unpickle what they pickled and use made-up passwords.
+# The directories of the tests and the scripts are not packages (INP001).
+"tests/**" = ["F841", "B011", "S106", "S301", "S602", "INP001"]
+"tools/**" = ["INP001"]
+".github/**" = ["INP001"]
 
 [tool.towncrier]
     package = "salt"

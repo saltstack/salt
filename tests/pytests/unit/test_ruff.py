@@ -65,6 +65,7 @@ def repo(tmp_path: Path) -> Path:
     git(tmp_path, "config", "user.name", "Ruff test")
     git(tmp_path, "config", "user.email", "ruff-test@example.invalid")
     write(tmp_path, "pyproject.toml", CONFIG)
+    write(tmp_path, "salt/__init__.py", "")
     write(tmp_path, "sample.py", "import os\n\nvalue = 1\n")
     commit(tmp_path)
     return tmp_path
@@ -899,6 +900,12 @@ NEW_RULE_CASES = [
     ("Q003", 'foo = "bar\\"s"\n'),
     ("Q004", 'foo = "bar\\\'s"\n'),
     ("W191", "if True:\n\tx = 1\n"),
+    # Rules for the code that handles data from outside. The tests are exempt, see below.
+    (
+        "S301",
+        'import pickle\n\nwith open("foo.pickle", "rb") as file:\n    foo = pickle.load(file)\n',
+    ),
+    ("S602", 'import subprocess\n\nsubprocess.run("ls -l", shell=True)\n'),
 ]
 
 
@@ -989,6 +996,37 @@ def test_rules_for_stub_files(repo: Path, code: str, source: str) -> None:
     result = check(repo)
     assert result.returncode == 1, result.stderr + result.stdout
     assert code in result.stdout
+
+
+def test_directory_without_init_is_reported_in_the_product_code(repo: Path) -> None:
+    write(repo, "salt/newpkg/module.py", "value = 1\n")
+    result = check(repo)
+    assert result.returncode == 1, result.stderr + result.stdout
+    assert "INP001" in result.stdout
+
+
+EXEMPT_CASES = [
+    # The tests run commands they wrote, unpickle what they pickled, use made-up passwords.
+    (
+        "tests/pytests/new.py",
+        'import subprocess\n\nsubprocess.Popen("ls", shell=True)\n',
+    ),
+    ("tests/pytests/new.py", "import pickle\n\npickle.loads(pickle.dumps(1))\n"),
+    ("tests/pytests/new.py", 'def f(connect):\n    connect(password="secret")\n'),
+    # The directories of the tests and of the scripts are not packages.
+    ("tests/newdir/new.py", "value = 1\n"),
+    ("tools/newdir/new.py", "value = 1\n"),
+    (".github/scripts/new.py", "value = 1\n"),
+]
+
+
+@pytest.mark.parametrize(("path", "source"), EXEMPT_CASES, ids=lambda v: v[:20])
+def test_rules_are_not_enforced_where_they_do_not_apply(
+    repo: Path, path: str, source: str
+) -> None:
+    write(repo, path, source)
+    result = check(repo)
+    assert result.returncode == 0, result.stderr + result.stdout
 
 
 def test_module_importing_itself_is_reported(repo: Path) -> None:
@@ -1286,6 +1324,12 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "S202",
         "import tarfile\nimport tempfile\n\ntar = tarfile.open(filename)\ntar.extractall(path=tempfile.mkdtemp())\ntar.close()\n",
     ),
+    # Rules enabled with an existing violation. Only new ones block a PR.
+    (
+        "RUF007",
+        'letters = "ABCD"\nzip(letters, letters[1:])  # ("A", "B"), ("B", "C"), ("C", "D")\n',
+    ),
+    ("S106", 'connect_to_server(password="hunter2")\n'),
 ]
 
 
