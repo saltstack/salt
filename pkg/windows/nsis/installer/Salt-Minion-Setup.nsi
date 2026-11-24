@@ -629,14 +629,18 @@ SectionEnd
 Section -install_vcredist_2022
 
     Var /GLOBAL VcRedistName
-    # Determine which architecture needs to be installed
-    ${if} ${runningx64}
+    # Match VCRedist to the package BUILD_ARCH (not RunningX64, which is true
+    # on both AMD64 and native ARM64).
+    !if "${BUILD_ARCH}" == "ARM64"
+        strcpy $VcRedistName "vcredist_a64_2022"
+        ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\arm64" "Installed"
+    !else if "${BUILD_ARCH}" == "AMD64"
         strcpy $VcRedistName "vcredist_x64_2022"
         ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" "Installed"
-    ${else}
+    !else
         strcpy $VcRedistName "vcredist_x86_2022"
         ReadRegDWORD $1 HKLM "SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" "Installed"
-    ${endif}
+    !endif
     detailPrint "Selected $VcRedistName installer"
 
     # Skip install if VCRedist is already present
@@ -791,29 +795,37 @@ Function .onInit
 
     ${LogMsg} "Running ${OUTFILE}"
 
-    # Make sure we do not allow 32-bit Salt on 64-bit systems
-    # This is the system the installer is running on
-    ${If} ${RunningX64}
-        # This is the Python architecture the installer was built with
-        ${If} ${CPUARCH} == "x86"
-            StrCpy $msg "Detected 64-bit Operating system.$\n\
-                Please install the 64-bit version of Salt on this operating system."
+    # Require the installer BUILD_ARCH to match the OS native CPU. RunningX64
+    # only distinguishes 32 vs 64-bit and cannot tell ARM64 from AMD64, so ARM
+    # packages previously installed on x86_64. IsNative* comes from x64.nsh.
+    !if "${BUILD_ARCH}" == "ARM64"
+        ${IfNot} ${IsNativeARM64}
+            StrCpy $msg "This Salt Minion installer is for Windows on ARM (ARM64).$\n\
+                Please install the AMD64/x64 version of Salt on this operating system."
             ${LogMsg} $msg
             MessageBox MB_OK|MB_ICONEXCLAMATION $msg /SD IDOK
             ${LogMsg} "Aborting"
             Abort
         ${EndIf}
-    ${Else}
-        # This is the Python architecture the installer was built with
-        ${If} ${CPUARCH} == "AMD64"
-            StrCpy $msg "Detected 32-bit Operating system.$\n\
-                Please install the 32-bit version of Salt on this operating system."
+    !else if "${BUILD_ARCH}" == "AMD64"
+        ${IfNot} ${IsNativeAMD64}
+            StrCpy $msg "This Salt Minion installer is for 64-bit AMD64/x64 Windows.$\n\
+                Please install the architecture-matching version of Salt on this operating system."
             ${LogMsg} $msg
             MessageBox MB_OK|MB_ICONEXCLAMATION $msg /SD IDOK
             ${LogMsg} "Aborting"
             Abort
         ${EndIf}
-    ${EndIf}
+    !else
+        ${IfNot} ${IsNativeIA32}
+            StrCpy $msg "This Salt Minion installer is for 32-bit Windows.$\n\
+                Please install the architecture-matching version of Salt on this operating system."
+            ${LogMsg} $msg
+            MessageBox MB_OK|MB_ICONEXCLAMATION $msg /SD IDOK
+            ${LogMsg} "Aborting"
+            Abort
+        ${EndIf}
+    !endif
 
     InitPluginsDir
     Call parseInstallerCommandLineSwitches

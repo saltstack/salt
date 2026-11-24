@@ -78,12 +78,11 @@ $DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads
 
 if ( $PY_MACHINE -eq "ARM64" ) {
     $ARCH         = "arm64"
-    # No native arm64 build of ssm.exe or vcredist exists in
-    # salt-windows-deps yet. Windows 11 on Arm runs x64 binaries under
-    # emulation, so fall back to the x64 builds until native ones are
-    # published upstream. DOWNLOAD_ARCH tracks the artifact to fetch,
-    # separately from ARCH (the true target architecture).
-    $DOWNLOAD_ARCH = "x64"
+    # VCRedist uses the short arch token a64 (vcredist_a64_2022.exe), matching
+    # the x86/x64 naming in salt-windows-deps. ssm.exe still has no native
+    # arm64 build, so Windows 11 on Arm runs the x64 SSM under emulation.
+    # DOWNLOAD_ARCH is the vcredist filename token; SSM_URL is independent.
+    $DOWNLOAD_ARCH = "a64"
     $SSM_URL      = "$DEPS_URL/ssm/64/ssm-2.24-103-gdee49fc.exe"
     $VCREDIST_URL = "$DEPS_URL/vcredist"
 } elseif ( $PY_MACHINE -eq "AMD64" ) {
@@ -171,7 +170,9 @@ if ( $PKG ) {
 
 # Make sure ssm.exe is present. This is needed for VMtools
 if ( ! (Test-Path -Path "$BUILD_DIR\ssm.exe") ) {
-    Write-Host "Copying SSM $DOWNLOAD_ARCH to Root: " -NoNewline
+    # SSM is still x64 even when DOWNLOAD_ARCH is a64 (ARM VCRedist token).
+    $ssm_arch_label = if ( $ARCH -eq "x86" ) { "x86" } else { "x64" }
+    Write-Host "Copying SSM $ssm_arch_label to Root: " -NoNewline
     Invoke-WebRequest -Uri "$SSM_URL" -OutFile "$BUILD_DIR\ssm.exe"
     if ( Test-Path -Path "$BUILD_DIR\ssm.exe" ) {
         Write-Result "Success" -ForegroundColor Green
