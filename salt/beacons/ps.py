@@ -11,19 +11,21 @@ IIS App Pools).
 
     beacons:
       ps:
-        processes:
-          - powershell.exe:
-             status: running
-          - w3svc.exe:
-             status: running
-             username: 'DOMAIN\username1'
-          - mysql:
-             status: stopped
+        - processes:
+            - powershell.exe:
+                status: running
+            - w3svc.exe:
+                status: running
+                username: 'DOMAIN\username1'
+            - mysql:
+                status: stopped
 
 """
 
 import logging
 from typing import Any
+
+import salt.utils.beacons
 
 try:
     import psutil
@@ -46,34 +48,76 @@ def __virtual__() -> str | tuple[bool, str]:
     return __virtualname__
 
 
-def validate(config: dict[str, Any]) -> tuple[bool, str]:
+def _normalize_processes(processes: Any) -> list[dict[str, dict[str, Any]]] | None:
+    """
+    Normalize the ``processes`` value to the new list-of-single-key-dicts form.
+
+    Accepts either:
+
+    * the new form, a list of single-key dicts, e.g.
+      ``[{"mysql": {"status": "running"}}]``
+    * the legacy flat-dict form, e.g. ``{"mysql": "running"}``, which is
+      upgraded in-place and a :py:class:`DeprecationWarning`-style log
+      message is emitted.
+
+    Returns the normalized list, or ``None`` if the shape can't be
+    interpreted.
+    """
+    if isinstance(processes, list):
+        return processes
+
+    if isinstance(processes, dict):
+        log.warning(
+            "ps beacon: the flat 'processes: {name: status}' config form is "
+            "deprecated and will be removed in a future release. Use the new "
+            "list form documented in the ps beacon module."
+        )
+        normalized: list[dict[str, dict[str, Any]]] = []
+        for name, value in processes.items():
+            if isinstance(value, dict):
+                normalized.append({name: value})
+            else:
+                normalized.append({name: {"status": value}})
+        return normalized
+
+    return None
+
+
+def validate(config: list) -> tuple[bool, str]:
     """
     Validate the beacon configuration
 
-    :param config: Beacon configuration dictionary. Must contain a ``processes``
-        key whose value is a list of single-key dicts. Each entry maps a process
-        name to a dict with a required ``status`` key (one of
-        ``sleeping``, ``idle``, ``running``, ``stopped``) and an optional
-        ``username`` key.
-    :type config: dict
+    :param config: Beacon configuration as a list of single-key dicts.
+        Must include a ``processes`` key whose value is a list of
+        single-key dicts (each mapping a process name to a dict with a
+        required ``status`` key, one of ``sleeping``, ``idle``,
+        ``running``, ``stopped``, and an optional ``username`` key).
+        The legacy ``processes: {name: status}`` flat-dict form is
+        still accepted with a deprecation warning.
+    :type config: list
     :returns: ``(True, "Valid beacon configuration")`` or ``(False, <reason>)``.
     :rtype: tuple(bool, str)
     """
-    # Configuration for ps beacon should be a dictionary with a 'processes' key
-    if not isinstance(config, dict):
-        return (
-            False,
-            "Configuration for ps beacon must be a dictionary with key 'processes' that contains a list.",
-        )
+    # Configuration for ps beacon should be a list of single-key dicts
+    # merged by the beacon framework into {"processes": [...]}.
+    if not isinstance(config, list):
+        return False, "Configuration for ps beacon must be a list."
 
-    if "processes" not in config:
+    merged = salt.utils.beacons.list_to_dict(config)
+
+    if "processes" not in merged:
         return False, "Configuration for ps beacon requires processes."
 
-    if not isinstance(config["processes"], list):
+    normalized = _normalize_processes(merged["processes"])
+    if normalized is None:
         return False, "Processes for ps beacon must be a list."
 
-    for entry in config["processes"]:
+    for entry in normalized:
+        if not isinstance(entry, dict) or len(entry) != 1:
+            return False, "Each process entry for ps beacon must be a single-key dict."
         proc_config = next(iter(entry.values()))
+        if not isinstance(proc_config, dict):
+            return False, "Each process entry value must be a dict with a 'status' key."
         status = proc_config.get("status", "")
         if status not in __accepted_statuses__:
             return (
@@ -84,7 +128,7 @@ def validate(config: dict[str, Any]) -> tuple[bool, str]:
     return True, "Valid beacon configuration"
 
 
-def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
+def beacon(config: list) -> list[dict[str, Any]]:
     r"""
     Search for given process(es) by name and optionally username, and return
     their status along with per-instance details.
@@ -93,12 +137,13 @@ def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
         The ``processes`` config key now accepts a list of single-key dicts
         (each mapping a process name to a sub-dict with ``status`` and an
         optional ``username``) instead of a flat ``process_name: running``
-        mapping.  Each matched entry in the return value now includes
-        ``username`` and ``create_time`` in the instance tuples.
+        mapping.  The legacy flat-dict form is still accepted with a
+        deprecation warning. Each matched entry in the return value now
+        includes ``username`` and ``create_time`` in the instance tuples.
 
-    :param config: Beacon configuration dictionary. Must contain a
-        ``processes`` key (see :func:`validate` for the expected structure).
-    :type config: dict
+    :param config: Beacon configuration as a list of single-key dicts.
+        See :func:`validate` for the expected structure.
+    :type config: list
 
     Example Config
 
@@ -106,14 +151,14 @@ def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
 
         beacons:
           ps:
-            processes:
-              - powershell.exe:
-                 status: running
-              - w3svc.exe:
-                 status: running
-                 username: 'DOMAIN\username1'
-              - mysql:
-                 status: stopped
+            - processes:
+                - powershell.exe:
+                    status: running
+                - w3svc.exe:
+                    status: running
+                    username: 'DOMAIN\username1'
+                - mysql:
+                    status: stopped
 
     The ``username`` key is optional. When present only instances running
     under that user are returned; when absent all instances are returned.
@@ -139,13 +184,16 @@ def beacon(config: dict[str, Any]) -> list[dict[str, Any]]:
     ret: list[dict[str, Any]] = []
     procs: list[Any] = []
 
+    merged = salt.utils.beacons.list_to_dict(config) if isinstance(config, list) else {}
+    processes = _normalize_processes(merged.get("processes", [])) or []
+
     for proc in psutil.process_iter():
         try:
             procs.append(proc)
         except psutil.NoSuchProcess:
             continue
 
-    for process in config.get("processes", []):
+    for process in processes:
         process_name = next(iter(process.keys()))
         proc_config = process[process_name]
         expected_status = proc_config.get("status", "running")

@@ -39,31 +39,38 @@ def configure_loader_modules():
     return {}
 
 
-def test_non_dict_config():
-    config = []
+def test_non_list_config():
+    config = {}
 
     ret = ps.validate(config)
-    assert ret == (
-        False,
-        "Configuration for ps beacon must be a dictionary with key 'processes' that contains a list.",
-    )
+    assert ret == (False, "Configuration for ps beacon must be a list.")
 
 
 def test_empty_config():
-    config = {}
+    config = []
 
     ret = ps.validate(config)
     assert ret == (False, "Configuration for ps beacon requires processes.")
 
 
 def test_invalid_status_config():
-    config = {"processes": [{"mysql": {"status": "oop"}}]}
+    config = [{"processes": [{"mysql": {"status": "oop"}}]}]
 
     ret = ps.validate(config)
     assert ret == (
         False,
         "Status not supported, currently supported are sleeping, idle, running, stopped.",
     )
+
+
+def test_legacy_flat_dict_config_still_accepted():
+    """
+    The legacy ``processes: {name: status}`` flat-dict config form should
+    still validate, with a deprecation warning logged.
+    """
+    config = [{"processes": {"apache2": "stopped"}}]
+    ret = ps.validate(config)
+    assert ret == (True, "Valid beacon configuration")
 
 
 def test_ps_running():
@@ -84,7 +91,7 @@ def test_ps_running():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {"processes": [{"salt-master": {"status": "running"}}]}
+        config = [{"processes": [{"salt-master": {"status": "running"}}]}]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -112,7 +119,7 @@ def test_ps_running_but_not_found():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {"processes": [{"salt-master": {"status": "running"}}]}
+        config = [{"processes": [{"salt-master": {"status": "running"}}]}]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -139,12 +146,14 @@ def test_multiple_ps_running():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {
-            "processes": [
-                {"salt-master": {"status": "running"}},
-                {"salt-minion": {"status": "running"}},
-            ]
-        }
+        config = [
+            {
+                "processes": [
+                    {"salt-master": {"status": "running"}},
+                    {"salt-minion": {"status": "running"}},
+                ]
+            }
+        ]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -184,12 +193,14 @@ def test_multiple_ps_running_but_not_found():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {
-            "processes": [
-                {"salt-master": {"status": "running"}},
-                {"salt-minion": {"status": "running"}},
-            ]
-        }
+        config = [
+            {
+                "processes": [
+                    {"salt-master": {"status": "running"}},
+                    {"salt-minion": {"status": "running"}},
+                ]
+            }
+        ]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -222,12 +233,19 @@ def test_multiple_ps_select_by_username_running():
                 _create_time=1306269803.47,
             ),
         ]
-        config = {
-            "processes": [
-                {"w3svc.exe": {"status": "running", "username": "DOMAIN\\username2"}},
-                {"powershell.exe": {"status": "running"}},
-            ]
-        }
+        config = [
+            {
+                "processes": [
+                    {
+                        "w3svc.exe": {
+                            "status": "running",
+                            "username": "DOMAIN\\username2",
+                        }
+                    },
+                    {"powershell.exe": {"status": "running"}},
+                ]
+            }
+        ]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -273,12 +291,14 @@ def test_multiple_instances_of_ps_running():
                 _create_time=1306269803.47,
             ),
         ]
-        config = {
-            "processes": [
-                {"w3svc.exe": {"status": "running"}},
-                {"powershell.exe": {"status": "running"}},
-            ]
-        }
+        config = [
+            {
+                "processes": [
+                    {"w3svc.exe": {"status": "running"}},
+                    {"powershell.exe": {"status": "running"}},
+                ]
+            }
+        ]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -321,7 +341,7 @@ def test_ps_not_running():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {"processes": [{"mysql": {"status": "stopped"}}]}
+        config = [{"processes": [{"mysql": {"status": "stopped"}}]}]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -348,12 +368,14 @@ def test_multiple_ps_not_running():
                 _create_time=1306289803.47,
             ),
         ]
-        config = {
-            "processes": [
-                {"mysql": {"status": "stopped"}},
-                {"redis": {"status": "stopped"}},
-            ]
-        }
+        config = [
+            {
+                "processes": [
+                    {"mysql": {"status": "stopped"}},
+                    {"redis": {"status": "stopped"}},
+                ]
+            }
+        ]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
@@ -377,7 +399,7 @@ def test_ps_not_running_but_is_running():
                 _create_time=1304289803.47,
             ),
         ]
-        config = {"processes": [{"redis": {"status": "stopped"}}]}
+        config = [{"processes": [{"redis": {"status": "stopped"}}]}]
 
         ret = ps.validate(config)
         assert ret == (True, "Valid beacon configuration")
