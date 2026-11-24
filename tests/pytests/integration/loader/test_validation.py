@@ -56,6 +56,31 @@ def accepts_pub_kwargs(x: int, **kwargs):
 '''
 
 
+# A state module whose body internally dispatches via __salt__ to an
+# annotated exec function with a bad input value. Under wire-only
+# scope the inner call is uncchecked; under internal scope it fails.
+INTERNAL_CALL_STATE_MODULE = '''
+"""Fixture state module that composes with __salt__ internally."""
+
+
+def calls_typed(name):
+    """Dispatch through __salt__ with a deliberately bad int value.
+
+    If internal_input_mode is off, the inner call succeeds and returns
+    the raw string. If internal_input_mode is enforce/strict, the
+    inner call raises SaltInvocationError which the state engine
+    surfaces as a failed chunk.
+    """
+    inner = __salt__["validation_demo.typed"](count="not-a-number")
+    return {
+        "name": name,
+        "changes": {"inner": inner},
+        "result": True,
+        "comment": "ok",
+    }
+'''
+
+
 # A state module with one function satisfying StateReturn and one that
 # violates it (missing the required ``comment`` field).
 STATE_MODULE_SOURCE = '''
@@ -86,8 +111,10 @@ def input_enforce_minion(salt_master):
     minion = salt_master.salt_minion_daemon(
         "loader-validation-input-enforce",
         overrides={
-            "loader_validate_input_mode": "enforce",
-            "loader_validate_return_mode": "off",
+            "loader_validate_wire_input_mode": "enforce",
+            "loader_validate_wire_return_mode": "off",
+            "loader_validate_internal_input_mode": "off",
+            "loader_validate_internal_return_mode": "off",
             **FIPS_OVERRIDES,
         },
     )
@@ -104,13 +131,78 @@ def input_enforce_minion(salt_master):
 
 
 @pytest.fixture(scope="module")
+def wire_only_minion(salt_master):
+    """Minion where wire validation is on but internal is off.
+
+    Proves the trust-boundary semantics: a state body dispatching
+    through __salt__ with bad input is NOT re-validated because that's
+    an internal loader call.
+    """
+    minion = salt_master.salt_minion_daemon(
+        "loader-validation-wire-only",
+        overrides={
+            "loader_validate_wire_input_mode": "enforce",
+            "loader_validate_wire_return_mode": "off",
+            "loader_validate_internal_input_mode": "off",
+            "loader_validate_internal_return_mode": "off",
+            **FIPS_OVERRIDES,
+        },
+    )
+    minion.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, minion.id
+    )
+    with salt_master.state_tree.base.temp_file(
+        "_modules/validation_demo.py", TYPED_EXEC_MODULE
+    ), salt_master.state_tree.base.temp_file(
+        "_states/internal_call_demo.py", INTERNAL_CALL_STATE_MODULE
+    ):
+        with minion.started():
+            cli = salt_master.salt_cli()
+            cli.run("saltutil.sync_modules", minion_tgt=minion.id)
+            cli.run("saltutil.sync_states", minion_tgt=minion.id)
+            yield minion
+
+
+@pytest.fixture(scope="module")
+def wire_and_internal_minion(salt_master):
+    """Minion with both wire AND internal enforce. Proves internal
+    scope kicks in: the same state body (bad inner dispatch) now
+    fails."""
+    minion = salt_master.salt_minion_daemon(
+        "loader-validation-wire-and-internal",
+        overrides={
+            "loader_validate_wire_input_mode": "enforce",
+            "loader_validate_wire_return_mode": "off",
+            "loader_validate_internal_input_mode": "enforce",
+            "loader_validate_internal_return_mode": "off",
+            **FIPS_OVERRIDES,
+        },
+    )
+    minion.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, minion.id
+    )
+    with salt_master.state_tree.base.temp_file(
+        "_modules/validation_demo.py", TYPED_EXEC_MODULE
+    ), salt_master.state_tree.base.temp_file(
+        "_states/internal_call_demo.py", INTERNAL_CALL_STATE_MODULE
+    ):
+        with minion.started():
+            cli = salt_master.salt_cli()
+            cli.run("saltutil.sync_modules", minion_tgt=minion.id)
+            cli.run("saltutil.sync_states", minion_tgt=minion.id)
+            yield minion
+
+
+@pytest.fixture(scope="module")
 def return_enforce_minion(salt_master):
     """Minion with return validation in ``enforce`` mode."""
     minion = salt_master.salt_minion_daemon(
         "loader-validation-return-enforce",
         overrides={
-            "loader_validate_input_mode": "off",
-            "loader_validate_return_mode": "enforce",
+            "loader_validate_wire_input_mode": "off",
+            "loader_validate_wire_return_mode": "enforce",
+            "loader_validate_internal_input_mode": "off",
+            "loader_validate_internal_return_mode": "off",
             **FIPS_OVERRIDES,
         },
     )
@@ -127,8 +219,9 @@ def return_enforce_minion(salt_master):
 
 
 class TestInputEnforce:
-    """Exercise ``loader_validate_input_mode=enforce`` through a real
-    publish-layer dispatch."""
+    """Exercise ``loader_validate_wire_input_mode=enforce`` through a
+    real publish-layer dispatch -- the wire loader is the filtered
+    ``minion_mods`` result produced by publish-dispatch."""
 
     def test_valid_input_passes(self, salt_cli, input_enforce_minion):
         ret = salt_cli.run(
@@ -214,8 +307,9 @@ class TestInputEnforce:
 
 
 class TestReturnEnforce:
-    """Exercise ``loader_validate_return_mode=enforce`` through state
-    dispatch against the pinned StateReturn contract."""
+    """Exercise ``loader_validate_wire_return_mode=enforce`` through
+    state dispatch against the pinned StateReturn contract. The states
+    loader is flagged is_wire_loader=True by its factory."""
 
     def test_good_state_return_passes(self, salt_cli, return_enforce_minion):
         ret = salt_cli.run(
@@ -245,4 +339,56 @@ class TestReturnEnforce:
             "return contract violation" in haystack
             or "contract" in haystack.lower()
             or "SaltInvocationError" in haystack
+        )
+
+
+class TestScopeDistinction:
+    """Prove wire vs. internal scope dispatch semantics: the *same*
+    state body with the *same* bad internal __salt__ call gets
+    different treatment based on the internal scope opts.
+
+    The state function in INTERNAL_CALL_STATE_MODULE dispatches:
+        __salt__["validation_demo.typed"](count="not-a-number")
+
+    - Under wire_only_minion (internal_input=off): the inner call is
+      an internal loader dispatch, validation is skipped, the typed
+      function receives the bad string, returns it as-is.
+    - Under wire_and_internal_minion (internal_input=enforce): the
+      inner call hits validation, pydantic can't coerce
+      "not-a-number" to int, SaltInvocationError is raised, the state
+      chunk fails.
+    """
+
+    def test_internal_dispatch_skipped_when_internal_off(
+        self, salt_cli, wire_only_minion
+    ):
+        ret = salt_cli.run(
+            "state.single",
+            "internal_call_demo.calls_typed",
+            name="scope-test",
+            minion_tgt=wire_only_minion.id,
+        )
+        chunk = next(iter(ret.data.values()))
+        # State succeeded because the inner __salt__ call wasn't
+        # validated; the bad string flowed through.
+        assert chunk.get("result") is True
+        assert chunk["changes"]["inner"]["count"] == "not-a-number"
+
+    def test_internal_dispatch_validated_when_internal_on(
+        self, salt_cli, wire_and_internal_minion
+    ):
+        ret = salt_cli.run(
+            "state.single",
+            "internal_call_demo.calls_typed",
+            name="scope-test",
+            minion_tgt=wire_and_internal_minion.id,
+        )
+        haystack = f"{ret.data!r} {ret.stdout or ''}"
+        # Inner validation raised; the state chunk failed. Error text
+        # is somewhere in the return payload or output.
+        assert (
+            "input validation failure" in haystack
+            or "SaltInvocationError" in haystack
+            or "not-a-number" in haystack.lower()
+            and "error" in haystack.lower()
         )

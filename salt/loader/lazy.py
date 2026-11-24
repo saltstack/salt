@@ -190,20 +190,19 @@ class LoadedFunc:
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        # Input validation: strip reserved kwargs, validate against the
-        # function's inferred pydantic model, coerce, re-merge reserved.
-        # No-op when opts["loader_validate_input_mode"] is "off", pydantic
-        # is unavailable, or the function has no type annotations.
-        input_mode = self.loader.opts.get("loader_validate_input_mode", "off")
+        # Pick the (scope, direction) opt cells for this loader's trust
+        # tier. Wire loaders (filtered minion_mods, states, runners,
+        # wheels) take user input; everything else is internal shipped-
+        # code composition. The two scopes have independent modes.
+        scope = "wire" if self.loader.is_wire_loader else "internal"
+        input_mode = self.loader.opts.get(f"loader_validate_{scope}_input_mode", "off")
+        return_mode = self.loader.opts.get(
+            f"loader_validate_{scope}_return_mode", "off"
+        )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
         )
         ret = self.loader.run(run_func, *args, **kwargs)
-        # Return validation: factory-pinned output_contract (universal
-        # per loader-kind) or per-function return_registry lookup, with
-        # module-declared subclass refinements honored. Governed
-        # independently of input validation.
-        return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
         if return_mode != "off":
             salt.loader.validation.validate_return(
                 self.func,
@@ -252,12 +251,15 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        input_mode = self.loader.opts.get("loader_validate_input_mode", "off")
+        scope = "wire" if self.loader.is_wire_loader else "internal"
+        input_mode = self.loader.opts.get(f"loader_validate_{scope}_input_mode", "off")
+        return_mode = self.loader.opts.get(
+            f"loader_validate_{scope}_return_mode", "off"
+        )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
         )
         ret = await self.loader.run(run_func, *args, **kwargs)
-        return_mode = self.loader.opts.get("loader_validate_return_mode", "off")
         if return_mode != "off":
             salt.loader.validation.validate_return(
                 self.func,
@@ -403,6 +405,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         pack_self=None,
         output_contract=None,
         return_registry=None,
+        is_wire_loader=False,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
@@ -447,6 +450,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # where return shapes vary per function (runners, wheels, etc.).
         # Owned by salt.loader.contracts, not by individual modules.
         self.return_registry = return_registry
+        # Trust-tier flag. True for loaders that receive user input
+        # directly: filtered minion_mods, states, runners, wheels. False
+        # for internal loaders backing __salt__/__utils__/etc. inside
+        # shipped code. Determines which validation-mode opts apply to
+        # dispatches through this loader -- the wire_* pair vs. the
+        # internal_* pair.
+        self.is_wire_loader = is_wire_loader
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type

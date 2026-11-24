@@ -488,6 +488,10 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
+        # Wire loader -- this is the one exposed to the publish layer
+        # and salt-api; inner salt_dunder above stays is_wire_loader=False
+        # because it backs __salt__ inside shipped code.
+        is_wire_loader=True,
     )
 
     # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
@@ -995,6 +999,8 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
         whitelist=whitelist,
         pack={"__context__": context},
         loaded_base_name=loaded_base_name,
+        # Wheel client / salt-api drive these -- user input.
+        is_wire_loader=True,
     )
 
 
@@ -1264,6 +1270,8 @@ def states(
         pack_self="__states__",
         loaded_base_name=loaded_base_name,
         output_contract=StateReturn if reqs.pydantic else None,
+        # SLS content and state.single/state.apply dispatch is user input.
+        is_wire_loader=True,
     )
 
 
@@ -1781,6 +1789,8 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         # TODO: change from __salt__ to something else, we overload __salt__ too much
         pack_self="__salt__",
         loaded_base_name=loaded_base_name,
+        # salt-run / salt-api drive these -- user input.
+        is_wire_loader=True,
     )
 
 

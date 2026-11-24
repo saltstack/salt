@@ -2,29 +2,43 @@
 Loader-level input and return validation for Salt modules.
 
 Called from ``LoadedFunc.__call__`` / ``LoadedCoro.__call__`` on every
-loader dispatch. Behavior is split across two independent options:
+loader dispatch. Behavior is split across a 2x2 grid of options -- the
+Cartesian product of scope (wire vs. internal) and direction (input vs.
+return):
 
-``loader_validate_input_mode`` -- governs ``validate_inputs()``:
+* ``loader_validate_wire_input_mode``
+* ``loader_validate_wire_return_mode``
+* ``loader_validate_internal_input_mode``
+* ``loader_validate_internal_return_mode``
 
-* ``off`` (default) -- input validation is skipped.
-* ``warn`` -- validate annotated callables; log + pass through on failure.
-* ``enforce`` -- raise ``SaltInvocationError`` on validation failure.
-* ``strict`` -- like ``enforce``, additionally require every loader-
-  dispatched function to have type annotations on all non-var parameters.
-  Raises on the first call to any function that doesn't meet the bar.
-  Intended for dev / CI environments that want "the whole surface typed."
+**Scope** is the loader's trust tier. Wire loaders receive user input
+directly (filtered ``minion_mods``, ``states``, ``runners``, ``wheels``
+-- flagged ``is_wire_loader=True`` by their factories). Internal
+loaders back ``__salt__``/``__utils__``/``__pillar__`` etc. inside
+shipped code and are flagged ``False``. Each scope reads its own pair
+of mode opts.
 
-``loader_validate_return_mode`` -- governs ``validate_return()``:
+**Direction** is input vs. return. Each takes one of ``off``, ``warn``,
+``enforce``, ``strict``:
 
-* ``off`` (default) -- return validation is skipped.
-* ``warn`` -- validate when a contract applies, log + pass through on
-  failure.
-* ``enforce`` -- raise ``SaltInvocationError`` on contract violation.
-* ``strict`` -- like ``enforce``, additionally require that every
-  loader-dispatched function be reachable through *some* contract
-  (factory-pinned, registry entry, or module-declared refinement).
-  Functions with none of those raise -- the discovery sensor for
-  "Salt does not yet know what this returns."
+* ``off`` (default for all four cells) -- validation is skipped.
+* ``warn`` -- validate; log + pass through on failure.
+* ``enforce`` -- raise ``SaltInvocationError`` on failure.
+* ``strict`` -- for inputs, additionally require every reachable
+  function to have annotations on all non-var parameters; for returns,
+  require some contract (factory, registry entry, or module-declared
+  refinement). Raise on gaps.
+
+Example rollout patterns:
+
+* State returns only (free bug catching, zero migration):
+  ``wire_return=enforce``, everything else ``off``.
+* Boundary-strict, trust internals:
+  ``wire_input=strict, wire_return=strict``, internals ``off``.
+* Observability everywhere:
+  ``wire_*=warn, internal_*=warn``.
+* CI / dev (whole surface typed):
+  all four ``strict``.
 
 Annotation-driven -- no per-function decorators required. A module author
 writes a plain Python function with type hints and the loader validates

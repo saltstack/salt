@@ -1197,29 +1197,32 @@ VALID_OPTS = immutabletypes.freeze(
         # Whitelist/blacklist specific modules to be synced
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
-        # Loader-level input validation mode: one of 'off', 'warn',
-        # 'enforce', 'strict'. Governs validate_inputs() called from
-        # LoadedFunc.__call__.
-        # 'off' (default): loader behaves as before.
-        # 'warn': validate annotated callables on every call; log on failure.
-        # 'enforce': raise SaltInvocationError on validation failure.
-        # 'strict': like 'enforce', plus require every loader-dispatched
-        #           function to have type annotations on all non-var params;
-        #           raise on the first call to any function that doesn't.
-        "loader_validate_input_mode": str,
-        # Loader-level return validation mode: one of 'off', 'warn',
-        # 'enforce', 'strict'. Governs validate_return() called from
-        # LoadedFunc.__call__ using the loader's output_contract (factory-
-        # pinned, e.g. states() pins StateReturn), per-function
-        # return_registry, or module-declared refinement.
-        # 'off' (default): return validation is skipped.
-        # 'warn': validate, log + pass return through on failure.
-        # 'enforce': raise SaltInvocationError on contract violation.
-        # 'strict': like 'enforce', plus require every loader-dispatched
-        #           function to have *some* contract (factory, registry
-        #           entry, or declared annotation); raise on functions
-        #           Salt doesn't yet have a contract for.
-        "loader_validate_return_mode": str,
+        # Loader validation modes. Four independent knobs, one per
+        # (scope x direction) cell. Each takes one of 'off', 'warn',
+        # 'enforce', 'strict'.
+        #
+        # Scope is the loader's trust tier:
+        #   wire     -- user-input gateways (filtered minion_mods, states,
+        #               runners, wheels). These are flagged
+        #               is_wire_loader=True by their factories.
+        #   internal -- shipped-code composition (__salt__ inside state
+        #               modules, __utils__, pillars, grains, matchers,
+        #               executors, ...). Everything else.
+        #
+        # Direction is input vs. return.
+        #
+        # Mode values:
+        #   off     -- validation skipped for this cell (default for all).
+        #   warn    -- validate; log + pass through on failure.
+        #   enforce -- raise SaltInvocationError on failure.
+        #   strict  -- for inputs, require annotations on all non-var
+        #              params; for returns, require some contract
+        #              (factory, registry entry, or module-declared
+        #              refinement). Raise on gaps.
+        "loader_validate_wire_input_mode": str,
+        "loader_validate_wire_return_mode": str,
+        "loader_validate_internal_input_mode": str,
+        "loader_validate_internal_return_mode": str,
         # django auth
         "django_auth_path": str,
         "django_auth_settings": str,
@@ -1644,8 +1647,10 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "salt_cp_chunk_size": 65536,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_input_mode": "off",
-        "loader_validate_return_mode": "off",
+        "loader_validate_wire_input_mode": "off",
+        "loader_validate_wire_return_mode": "off",
+        "loader_validate_internal_input_mode": "off",
+        "loader_validate_internal_return_mode": "off",
         "minion_sign_messages": False,
         "discovery": False,
         "schedule": {},
@@ -2091,8 +2096,10 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_input_mode": "off",
-        "loader_validate_return_mode": "off",
+        "loader_validate_wire_input_mode": "off",
+        "loader_validate_wire_return_mode": "off",
+        "loader_validate_internal_input_mode": "off",
+        "loader_validate_internal_return_mode": "off",
         "clean_dynamic_modules": True,
         "django_auth_path": "",
         "django_auth_settings": "",
