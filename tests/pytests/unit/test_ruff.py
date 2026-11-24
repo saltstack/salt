@@ -984,6 +984,21 @@ RULES_WITH_EXISTING_VIOLATIONS = [
         "TRY301",
         "def bar():\n    pass\n\n\ndef foo():\n    try:\n        a = bar()\n        if not a:\n            raise ValueError\n    except ValueError:\n        raise\n",
     ),
+    # Rules enabled in the fourth wave: existing violations. Only new ones block a PR.
+    ("B007", "for i, j in foo:\n    bar(i)\n"),
+    (
+        "B904",
+        'try:\n    ...\nexcept FileNotFoundError:\n    if ...:\n        raise RuntimeError("...")\n    else:\n        raise UserWarning("...")\n',
+    ),
+    (
+        "PLW2901",
+        "for i in range(10):\n    i = 9\n    print(i)  # prints 9 every iteration\n\nfor i in range(10):\n    for i in range(10):  # original value overwritten\n        pass\n    print(i)  # also prints 9 every iteration\n\nwith path1.open() as f:\n    with path2.open() as f:\n        f = path2.open()\n    print(f.readline())  # prints a line from path2\n",
+    ),
+    ("RET503", "def foo(bar):\n    if not bar:\n        return 1\n"),
+    (
+        "RUF012",
+        "class A:\n    variable_1: list[int] = []\n    variable_2: set[int] = set()\n    variable_3: dict[str, int] = {}\n",
+    ),
 ]
 
 
