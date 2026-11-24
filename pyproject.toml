@@ -110,95 +110,55 @@ ignore = [
     "F405",  # names from star imports
 
     # Not enabled on purpose.
-    # COM: conflicts with the formatter (trailing commas)
-    # Q: conflicts with the formatter (quotes)
-    # ISC: implicit string concatenation, formatter decides
-    # D: docstring style, Salt has its own docstring checks
-    # DOC: docstring contents, Salt has its own docstring checks
-    # CPY: copyright header
-    # FIX: FIXME and TODO markers
-    # TD: TODO format
-    # ERA: commented-out code
-    # INP: implicit namespace packages
-    # EM: error message in a variable
-    # FBT: boolean positional arguments
-    # T20: print and pprint
-    # N: naming, renaming changes the public API
-    # ARG: unused arguments, Salt functions have fixed signatures
-    # E501: line length, black does not wrap long strings and comments
-    # W191: conflicts with the formatter (tab indentation)
-    # S101: assert, used throughout the tests
-    # TRY003: long messages in exceptions
-    # PLR2004: magic values
-    # C901, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917: complexity threshold
-    # A002: parameter names that shadow builtins are part of the API
-    # TC001, TC002: moving an import into a TYPE_CHECKING block breaks code that reads
-    # the annotations at run time
-    # ICN001: import alias conventions are not part of the Salt style
-    # B008: calls in default arguments are how Salt sets its path defaults
-    # PT015: "assert False" is allowed in tests, as for B011
-    # RUF001, RUF002, RUF003: typographic characters and unicode test data
-    "A002",  # builtin-argument-shadowing
-    "ARG",  # flake8-unused-arguments (all rules)
-    "B008",  # function-call-in-default-argument
-    "C901",  # complex-structure
-    "COM",  # flake8-commas (all rules)
-    "CPY",  # flake8-copyright (all rules)
-    "D",  # pydocstyle (all rules)
-    "E501",  # line-too-long
-    "EM",  # flake8-errmsg (all rules)
-    "ERA",  # eradicate (all rules)
-    "FBT",  # flake8-boolean-trap (all rules)
-    "FIX",  # flake8-fixme (all rules)
-    "ICN001",  # unconventional-import-alias
-    "INP",  # flake8-no-pep420 (all rules)
-    "ISC",  # flake8-implicit-str-concat (all rules)
-    "N",  # pep8-naming (all rules)
-    "PLR0911",  # too-many-return-statements
-    "PLR0912",  # too-many-branches
-    "PLR0913",  # too-many-arguments
-    "PLR0915",  # too-many-statements
-    "PLR0917",  # too-many-positional-arguments
-    "PLR2004",  # magic-value-comparison
-    "PT015",  # pytest-assert-always-false
-    "Q",  # flake8-quotes (all rules)
-    "RUF001",  # ambiguous-unicode-character-string
-    "RUF002",  # ambiguous-unicode-character-docstring
-    "RUF003",  # ambiguous-unicode-character-comment
-    "S101",  # assert
-    "T201",  # print
-    "T203",  # p-print
-    "TC001",  # typing-only-first-party-import
-    "TC002",  # typing-only-third-party-import
-    "TD",  # flake8-todos (all rules)
-    "TRY003",  # raise-vanilla-args
-    "W191",  # tab-indentation
+    "A002",  # parameter names that shadow builtins are part of the API
+    "ARG",  # unused arguments, Salt functions have fixed signatures
+    "B008",  # calls in default arguments are how Salt sets its path defaults
+    "C901",  # complexity threshold
+    "COM",  # conflicts with the formatter (trailing commas)
+    "CPY",  # copyright header
+    "D",  # docstring style, Salt has its own docstring checks
+    "E501",  # line length, black does not wrap long strings and comments
+    "EM",  # error message in a variable
+    "ERA",  # commented-out code
+    "FBT",  # boolean positional arguments
+    "FIX",  # FIXME and TODO markers
+    "ICN001",  # import alias conventions are not part of the Salt style
+    "INP",  # implicit namespace packages
+    "ISC",  # implicit string concatenation, formatter decides
+    "N",  # naming, renaming changes the public API
+    "PLR0911",  # complexity threshold
+    "PLR0912",  # complexity threshold
+    "PLR0913",  # complexity threshold
+    "PLR0915",  # complexity threshold
+    "PLR0917",  # complexity threshold
+    "PLR2004",  # magic values
+    "PT015",  # "assert False" is allowed in tests, as for B011
+    "Q",  # conflicts with the formatter (quotes)
+    "RUF001",  # typographic characters and unicode test data
+    "RUF002",  # typographic characters and unicode test data
+    "RUF003",  # typographic characters and unicode test data
+    "S101",  # assert, used throughout the tests
+    "T201",  # print and pprint
+    "T203",  # print and pprint
+    "TC001",  # moving an import into a TYPE_CHECKING block breaks code that reads the annotations at run time
+    "TC002",  # moving an import into a TYPE_CHECKING block breaks code that reads the annotations at run time
+    "TD",  # TODO format
+    "TRY003",  # long messages in exceptions
+    "W191",  # conflicts with the formatter (tab indentation)
 
     # The fix is not a habit to change: it changes the behavior, or goes against the
     # way Salt is written.
-    # G004: f-strings in logging are allowed (logging-fstring-interpolation is off in .pylintrc)
-    # SIM112: the Windows environment variables are written as Windows names them
-    # (SystemRoot, ProgramFiles)
-    # SIM115: temporary files and tar files that stay open longer than one block
-    # TRY004: a TypeError instead of the RuntimeError or ValueError that callers catch
-    # TRY301: a raise in a try block that the same try catches
-    # PLW2901: most of them are x = f(x) on the loop variable (line = line.strip())
-    # PLR2044: a line with only # separates the paragraphs of a comment
-    # RUF015: the fix turns the IndexError of an empty sequence into a StopIteration
-    # E402: imports after sys.path or the environment are set, and the project turned
-    # wrong-import-position off in .pylintrc
-    # ASYNC110, ASYNC240: the fix is a change of the design (an Event, to_thread)
-    "ASYNC110",  # async-busy-wait
-    "ASYNC240",  # blocking-path-method-in-async-function
-    "E402",  # module-import-not-at-top-of-file
-    "G004",  # logging-f-string
-    "PLR2044",  # empty-comment
-    "PLW2901",  # redefined-loop-name
-    "RUF015",  # unnecessary-iterable-allocation-for-first-element
-    "SIM112",  # uncapitalized-environment-variables
-    "SIM115",  # open-file-with-context-handler
-    "TRY004",  # type-check-without-type-error
-    "TRY301",  # raise-within-try
+    "ASYNC110",  # the fix is a change of the design (an Event, to_thread)
+    "ASYNC240",  # the fix is a change of the design (an Event, to_thread)
+    "E402",  # imports after sys.path or the environment are set, and the project turned wrong-import-position off in .pylintrc
+    "G004",  # f-strings in logging are allowed (logging-fstring-interpolation is off in .pylintrc)
+    "PLR2044",  # a line with only # separates the paragraphs of a comment
+    "PLW2901",  # most of them are x = f(x) on the loop variable (line = line.strip())
+    "RUF015",  # the fix turns the IndexError of an empty sequence into a StopIteration
+    "SIM112",  # the Windows environment variables are written as Windows names them (SystemRoot, ProgramFiles)
+    "SIM115",  # temporary files and tar files that stay open longer than one block
+    "TRY004",  # a TypeError instead of the RuntimeError or ValueError that callers catch
+    "TRY301",  # a raise in a try block that the same try catches
 
     # Rules for libraries and file types that Salt does not use: Airflow, Django,
     # FastAPI, gettext, NumPy, pandas, and the type stubs (.pyi) rules.
@@ -303,20 +263,14 @@ ignore = [
     "W505",  # doc-line-too-long
 
     # Not decided yet.
-    # ANN: type annotations
-    # SLF001: private member access, mostly in tests
-    # PT009: unittest style assertions in tests
-    # DTZ: naive datetimes, making them aware changes the behavior
-    # PTH: pathlib
-    # PYI024: collections.namedtuple
-    "ANN",  # flake8-annotations (all rules)
+    "ANN",  # type annotations
     "DTZ001",  # call-datetime-without-tzinfo
     "DTZ002",  # call-datetime-today
     "DTZ005",  # call-datetime-now-without-tzinfo
     "DTZ006",  # call-datetime-fromtimestamp
     "DTZ007",  # call-datetime-strptime-without-zone
     "DTZ011",  # call-date-today
-    "PT009",  # pytest-unittest-assertion
+    "PT009",  # unittest style assertions in tests
     "PTH100",  # os-path-abspath
     "PTH101",  # os-chmod
     "PTH102",  # os-mkdir
@@ -333,8 +287,8 @@ ignore = [
     "PTH204",  # os-path-getmtime
     "PTH207",  # glob
     "PTH211",  # os-symlink
-    "PYI024",  # collections-named-tuple
-    "SLF001",  # private-member-access
+    "PYI024",  # collections.namedtuple
+    "SLF001",  # private member access, mostly in tests
 
     # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
     "S103",  # bad-file-permissions
@@ -431,12 +385,9 @@ ignore = [
     "RUF100",  # unused-noqa
 
     # Waiting for a decision or for another change:
-    # BLE001: pylint reports the same, to be moved with it
-    # TRY400: logging.exception adds a traceback to the logs
-    # RUF059: little value
-    "BLE001",  # blind-except
-    "RUF059",  # unused-unpacked-variable
-    "TRY400",  # error-instead-of-exception
+    "BLE001",  # pylint reports the same, to be moved with it
+    "RUF059",  # little value
+    "TRY400",  # logging.exception adds a traceback to the logs
 
     # Only a way of writing, nothing that goes wrong without it. Not worth the
     # change of the line.
