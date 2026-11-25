@@ -221,8 +221,8 @@ async def _timeout_then_late_failure():
         def closed(self):
             return False
 
-        def write(self, data):
-            return write_future
+        def write(self, data, _wf=write_future):
+            return _wf
 
     loop = asyncio.get_running_loop()
     handler = _capture_loop_errors(loop)
@@ -292,8 +292,8 @@ async def _caller_cancellation_then_late_failure():
         def closed(self):
             return False
 
-        def write(self, data):
-            return write_future
+        def write(self, data, _wf=write_future):
+            return _wf
 
     loop = asyncio.get_running_loop()
     handler = _capture_loop_errors(loop)
