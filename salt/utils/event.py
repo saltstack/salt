@@ -83,6 +83,12 @@ from salt.utils.versions import warn_until
 
 log = logging.getLogger(__name__)
 
+# Default upper bound in seconds for a single publish on the local event
+# bus. A wedged pull side must raise TimeoutError to the caller instead of
+# blocking its worker forever (#69824). Configurable via the master option
+# ``event_publish_timeout``.
+DEFAULT_EVENT_PUBLISH_TIMEOUT = 60
+
 
 def _event_tag_prefix(tag):
     """
@@ -940,12 +946,15 @@ class SaltEvent:
         # running asyncio loop and could hit the nested-SyncWrapper
         # deadlock / dead-loop-cache issues it fixes.
         async_mworker = bool(self.opts.get("master_async_mworker", False))
+        publish_timeout = self.opts.get(
+            "event_publish_timeout", DEFAULT_EVENT_PUBLISH_TIMEOUT
+        )
         if not async_mworker:
             if self._run_io_loop_sync:
                 # pusher is a SyncWrapper; publish() runs synchronously.
-                self.pusher.publish(msg)
+                self.pusher.publish(msg, timeout=publish_timeout)
             else:
-                await self.pusher.publish(msg)
+                await self.pusher.publish(msg, timeout=publish_timeout)
         else:
             # ``self.pusher`` may be a ``SyncWrapper`` (constructed with
             # ``io_loop=None`` in ``AESFuncs.__init__`` etc.).  Its
@@ -970,7 +979,7 @@ class SaltEvent:
                 and underlying is not None
                 and hasattr(underlying, "publish")
             ):
-                result = underlying.publish(msg)
+                result = underlying.publish(msg, timeout=publish_timeout)
                 if inspect.isawaitable(result):
                     await result
             elif self._run_io_loop_sync:
@@ -978,9 +987,12 @@ class SaltEvent:
                 # by running it in the default executor so we don't block
                 # our own event loop.
                 loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, self.pusher.publish, msg)
+                await loop.run_in_executor(
+                    None,
+                    lambda: self.pusher.publish(msg, timeout=publish_timeout),
+                )
             else:
-                await self.pusher.publish(msg)
+                await self.pusher.publish(msg, timeout=publish_timeout)
         if cb is not None:
             warn_until(
                 3009,
@@ -1020,9 +1032,12 @@ class SaltEvent:
         ).add(1, attributes={"tag_prefix": _event_tag_prefix(tag)})
         event = self.pack(tag, data, max_size=self.opts["max_event_size"])
         msg = salt.utils.stringutils.to_bytes(event, "utf-8")
+        publish_timeout = self.opts.get(
+            "event_publish_timeout", DEFAULT_EVENT_PUBLISH_TIMEOUT
+        )
         if self._run_io_loop_sync:
             try:
-                self.pusher.publish(msg)
+                self.pusher.publish(msg, timeout=publish_timeout)
             except Exception as exc:  # pylint: disable=broad-except
                 # LTS default: pre-PR behaviour re-raises the exception
                 # (``fire_event`` returning ``False`` on connect failure but
@@ -1057,7 +1072,9 @@ class SaltEvent:
                     exc,
                 )
         else:
-            task = self.io_loop.create_task(self.pusher.publish(msg))
+            task = self.io_loop.create_task(
+                self.pusher.publish(msg, timeout=publish_timeout)
+            )
             self._publish_tasks.add(task)
             task.add_done_callback(self._publish_tasks.discard)
         return True
