@@ -99,7 +99,10 @@ def test_beacon_module(minion_opts):
     _expected = [
         {
             "tag": "salt/beacon/minion/watch_apache/",
-            "data": {"id": "minion", "apache2": "Stopped"},
+            "data": {
+                "id": "minion",
+                "apache2": {"status": "stopped", "instances": []},
+            },
             "beacon_name": "ps",
         }
     ]
