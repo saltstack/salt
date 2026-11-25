@@ -362,21 +362,59 @@ def validate_inputs(fn, args, kwargs, mode):
         log.warning(msg)
         return args, kwargs
 
-    coerced = _coerced_kwargs(validated, bound.arguments)
-    positional_only = [
-        p.name
-        for p in sig.parameters.values()
-        if p.kind is inspect.Parameter.POSITIONAL_ONLY
-    ]
-    new_pos = tuple(coerced.pop(n) for n in positional_only if n in coerced)
-    new_kwargs = {**coerced, **reserved}
-    return new_pos, new_kwargs
+    # Build the output by mutating the ORIGINAL call in place: positional
+    # args keep their index, keyword args keep their key, *args / **kwargs
+    # extras and unannotated params pass through untouched. Only the
+    # specific slots the pydantic model knows about are replaced with
+    # the (coerced) validated values.
+    #
+    # Previous implementation rebuilt the call from validated.model_fields,
+    # which dropped unannotated params (``def f(a: int, b): f(1, 2)``
+    # would lose ``b``) and **kwargs extras (``def install(name: str,
+    # **kw): install("x", refresh=True)`` would lose ``refresh``).
+    model_fields = validated.__class__.model_fields
+    new_args = list(args)
+    param_list = list(sig.parameters.values())
+    for i in range(min(len(new_args), len(param_list))):
+        param = param_list[i]
+        if param.kind is inspect.Parameter.VAR_POSITIONAL:
+            # Positional slots from here on map to *args contents --
+            # not model fields.
+            break
+        if param.name in model_fields:
+            new_args[i] = getattr(validated, param.name)
+    new_kwargs = dict(kwargs)
+    for name in model_fields:
+        if name in new_kwargs:
+            new_kwargs[name] = getattr(validated, name)
+    return tuple(new_args), new_kwargs
 
 
 # Sentinel attached to a function when contract resolution has decided
 # no validation is applicable (and we don't want to re-resolve on every
 # call).
 _NO_CONTRACT = object()
+
+
+# State-module helper functions that dispatch through the states loader
+# but do NOT return a StateReturn-shaped dict. The state-system calls
+# these as bookkeeping / setup hooks:
+#
+# * ``mod_init(low)`` -> bool
+# * ``mod_aggregate(low, chunks, running)`` -> aggregated low-chunk dict
+# * ``mod_run_check(low, running, ...)`` -> truthy-or-dict skip-signal
+# * ``mod_run_check_cmd(cmd, ...)`` -> bool
+#
+# ``mod_watch`` and ``mod_beacon`` DO return real state dicts and stay
+# validated against :class:`StateReturn`.
+_STATE_HELPER_FUNCS = frozenset(
+    {
+        "mod_init",
+        "mod_aggregate",
+        "mod_run_check",
+        "mod_run_check_cmd",
+    }
+)
 
 
 def _return_annotation(fn):
@@ -529,6 +567,14 @@ def validate_return(fn, fn_name, ret, contract, registry, mode):
     Returns ``ret`` unchanged (payload is never mutated).
     """
     if mode == "off" or not reqs.pydantic:
+        return ret
+
+    # Skip state-module helper functions whose returns aren't
+    # StateReturn-shaped (mod_init -> bool, mod_aggregate -> low chunk,
+    # mod_run_check* -> skip signal). Validated by last path component
+    # of ``fn_name`` -- any module's mod_init / mod_aggregate etc.
+    func_basename = fn_name.rsplit(".", 1)[-1] if fn_name else ""
+    if func_basename in _STATE_HELPER_FUNCS:
         return ret
 
     effective = _get_or_resolve_return_contract(fn, fn_name, contract, registry, mode)

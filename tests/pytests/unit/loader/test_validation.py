@@ -171,11 +171,47 @@ class TestValidateInputs:
             return (a, b)
 
         args, kwargs = validation.validate_inputs(f, (1, "x"), {}, "strict")
-        # bind_partial maps positional to kwarg names; downstream dispatch
-        # works either way, so we accept kwargs-form here.
-        reconstructed = dict(kwargs)
-        # Pydantic coerced in lax mode.
-        assert reconstructed == {"a": 1, "b": "x"}
+        # Positional stays positional (post-Charlie-review fix).
+        assert args == (1, "x")
+        assert kwargs == {}
+
+    def test_unannotated_positional_passed_through(self):
+        """Regression for charzl's review: unannotated params were
+        being dropped when passed positionally because _coerced_kwargs
+        rebuilt the call purely from model_fields, which skip
+        unannotated params."""
+
+        def f(a: int, b):  # b has no annotation
+            return (a, b)
+
+        args, kwargs = validation.validate_inputs(f, (1, 2), {}, "enforce")
+        # b must be preserved at index 1.
+        assert args == (1, 2)
+        assert kwargs == {}
+
+    def test_var_kwargs_extras_preserved(self):
+        """Regression for charzl's review: **kwargs catchall contents
+        were being dropped because the model doesn't have fields for
+        them."""
+
+        def install(name: str, **kwargs):
+            return (name, kwargs)
+
+        args, kwargs = validation.validate_inputs(
+            install, (), {"name": "x", "refresh": True}, "enforce"
+        )
+        assert kwargs == {"name": "x", "refresh": True}
+
+    def test_var_args_extras_preserved(self):
+        """*args contents must survive validation of the leading
+        annotated positional."""
+
+        def f(a: int, *extra):
+            return (a, extra)
+
+        args, kwargs = validation.validate_inputs(f, (1, "b", "c"), {}, "enforce")
+        assert args == (1, "b", "c")
+        assert kwargs == {}
 
     def test_model_cache_attached(self):
         def f(x: int):
@@ -276,6 +312,48 @@ class TestValidateReturn:
             "strict",
         )
         assert ret["result"] is True
+
+    @pytest.mark.parametrize(
+        "helper_name",
+        ["mod_init", "mod_aggregate", "mod_run_check", "mod_run_check_cmd"],
+    )
+    def test_state_helper_funcs_skip_contract(self, helper_name):
+        """Regression for charzl's review: state-system helper
+        functions (mod_init returns bool, mod_aggregate returns a low
+        chunk, etc.) dispatch through the states loader but don't
+        return StateReturn-shaped dicts. They must skip the contract."""
+
+        def fn():
+            return True  # bool, not a StateReturn dict
+
+        ret = validation.validate_return(
+            fn,
+            f"pkg.{helper_name}",
+            True,
+            validation.StateReturn,
+            None,
+            "enforce",
+        )
+        # Must not raise and must return ret unchanged.
+        assert ret is True
+
+    @pytest.mark.parametrize("real_fn", ["installed", "mod_watch", "mod_beacon"])
+    def test_non_helper_state_funcs_still_validate(self, real_fn):
+        """mod_watch and mod_beacon DO return state dicts; they stay
+        validated. Regular state functions like installed do too."""
+
+        def fn():
+            return {"name": "n", "changes": {}, "result": True}  # missing comment
+
+        with pytest.raises(SaltInvocationError, match="contract violation"):
+            validation.validate_return(
+                fn,
+                f"pkg.{real_fn}",
+                {"name": "n", "changes": {}, "result": True},
+                validation.StateReturn,
+                None,
+                "enforce",
+            )
 
 
 class TestContractResolution:
