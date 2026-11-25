@@ -1,6 +1,7 @@
 """Owned request workers must survive successive SyncWrapper calls."""
 
 import asyncio
+from typing import ClassVar
 
 import pytest
 
@@ -10,7 +11,7 @@ pytestmark = [pytest.mark.core_test]
 
 
 class QueueWorker:
-    async_methods = ["send"]
+    async_methods: ClassVar[list[str]] = ["send"]
 
     def __init__(self, mode):
         self.queue = asyncio.Queue()
@@ -32,7 +33,7 @@ class QueueWorker:
             while True:
                 try:
                     reply, value = await self.next_request()
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     continue
                 reply.set_result(value)
         finally:
@@ -76,7 +77,7 @@ async def test_owned_worker_survives_dispatch(mode, custom_factory, materialize_
 
 
 class OrphanWorker:
-    async_methods = ["start"]
+    async_methods: ClassVar[list[str]] = ["start"]
 
     async def start(self):
         async def consume():
@@ -99,7 +100,7 @@ async def test_unowned_worker_is_still_reaped():
 
 async def test_task_factory_restored_after_dispatch_error():
     class FailingCall:
-        async_methods = ["fail"]
+        async_methods: ClassVar[list[str]] = ["fail"]
 
         async def fail(self):
             sleeper = asyncio.create_task(asyncio.sleep(60))
