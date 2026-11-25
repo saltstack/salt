@@ -134,11 +134,21 @@ change, just log lines when validation fails):
 .. code-block:: yaml
 
     loader_validate_overrides:
-      wire_salt:   {input_mode: warn, return_mode: warn}
-      salt_dunder: {input_mode: warn, return_mode: warn}
-      states:      {input_mode: warn, return_mode: warn}
-      runners:     {input_mode: warn, return_mode: warn}
-      wheels:      {input_mode: warn, return_mode: warn}
+      wire_salt:
+        input_mode: warn
+        return_mode: warn
+      salt_dunder:
+        input_mode: warn
+        return_mode: warn
+      states:
+        input_mode: warn
+        return_mode: warn
+      runners:
+        input_mode: warn
+        return_mode: warn
+      wheels:
+        input_mode: warn
+        return_mode: warn
 
 **Catch state-return bugs, nothing else** (zero migration cost; the
 ``StateReturn`` contract is already factory-pinned on the ``states``
@@ -156,21 +166,39 @@ API input, but don't disturb internal composition):
 .. code-block:: yaml
 
     loader_validate_overrides:
-      wire_salt: {input_mode: enforce, return_mode: enforce}
-      states:    {input_mode: enforce, return_mode: enforce}
-      runners:   {input_mode: enforce, return_mode: enforce}
-      wheels:    {input_mode: enforce, return_mode: enforce}
+      wire_salt:
+        input_mode: enforce
+        return_mode: enforce
+      states:
+        input_mode: enforce
+        return_mode: enforce
+      runners:
+        input_mode: enforce
+        return_mode: enforce
+      wheels:
+        input_mode: enforce
+        return_mode: enforce
 
 **CI / dev -- whole surface typed**:
 
 .. code-block:: yaml
 
     loader_validate_overrides:
-      wire_salt:   {input_mode: strict, return_mode: strict}
-      salt_dunder: {input_mode: strict, return_mode: strict}
-      states:      {input_mode: strict, return_mode: strict}
-      runners:     {input_mode: strict, return_mode: strict}
-      wheels:      {input_mode: strict, return_mode: strict}
+      wire_salt:
+        input_mode: strict
+        return_mode: strict
+      salt_dunder:
+        input_mode: strict
+        return_mode: strict
+      states:
+        input_mode: strict
+        return_mode: strict
+      runners:
+        input_mode: strict
+        return_mode: strict
+      wheels:
+        input_mode: strict
+        return_mode: strict
 
 **LTS production pattern** -- surface external callers, trust
 shipped internals:
@@ -178,8 +206,10 @@ shipped internals:
 .. code-block:: yaml
 
     loader_validate_overrides:
-      wire_salt: {input_mode: warn}
-      states:    {return_mode: warn}
+      wire_salt:
+        input_mode: warn
+      states:
+        return_mode: warn
 
 
 Annotating a module function
