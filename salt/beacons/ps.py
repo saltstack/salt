@@ -247,6 +247,8 @@ def _context_pull_props(proc: Any) -> tuple[int, str, float]:
     """
     Retrieve process properties.
 
+    .. versionadded:: 3009.0
+
     Uses ``oneshot()`` to cache multiple attributes in a single call.
     See https://psutil.readthedocs.io/en/latest/#psutil.Process.oneshot
 
