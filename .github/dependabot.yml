@@ -23,17 +23,36 @@ updates:
     #   pytest >= 9 needs pytest-salt-factories compat review
     #   pip >= 26 ships a vendored pygments missing modeline on cpython 3.14
     #   setuptools-scm >= 10 splits version inference, breaks --no-binary=:all:
+    # Each cap is duplicated with applies-to: security-updates because ignore
+    # entries default to version-updates only; without the duplicate,
+    # dependabot opens security PRs that jump past the cap (precedent: #70944
+    # proposed pip 25.2 -> 26.2 to clear six open pip CVEs at once).
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+        applies-to: security-updates
       - dependency-name: "pylint"
         versions: [">=3.2.0"]
+      - dependency-name: "pylint"
+        versions: [">=3.2.0"]
+        applies-to: security-updates
       - dependency-name: "pytest"
         versions: [">=9.0.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+        applies-to: security-updates
       - dependency-name: "pip"
         versions: [">=26.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+        applies-to: security-updates
       - dependency-name: "setuptools-scm"
         versions: [">=10.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
+        applies-to: security-updates
     groups:
       all-pip-updates:
         patterns:
@@ -55,14 +74,29 @@ updates:
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+        applies-to: security-updates
       - dependency-name: "pylint"
         versions: [">=3.2.0"]
+      - dependency-name: "pylint"
+        versions: [">=3.2.0"]
+        applies-to: security-updates
       - dependency-name: "pytest"
         versions: [">=9.0.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+        applies-to: security-updates
       - dependency-name: "pip"
         versions: [">=26.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+        applies-to: security-updates
       - dependency-name: "setuptools-scm"
         versions: [">=10.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
+        applies-to: security-updates
 
   # 3007.x: security advisories only.
   - package-ecosystem: "pip"
@@ -79,14 +113,29 @@ updates:
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+        applies-to: security-updates
       - dependency-name: "pylint"
         versions: [">=3.2.0"]
+      - dependency-name: "pylint"
+        versions: [">=3.2.0"]
+        applies-to: security-updates
       - dependency-name: "pytest"
         versions: [">=9.0.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+        applies-to: security-updates
       - dependency-name: "pip"
         versions: [">=26.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+        applies-to: security-updates
       - dependency-name: "setuptools-scm"
         versions: [">=10.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
+        applies-to: security-updates
 
   # 3006.x: security advisories only.
   - package-ecosystem: "pip"
@@ -103,11 +152,26 @@ updates:
     ignore:
       - dependency-name: "vcert"
         versions: [">=0.10.0"]
+      - dependency-name: "vcert"
+        versions: [">=0.10.0"]
+        applies-to: security-updates
       - dependency-name: "pylint"
         versions: [">=3.2.0"]
+      - dependency-name: "pylint"
+        versions: [">=3.2.0"]
+        applies-to: security-updates
       - dependency-name: "pytest"
         versions: [">=9.0.0"]
+      - dependency-name: "pytest"
+        versions: [">=9.0.0"]
+        applies-to: security-updates
       - dependency-name: "pip"
         versions: [">=26.0.0"]
+      - dependency-name: "pip"
+        versions: [">=26.0.0"]
+        applies-to: security-updates
       - dependency-name: "setuptools-scm"
         versions: [">=10.0.0"]
+      - dependency-name: "setuptools-scm"
+        versions: [">=10.0.0"]
+        applies-to: security-updates
