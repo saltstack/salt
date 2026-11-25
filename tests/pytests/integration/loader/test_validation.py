@@ -342,6 +342,63 @@ class TestReturnEnforce:
         )
 
 
+@pytest.fixture(scope="module")
+def states_override_minion(salt_master):
+    """Minion where tier defaults are 'warn' but 'states' is overridden
+    to 'enforce'. Proves the per-loader override takes precedence over
+    the tier default."""
+    minion = salt_master.salt_minion_daemon(
+        "loader-validation-states-override",
+        overrides={
+            # Tier defaults: warn everywhere.
+            "loader_validate_wire_input_mode": "warn",
+            "loader_validate_wire_return_mode": "warn",
+            "loader_validate_internal_input_mode": "warn",
+            "loader_validate_internal_return_mode": "warn",
+            # Per-loader override: states is strict on returns.
+            "loader_validate_overrides": {
+                "states": {"return_mode": "enforce"},
+            },
+            **FIPS_OVERRIDES,
+        },
+    )
+    minion.after_terminate(
+        pytest.helpers.remove_stale_minion_key, salt_master, minion.id
+    )
+    with salt_master.state_tree.base.temp_file(
+        "_states/validation_state_demo.py", STATE_MODULE_SOURCE
+    ):
+        with minion.started():
+            cli = salt_master.salt_cli()
+            cli.run("saltutil.sync_states", minion_tgt=minion.id)
+            yield minion
+
+
+class TestPerLoaderOverride:
+    """Prove loader_validate_overrides[<name>][<direction>_mode] wins
+    over the tier default."""
+
+    def test_states_override_is_enforce_despite_warn_default(
+        self, salt_cli, states_override_minion
+    ):
+        """Tier default is warn (would log + pass through); per-loader
+        override for 'states' promotes return validation to enforce
+        (raises), so the bad_return state fails rather than succeeding
+        with a logged warning."""
+        ret = salt_cli.run(
+            "state.single",
+            "validation_state_demo.bad_return",
+            name="override-test",
+            minion_tgt=states_override_minion.id,
+        )
+        haystack = f"{ret.data!r} {ret.stdout or ''}"
+        assert (
+            "return contract violation" in haystack
+            or "contract" in haystack.lower()
+            or "SaltInvocationError" in haystack
+        )
+
+
 class TestScopeDistinction:
     """Prove wire vs. internal scope dispatch semantics: the *same*
     state body with the *same* bad internal __salt__ call gets

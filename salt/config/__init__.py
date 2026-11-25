@@ -1223,6 +1223,12 @@ VALID_OPTS = immutabletypes.freeze(
         "loader_validate_wire_return_mode": str,
         "loader_validate_internal_input_mode": str,
         "loader_validate_internal_return_mode": str,
+        # Per-loader overrides. Dict keyed by LazyLoader.name; each value
+        # is a dict with optional "input_mode" / "return_mode" keys.
+        # Overrides the tier-default opts above for the named loader.
+        # Validated at LazyLoader startup by
+        # salt.config.loader_validation.validate_loader_validation_opts.
+        "loader_validate_overrides": dict,
         # django auth
         "django_auth_path": str,
         "django_auth_settings": str,
@@ -1651,6 +1657,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "loader_validate_wire_return_mode": "off",
         "loader_validate_internal_input_mode": "off",
         "loader_validate_internal_return_mode": "off",
+        "loader_validate_overrides": {},
         "minion_sign_messages": False,
         "discovery": False,
         "schedule": {},
@@ -2100,6 +2107,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "loader_validate_wire_return_mode": "off",
         "loader_validate_internal_input_mode": "off",
         "loader_validate_internal_return_mode": "off",
+        "loader_validate_overrides": {},
         "clean_dynamic_modules": True,
         "django_auth_path": "",
         "django_auth_settings": "",

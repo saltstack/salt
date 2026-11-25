@@ -111,6 +111,32 @@ def _mod_type(module_path):
     return "ext"
 
 
+def _resolve_validate_mode(opts, loader_name, is_wire_loader, direction):
+    """Resolve the effective validation mode for a dispatch.
+
+    Resolution order (first hit wins):
+
+    1. ``loader_validate_overrides[<loader_name>][<direction>_mode]`` --
+       per-loader override dict. Only consulted when the loader has a
+       name.
+    2. ``loader_validate_<wire|internal>_<direction>_mode`` -- tier
+       default based on the loader's trust-tier flag.
+    3. Hard-coded ``"off"``.
+
+    :param opts: Loader opts dict.
+    :param loader_name: ``LazyLoader.name``, may be None.
+    :param is_wire_loader: ``LazyLoader.is_wire_loader``.
+    :param direction: ``"input"`` or ``"return"``.
+    """
+    overrides = opts.get("loader_validate_overrides", {})
+    if loader_name and loader_name in overrides:
+        mode = overrides[loader_name].get(f"{direction}_mode")
+        if mode is not None:
+            return mode
+    tier = "wire" if is_wire_loader else "internal"
+    return opts.get(f"loader_validate_{tier}_{direction}_mode", "off")
+
+
 class FilterDictWrapper(MutableMapping):
     """
     Create a dict which wraps another dict with a specific key suffix on get
@@ -190,14 +216,14 @@ class LoadedFunc:
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        # Pick the (scope, direction) opt cells for this loader's trust
-        # tier. Wire loaders (filtered minion_mods, states, runners,
-        # wheels) take user input; everything else is internal shipped-
-        # code composition. The two scopes have independent modes.
-        scope = "wire" if self.loader.is_wire_loader else "internal"
-        input_mode = self.loader.opts.get(f"loader_validate_{scope}_input_mode", "off")
-        return_mode = self.loader.opts.get(
-            f"loader_validate_{scope}_return_mode", "off"
+        # Resolve validation modes. Per-loader override (if present and
+        # this loader is named) wins; otherwise fall back to the tier
+        # default for wire vs. internal.
+        input_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "input"
+        )
+        return_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "return"
         )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
@@ -251,10 +277,11 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        scope = "wire" if self.loader.is_wire_loader else "internal"
-        input_mode = self.loader.opts.get(f"loader_validate_{scope}_input_mode", "off")
-        return_mode = self.loader.opts.get(
-            f"loader_validate_{scope}_return_mode", "off"
+        input_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "input"
+        )
+        return_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "return"
         )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
@@ -406,6 +433,7 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         output_contract=None,
         return_registry=None,
         is_wire_loader=False,
+        name=None,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
@@ -434,6 +462,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
         self.opts = self.__prep_mod_opts(opts)
+        # Validate the loader_validate_* family of opts at loader
+        # startup. Raises ValueError with an accumulated error listing
+        # when any mode value is unrecognized or the overrides dict is
+        # malformed. Cached on opts so sibling loaders don't re-validate.
+        import salt.config.loader_validation
+
+        salt.config.loader_validation.validate_loader_validation_opts(self.opts)
         self.pack_self = pack_self
 
         self.module_dirs = module_dirs
@@ -457,6 +492,13 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # dispatches through this loader -- the wire_* pair vs. the
         # internal_* pair.
         self.is_wire_loader = is_wire_loader
+        # Logical loader name for per-loader validation-mode overrides.
+        # Set by the factory in salt/loader/__init__.py. Examples:
+        # "wire_salt" (filtered minion_mods), "salt_dunder" (inner
+        # minion_mods), "states", "runners", "wheels". None means the
+        # loader is unnamed -- per-loader overrides can't target it,
+        # only tier-wide opts apply.
+        self.name = name
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type

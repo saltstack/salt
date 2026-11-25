@@ -474,6 +474,7 @@ def minion_mods(
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__salt__",
+        name="salt_dunder",
     )
     pack = dict(pack)
     pack["__salt__"] = salt_dunder
@@ -492,6 +493,7 @@ def minion_mods(
         # and salt-api; inner salt_dunder above stays is_wire_loader=False
         # because it backs __salt__ inside shipped code.
         is_wire_loader=True,
+        name="wire_salt",
     )
 
     # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
@@ -1001,6 +1003,7 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
         loaded_base_name=loaded_base_name,
         # Wheel client / salt-api drive these -- user input.
         is_wire_loader=True,
+        name="wheels",
     )
 
 
@@ -1272,6 +1275,7 @@ def states(
         output_contract=StateReturn if reqs.pydantic else None,
         # SLS content and state.single/state.apply dispatch is user input.
         is_wire_loader=True,
+        name="states",
     )
 
 
@@ -1791,6 +1795,7 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         loaded_base_name=loaded_base_name,
         # salt-run / salt-api drive these -- user input.
         is_wire_loader=True,
+        name="runners",
     )
 
 
