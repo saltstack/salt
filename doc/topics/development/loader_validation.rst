@@ -402,17 +402,19 @@ Common messages
     Correct the key, or remove the override block.
 
 ``loader_validate_overrides.<X>.<Y>: not a valid direction key``
-``loader_validate_defaults.<Y>: not a valid direction key``
-    Only ``input_mode`` and ``return_mode`` are allowed.
+    Only ``input_mode`` and ``return_mode`` are allowed inside a
+    per-loader override entry.  ``loader_validate_defaults`` reports
+    the same error without the ``<X>`` prefix when the misspelled key
+    is at the top level of the defaults dict.
 
 ``loader_validate_overrides.<X>.<Y>: '<mode>' is not a valid mode``
-``loader_validate_defaults.<Y>: '<mode>' is not a valid mode``
     Mode must be one of ``off``, ``warn``, ``enforce``, ``strict``.
+    The same error applies to ``loader_validate_defaults.<Y>``.
 
-``loader_validate_defaults: must be a dict, got <type>``
 ``loader_validate_overrides.<X>: must be a dict, got <type>``
     The value was a scalar or list where a per-direction dict was
-    expected.
+    expected.  ``loader_validate_defaults: must be a dict, got <type>``
+    reports the equivalent problem at the top level.
 
 Startup failures
 ----------------
