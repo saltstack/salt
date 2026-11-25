@@ -8,7 +8,9 @@ import threading
 
 import salt.loader
 import salt.loader.context
+import salt.loader.dunder
 import salt.loader.lazy
+import salt.payload
 from tests.support.mock import patch
 
 
@@ -190,3 +192,50 @@ def test_resource_modules_packs_resource_dunder():
         "resource_modules pack is missing '__resource__'; "
         "sshresource_state will raise NameError at runtime"
     )
+
+
+def test_dunder_mapping_globals_default_to_empty_dict():
+    """
+    Regression test for #65504.
+
+    The mapping-typed dunders (``__opts__``, ``__context__``,
+    ``__pillar__``, ``__grains__``) are constructed in ``salt.loader.dunder``
+    with ``default={}`` so ``value()`` returns an empty mapping when no
+    loader is bound to the current thread, honoring the
+    ``MutableMapping`` contract that ``NamedLoaderContext`` advertises.
+
+    ``__file_client__`` stays ``default=None``: it is not a mapping, and
+    ``None`` is its documented "no file client" sentinel.
+    """
+    for dunder in (
+        salt.loader.dunder.__opts__,
+        salt.loader.dunder.__context__,
+        salt.loader.dunder.__pillar__,
+        salt.loader.dunder.__grains__,
+    ):
+        assert dunder.default == {}
+    assert salt.loader.dunder.__file_client__.default is None
+
+
+def test_dunder_opts_round_trips_through_payload_off_context():
+    """
+    Regression test for #65504.
+
+    ``salt.payload.dumps`` msgpack-encodes any ``collections.abc.MutableMapping``
+    via ``dict(obj)``, which iterates the mapping.  When
+    ``salt.loader.dunder.__opts__`` slips into a payload off-context (no
+    loader on the current thread), the pre-fix behavior was to crash in
+    ``__iter__`` with
+    ``AttributeError: 'NoneType' object has no attribute '__iter__'``
+    because ``value()`` returned the construction default of ``None``.
+    With the fix ``__opts__`` is constructed with ``default={}`` and the
+    payload round-trips cleanly to an empty dict.
+    """
+    # Sanity: off-context, value() must be the empty-dict default.
+    assert salt.loader.dunder.__opts__.loader() is None
+    assert salt.loader.dunder.__opts__.value() == {}
+
+    # The load-bearing case from the issue: msgpack must encode a payload
+    # that contains this NamedLoaderContext without crashing.
+    packed = salt.payload.dumps({"ctx": salt.loader.dunder.__opts__}, use_bin_type=True)
+    assert salt.payload.loads(packed) == {"ctx": {}}
