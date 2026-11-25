@@ -303,6 +303,15 @@ def debian(
             "help": "Signing key id",
             "required": False,
         },
+        "native": {
+            "help": "Build the native-flavor RPM instead of the onedir "
+            "flavor. Requires --native-slug.",
+        },
+        "native_slug": {
+            "help": "Native distro slug (see `tools pkg native-deps "
+            "list-platforms`). Determines which cicd/native-deps/"
+            "<slug>-vendor.txt is baked into salt/_vendor/.",
+        },
     },
 )
 def rpm(
@@ -312,13 +321,55 @@ def rpm(
     python_version: str = None,
     arch: str = None,
     key_id: str = None,
+    native: bool = False,
+    # ptscripts evaluates annotations at runtime via get_type_hints().
+    # `str | None` (PEP 604) is py3.10+; this spec runs on the system
+    # python of each slug and AL2023/Rocky-9 ship py3.9. Match the
+    # legacy pattern used by the siblings above.
+    native_slug: str = None,  # noqa: RUF013
 ):
     """
     Build the RPM package.
     """
     onci = "GITHUB_WORKFLOW" in os.environ
     checkout = pathlib.Path.cwd()
-    if onedir:
+    rpmbuild_defines = [f"--define=_salt_src {checkout}"]
+    rpmbuild_args = []
+
+    if native:
+        if not native_slug:
+            ctx.error("--native requires --native-slug")
+            ctx.exit(1)
+        vendor_list = checkout / "cicd" / "native-deps" / f"{native_slug}-vendor.txt"
+        if not vendor_list.exists():
+            ctx.error(
+                f"missing vendor plan for slug {native_slug!r}: "
+                f"{vendor_list.relative_to(checkout)} does not exist. "
+                f"Run `tools pkg native-deps audit {native_slug}` + "
+                f"`vendor-plan {native_slug}` first."
+            )
+            ctx.exit(1)
+        wheels_dir = checkout / "cicd" / "native-deps" / "wheels"
+        wheels_dir.mkdir(parents=True, exist_ok=True)
+        ctx.info(
+            f"Pre-staging vendor wheels for {native_slug} into "
+            f"{wheels_dir.relative_to(checkout)} ..."
+        )
+        ctx.run(
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            "--no-deps",
+            "--dest",
+            str(wheels_dir),
+            "--requirement",
+            str(vendor_list),
+        )
+        rpmbuild_args.append("--with")
+        rpmbuild_args.append("native")
+        rpmbuild_defines.append(f"--define=native_slug {native_slug}")
+    elif onedir:
         onedir_artifact = checkout / "artifacts" / onedir
         _check_pkg_build_files_exist(ctx, onedir_artifact=onedir_artifact)
         ctx.info(
@@ -354,7 +405,7 @@ def rpm(
     _set_pip_constraint_env(env)
     spec_file = checkout / "pkg" / "rpm" / "salt.spec"
     ctx.run(
-        "rpmbuild", "-bb", f"--define=_salt_src {checkout}", str(spec_file), env=env
+        "rpmbuild", "-bb", *rpmbuild_args, *rpmbuild_defines, str(spec_file), env=env
     )
     if key_id:
         if onci:

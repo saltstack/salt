@@ -4,6 +4,13 @@ DH_VERBOSE = 1
 unexport RUSTFLAGS
 export RELENV_DATA ?= $(HOME)/.local/relenv
 
+# Native-flavor build toggle. Set SALT_NATIVE=1 in the environment to
+# build the system-Python flavor (installed into /usr/lib/python3/
+# dist-packages/salt) instead of the onedir flavor (installed into
+# /opt/saltstack/salt). SALT_NATIVE_SLUG selects which audit's
+# vendor-plan feeds salt/_vendor/. See cicd/native-deps/README.md.
+SALT_NATIVE ?= 0
+
 .PHONY: override_dh_strip
 
 %:
@@ -18,6 +25,40 @@ override_dh_auto_clean:
 	rm -rf debian/salt-syndic
 	rm -rf debian/salt-ssh
 
+ifeq ("${SALT_NATIVE}", "1")
+override_dh_auto_build:
+	# Native build: wheel against the OS's system Python. No relenv,
+	# no onedir. Done inside a venv so we don't need setup.py/wheel
+	# preinstalled on the build host.
+	mkdir -p build/native
+	python3 -m venv --clear --copies build/native/venv
+	# setuptools>=65 is needed by salt_build_backend (imports
+	# setuptools.build_meta.build_editable, added in 65). Ubuntu
+	# 22.04's system setuptools is 59.6; --upgrade force-replaces it.
+	build/native/venv/bin/python3 -m pip install --upgrade \
+		'setuptools>=65.0' build wheel \
+		looseversion packaging 'importlib-metadata>=8.7.0'
+	build/native/venv/bin/python3 -m build --wheel --no-isolation \
+		--outdir build/native/dist
+
+	# Stub man pages (sphinx-generated man pages are a follow-up).
+	mkdir -p doc/man
+	for _mp in salt salt-cp salt-key salt-master salt-run salt-call \
+	          salt-minion salt-proxy salt-syndic salt-api salt-cloud \
+	          salt-ssh spm; do \
+	    printf '.TH %s 1 "" "native" "Salt"\n.SH NAME\n%s \\- see https://docs.saltproject.io/\n' \
+	        "$${_mp}" "$${_mp}" > "doc/man/$${_mp}.1" ; \
+	done
+
+	# Pre-stage vendor wheels so override_dh_install can pip-install
+	# them without needing outbound network at package-build time.
+	if [ -n "$${SALT_NATIVE_SLUG}" ] && [ -s "cicd/native-deps/$${SALT_NATIVE_SLUG}-vendor.txt" ]; then \
+	    mkdir -p build/native/vendor-wheels ; \
+	    build/native/venv/bin/python3 -m pip download --no-deps \
+	        --dest build/native/vendor-wheels \
+	        --requirement "cicd/native-deps/$${SALT_NATIVE_SLUG}-vendor.txt" ; \
+	fi
+else
 ifeq ("${SALT_ONEDIR_ARCHIVE}", "")
 override_dh_auto_build:
 	export PIP_CONSTRAINT=requirements/constraints.txt
@@ -58,20 +99,137 @@ override_dh_auto_build:
 	find build/onedir/salt/bin/ -type f -exec sed -i 's:#!/\(.*\)salt/bin/python3:#!/bin/sh\n"exec" "$$(dirname $$(readlink -f $$0))/python3" "$$0" "$$@":g' {} \;
 
 endif
+endif
 
 # dh_auto_install tries to invoke distutils causing failures.
 override_dh_auto_install:
 
 
+ifeq ("${SALT_NATIVE}", "1")
+override_dh_install:
+	# Install the wheel's contents into debian/salt-common. Debian's
+	# python3 patches pip to redirect `--prefix=/usr` into
+	# `/usr/local/`; DEB_PYTHON_INSTALL_LAYOUT=deb_system disables
+	# that redirect so scripts land in /usr/bin and modules in
+	# /usr/lib/python3/dist-packages/.
+	mkdir -p debian/salt-common
+	DEB_PYTHON_INSTALL_LAYOUT=deb_system \
+	    python3 -m pip install --no-deps --no-build-isolation --no-compile \
+	    --root debian/salt-common --prefix /usr \
+	    build/native/dist/salt-*.whl
+	# Belt-and-braces fallback: if the redirect still fires (older
+	# pip + debian python combos), migrate manually.
+	if [ -d debian/salt-common/usr/local/bin ]; then \
+	    mkdir -p debian/salt-common/usr/bin ; \
+	    mv debian/salt-common/usr/local/bin/* debian/salt-common/usr/bin/ ; \
+	    rmdir debian/salt-common/usr/local/bin debian/salt-common/usr/local 2>/dev/null || true ; \
+	fi
+	if [ -d debian/salt-common/usr/local/lib ]; then \
+	    mkdir -p debian/salt-common/usr/lib/python3/dist-packages ; \
+	    find debian/salt-common/usr/local/lib -name 'salt' -type d \
+	        -exec mv {} debian/salt-common/usr/lib/python3/dist-packages/ \; ; \
+	    find debian/salt-common/usr/local/lib -name 'salt-*.dist-info' -type d \
+	        -exec mv {} debian/salt-common/usr/lib/python3/dist-packages/ \; ; \
+	    rm -rf debian/salt-common/usr/local ; \
+	fi
+
+	# Vendor the module-top-missing deps into salt/_vendor/. The per-
+	# slug vendor list is picked by the SALT_NATIVE_SLUG env var.
+	if [ -n "$${SALT_NATIVE_SLUG}" ] && [ -s "cicd/native-deps/$${SALT_NATIVE_SLUG}-vendor.txt" ]; then \
+	    VENDOR_DIR=$$(find debian/salt-common -type d -name salt -path '*/dist-packages/*' | head -1)/_vendor ; \
+	    mkdir -p "$${VENDOR_DIR}" ; \
+	    PIP_ARGS="" ; \
+	    if [ -d build/native/vendor-wheels ]; then \
+	        PIP_ARGS="--no-index --find-links=build/native/vendor-wheels" ; \
+	    fi ; \
+	    python3 -m pip install --no-deps --no-build-isolation --no-compile \
+	        $${PIP_ARGS} \
+	        --target "$${VENDOR_DIR}" \
+	        -r "cicd/native-deps/$${SALT_NATIVE_SLUG}-vendor.txt" ; \
+	fi
+
+	# salt-vendor.pth so salt/_vendor wins sys.path before import salt.
+	# .pth beats sitecustomize.py on Debian because the base python3
+	# ships its own /usr/lib/python3.X/sitecustomize.py that would
+	# otherwise shadow ours.
+	SITE_PACKAGES=$$(find debian/salt-common -type d -path '*/dist-packages' | head -1) ; \
+	install -D -m 0644 pkg/common/salt-vendor.pth "$${SITE_PACKAGES}/salt-vendor.pth"
+
+	# Ship a marker file so preinst/postinst scripts can detect native
+	# mode at runtime and apply native-appropriate defaults (hardened
+	# layout, skip /opt/saltstack ops).
+	install -D -m 0644 /dev/null debian/salt-common/etc/salt/.pkg-native
+
+	# salt-common.preinst creates the salt user and computes its home
+	# dir BEFORE the package is unpacked, so the marker file isn't
+	# there yet. Patch the preinst at build time so the hardened
+	# default fires regardless of marker visibility.
+	sed -i 's@if \[ -f /etc/salt/\.pkg-native \] && \[ -z "\$${SALT_ONEDIR_HARDEN+x}" \]; then@if [ -z "$${SALT_ONEDIR_HARDEN+x}" ]; then@' \
+	    debian/salt-common.preinst
+
+	# Redistribute /usr/bin/salt-* across the per-daemon packages so
+	# each deb owns the scripts its systemd unit invokes. Mirrors the
+	# layout the .links files describe on onedir. salt-common keeps
+	# the utilities (salt-pip, spm, salt-cp, salt-key).
+	mkdir -p debian/salt-master/usr/bin debian/salt-minion/usr/bin \
+	         debian/salt-cloud/usr/bin debian/salt-ssh/usr/bin \
+	         debian/salt-syndic/usr/bin debian/salt-api/usr/bin
+	for _b in salt salt-master salt-run ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-master/usr/bin/" ; \
+	done
+	for _b in salt-call salt-minion salt-proxy ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-minion/usr/bin/" ; \
+	done
+	for _b in salt-cloud ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-cloud/usr/bin/" ; \
+	done
+	for _b in salt-ssh ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-ssh/usr/bin/" ; \
+	done
+	for _b in salt-syndic ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-syndic/usr/bin/" ; \
+	done
+	for _b in salt-api ; do \
+	    [ -f "debian/salt-common/usr/bin/$${_b}" ] && \
+	        mv "debian/salt-common/usr/bin/$${_b}" "debian/salt-api/usr/bin/" ; \
+	done
+
+	# Master config: same massage as onedir -- user: salt by default.
+	mkdir -p debian/salt-master/etc/salt
+	sed 's/#user: root/user: salt/g' conf/master > debian/salt-master/etc/salt/master
+
+	# On native the /usr/bin/salt-* binaries come from wheel entry
+	# points, not symlinks into /opt/saltstack. Blank out the .links
+	# files so dh_link doesn't try to create pointers to a tree that
+	# doesn't exist in the native payload. Config-/completion-related
+	# links in salt-common.links are preserved.
+	for _lf in debian/salt-common.links debian/salt-master.links \
+	           debian/salt-minion.links debian/salt-syndic.links \
+	           debian/salt-api.links debian/salt-cloud.links \
+	           debian/salt-ssh.links ; do \
+	    if [ -f "$${_lf}" ]; then \
+	        grep -vE '^opt/saltstack/' "$${_lf}" > "$${_lf}.native" ; \
+	        mv "$${_lf}.native" "$${_lf}" ; \
+	    fi ; \
+	done
+
+	dh_install
+else
 override_dh_install:
 	mkdir -p debian/salt-common/opt/saltstack
 	cp -R build/onedir/salt debian/salt-common/opt/saltstack/
 
-        # Generate master config
+	# Generate master config
 	mkdir -p debian/salt-master/etc/salt
 	sed 's/#user: root/user: salt/g' conf/master > debian/salt-master/etc/salt/master
 
 	dh_install
+endif
 
 override_dh_strip:
 	dh_strip --dbg-package=salt-dbg

@@ -1,2 +1,3 @@
 /etc/salt/minion.d/
 /etc/salt/proxy.d/
+/etc/salt/pki/minion

@@ -56,6 +56,17 @@ on:
         required: true
         type: string
         description: Json job matrix config
+      native-slugs:
+        required: false
+        type: string
+        default: "[]"
+        description: >
+          JSON list of distro slugs to build native (system-Python) RPMs
+          for. Default empty (native build skipped). See
+          `tools pkg native-deps list-platforms` for the known set.
+          Artifacts are uploaded as
+          `salt-<version>-<arch>-<slug>-rpm-native` and are published
+          out-of-band to packages.broadcom.com's generic repo.
 
 
 
@@ -364,6 +375,204 @@ jobs:
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name }}
           path: ~/rpmbuild/RPMS/${{ matrix.arch == 'arm64' && 'aarch64' || matrix.arch }}/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
+  build-native-rpm-packages:
+    name: Native RPM (${{ matrix.slug }})
+    # Native builds live alongside onedir on 3008.x. The caller sets
+    # `native-slugs` to the audited distro set when running nightly or
+    # when a PR touches the packaging or audit code. Artifacts are
+    # uploaded out-of-band to packages.broadcom.com's generic repo
+    # after release.
+    if: ${{ fromJSON(inputs.native-slugs) != '[]' }}
+    environment: ${{ inputs.environment }}
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        slug: ${{ fromJSON(inputs.native-slugs) }}
+        arch: [x86_64, arm64]
+
+    # Build inside the salt-ci-containers image for the target distro so
+    # the wheel + vendor `pip download` use the OS's own Python interp
+    # and resolve platform-correct wheels.
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/testing:${{ matrix.slug }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Skip non-rpm distros
+        # Native-slugs is shared across rpm and deb builds; short-circuit
+        # on deb-only slugs so the matrix is cheap and we don't trip on
+        # rpm tooling missing from debian containers.
+        id: dispatch
+        run: |
+          case "${{ matrix.slug }}" in
+            amazonlinux-*|fedora-*|rockylinux-*)  echo "run=true" >> "$GITHUB_OUTPUT" ;;
+            photon-*)
+                # Photon 5's python3-pip-26.2.2 ships a broken wheel
+                # missing pip._internal.operations.install.wheel.
+                # `python3 -m venv` fires ensurepip --upgrade --default-pip
+                # which crashes trying to install that wheel. Blocks
+                # setup-python-tools-scripts before our build code runs.
+                # Re-enable once Photon ships a fixed python3-pip.
+                echo "run=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+                echo "run=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Install native-build dependencies
+        if: steps.dispatch.outputs.run == 'true'
+        # Dispatch by the OS family in the slug. tdnf (Photon), yum/dnf
+        # (Amazon/Fedora/Rocky). Keeps the per-distro install knowledge
+        # in one spot.
+        run: |
+          set -eux
+          if command -v tdnf >/dev/null; then
+              tdnf -y install rpm-build python3 python3-pip python3-devel \
+                              python3-setuptools python3-wheel openssl make git
+          elif command -v dnf >/dev/null; then
+              dnf -y install rpm-build python3 python3-pip python3-devel \
+                             python3-setuptools python3-wheel openssl make git
+          elif command -v yum >/dev/null; then
+              yum -y install rpm-build python3 python3-pip python3-devel \
+                             python3-setuptools python3-wheel openssl make git
+          else
+              echo "no known package manager on ${{ matrix.slug }}" >&2
+              exit 1
+          fi
+
+      - name: Setup Python Tools Scripts
+        if: steps.dispatch.outputs.run == 'true'
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        if: steps.dispatch.outputs.run == 'true'
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Build Native RPM
+        if: steps.dispatch.outputs.run == 'true'
+        run: |
+          tools pkg build rpm --native --native-slug=${{ matrix.slug }}
+
+      - name: Set Artifact Name
+        if: steps.dispatch.outputs.run == 'true'
+        id: set-artifact-name
+        run: |
+          echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.slug }}-rpm-native" >> "$GITHUB_OUTPUT"
+
+      - name: Collect RPMs
+        if: steps.dispatch.outputs.run == 'true'
+        id: collect
+        run: |
+          # rpmbuild writes to one of ~/rpmbuild/RPMS or /root/rpmbuild/RPMS
+          # depending on container HOME. Normalize into ./native-rpms/.
+          mkdir -p native-rpms
+          find ~/rpmbuild/RPMS /root/rpmbuild/RPMS -name '*.rpm' \
+              -exec cp -v {} native-rpms/ \; 2>/dev/null || true
+          test -n "$(ls -A native-rpms/)" || { echo "no rpms produced" >&2; exit 1; }
+          ls -la native-rpms/
+
+      - name: Upload Native RPMs
+        if: steps.dispatch.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: native-rpms/*.rpm
+          retention-days: 7
+          if-no-files-found: error
+
+  build-native-deb-packages:
+    name: Native DEB (${{ matrix.slug }})
+    # Native-flavor DEB counterpart to build-native-rpm-packages.
+    # Same gating + artifact-naming convention; builds inside the
+    # matching salt-ci-containers image so the wheel + vendor pip
+    # resolve to the distro's own Python ABI.
+    if: ${{ fromJSON(inputs.native-slugs) != '[]' }}
+    environment: ${{ inputs.environment }}
+    runs-on:
+      - ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || inputs.linux_arm_runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        slug: ${{ fromJSON(inputs.native-slugs) }}
+        arch: [x86_64, arm64]
+
+    container:
+      image: ghcr.io/saltstack/salt-ci-containers/testing:${{ matrix.slug }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Skip non-deb distros
+        # The native-slugs list is shared across rpm and deb builds;
+        # short-circuit on rpm-only slugs so the matrix is cheap.
+        id: dispatch
+        run: |
+          case "${{ matrix.slug }}" in
+            debian-*|ubuntu-*)   echo "run=true" >> "$GITHUB_OUTPUT" ;;
+            *)                   echo "run=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Install native-build dependencies
+        if: steps.dispatch.outputs.run == 'true'
+        run: |
+          set -eux
+          apt-get update -y
+          apt-get install -y --no-install-recommends \
+              build-essential devscripts debhelper dh-python bash-completion \
+              dh-exec python3 python3-pip python3-venv python3-setuptools \
+              python3-wheel python3-dev openssl git
+
+      - name: Setup Python Tools Scripts
+        if: steps.dispatch.outputs.run == 'true'
+        uses: ./.github/actions/setup-python-tools-scripts
+        with:
+          cache-prefix: ${{ inputs.cache-prefix }}
+
+      - name: Setup Salt Version
+        if: steps.dispatch.outputs.run == 'true'
+        uses: ./.github/actions/setup-salt-version
+        with:
+          salt-version: "${{ inputs.salt-version }}"
+
+      - name: Build Native DEB
+        if: steps.dispatch.outputs.run == 'true'
+        env:
+          SALT_NATIVE: "1"
+          SALT_NATIVE_SLUG: ${{ matrix.slug }}
+        run: |
+          ln -sf pkg/debian debian
+          debuild -e SALT_NATIVE -e SALT_NATIVE_SLUG \
+              -b -uc -us -tc --lintian-opts --no-lintian
+
+      - name: Set Artifact Name
+        if: steps.dispatch.outputs.run == 'true'
+        id: set-artifact-name
+        run: |
+          echo "artifact-name=salt-${{ inputs.salt-version }}-${{ matrix.arch }}-${{ matrix.slug }}-deb-native" >> "$GITHUB_OUTPUT"
+
+      - name: Collect DEBs
+        if: steps.dispatch.outputs.run == 'true'
+        run: |
+          mkdir -p native-debs
+          cp -v ../salt*.deb ../*.deb native-debs/ 2>/dev/null || true
+          test -n "$(ls -A native-debs/)" || { echo "no debs produced" >&2; exit 1; }
+          ls -la native-debs/
+
+      - name: Upload Native DEBs
+        if: steps.dispatch.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.set-artifact-name.outputs.artifact-name }}
+          path: native-debs/*.deb
           retention-days: 7
           if-no-files-found: error
 

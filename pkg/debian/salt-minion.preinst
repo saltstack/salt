@@ -26,6 +26,12 @@ fi
 if [ -f /etc/sysconfig/salt-minion-setup ]; then
     . /etc/sysconfig/salt-minion-setup
 fi
+# Native build ships /etc/salt/.pkg-native so scriptlets can detect the
+# flavor at runtime; default SALT_ONEDIR_HARDEN=1 so the hardened
+# per-daemon chown blocks fire.
+if [ -f /etc/salt/.pkg-native ] && [ -z "${SALT_ONEDIR_HARDEN+x}" ]; then
+    SALT_ONEDIR_HARDEN=1
+fi
 
 # SALT_ONEDIR_HARDEN=1 opts in to relocating the salt daemon's writable
 # state out of /opt/saltstack/salt into /var/lib/salt/minion/ so the

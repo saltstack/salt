@@ -20,7 +20,12 @@ set -e
 
 case "$1" in
     configure)
-        /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
+        # Native builds have no /opt/saltstack tree; the system python
+        # owns its own bytecode and dh_python3 handles bytecompile. The
+        # relenv compileall below is onedir-only.
+        if [ ! -f /etc/salt/.pkg-native ] && [ -x /opt/saltstack/salt/bin/python3 ]; then
+            /opt/saltstack/salt/bin/python3 -m compileall -qq /opt/saltstack/salt/lib
+        fi
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

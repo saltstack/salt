@@ -28,6 +28,12 @@ case "$1" in
     if [ -f /etc/sysconfig/salt-minion-setup ]; then
         . /etc/sysconfig/salt-minion-setup
     fi
+    # Native build ships /etc/salt/.pkg-native so scriptlets can
+    # detect the flavor at runtime; default SALT_ONEDIR_HARDEN=1 so
+    # the hardened per-daemon chown blocks below fire.
+    if [ -f /etc/salt/.pkg-native ] && [ -z "${SALT_ONEDIR_HARDEN+x}" ]; then
+        SALT_ONEDIR_HARDEN=1
+    fi
     # SALT_ONEDIR_HARDEN default is unset on 3006.x (legacy layout
     # preserved). The default flips on 3009.0. See issue #70198.
     PY_VER=$(/opt/saltstack/salt/bin/python3 -c "import sys; sys.stdout.write('{}.{}'.format(*sys.version_info)); sys.stdout.flush()" 2>/dev/null || echo "")
