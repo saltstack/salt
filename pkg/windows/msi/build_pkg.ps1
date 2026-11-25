@@ -73,6 +73,7 @@ function VerifyOrDownload ($local_file, $URL, $SHA256) {
 # Script Variables
 #-------------------------------------------------------------------------------
 
+# Cache dir for Burn Bundle VCRedist payloads (MSI no longer embeds CRT)
 $WEBCACHE_DIR   = "$env:TEMP\msi_build_cache_dir"
 $DEPS_URL       = "https://github.com/saltstack/salt-windows-deps/raw/refs/heads/main/vcredist"
 $PROJECT_DIR    = $(git rev-parse --show-toplevel)
@@ -128,21 +129,6 @@ Write-Host "- Salt Version: $Version"
 Write-Host $("-" * 80)
 
 #-------------------------------------------------------------------------------
-# Ensure cache dir exists
-#-------------------------------------------------------------------------------
-
-if ( ! (Test-Path -Path $WEBCACHE_DIR) ) {
-    Write-Host "Creating cache directory: " -NoNewline
-    New-Item -ItemType directory -Path $WEBCACHE_DIR | Out-Null
-    if ( Test-Path -Path $WEBCACHE_DIR ) {
-        Write-Result "Success" -ForegroundColor Green
-    } else {
-        Write-Result "Failed" -ForegroundColor Red
-        exit 1
-    }
-}
-
-#-------------------------------------------------------------------------------
 # Ensure WIX environment variable is set, if not refresh and check again
 #-------------------------------------------------------------------------------
 # If wix is installed in the same session, the WIX environment variable won't be
@@ -160,30 +146,6 @@ if ( ! "$env:WIX" ) {
         Write-Result "Failed" -ForegroundColor Red
         exit 1
     }
-}
-
-#-------------------------------------------------------------------------------
-# Caching VC++ Runtimes
-#-------------------------------------------------------------------------------
-
-$RUNTIMES = @(
-    ("Microsoft_VC143_CRT_x64.msm", "F209B8906063A79B0DFFBB55D3C20AC0A676252DD4F5377CFCD148C409C859EC"),
-    ("Microsoft_VC143_CRT_x86.msm", "B187BD73C7DC0BA353C5D3A6D9D4E63EF72435F8E68273466F30E5496C1A86F7")
-)
-$RUNTIMES | ForEach-Object {
-    $name, $hash = $_
-    VerifyOrDownload "$WEBCACHE_DIR\$name" "$DEPS_URL/$name" "$hash"
-}
-
-if ( $BUILD_ARCH -eq "ARM64" ) {
-    # Merge modules enforce exact architecture matching at build time
-    # (a Windows Installer rule, not a WiX limitation) - an x64 merge
-    # module cannot be merged into an arm64-declared product even
-    # though the resulting DLLs run fine under Windows 11 on Arm's x64
-    # emulation. No native arm64 merge module is published anywhere
-    # yet, so arm64 launches the standalone installer EXE via a
-    # CustomAction (see Product.wxs) instead of merging an .msm.
-    VerifyOrDownload "$WEBCACHE_DIR\vcredist_x64_2022.exe" "$DEPS_URL/vcredist_x64_2022.exe" "1AD7988C17663CC742B01BEF1A6DF2ED1741173009579AD50A94434E54F56073"
 }
 
 #-------------------------------------------------------------------------------
@@ -553,7 +515,6 @@ Push-Location $SCRIPT_DIR
     -dDisplayVersion="$Version" `
     -dInternalVersion="$INTERNAL_VERSION" `
     -dDISCOVER_INSTALLDIR="$($DISCOVER_INSTALLDIR[$i])" `
-    -dWEBCACHE_DIR="$WEBCACHE_DIR" `
     -dDISCOVER_CONFDIR="$DISCOVER_CONFDIR" `
     -ext "$($ENV:WIX)bin\WixUtilExtension.dll" `
     -ext "$($ENV:WIX)bin\WixUIExtension.dll" `
@@ -566,11 +527,9 @@ Pop-Location
 
 Write-Host "Linking $PRODUCT-$INTERNAL_VERSION-$($ARCH_AKA[$i]).msi: " -NoNewline
 # Options https://wixtoolset.org/documentation/manual/v3/overview/light.html
-# Supress LGHT1076 ICE82 warnings caused by the VC++ Runtime merge modules
-#     https://sourceforge.net/p/wix/mailman/message/22945366/
 $installer_name = "$PRODUCTFILE-Py3-$($ARCH_AKA[$i]).msi"
 & "$($ENV:WIX)bin\light" `
-    -nologo -spdb -sw1076 -sice:ICE03 -cultures:en-us `
+    -nologo -spdb -sice:ICE03 -cultures:en-us `
     -out "$SCRIPT_DIR\$installer_name" `
     -dDISCOVER_INSTALLDIR="$($DISCOVER_INSTALLDIR[$i])" `
     -dDISCOVER_CONFDIR="$DISCOVER_CONFDIR" `
@@ -582,7 +541,7 @@ $installer_name = "$PRODUCTFILE-Py3-$($ARCH_AKA[$i]).msi"
     "$SCRIPT_DIR\Product-discovered-files-config.wixobj"
 CheckExitCode
 
-Remove-Item *.wixobj
+Remove-Item "$SCRIPT_DIR\*.wixobj" -ErrorAction SilentlyContinue
 
 #-------------------------------------------------------------------------------
 # Move installer to build directory
@@ -607,6 +566,108 @@ if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
 Write-Host "Moving the Installer: " -NoNewline
 Move-Item -Path "$SCRIPT_DIR\$installer_name" -Destination "$BUILD_DIR"
 if ( Test-Path -Path "$BUILD_DIR\$installer_name" ) {
+    Write-Result "Success" -ForegroundColor Green
+} else {
+    Write-Result "Failed" -ForegroundColor Red
+    exit 1
+}
+
+#-------------------------------------------------------------------------------
+# Build Burn Bundle (VCRedist + MSI)
+#-------------------------------------------------------------------------------
+# Filename token in salt-windows-deps: x86 / x64 / a64
+# Registry key under VC\Runtimes: x86 / x64 / arm64
+if ( $BUILD_ARCH -eq "ARM64" ) {
+    $VCREDIST_TOKEN   = "a64"
+    $VCREDIST_REGARCH = "arm64"
+} elseif ( $BUILD_ARCH -eq "AMD64" ) {
+    $VCREDIST_TOKEN   = "x64"
+    $VCREDIST_REGARCH = "x64"
+} else {
+    $VCREDIST_TOKEN   = "x86"
+    $VCREDIST_REGARCH = "x86"
+}
+
+$VCREDIST_HASHES = @{
+    "x86" = "510FC8C2112E2BC544FB29A72191EABCC68D3A5A7468D35D7694493BC8593A79"
+    "x64" = "1AD7988C17663CC742B01BEF1A6DF2ED1741173009579AD50A94434E54F56073"
+    "a64" = "3C81BCF5B06156858362400D7066F65ECE38E8ACCB5E687FC65BEF5735F31FFC"
+}
+$VCREDIST_FILENAME = "vcredist_$VCREDIST_TOKEN`_2022.exe"
+$VCREDIST_PATH     = "$WEBCACHE_DIR\$VCREDIST_FILENAME"
+
+if ( ! (Test-Path -Path $WEBCACHE_DIR) ) {
+    Write-Host "Creating cache directory: " -NoNewline
+    New-Item -ItemType directory -Path $WEBCACHE_DIR | Out-Null
+    if ( Test-Path -Path $WEBCACHE_DIR ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+VerifyOrDownload `
+    "$VCREDIST_PATH" `
+    "$DEPS_URL/$VCREDIST_FILENAME" `
+    "$($VCREDIST_HASHES[$VCREDIST_TOKEN])"
+
+$bundle_name = "$PRODUCTFILE-Py3-$($ARCH_AKA[$i])-Bundle.exe"
+$msi_path    = "$BUILD_DIR\$installer_name"
+
+Write-Host "Compiling Bundle.wxs: " -NoNewline
+# WiX 3 Burn engine is 32-bit; always candle the Bundle as x86. Chained
+# MSI/VCRedist payloads remain architecture-specific via defines.
+Push-Location $SCRIPT_DIR
+& "$($ENV:WIX)bin\candle.exe" -nologo `
+    -arch x86 `
+    -dWIN64="$($WIN64[$i])" `
+    -dMANUFACTURER="$MANUFACTURER" `
+    -dPRODUCT="$PRODUCT" `
+    -dPRODUCTDIR="$PRODUCTDIR" `
+    -dDisplayVersion="$Version" `
+    -dInternalVersion="$INTERNAL_VERSION" `
+    -dVCREDIST_REGARCH="$VCREDIST_REGARCH" `
+    -dVCREDIST_PATH="$VCREDIST_PATH" `
+    -dVCREDIST_FILENAME="$VCREDIST_FILENAME" `
+    -dMSI_PATH="$msi_path" `
+    -dMSI_FILENAME="$installer_name" `
+    -ext "$($ENV:WIX)bin\WixBalExtension.dll" `
+    -ext "$($ENV:WIX)bin\WixUtilExtension.dll" `
+    "$SCRIPT_DIR\Bundle.wxs" > build.tmp
+CheckExitCode
+Pop-Location
+
+Write-Host "Linking $bundle_name`: " -NoNewline
+# Bind from SCRIPT_DIR so relative pkg_resources\ paths in Bundle.wxs resolve.
+Push-Location $SCRIPT_DIR
+& "$($ENV:WIX)bin\light" `
+    -nologo -spdb `
+    -out "$SCRIPT_DIR\$bundle_name" `
+    -ext "$($ENV:WIX)bin\WixBalExtension.dll" `
+    -ext "$($ENV:WIX)bin\WixUtilExtension.dll" `
+    "$SCRIPT_DIR\Bundle.wixobj"
+CheckExitCode
+Pop-Location
+
+Remove-Item "$SCRIPT_DIR\Bundle.wixobj" -ErrorAction SilentlyContinue
+Remove-Item "$SCRIPT_DIR\*.wixpdb" -ErrorAction SilentlyContinue
+
+if ( Test-Path -Path "$BUILD_DIR\$bundle_name" ) {
+    Write-Host "Backing up existing bundle: " -NoNewline
+    $new_name = "$bundle_name.$( Get-Date -UFormat %s ).bak"
+    Move-Item -Path "$BUILD_DIR\$bundle_name" -Destination "$BUILD_DIR\$new_name"
+    if ( Test-Path -Path "$BUILD_DIR\$new_name" ) {
+        Write-Result "Success" -ForegroundColor Green
+    } else {
+        Write-Result "Failed" -ForegroundColor Red
+        exit 1
+    }
+}
+
+Write-Host "Moving the Bundle: " -NoNewline
+Move-Item -Path "$SCRIPT_DIR\$bundle_name" -Destination "$BUILD_DIR"
+if ( Test-Path -Path "$BUILD_DIR\$bundle_name" ) {
     Write-Result "Success" -ForegroundColor Green
 } else {
     Write-Result "Failed" -ForegroundColor Red

@@ -695,6 +695,7 @@ def windows(
         for fname in (
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Setup.exe",
             f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}.msi",
+            f"pkg/windows/build/Salt-Minion-{salt_version}-Py3-{arch}-Bundle.exe",
         ):
             fpath = str(pathlib.Path(fname).resolve())
             ctx.info(f"Signing {fname} ...")

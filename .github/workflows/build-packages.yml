@@ -631,7 +631,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-nsis }}
-          path: pkg/windows/build/Salt-*.exe
+          # *-Setup.exe only — do not match Burn *-Bundle.exe
+          path: pkg/windows/build/Salt-*-Setup.exe
           retention-days: 7
           if-no-files-found: error
 
@@ -639,6 +640,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ${{ steps.set-artifact-name.outputs.artifact-name-msi }}
-          path: pkg/windows/build/Salt-*.msi
+          # Bare MSI plus Burn Bundle (VCRedist + MSI)
+          path: |
+            pkg/windows/build/Salt-*.msi
+            pkg/windows/build/Salt-*-Bundle.exe
           retention-days: 7
           if-no-files-found: error

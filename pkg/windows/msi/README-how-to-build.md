@@ -5,13 +5,14 @@
 The build client is where the msi installer is built.
 
 You need
-- 64bit Windows 10
-- Git repositories `salt`, `salt-windows-nsis` and `salt-windows-msi`
+- 64bit Windows 10 (or Windows 11 on Arm for arm64 packages)
+- Git repository `salt`
 - .Net 3.5 SDK (for WiX)<sup>*</sup>
-- [Wix 3](http://wixtoolset.org/releases/)<sup>**</sup>
+- [Wix 3](http://wixtoolset.org/releases/)<sup>**</sup> (includes Burn / Bal extension)
 - [Build tools 2015](https://www.microsoft.com/en-US/download/confirmation.aspx?id=48159)<sup>**</sup>
-- Microsoft_VC143_CRT_x64.msm from Visual Studio 2015<sup>**</sup>
-- Microsoft_VC143_CRT_x86.msm from Visual Studio 2015<sup>**</sup>
+
+`build_pkg.ps1` downloads the arch-matching `vcredist_*_2022.exe` from
+salt-windows-deps when linking the Burn Bundle (not merge modules).
 
 Notes:
 - <sup>*</sup> `build.cmd` will open `optionalfeatures` if necessary.
@@ -36,9 +37,8 @@ Execute
 
 ### Directory structure
 
-- Product.wxs: main file.
-  - (EXPERIMENTAL) salt-minion Windows Service
-    - requires [saltminionservice](https://github.com/saltstack/salt/blob/167cdb344732a6b85e6421115dd21956b71ba25a/salt/utils/saltminionservice.py) or [winservice](https://github.com/saltstack/salt/blob/3fb24929c6ebc3bfbe2a06554367f8b7ea980f5e/salt/utils/winservice.py) [Removed](https://github.com/saltstack/salt/commit/8c01aacd9b4d6be2e8cf991e3309e2a378737ea0)
+- Product.wxs: Salt Minion MSI (no CRT)
+- Bundle.wxs: Burn bootstrapper (VCRedist + MSI) → `*-Bundle.exe`
 - CustomAction01/: custom actions in C#
 - *-discovered-files.wxs: TEMPORARY FILE
 

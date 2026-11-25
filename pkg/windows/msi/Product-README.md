@@ -65,9 +65,8 @@ Order and conditions follow [Product.wxs](Product.wxs) `InstallExecuteSequence`
     on **`[INSTALLDIR]`** first, then removes **`Scripts`** / **`bin`** and config
     trees per **`CLEAN_INSTALL`** / **`REMOVE_CONFIG`**.
 
-**`VC143` feature** — Hidden merge of **Microsoft VC++ 2022** CRT
-(`MSM_VC143_CRT` `.msm`); skipped when `VCREDIST_INSTALLED` registry probe says
-already present. See **VC++ runtime** below.
+**VC++ runtime** — Not shipped inside this MSI. See **VC++ runtime** below
+(Burn Bundle vs bare MSI).
 
 
 ## Product attributes
@@ -274,23 +273,25 @@ Notes on ReadConfig_IMCAC
 http://wixtoolset.org/documentation/manual/v3/howtos/updates/major_upgrade.html
 
 
-## VC++ runtime (what this MSI ships)
+## VC++ runtime (Bundle vs bare MSI)
 
-The minion ships as **onedir** with an embedded Python and native dependencies.
-[Product.wxs](Product.wxs) merges the **Microsoft Visual C++ 2022** CRT via
-WiX **Merge** modules:
+The minion ships as **onedir** with an embedded Python and native dependencies
+that need the **Microsoft Visual C++ 2022** runtime. That CRT is **not**
+merged into the MSI (no `.msm`, no `InstallVCRedist` CustomAction).
 
-- **`MSM_VC143_CRT`** — `Microsoft_VC143_CRT_x64.msm` or `_x86.msm` from
-  `$(var.WEBCACHE_DIR)` (see [build_pkg.ps1](build_pkg.ps1) for download URLs
-  and SHA-256 checks).
-- Feature **`VC143`** (hidden) references that merge; **`Condition Level="0"`**
-  skips install when **`VCREDIST_INSTALLED`** registry search reports the
-  runtime already present (see `Product.wxs`).
+- **Recommended:** [Bundle.wxs](Bundle.wxs) Burn bootstrapper
+  (`Salt-Minion-*-Bundle.exe`). Detects
+  `HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\{x86|x64|arm64}`,
+  installs the matching `vcredist_*_2022.exe` from salt-windows-deps when
+  missing, then installs the Salt MSI. Public MSI properties are forwarded
+  under the same names (`MASTER=`, `MINION_ID=`, …).
+- **Bare MSI:** for environments that already deploy VCRedist. `msiexec`
+  users must install the arch-matching redistributable themselves.
 
-Merge-module packaging follows the WiX
-[how-to][wix-vcredist-howto]. Developers extending the **build** with extra
-native wheels may still need a full MSVC toolchain on the **build machine**;
-see [PythonWiki](https://wiki.python.org/moin/WindowsCompilers) for background.
+See [build_pkg.ps1](build_pkg.ps1) for Bundle candle/light and VCRedist
+download/hash checks. Build machines that compile extra native wheels may
+still need a full MSVC toolchain; see
+[PythonWiki](https://wiki.python.org/moin/WindowsCompilers).
 
 
 ## Images
@@ -357,5 +358,4 @@ Markdown link targets (see line-length note at top of this file).
 [ms-std-actions]: https://docs.microsoft.com/windows/win32/msi/standard-actions-reference
 [fg-seq]: https://www.firegiant.com/wix/tutorial/events-and-actions/queueing-up/
 [codingbee-seq]: https://codingbee.net/wix/wix-the-installation-sequence
-[wix-vcredist-howto]: https://wixtoolset.org/documentation/manual/v3/howtos/redistributables_and_install_checks/install_vcredist.html
 [wix-ui-custom]: http://wixtoolset.org/documentation/manual/v3/wixui/wixui_customizations.html
