@@ -2,26 +2,26 @@
 Loader-level input and return validation for Salt modules.
 
 Called from ``LoadedFunc.__call__`` / ``LoadedCoro.__call__`` on every
-loader dispatch. Behavior is split across a 2x2 grid of options -- the
-Cartesian product of scope (wire vs. internal) and direction (input vs.
-return):
+loader dispatch. Behavior is driven by the ``loader_validate_overrides``
+opt -- a dict keyed by loader name (``LazyLoader.name``, set by
+factories in :mod:`salt.loader`) with per-direction mode entries::
 
-* ``loader_validate_wire_input_mode``
-* ``loader_validate_wire_return_mode``
-* ``loader_validate_internal_input_mode``
-* ``loader_validate_internal_return_mode``
+    loader_validate_overrides:
+      wire_salt:
+        input_mode: enforce
+      states:
+        input_mode: strict
+        return_mode: strict
 
-**Scope** is the loader's trust tier. Wire loaders receive user input
-directly (filtered ``minion_mods``, ``states``, ``runners``, ``wheels``
--- flagged ``is_wire_loader=True`` by their factories). Internal
-loaders back ``__salt__``/``__utils__``/``__pillar__`` etc. inside
-shipped code and are flagged ``False``. Each scope reads its own pair
-of mode opts.
+Known loader names: ``wire_salt`` (filtered ``minion_mods``),
+``salt_dunder`` (unfiltered ``minion_mods`` backing ``__salt__``),
+``states``, ``runners``, ``wheels``. Loaders without a name entry --
+or dispatches through unnamed loaders -- always resolve to ``off``.
 
-**Direction** is input vs. return. Each takes one of ``off``, ``warn``,
-``enforce``, ``strict``:
+Each ``*_mode`` takes one of ``off``, ``warn``, ``enforce``, ``strict``:
 
-* ``off`` (default for all four cells) -- validation is skipped.
+* ``off`` (default for any direction not configured) -- validation is
+  skipped.
 * ``warn`` -- validate; log + pass through on failure.
 * ``enforce`` -- raise ``SaltInvocationError`` on failure.
 * ``strict`` -- for inputs, additionally require every reachable
@@ -32,13 +32,14 @@ of mode opts.
 Example rollout patterns:
 
 * State returns only (free bug catching, zero migration):
-  ``wire_return=enforce``, everything else ``off``.
+  ``states: {return_mode: enforce}``.
 * Boundary-strict, trust internals:
-  ``wire_input=strict, wire_return=strict``, internals ``off``.
+  ``wire_salt`` / ``states`` / ``runners`` / ``wheels`` input+return
+  ``strict``; leave ``salt_dunder`` unconfigured.
 * Observability everywhere:
-  ``wire_*=warn, internal_*=warn``.
+  every known loader with ``input_mode: warn`` + ``return_mode: warn``.
 * CI / dev (whole surface typed):
-  all four ``strict``.
+  every known loader with ``input_mode: strict`` + ``return_mode: strict``.
 
 Annotation-driven -- no per-function decorators required. A module author
 writes a plain Python function with type hints and the loader validates

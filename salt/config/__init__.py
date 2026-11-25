@@ -1197,37 +1197,24 @@ VALID_OPTS = immutabletypes.freeze(
         # Whitelist/blacklist specific modules to be synced
         "extmod_whitelist": dict,
         "extmod_blacklist": dict,
-        # Loader validation modes. Four independent knobs, one per
-        # (scope x direction) cell. Each takes one of 'off', 'warn',
-        # 'enforce', 'strict'.
+        # Loader validation overrides. Dict keyed by LazyLoader.name;
+        # each value is a dict with optional "input_mode" / "return_mode"
+        # keys. Each mode takes one of 'off', 'warn', 'enforce', 'strict':
         #
-        # Scope is the loader's trust tier:
-        #   wire     -- user-input gateways (filtered minion_mods, states,
-        #               runners, wheels). These are flagged
-        #               is_wire_loader=True by their factories.
-        #   internal -- shipped-code composition (__salt__ inside state
-        #               modules, __utils__, pillars, grains, matchers,
-        #               executors, ...). Everything else.
-        #
-        # Direction is input vs. return.
-        #
-        # Mode values:
-        #   off     -- validation skipped for this cell (default for all).
+        #   off     -- validation skipped (default for any loader/direction
+        #              not listed).
         #   warn    -- validate; log + pass through on failure.
         #   enforce -- raise SaltInvocationError on failure.
         #   strict  -- for inputs, require annotations on all non-var
         #              params; for returns, require some contract
         #              (factory, registry entry, or module-declared
         #              refinement). Raise on gaps.
-        "loader_validate_wire_input_mode": str,
-        "loader_validate_wire_return_mode": str,
-        "loader_validate_internal_input_mode": str,
-        "loader_validate_internal_return_mode": str,
-        # Per-loader overrides. Dict keyed by LazyLoader.name; each value
-        # is a dict with optional "input_mode" / "return_mode" keys.
-        # Overrides the tier-default opts above for the named loader.
-        # Validated at LazyLoader startup by
-        # salt.config.loader_validation.validate_loader_validation_opts.
+        #
+        # Loaders are named by their factory in salt/loader/__init__.py.
+        # Current recognized names: "wire_salt" (filtered minion_mods),
+        # "salt_dunder" (unfiltered minion_mods powering __salt__),
+        # "states", "runners", "wheels". Unknown names raise at startup.
+        # Validated by salt.config.loader_validation.validate_loader_validation_opts.
         "loader_validate_overrides": dict,
         # django auth
         "django_auth_path": str,
@@ -1653,10 +1640,6 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "salt_cp_chunk_size": 65536,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_wire_input_mode": "off",
-        "loader_validate_wire_return_mode": "off",
-        "loader_validate_internal_input_mode": "off",
-        "loader_validate_internal_return_mode": "off",
         "loader_validate_overrides": {},
         "minion_sign_messages": False,
         "discovery": False,
@@ -2103,10 +2086,6 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "disable_aes_with_tls": False,
         "extmod_whitelist": {},
         "extmod_blacklist": {},
-        "loader_validate_wire_input_mode": "off",
-        "loader_validate_wire_return_mode": "off",
-        "loader_validate_internal_input_mode": "off",
-        "loader_validate_internal_return_mode": "off",
         "loader_validate_overrides": {},
         "clean_dynamic_modules": True,
         "django_auth_path": "",

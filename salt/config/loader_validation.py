@@ -1,18 +1,12 @@
 """
 Validation for loader validation opts.
 
-Catches typos and malformed structure in the ``loader_validate_*``
-family of opts at daemon startup rather than letting them silently
-fall back to ``"off"`` via ``opts.get(..., "off")`` at dispatch time.
+Catches typos and malformed structure in the ``loader_validate_overrides``
+opt at daemon startup rather than letting them silently fall back to
+``"off"`` via ``opts.get(..., "off")`` at dispatch time.
 
-Four flat tier-default opts are checked:
-
-* ``loader_validate_wire_input_mode``
-* ``loader_validate_wire_return_mode``
-* ``loader_validate_internal_input_mode``
-* ``loader_validate_internal_return_mode``
-
-Plus one nested dict opt for per-loader overrides::
+The opt is a nested dict keyed by loader name, with per-direction mode
+entries::
 
     loader_validate_overrides:
       states:
@@ -54,17 +48,9 @@ KNOWN_LOADER_NAMES = frozenset(
 # Valid direction keys inside a per-loader override entry.
 _VALID_DIRECTION_KEYS = frozenset({"input_mode", "return_mode"})
 
-# The four top-level tier-default opts. Checked for valid mode values.
-_TIER_OPT_KEYS = (
-    "loader_validate_wire_input_mode",
-    "loader_validate_wire_return_mode",
-    "loader_validate_internal_input_mode",
-    "loader_validate_internal_return_mode",
-)
-
 
 def validate_loader_validation_opts(opts):
-    """Validate the loader_validate_* family of opts.
+    """Validate the loader_validate_overrides opt.
 
     Returns ``True`` on success. Raises :class:`ValueError` with a
     newline-joined error message on failure -- every problem the
@@ -82,25 +68,10 @@ def validate_loader_validation_opts(opts):
 
     :param dict opts: The Salt configuration dictionary.
     :returns: ``True`` when the configuration is valid.
-    :raises ValueError: If any loader_validate_* opt is malformed.
+    :raises ValueError: If loader_validate_overrides is malformed.
     """
     errors = []
 
-    # 1. Tier-default opts must be one of VALID_MODES.
-    for key in _TIER_OPT_KEYS:
-        if key not in opts:
-            continue
-        value = opts[key]
-        if not isinstance(value, str):
-            errors.append(f"{key}: must be a string, got {type(value).__name__}")
-            continue
-        if value not in VALID_MODES:
-            errors.append(
-                f"{key}: {value!r} is not a valid mode "
-                f"(expected one of {sorted(VALID_MODES)})"
-            )
-
-    # 2. Overrides dict structure.
     overrides = opts.get("loader_validate_overrides", {})
     if overrides is None:
         overrides = {}

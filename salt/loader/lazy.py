@@ -111,30 +111,18 @@ def _mod_type(module_path):
     return "ext"
 
 
-def _resolve_validate_mode(opts, loader_name, is_wire_loader, direction):
+def _resolve_validate_mode(opts, loader_name, direction):
     """Resolve the effective validation mode for a dispatch.
 
-    Resolution order (first hit wins):
-
-    1. ``loader_validate_overrides[<loader_name>][<direction>_mode]`` --
-       per-loader override dict. Only consulted when the loader has a
-       name.
-    2. ``loader_validate_<wire|internal>_<direction>_mode`` -- tier
-       default based on the loader's trust-tier flag.
-    3. Hard-coded ``"off"``.
-
-    :param opts: Loader opts dict.
-    :param loader_name: ``LazyLoader.name``, may be None.
-    :param is_wire_loader: ``LazyLoader.is_wire_loader``.
-    :param direction: ``"input"`` or ``"return"``.
+    Reads loader_validate_overrides[<loader_name>][<direction>_mode]
+    from opts. Returns "off" when the loader has no name, no override
+    is set, or the direction wasn't configured.
     """
+    if not loader_name:
+        return "off"
     overrides = opts.get("loader_validate_overrides", {})
-    if loader_name and loader_name in overrides:
-        mode = overrides[loader_name].get(f"{direction}_mode")
-        if mode is not None:
-            return mode
-    tier = "wire" if is_wire_loader else "internal"
-    return opts.get(f"loader_validate_{tier}_{direction}_mode", "off")
+    entry = overrides.get(loader_name, {})
+    return entry.get(f"{direction}_mode", "off")
 
 
 class FilterDictWrapper(MutableMapping):
@@ -216,14 +204,11 @@ class LoadedFunc:
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        # Resolve validation modes. Per-loader override (if present and
-        # this loader is named) wins; otherwise fall back to the tier
-        # default for wire vs. internal.
-        input_mode = _resolve_validate_mode(
-            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "input"
-        )
+        # Resolve validation modes from the per-loader override dict
+        # keyed by LazyLoader.name. Unnamed loaders always resolve to "off".
+        input_mode = _resolve_validate_mode(self.loader.opts, self.loader.name, "input")
         return_mode = _resolve_validate_mode(
-            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "return"
+            self.loader.opts, self.loader.name, "return"
         )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
@@ -277,11 +262,9 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
-        input_mode = _resolve_validate_mode(
-            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "input"
-        )
+        input_mode = _resolve_validate_mode(self.loader.opts, self.loader.name, "input")
         return_mode = _resolve_validate_mode(
-            self.loader.opts, self.loader.name, self.loader.is_wire_loader, "return"
+            self.loader.opts, self.loader.name, "return"
         )
         args, kwargs = salt.loader.validation.validate_inputs(
             self.func, args, kwargs, input_mode
@@ -432,7 +415,6 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         pack_self=None,
         output_contract=None,
         return_registry=None,
-        is_wire_loader=False,
         name=None,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
@@ -485,19 +467,12 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         # where return shapes vary per function (runners, wheels, etc.).
         # Owned by salt.loader.contracts, not by individual modules.
         self.return_registry = return_registry
-        # Trust-tier flag. True for loaders that receive user input
-        # directly: filtered minion_mods, states, runners, wheels. False
-        # for internal loaders backing __salt__/__utils__/etc. inside
-        # shipped code. Determines which validation-mode opts apply to
-        # dispatches through this loader -- the wire_* pair vs. the
-        # internal_* pair.
-        self.is_wire_loader = is_wire_loader
-        # Logical loader name for per-loader validation-mode overrides.
-        # Set by the factory in salt/loader/__init__.py. Examples:
-        # "wire_salt" (filtered minion_mods), "salt_dunder" (inner
-        # minion_mods), "states", "runners", "wheels". None means the
-        # loader is unnamed -- per-loader overrides can't target it,
-        # only tier-wide opts apply.
+        # Logical loader name for per-loader validation-mode lookup via
+        # loader_validate_overrides. Set by the factory in
+        # salt/loader/__init__.py. Examples: "wire_salt" (filtered
+        # minion_mods), "salt_dunder" (inner minion_mods), "states",
+        # "runners", "wheels". None means the loader is unnamed and
+        # validation is always off for its dispatches.
         self.name = name
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME

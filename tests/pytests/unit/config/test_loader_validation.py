@@ -1,6 +1,6 @@
 """
 Tests for salt.config.loader_validation -- the hand-rolled validator
-for the loader_validate_* family of opts.
+for the loader_validate_overrides opt.
 """
 
 import pytest
@@ -12,47 +12,24 @@ from salt.config.loader_validation import (
 )
 
 
-class TestTierDefaults:
+class TestOverrides:
     def test_all_empty_passes(self):
         assert validate_loader_validation_opts({}) is True
+
+    def test_empty_overrides_dict_passes(self):
+        assert (
+            validate_loader_validation_opts({"loader_validate_overrides": {}}) is True
+        )
 
     @pytest.mark.parametrize("mode", sorted(VALID_MODES))
     def test_valid_mode_passes(self, mode):
         assert (
-            validate_loader_validation_opts({"loader_validate_wire_input_mode": mode})
+            validate_loader_validation_opts(
+                {"loader_validate_overrides": {"states": {"input_mode": mode}}}
+            )
             is True
         )
 
-    def test_invalid_tier_mode_raises(self):
-        with pytest.raises(ValueError, match="not a valid mode"):
-            validate_loader_validation_opts(
-                {"loader_validate_wire_input_mode": "enforcee"}
-            )
-
-    def test_non_string_tier_mode_raises(self):
-        with pytest.raises(ValueError, match="must be a string"):
-            validate_loader_validation_opts({"loader_validate_wire_input_mode": 42})
-
-    def test_all_four_tier_opts_checked(self):
-        """Every one of the four tier opts should be validated."""
-        with pytest.raises(ValueError, match="not a valid mode") as exc:
-            validate_loader_validation_opts(
-                {
-                    "loader_validate_wire_input_mode": "bogus1",
-                    "loader_validate_wire_return_mode": "bogus2",
-                    "loader_validate_internal_input_mode": "bogus3",
-                    "loader_validate_internal_return_mode": "bogus4",
-                }
-            )
-        # All four errors accumulated into one message.
-        text = str(exc.value)
-        assert "bogus1" in text
-        assert "bogus2" in text
-        assert "bogus3" in text
-        assert "bogus4" in text
-
-
-class TestOverrides:
     def test_valid_overrides_pass(self):
         opts = {
             "loader_validate_overrides": {
@@ -102,6 +79,12 @@ class TestOverrides:
                 }
             )
 
+    def test_non_string_mode_raises(self):
+        with pytest.raises(ValueError, match="must be a string"):
+            validate_loader_validation_opts(
+                {"loader_validate_overrides": {"states": {"input_mode": 42}}}
+            )
+
     def test_override_entry_not_dict_raises(self):
         with pytest.raises(ValueError, match="must be a dict"):
             validate_loader_validation_opts(
@@ -110,10 +93,9 @@ class TestOverrides:
 
     def test_accumulates_multiple_errors(self):
         """One raise, every problem in the message."""
-        with pytest.raises(ValueError, match="bogus") as exc:
+        with pytest.raises(ValueError, match="nonexistent") as exc:
             validate_loader_validation_opts(
                 {
-                    "loader_validate_wire_input_mode": "bogus",
                     "loader_validate_overrides": {
                         "nonexistent": {"input_mode": "strict"},
                         "states": {"input_mode": "also-bogus"},
@@ -121,7 +103,6 @@ class TestOverrides:
                 }
             )
         text = str(exc.value)
-        assert "bogus" in text
         assert "nonexistent" in text
         assert "also-bogus" in text
 
@@ -129,59 +110,62 @@ class TestOverrides:
 class TestResolver:
     """The resolver lives in salt.loader.lazy; test its behavior directly."""
 
-    def test_override_wins_over_tier(self):
+    def test_override_resolves(self):
         from salt.loader.lazy import _resolve_validate_mode
 
         opts = {
-            "loader_validate_wire_input_mode": "warn",
             "loader_validate_overrides": {
                 "states": {"input_mode": "strict"},
             },
         }
-        assert _resolve_validate_mode(opts, "states", True, "input") == "strict"
+        assert _resolve_validate_mode(opts, "states", "input") == "strict"
 
-    def test_tier_wins_when_no_override(self):
-        from salt.loader.lazy import _resolve_validate_mode
-
-        opts = {"loader_validate_wire_input_mode": "enforce"}
-        assert _resolve_validate_mode(opts, "wire_salt", True, "input") == "enforce"
-
-    def test_internal_tier_for_non_wire(self):
+    def test_missing_override_entry_defaults_off(self):
         from salt.loader.lazy import _resolve_validate_mode
 
         opts = {
-            "loader_validate_wire_input_mode": "strict",
-            "loader_validate_internal_input_mode": "off",
+            "loader_validate_overrides": {
+                "states": {"input_mode": "strict"},
+            },
         }
-        # is_wire_loader=False -> internal tier is consulted.
-        assert _resolve_validate_mode(opts, "salt_dunder", False, "input") == "off"
+        # Named loader with no matching override entry.
+        assert _resolve_validate_mode(opts, "wire_salt", "input") == "off"
 
-    def test_override_without_direction_falls_through_to_tier(self):
-        """If the override entry lacks the requested direction, fall
-        back to the tier default for that direction."""
+    def test_override_without_direction_defaults_off(self):
+        """If the override entry lacks the requested direction, resolve
+        to off."""
         from salt.loader.lazy import _resolve_validate_mode
 
         opts = {
-            "loader_validate_wire_return_mode": "enforce",
             "loader_validate_overrides": {
                 "states": {"input_mode": "strict"},  # no return_mode
             },
         }
-        assert _resolve_validate_mode(opts, "states", True, "return") == "enforce"
+        assert _resolve_validate_mode(opts, "states", "return") == "off"
 
-    def test_unnamed_loader_skips_override_lookup(self):
+    def test_unnamed_loader_always_off(self):
         from salt.loader.lazy import _resolve_validate_mode
 
         opts = {
-            "loader_validate_wire_input_mode": "warn",
             "loader_validate_overrides": {
                 "states": {"input_mode": "strict"},
             },
         }
-        # No loader name -> override dict is ignored; tier wins.
-        assert _resolve_validate_mode(opts, None, True, "input") == "warn"
+        # No loader name -> override dict is ignored.
+        assert _resolve_validate_mode(opts, None, "input") == "off"
 
     def test_hard_default_when_everything_missing(self):
         from salt.loader.lazy import _resolve_validate_mode
 
-        assert _resolve_validate_mode({}, "states", True, "input") == "off"
+        assert _resolve_validate_mode({}, "states", "input") == "off"
+
+    def test_each_direction_resolved_independently(self):
+        from salt.loader.lazy import _resolve_validate_mode
+
+        opts = {
+            "loader_validate_overrides": {
+                "states": {"input_mode": "strict", "return_mode": "warn"},
+            },
+        }
+        assert _resolve_validate_mode(opts, "states", "input") == "strict"
+        assert _resolve_validate_mode(opts, "states", "return") == "warn"

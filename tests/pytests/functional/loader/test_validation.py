@@ -80,14 +80,23 @@ def _base_opts(**extra):
     return opts
 
 
+def _wire_salt_overrides(**modes):
+    """Shorthand for loader_validate_overrides targeting wire_salt."""
+    return {"loader_validate_overrides": {"wire_salt": dict(modes)}}
+
+
+def _states_overrides(**modes):
+    """Shorthand for loader_validate_overrides targeting states."""
+    return {"loader_validate_overrides": {"states": dict(modes)}}
+
+
 class TestInputValidation:
     """Real LazyLoader dispatch exercises validate_inputs end-to-end."""
 
     def test_off_passes_bad_type_through(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="off"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="off")),
             name="wire_salt",
         )
         result = loader["typed_mod.typed"](count="not-a-number")
@@ -98,8 +107,7 @@ class TestInputValidation:
     def test_enforce_coerces_string_to_int(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="enforce")),
             name="wire_salt",
         )
         result = loader["typed_mod.typed"](count="42", name="x", flag="true")
@@ -110,8 +118,7 @@ class TestInputValidation:
     def test_enforce_raises_on_unparseable(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="enforce")),
             name="wire_salt",
         )
         with pytest.raises(SaltInvocationError, match="input validation failure"):
@@ -120,8 +127,7 @@ class TestInputValidation:
     def test_warn_logs_and_passes_through(self, typed_mod_dir, caplog):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="warn"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="warn")),
             name="wire_salt",
         )
         with caplog.at_level(logging.WARNING, logger="salt.loader.validation"):
@@ -132,8 +138,7 @@ class TestInputValidation:
     def test_strict_rejects_unannotated_function(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="strict"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="strict")),
             name="wire_salt",
         )
         with pytest.raises(SaltInvocationError, match="missing"):
@@ -142,8 +147,7 @@ class TestInputValidation:
     def test_unannotated_function_unaffected_under_enforce(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="enforce")),
             name="wire_salt",
         )
         assert loader["typed_mod.unannotated"]("a", "b") == ("a", "b")
@@ -151,8 +155,7 @@ class TestInputValidation:
     def test_reserved_kwargs_forwarded_to_fn(self, typed_mod_dir):
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
-            _base_opts(loader_validate_wire_input_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_wire_salt_overrides(input_mode="enforce")),
             name="wire_salt",
         )
         result = loader["typed_mod.accepts_pub_kwargs"](
@@ -171,8 +174,7 @@ class TestReturnValidation:
 
         loader = salt.loader.lazy.LazyLoader(
             [state_mod_dir],
-            _base_opts(loader_validate_wire_return_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_states_overrides(return_mode="enforce")),
             name="states",
             output_contract=StateReturn,
         )
@@ -184,8 +186,7 @@ class TestReturnValidation:
 
         loader = salt.loader.lazy.LazyLoader(
             [state_mod_dir],
-            _base_opts(loader_validate_wire_return_mode="enforce"),
-            is_wire_loader=True,
+            _base_opts(**_states_overrides(return_mode="enforce")),
             name="states",
             output_contract=StateReturn,
         )
@@ -197,8 +198,7 @@ class TestReturnValidation:
 
         loader = salt.loader.lazy.LazyLoader(
             [state_mod_dir],
-            _base_opts(loader_validate_wire_return_mode="warn"),
-            is_wire_loader=True,
+            _base_opts(**_states_overrides(return_mode="warn")),
             name="states",
             output_contract=StateReturn,
         )
@@ -209,81 +209,58 @@ class TestReturnValidation:
         assert any("return contract violation" in r.message for r in caplog.records)
 
 
-class TestScopeDistinction:
-    """is_wire_loader flag controls which opt pair applies. Build two
-    loaders over the same module, one wire, one internal, and prove
-    they read different opts."""
+class TestPerLoaderLookup:
+    """Each loader reads its own override entry from the same opts dict.
 
-    def test_wire_vs_internal_read_separate_opts(self, typed_mod_dir):
+    Build two loaders over the same module with different ``name=``
+    kwargs and prove they resolve to different modes from a single
+    overrides dict.
+    """
+
+    def test_separate_names_resolve_to_separate_entries(self, typed_mod_dir):
         opts = _base_opts(
-            loader_validate_wire_input_mode="enforce",
-            loader_validate_internal_input_mode="off",
+            loader_validate_overrides={
+                # wire_salt sees enforce, salt_dunder has no entry (off).
+                "wire_salt": {"input_mode": "enforce"},
+            }
         )
-        wire = salt.loader.lazy.LazyLoader(
-            [typed_mod_dir], opts, is_wire_loader=True, name="wire_salt"
-        )
+        wire = salt.loader.lazy.LazyLoader([typed_mod_dir], opts, name="wire_salt")
         internal = salt.loader.lazy.LazyLoader(
-            [typed_mod_dir], opts, is_wire_loader=False, name="salt_dunder"
+            [typed_mod_dir], opts, name="salt_dunder"
         )
-        # Wire raises on bad input.
+        # wire_salt entry exists -> enforce, raises on bad input.
         with pytest.raises(SaltInvocationError):
             wire["typed_mod.typed"](count="not-a-number")
-        # Internal passes it through -- same opts dict, different tier.
+        # salt_dunder has no entry -> off, passes through.
         result = internal["typed_mod.typed"](count="not-a-number")
         assert result["count"] == "not-a-number"
 
 
-class TestPerLoaderOverride:
-    """loader_validate_overrides[<name>] wins over the tier default."""
+class TestUnnamedLoaderOff:
+    """Loaders without a name always resolve to off, even when an
+    overrides entry targets a known loader name."""
 
-    def test_override_promotes_states_to_enforce(self, state_mod_dir):
-        from salt.loader.contracts.states import StateReturn
-
+    def test_unnamed_loader_skips_validation(self, typed_mod_dir):
         opts = _base_opts(
-            # Tier default: warn (would log, not raise).
-            loader_validate_wire_return_mode="warn",
-            # Per-loader override: enforce for states.
             loader_validate_overrides={
-                "states": {"return_mode": "enforce"},
-            },
+                "wire_salt": {"input_mode": "enforce"},
+            }
         )
-        loader = salt.loader.lazy.LazyLoader(
-            [state_mod_dir],
-            opts,
-            is_wire_loader=True,
-            name="states",
-            output_contract=StateReturn,
-        )
-        with pytest.raises(SaltInvocationError, match="return contract violation"):
-            loader["state_mod.bad"]("x")
-
-    def test_override_narrows_wire_salt_to_off(self, typed_mod_dir):
-        opts = _base_opts(
-            # Tier default: enforce for wire inputs.
-            loader_validate_wire_input_mode="enforce",
-            # Per-loader override: off for wire_salt specifically.
-            loader_validate_overrides={
-                "wire_salt": {"input_mode": "off"},
-            },
-        )
-        loader = salt.loader.lazy.LazyLoader(
-            [typed_mod_dir], opts, is_wire_loader=True, name="wire_salt"
-        )
-        # Override wins -- bad input passes through without raising.
+        loader = salt.loader.lazy.LazyLoader([typed_mod_dir], opts)
+        # No name -> validation off, bad input passes through.
         result = loader["typed_mod.typed"](count="not-a-number")
         assert result["count"] == "not-a-number"
 
 
 class TestValidatorAtStartup:
-    """Malformed loader_validate_* opts raise at LazyLoader.__init__,
+    """Malformed loader_validate_overrides raises at LazyLoader.__init__,
     not at first dispatch."""
 
     def test_bogus_mode_value_raises_at_startup(self, typed_mod_dir):
         with pytest.raises(ValueError, match="not a valid mode"):
             salt.loader.lazy.LazyLoader(
                 [typed_mod_dir],
-                _base_opts(loader_validate_wire_input_mode="enforcee"),
-                is_wire_loader=True,
+                _base_opts(**_wire_salt_overrides(input_mode="enforcee")),
                 name="wire_salt",
             )
 
@@ -294,7 +271,6 @@ class TestValidatorAtStartup:
                 _base_opts(
                     loader_validate_overrides={"nonexistent": {"input_mode": "strict"}}
                 ),
-                is_wire_loader=True,
                 name="wire_salt",
             )
 
@@ -304,13 +280,11 @@ class TestValidatorAtStartup:
         loader = salt.loader.lazy.LazyLoader(
             [typed_mod_dir],
             _base_opts(
-                loader_validate_wire_input_mode="enforce",
                 loader_validate_overrides={
+                    "wire_salt": {"input_mode": "enforce"},
                     "states": {"input_mode": "strict", "return_mode": "strict"},
                 },
             ),
-            is_wire_loader=True,
             name="wire_salt",
         )
-        assert loader.is_wire_loader is True
         assert loader.name == "wire_salt"

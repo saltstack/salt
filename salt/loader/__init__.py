@@ -465,6 +465,8 @@ def minion_mods(
     # LazyLoader reuses an existing per-module ``LoaderContext`` when it
     # encounters one, so both loaders share the same NamedLoaderContext
     # bindings and per-module ``__context__`` state stays consistent.
+    # name= is the key loader_validate_overrides consults to pick a
+    # per-loader validation mode for this loader's dispatches.
     salt_dunder = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
@@ -480,6 +482,8 @@ def minion_mods(
     pack["__salt__"] = salt_dunder
     if pillar is not None:
         pack["__pillar__"] = pillar
+    # name="wire_salt" targets the filtered minion_mods loader for
+    # loader_validate_overrides lookups.
     ret = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
@@ -489,10 +493,6 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
-        # Wire loader -- this is the one exposed to the publish layer
-        # and salt-api; inner salt_dunder above stays is_wire_loader=False
-        # because it backs __salt__ inside shipped code.
-        is_wire_loader=True,
         name="wire_salt",
     )
 
@@ -994,6 +994,7 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
     """
     if context is None:
         context = {}
+    # name="wheels" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "wheel"),
         opts,
@@ -1001,8 +1002,6 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
         whitelist=whitelist,
         pack={"__context__": context},
         loaded_base_name=loaded_base_name,
-        # Wheel client / salt-api drive these -- user input.
-        is_wire_loader=True,
         name="wheels",
     )
 
@@ -1263,6 +1262,7 @@ def states(
     from salt.loader.contracts.states import StateReturn
     from salt.utils.versions import reqs
 
+    # name="states" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
@@ -1273,8 +1273,6 @@ def states(
         pack_self="__states__",
         loaded_base_name=loaded_base_name,
         output_contract=StateReturn if reqs.pydantic else None,
-        # SLS content and state.single/state.apply dispatch is user input.
-        is_wire_loader=True,
         name="states",
     )
 
@@ -1783,6 +1781,7 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         utils = {}
     if context is None:
         context = {}
+    # name="runners" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "runners", "runner", ext_type_dirs="runner_dirs"),
         opts,
@@ -1793,8 +1792,6 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         # TODO: change from __salt__ to something else, we overload __salt__ too much
         pack_self="__salt__",
         loaded_base_name=loaded_base_name,
-        # salt-run / salt-api drive these -- user input.
-        is_wire_loader=True,
         name="runners",
     )
 
