@@ -468,7 +468,6 @@ def test_syncwrapper_del_forked_child_does_not_touch_parent_resources_70175(
     )
 
 
-
 def test_cancel_and_drain_lets_cancelled_tasks_unwind():
     """
     A cancelled task only runs its ``finally`` block while the loop keeps
