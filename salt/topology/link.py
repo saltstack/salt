@@ -499,6 +499,15 @@ class PeerMasterLink:
         bounded-timeout boundaries, so re-raising preserves their
         error path.
 
+        On a ``{"session_expired": True}`` reply (the receiver's
+        :func:`salt.topology.link_manager._handle_inbound` signalled
+        that it has no inbound record for this sender's session), the
+        link's session state is cleared and the link is marked
+        DISCONNECTED so :func:`salt.topology.link_manager._reconnect_loop`
+        picks it up and re-handshakes within one sweep interval.  This
+        is the recovery path for the ZMQ-silent-reconnect case where
+        the peer restarted but our outbound socket survived.
+
         On success, records ``_last_send_success_at`` for ops
         visibility.
         """
@@ -514,6 +523,71 @@ class PeerMasterLink:
         except Exception as exc:  # pylint: disable=broad-except
             self._handle_send_fault(tag, exc)
             raise
+        if isinstance(result, dict) and result.get("session_expired"):
+            log.info(
+                "topology link to %s: peer dropped our session; "
+                "re-handshaking inline and re-sending (tag=%r, stale gen=%r)",
+                self._peer_cluster_id,
+                tag,
+                self._session_generation,
+            )
+            # Clear outbound session state and re-handshake inline so the
+            # caller's single send completes end-to-end after a peer
+            # restart.  Without the inline retry the first send after a
+            # peer process replacement is silently lost: the reconnect
+            # sweeper fires every ``_RECONNECT_INTERVAL`` seconds but the
+            # publish call already returned.
+            self._session_aes = None
+            try:
+                await self.connect()
+            except Exception as exc:  # pylint: disable=broad-except
+                self._handle_send_fault(tag, exc)
+                raise LinkUnavailable(
+                    f"peer {self._peer_cluster_id!r} session expired and "
+                    f"re-handshake failed: {exc}"
+                ) from exc
+            if self._session_aes is None:
+                # Handshake did not establish a session (e.g. peer still
+                # replies ``retry`` -- key not yet accepted on peer).
+                self._handle_send_fault(
+                    tag,
+                    LinkUnavailable(
+                        f"re-handshake to {self._peer_cluster_id!r} "
+                        "completed without establishing a session"
+                    ),
+                )
+                raise LinkUnavailable(
+                    f"peer {self._peer_cluster_id!r} session expired; "
+                    "re-handshake did not restore the session"
+                )
+            # Rebuild ``session_generation`` on the payload with the
+            # freshly-handshaked value and retry the send once.  The
+            # payload envelope shape is stable across generations; only
+            # ``session_generation`` and the implicit AES key change.
+            if isinstance(payload, dict):
+                payload["session_generation"] = self._session_generation
+            try:
+                result = await self._req_channel.send(payload, tries=1)
+            except SaltReqTimeoutError as exc:
+                self._handle_send_fault(tag, exc)
+                raise
+            except Exception as exc:  # pylint: disable=broad-except
+                self._handle_send_fault(tag, exc)
+                raise
+            if isinstance(result, dict) and result.get("session_expired"):
+                # Peer rejected the fresh session too -- give up on this
+                # send; the sweeper will keep trying to recover the link.
+                self._handle_send_fault(
+                    tag,
+                    LinkUnavailable(
+                        f"peer {self._peer_cluster_id!r} rejected the "
+                        "re-handshaked session"
+                    ),
+                )
+                raise LinkUnavailable(
+                    f"peer {self._peer_cluster_id!r} rejected re-handshaked "
+                    "session; link marked for sweeper recovery"
+                )
         self._last_send_success_at = time.time()
         # Snapshot each success is a lot of disk churn; the summary
         # emit loop fires every ``topology_summary_interval`` and

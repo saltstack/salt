@@ -76,7 +76,13 @@ def clean_state(monkeypatch):
 
 
 def _install_fake_inbound_link(cluster_id, session_generation=1):
-    """Pre-populate _INBOUND so :func:`_verify_session` passes."""
+    """Pre-populate _INBOUND so :func:`_verify_session` passes.
+
+    Sets ``session_aes`` to a non-None sentinel; :func:`_verify_session`
+    rejects records whose ``session_aes`` is None as a defense-in-depth
+    guard against a lazy-register bypass, so the stub must present a
+    handshake-established shape to stand in for an authenticated peer.
+    """
 
     class _Stub:
         pass
@@ -84,6 +90,7 @@ def _install_fake_inbound_link(cluster_id, session_generation=1):
     stub = _Stub()
     stub.peer_cluster_id = cluster_id
     stub.session_generation = session_generation
+    stub.session_aes = b"stub-aes-32-bytes-session-sentinel"
     stub.health = LinkHealth.CONNECTED
     link_manager._INBOUND[cluster_id] = stub  # pylint: disable=protected-access
     return stub

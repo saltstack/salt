@@ -468,7 +468,13 @@ class _FakeRouter:
 
 
 def _install_fake_inbound_link(cluster_id, session_generation=1):
-    """Pre-populate _INBOUND with a stub link so session verification passes."""
+    """Pre-populate _INBOUND with a stub link so session verification passes.
+
+    Sets ``session_aes`` to a non-None sentinel; :func:`_verify_session`
+    rejects records whose ``session_aes`` is None as a defense-in-depth
+    guard against a lazy-register bypass, so the stub must present a
+    handshake-established shape to stand in for an authenticated peer.
+    """
 
     class _Stub:
         pass
@@ -476,6 +482,7 @@ def _install_fake_inbound_link(cluster_id, session_generation=1):
     stub = _Stub()
     stub.peer_cluster_id = cluster_id
     stub.session_generation = session_generation
+    stub.session_aes = b"stub-aes-32-bytes-session-sentinel"
     stub.health = LinkHealth.CONNECTED
     link_manager._INBOUND[cluster_id] = stub  # pylint: disable=protected-access
     return stub
@@ -575,7 +582,10 @@ def test_handle_inbound_bad_session_dropped(opts, clean_state, caplog, monkeypat
             result = loop.run_until_complete(
                 link_manager._handle_inbound(payload)
             )  # pylint: disable=protected-access
-        assert result is None
+        # Verify-fail returns the ``session_expired`` sentinel so the
+        # sender's :meth:`PeerMasterLink._send_with_fault_handling`
+        # picks up the signal to re-handshake.
+        assert result == {"session_expired": True}
         assert (
             not fake.forward_publish_calls
         ), "stale-session payload should NOT dispatch"
@@ -843,6 +853,315 @@ def test_two_master_handshake_e2e(two_cluster_fixture, clean_state):
         assert reply["status"] == "ok", f"handshake did not accept east: {reply!r}"
         assert reply["cluster_id"] == "west"
         assert reply["endpoints"], "accept must advertise own endpoints"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Unauthenticated-frame rejection (publish-injection regression)
+# ---------------------------------------------------------------------------
+#
+# These exercise the same invariant as the three sibling unit tests in
+# ``tests/pytests/unit/topology/test_link_manager.py``
+# (``test_handle_inbound_rejects_forged_pub_*``) but drive it through
+# the started module with a real :mod:`salt.topology.router`.  The
+# unit tests pin behaviour at the ``_handle_inbound`` / ``_verify_session``
+# / ``_maybe_lazy_register_inbound`` boundary; these pin the same end
+# invariant with the full module in play (router wired, dispatch table
+# live), so a fix that moves the check into the router layer or the
+# dispatcher chain also satisfies the guard.
+#
+# Invariant: a non-handshake frame whose ``origin_cluster_id`` has no
+# in-process ``_INBOUND`` record must not reach the router's publish
+# or local-minion path, even when a ``masters/<origin>.pub`` key sits
+# on disk.  The on-disk key is an identity anchor for a future
+# handshake, not proof that the current sender holds the matching
+# private key.
+
+
+def test_handle_inbound_forged_pub_without_prior_handshake_does_not_forward(
+    opts, clean_state, caplog, monkeypatch, tmp_path
+):
+    """
+    End-to-end regression for the unauthenticated publish-injection
+    chain.  With the router wired and ``masters/east.pub`` on disk but
+    no prior ``_INBOUND["east"]``, a forged ``topology/pub`` must not
+    reach :meth:`TopologyRouter.forward_publish`.  Observed via the
+    :class:`_FakeRouter` installed at ``router_mod._ROUTER``; the
+    router boundary is the next hop on the chain to
+    :func:`_publish_to_local_minions`, so blocking there is sufficient
+    to prove the publish-injection payoff is unreachable.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        fake = _FakeRouter()
+        monkeypatch.setattr(router_mod, "_ROUTER", fake)
+
+        # Attacker precondition: the peer's public key is on disk (any
+        # previously-accepted peer or a stolen/leaked key file suffices
+        # to seed this), but no in-process session was established by
+        # a real handshake.
+        accepted = tmp_path / "pki" / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+        assert (
+            "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+        ), "test precondition: no in-process inbound session for east"
+
+        forged = {
+            "tag": "topology/pub",
+            "origin_cluster_id": "east",
+            "session_generation": 424242,  # attacker-chosen
+            "load": {
+                "jid": "20260101000000000000",
+                "tgt": "C@self and *",
+                "tgt_type": "compound",
+                "fun": "cmd.run",
+                "arg": ["id"],
+            },
+        }
+        with caplog.at_level(logging.WARNING, logger="salt.topology.link_manager"):
+            result = loop.run_until_complete(
+                link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+            )
+        # Drop paths return either None or the ``session_expired`` sentinel
+        # that triggers the sender's re-handshake; both block dispatch.
+        assert result in (
+            None,
+            {"session_expired": True},
+        ), f"forged frame dispatched past the session guard: {result!r}"
+        assert fake.forward_publish_calls == [], (
+            "router.forward_publish fired for a frame whose origin never "
+            f"completed _master_auth: {fake.forward_publish_calls!r}"
+        )
+        assert any(
+            "bad/missing session" in rec.message for rec in caplog.records
+        ), "unauthenticated frame must be dropped with WARNING"
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+def test_handle_inbound_forged_frame_does_not_pollute_inbound_registry(
+    opts, clean_state, monkeypatch, tmp_path
+):
+    """
+    Side-effect regression: processing a forged non-handshake frame
+    must not leave a usable ``_INBOUND[origin]`` record behind.  An
+    attacker who got a cleartext frame onto the port and lost the race
+    to the real dispatcher must not have secondary success in the
+    form of a session record that later frames or legitimate peers
+    can collide with.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        monkeypatch.setattr(router_mod, "_ROUTER", _FakeRouter())
+
+        accepted = tmp_path / "pki" / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+
+        forged = {
+            "tag": "topology/pub",
+            "origin_cluster_id": "east",
+            "session_generation": 919191,
+            "load": {"jid": "20260101000000000002"},
+        }
+        loop.run_until_complete(
+            link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+        )
+        # Either no record, OR a record whose ``session_aes`` is None /
+        # whose gen does not match the forged frame's gen.  Any fix
+        # that satisfies the test above must also satisfy this one;
+        # pre-fix the registry is polluted with the attacker-chosen
+        # ``session_generation=919191``.
+        inbound = link_manager._INBOUND.get("east")  # pylint: disable=protected-access
+        if inbound is not None:
+            assert getattr(inbound, "session_generation", None) != 919191, (
+                "forged frame installed its chosen session_generation in "
+                "_INBOUND -- subsequent replays with the same gen would "
+                "pass _verify_session"
+            )
+
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+def test_handle_inbound_forged_pub_blocks_local_minion_publish(
+    opts, clean_state, monkeypatch, tmp_path
+):
+    """
+    End-to-end regression against the final sink of the chain:
+    :func:`_publish_to_local_minions` must never be reached from a
+    forged ``topology/pub`` with no prior handshake, regardless of
+    what the router's ``forward_publish`` returns.  Uses a router
+    stub that would unconditionally request a local publish if
+    called; any valid fix stops the chain before the dispatcher
+    consults the router.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        # Router stub that WOULD request a local publish if a forged
+        # frame managed to reach it.  The assertion target is that
+        # ``_publish_to_local_minions`` is never invoked -- which
+        # requires the forged frame to be dropped BEFORE the router
+        # is consulted.
+        router_stub = _FakeRouterWithLocalMatch(local_match=True)
+        monkeypatch.setattr(router_mod, "_ROUTER", router_stub)
+
+        accepted = tmp_path / "pki" / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+
+        local_calls = []
+
+        async def _spy_publish(load, matched=None):
+            local_calls.append(load)
+
+        monkeypatch.setattr(link_manager, "_publish_to_local_minions", _spy_publish)
+
+        forged = {
+            "tag": "topology/pub",
+            "origin_cluster_id": "east",
+            "session_generation": 777777,
+            "load": {
+                "jid": "20260101000000000003",
+                "tgt": "C@self and *",
+                "tgt_type": "compound",
+                "fun": "cmd.run",
+                "arg": ["id"],
+            },
+        }
+        loop.run_until_complete(
+            link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+        )
+        assert local_calls == [], (
+            "_publish_to_local_minions invoked from a forged frame -- "
+            f"the publish-injection chain completed: {local_calls!r}"
+        )
+        assert router_stub.calls == [], (
+            "forward_publish was consulted for a forged frame; the "
+            "session guard must stop the chain before the router "
+            f"is reached: {router_stub.calls!r}"
+        )
+    finally:
+        loop.run_until_complete(link_manager.stop())
+        loop.close()
+
+
+# ---------------------------------------------------------------------------
+# Side-channel coverage: ret / evt / sum share the lazy-register +
+# session-verify chain with pub.  Pin each at the router boundary so
+# a regression at any sink is caught.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "tag,body,sink_attr",
+    [
+        # ``topology/ret``: dispatcher iterates ``batch`` and calls
+        # ``router.route_return`` per item -- sink is the per-item
+        # route_return invocation.
+        (
+            "topology/ret",
+            {
+                "batch": [
+                    {
+                        "jid": "20260101000000000020",
+                        "id": "web-01",
+                        "return": "pwn",
+                    }
+                ]
+            },
+            "route_return_calls",
+        ),
+        # ``topology/evt``: dispatcher calls ``router.route_event`` once
+        # with the whole load.
+        (
+            "topology/evt",
+            {"tag": "salt/custom/pwn", "data": {"pwn": True}},
+            "route_event_calls",
+        ),
+        # ``topology/sum``: dispatcher deserializes the wire summary and
+        # schedules ``router.ingest_summary``.  Sink: ingest_summary calls
+        # observed on the fake router.
+        (
+            "topology/sum",
+            {
+                "summary": {
+                    "cluster_id": "east",
+                    "path": ["east"],
+                    "minion_count": 0,
+                    "up_count": 0,
+                    "grain_histograms": {},
+                    "origin_seq": 1,
+                    "origin_at": 0.0,
+                },
+            },
+            "ingest_summary_calls",
+        ),
+    ],
+    ids=["ret", "evt", "sum"],
+)
+def test_handle_inbound_forged_side_channel_without_prior_handshake_is_dropped(
+    opts, clean_state, caplog, monkeypatch, tmp_path, tag, body, sink_attr
+):
+    """
+    Side-channel end-to-end regression: ``topology/ret`` (fake minion
+    returns), ``topology/evt`` (event-bus injection), and
+    ``topology/sum`` (routing-table poisoning) must not reach the
+    router when the inbound session cannot be verified.  Mirrors the
+    ``topology/pub`` end-to-end test for the same chain; any valid
+    fix blocks all four tags uniformly.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(link_manager.start(opts, loop))
+        fake = _FakeRouter()
+        monkeypatch.setattr(router_mod, "_ROUTER", fake)
+
+        accepted = tmp_path / "pki" / "masters" / "east.pub"
+        accepted.parent.mkdir(parents=True, exist_ok=True)
+        accepted.write_bytes(
+            b"-----BEGIN PUBLIC KEY-----\nstub\n-----END PUBLIC KEY-----\n"
+        )
+        assert (
+            "east" not in link_manager._INBOUND  # pylint: disable=protected-access
+        ), "test precondition: no in-process inbound session for east"
+
+        forged = {
+            "tag": tag,
+            "origin_cluster_id": "east",
+            "session_generation": 131313,
+            "load": body,
+        }
+        with caplog.at_level(logging.WARNING, logger="salt.topology.link_manager"):
+            result = loop.run_until_complete(
+                link_manager._handle_inbound(forged)  # pylint: disable=protected-access
+            )
+        assert result in (
+            None,
+            {"session_expired": True},
+        ), f"forged {tag!r} dispatched past the session guard: {result!r}"
+        calls = getattr(fake, sink_attr)
+        assert calls == [], (
+            f"router {sink_attr} fired for a forged {tag!r} whose origin "
+            f"never completed _master_auth: {calls!r}"
+        )
+        assert any(
+            "bad/missing session" in rec.message for rec in caplog.records
+        ), f"unauthenticated {tag!r} must be dropped with WARNING"
     finally:
         loop.run_until_complete(link_manager.stop())
         loop.close()
