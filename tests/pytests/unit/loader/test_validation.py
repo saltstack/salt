@@ -183,7 +183,8 @@ class TestValidateInputs:
 
         validation.validate_inputs(f, (), {"x": "1"}, "strict")
         cached = getattr(f, "__salt_validate_model__", None)
-        assert cached is not None and cached is not validation._NO_MODEL
+        assert cached is not None
+        assert cached is not validation._NO_MODEL
 
     def test_unannotated_cached_as_no_model(self):
         def f(x, y):

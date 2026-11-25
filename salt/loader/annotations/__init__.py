@@ -36,7 +36,7 @@ JSON Schema reflects their constraints.
 
 import re
 from datetime import timedelta
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from salt.utils.versions import reqs
 
@@ -86,8 +86,8 @@ if reqs.pydantic:
           timedelta parser.
         """
 
-        _UNITS = {"s": 1, "m": 60, "h": 3600, "d": 86400}
-        _SHORT = re.compile(r"(\d+(?:\.\d+)?)\s*([smhd])$")
+        _UNITS: ClassVar[dict[str, int]] = {"s": 1, "m": 60, "h": 3600, "d": 86400}
+        _SHORT: ClassVar = re.compile(r"(\d+(?:\.\d+)?)\s*([smhd])$")
 
         @classmethod
         def _coerce(cls, v):
@@ -138,7 +138,7 @@ if reqs.pydantic:
         tolerated.
         """
 
-        _MULTIPLIERS = {
+        _MULTIPLIERS: ClassVar[dict[str, int]] = {
             "": 1,
             "B": 1,
             "KB": 10**3,
@@ -150,7 +150,7 @@ if reqs.pydantic:
             "GIB": 2**30,
             "TIB": 2**40,
         }
-        _PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*([A-Za-z]*)$")
+        _PATTERN: ClassVar = re.compile(r"(\d+(?:\.\d+)?)\s*([A-Za-z]*)$")
 
         @classmethod
         def _coerce(cls, v):
@@ -204,4 +204,4 @@ else:  # pragma: no cover
     ByteSize = int  # type: ignore[misc,assignment]
 
 
-__all__ = ["MinionID", "Port", "Duration", "ByteSize"]
+__all__ = ["ByteSize", "Duration", "MinionID", "Port"]

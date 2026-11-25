@@ -446,6 +446,5 @@ class TestScopeDistinction:
         assert (
             "input validation failure" in haystack
             or "SaltInvocationError" in haystack
-            or "not-a-number" in haystack.lower()
-            and "error" in haystack.lower()
+            or ("not-a-number" in haystack.lower() and "error" in haystack.lower())
         )

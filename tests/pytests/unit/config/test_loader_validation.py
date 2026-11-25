@@ -35,7 +35,7 @@ class TestTierDefaults:
 
     def test_all_four_tier_opts_checked(self):
         """Every one of the four tier opts should be validated."""
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match="not a valid mode") as exc:
             validate_loader_validation_opts(
                 {
                     "loader_validate_wire_input_mode": "bogus1",
@@ -110,7 +110,7 @@ class TestOverrides:
 
     def test_accumulates_multiple_errors(self):
         """One raise, every problem in the message."""
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match="bogus") as exc:
             validate_loader_validation_opts(
                 {
                     "loader_validate_wire_input_mode": "bogus",
