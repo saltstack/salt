@@ -63,13 +63,6 @@ _TIER_OPT_KEYS = (
 )
 
 
-# Sentinel attached to the opts dict once validation has succeeded, so
-# subsequent LazyLoader.__init__ calls against the same opts can
-# short-circuit instead of re-validating the same dict ~25 times per
-# daemon startup.
-_VALIDATED_SENTINEL = "_salt_loader_validation_opts_validated"
-
-
 def validate_loader_validation_opts(opts):
     """Validate the loader_validate_* family of opts.
 
@@ -78,13 +71,19 @@ def validate_loader_validation_opts(opts):
     validator finds is accumulated, matching the pattern in
     :func:`salt.config.worker_pools.validate_worker_pools_config`.
 
+    Called once per :class:`LazyLoader` constructor. A minion creates
+    ~25 loaders at startup; each validation call is a few 10s of
+    microseconds against the small loader_validate_* key set, so the
+    total boot cost is well under 1ms. No caching: a previous attempt
+    to sentinel-cache on the opts dict leaked the sentinel into
+    ``salt '*' config.items`` output and didn't actually cache across
+    sibling ``OptsDict`` children anyway (see audit report
+    ``agents/reports/validation_memory_audit.md``).
+
     :param dict opts: The Salt configuration dictionary.
     :returns: ``True`` when the configuration is valid.
     :raises ValueError: If any loader_validate_* opt is malformed.
     """
-    if opts.get(_VALIDATED_SENTINEL):
-        return True
-
     errors = []
 
     # 1. Tier-default opts must be one of VALID_MODES.
@@ -155,11 +154,4 @@ def validate_loader_validation_opts(opts):
     if errors:
         raise ValueError("\n".join(errors))
 
-    # Cache the success so sibling LazyLoaders built from the same opts
-    # dict don't re-run the check.
-    try:
-        opts[_VALIDATED_SENTINEL] = True
-    except (TypeError, AttributeError):  # pragma: no cover
-        # opts is a frozen/immutable mapping -- fine, just skip caching.
-        pass
     return True

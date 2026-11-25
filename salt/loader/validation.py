@@ -175,20 +175,35 @@ def _missing_annotations(fn):
     Excludes ``*args`` and ``**kwargs`` -- they can't be annotated in a way
     pydantic would validate anyway, so a missing annotation on those is not
     actionable.
+
+    Result is cached on the function via ``__salt_missing_annotations__``
+    so strict-mode dispatch doesn't re-walk the signature on every call --
+    ``inspect.signature`` is ~100-200us and the strict-check fires on
+    every single loader dispatch when strict mode is on.
     """
+    cached = getattr(fn, "__salt_missing_annotations__", None)
+    if cached is not None:
+        return cached
     try:
         sig = inspect.signature(fn)
     except (TypeError, ValueError):
-        return []
-    missing = []
-    for name, param in sig.parameters.items():
-        if param.kind in (
-            inspect.Parameter.VAR_POSITIONAL,
-            inspect.Parameter.VAR_KEYWORD,
-        ):
-            continue
-        if param.annotation is inspect.Parameter.empty:
-            missing.append(name)
+        missing = []
+    else:
+        missing = []
+        for name, param in sig.parameters.items():
+            if param.kind in (
+                inspect.Parameter.VAR_POSITIONAL,
+                inspect.Parameter.VAR_KEYWORD,
+            ):
+                continue
+            if param.annotation is inspect.Parameter.empty:
+                missing.append(name)
+    try:
+        fn.__salt_missing_annotations__ = missing
+    except (AttributeError, TypeError):  # pragma: no cover
+        # Non-settable callable (C builtin, functools.partial, ...).
+        # Fall back to re-walking on each call; correct but slow.
+        pass
     return missing
 
 
@@ -276,7 +291,14 @@ def _set_cache(fn, value):
     """Attach the model cache to the function. Some callables (C builtins,
     functools.partial) don't accept attribute assignment; silently skip
     caching in that case -- we'll rebuild each call, which is correct
-    but slower."""
+    but slower.
+
+    Not locked. Two workers concurrently first-dispatching the same
+    function can both build a pydantic model; the loser's model is
+    unreferenced after the attribute race and GC'd. Transient
+    duplicate allocation of a pydantic ``SchemaValidator`` (Rust-
+    backed), not a correctness bug.
+    """
     try:
         fn.__salt_validate_model__ = value
     except (AttributeError, TypeError):  # pragma: no cover
@@ -465,6 +487,9 @@ def _get_or_resolve_return_contract(fn, fn_name, factory_contract, registry, mod
 
     Incompatible-refinement errors are not cached -- they're raised afresh
     on every call so the error is loud and visible every time.
+
+    Not locked -- same race shape as :func:`_set_cache`. Concurrent
+    first-dispatchers can both resolve; loser's resolved model is GC'd.
     """
     cached = getattr(fn, "__salt_return_contract__", None)
     if cached is _NO_CONTRACT:

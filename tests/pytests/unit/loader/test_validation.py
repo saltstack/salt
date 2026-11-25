@@ -88,6 +88,25 @@ class TestValidateInputs:
         args, kwargs = validation.validate_inputs(f, (), {"x": 1}, "strict")
         assert kwargs == {"x": 1}
 
+    def test_missing_annotations_cached_on_function(self):
+        """_missing_annotations is called on every strict dispatch; its
+        result must be cached via __salt_missing_annotations__ so we
+        don't re-walk the signature each time."""
+
+        def f(a: int, b, c):  # b, c missing
+            return (a, b, c)
+
+        # First call populates the cache.
+        got = validation._missing_annotations(f)
+        assert got == ["b", "c"]
+        assert getattr(f, "__salt_missing_annotations__", None) == ["b", "c"]
+
+        # Second call reads the cache -- mutate the stored value and
+        # confirm the function returns the mutated form, proving it's
+        # not re-walking the signature.
+        f.__salt_missing_annotations__ = ["mutated"]
+        assert validation._missing_annotations(f) == ["mutated"]
+
     def test_enforce_raises_on_bad_type(self):
         def f(x: int):
             return x
