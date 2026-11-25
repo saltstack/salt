@@ -402,21 +402,28 @@ Common messages
     Correct the key, or remove the override block.
 
 ``loader_validate_overrides.<X>.<Y>: not a valid direction key``
-    Only ``input_mode`` and ``return_mode`` are allowed per-loader.
+``loader_validate_defaults.<Y>: not a valid direction key``
+    Only ``input_mode`` and ``return_mode`` are allowed.
 
 ``loader_validate_overrides.<X>.<Y>: '<mode>' is not a valid mode``
+``loader_validate_defaults.<Y>: '<mode>' is not a valid mode``
     Mode must be one of ``off``, ``warn``, ``enforce``, ``strict``.
+
+``loader_validate_defaults: must be a dict, got <type>``
+``loader_validate_overrides.<X>: must be a dict, got <type>``
+    The value was a scalar or list where a per-direction dict was
+    expected.
 
 Startup failures
 ----------------
 
-Configuration problems in ``loader_validate_overrides`` are caught at
-daemon startup, not at first dispatch, and every problem the
-validator finds is reported together.  When the master or minion
-refuses to start with a ``ValueError`` naming
-``loader_validate_overrides``, fix every line listed in the error
-message in one pass -- that is the complete list of problems the
-validator found.
+Configuration problems in ``loader_validate_defaults`` and
+``loader_validate_overrides`` are caught at daemon startup, not at
+first dispatch, and every problem the validator finds is reported
+together.  When the master or minion refuses to start with a
+``ValueError`` naming one of these opts, fix every line listed in the
+error message in one pass -- that is the complete list of problems
+the validator found.
 
 
 Operational notes
@@ -425,8 +432,9 @@ Operational notes
 **Pydantic dependency.**  Validation requires :mod:`pydantic`, which
 ships in Salt's base requirements as of 3008.  If pydantic is not
 importable, the validation layer silently degrades to a no-op; the
-``loader_validate_overrides`` opt is still parsed and validated for
-structure, but no dispatch is intercepted.
+``loader_validate_defaults`` and ``loader_validate_overrides`` opts
+are still parsed and validated for structure, but no dispatch is
+intercepted.
 
 **Default behavior is off.**  Every loader direction defaults to
 ``off`` on upgrade.  Operators and module authors opt in explicitly.
