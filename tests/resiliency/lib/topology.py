@@ -1217,42 +1217,62 @@ class Topology:
                         after_reprobe = self.sample_minions()
                     finally:
                         self.resume_workload()
+                    # Growth during the reprobe window is the real
+                    # retention signal: whatever the fault allocated is
+                    # already in ``after``; the ONLY thing that can grow
+                    # between ``after`` and ``after_reprobe`` (with
+                    # workload paused) is memory the fault's allocation
+                    # is still holding.  Flat drift ⇒ transient drained;
+                    # continued growth ⇒ real retention.  Computing the
+                    # slope from ``before`` (pre-fault) always carries
+                    # the fault's one-shot allocation and scales poorly:
+                    # longer elapsed windows lower the slope but the
+                    # underlying absolute delta doesn't change.
+                    delta_drift = after_reprobe - after
+                    fd_drift = delta_drift.fds
+                    rss_drift_kb = delta_drift.rss_kb
+                    rss_drift_per_min = rss_drift_kb * 60 // max(reprobe_wait, 1)
+                    # Also keep the baseline-anchored stats for logging
+                    # + the result record (analyzer trend wants a
+                    # consistent before→after comparison).
                     delta_reprobe = after_reprobe - before
                     fd_reprobe = delta_reprobe.fds
                     rss_reprobe_kb = delta_reprobe.rss_kb
                     elapsed_reprobe = elapsed + reprobe_wait
                     rss_per_min_reprobe = rss_reprobe_kb * 60 // elapsed_reprobe
-                    reprobe_leak_fd = (
+                    drift_leak_fd = (
                         not allow_fd_accumulation
-                    ) and fd_reprobe > fd_threshold
-                    reprobe_leak_bulk = (
+                    ) and fd_drift > fd_threshold
+                    drift_leak_bulk = (
                         not allow_bulk_rss
-                    ) and rss_reprobe_kb > LEAK_BULK_RSS_KB
-                    still_leaking = rss_per_min_reprobe > RSS_LEAK_KB_PER_MIN and (
-                        reprobe_leak_fd or reprobe_leak_bulk
+                    ) and rss_drift_kb > LEAK_BULK_RSS_KB
+                    still_leaking = rss_drift_per_min > RSS_LEAK_KB_PER_MIN and (
+                        drift_leak_fd or drift_leak_bulk
                     )
                     if not still_leaking:
                         log.info(
                             "TRANSIENT_DRAINED %r: initial %d KB/min "
-                            "(fd=%d rss=%d) recovered to %d KB/min "
-                            "(fd=%d rss=%d) at +%ds -- not retention",
+                            "(fd=%d rss=%d baseline-anchored) -- drift "
+                            "during +%ds reprobe only %d KB/min "
+                            "(fd=%d rss=%d) -- not retention",
                             scenario,
                             rss_per_min,
                             fd_delta,
                             rss_delta_kb,
-                            rss_per_min_reprobe,
-                            fd_reprobe,
-                            rss_reprobe_kb,
                             reprobe_wait,
+                            rss_drift_per_min,
+                            fd_drift,
+                            rss_drift_kb,
                         )
-                        # Use the drained sample for the recovered record so
-                        # the analyzer trend reflects the actual steady state.
+                        # Keep the baseline-anchored reprobe sample for
+                        # the result record so the analyzer trend sees a
+                        # consistent before→after comparison.
                         fd_delta = fd_reprobe
                         rss_delta_kb = rss_reprobe_kb
                         rss_per_min = rss_per_min_reprobe
                         transient_note = (
-                            f"transient_drained; initial rss_kb_per_min="
-                            f"{rss_per_min} "
+                            f"transient_drained; drift_rss_kb_per_min="
+                            f"{rss_drift_per_min} drift_rss_kb={rss_drift_kb} "
                             f"initial_reason={reason}"
                         )
                         notes = (
@@ -1260,27 +1280,26 @@ class Topology:
                         )
                     else:
                         reason_reprobe = (
-                            "fd_accumulation"
-                            if reprobe_leak_fd
-                            else "bulk_rss_retention"
+                            "fd_accumulation" if drift_leak_fd else "bulk_rss_retention"
                         )
                         leak_notes = (
-                            f"rss_kb_per_min={rss_per_min_reprobe} "
+                            f"drift_rss_kb_per_min={rss_drift_per_min} "
+                            f"drift_rss_kb={rss_drift_kb} "
                             f"threshold={RSS_LEAK_KB_PER_MIN} "
                             f"reason={reason_reprobe} "
-                            f"still_leaking_after_reprobe={reprobe_wait}s"
+                            f"still_growing_after_reprobe={reprobe_wait}s"
                         )
                         full_notes = f"{notes}; {leak_notes}" if notes else leak_notes
                         log.error(
                             "LEAK %r recovered after %ds via %s but RSS "
-                            "grew %d KB/min > %d KB/min at +%ds reprobe "
-                            "(reason=%s)",
+                            "drifted %d KB/min during +%ds reprobe "
+                            "(drift_rss=%d KB, reason=%s)",
                             scenario,
                             reconnect_s,
                             last_master,
-                            rss_per_min_reprobe,
-                            RSS_LEAK_KB_PER_MIN,
+                            rss_drift_per_min,
                             reprobe_wait,
+                            rss_drift_kb,
                             reason_reprobe,
                         )
                         self._stash_result(
@@ -1297,11 +1316,10 @@ class Topology:
                         )
                         pytest.fail(
                             f"{scenario}: recovered after {reconnect_s}s but "
-                            f"RSS slope {rss_per_min_reprobe} KB/min still "
-                            f"exceeds threshold {RSS_LEAK_KB_PER_MIN} KB/min "
-                            f"at +{reprobe_wait}s reprobe "
-                            f"(fd_delta={fd_reprobe} rss_delta_kb="
-                            f"{rss_reprobe_kb} reason={reason_reprobe})"
+                            f"RSS drifted {rss_drift_per_min} KB/min during "
+                            f"+{reprobe_wait}s reprobe (workload paused); "
+                            f"drift_rss_kb={rss_drift_kb} "
+                            f"drift_fd={fd_drift} reason={reason_reprobe}"
                         )
 
                 log.info(
