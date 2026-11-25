@@ -171,6 +171,10 @@ class PublishClient(salt.transport.base.PublishClient):
         **extras,
     ):
         self.hexid = hashlib.sha1(salt.utils.stringutils.to_bytes(_id)).hexdigest()
+        self._subscriptions = {
+            "broadcast",
+            "syndic" if role == "syndic" else self.hexid,
+        }
         self._closing = False
         self.context = zmq.asyncio.Context()
         self._socket = self.context.socket(zmq.SUB)
@@ -231,6 +235,18 @@ class PublishClient(salt.transport.base.PublishClient):
         if HAS_ZMQ_MONITOR and zmq_monitor:
             self._monitor = ZeroMQSocketMonitor(self._socket)
             self._monitor.start_io_loop(self.io_loop)
+
+    def add_subscriptions(self, minion_ids):
+        """
+        Subscribe to publications for additional minion IDs on this connection.
+        """
+        for minion_id in minion_ids:
+            topic = hashlib.sha1(salt.utils.stringutils.to_bytes(minion_id)).hexdigest()
+            if topic not in self._subscriptions:
+                self._socket.setsockopt(
+                    zmq.SUBSCRIBE, salt.utils.stringutils.to_bytes(topic)
+                )
+                self._subscriptions.add(topic)
 
     def __init__(self, opts, io_loop, **kwargs):
         super().__init__(opts, io_loop, **kwargs)
@@ -366,13 +382,7 @@ class PublishClient(salt.transport.base.PublishClient):
             # 2 includes a header which says who should do it
             elif messages_len == 2:
                 message_target = salt.utils.stringutils.to_str(messages[0])
-                if (
-                    self.opts.get("__role") != "syndic"
-                    and message_target not in ("broadcast", self.hexid)
-                ) or (
-                    self.opts.get("__role") == "syndic"
-                    and message_target not in ("broadcast", "syndic")
-                ):
+                if message_target not in self._subscriptions:
                     log.debug(
                         "Publish received for not this minion: %s", message_target
                     )
@@ -393,8 +403,8 @@ class PublishClient(salt.transport.base.PublishClient):
     async def recv(self, timeout=None):
         if timeout == 0:
             events = self.poller.poll(timeout=timeout)
-            if events:
-                return await self._socket.recv()
+            if not events:
+                return None
         elif timeout:
             # Use poll + recv instead of asyncio.wait_for(recv(), timeout).
             # Python 3.12 rewrote wait_for to use asyncio.timeout() which
@@ -404,11 +414,13 @@ class PublishClient(salt.transport.base.PublishClient):
             # new messages.  poll() never consumes data, so a timeout here
             # is always safe.
             events = await self._socket.poll(timeout=int(timeout * 1000))
-            if events:
-                return await self._socket.recv()
-            log.trace("PublishClient recieve timedout: %s", timeout)
-        else:
-            return await self._socket.recv()
+            if not events:
+                log.trace("PublishClient recieve timedout: %s", timeout)
+                return None
+        # Filtering adds a topic frame. Keep it paired with its payload so the
+        # decoder can validate the topic before passing the publication on.
+        messages = await self._socket.recv_multipart()
+        return messages[0] if len(messages) == 1 else messages
 
     async def send(self, msg):
         return
@@ -1776,7 +1788,7 @@ class ZeroMQSocketMonitor:
                 pass
         try:
             self._socket.disable_monitor()
-        except zmq.Error:
+        except zmq.ZMQError:
             pass
         self._socket = None
         monitor_socket = self._monitor_socket
@@ -1784,7 +1796,7 @@ class ZeroMQSocketMonitor:
         if monitor_socket is not None:
             try:
                 monitor_socket.close(0)
-            except (zmq.Error, AttributeError):
+            except (zmq.ZMQError, AttributeError):
                 pass
         log.trace("Event monitor done!")
 
