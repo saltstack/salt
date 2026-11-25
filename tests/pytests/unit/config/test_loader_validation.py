@@ -107,6 +107,39 @@ class TestOverrides:
         assert "also-bogus" in text
 
 
+class TestDefaults:
+    def test_valid_defaults_pass(self):
+        assert (
+            validate_loader_validation_opts(
+                {
+                    "loader_validate_defaults": {
+                        "input_mode": "warn",
+                        "return_mode": "enforce",
+                    }
+                }
+            )
+            is True
+        )
+
+    def test_defaults_not_dict_raises(self):
+        with pytest.raises(ValueError, match="must be a dict"):
+            validate_loader_validation_opts(
+                {"loader_validate_defaults": ["not", "a", "dict"]}
+            )
+
+    def test_defaults_invalid_mode_raises(self):
+        with pytest.raises(ValueError, match="not a valid mode"):
+            validate_loader_validation_opts(
+                {"loader_validate_defaults": {"input_mode": "bogus"}}
+            )
+
+    def test_defaults_unknown_direction_raises(self):
+        with pytest.raises(ValueError, match="not a valid direction key"):
+            validate_loader_validation_opts(
+                {"loader_validate_defaults": {"inpit_mode": "warn"}}
+            )
+
+
 class TestResolver:
     """The resolver lives in salt.loader.lazy; test its behavior directly."""
 
@@ -158,6 +191,50 @@ class TestResolver:
         from salt.loader.lazy import _resolve_validate_mode
 
         assert _resolve_validate_mode({}, "states", "input") == "off"
+
+    def test_defaults_apply_when_no_override(self):
+        from salt.loader.lazy import _resolve_validate_mode
+
+        opts = {"loader_validate_defaults": {"input_mode": "warn"}}
+        # No override for "states" -> default applies.
+        assert _resolve_validate_mode(opts, "states", "input") == "warn"
+
+    def test_override_beats_default(self):
+        from salt.loader.lazy import _resolve_validate_mode
+
+        opts = {
+            "loader_validate_defaults": {"input_mode": "warn"},
+            "loader_validate_overrides": {
+                "states": {"input_mode": "strict"},
+            },
+        }
+        assert _resolve_validate_mode(opts, "states", "input") == "strict"
+
+    def test_default_applies_per_direction(self):
+        """Default covers directions the override doesn't."""
+        from salt.loader.lazy import _resolve_validate_mode
+
+        opts = {
+            "loader_validate_defaults": {
+                "input_mode": "warn",
+                "return_mode": "enforce",
+            },
+            "loader_validate_overrides": {
+                "states": {"input_mode": "strict"},  # no return_mode
+            },
+        }
+        # Override covers input direction.
+        assert _resolve_validate_mode(opts, "states", "input") == "strict"
+        # Return direction falls through to the default.
+        assert _resolve_validate_mode(opts, "states", "return") == "enforce"
+
+    def test_defaults_apply_to_unnamed_loaders_too(self):
+        """Even without a name, defaults still apply -- they're not
+        keyed by loader so there's nothing to look up."""
+        from salt.loader.lazy import _resolve_validate_mode
+
+        opts = {"loader_validate_defaults": {"input_mode": "warn"}}
+        assert _resolve_validate_mode(opts, None, "input") == "warn"
 
     def test_each_direction_resolved_independently(self):
         from salt.loader.lazy import _resolve_validate_mode

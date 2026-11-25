@@ -46,18 +46,30 @@ dispatch for a typical signature).  It can be deployed boundary-only
 Configuration
 =============
 
-A single master / minion option controls validation:
+Two master / minion options control validation:
 
 .. code-block:: yaml
+
+    loader_validate_defaults:
+      input_mode: <mode>
+      return_mode: <mode>
 
     loader_validate_overrides:
       <loader-name>:
         input_mode: <mode>
         return_mode: <mode>
 
-The outer dict is keyed by loader name; each entry has optional
-``input_mode`` and ``return_mode`` keys.  Direction keys that are
-omitted resolve to ``off``.
+``loader_validate_defaults`` sets fleet-wide baselines applied to any
+loader that doesn't have a matching override entry.
+``loader_validate_overrides`` is keyed by loader name and wins over
+the defaults.  Direction keys that neither opt sets resolve to
+``off``.
+
+Resolution order at dispatch (first hit wins):
+
+1. ``loader_validate_overrides[<loader-name>][<direction>_mode]``
+2. ``loader_validate_defaults[<direction>_mode]``
+3. ``"off"``
 
 Loader names
 ------------
@@ -133,22 +145,9 @@ change, just log lines when validation fails):
 
 .. code-block:: yaml
 
-    loader_validate_overrides:
-      wire_salt:
-        input_mode: warn
-        return_mode: warn
-      salt_dunder:
-        input_mode: warn
-        return_mode: warn
-      states:
-        input_mode: warn
-        return_mode: warn
-      runners:
-        input_mode: warn
-        return_mode: warn
-      wheels:
-        input_mode: warn
-        return_mode: warn
+    loader_validate_defaults:
+      input_mode: warn
+      return_mode: warn
 
 **Catch state-return bugs, nothing else** (zero migration cost; the
 ``StateReturn`` contract is already factory-pinned on the ``states``
@@ -183,33 +182,20 @@ API input, but don't disturb internal composition):
 
 .. code-block:: yaml
 
-    loader_validate_overrides:
-      wire_salt:
-        input_mode: strict
-        return_mode: strict
-      salt_dunder:
-        input_mode: strict
-        return_mode: strict
-      states:
-        input_mode: strict
-        return_mode: strict
-      runners:
-        input_mode: strict
-        return_mode: strict
-      wheels:
-        input_mode: strict
-        return_mode: strict
+    loader_validate_defaults:
+      input_mode: strict
+      return_mode: strict
 
-**LTS production pattern** -- surface external callers, trust
-shipped internals:
+**Mixed -- warn baseline, promote the states contract to enforce**:
 
 .. code-block:: yaml
 
+    loader_validate_defaults:
+      input_mode: warn
+      return_mode: warn
     loader_validate_overrides:
-      wire_salt:
-        input_mode: warn
       states:
-        return_mode: warn
+        return_mode: enforce
 
 
 Annotating a module function

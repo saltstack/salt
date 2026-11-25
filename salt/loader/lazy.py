@@ -114,15 +114,22 @@ def _mod_type(module_path):
 def _resolve_validate_mode(opts, loader_name, direction):
     """Resolve the effective validation mode for a dispatch.
 
-    Reads loader_validate_overrides[<loader_name>][<direction>_mode]
-    from opts. Returns "off" when the loader has no name, no override
-    is set, or the direction wasn't configured.
+    Resolution order (first hit wins):
+
+    1. ``loader_validate_overrides[<loader_name>][<direction>_mode]`` --
+       per-loader override. Only consulted when the loader has a name.
+    2. ``loader_validate_defaults[<direction>_mode]`` -- fleet-wide
+       default applied to any loader without a matching override entry.
+    3. ``"off"``.
     """
-    if not loader_name:
-        return "off"
-    overrides = opts.get("loader_validate_overrides", {})
-    entry = overrides.get(loader_name, {})
-    return entry.get(f"{direction}_mode", "off")
+    if loader_name:
+        overrides = opts.get("loader_validate_overrides", {})
+        entry = overrides.get(loader_name, {})
+        mode = entry.get(f"{direction}_mode")
+        if mode is not None:
+            return mode
+    defaults = opts.get("loader_validate_defaults", {})
+    return defaults.get(f"{direction}_mode", "off")
 
 
 class FilterDictWrapper(MutableMapping):

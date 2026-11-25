@@ -1216,6 +1216,15 @@ VALID_OPTS = immutabletypes.freeze(
         # "states", "runners", "wheels". Unknown names raise at startup.
         # Validated by salt.config.loader_validation.validate_loader_validation_opts.
         "loader_validate_overrides": dict,
+        # Loader validation defaults. Applied to any loader that doesn't
+        # have an entry in ``loader_validate_overrides`` for a given
+        # direction. Resolution order at dispatch time:
+        #   1. loader_validate_overrides[<name>][<direction>_mode]
+        #   2. loader_validate_defaults[<direction>_mode]
+        #   3. "off"
+        # Shape: {"input_mode": ..., "return_mode": ...}. Each takes the
+        # same mode values as overrides. Validated by the same hook.
+        "loader_validate_defaults": dict,
         # django auth
         "django_auth_path": str,
         "django_auth_settings": str,
@@ -1641,6 +1650,7 @@ DEFAULT_MINION_OPTS = immutabletypes.freeze(
         "extmod_whitelist": {},
         "extmod_blacklist": {},
         "loader_validate_overrides": {},
+        "loader_validate_defaults": {},
         "minion_sign_messages": False,
         "discovery": False,
         "schedule": {},
@@ -2087,6 +2097,7 @@ DEFAULT_MASTER_OPTS = immutabletypes.freeze(
         "extmod_whitelist": {},
         "extmod_blacklist": {},
         "loader_validate_overrides": {},
+        "loader_validate_defaults": {},
         "clean_dynamic_modules": True,
         "django_auth_path": "",
         "django_auth_settings": "",
