@@ -371,6 +371,10 @@ Set the number of seconds to wait before attempting to resolve
 the master hostname if name resolution fails. Defaults to 30 seconds.
 Set to zero if the minion should shutdown and not retry.
 
+When :conf_minion:`master_type` is set to ``failover``, Salt sets
+``retry_dns`` to ``0`` during startup so the minion can fail over to the
+next master on DNS errors.
+
 .. code-block:: yaml
 
     retry_dns: 30

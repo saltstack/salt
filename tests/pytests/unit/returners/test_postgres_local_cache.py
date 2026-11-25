@@ -59,7 +59,7 @@ def test_returner():
                         if isinstance(val, str) and "return" in val:
                             return_val = json.loads(val)
 
-        assert return_val is not None, None
+        assert return_val is not None
         assert return_val == expected
 
 
@@ -217,5 +217,5 @@ def test_returner_unicode_exception():
                             if search_string in val:
                                 return_val = json.loads(val)
 
-        assert return_val is not None, None
+        assert return_val is not None
         assert return_val == expected

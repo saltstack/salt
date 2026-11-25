@@ -718,8 +718,7 @@ def find(path, options):
     WRITEME
     """
     finder = Finder(options)
-    for path in finder.find(path):
-        yield path
+    yield from finder.find(path)
 
 
 def _main():

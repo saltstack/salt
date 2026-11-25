@@ -384,11 +384,23 @@ class SnapperTestCase(TestCase, LoaderModuleMockMixin):
             )  # pylint: disable=protected-access
 
     def test_run(self):
-        patch_dict = {
-            "snapper.create_snapshot": MagicMock(return_value=43),
+        # ``snapper.create_snapshot`` is composed internally (trusted
+        # shipped code) so it is resolved via ``__salt__``; the
+        # caller-supplied ``function`` target is dispatched via
+        # ``__wire_salt__`` so ``whitelist_modules`` applies to it.
+        wire_dispatch = {
             "test.ping": MagicMock(return_value=True),
         }
-        with patch.dict(snapper.__salt__, patch_dict):
+        salt_dict = {
+            "snapper.create_snapshot": MagicMock(return_value=43),
+            # Older callers may still look the target up via ``__salt__``
+            # (e.g. the fallback ``.__doc__`` read inside snapper.run's
+            # exception handler).  Keep it here for compatibility.
+            "test.ping": wire_dispatch["test.ping"],
+        }
+        with patch.dict(snapper.__salt__, salt_dict), patch.object(
+            snapper, "__wire_salt__", wire_dispatch, create=True
+        ):
             self.assertEqual(snapper.run("test.ping"), True)
             self.assertRaises(CommandExecutionError, snapper.run, "unknown.func")
 

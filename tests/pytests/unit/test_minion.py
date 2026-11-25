@@ -6,8 +6,10 @@ import logging
 import os
 import pathlib
 import signal
+import sys
 import threading
 import time
+import types
 import uuid
 
 import pytest
@@ -25,6 +27,7 @@ import salt.payload
 import salt.syspaths
 import salt.utils.crypt
 import salt.utils.doc
+import salt.utils.event
 import salt.utils.event as event
 import salt.utils.files
 import salt.utils.jid
@@ -4962,3 +4965,413 @@ async def test_minion_process_process_queue_keeps_task_reference(
     with contextlib.suppress(Exception):
         await asyncio.gather(*minion._background_tasks, return_exceptions=True)
     minion.destroy()
+
+
+def _unwinding_task(cleaned):
+    """
+    A coroutine that closes something only while it unwinds after a cancel, and
+    that needs more loop iterations to do it, like closing a channel.
+    """
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    return background()
+
+
+@contextlib.contextmanager
+def _minion_ready_to_tune_in(minion_opts):
+    """
+    A real ``Minion`` on its own event loop, with the start-up that
+    ``tune_in()`` does before ``run_forever()`` replaced by no-ops.
+    """
+    loop = asyncio.new_event_loop()
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch.multiple(
+        "salt.minion.Minion",
+        _pre_tune=MagicMock(),
+        sync_connect_master=MagicMock(),
+        _state_run=MagicMock(),
+        setup_beacons=MagicMock(),
+        setup_scheduler=MagicMock(),
+        setup_state_queue_processing=MagicMock(),
+        setup_process_queue_processing=MagicMock(),
+    ), patch("salt.minion.enable_sigusr1_handler"), patch(
+        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True)
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(minion_opts, io_loop=loop)
+        try:
+            yield minion, loop
+        finally:
+            minion.destroy()
+            if not loop.is_closed():
+                loop.close()
+
+
+@contextlib.contextmanager
+def _syndic_manager_ready_to_tune_in(minion_opts):
+    """
+    A real ``SyndicManager`` on its own event loop, with the master connections,
+    the local client and the event forwarding that ``tune_in()`` sets up
+    replaced by mocks.
+    """
+    loop = asyncio.new_event_loop()
+    minion_opts["order_masters"] = True
+    minion_opts["_minion_conf_file"] = "minion"
+    minion_opts.setdefault("syndic_event_forward_timeout", 0.5)
+    with patch("salt.minion.SyndicManager._spawn_syndics", MagicMock()), patch(
+        "salt.client.get_local_client", MagicMock()
+    ), patch("salt.minion.tornado.ioloop.PeriodicCallback", MagicMock()), patch(
+        "salt.minion.enable_sigusr1_handler"
+    ):
+        manager = salt.minion.SyndicManager(minion_opts, io_loop=loop)
+        try:
+            yield manager, loop
+        finally:
+            manager.destroy()
+            if not loop.is_closed():
+                loop.close()
+
+
+def _interrupt():
+    raise KeyboardInterrupt
+
+
+def test_minion_tune_in_lets_background_tasks_finish_before_closing_the_loop(
+    minion_opts,
+):
+    """
+    A background task of a ``Minion`` closes its sockets only while it unwinds
+    after a cancel.  ``tune_in()`` must let it do that before it closes the loop
+    (#70624, #70857).
+    """
+    cleaned = []
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        minion._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, loop.stop)
+        minion.tune_in()
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_minion_tune_in_waits_for_tasks_that_destroy_cancelled_already(minion_opts):
+    """
+    After Ctrl-C ``tune_in()`` calls ``destroy()``, which cancels the background
+    tasks and forgets them.  The drain still has to wait for them.
+    """
+    cleaned = []
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        minion._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, _interrupt)
+        minion.tune_in()
+        assert not minion._background_tasks
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_minion_tune_in_closes_the_loop_when_draining_fails(minion_opts):
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        loop.call_later(0.1, loop.stop)
+        with patch(
+            "salt.utils.asynchronous.cancel_and_drain",
+            side_effect=RuntimeError("boom"),
+        ) as drain:
+            minion.tune_in()
+        drain.assert_called_once()
+        assert loop.is_closed()
+
+
+def test_syndic_manager_tune_in_lets_background_tasks_finish_before_closing_the_loop(
+    minion_opts,
+):
+    cleaned = []
+    with _syndic_manager_ready_to_tune_in(minion_opts) as (manager, loop):
+        manager._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, loop.stop)
+        manager.tune_in()
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_syndic_manager_tune_in_closes_the_loop_when_draining_fails(minion_opts):
+    with _syndic_manager_ready_to_tune_in(minion_opts) as (manager, loop):
+        loop.call_later(0.1, loop.stop)
+        with patch(
+            "salt.utils.asynchronous.cancel_and_drain",
+            side_effect=RuntimeError("boom"),
+        ) as drain:
+            manager.tune_in()
+        drain.assert_called_once()
+        assert loop.is_closed()
+
+
+def _master_alive_minion(minion_opts, master_alive_interval):
+    minion_opts.update(
+        {
+            "master": "master1",
+            "master_type": "str",
+            "master_alive_interval": master_alive_interval,
+            "transport": "zeromq",
+        }
+    )
+    minion = salt.minion.Minion(
+        minion_opts, io_loop=MagicMock(spec=asyncio.AbstractEventLoop)
+    )
+    minion.ready = True
+    minion.schedule = MagicMock()
+    return minion
+
+
+def _alive_job_calls(mock_method):
+    return [
+        call
+        for call in mock_method.call_args_list
+        if call.kwargs.get("name", "").startswith("__master_alive")
+    ]
+
+
+async def test_master_disconnect_deletes_per_master_alive_job(minion_opts):
+    """
+    The master_alive job is named after the master, so the disconnect
+    handler has to delete it using that name.
+    """
+    minion = _master_alive_minion(minion_opts, 30)
+    minion.connected = True
+    with patch.object(
+        minion, "eval_master", MagicMock(side_effect=SaltClientError("down"))
+    ):
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
+        await minion.handle_event(package)
+
+    minion.schedule.delete_job.assert_any_call(name="__master_alive_master1")
+    assert minion.connected is False
+
+
+@pytest.mark.parametrize("master_alive_interval", [0, 30])
+async def test_master_reconnect_respects_master_alive_interval(
+    minion_opts, master_alive_interval
+):
+    """
+    When the connection is re-established, the master_alive job should
+    only come back if master_alive_interval is enabled, same as at startup.
+    """
+    minion = _master_alive_minion(minion_opts, master_alive_interval)
+    minion.connected = False
+    package = salt.utils.event.SaltEvent.pack(
+        "__master_connected", {"master": "master1"}
+    )
+    await minion.handle_event(package)
+
+    assert minion.connected is True
+    calls = _alive_job_calls(minion.schedule.modify_job)
+    if master_alive_interval:
+        assert len(calls) == 1
+        assert calls[0].kwargs["name"] == "__master_alive_master1"
+        assert calls[0].kwargs["schedule"]["seconds"] == master_alive_interval
+    else:
+        assert not calls
+
+
+@pytest.mark.parametrize("master_alive_interval", [0, 30])
+async def test_master_failover_reinit_respects_master_alive_interval(
+    minion_opts, master_alive_interval
+):
+    """
+    After a disconnect, re-initialising for the (new) master must not add
+    a master_alive job with "seconds: 0" when master_alive_interval is 0.
+    """
+    minion = _master_alive_minion(minion_opts, master_alive_interval)
+    minion.connected = True
+    pub_channel = MagicMock()
+
+    @tornado.gen.coroutine
+    def fake_eval_master(*args, **kwargs):
+        minion.connected = True
+        return "master2", pub_channel
+
+    @tornado.gen.coroutine
+    def fake_coro(*args, **kwargs):
+        return None
+
+    req_channel = MagicMock()
+    req_channel.connect = fake_coro
+    with patch.object(minion, "eval_master", fake_eval_master), patch.object(
+        minion, "_fire_master_minion_start", fake_coro
+    ), patch.object(minion, "_register_resources_with_master", fake_coro), patch.object(
+        minion, "_load_modules", MagicMock(return_value=(None, None, None, None))
+    ), patch(
+        "salt.channel.client.AsyncReqChannel.factory",
+        MagicMock(return_value=req_channel),
+    ):
+        package = salt.utils.event.SaltEvent.pack(
+            "__master_disconnected", {"master": "master1"}
+        )
+        await minion.handle_event(package)
+
+    assert minion.opts["master"] == "master2"
+    minion.schedule.delete_job.assert_any_call(name="__master_alive_master1")
+    calls = _alive_job_calls(minion.schedule.modify_job)
+    if master_alive_interval:
+        assert len(calls) == 1
+        assert calls[0].kwargs["name"] == "__master_alive_master2"
+        assert calls[0].kwargs["schedule"]["seconds"] == master_alive_interval
+    else:
+        assert not calls
+
+
+async def test_pillar_refresh_marks_request_as_regular_fetch():
+    """
+    The minion's own pillar refresh is what updates the master's targeting
+    data, so it must ask for it.
+    """
+    minion = MagicMock(
+        opts={"grains": {}, "id": "m1", "saltenv": "base", "pillarenv": "dev"},
+        connected=True,
+    )
+    pillar = MagicMock()
+    pillar.compile_pillar = AsyncMock(side_effect=SaltClientError("down"))
+    pillar.aclose = AsyncMock()
+    with patch("salt.pillar.get_async_pillar", return_value=pillar) as get_pillar:
+        with patch("salt.utils.event.get_event"):
+            await salt.minion.Minion.pillar_refresh(minion, clean_cache=True)
+    kwargs = get_pillar.call_args.kwargs
+    assert kwargs["snapshot"] is True
+    assert kwargs["pillarenv"] == "dev"
+    assert kwargs["clean_cache"] is True
+
+
+def _tune_in_manager(loop, spawn):
+    """
+    The parts of a MinionManager that ``tune_in`` uses, without building a real one.
+    """
+    manager = types.SimpleNamespace(
+        io_loop=loop, _bind=lambda: None, _background_tasks=set()
+    )
+    manager._spawn_minions = lambda: spawn(manager)
+    return manager
+
+
+def test_tune_in_lets_background_tasks_finish_before_closing_the_loop():
+    """
+    ``tune_in()`` can return before ``MinionManager.destroy()`` runs, which then
+    finds a closed loop.  The background tasks must be able to run their cleanup
+    before the loop is closed, otherwise the sockets they hold stay open
+    (#70624, #70857).
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # a channel that is closed with ``await`` needs more loop iterations
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(background())
+        manager._background_tasks.add(task)
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert cleaned == [True]
+    assert loop.is_closed()
+
+
+def test_tune_in_waits_for_tasks_that_destroy_cancelled_already():
+    """
+    SIGTERM: ``destroy()`` cancels the background tasks and forgets them, then
+    ``SystemExit`` ends ``run_forever()`` before they could unwind.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0.2)
+            cleaned.append(True)
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(background())
+        manager._background_tasks.add(task)
+
+        def destroy():
+            for background_task in list(manager._background_tasks):
+                background_task.cancel()
+            manager._background_tasks.clear()
+            sys.exit()
+
+        manager.io_loop.call_later(0.05, destroy)
+
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert cleaned == [True]
+    assert loop.is_closed()
+
+
+def test_tune_in_closes_the_loop_when_draining_fails():
+    loop = asyncio.new_event_loop()
+
+    def spawn(manager):
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    with patch(
+        "salt.utils.asynchronous.cancel_and_drain", side_effect=RuntimeError("boom")
+    ):
+        salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert loop.is_closed()
+
+
+def test_tune_in_closes_the_loop_when_a_task_does_not_finish(caplog):
+    """
+    A task that ignores the cancel must not keep the minion from stopping.
+    """
+    loop = asyncio.new_event_loop()
+    stop = []
+    real_drain = salt.utils.asynchronous.cancel_and_drain
+
+    async def stubborn():
+        while not stop:
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                pass
+
+    def spawn(manager):
+        task = manager.io_loop.create_task(stubborn())
+        manager._background_tasks.add(task)
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    # the real timeout is 5 seconds, do not wait that long in a test
+    with patch(
+        "salt.utils.asynchronous.cancel_and_drain",
+        side_effect=lambda lp, tasks: real_drain(lp, tasks, timeout=0.2),
+    ):
+        with caplog.at_level(logging.WARNING):
+            salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    stop.append(True)
+    assert loop.is_closed()
+    assert "did not finish" in caplog.text
+    # the message says which coroutine is stuck, not just ``Task-<number>``
+    assert "stubborn" in caplog.text
+
+
+def test_tune_in_does_not_wait_when_there_is_nothing_to_drain():
+    loop = asyncio.new_event_loop()
+
+    def spawn(manager):
+        manager.io_loop.call_later(0.05, sys.exit)
+
+    start = time.monotonic()
+    salt.minion.MinionManager.tune_in(_tune_in_manager(loop, spawn))
+    assert time.monotonic() - start < 2
+    assert loop.is_closed()

@@ -1,5 +1,5 @@
 """
-Tests for salt.utils.find traversal limits.
+Tests for salt.utils.find.
 """
 
 import os
@@ -93,3 +93,20 @@ def test_maxdepth_zero_does_not_descend(tmp_path, monkeypatch):
 
     assert found == [root]
     assert all(_child_depth(root, dirpath) <= 1 for dirpath in walked)
+
+
+def test_find_yields_the_paths_that_match(tmp_path):
+    (tmp_path / "a.txt").write_text("")
+    (tmp_path / "b.log").write_text("")
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    (sub / "c.txt").write_text("")
+
+    found = sorted(salt.utils.find.find(str(tmp_path), {"name": "*.txt"}))
+
+    assert found == sorted([str(tmp_path / "a.txt"), str(sub / "c.txt")])
+
+
+def test_find_is_a_generator(tmp_path):
+    found = salt.utils.find.find(str(tmp_path), {})
+    assert iter(found) is found

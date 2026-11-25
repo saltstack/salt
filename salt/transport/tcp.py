@@ -1753,7 +1753,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 cert = stream.socket.getpeercert()
 
                 # If server requires client cert but none provided, reject
-                if not cert:
+                if not cert and self.ssl.verify_mode == ssl.CERT_REQUIRED:
                     stream.close()
                     return
 
