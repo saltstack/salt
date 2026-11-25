@@ -164,7 +164,16 @@ def test_systemctl_stop_removes_proc_files(install_salt, salt_minion):
             assert not remaining, f"proc dir non-empty after clean stop: {remaining!r}"
 
     finally:
-        # Restart for any tests that follow.
+        # Restart for any tests that follow. Clear any accumulated
+        # ``StartLimitBurst`` state first: this suite stops+starts the
+        # unit explicitly, which (when combined with the unit's
+        # ``Restart=on-failure`` and prior fixture lifecycle starts)
+        # can push us up against ``StartLimitBurst`` in a long session
+        # and cause the teardown ``systemctl start`` to be refused with
+        # ``start-limit-hit``. ``reset-failed`` clears both the failed
+        # state and the start-limit counter without changing semantics
+        # for the subsequent start.
+        _systemctl("reset-failed", "salt-minion")
         _systemctl("start", "salt-minion")
         _wait_for(
             _minion_running_via_systemd,

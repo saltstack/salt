@@ -44,7 +44,7 @@ def cachedir_tree(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def pillar_cache_dir(cachedir_tree):
-    pillar_cache_dir = cachedir_tree / "pillar"
+    pillar_cache_dir = cachedir_tree / "pillar_compile"
     pillar_cache_dir.mkdir()
     return pillar_cache_dir
 
@@ -190,3 +190,17 @@ def test_show_pillar_cache(cachedir_tree, pillar_cache_dir, pillar_cache_files):
                 ) as atomic_open_mock:
                     ret = pillar_runner.show_pillar_cache("fake-host")
                     assert ret == {}
+
+
+@pytest.mark.parametrize("func", ["show_pillar_cache", "clear_pillar_cache"])
+def test_cache_runners_need_pillar_cache(func):
+    """
+    Only the compilation cache is managed here, so ``minion_data_cache`` alone
+    is not enough.
+    """
+    with patch.dict(
+        pillar_runner.__opts__, {"pillar_cache": False, "minion_data_cache": True}
+    ):
+        with patch("salt.utils.minions.CkMinions.check_minions") as check_minions:
+            assert getattr(pillar_runner, func)() is False
+    check_minions.assert_not_called()

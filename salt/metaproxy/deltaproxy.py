@@ -124,6 +124,7 @@ async def post_master_init(self, master):
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=True,
         ).compile_pillar()
 
         # Ensure that the value of master is the one we passed in.
@@ -511,6 +512,7 @@ async def subproxy_post_master_init(minion_id, uid, opts, main_proxy, main_utils
         minion_id,
         saltenv=proxyopts["saltenv"],
         pillarenv=proxyopts.get("pillarenv"),
+        snapshot=True,
     ).compile_pillar()
 
     proxyopts["proxy"] = proxy_pillar.get("proxy", {})

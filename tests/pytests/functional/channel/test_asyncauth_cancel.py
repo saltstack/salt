@@ -605,3 +605,64 @@ async def test_fresh_authenticate_in_pending_cancel_window(
     # matters is that we spawned exactly one FRESH task, not that we
     # did not touch the master at all.
     assert auth_counter.value >= 1
+
+
+async def test_last_waiter_cancel_closes_channel_synchronously(
+    running_master,
+    cancel_minion_opts,
+    fresh_auth,
+    io_loop,
+):
+    """
+    Property 4: When the sole waiter cancels, ``_on_waiter_done`` must
+    close the sign-in task's request channel *synchronously*, inside the
+    same done-callback that requests the task cancellation.
+
+    ``task.cancel()`` is cooperative: unwinding the task through
+    ``async with AsyncReqChannel`` + ``close_async()`` (drain
+    ``_send_recv``, close the socket) takes several more loop
+    iterations.  A caller released by ``run_until_complete`` /
+    ``run_sync`` can close the loop before those iterations run,
+    leaving the task ``cancelling`` with its REQ socket still open;
+    the next ``gc.collect()`` then blocks forever in
+    ``zmq_ctx_term()`` (issue #70857, same end state as #70353).
+    The synchronous close must therefore complete before the caller
+    is released -- which is what this test pins: one loop tick after
+    ``future.cancel()`` the socket and context must already be
+    closed, not merely unwinding.
+    """
+    auth = salt.crypt.AsyncAuth(cancel_minion_opts, io_loop=io_loop)
+
+    future = auth.authenticate()
+    task = auth._sign_in_task
+    assert task is not None
+
+    # Let the sign-in task get its request on the wire: the lazy
+    # connect in ``transport.send`` has created the REQ socket and
+    # spawned ``_send_recv``.
+    await asyncio.sleep(0.2)
+
+    channel = getattr(task, "_sign_in_channel", None)
+    assert channel is not None, "sign-in task must expose its live channel"
+    transport = channel.transport
+    socket = transport.socket
+    context = transport.context
+    assert socket is not None and not socket.closed
+    assert context is not None and not context.closed
+
+    future.cancel()
+    # Drain the loop once so the future's done-callbacks ran.  This is
+    # the last moment a caller-side ``run_until_complete`` could stop
+    # the loop -- the teardown must already be done.
+    await asyncio.sleep(0)
+
+    assert auth._sign_in_task is None
+    assert channel._closing is True
+    assert transport._closing is True
+    assert socket.closed, (
+        "REQ socket must be closed synchronously on last-waiter cancel; "
+        "leaving it open wedges a later gc.collect() in zmq_ctx_term()"
+    )
+    assert (
+        context.closed
+    ), "zmq context must be destroyed synchronously on last-waiter cancel"

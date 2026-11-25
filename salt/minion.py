@@ -966,6 +966,7 @@ class MinionBase:
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             try:
                 self.opts["pillar"] = pillar.compile_pillar()
@@ -2161,7 +2162,26 @@ class MinionManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
-                self.io_loop.close()
+                try:
+                    # A background task, for example a sign-in that waits for a
+                    # master that is down, holds sockets that it only closes
+                    # while it unwinds.  That needs the loop to keep running
+                    # after the cancel, so cancel the tasks and let them finish
+                    # before the loop is closed.  Without this their sockets
+                    # stay open and the garbage collector later blocks in
+                    # zmq_ctx_term() (#70624, #70857).  ``destroy()`` may have
+                    # cancelled the tasks already (SIGTERM); those are waited
+                    # for as well.
+                    salt.utils.asynchronous.cancel_and_drain(
+                        self.io_loop, list(self._background_tasks)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    # Best effort.  Whatever goes wrong while draining, for
+                    # example something stopping the loop, the loop must still
+                    # be closed and the minion must go on stopping.
+                    log.warning("Error draining the event loop", exc_info=True)
+                finally:
+                    self.io_loop.close()
 
     @property
     def restart(self):
@@ -2494,6 +2514,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
             # Async aclose awaits the transport's send/recv exit
@@ -4891,6 +4912,7 @@ class Minion(MinionBase):
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
                 clean_cache=clean_cache,
+                snapshot=True,
             )
             try:
                 new_pillar = await async_pillar.compile_pillar()
@@ -5253,7 +5275,10 @@ class Minion(MinionBase):
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error firing master request return event: %s", exc)
             else:
-                log.error(
+                # Benign skip: this req was issued against a different master
+                # in a multi-master / failover topology.  Normal routing
+                # behaviour, not an error condition.  See #70891.
+                log.debug(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
                     data["cmd"],
                     job_master,
@@ -5946,7 +5971,21 @@ class Minion(MinionBase):
                 self.destroy()
             finally:
                 if not self.io_loop.is_closed():
-                    self.io_loop.close()
+                    try:
+                        # Same hazard as ``MinionManager.tune_in``: a
+                        # background task (sign-in, mine send, reconnect)
+                        # that is still waiting when the loop stops only
+                        # closes its sockets while it unwinds after a
+                        # cancel, which needs more loop iterations.
+                        # Drain here so a later ``gc.collect()`` does not
+                        # block in ``zmq_ctx_term()`` (#70624, #70857).
+                        salt.utils.asynchronous.cancel_and_drain(
+                            self.io_loop, list(self._background_tasks)
+                        )
+                    except Exception:  # pylint: disable=broad-except
+                        log.warning("Error draining the event loop", exc_info=True)
+                    finally:
+                        self.io_loop.close()
 
     async def _handle_payload(self, payload):
         if payload is not None and payload["enc"] == "aes":
@@ -6966,7 +7005,19 @@ class SyndicManager(MinionBase):
             pass
         finally:
             if not self.io_loop.is_closed():
-                self.io_loop.close()
+                try:
+                    # Same hazard as ``MinionManager.tune_in``: drain
+                    # the syndic's background tasks so their sockets
+                    # close before the loop does, and a later
+                    # ``gc.collect()`` doesn't block in
+                    # ``zmq_ctx_term()`` (#70624, #70857).
+                    salt.utils.asynchronous.cancel_and_drain(
+                        self.io_loop, list(self._background_tasks)
+                    )
+                except Exception:  # pylint: disable=broad-except
+                    log.warning("Error draining the event loop", exc_info=True)
+                finally:
+                    self.io_loop.close()
 
     async def _process_event(self, raw):
         # TODO: cleanup: Move down into event class
@@ -7305,6 +7356,7 @@ class SProxyMinion(SMinion):
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=True,
         )
         try:
             new_pillar = pillar.compile_pillar()

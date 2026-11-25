@@ -163,7 +163,8 @@ if ( Test-Path -Path "$BUILDENV_DIR\salt-minion.exe" ) {
 # Build the exit stub (vcredist): a real PE that exits immediately with code 0
 # so ExecWait succeeds and the installer does not abort during VCRedist install.
 $prereq_files = "vcredist_x86_2022.exe",
-                "vcredist_x64_2022.exe"
+                "vcredist_x64_2022.exe",
+                "vcredist_a64_2022.exe"
 $prereq_files | ForEach-Object {
     Write-Host "Building $_`: " -NoNewline
     & go build -C "$SCRIPT_DIR\stubs\exit" -o "$PREREQS_DIR\$_" .

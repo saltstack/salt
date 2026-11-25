@@ -620,3 +620,19 @@ def test_client_cmd_as_aligns_environment(monkeypatch):
     with patch("salt.utils.user.chugid"):
         result = saltutil._client_cmd_as("salt", _EnvClient(), "test.ping", {})
     assert result == "/home/salt"
+
+
+def test_cmd_iter_yields_what_the_client_returns():
+    client = MagicMock()
+    client.cmd_iter.return_value = iter([{"minion1": {"ret": True}}, {"minion2": {}}])
+    with patch("salt.client.get_local_client", return_value=client):
+        ret = list(saltutil.cmd_iter("*", "test.ping", ret="returner"))
+    assert ret == [{"minion1": {"ret": True}}, {"minion2": {}}]
+
+
+def test_cmd_iter_passes_the_returner_to_the_client():
+    client = MagicMock()
+    client.cmd_iter.return_value = iter([])
+    with patch("salt.client.get_local_client", return_value=client):
+        list(saltutil.cmd_iter("*", "test.ping", ret="returner"))
+    assert client.cmd_iter.call_args.args[5] == "returner"
