@@ -939,47 +939,60 @@ class SaltEvent:
         # running asyncio loop and could hit the nested-SyncWrapper
         # deadlock / dead-loop-cache issues it fixes.
         async_mworker = bool(self.opts.get("master_async_mworker", False))
-        if not async_mworker:
-            if self._run_io_loop_sync:
-                # pusher is a SyncWrapper; publish() runs synchronously.
-                self.pusher.publish(msg)
+        try:
+            if not async_mworker:
+                if self._run_io_loop_sync:
+                    # pusher is a SyncWrapper; publish() runs synchronously.
+                    self.pusher.publish(msg)
+                else:
+                    await self.pusher.publish(msg)
             else:
-                await self.pusher.publish(msg)
-        else:
-            # ``self.pusher`` may be a ``SyncWrapper`` (constructed with
-            # ``io_loop=None`` in ``AESFuncs.__init__`` etc.).  Its
-            # ``publish`` normally runs synchronously via ``run_sync`` on
-            # the wrapper's own io_loop.  But when ``fire_event_async``
-            # is invoked from a running asyncio loop -- as async-dispatched
-            # master handlers do (``_pillar``, ``_return``,
-            # ``_minion_event`` etc.) -- going through SyncWrapper races
-            # both (a) the SyncWrapper's own loop teardown (RuntimeError:
-            # Event loop stopped before Future completed) and (b) the
-            # nested-SyncWrapper deadlock that Bug 1 patched at the outer
-            # ``PublishServer.publish`` level.
-            #
-            # Reach into ``self.pusher.obj`` -- the raw async publisher --
-            # and await its ``publish`` directly on the running loop.  The
-            # per-loop cache from Bug 1 handles the fact that the
-            # publisher was constructed on the SyncWrapper's io_loop and
-            # is now being invoked from a different loop.
-            underlying = getattr(self.pusher, "obj", None)
-            if (
-                self._run_io_loop_sync
-                and underlying is not None
-                and hasattr(underlying, "publish")
-            ):
-                result = underlying.publish(msg)
-                if inspect.isawaitable(result):
-                    await result
-            elif self._run_io_loop_sync:
-                # No async publisher available; fall back to the sync path
-                # by running it in the default executor so we don't block
-                # our own event loop.
-                loop = asyncio.get_running_loop()
-                await loop.run_in_executor(None, self.pusher.publish, msg)
-            else:
-                await self.pusher.publish(msg)
+                # ``self.pusher`` may be a ``SyncWrapper`` (constructed with
+                # ``io_loop=None`` in ``AESFuncs.__init__`` etc.).  Its
+                # ``publish`` normally runs synchronously via ``run_sync`` on
+                # the wrapper's own io_loop.  But when ``fire_event_async``
+                # is invoked from a running asyncio loop -- as async-dispatched
+                # master handlers do (``_pillar``, ``_return``,
+                # ``_minion_event`` etc.) -- going through SyncWrapper races
+                # both (a) the SyncWrapper's own loop teardown (RuntimeError:
+                # Event loop stopped before Future completed) and (b) the
+                # nested-SyncWrapper deadlock that Bug 1 patched at the outer
+                # ``PublishServer.publish`` level.
+                #
+                # Reach into ``self.pusher.obj`` -- the raw async publisher --
+                # and await its ``publish`` directly on the running loop.  The
+                # per-loop cache from Bug 1 handles the fact that the
+                # publisher was constructed on the SyncWrapper's io_loop and
+                # is now being invoked from a different loop.
+                underlying = getattr(self.pusher, "obj", None)
+                if (
+                    self._run_io_loop_sync
+                    and underlying is not None
+                    and hasattr(underlying, "publish")
+                ):
+                    result = underlying.publish(msg)
+                    if inspect.isawaitable(result):
+                        await result
+                elif self._run_io_loop_sync:
+                    # No async publisher available; fall back to the sync path
+                    # by running it in the default executor so we don't block
+                    # our own event loop.
+                    loop = asyncio.get_running_loop()
+                    await loop.run_in_executor(None, self.pusher.publish, msg)
+                else:
+                    await self.pusher.publish(msg)
+        except Exception as exc:  # pylint: disable=broad-except
+            if not async_mworker:
+                raise
+            # Same as fire_event: events are best-effort, so a closed or
+            # unreachable event bus must not fail the request that fired
+            # this event.
+            log.warning(
+                "Publisher send failed, dropping event tag=%s: %r",
+                tag,
+                exc,
+                exc_info_on_loglevel=logging.DEBUG,
+            )
 
     def fire_event(self, data, tag, timeout=1000):
         """
@@ -1045,9 +1058,10 @@ class SaltEvent:
                 # this leaks tens of GB per minute (observed
                 # ~66 GB in a single MWorker within a few minutes).
                 log.warning(
-                    "Publisher send failed, dropping event tag=%s: %s",
+                    "Publisher send failed, dropping event tag=%s: %r",
                     tag,
                     exc,
+                    exc_info_on_loglevel=logging.DEBUG,
                 )
         else:
             task = self.io_loop.create_task(self.pusher.publish(msg))
