@@ -12,6 +12,8 @@ back every master-initiated job) raised
 
 import asyncio
 import gc
+import logging
+import time
 import warnings
 
 import pytest
@@ -464,3 +466,213 @@ def test_syncwrapper_del_forked_child_does_not_touch_parent_resources_70175(
         "forked-child SyncWrapper.__del__ must NOT close the shared asyncio_loop "
         "(fork-safety guard broken -- parent's transport would be destroyed)"
     )
+
+
+def test_cancel_and_drain_lets_cancelled_tasks_unwind():
+    """
+    A cancelled task only runs its ``finally`` block while the loop keeps
+    running.  ``cancel_and_drain`` must keep the loop running until the
+    cleanup is done, so that the caller can close the loop afterwards.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # cleanup that needs several more loop iterations, like closing a
+            # channel with ``await``
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        asynchronous.cancel_and_drain(loop, [task])
+    finally:
+        loop.close()
+    assert cleaned == [True]
+    assert task.cancelled()
+
+
+def test_cancel_and_drain_waits_for_tasks_cancelled_as_a_consequence():
+    """
+    Cancelling a caller can make a done callback cancel another task, like the
+    sign-in task when its last caller goes away.  That task has to unwind too.
+    """
+    loop = asyncio.new_event_loop()
+    cleaned = []
+    waiter = loop.create_future()
+
+    async def sign_in():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            cleaned.append("sign_in")
+
+    async def caller():
+        await waiter
+
+    sign_in_task = loop.create_task(sign_in())
+    waiter.add_done_callback(lambda _: sign_in_task.cancel())
+    caller_task = loop.create_task(caller())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        asynchronous.cancel_and_drain(loop, [caller_task])
+    finally:
+        loop.close()
+    assert cleaned == ["sign_in"]
+
+
+def test_cancel_and_drain_does_not_log_failed_cleanups_as_unretrieved(caplog):
+    """
+    A task whose cleanup raises must not make asyncio log "Task exception was
+    never retrieved" at shutdown.
+    """
+    loop = asyncio.new_event_loop()
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            raise ValueError("cleanup failed")
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        asynchronous.cancel_and_drain(loop, [task])
+    finally:
+        loop.close()
+    del task
+    with caplog.at_level(logging.ERROR, logger="asyncio"):
+        gc.collect()
+    assert "never retrieved" not in caplog.text
+
+
+def test_cancel_and_drain_closes_a_zmq_socket_held_by_the_task():
+    """
+    The reason for draining: a task closes its socket only while it unwinds
+    after the cancel.  If the loop is closed right after the cancel, the socket
+    stays open and the garbage collector later blocks in ``zmq_ctx_term()``.
+    """
+    zmq = pytest.importorskip("zmq")
+    zmq_asyncio = pytest.importorskip("zmq.asyncio")
+    loop = asyncio.new_event_loop()
+    context = zmq_asyncio.Context()
+    socket = context.socket(zmq.REQ)
+    socket.setsockopt(zmq.LINGER, 0)
+    # nothing listens here, connecting does not block
+    socket.connect("tcp://127.0.0.1:1")
+
+    async def worker():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            # like ``close_async()``, the socket is closed after an ``await``
+            await asyncio.sleep(0)
+            socket.close()
+
+    task = loop.create_task(worker())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        assert not socket.closed
+        asynchronous.cancel_and_drain(loop, [task])
+        assert socket.closed
+    finally:
+        loop.close()
+        context.destroy(linger=0)
+
+
+def test_cancel_and_drain_ignores_finished_tasks_and_can_run_twice():
+    loop = asyncio.new_event_loop()
+
+    async def quick():
+        return 1
+
+    task = loop.create_task(quick())
+    loop.run_until_complete(task)
+    try:
+        asynchronous.cancel_and_drain(loop, [task])
+        assert not task.cancelled()
+        assert task.result() == 1
+        asynchronous.cancel_and_drain(loop, [task])
+    finally:
+        loop.close()
+
+
+def test_cancel_and_drain_leaves_other_tasks_alone():
+    """
+    The code that owns a task may close it later and expect that it was not
+    cancelled (``MinionManager.destroy()`` and the event publisher).
+    """
+    loop = asyncio.new_event_loop()
+    mine = loop.create_task(asyncio.sleep(3600))
+    other = loop.create_task(asyncio.sleep(3600))
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        asynchronous.cancel_and_drain(loop, [mine])
+        assert mine.cancelled()
+        assert not other.done()
+        assert other.cancelling() == 0
+    finally:
+        other.cancel()
+        loop.run_until_complete(asyncio.gather(other, return_exceptions=True))
+        loop.close()
+
+
+def test_cancel_and_drain_gives_up_after_the_timeout(caplog):
+    """
+    A task that does not stop must not keep the caller from going on, and the
+    warning says which coroutine it is.
+    """
+    loop = asyncio.new_event_loop()
+    stop = []
+
+    async def stubborn():
+        while not stop:
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                pass
+
+    task = loop.create_task(stubborn())
+    loop.run_until_complete(asyncio.sleep(0))
+    try:
+        start = time.monotonic()
+        with caplog.at_level(logging.WARNING):
+            asynchronous.cancel_and_drain(loop, [task], timeout=0.3)
+        elapsed = time.monotonic() - start
+        assert not task.done()
+        assert elapsed < 5
+        assert "did not finish" in caplog.text
+        assert "stubborn" in caplog.text
+    finally:
+        # let the task finish so that the loop can be closed cleanly
+        stop.append(True)
+        asynchronous.cancel_and_drain(loop, [task])
+        loop.close()
+    assert task.done()
+
+
+def test_cancel_and_drain_leaves_unusable_loops_alone():
+    asynchronous.cancel_and_drain(None, [])
+
+    loop = asyncio.new_event_loop()
+    task = loop.create_task(asyncio.sleep(3600))
+    loop.run_until_complete(asyncio.sleep(0))
+
+    # a running loop cannot be driven from the inside, nothing is cancelled
+    async def inside():
+        asynchronous.cancel_and_drain(loop, [task])
+
+    loop.run_until_complete(inside())
+    assert not task.cancelling()
+
+    task.cancel()
+    loop.run_until_complete(asyncio.gather(task, return_exceptions=True))
+    loop.close()
+    asynchronous.cancel_and_drain(loop, [])

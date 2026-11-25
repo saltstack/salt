@@ -234,16 +234,23 @@ def get_opts():
 
 def cross_test(func, args=None):
     """
-    Execute a minion function via the ``__salt__`` object in the test
-    module, used to verify that the Minion functions can be called
-    via the ``__salt__`` module.
+    Execute a minion function and return its result.  Used to verify
+    that minion functions can be invoked reflectively (e.g. by schedule
+    entries or orchestration states that pass a function name as data).
 
-    ``__salt__`` is the unfiltered inner loader, so ``cross_test`` can
-    reach any loaded function regardless of ``whitelist_modules``.
-    An operator who whitelists ``test.cross_test`` is granting
-    reflective access to every execution module; prefer
-    :func:`cross_test_safe` when the dispatch target should be subject
-    to the whitelist.
+    Dispatch goes through the whitelist-gated loader
+    (``__wire_salt__``), so ``whitelist_modules`` applies to the
+    target as well as to ``test.cross_test`` itself: a non-whitelisted
+    target raises ``KeyError``.
+
+    .. versionchanged:: 3008.7
+
+        Previously dispatched via the unfiltered inner ``__salt__``,
+        which let a caller who whitelisted ``test.cross_test`` reach
+        any execution module function.  ``cross_test`` now honours the
+        whitelist.  Callers that depended on the earlier reflective
+        behaviour must whitelist the specific target functions (either
+        bare ``module`` or ``module.func``).
 
     CLI Example:
 
@@ -253,29 +260,9 @@ def cross_test(func, args=None):
     """
     if args is None:
         args = []
-    return __salt__[func](*args)
-
-
-def cross_test_safe(func, args=None):
-    """
-    Execute a minion function via the whitelist-gated loader
-    (``__wire_salt__``).  Unlike :func:`cross_test`, which uses the
-    unfiltered inner ``__salt__``, this variant dispatches through the
-    outer wire-filtered loader so ``whitelist_modules`` applies to the
-    target function as well as to ``test.cross_test_safe`` itself.
-
-    Fails with ``KeyError`` when ``func`` is not whitelisted.
-
-    CLI Example:
-
-    .. code-block:: bash
-
-        salt '*' test.cross_test_safe test.ping
-    """
-    if args is None:
-        args = []
     # pylint: disable=undefined-variable
-    return __wire_salt__[func](*args)  # noqa: F821  (packed by salt.loader.minion_mods)
+    return __wire_salt__[func](*args)  # noqa: F821
+    # pylint: enable=undefined-variable
 
 
 def kwarg(**kwargs):
@@ -614,6 +601,17 @@ def try_(module, return_try_exception=False, **kwargs):
     If ``return_try_exception`` is set to ``True``, return the exception.
     This can be helpful in templates where running a module might fail as expected.
 
+    Dispatch goes through the whitelist-gated loader
+    (``__wire_salt__``), so ``whitelist_modules`` applies to ``module``:
+    a non-whitelisted target raises ``KeyError`` which this function
+    treats as any other failure (returning ``None`` or the exception
+    depending on ``return_try_exception``).
+
+    .. versionchanged:: 3008.7
+
+        Previously dispatched via the unfiltered inner ``__salt__``.
+        See :func:`cross_test` for the equivalent note.
+
     Jinja Example:
 
     .. code-block:: jinja
@@ -623,7 +621,10 @@ def try_(module, return_try_exception=False, **kwargs):
         {% endfor %}
     """
     try:
-        return __salt__[module](**kwargs)
+        # pylint: disable=undefined-variable
+        fun = __wire_salt__[module]  # noqa: F821
+        # pylint: enable=undefined-variable
+        return fun(**kwargs)
     except Exception as e:  # pylint: disable=broad-except
         if return_try_exception:
             return e

@@ -2254,6 +2254,83 @@ def purge(name=None, pkgs=None, **kwargs):  # pylint: disable=W0613
     return remove(name=name, pkgs=pkgs)
 
 
+def _require_dnf():
+    yum_bin = _yum()
+    if yum_bin not in ("dnf", "dnf5"):
+        raise CommandExecutionError(f"Package marks are not supported by {yum_bin}")
+    return yum_bin
+
+
+def get_mark(mark="auto"):
+    """
+    .. versionadded:: 3008.0
+
+    Return the installed packages that have the given install reason. Requires
+    ``dnf`` or ``dnf5``.
+
+    mark
+        Either ``auto`` (installed to satisfy another package, and removable by
+        ``dnf autoremove``; dnf calls this ``dependency``) or ``manual`` (dnf
+        calls this ``user``). Default is ``auto``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_mark
+        salt '*' pkg.get_mark mark=manual
+    """
+    if mark not in ("auto", "manual"):
+        raise SaltInvocationError("mark must be one of 'auto' or 'manual'.")
+    _require_dnf()
+    out = _call_yum(["repoquery", "--userinstalled", "--queryformat", r"%{name}\n"])
+    if out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to list user installed packages: {out['stderr']}"
+        )
+    user = set(out["stdout"].split())
+    if mark == "manual":
+        return sorted(user)
+    return sorted(set(list_pkgs()) - user)
+
+
+def set_mark(pkgs, mark="manual"):
+    """
+    .. versionadded:: 3008.0
+
+    Set the install reason on packages (``dnf mark install`` on dnf, ``dnf5
+    mark user`` on dnf5). Always acts; deciding whether a change is needed, and
+    honouring ``test=True``, is up to the caller (e.g. the
+    :py:func:`pkg.installed <salt.states.pkg.installed>` state). Only
+    ``manual`` is supported.
+
+    pkgs
+        A list of packages to mark. Must be passed as a python list.
+
+    mark
+        Only ``manual`` is supported.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.set_mark pkgs='["jq", "oniguruma"]' mark=manual
+    """
+    if mark != "manual":
+        raise SaltInvocationError("Only mark=manual is supported.")
+    if not pkgs:
+        raise SaltInvocationError("pkgs must be specified.")
+    yum_bin = _require_dnf()
+    # dnf calls this "mark install"; dnf5 renamed it to "mark user"
+    action = "user" if yum_bin == "dnf5" else "install"
+    out = _call_yum(["mark", action, *pkgs])
+    if out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to mark packages as user installed: {out['stderr']}"
+        )
+    return True
+
+
 def hold(
     name=None, pkgs=None, sources=None, normalize=True, **kwargs
 ):  # pylint: disable=W0613

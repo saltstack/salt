@@ -2,6 +2,7 @@ import asyncio
 import gc
 import os
 import socket
+import ssl
 import warnings
 import weakref
 
@@ -2000,6 +2001,147 @@ def test_pub_server_apply_write_buffer_cap_helper(master_opts, io_loop):
     stream2 = Stream2()
     server2._apply_write_buffer_cap(stream2)
     assert stream2.max_write_buffer_size == "sentinel"
+
+
+# ---------------------------------------------------------------------------
+# Issue #70771: ``PubServer._validate_ssl_and_add_client`` closed every TLS
+# subscriber that did not present a client certificate, even when the
+# server's SSL context did not require one (``ssl.cert_reqs: CERT_NONE``).
+# ``SSLSocket.getpeercert()`` is falsy whenever the peer sent no cert,
+# regardless of the context's ``verify_mode``, so the ``if not cert:``
+# guard dropped every server-only-TLS subscriber.  The guard now only
+# rejects a cert-less peer when the context requires a certificate.
+# ---------------------------------------------------------------------------
+
+
+async def test_pub_server_ssl_cert_none_accepts_certless_subscriber(
+    master_opts, io_loop
+):
+    """
+    With ``cert_reqs: CERT_NONE`` the master uses server-only TLS: minions
+    verify the master's certificate and present none of their own.  The
+    publish server must accept those subscribers.  See issue #70771.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.verify_mode = ssl.CERT_NONE
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop, ssl=context)
+
+    class Stream:
+        def __init__(self):
+            self.socket = MagicMock()
+            # ``handle_stream`` runs while the TLS handshake is still in
+            # flight (ValueError); by the time the deferred validation runs
+            # the handshake is done and the peer sent no certificate.
+            self.socket.getpeercert.side_effect = [
+                ValueError("SSL handshake not done yet"),
+                None,
+            ]
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(server, "_stream_read", AsyncMock()):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+            # ``handle_stream`` defers to ``_validate_ssl_and_add_client``
+            # via ``io_loop.create_task``; let the scheduled task run.
+            await asyncio.sleep(0.1)
+
+            assert not stream.closed()
+            assert len(server.clients) == 1
+    finally:
+        server.close()
+
+
+async def test_pub_server_ssl_cert_required_rejects_certless_subscriber(
+    master_opts, io_loop
+):
+    """
+    With ``cert_reqs: CERT_REQUIRED`` a TLS subscriber that completes the
+    handshake without presenting a client certificate must still be
+    rejected by the deferred validation guard.
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.verify_mode = ssl.CERT_REQUIRED
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop, ssl=context)
+
+    class Stream:
+        def __init__(self):
+            self.socket = MagicMock()
+            self.socket.getpeercert.side_effect = [
+                ValueError("SSL handshake not done yet"),
+                None,
+            ]
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(server, "_stream_read", AsyncMock()):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+            await asyncio.sleep(0.1)
+
+            assert stream.closed()
+            assert not server.clients
+    finally:
+        server.close()
+
+
+async def test_pub_server_ssl_cert_optional_accepts_subscriber_with_cert(
+    master_opts, io_loop
+):
+    """
+    A TLS subscriber presenting a client certificate is accepted regardless
+    of ``verify_mode`` (control case using ``CERT_OPTIONAL``).
+    """
+    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    context.verify_mode = ssl.CERT_OPTIONAL
+    server = salt.transport.tcp.PubServer(master_opts, io_loop=io_loop, ssl=context)
+
+    class Stream:
+        def __init__(self):
+            self.socket = MagicMock()
+            self.socket.getpeercert.side_effect = [
+                ValueError("SSL handshake not done yet"),
+                {"subject": ((("commonName", "minion1"),),)},
+            ]
+            self._closed = False
+
+        def set_close_callback(self, cb):
+            pass
+
+        def close(self):
+            self._closed = True
+
+        def closed(self):
+            return self._closed
+
+    stream = Stream()
+    try:
+        with patch.object(server, "_stream_read", AsyncMock()):
+            server.handle_stream(stream, ("127.0.0.1", 12345))
+            await asyncio.sleep(0.1)
+
+            assert not stream.closed()
+            assert len(server.clients) == 1
+    finally:
+        server.close()
 
 
 # ---------------------------------------------------------------------------

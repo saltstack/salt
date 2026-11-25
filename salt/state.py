@@ -1057,6 +1057,11 @@ class State:
             self.opts["saltenv"],
             pillar_override=self._pillar_override,
             pillarenv=self.opts.get("pillarenv"),
+            # A one-off ``pillarenv`` or pillar override is not the pillar the
+            # minion holds, so the master must not use it for targeting.
+            snapshot=not (
+                self._pillar_override or self.opts.get("__pillarenv_overridden")
+            ),
         )
         try:
             return pillar.compile_pillar()
@@ -3734,7 +3739,10 @@ class LazyAvailStates:
     def _fill(self) -> None:
         if self._filled:
             return
-        for saltenv in self._hs._get_envs():
+        # ``env_order`` only orders and limits the top files that are
+        # evaluated; it must not hide environments (for example gitfs branches
+        # that become saltenvs) which exist on the fileserver.
+        for saltenv in self._hs._get_envs(restrict_to_env_order=False):
             if saltenv not in self._avail:
                 self._avail[saltenv] = None
         self._filled = True
@@ -3886,9 +3894,13 @@ class BaseHighState:
             opts["jinja_trim_blocks"] = mopts.get("jinja_trim_blocks", False)
         return opts
 
-    def _get_envs(self):
+    def _get_envs(self, restrict_to_env_order=True):
         """
         Pull the file server environments out of the master options
+
+        When ``env_order`` is configured the result is limited to (and ordered
+        by) it, unless ``restrict_to_env_order`` is ``False``, in which case
+        every environment known to the fileserver is returned.
         """
         envs = ["base"]
         if "file_roots" in self.opts:
@@ -3900,14 +3912,15 @@ class BaseHighState:
             env for env in env_order if not (env in members or members.add(env))
         ]
         client_envs = self.client.envs()
-        if env_order and client_envs:
-            return [env for env in env_order if env in client_envs]
-
-        elif env_order:
+        if restrict_to_env_order:
+            if env_order and client_envs:
+                return [env for env in env_order if env in client_envs]
+            elif env_order:
+                return env_order
+        elif env_order and not client_envs:
             return env_order
-        else:
-            envs.extend([env for env in client_envs if env not in envs])
-            return envs
+        envs.extend([env for env in client_envs if env not in envs])
+        return envs
 
     def get_tops(self, context=None):
         """
@@ -4327,6 +4340,19 @@ class BaseHighState:
                 _filter_matches(match, data, self.opts["nodegroups"])
         ext_matches = self._master_tops()
         for saltenv in ext_matches:
+            if self.opts["saltenv"] and saltenv != self.opts["saltenv"]:
+                # A saltenv was explicitly requested for this run. Top file
+                # sections for other saltenvs are skipped above, so master_tops
+                # data for other saltenvs has to be skipped too, otherwise the
+                # run pulls in states -- and, through load_dynamic(), custom
+                # modules -- from a saltenv it was told not to use.
+                log.debug(
+                    "master_tops data for saltenv '%s' will be ignored, as this "
+                    "state run is pinned to saltenv '%s'",
+                    saltenv,
+                    self.opts["saltenv"],
+                )
+                continue
             top_file_matches = matches.get(saltenv, [])
             if self.opts.get("master_tops_first"):
                 first = ext_matches[saltenv]
@@ -4388,7 +4414,22 @@ class BaseHighState:
         """
         if not self.opts["autoload_dynamic_modules"]:
             return
-        syncd = self.state.functions["saltutil.sync_all"](list(matches), refresh=False)
+        if self.opts["saltenv"]:
+            # The state run is pinned to a single saltenv, so the dynamic
+            # modules have to come from that saltenv and nowhere else.
+            #
+            # ``matches`` cannot be trusted here: it can carry additional
+            # saltenvs picked up from master_tops data or from cross-saltenv
+            # ``- <saltenv>: <sls>`` entries in the top file. Every synced
+            # saltenv is copied into the same flat ``extension_modules``
+            # directory, so the last saltenv synced silently wins. That let a
+            # ``state.apply saltenv=qa`` clobber the qa copy of a custom module
+            # with the ``base`` copy, and left it clobbered for later runs.
+            saltenvs = [self.opts["saltenv"]]
+        else:
+            saltenvs = list(matches)
+        log.debug("Syncing dynamic modules from saltenv(s): %s", saltenvs)
+        syncd = self.state.functions["saltutil.sync_all"](saltenvs, refresh=False)
         if syncd["grains"]:
             self.opts["grains"] = salt.loader.grains(self.opts)
             self.state.opts["pillar"] = self.state._gather_pillar()

@@ -62,8 +62,8 @@ known_third_party = [
 ]
 
 [tool.ruff]
-# Match the minimum Python version declared by this project.
-target-version = "py38"
+# Salt 3008 runs on the Python 3.14 that it ships.
+target-version = "py314"
 line-length = 88
 extend-exclude = ["salt/ext", "templates"]
 # Names Salt injects into modules at load time. Keep in sync with
@@ -96,6 +96,12 @@ builtins = [
     "napalm_device",
 ]
 
+[tool.ruff.per-file-target-version]
+# These files go into the salt-ssh thin and run on the Python of the target host.
+"salt/client/ssh/ssh_py_shim.py" = "py37"
+"salt/client/ssh/wrapper/pillar.py" = "py37"
+"salt/utils/systemd.py" = "py37"
+
 [tool.ruff.lint]
 # Only new violations block a PR (see tools/precommit/ruff.py), so a rule can be
 # enabled while old code still breaks it. Black remains the formatter.
@@ -105,121 +111,241 @@ builtins = [
 # list and add a case for it to tests/pytests/unit/test_ruff.py. Ruff is pinned in
 # .pre-commit-config.yaml, so a new Ruff release does not add rules by itself.
 select = ["ALL"]
+extend-select = [
+    # Rules of the families that are not enabled (see ignore), which nothing in the code breaks.
+    # A rule that is named here is enabled even if its family is in ignore.
+    "COM819",  # prohibited-trailing-comma
+    "D106",  # undocumented-public-nested-class
+    "D201",  # blank-line-before-function
+    "D204",  # incorrect-blank-line-after-class
+    "D206",  # docstring-tab-indentation
+    "D207",  # under-indentation
+    "D210",  # surrounding-whitespace
+    "D211",  # blank-line-before-class
+    "D215",  # overindented-section-underline
+    "D408",  # missing-section-underline-after-name
+    "D418",  # overload-with-docstring
+    "ISC002",  # multi-line-implicit-string-concatenation
+    "N811",  # constant-imported-as-non-constant
+    "N814",  # camelcase-imported-as-constant
+    "Q000",  # bad-quotes-inline-string
+    "Q001",  # bad-quotes-multiline-string
+    "Q002",  # bad-quotes-docstring
+    "Q003",  # avoidable-escaped-quote
+    "Q004",  # unnecessary-escaped-quote
+    "W191",  # tab-indentation
+]
 ignore = [
     "F403",  # star imports
     "F405",  # names from star imports
 
-    # Not enabled on purpose.
-    # COM: conflicts with the formatter (trailing commas)
-    # Q: conflicts with the formatter (quotes)
-    # ISC: implicit string concatenation, formatter decides
-    # D: docstring style, Salt has its own docstring checks
-    # DOC: docstring contents, Salt has its own docstring checks
-    # CPY: copyright header
-    # FIX: FIXME and TODO markers
-    # TD: TODO format
-    # ERA: commented-out code
-    # INP: implicit namespace packages
-    # EM: error message in a variable
-    # FBT: boolean positional arguments
-    # T20: print and pprint
-    # N: naming, renaming changes the public API
-    # ARG: unused arguments, Salt functions have fixed signatures
-    # E501: line length, black does not wrap long strings and comments
-    # W191: conflicts with the formatter (tab indentation)
-    # S101: assert, used throughout the tests
-    # TRY003: long messages in exceptions
-    # PLR2004: magic values
-    # C901, PLR0911, PLR0912, PLR0913, PLR0915, PLR0917: complexity threshold
-    # A002: parameter names that shadow builtins are part of the API
-    "A002", "ARG", "C901", "COM", "CPY", "D", "E501", "EM", "ERA", "FBT", "FIX", "INP",
-    "ISC", "N", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917", "PLR2004", "Q",
-    "S101", "TD", "TRY003", "W191",
+    # Not enabled on purpose. The rules of these families that nothing breaks are in
+    # extend-select above.
+    "A002",  # parameter names that shadow builtins are part of the API
+    "ARG",  # unused arguments, Salt functions have fixed signatures
+    "B008",  # calls in default arguments are how Salt sets its path defaults
+    "C901",  # complexity threshold
+    "COM",  # conflicts with the formatter (trailing commas)
+    "CPY",  # copyright header
+    "D",  # docstring style, Salt has its own docstring checks
+    "E501",  # line length, black does not wrap long strings and comments
+    "EM",  # error message in a variable
+    "ERA",  # commented-out code
+    "FBT",  # boolean positional arguments
+    "FIX",  # FIXME and TODO markers
+    "ICN001",  # import alias conventions are not part of the Salt style
+    "ISC",  # implicit string concatenation, formatter decides
+    "N",  # naming, renaming changes the public API
+    "PLR0911",  # complexity threshold
+    "PLR0912",  # complexity threshold
+    "PLR0913",  # complexity threshold
+    "PLR0915",  # complexity threshold
+    "PLR0917",  # complexity threshold
+    "PLR2004",  # magic values
+    "PT015",  # "assert False" is allowed in tests, as for B011
+    "Q",  # conflicts with the formatter (quotes)
+    "RUF001",  # typographic characters and unicode test data
+    "RUF002",  # typographic characters and unicode test data
+    "RUF003",  # typographic characters and unicode test data
+    "S101",  # assert, used throughout the tests
+    "T201",  # print and pprint
+    "T203",  # print and pprint
+    "TC001",  # moving an import into a TYPE_CHECKING block breaks code that reads the annotations at run time
+    "TC002",  # moving an import into a TYPE_CHECKING block breaks code that reads the annotations at run time
+    "TD",  # TODO format
+    "TRY003",  # long messages in exceptions
+
+    # The fix is not a habit to change: it changes the behavior, or goes against the
+    # way Salt is written.
+    "ASYNC110",  # the fix is a change of the design (an Event, to_thread)
+    "ASYNC240",  # the fix is a change of the design (an Event, to_thread)
+    "E402",  # imports after sys.path or the environment are set, and the project turned wrong-import-position off in .pylintrc
+    "G004",  # f-strings in logging are allowed (logging-fstring-interpolation is off in .pylintrc)
+    "PLR2044",  # a line with only # separates the paragraphs of a comment
+    "PLW2901",  # most of them are x = f(x) on the loop variable (line = line.strip())
+    "RUF015",  # the fix turns the IndexError of an empty sequence into a StopIteration
+    "SIM112",  # the Windows environment variables are written as Windows names them (SystemRoot, ProgramFiles)
+    "SIM115",  # temporary files and tar files that stay open longer than one block
+    "TRY004",  # a TypeError instead of the RuntimeError or ValueError that callers catch
+    "TRY301",  # a raise in a try block that the same try catches
+
+    # Report nothing without a setting, or cannot be triggered on their own.
+    # They are to be enabled together with their setting.
+    "E902",  # io-error
+    "I002",  # missing-required-import
+    "ICN002",  # banned-import-alias
+    "ICN003",  # banned-import-from
+    "RUF200",  # invalid-pyproject-toml
+    "TC007",  # unquoted-type-alias
+    "TID251",  # banned-api
+    "TID253",  # banned-module-level-imports
+    "W505",  # doc-line-too-long
 
     # Not decided yet.
-    # ANN: type annotations
-    # SLF001: private member access, mostly in tests
-    # PT009: unittest style assertions in tests
-    "ANN", "PT009", "SLF001",
+    "ANN",  # type annotations
+    "DTZ001",  # call-datetime-without-tzinfo
+    "DTZ002",  # call-datetime-today
+    "DTZ005",  # call-datetime-now-without-tzinfo
+    "DTZ006",  # call-datetime-fromtimestamp
+    "DTZ007",  # call-datetime-strptime-without-zone
+    "DTZ011",  # call-date-today
+    "PT009",  # unittest style assertions in tests
+    "PTH100",  # os-path-abspath
+    "PTH101",  # os-chmod
+    "PTH102",  # os-mkdir
+    "PTH104",  # os-rename
+    "PTH105",  # os-replace
+    "PTH106",  # os-rmdir
+    "PTH108",  # os-unlink
+    "PTH109",  # os-getcwd
+    "PTH114",  # os-path-islink
+    "PTH117",  # os-path-isabs
+    "PTH122",  # os-path-splitext
+    "PTH123",  # builtin-open
+    "PTH202",  # os-path-getsize
+    "PTH204",  # os-path-getmtime
+    "PTH207",  # glob
+    "PTH211",  # os-symlink
+    "PYI024",  # collections.namedtuple
+    "SLF001",  # private member access, mostly in tests
 
     # Security rules (flake8-bandit), to be decided one by one. Bandit still runs.
-    "S102", "S103", "S104", "S105", "S106", "S107", "S108", "S110", "S112", "S113",
-    "S201", "S202", "S301", "S303", "S306", "S307", "S308", "S310", "S311", "S314",
-    "S318", "S321", "S323", "S324", "S504", "S506", "S507", "S508", "S509", "S602",
-    "S603", "S604", "S605", "S607", "S608", "S610", "S611", "S701", "S702",
+    "S103",  # bad-file-permissions
+    "S104",  # hardcoded-bind-all-interfaces
+    "S105",  # hardcoded-password-string
+    "S108",  # hardcoded-temp-file
+    "S110",  # try-except-pass
+    "S112",  # try-except-continue
+    "S303",  # suspicious-insecure-hash-usage
+    "S306",  # suspicious-mktemp-usage
+    "S307",  # suspicious-eval-usage
+    "S310",  # suspicious-url-open-usage
+    "S311",  # suspicious-non-cryptographic-random-usage
+    "S314",  # suspicious-xml-element-tree-usage
+    "S318",  # suspicious-xml-mini-dom-usage
+    "S323",  # suspicious-unverified-context-usage
+    "S324",  # hashlib-insecure-hash-function
+    "S504",  # ssl-with-no-version
+    "S506",  # unsafe-yaml-load
+    "S507",  # ssh-no-host-key-verification
+    "S603",  # subprocess-without-shell-equals-true
+    "S604",  # call-with-shell-equals-true
+    "S607",  # start-process-with-partial-path
+    "S608",  # hardcoded-sql-expression
+    "S701",  # jinja2-autoescape-false
 
-    # Result depends on the Python version Ruff checks for, to be enabled after the
-    # minimum Python version is raised.
-    "ASYNC109", "B905", "B912", "FA102", "FURB188", "I001", "PERF203", "PTH115",
-    "RUF007", "TC003", "UP001", "UP003", "UP004", "UP005", "UP006", "UP007", "UP008",
-    "UP009", "UP010", "UP011", "UP012", "UP013", "UP014", "UP015", "UP017", "UP018",
-    "UP019", "UP020", "UP021", "UP022", "UP023", "UP024", "UP025", "UP026", "UP028",
-    "UP029", "UP030", "UP031", "UP032", "UP033", "UP034", "UP035", "UP036", "UP037",
-    "UP039", "UP040", "UP041", "UP042", "UP043", "UP044", "UP045", "UP046", "UP047",
-    "UP049", "UP050",
+    # Rules that depend on the Python version (3.14). The ones that nothing in the code
+    # breaks are enabled. These are left: four that have nothing to report on 3.14, and
+    # the ones with violations, to be decided one by one.
+    "ASYNC109",  # async-function-with-timeout
+    "B905",  # zip-without-explicit-strict
+    "B912",  # map-without-explicit-strict
+    "FA100",  # only reported for Python 3.8; nothing to report on 3.14
+    "FA102",  # future-required-type-annotation
+    "FAST001",  # does not report on the 3.14 version, and Salt does not use FastAPI
+    "I001",  # unsorted-imports
+    "PERF203",  # try-except-in-loop
+    "PTH115",  # os-readlink
+    "TC003",  # typing-only-standard-library-import
+    "TC010",  # only reported up to Python 3.13; annotations are not evaluated at once on 3.14
+    "UP007",  # non-pep604-annotation-union
+    "UP010",  # unnecessary-future-import
+    "UP013",  # convert-typed-dict-functional-to-class
+    "UP015",  # redundant-open-modes
+    "UP018",  # native-literals
+    "UP022",  # replace-stdout-stderr
+    "UP026",  # deprecated-mock-import
+    "UP030",  # format-literals
+    "UP031",  # printf-string-formatting
+    "UP032",  # f-string
+    "UP035",  # deprecated-import
+    "UP036",  # outdated-version-block
+    "UP037",  # quoted-annotation
+    "UP042",  # replace-str-enum
+    "UP047",  # non-pep695-generic-function
 
-    # Wave 1: no violation in the code today.
-    "A005", "A006", "AIR001", "AIR002", "AIR301", "AIR302", "AIR303", "AIR311",
-    "AIR312", "ASYNC100", "ASYNC105", "ASYNC115", "ASYNC116", "ASYNC212", "ASYNC221",
-    "B024", "B027", "B911", "C401", "C402", "C403", "C404", "C405", "C410", "C411",
-    "C415", "C417", "DJ001", "DJ003", "DJ006", "DJ007", "DJ008", "DJ012", "DJ013",
-    "DTZ901", "E101", "E401", "E701", "E702", "E703", "E731", "E902", "EXE002",
-    "EXE003", "EXE004", "EXE005", "FA100", "FAST001", "FAST002", "FAST003", "FURB161",
-    "FURB162", "FURB163", "FURB164", "FURB166", "FURB168", "FURB169", "FURB181",
-    "FURB187", "G003", "I002", "ICN002", "ICN003", "INT001", "INT002", "INT003",
-    "NPY001", "NPY002", "NPY003", "NPY201", "PD002", "PD003", "PD004", "PD007", "PD008",
-    "PD009", "PD010", "PD011", "PD012", "PD013", "PD015", "PD101", "PLC0105", "PLC0131",
-    "PLC0132", "PLC0414", "PLC1802", "PLC2401", "PLC2403", "PLW1510", "PLW3301",
-    "PT002", "PT008", "PT020", "PT024", "PT025", "PT026", "PTH124", "PTH201", "PTH203",
-    "PTH210", "PYI001", "PYI002", "PYI003", "PYI004", "PYI005", "PYI007", "PYI008",
-    "PYI009", "PYI010", "PYI011", "PYI012", "PYI013", "PYI014", "PYI015", "PYI016",
-    "PYI017", "PYI018", "PYI019", "PYI020", "PYI021", "PYI026", "PYI029", "PYI030",
-    "PYI032", "PYI033", "PYI035", "PYI041", "PYI042", "PYI043", "PYI044", "PYI045",
-    "PYI046", "PYI047", "PYI048", "PYI049", "PYI050", "PYI051", "PYI052", "PYI053",
-    "PYI054", "PYI055", "PYI056", "PYI057", "PYI058", "PYI059", "PYI061", "PYI062",
-    "PYI063", "PYI064", "PYI066", "RUF020", "RUF028", "RUF036", "RUF037", "RUF041",
-    "RUF049", "RUF053", "RUF058", "RUF063", "RUF104", "RUF200", "SIM911", "T100",
-    "TC004", "TC005", "TC007", "TC010", "TID251", "TID252", "TID253", "W291", "W292",
-    "W293", "W505",
+    # To be enabled last, when the set of rules is final. It reports the noqa comments
+    # of rules that are not enabled yet, and asks to delete them.
+    "RUF100",  # unused-noqa
 
-    # Wave 2: 1 to 10 violations.
-    "A003", "A004", "B028", "C400", "C406", "C409", "C413", "C418", "DTZ012", "FURB105",
-    "FURB116", "FURB122", "FURB129", "FURB132", "FURB136", "FURB157", "FURB177",
-    "FURB192", "G001", "ICN001", "LOG009", "LOG015", "PERF101", "PIE800", "PIE807",
-    "PLC0207", "PLR0124", "PLR0206", "PLR1716", "PLR1722", "PLR1736", "PLW0108",
-    "PLW0602", "PLW1508", "PLW1509", "PT013", "PT021", "PT023", "PTH121", "PTH205",
-    "PTH206", "PYI006", "PYI025", "PYI034", "PYI036", "RUF017", "RUF022", "RUF023",
-    "RUF102", "SIM109", "SIM116", "SIM208", "SIM211", "SIM222", "SIM905", "SLOT000",
-    "SLOT001", "SLOT002", "T203", "TC001", "TC002", "TC006", "TRY201", "TRY203",
-    "YTT203", "YTT204",
+    # Waiting for a decision or for another change:
+    "BLE001",  # pylint reports the same, to be moved with it
+    "RUF059",  # little value
+    "TRY400",  # logging.exception adds a traceback to the logs
 
-    # Wave 3: 11 to 100 violations.
-    "A001", "ASYNC110", "ASYNC240", "B008", "B009", "B010", "C414", "C416", "C419",
-    "C420", "DTZ001", "DTZ002", "DTZ005", "DTZ006", "DTZ007", "DTZ011", "E402", "E741",
-    "EXE001", "FURB110", "FURB167", "FURB171", "G004", "G201", "PERF102", "PERF402",
-    "PERF403", "PIE804", "PIE808", "PIE810", "PLC0206", "PLR1704", "PLR1711", "PLR1714",
-    "PLR1730", "PLR1733", "PLR2044", "PT001", "PT003", "PT011", "PT012", "PT015",
-    "PT018", "PT028", "PTH100", "PTH101", "PTH102", "PTH104", "PTH105", "PTH106",
-    "PTH108", "PTH109", "PTH114", "PTH117", "PTH122", "PTH123", "PTH202", "PTH204",
-    "PTH207", "PTH211", "PYI024", "RET501", "RET502", "RET507", "RET508", "RSE102",
-    "RUF001", "RUF002", "RUF003", "RUF010", "RUF013", "RUF015", "RUF021", "RUF046",
-    "RUF051", "RUF100", "SIM101", "SIM110", "SIM112", "SIM113", "SIM115", "SIM118",
-    "SIM201", "SIM210", "SIM212", "SIM401", "SIM910", "TRY002", "TRY004", "TRY301",
-
-    # Wave 4: more than 100 violations.
-    "B007", "B904", "BLE001", "C408", "FLY002", "PERF401", "PLC0415", "PLR0402",
-    "PLR5501", "PLW0603", "PLW2901", "PT006", "PT007", "PT019", "PT022", "PT027",
-    "PTH103", "PTH107", "PTH110", "PTH111", "PTH112", "PTH113", "PTH116", "PTH118",
-    "PTH119", "PTH120", "PTH208", "RET503", "RET504", "RET505", "RET506", "RUF005",
-    "RUF012", "RUF019", "RUF059", "RUF061", "SIM102", "SIM103", "SIM105", "SIM108",
-    "SIM114", "SIM117", "SIM300", "T201", "TRY300", "TRY400", "TRY401",
+    # Only a way of writing, nothing that goes wrong without it. Not worth the
+    # change of the line.
+    "C408",  # unnecessary-collection-call
+    "FLY002",  # static-join-to-f-string
+    "PERF401",  # manual-list-comprehension
+    "PLC0415",  # import-outside-top-level
+    "PLR0402",  # manual-from-import
+    "PLR5501",  # collapsible-else-if
+    "PLW0603",  # global-statement
+    "PT006",  # pytest-parametrize-names-wrong-type
+    "PT007",  # pytest-parametrize-values-wrong-type
+    "PT019",  # pytest-fixture-param-without-value
+    "PT022",  # pytest-useless-yield-fixture
+    "PT027",  # pytest-unittest-raises-assertion
+    "PTH103",  # os-makedirs
+    "PTH107",  # os-remove
+    "PTH110",  # os-path-exists
+    "PTH111",  # os-path-expanduser
+    "PTH112",  # os-path-isdir
+    "PTH113",  # os-path-isfile
+    "PTH116",  # os-stat
+    "PTH118",  # os-path-join
+    "PTH119",  # os-path-basename
+    "PTH120",  # os-path-dirname
+    "PTH208",  # os-listdir
+    "RET504",  # unnecessary-assign
+    "RET505",  # superfluous-else-return
+    "RET506",  # superfluous-else-raise
+    "RUF005",  # collection-literal-concatenation
+    "RUF019",  # unnecessary-key-check
+    "RUF061",  # legacy-form-pytest-raises
+    "SIM102",  # collapsible-if
+    "SIM103",  # needless-bool
+    "SIM105",  # suppressible-exception
+    "SIM108",  # if-else-block-instead-of-if-exp
+    "SIM114",  # if-with-same-arms
+    "SIM117",  # multiple-with-statements
+    "SIM300",  # yoda-conditions
+    "TRY300",  # try-consider-else
+    "TRY401",  # verbose-log-message
 ]
 
 [tool.ruff.lint.per-file-ignores]
 # Unused local variables are not checked in tests for now.
 # "assert False" is allowed in tests: with "python -O" every assert in the test
 # suite is removed, so replacing this one would not protect anything.
-"tests/**" = ["F841", "B011"]
+# S602, S301 and S106 are for the code that handles data from outside. The tests run
+# commands they wrote themselves, unpickle what they pickled and use made-up passwords.
+# The directories of the tests and the scripts are not packages (INP001). The tests
+# have single quoted strings that black does not touch (Q000); the product code has none.
+"tests/**" = ["F841", "B011", "Q000", "S106", "S301", "S602", "INP001"]
+"tools/**" = ["INP001"]
+".github/**" = ["INP001"]
 
 [tool.towncrier]
     package = "salt"
