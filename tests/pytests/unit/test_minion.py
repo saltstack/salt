@@ -4967,6 +4967,149 @@ async def test_minion_process_process_queue_keeps_task_reference(
     minion.destroy()
 
 
+def _unwinding_task(cleaned):
+    """
+    A coroutine that closes something only while it unwinds after a cancel, and
+    that needs more loop iterations to do it, like closing a channel.
+    """
+
+    async def background():
+        try:
+            await asyncio.sleep(3600)
+        finally:
+            await asyncio.sleep(0)
+            cleaned.append(True)
+
+    return background()
+
+
+@contextlib.contextmanager
+def _minion_ready_to_tune_in(minion_opts):
+    """
+    A real ``Minion`` on its own event loop, with the start-up that
+    ``tune_in()`` does before ``run_forever()`` replaced by no-ops.
+    """
+    loop = asyncio.new_event_loop()
+    with patch("salt.minion.Minion.ctx", MagicMock(return_value={})), patch.multiple(
+        "salt.minion.Minion",
+        _pre_tune=MagicMock(),
+        sync_connect_master=MagicMock(),
+        _state_run=MagicMock(),
+        setup_beacons=MagicMock(),
+        setup_scheduler=MagicMock(),
+        setup_state_queue_processing=MagicMock(),
+        setup_process_queue_processing=MagicMock(),
+    ), patch("salt.minion.enable_sigusr1_handler"), patch(
+        "salt.utils.process.SignalHandlingProcess.start", MagicMock(return_value=True)
+    ), patch(
+        "salt.utils.process.SignalHandlingProcess.join", MagicMock(return_value=True)
+    ):
+        minion = salt.minion.Minion(minion_opts, io_loop=loop)
+        try:
+            yield minion, loop
+        finally:
+            minion.destroy()
+            if not loop.is_closed():
+                loop.close()
+
+
+@contextlib.contextmanager
+def _syndic_manager_ready_to_tune_in(minion_opts):
+    """
+    A real ``SyndicManager`` on its own event loop, with the master connections,
+    the local client and the event forwarding that ``tune_in()`` sets up
+    replaced by mocks.
+    """
+    loop = asyncio.new_event_loop()
+    minion_opts["order_masters"] = True
+    minion_opts["_minion_conf_file"] = "minion"
+    minion_opts.setdefault("syndic_event_forward_timeout", 0.5)
+    with patch("salt.minion.SyndicManager._spawn_syndics", MagicMock()), patch(
+        "salt.client.get_local_client", MagicMock()
+    ), patch("salt.minion.tornado.ioloop.PeriodicCallback", MagicMock()), patch(
+        "salt.minion.enable_sigusr1_handler"
+    ):
+        manager = salt.minion.SyndicManager(minion_opts, io_loop=loop)
+        try:
+            yield manager, loop
+        finally:
+            manager.destroy()
+            if not loop.is_closed():
+                loop.close()
+
+
+def _interrupt():
+    raise KeyboardInterrupt
+
+
+def test_minion_tune_in_lets_background_tasks_finish_before_closing_the_loop(
+    minion_opts,
+):
+    """
+    A background task of a ``Minion`` closes its sockets only while it unwinds
+    after a cancel.  ``tune_in()`` must let it do that before it closes the loop
+    (#70624, #70857).
+    """
+    cleaned = []
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        minion._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, loop.stop)
+        minion.tune_in()
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_minion_tune_in_waits_for_tasks_that_destroy_cancelled_already(minion_opts):
+    """
+    After Ctrl-C ``tune_in()`` calls ``destroy()``, which cancels the background
+    tasks and forgets them.  The drain still has to wait for them.
+    """
+    cleaned = []
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        minion._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, _interrupt)
+        minion.tune_in()
+        assert not minion._background_tasks
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_minion_tune_in_closes_the_loop_when_draining_fails(minion_opts):
+    with _minion_ready_to_tune_in(minion_opts) as (minion, loop):
+        loop.call_later(0.1, loop.stop)
+        with patch(
+            "salt.utils.asynchronous.cancel_and_drain",
+            side_effect=RuntimeError("boom"),
+        ) as drain:
+            minion.tune_in()
+        drain.assert_called_once()
+        assert loop.is_closed()
+
+
+def test_syndic_manager_tune_in_lets_background_tasks_finish_before_closing_the_loop(
+    minion_opts,
+):
+    cleaned = []
+    with _syndic_manager_ready_to_tune_in(minion_opts) as (manager, loop):
+        manager._spawn_background(_unwinding_task(cleaned))
+        loop.call_later(0.1, loop.stop)
+        manager.tune_in()
+        assert cleaned == [True]
+        assert loop.is_closed()
+
+
+def test_syndic_manager_tune_in_closes_the_loop_when_draining_fails(minion_opts):
+    with _syndic_manager_ready_to_tune_in(minion_opts) as (manager, loop):
+        loop.call_later(0.1, loop.stop)
+        with patch(
+            "salt.utils.asynchronous.cancel_and_drain",
+            side_effect=RuntimeError("boom"),
+        ) as drain:
+            manager.tune_in()
+        drain.assert_called_once()
+        assert loop.is_closed()
+
+
 def _master_alive_minion(minion_opts, master_alive_interval):
     minion_opts.update(
         {
