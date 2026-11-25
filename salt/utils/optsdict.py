@@ -1034,18 +1034,33 @@ class OptsDict(dict):
         """
         Support for copy.deepcopy().
 
-        Uses copy-on-write by creating a child OptsDict instead of deep copying.
-        This provides the same isolation semantics as deepcopy while being much
-        more memory efficient. When the copied OptsDict is modified, only the
-        modified keys are copied, not the entire dict.
+        Creates a truly independent OptsDict with no parent reference.
+        This is essential to avoid circular references when the copy ends up
+        being stored inside the original's data (e.g., ext_pillar returning
+        __opts__ into pillar data, which is then visible via opts['pillar']).
+
+        For memory-efficient copy-on-write copies that maintain a parent link,
+        use safe_opts_copy() or OptsDict.from_parent() instead.
         """
-        # Use copy-on-write by creating a child OptsDict
-        # This shares data with parent until mutations occur
-        child = OptsDict.from_parent(self, name=f"{self._name}_deepcopy")
-        # Sync underlying dict to support C-level iteration (e.g., JSON serialization)
-        # This ensures json.dumps() works without needing to call __iter__() first
-        list(child)  # Triggers __iter__() which syncs the underlying dict
-        return child
+        # Build a flat snapshot of all visible key-value pairs without proxies
+        flat = {}
+        for key in self._get_all_keys():
+            if key in self._local:
+                val = self._local[key]
+                if val is not _DELETED:
+                    flat[key] = val
+            elif self._parent is not None:
+                found, val = self._get_from_parent_chain(key)
+                if found and val is not _DELETED:
+                    flat[key] = val
+            elif key in self._base:
+                flat[key] = self._base[key]
+
+        # Deep copy the flat dict to ensure full independence
+        copied = copy.deepcopy(flat, memo)
+        result = OptsDict.from_dict(copied, name=f"{self._name}_deepcopy")
+        memo[id(self)] = result
+        return result
 
     def __eq__(self, other):
         """
