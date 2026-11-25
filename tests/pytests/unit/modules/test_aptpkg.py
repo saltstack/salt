@@ -2172,6 +2172,34 @@ def test_hold():
     }
 
 
+@pytest.mark.parametrize("mark", ["auto", "manual"])
+def test_get_mark(mark):
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": "a\nb\n", "stderr": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": run_all}):
+        assert aptpkg.get_mark(mark) == ["a", "b"]
+    assert run_all.call_args.args[0] == ["apt-mark", f"show{mark}"]
+
+
+def test_get_mark_invalid_and_failure():
+    with pytest.raises(SaltInvocationError):
+        aptpkg.get_mark("hold")
+    run_all = MagicMock(return_value={"retcode": 1, "stdout": "", "stderr": "bad"})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": run_all}):
+        with pytest.raises(CommandExecutionError):
+            aptpkg.get_mark("auto")
+
+
+def test_set_mark():
+    run_all = MagicMock(return_value={"retcode": 0, "stdout": "", "stderr": ""})
+    with patch.dict(aptpkg.__salt__, {"cmd.run_all": run_all}):
+        assert aptpkg.set_mark(["jq", "vim"], "manual") is True
+    assert run_all.call_args.args[0] == ["apt-mark", "manual", "jq", "vim"]
+    with pytest.raises(SaltInvocationError):
+        aptpkg.set_mark([], "manual")
+    with pytest.raises(SaltInvocationError):
+        aptpkg.set_mark(["jq"], "hold")
+
+
 def test_hold_no_name_pkgs():
     """
     test aptpkg.hold when we do not pass in a name or list of pkgs

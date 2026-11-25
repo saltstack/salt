@@ -21,6 +21,7 @@ import traceback
 
 import salt.grains.extra
 import salt.utils.args
+import salt.utils.beacons
 import salt.utils.data
 import salt.utils.files
 import salt.utils.json
@@ -606,7 +607,8 @@ def _run(
     if output_loglevel is not None:
         # Always log the shell commands at INFO unless quiet logging is
         # requested. The command output is what will be controlled by the
-        # 'loglevel' parameter.
+        # 'loglevel' parameter. Commands run by a beacon are logged at DEBUG,
+        # beacons run on a short interval and would otherwise flood the log.
         msg = "Executing command {}{}{} {}{}in directory '{}'{}".format(
             "'" if not isinstance(cmd, list) else "",
             _log_cmd(cmd),
@@ -620,7 +622,10 @@ def _run(
                 else ""
             ),
         )
-        log.info(log_callback(msg))
+        log.log(
+            (logging.DEBUG if salt.utils.beacons.is_running_beacon() else logging.INFO),
+            log_callback(msg),
+        )
 
     if runas and salt.utils.platform.is_darwin():
         # We need to insert the user simulation into the command itself and not

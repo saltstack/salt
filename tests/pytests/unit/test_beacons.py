@@ -5,6 +5,7 @@ unit tests for the beacon_module parameter
 import logging
 
 import salt.beacons
+import salt.utils.beacons
 from tests.support.mock import MagicMock, call, patch
 
 log = logging.getLogger(__name__)
@@ -362,3 +363,34 @@ def test_delete_beacon_without_close(minion_opts):
         beacon.delete_beacon("status")
 
     assert "status" not in minion_opts["beacons"]
+
+
+def test_beacon_process_marks_beacon_as_running(minion_opts):
+    """
+    While a beacon function runs it is flagged as such, so the commands it
+    triggers can be logged at a lower level (issue #68064). The flag must not
+    leak outside of the beacon.
+    """
+    minion_opts["id"] = "minion"
+    minion_opts["__role"] = "minion"
+    minion_opts["beacons"] = {
+        "watch_apache": [
+            {"processes": {"apache2": "stopped"}},
+            {"beacon_module": "ps"},
+        ]
+    }
+    seen = []
+
+    def _beacon(config):
+        seen.append(salt.utils.beacons.is_running_beacon())
+        return []
+
+    beacon_mock = MagicMock(side_effect=_beacon)
+    beacon_mock.__globals__ = {}
+    beacon = salt.beacons.Beacon(minion_opts, [])
+    beacon.beacons["ps.beacon"] = beacon_mock
+
+    beacon.process(minion_opts["beacons"], minion_opts["grains"])
+
+    assert seen == [True]
+    assert salt.utils.beacons.is_running_beacon() is False

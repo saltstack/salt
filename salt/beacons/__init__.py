@@ -7,6 +7,7 @@ import logging
 import re
 import sys
 
+import salt.utils.beacons
 import salt.utils.event
 import salt.utils.minion
 
@@ -187,7 +188,8 @@ class Beacon:
                 # Fire the beacon!
                 error = None
                 try:
-                    raw = self.beacons[fun_str](b_config[mod])
+                    with salt.utils.beacons.running_beacon():
+                        raw = self.beacons[fun_str](b_config[mod])
                 except:  # pylint: disable=bare-except
                     error = f"{sys.exc_info()[1]}"
                     log.error("Unable to start %s beacon, %s", mod, error)

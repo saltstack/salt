@@ -16,6 +16,7 @@ import pytest
 
 import salt.grains.extra
 import salt.modules.cmdmod as cmdmod
+import salt.utils.beacons
 import salt.utils.files
 import salt.utils.path
 import salt.utils.platform
@@ -1596,3 +1597,27 @@ def test_check_cb_ignores_a_value_that_is_not_callable(not_callable, caplog):
 
 def test_check_cb_without_a_callback_returns_the_value_unchanged():
     assert cmdmod._check_cb(None)("text") == "text"
+
+
+@pytest.mark.parametrize(
+    "in_beacon,level",
+    [(False, logging.INFO), (True, logging.DEBUG)],
+)
+def test_run_all_command_logged_at_debug_when_run_by_a_beacon(caplog, in_beacon, level):
+    """
+    Beacons run on a short interval, so the "Executing command" message of the
+    commands they run is logged at DEBUG instead of INFO (issue #68064).
+    """
+    proc = MagicMock(return_value=MockTimedProc(stdout=b"test"))
+
+    with patch("salt.utils.timed_subprocess.TimedProc", proc):
+        with caplog.at_level(logging.DEBUG, logger="salt.modules.cmdmod"):
+            if in_beacon:
+                with salt.utils.beacons.running_beacon():
+                    cmdmod.run_all("some command")
+            else:
+                cmdmod.run_all("some command")
+
+    records = [r for r in caplog.records if "Executing command" in r.getMessage()]
+    assert len(records) == 1
+    assert records[0].levelno == level

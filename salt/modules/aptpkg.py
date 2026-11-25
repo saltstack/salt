@@ -1260,6 +1260,72 @@ def hold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     return ret
 
 
+def get_mark(mark="auto"):
+    """
+    .. versionadded:: 3008.0
+
+    Return the installed packages that have the given apt mark. Unlike
+    :py:func:`pkg.get_selections <salt.modules.aptpkg.get_selections>`, which
+    reads the dpkg selection state (install, hold, ...), this reads whether apt
+    considers a package automatically or manually installed.
+
+    mark
+        Either ``auto`` (installed as a dependency, and removable by
+        ``apt autoremove``) or ``manual``. Default is ``auto``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.get_mark
+        salt '*' pkg.get_mark mark=manual
+    """
+    if mark not in ("auto", "manual"):
+        raise SaltInvocationError("mark must be one of 'auto' or 'manual'.")
+    out = __salt__["cmd.run_all"](
+        ["apt-mark", f"show{mark}"], python_shell=False, output_loglevel="trace"
+    )
+    if out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to list {mark} installed packages: {out['stderr']}"
+        )
+    return out["stdout"].splitlines()
+
+
+def set_mark(pkgs, mark="manual"):
+    """
+    .. versionadded:: 3008.0
+
+    Set the apt mark on packages. Always acts; deciding whether a change is
+    needed, and honouring ``test=True``, is up to the caller (e.g. the
+    :py:func:`pkg.installed <salt.states.pkg.installed>` state).
+
+    pkgs
+        A list of packages to mark. Must be passed as a python list.
+
+    mark
+        Either ``auto`` or ``manual``. Default is ``manual``.
+
+    CLI Example:
+
+    .. code-block:: bash
+
+        salt '*' pkg.set_mark pkgs='["jq", "libonig5"]' mark=manual
+    """
+    if mark not in ("auto", "manual"):
+        raise SaltInvocationError("mark must be one of 'auto' or 'manual'.")
+    if not pkgs:
+        raise SaltInvocationError("pkgs must be specified.")
+    out = __salt__["cmd.run_all"](
+        ["apt-mark", mark, *pkgs], python_shell=False, output_loglevel="trace"
+    )
+    if out["retcode"] != 0:
+        raise CommandExecutionError(
+            f"Unable to mark packages as {mark}: {out['stderr']}"
+        )
+    return True
+
+
 def unhold(name=None, pkgs=None, sources=None, **kwargs):  # pylint: disable=W0613
     """
     .. versionadded:: 2014.7.0

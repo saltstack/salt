@@ -7,6 +7,8 @@
 
 import logging
 
+import pytest
+
 import salt.utils.beacons as beacons
 
 log = logging.getLogger(__name__)
@@ -37,3 +39,17 @@ def test_remove_hidden_options():
     expected = [{"a": "b"}, {"c": "d"}, {"_e": "f"}]
     ret = beacons.remove_hidden_options(config, ["_e"])
     assert ret == expected
+
+
+def test_is_running_beacon():
+    assert beacons.is_running_beacon() is False
+    with beacons.running_beacon():
+        assert beacons.is_running_beacon() is True
+    assert beacons.is_running_beacon() is False
+
+
+def test_running_beacon_is_reset_on_error():
+    with pytest.raises(RuntimeError):
+        with beacons.running_beacon():
+            raise RuntimeError("boom")
+    assert beacons.is_running_beacon() is False
