@@ -1,0 +1,20 @@
+=== pillar_refresh ===
+baseline        rss_kb=231548
+during          rss_kb=251188
++60s            rss_kb=251168
++120s           rss_kb=231744
++180s           rss_kb=231772
+
+=== beacon_flood ===
+baseline        rss_kb=231772
+during          rss_kb=231772
++60s            rss_kb=251240
++120s           rss_kb=231792
++180s           rss_kb=231816
+
+=== cache_corruption ===
+baseline        rss_kb=231816
+during          rss_kb=231824
++60s            rss_kb=244984
++120s           rss_kb=231836
++180s           rss_kb=231596

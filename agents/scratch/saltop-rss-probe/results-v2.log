@@ -1,0 +1,27 @@
+=== pillar_refresh ===
+baseline        rss_kb=231624  fd=105
+during          rss_kb=231652  fd=105
++60s            rss_kb=231692  fd=109
++120s           rss_kb=231656  fd=105
++180s           rss_kb=231660  fd=105
+
+=== beacon_flood ===
+baseline        rss_kb=231660  fd=105
+during          rss_kb=231660  fd=105
++60s            rss_kb=232284  fd=105
++120s           rss_kb=232288  fd=107
++180s           rss_kb=232296  fd=105
+
+=== cache_corruption ===
+baseline        rss_kb=232296  fd=105
+during          rss_kb=232296  fd=111
++60s            rss_kb=231680  fd=115
++120s           rss_kb=231692  fd=111
++180s           rss_kb=231716  fd=113
+
+=== sls_swap ===
+baseline        rss_kb=231716  fd=111
+during          rss_kb=231724  fd=105
++60s            rss_kb=231744  fd=105
++120s           rss_kb=231764  fd=105
++180s           rss_kb=231768  fd=105

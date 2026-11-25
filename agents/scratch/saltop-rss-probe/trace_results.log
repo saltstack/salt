@@ -1,0 +1,75 @@
+
+RSS baseline=265208 KB  immediately=422292 KB  delta=+157084 KB
+
+=== state.apply immediately after return: top 20 by size diff ===
+        2.6 MB  + 24564 objs  <frozen importlib._bootstrap_external>:672
+      276.9 KB  +  2665 objs  loader/lazy.py:778  self.file_mapping[f_noext] = (fpath, ext, opt_index)
+      252.2 KB  +  4519 objs  /usr/local/lib/python3.10/genericpath.py:139  return p[:dotIndex], p[dotIndex:]
+      248.1 KB  +  2692 objs  /usr/local/lib/python3.10/posixpath.py:88  path += sep + b
+       79.8 KB  +   333 objs  /usr/local/lib/python3.10/abc.py:106  cls = super().__new__(mcls, name, bases, namespace, **kwargs
+       47.1 KB  +   513 objs  /usr/local/lib/python3.10/typing.py:668  code = compile(arg, '<string>', 'eval')
+       44.5 KB  +   779 objs  loader/lazy.py:702  f_noext = PY3_PRE_EXT.sub(_replace_pre_ext, f_noext)
+       40.2 KB  +   572 objs  /usr/local/lib/python3.10/typing.py:989  super().__setattr__(attr, val)
+       33.9 KB  +    32 objs  utils/optsdict.py:68  super().__init__(target)
+       25.6 KB  +   156 objs  /usr/local/lib/python3.10/importlib/metadata/_functools.py:100  def wrapper(param, *args, **kwargs):
+       21.4 KB  +   205 objs  <frozen importlib._bootstrap_external>:128
+       20.3 KB  +    46 objs  /usr/local/lib/python3.10/sre_compile.py:804  return _sre.compile(
+       19.1 KB  +   337 objs  utils/optsdict.py:599  self._proxy_cache[key] = (proxy, id(value))
+       18.1 KB  +     2 objs  utils/optsdict.py:707  dict.__setitem__(self, key, value)
+       16.3 KB  +   286 objs  /usr/local/lib/python3.10/typing.py:1022  self.__args__ = tuple(... if a is _TypingEllipsis else
+       14.6 KB  +   208 objs  <frozen importlib._bootstrap>:359
+       13.8 KB  +   208 objs  <frozen importlib._bootstrap>:49
+       13.6 KB  +    73 objs  /usr/local/lib/python3.10/abc.py:107  _abc_init(cls)
+       13.3 KB  +     1 objs  /usr/local/lib/python3.10/codecs.py:322  (result, consumed) = self._buffer_decode(data, self.errors,
+       12.8 KB  +    90 objs  /usr/local/lib/python3.10/typing.py:309  return cached(*args, **kwds)
+  --- top-20 total:     3.8 MB
+
+RSS +60s=547200 KB  delta_from_baseline=+281992 KB
+
+=== state.apply + 60s settle: top 20 by size diff ===
+        2.6 MB  + 24564 objs  <frozen importlib._bootstrap_external>:672
+      712.0 KB  +  7142 objs  /usr/local/lib/python3.10/linecache.py:137  lines = fp.readlines()
+      276.9 KB  +  2665 objs  loader/lazy.py:778  self.file_mapping[f_noext] = (fpath, ext, opt_index)
+      252.2 KB  +  4519 objs  /usr/local/lib/python3.10/genericpath.py:139  return p[:dotIndex], p[dotIndex:]
+      248.1 KB  +  2692 objs  /usr/local/lib/python3.10/posixpath.py:88  path += sep + b
+       79.8 KB  +   333 objs  /usr/local/lib/python3.10/abc.py:106  cls = super().__new__(mcls, name, bases, namespace, **kwargs
+       47.1 KB  +   513 objs  /usr/local/lib/python3.10/typing.py:668  code = compile(arg, '<string>', 'eval')
+       44.5 KB  +   779 objs  loader/lazy.py:702  f_noext = PY3_PRE_EXT.sub(_replace_pre_ext, f_noext)
+       40.2 KB  +   572 objs  /usr/local/lib/python3.10/typing.py:989  super().__setattr__(attr, val)
+       33.9 KB  +    32 objs  utils/optsdict.py:68  super().__init__(target)
+       25.6 KB  +   156 objs  /usr/local/lib/python3.10/importlib/metadata/_functools.py:100  def wrapper(param, *args, **kwargs):
+       21.4 KB  +   205 objs  <frozen importlib._bootstrap_external>:128
+       20.3 KB  +    46 objs  /usr/local/lib/python3.10/sre_compile.py:804  return _sre.compile(
+       19.1 KB  +   337 objs  utils/optsdict.py:599  self._proxy_cache[key] = (proxy, id(value))
+       18.1 KB  +     2 objs  utils/optsdict.py:707  dict.__setitem__(self, key, value)
+       16.3 KB  +   286 objs  /usr/local/lib/python3.10/typing.py:1022  self.__args__ = tuple(... if a is _TypingEllipsis else
+       14.6 KB  +   208 objs  <frozen importlib._bootstrap>:359
+       13.8 KB  +   208 objs  <frozen importlib._bootstrap>:49
+       13.6 KB  +    73 objs  /usr/local/lib/python3.10/abc.py:107  _abc_init(cls)
+       13.3 KB  +     1 objs  /usr/local/lib/python3.10/codecs.py:322  (result, consumed) = self._buffer_decode(data, self.errors,
+  --- top-20 total:     4.5 MB
+
+RSS +120s=659096 KB  delta_from_baseline=+393888 KB
+
+=== state.apply + 120s settle: top 20 by size diff ===
+        2.6 MB  + 24564 objs  <frozen importlib._bootstrap_external>:672
+      726.3 KB  +  7295 objs  /usr/local/lib/python3.10/linecache.py:137  lines = fp.readlines()
+      276.9 KB  +  2665 objs  loader/lazy.py:778  self.file_mapping[f_noext] = (fpath, ext, opt_index)
+      252.2 KB  +  4519 objs  /usr/local/lib/python3.10/genericpath.py:139  return p[:dotIndex], p[dotIndex:]
+      248.1 KB  +  2692 objs  /usr/local/lib/python3.10/posixpath.py:88  path += sep + b
+       79.8 KB  +   333 objs  /usr/local/lib/python3.10/abc.py:106  cls = super().__new__(mcls, name, bases, namespace, **kwargs
+       47.1 KB  +   513 objs  /usr/local/lib/python3.10/typing.py:668  code = compile(arg, '<string>', 'eval')
+       44.5 KB  +   779 objs  loader/lazy.py:702  f_noext = PY3_PRE_EXT.sub(_replace_pre_ext, f_noext)
+       40.2 KB  +   572 objs  /usr/local/lib/python3.10/typing.py:989  super().__setattr__(attr, val)
+       33.9 KB  +    32 objs  utils/optsdict.py:68  super().__init__(target)
+       25.6 KB  +   156 objs  /usr/local/lib/python3.10/importlib/metadata/_functools.py:100  def wrapper(param, *args, **kwargs):
+       21.4 KB  +   205 objs  <frozen importlib._bootstrap_external>:128
+       20.3 KB  +    46 objs  /usr/local/lib/python3.10/sre_compile.py:804  return _sre.compile(
+       19.1 KB  +   337 objs  utils/optsdict.py:599  self._proxy_cache[key] = (proxy, id(value))
+       18.1 KB  +     2 objs  utils/optsdict.py:707  dict.__setitem__(self, key, value)
+       16.3 KB  +   286 objs  /usr/local/lib/python3.10/typing.py:1022  self.__args__ = tuple(... if a is _TypingEllipsis else
+       14.6 KB  +   208 objs  <frozen importlib._bootstrap>:359
+       13.8 KB  +   208 objs  <frozen importlib._bootstrap>:49
+       13.6 KB  +    73 objs  /usr/local/lib/python3.10/abc.py:107  _abc_init(cls)
+       13.3 KB  +     1 objs  /usr/local/lib/python3.10/codecs.py:322  (result, consumed) = self._buffer_decode(data, self.errors,
+  --- top-20 total:     4.5 MB
