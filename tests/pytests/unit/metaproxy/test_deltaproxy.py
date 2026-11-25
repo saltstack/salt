@@ -559,7 +559,7 @@ def test_subproxy_post_master_init_gives_each_subproxy_its_own_loader_namespace(
 
 
 @pytest.mark.parametrize("operation", ["reload", "shutdown"])
-def test_subproxy_connection_globals_are_isolated(
+async def test_subproxy_connection_globals_are_isolated(
     proxy_opts, fake_main_utils, tmp_path, operation
 ):
     """Initializing, reloading or closing one device must not change another."""
@@ -617,15 +617,12 @@ def test_subproxy_connection_globals_are_isolated(
         for target, attribute, key in targets:
             stack.enter_context(patch.object(target, attribute, patches[key]))
 
-        async def initialize_subproxies():
-            return [
-                await deltaproxy.subproxy_post_master_init(
-                    minion_id, 0, proxy_opts, control, fake_main_utils
-                )
-                for minion_id in ("minion1", "minion2")
-            ]
-
-        results = asyncio.run(initialize_subproxies())
+        results = [
+            await deltaproxy.subproxy_post_master_init(
+                minion_id, 0, proxy_opts, control, fake_main_utils
+            )
+            for minion_id in ("minion1", "minion2")
+        ]
         sub1, sub2 = (result["proxy_minion"] for result in results)
         loaders = (control, sub1.proxy, sub2.proxy)
         assert [loader["dummy_test_proxy.device_id"]() for loader in loaders] == [

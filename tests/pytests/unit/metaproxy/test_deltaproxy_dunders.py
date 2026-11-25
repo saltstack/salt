@@ -1,6 +1,5 @@
 """Refresh and reload must preserve device-specific execution/proxy dunders."""
 
-import asyncio
 import copy
 import sys
 
@@ -13,7 +12,7 @@ from tests.support.mock import AsyncMock, MagicMock, patch
 
 
 @pytest.mark.parametrize("reload_proxy", [False, True])
-def test_dunders_after_grains_pillar_refresh_and_reload(
+async def test_dunders_after_grains_pillar_refresh_and_reload(
     minion_opts, tmp_path, monkeypatch, reload_proxy
 ):
     """Real loaders expose fresh values without contaminating another device."""
@@ -87,14 +86,14 @@ def test_dunders_after_grains_pillar_refresh_and_reload(
         sys.modules
     ):
         minions = []
-        for minion_id in grain_revisions:
+        for minion_id, grain_revision in grain_revisions.items():
             opts = copy.deepcopy(dict(minion_opts))
             opts.update(
                 id=minion_id,
                 proxy={"proxytype": "dunder_test", "host": minion_id},
                 proxy_dirs=[str(proxy_dir)],
                 module_dirs=[str(module_dir)],
-                grains={"device_revision": grain_revisions[minion_id]},
+                grains={"device_revision": grain_revision},
                 pillar={"device_revision": pillar_revisions[minion_id]},
             )
             minion = salt.minion.ProxyMinion.__new__(salt.minion.ProxyMinion)
@@ -146,7 +145,7 @@ def test_dunders_after_grains_pillar_refresh_and_reload(
             assert_dunders()
 
             pillar_revisions[minion_id] += "-refreshed"
-            asyncio.run(minion.pillar_refresh())
+            await minion.pillar_refresh()
             assert_dunders()
 
             if reload_proxy:
