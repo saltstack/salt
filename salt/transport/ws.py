@@ -25,6 +25,38 @@ from salt.transport.tcp import (
 log = logging.getLogger(__name__)
 
 
+def _observe_late_task(task):
+    """Consume a timed-out task's late outcome.
+
+    ``PublishServer.publish`` and ``PublishServer.publish_payload`` stop
+    waiting for a wedged write without cancelling it.  Retrieve the
+    result or exception -- now if the task already settled (a failure
+    completing in the cancellation or timeout race window), otherwise
+    from a done callback -- so the late completion, failure or
+    cancellation produces neither an unretrieved-exception warning nor
+    an unhandled callback error on the loop.
+
+    Duplicated from ``salt.transport.tcp._observe_late_write``; keeping
+    it local to the ws module avoids a cross-transport import.
+    """
+
+    def _consume(future):
+        try:
+            future.result()
+        except (Exception, asyncio.CancelledError):  # pylint: disable=broad-except
+            # The caller already stopped waiting for this task; its
+            # late failure or cancellation is expected, not an error.
+            # The catch is deliberately wide: the observer's contract
+            # is to consume ANY late outcome of a write the caller
+            # gave up on, and the stream can surface arbitrary errors.
+            pass
+
+    if task.done():
+        _consume(task)
+    else:
+        task.add_done_callback(_consume)
+
+
 class PublishClient(salt.transport.base.PublishClient):
     """
     Tornado based TCP Pub Client
@@ -513,12 +545,47 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         self, payload, **kwargs
     ):  # pylint: disable=invalid-overridden-method
         """
-        Publish "load" to minions
+        Publish "load" to minions.
+
+        :param int timeout: Optional timeout in seconds for the drain,
+                            passed via ``kwargs``.  A drain that does not
+                            complete within ``timeout`` raises
+                            ``TimeoutError`` instead of waiting forever.
+                            ``None`` (the default) preserves the
+                            pre-#70938 unbounded path.  The kwarg-only
+                            plumbing keeps this method's signature
+                            identical to the abstract
+                            ``DaemonizedPublishServer.publish`` so
+                            ``test_transport_publishserver_has_method_signatures``
+                            still pins a single cross-transport shape.
         """
+        timeout = kwargs.get("timeout")
         if not self.pub_writer:
             await self.connect()
         self.pub_writer.write(salt.payload.dumps(payload, use_bin_type=True))
-        await self.pub_writer.drain()
+        if timeout is None:
+            await self.pub_writer.drain()
+            return
+        drain = asyncio.ensure_future(self.pub_writer.drain())
+        try:
+            # asyncio.wait does NOT cancel the pending drain on timeout:
+            # cancelling could drop bytes the stream may still flush and
+            # races a drain completing at the same moment.  The caller
+            # stops waiting; the late completion is observed so it can
+            # neither leak nor warn.
+            done, _ = await asyncio.wait({drain}, timeout=timeout)
+        except BaseException:
+            _observe_late_task(drain)
+            raise
+        if drain not in done:
+            _observe_late_task(drain)
+            # ``asyncio.TimeoutError`` is only the builtin ``TimeoutError``
+            # on Python >= 3.11.  Raise the builtin so callers see one
+            # exception type on every supported Python.
+            raise TimeoutError(
+                f"ws publish drain did not complete within {timeout} seconds"
+            )
+        drain.result()  # propagate stream errors
 
     async def publish_payload(self, payload, topic_list=None, raw_payload=None):
         # ``raw_payload`` is accepted for interface parity with the
@@ -526,10 +593,43 @@ class PublishServer(salt.transport.base.DaemonizedPublishServer):
         # msgpack round-trip on the EP fan-out hot path.  The ws
         # transport frames with ``salt.payload.dumps`` below, so the
         # unframed passthrough shortcut doesn't apply here.
+        #
+        # The per-subscriber send timeout is read from
+        # ``self._publish_payload_timeout`` instead of a kwarg so this
+        # method's signature stays identical to the abstract
+        # ``DaemonizedPublishServer.publish_payload``.  That keeps the
+        # cross-transport signature pin
+        # (``test_transport_publishserver_has_method_signatures``)
+        # green while still letting operators or tests bound the
+        # fan-out drain.  ``None`` (the default) preserves the
+        # pre-#70938 unbounded path.
+        timeout = getattr(self, "_publish_payload_timeout", None)
         payload = salt.payload.dumps(payload, use_bin_type=True)
         for ws in list(self.clients):
             try:
-                await ws.send_bytes(payload)
+                if timeout is None:
+                    await ws.send_bytes(payload)
+                    continue
+                send = asyncio.ensure_future(ws.send_bytes(payload))
+                try:
+                    done, _ = await asyncio.wait({send}, timeout=timeout)
+                except BaseException:
+                    _observe_late_task(send)
+                    raise
+                if send not in done:
+                    # Stalled subscriber: drop it (same remediation as
+                    # ``ConnectionResetError``) and continue the fan-
+                    # out so one slow minion cannot stop publishes to
+                    # every other minion.  Observe the pending send so
+                    # a late failure neither leaks nor warns.
+                    _observe_late_task(send)
+                    log.warning(
+                        "Dropping ws publish subscriber that stalled for %.1fs",
+                        timeout,
+                    )
+                    self.clients.discard(ws)
+                    continue
+                send.result()  # propagate stream errors
             except ConnectionResetError:
                 self.clients.discard(ws)
 
