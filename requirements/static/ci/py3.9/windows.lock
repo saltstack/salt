@@ -254,8 +254,6 @@ mdurl==0.1.2
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
     #   markdown-it-py
-mock==5.2.0
-    # via -r requirements/pytest.txt
 more-itertools==10.8.0
     # via
     #   -c requirements/static/pkg/py3.9/windows.lock
