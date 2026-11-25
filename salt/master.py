@@ -2036,6 +2036,8 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
         self.stat_clock = time.time()
 
         # Pool-specific attributes
+        # Stays None in legacy mode so the transport uses the socket zmq_device binds.
+        self._transport_pool_name = pool_name
         self.pool_name = pool_name or "default"
         self.pool_index = pool_index if pool_index is not None else 0
 
@@ -2108,7 +2110,7 @@ class MWorker(salt.utils.process.SignalHandlingProcess):
             req_channel.post_fork(
                 self._handle_payload,
                 io_loop=self.io_loop,
-                pool_name=self.pool_name,
+                pool_name=self._transport_pool_name,
                 pool_index=self.pool_index,
             )
 
@@ -3264,6 +3266,10 @@ class AESFuncs(TransportMethods):
                 load["id"],
                 load["grains"],
             )
+            if salt.pillar.update_minion_snapshot(load):
+                await loop.run_in_executor(
+                    None, self.masterapi.cache.store, "pillar", load["id"], data
+                )
 
             if self.opts.get("minion_data_cache_events") is True:
                 await self.event.fire_event_async(
@@ -4011,6 +4017,8 @@ class AESFuncs(TransportMethods):
         self.fs_.update_opts()
         if self.opts.get("minion_data_cache", False):
             self.masterapi.cache.store("grains", load["id"], load["grains"])
+            if salt.pillar.update_minion_snapshot(load):
+                self.masterapi.cache.store("pillar", load["id"], data)
 
             if self.opts.get("minion_data_cache_events") is True:
                 self.event.fire_event(

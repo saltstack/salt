@@ -693,7 +693,22 @@ class WindowsUpdateAgent:
                 uid = update.Identity.UpdateID
                 ret["Updates"][uid] = {}
                 ret["Updates"][uid]["Title"] = update.Title
-                ret["Updates"][uid]["AlreadyDownloaded"] = bool(update.IsDownloaded)
+
+                # Some updates (notably certain drivers) raise a COM error
+                # (E_INVALIDARG) when properties are queried. Skip them
+                # instead of failing the whole run.
+                try:
+                    is_downloaded = salt.utils.data.is_true(update.IsDownloaded)
+                except pywintypes.com_error as exc:
+                    log.warning(
+                        "Unable to determine download state for update %s (%s): %s",
+                        uid,
+                        update.Title,
+                        exc,
+                    )
+                    ret["Updates"][uid]["Result"] = "Unable to query update"
+                    continue
+                ret["Updates"][uid]["AlreadyDownloaded"] = is_downloaded
 
                 # Accept EULA
                 if not salt.utils.data.is_true(update.EulaAccepted):
@@ -701,7 +716,7 @@ class WindowsUpdateAgent:
                     update.AcceptEula()  # pylint: disable=W0104
 
                 # Update already downloaded
-                if not salt.utils.data.is_true(update.IsDownloaded):
+                if not is_downloaded:
                     log.debug("To Be Downloaded: %s", uid)
                     log.debug("\tTitle: %s", update.Title)
                     download_list.Add(update)

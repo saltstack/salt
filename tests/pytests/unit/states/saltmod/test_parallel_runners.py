@@ -1,6 +1,8 @@
 import pytest
 
 import salt.exceptions
+import salt.loader.context
+import salt.loader.lazy
 import salt.states.saltmod as saltmod
 from tests.support.mock import MagicMock, patch
 
@@ -251,3 +253,131 @@ def test_failed():
         assert runner_1 in ret_comment
         assert runner_3 in ret_comment
         assert runner_2 not in ret_comment
+
+
+def _loader_with_salt(salt_pack):
+    """Build a loader whose ``__salt__`` pack is visible via loader context."""
+    return salt.loader.lazy.LazyLoader(["/foo"], pack={"__salt__": salt_pack})
+
+
+def test_parallel_map_propagates_loader_context():
+    """
+    Worker threads must see the loader context that was current in the caller.
+
+    ``_parallel_map`` used to start a bare ``threading.Thread``. Context
+    variables are not copied into that thread, so ``NamedLoaderContext``
+    resolves to ``None`` and ``__salt__["saltutil.runner"]`` raises
+    ``TypeError`` (#66022, #70742).
+    """
+    marker = object()
+    pack = {"saltutil.runner": marker, "token": "from-caller"}
+    loader = _loader_with_salt(pack)
+    named = salt.loader.context.LoaderContext().named_context("__salt__")
+    seen = {}
+
+    def worker(item):
+        seen[item] = {
+            "loader": salt.loader.context.loader_ctxvar.get(),
+            "value": named.value(),
+            "runner": named["saltutil.runner"],
+            "token": named["token"],
+        }
+        return item
+
+    with salt.loader.context.loader_context(loader):
+        result = saltmod._parallel_map(worker, ["a", "b"])
+        assert salt.loader.context.loader_ctxvar.get() is loader
+
+    assert result == ["a", "b"]
+    for item in ("a", "b"):
+        assert seen[item]["loader"] is loader
+        assert seen[item]["value"] is pack
+        assert seen[item]["runner"] is marker
+        assert seen[item]["token"] == "from-caller"
+
+
+def test_parallel_runners_reads_saltutil_from_loader_context():
+    """
+    ``parallel_runners`` must call ``saltutil.runner`` from the worker thread.
+
+    Patching a plain dict over ``__salt__`` hides the bug: a dict is visible
+    to every thread. Production ``__salt__`` is a ``NamedLoaderContext`` that
+    reads the loader contextvar, which a bare thread does not have.
+    """
+    name = "parallel-state"
+    runner_ret = {"ret": True, "exit_code": 0}
+    mock = MagicMock(return_value={"return": runner_ret})
+    loader = _loader_with_salt({"saltutil.runner": mock})
+    named = salt.loader.context.LoaderContext().named_context("__salt__")
+    runners = {
+        "my_runner_1": [{"name": "test.sleep"}, {"kwarg": {"s_time": 0.1}}],
+        "my_runner_2": [{"name": "test.sleep"}, {"kwarg": {"s_time": 0.1}}],
+    }
+    expected = {
+        "name": name,
+        "changes": {
+            "ret": {
+                "my_runner_1": runner_ret,
+                "my_runner_2": runner_ret,
+            }
+        },
+        "result": True,
+        "comment": "All runner functions executed successfully.",
+    }
+
+    with salt.loader.context.loader_context(loader):
+        with patch.object(saltmod, "__salt__", named):
+            ret = saltmod.parallel_runners(name, runners)
+
+    assert ret == expected
+    assert mock.call_count == 2
+    assert [call.args[0] for call in mock.call_args_list] == [
+        "test.sleep",
+        "test.sleep",
+    ]
+    for call in mock.call_args_list:
+        assert call.kwargs["s_time"] == 0.1
+        assert call.kwargs["full_return"] is True
+
+
+def test_non_dict_runner_returns():
+    """
+    ``test.sleep`` returns ``True`` and ``test.stdout_print`` returns a string.
+
+    ``parallel_runners`` used to call ``.get`` on that payload and raise
+    ``AttributeError`` once the loader-context crash was out of the way
+    (#66022).
+    """
+    name = "parallel-state"
+    mock = MagicMock(side_effect=[{"return": True}, {"return": "bar"}])
+    runners = {
+        "my_runner_1": [{"name": "test.sleep"}, {"kwarg": {"s_time": 0.1}}],
+        "my_runner_2": [{"name": "test.stdout_print"}],
+    }
+    expected = {
+        "name": name,
+        "result": True,
+        "changes": {"ret": {"my_runner_1": True, "my_runner_2": "bar"}},
+        "comment": "All runner functions executed successfully.",
+    }
+    with patch.dict(saltmod.__salt__, {"saltutil.runner": mock}):
+        ret = saltmod.parallel_runners(name, runners)
+    assert ret == expected
+
+
+def test_non_dict_return_does_not_mask_failed_runner():
+    """A boolean return must not hide a sibling runner that set ``exit_code``."""
+    name = "parallel-state"
+    failed = {"ret": False, "exit_code": 1}
+    mock = MagicMock(side_effect=[{"return": True}, {"return": failed}])
+    runners = {
+        "my_runner_1": [{"name": "test.sleep"}],
+        "my_runner_2": [{"name": "state.orchestrate"}],
+    }
+    with patch.dict(saltmod.__salt__, {"saltutil.runner": mock}):
+        ret = saltmod.parallel_runners(name, runners)
+
+    assert ret["result"] is False
+    assert ret["name"] == name
+    assert ret["changes"] == {"ret": {"my_runner_1": True, "my_runner_2": failed}}
+    assert ret["comment"] == "Runner my_runner_2 failed."

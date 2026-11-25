@@ -30,13 +30,13 @@ def profile_func(filename=None):
 
     def proffunc(fun):
         def profiled_func(*args, **kwargs):
-            logging.info("Profiling function %s", fun.__name__)
+            log.info("Profiling function %s", fun.__name__)
             try:
                 profiler = cProfile.Profile()
                 retval = profiler.runcall(fun, *args, **kwargs)
                 profiler.dump_stats(filename or f"{fun.__name__}_func.profile")
             except OSError:
-                logging.exception("Could not open profile file %s", filename)
+                log.exception("Could not open profile file %s", filename)
 
             return retval
 

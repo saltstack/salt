@@ -4,10 +4,13 @@ import collections
 import os
 import pathlib
 import stat
+import tempfile
 import threading
 import time
 
 import pytest
+import zmq
+from pytestshellutils.utils import ports
 
 import salt.channel.client
 import salt.config
@@ -15,11 +18,12 @@ import salt.crypt
 import salt.exceptions
 import salt.master
 import salt.serializers.msgpack
+import salt.transport.zeromq
 import salt.utils.cache
 import salt.utils.files
 import salt.utils.platform
 import salt.utils.stringutils
-from tests.support.mock import AsyncMock, MagicMock, patch
+from tests.support.mock import AsyncMock, MagicMock, call, patch
 from tests.support.runtests import RUNTIME_VARS
 
 try:
@@ -2036,6 +2040,67 @@ async def test_collect__auth_to_master_stats():
         handle_clear_mock.assert_not_called()
 
 
+@pytest.mark.parametrize("ipc_mode", ["ipc", "tcp"])
+def test_legacy_mworker_reaches_zmq_device(master_opts, ipc_mode):
+    """
+    With ``worker_pools_enabled: False``, an MWorker must connect to the
+    socket that the legacy ``zmq_device`` binds, on real zmq sockets.
+
+    Regression test for https://github.com/saltstack/salt/issues/69912
+    """
+    with tempfile.TemporaryDirectory(dir="/tmp") as sock_dir:
+        master_opts.update(
+            {
+                "worker_pools_enabled": False,
+                "worker_pools": {"default": {"worker_count": 1, "commands": ["*"]}},
+                "interface": "127.0.0.1",
+                "ret_port": ports.get_unused_localhost_port(),
+                "ipc_mode": ipc_mode,
+                "tcp_master_workers": ports.get_unused_localhost_port(),
+                "sock_dir": sock_dir,
+            }
+        )
+        transport = salt.transport.zeromq.RequestServer(master_opts)
+
+        async def handler(payload):
+            return payload
+
+        class Channel:
+            # Forwards like ReqServerChannel.post_fork, minus the master keys.
+            def post_fork(self, _payload_handler, io_loop, **kwargs):
+                transport.post_fork(handler, io_loop, **kwargs)
+
+        mworker = salt.master.MWorker(master_opts, {}, {}, [Channel()])
+        assert mworker.pool_name == "default"
+        replies = []
+
+        def round_trip(_device, _clients, workers):
+            # Stands in for the QUEUE loop: one request through the bound socket.
+            workers.setsockopt(zmq.SNDTIMEO, 3000)
+            try:
+                workers.send_multipart([b"", transport.encode_payload("ping")])
+                if workers.poll(3000):
+                    replies.append(workers.recv_multipart()[-1])
+            except zmq.Again:
+                pass
+            finally:
+                mworker.io_loop.call_soon_threadsafe(mworker.io_loop.stop)
+            raise KeyboardInterrupt
+
+        server = salt.transport.zeromq.RequestServer(master_opts)
+        worker_thread = threading.Thread(target=mworker._MWorker__bind, daemon=True)
+        with patch("salt.master.ClearFuncs"), patch("salt.master.AESFuncs"), patch(
+            "salt.transport.zeromq.zmq.device", side_effect=round_trip
+        ), patch.object(server, "_RequestServer__setup_signals"):
+            worker_thread.start()
+            server.zmq_device()
+            worker_thread.join(10)
+        transport.close()
+
+    assert not worker_thread.is_alive()
+    assert [transport.decode_payload(reply) for reply in replies] == ["ping"]
+
+
 # ---------------------------------------------------------------------------
 # AuthFuncs
 # ---------------------------------------------------------------------------
@@ -3135,9 +3200,13 @@ async def test_pillar_async_dispatch_through_handle_aes(master_opts):
     assert args[0] == {"Minion data cache refresh": "minion-async"}
     # Sync-only cache and fileserver helpers were still invoked (offloaded via
     # ``run_in_executor``).
-    aes_funcs.masterapi.cache.store.assert_called_once_with(
-        "grains", "minion-async", {"os": "Debian", "id": "minion-async"}
+    aes_funcs.masterapi.cache.store.assert_has_calls(
+        [
+            call("grains", "minion-async", {"os": "Debian", "id": "minion-async"}),
+            call("pillar", "minion-async", compile_ret),
+        ]
     )
+    assert aes_funcs.masterapi.cache.store.call_count == 2
     aes_funcs.fs_.update_opts.assert_called_once_with()
 
 
@@ -3190,7 +3259,13 @@ async def test_pillar_async_skips_fire_event_when_events_disabled(master_opts):
     with patch("salt.pillar.get_async_pillar", mocks["get_async_pillar"]):
         await worker._handle_aes(load)
 
-    aes_funcs.masterapi.cache.store.assert_called_once()
+    aes_funcs.masterapi.cache.store.assert_has_calls(
+        [
+            call("grains", "minion-quiet", {"id": "minion-quiet"}),
+            call("pillar", "minion-quiet", {}),
+        ]
+    )
+    assert aes_funcs.masterapi.cache.store.call_count == 2
     assert aes_funcs.event.fire_event_async.await_count == 0
 
 

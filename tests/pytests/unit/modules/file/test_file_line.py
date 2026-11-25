@@ -1802,3 +1802,63 @@ def test_line_replace(tempfile_name, get_body, match):
             writelines_content[0],
             expected,
         )
+
+
+def test_line_dry_run_does_not_modify_file(tempfile_name):
+    """
+    With ``dry_run=True`` file.line must report the diff but leave the file
+    untouched, even when ``__opts__["test"]`` is ``False`` (this is the case
+    for the prereq test pass of a state).
+    """
+    original = "first line\nsecond line\n"
+    with salt.utils.files.fopen(tempfile_name, "w") as fp_:
+        fp_.write(original)
+
+    ret = filemod.line(
+        tempfile_name,
+        content="inserted line",
+        after="first line",
+        mode="ensure",
+        dry_run=True,
+    )
+
+    assert "+inserted line" in ret
+    with salt.utils.files.fopen(tempfile_name) as fp_:
+        assert fp_.read() == original
+    # No backup was created either
+    assert os.listdir(os.path.dirname(tempfile_name)) == [
+        os.path.basename(tempfile_name)
+    ]
+
+
+def test_line_dry_run_does_not_create_backup(tempfile_name):
+    with salt.utils.files.fopen(tempfile_name, "w") as fp_:
+        fp_.write("first line\n")
+
+    filemod.line(
+        tempfile_name,
+        content="inserted line",
+        after="first line",
+        mode="ensure",
+        backup=True,
+        dry_run=True,
+    )
+
+    assert os.listdir(os.path.dirname(tempfile_name)) == [
+        os.path.basename(tempfile_name)
+    ]
+
+
+def test_line_writes_file_without_dry_run(tempfile_name):
+    with salt.utils.files.fopen(tempfile_name, "w") as fp_:
+        fp_.write("first line\n")
+
+    filemod.line(
+        tempfile_name,
+        content="inserted line",
+        after="first line",
+        mode="ensure",
+    )
+
+    with salt.utils.files.fopen(tempfile_name) as fp_:
+        assert fp_.read() == "first line\ninserted line\n"

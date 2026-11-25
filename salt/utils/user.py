@@ -30,11 +30,19 @@ try:
 except ImportError:
     HAS_GRP = False
 
-try:
-    import salt.utils.win_functions
+# Deferred: only pull in salt.utils.win_functions (+ ctypes/pywin32/etc.)
+# on Windows.  ``salt.utils.win_functions`` is importable on Linux too
+# (it just returns HAS_WIN32=False), so previously every minion process
+# paid the module + transitive cost even where get_current_user() is
+# unreachable.
+if sys.platform == "win32":
+    try:
+        import salt.utils.win_functions
 
-    HAS_WIN_FUNCTIONS = True
-except ImportError:
+        HAS_WIN_FUNCTIONS = True
+    except ImportError:
+        HAS_WIN_FUNCTIONS = False
+else:
     HAS_WIN_FUNCTIONS = False
 
 if sys.platform == "win32":

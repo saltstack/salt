@@ -1,4 +1,6 @@
 import os
+import pathlib
+import subprocess
 
 import pytest
 
@@ -164,3 +166,29 @@ def test_gitpython_lock(gitpython_winrepo_opts):
 @skipif_no_pygit2
 def test_pygit2_lock(pygit2_winrepo_opts):
     _test_lock(pygit2_winrepo_opts)
+
+
+@pytest.mark.skip_if_binaries_missing("git")
+def test_gitcli_winrepo_checkout_puts_files_on_disk(winrepo_opts, tmp_path):
+    remote = tmp_path / "remote"
+    remote.mkdir()
+    for args in (
+        ["init", "-q", "-b", "main"],
+        ["config", "user.name", "Salt Test"],
+        ["config", "user.email", "salt-test@example.invalid"],
+        ["config", "commit.gpgsign", "false"],
+    ):
+        subprocess.run(["git", "-C", str(remote), *args], check=True)
+    (remote / "firefox.sls").write_text("firefox: {}\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(remote), "add", "."], check=True)
+    subprocess.run(["git", "-C", str(remote), "commit", "-q", "-m", "Add"], check=True)
+
+    winrepo_opts["verified_winrepo_provider"] = "gitcli"
+    winrepo_opts["winrepo_branch"] = "main"
+    w = _get_winrepo(winrepo_opts, remote.as_uri())
+    w.fetch_remotes()
+    w.checkout()
+    assert len(w.winrepo_dirs) == 1, w.winrepo_dirs
+    winrepo_dir = next(iter(w.winrepo_dirs.values()))
+    sls = pathlib.Path(winrepo_dir) / "firefox.sls"
+    assert sls.read_text(encoding="utf-8") == "firefox: {}\n"

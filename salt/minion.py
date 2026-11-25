@@ -116,11 +116,20 @@ try:
 except ImportError:
     HAS_RESOURCE = False
 
-try:
-    import salt.utils.win_functions
+# Deferred: only pull in salt.utils.win_functions (+ ctypes/pywin32/etc.)
+# on Windows.  ``salt.utils.win_functions`` is importable on Linux too
+# (its inner ``import win32...`` block falls through and it exports
+# ``HAS_WIN32 = False``), so previously every minion process paid the
+# module + transitive cost even though the only use-site
+# (``enable_ctrl_logoff_handler`` below) is Windows-only.
+if sys.platform == "win32":
+    try:
+        import salt.utils.win_functions
 
-    HAS_WIN_FUNCTIONS = True
-except ImportError:
+        HAS_WIN_FUNCTIONS = True
+    except ImportError:
+        HAS_WIN_FUNCTIONS = False
+else:
     HAS_WIN_FUNCTIONS = False
 
 
@@ -957,6 +966,7 @@ class MinionBase:
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             try:
                 self.opts["pillar"] = pillar.compile_pillar()
@@ -2485,6 +2495,7 @@ class Minion(MinionBase):
                 self.opts["id"],
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
+                snapshot=True,
             )
             self.opts["pillar"] = await async_pillar.compile_pillar()
             # Async aclose awaits the transport's send/recv exit
@@ -4877,6 +4888,7 @@ class Minion(MinionBase):
                 self.opts["saltenv"],
                 pillarenv=self.opts.get("pillarenv"),
                 clean_cache=clean_cache,
+                snapshot=True,
             )
             try:
                 new_pillar = await async_pillar.compile_pillar()
@@ -5239,7 +5251,10 @@ class Minion(MinionBase):
                     except Exception as exc:  # pylint: disable=broad-except
                         log.error("Error firing master request return event: %s", exc)
             else:
-                log.error(
+                # Benign skip: this req was issued against a different master
+                # in a multi-master / failover topology.  Normal routing
+                # behaviour, not an error condition.  See #70891.
+                log.debug(
                     "Skipping req for other master: cmd=%s master=%s id=%s",
                     data["cmd"],
                     job_master,
@@ -5322,7 +5337,9 @@ class Minion(MinionBase):
                 self.connected = False
                 log.info("Connection to master %s lost", self.opts["master"])
                 if self.opts["transport"] != "tcp":
-                    self.schedule.delete_job(name=master_event(type="alive"))
+                    self.schedule.delete_job(
+                        name=master_event(type="alive", master=self.opts["master"])
+                    )
 
                 log.info("Trying to tune in to next master from master-list")
 
@@ -7289,6 +7306,7 @@ class SProxyMinion(SMinion):
             self.opts["id"],
             saltenv=self.opts["saltenv"],
             pillarenv=self.opts.get("pillarenv"),
+            snapshot=True,
         )
         try:
             new_pillar = pillar.compile_pillar()

@@ -30,7 +30,6 @@ import tornado.tcpclient
 import tornado.tcpserver
 import tornado.util
 
-import salt.master
 import salt.payload
 import salt.transport.base
 import salt.transport.frame
@@ -1754,7 +1753,7 @@ class PubServer(tornado.tcpserver.TCPServer):
                 cert = stream.socket.getpeercert()
 
                 # If server requires client cert but none provided, reject
-                if not cert:
+                if not cert and self.ssl.verify_mode == ssl.CERT_REQUIRED:
                     stream.close()
                     return
 

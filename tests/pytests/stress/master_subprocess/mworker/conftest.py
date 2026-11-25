@@ -15,13 +15,11 @@ Design notes
   libzmq is not fork-safe; inheriting an open ZMQ socket into the child
   causes silent drops.
 * The DEALER's URI is computed via
-  ``req_channel.transport.get_worker_uri(pool_name="default")`` so it
-  matches the URI the child MWorker resolves.  ``MWorker.__init__``
-  defaults ``pool_name`` to ``"default"``, and
-  :func:`RequestServer.get_worker_uri` applies an ``adler32`` port
-  offset for named pools — using the bare ``tcp_master_workers`` port
-  puts the DEALER on the wrong socket and the round-trip silently
-  hangs.
+  ``req_channel.transport.get_worker_uri()`` so it matches the URI the
+  child MWorker resolves.  An MWorker created without a pool passes no
+  pool name to the transport, so both sides use the bare
+  ``tcp_master_workers`` port, without the ``adler32`` offset
+  :func:`RequestServer.get_worker_uri` applies for named pools.
 * ``opts["minimum_auth_version"] = 0`` is set so cleartext ``ping``
   payloads (used by throughput tests) are not rejected at the
   ReqServerChannel layer before they reach ``MWorker._handle_payload``.
@@ -140,7 +138,7 @@ class MWorkerHandle:
         self.req_channel = salt.channel.server.ReqServerChannel.factory(opts)
         # Use the transport's own URI resolver so we bind exactly where
         # the child MWorker's REP will connect.
-        self.w_uri = self.req_channel.transport.get_worker_uri(pool_name="default")
+        self.w_uri = self.req_channel.transport.get_worker_uri()
         self.mkey = salt.crypt.MasterKeys(opts)
         self._ctx = None
         self._dealer = None

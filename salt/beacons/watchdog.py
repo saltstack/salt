@@ -61,7 +61,7 @@ class Handler(FileSystemEventHandler):
         self._append_if_mask(event, "move")
 
     def _append_if_mask(self, event, mask):
-        logging.debug(event)
+        log.debug(event)
 
         self._append_path_if_mask(event, mask)
 
