@@ -121,6 +121,13 @@ if reqs.pydantic:
         # Reserved kwargs are already stripped by the caller, but keep
         # extras tolerant for anything we missed.
         extra="ignore",
+        # Numbers passed where a str is expected are coerced to str.
+        # SLS / CLI / salt-api dispatch commonly produces float or int
+        # for version / port-like kwargs that the target function
+        # declares as str (``version=1.2`` -> ``"1.2"``). Without this
+        # the whole documented coercion story fails on YAML/JSON
+        # autoparsing of numeric literals.
+        coerce_numbers_to_str=True,
     )
 else:  # pragma: no cover
     SALT_VALIDATE_CONFIG = None
@@ -304,19 +311,6 @@ def _set_cache(fn, value):
         fn.__salt_validate_model__ = value
     except (AttributeError, TypeError):  # pragma: no cover
         pass
-
-
-def _coerced_kwargs(validated_model, provided_keys):
-    """Pull attribute values back off a validated model for keys that were
-    actually provided in the call. Avoids clobbering fn-level defaults with
-    pydantic-sourced defaults, and preserves nested BaseModel instances
-    (which would otherwise be flattened by ``model_dump``).
-    """
-    return {
-        name: getattr(validated_model, name)
-        for name in validated_model.__class__.model_fields
-        if name in provided_keys
-    }
 
 
 def validate_inputs(fn, args, kwargs, mode):

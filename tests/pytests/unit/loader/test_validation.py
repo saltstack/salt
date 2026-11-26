@@ -148,6 +148,26 @@ class TestValidateInputs:
         _args, kwargs = validation.validate_inputs(f, (), {"flag": "false"}, "strict")
         assert kwargs == {"flag": False}
 
+    def test_number_to_str_coercion(self):
+        """YAML / JSON often parses ``version: 1.2`` as a float even
+        when the declared type is str. The ``coerce_numbers_to_str``
+        pydantic config turns that into ``"1.2"`` rather than rejecting
+        it -- which is what the user-facing doc claims. Regression for
+        charzl's review."""
+
+        def installed(name: str, version: str = "latest"):
+            return {"name": name, "version": version}
+
+        _args, kwargs = validation.validate_inputs(
+            installed, (), {"name": "nginx", "version": 1.2}, "enforce"
+        )
+        assert kwargs == {"name": "nginx", "version": "1.2"}
+
+        _args, kwargs = validation.validate_inputs(
+            installed, (), {"name": "nginx", "version": 42}, "enforce"
+        )
+        assert kwargs == {"name": "nginx", "version": "42"}
+
     def test_reserved_kwargs_pass_through_as_kwargs(self):
         def f(x: int, **_kwargs):
             return x
