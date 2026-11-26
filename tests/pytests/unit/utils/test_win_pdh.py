@@ -33,10 +33,8 @@ def test_get_all_counters_default_instances():
         [
             ("Processor", "0", "% Processor Time"),
             ("Processor", "*", "% Processor Time"),
-            ("Processor", None, "% Processor Time"),
             ("Processor", "0", "% User Time"),
             ("Processor", "*", "% User Time"),
-            ("Processor", None, "% User Time"),
         ]
     )
 
@@ -53,12 +51,7 @@ def test_get_all_counters_non_list_instance_list():
         ) as mock_get_counters:
             win_pdh.get_all_counters("Processor", instance_list="_Total")
 
-    mock_get_counters.assert_called_once_with(
-        [
-            ("Processor", "*", "% Processor Time"),
-            ("Processor", None, "% Processor Time"),
-        ]
-    )
+    mock_get_counters.assert_called_once_with([("Processor", "*", "% Processor Time")])
 
 
 def test_get_all_counters_empty_instances():
@@ -69,6 +62,21 @@ def test_get_all_counters_empty_instances():
             win_pdh, "get_counters", return_value={}
         ) as mock_get_counters:
             win_pdh.get_all_counters("Memory")
+
+    mock_get_counters.assert_called_once_with([("Memory", None, "Available Bytes")])
+
+
+def test_get_all_counters_empty_instance_list():
+    """
+    An empty instance_list queries the counters without an instance.
+    """
+    mock_win32pdh = MagicMock()
+    mock_win32pdh.EnumObjectItems.return_value = (["Available Bytes"], [])
+    with patch.object(win_pdh, "win32pdh", mock_win32pdh, create=True):
+        with patch.object(
+            win_pdh, "get_counters", return_value={}
+        ) as mock_get_counters:
+            win_pdh.get_all_counters("Memory", instance_list=[])
 
     mock_get_counters.assert_called_once_with([("Memory", None, "Available Bytes")])
 
