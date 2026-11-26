@@ -52,7 +52,7 @@ from salt.utils.versions import Version
 VALID_REF_TYPES = _DEFAULT_MASTER_OPTS["gitfs_ref_types"]
 
 # Optional per-remote params that can only be used on a per-remote basis, and
-# thus do not have defaults in salt/config.py.
+# thus do not have defaults in the master config defaults.
 PER_REMOTE_ONLY = ("name",)
 # Params which are global only and cannot be overridden for a single remote.
 GLOBAL_ONLY = ()
