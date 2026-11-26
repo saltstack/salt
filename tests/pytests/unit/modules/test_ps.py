@@ -274,7 +274,7 @@ class DummyProcess:
     def __enter__(self):
         pass
 
-    def __exit__(self):
+    def __exit__(self, *args):
         pass
 
     def cmdline(self):
