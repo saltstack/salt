@@ -8,6 +8,7 @@ import pytest
 
 import salt.states.user as user
 import salt.utils.platform
+import salt.utils.pycrypto
 from tests.support.mock import MagicMock, Mock, patch
 
 log = logging.getLogger(__name__)
@@ -822,3 +823,82 @@ def test_gecos_comma_check_rejected_on_posix():
         ret = user.present("bob", fullname="Doe, John")
         assert ret["result"] is False
         assert "Unsupported char" in ret["comment"]
+
+
+SHA512_ROUNDS = (
+    "$6$rounds=656000$abcdefgh$/Ei/7YaGhLUaj/.Vzhbn8/qTav7snBIiSWc4ltNfH/h5CKGCnV8"
+    "KtAzHxd56WDXc3DF7SfbULGkU/EoGIlOV70"
+)
+SHA512_IMPLICIT = (
+    "$6$abcdefgh$ltjgWl6579NluT/Vi1nwEvcil.G5Nbc4NiXZaNGStk8PSwGfQv72N2CKPPrVACtLt"
+    "ip/cZ/1GM/O6IND4WQhG."
+)
+
+
+def _gen_hash_crypt(password, crypt_salt=None, algorithm=None):
+    # Mirrors the stdlib crypt backend of salt.utils.pycrypto.gen_hash
+    crypt = pytest.importorskip("crypt")
+    ident = {"sha512": "6", "sha256": "5", "md5": "1"}[algorithm]
+    return crypt.crypt(password, f"${ident}${crypt_salt}")
+
+
+def _gen_hash_passlib(password, crypt_salt=None, algorithm=None):
+    if not salt.utils.pycrypto.HAS_PASSLIB:
+        pytest.skip("passlib is not installed")
+    return salt.utils.pycrypto._gen_hash_passlib(crypt_salt, password, algorithm)
+
+
+@pytest.mark.parametrize("gen_hash", [_gen_hash_passlib, _gen_hash_crypt])
+@pytest.mark.parametrize(
+    "stored",
+    [
+        SHA512_ROUNDS,
+        "$5$rounds=10000$abcdefgh$xH5OIv1xXYrZ3ShkQqwef3DzYdGY9C2Tq1B2B75WTC0",
+        SHA512_IMPLICIT,
+        "$5$abcdefgh$gruCpC7VkOTspMQTTSAR8mtlO9Upms.fwqE5y16JVM.",
+        "$1$abcdefgh$cHJi5PXp/ki/ktXzqlk6I1",
+    ],
+    ids=["sha512-rounds", "sha256-rounds", "sha512", "sha256", "md5"],
+)
+def test_present_hash_password_reuses_salt_and_rounds(stored, gen_hash):
+    """
+    Test that hash_password=True re-uses the salt and rounds of the stored
+    hash, so an unchanged password is not reported as changed.
+    """
+    mock_info = MagicMock(
+        return_value={
+            "uid": 5000,
+            "gid": 5000,
+            "groups": [],
+            "home": "/home/salt",
+            "fullname": "",
+        }
+    )
+    shadow_info = MagicMock(
+        return_value={
+            "min": 2,
+            "max": 88888,
+            "inact": 77,
+            "warn": 14,
+            "passwd": stored,
+        }
+    )
+    set_password = MagicMock(return_value=True)
+
+    with patch.dict(user.__grains__, {"kernel": "Linux"}), patch.dict(
+        user.__salt__,
+        {
+            "shadow.default_hash": MagicMock(return_value="!"),
+            "shadow.info": shadow_info,
+            "shadow.gen_password": MagicMock(side_effect=gen_hash),
+            "shadow.set_password": set_password,
+            "user.info": mock_info,
+            "file.gid_to_group": MagicMock(return_value=5000),
+        },
+    ), patch.dict(user.__opts__, {"test": False}):
+        ret = user.present(
+            "salt", password="secret", hash_password=True, createhome=False
+        )
+    assert ret["changes"] == {}
+    assert ret["comment"] == "User salt is present and up to date"
+    set_password.assert_not_called()
