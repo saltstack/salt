@@ -463,21 +463,27 @@ def test_saltop_grain_mutation(topology, workload, request):
 
 
 def _parse_async_jid(proc) -> str:
-    """Extract ``jid`` from ``salt --async --out=json`` output.  "" on error."""
-    import json
+    """Extract the jid from ``salt --async`` output.  "" on error.
+
+    ``salt --async`` ignores ``--out=json`` and always prints the plain
+    text line ``"Executed command with job ID: <jid>"`` directly (see
+    ``salt/cli/salt.py``), so JSON parsing cannot be used.  When no
+    minion matches the target (e.g. on ``master_type: failover`` the
+    minion is attached to a different master in ``spec.masters``),
+    ``cmd_async`` returns ``0`` and the line reads
+    ``"Executed command with job ID: 0"``; treat that as "no jid".
+    """
+    import re
 
     stdout = getattr(proc, "stdout", "") or ""
-    stdout = stdout.strip()
-    if not stdout:
-        return ""
-    try:
-        data = json.loads(stdout)
-    except json.JSONDecodeError:
-        return ""
-    if not isinstance(data, dict):
-        return ""
-    jid = data.get("jid", "")
-    return str(jid) if jid else ""
+    for line in stdout.splitlines():
+        match = re.search(r"job ID:\s*(\S+)", line)
+        if not match:
+            continue
+        jid = match.group(1).strip()
+        if jid and jid != "0":
+            return jid
+    return ""
 
 
 def test_saltop_pillar_refresh_during_state(topology, workload, request):
@@ -594,46 +600,87 @@ def _scrape_recent_state_sleep_jid(topology, master: str) -> str:
     return str(cands[0][0])
 
 
+def _dispatch_state_sleep_jid(topology, masters) -> tuple[str, str]:
+    """Dispatch ``salt --async '*' state.sleep 60`` from each master in
+    ``masters`` until one returns a non-zero jid.  Returns
+    ``(jid, dispatch_master)``; both ``""`` if no master could publish.
+
+    Rationale: on ``master_type: failover`` topologies (currently
+    ``multimaster-failover``, also ``cluster5``) the minion is attached
+    to exactly ONE master at any time, and ``master_shuffle: True``
+    means the attachment can land on any peer in the list.  Dispatching
+    from a master with no attached minions produces
+    ``"Executed command with job ID: 0"`` (see
+    ``salt/client/__init__.py::_check_pub_data``: empty
+    ``pub_data["minions"]`` returns ``{}`` from ``cmd_async``, which
+    the CLI renders as jid=0) and no master-side job cache entry.  So
+    the test has to try each peer until it finds the one holding the
+    minion before it has anything to kill.
+    """
+    for master in masters:
+        try:
+            proc = topology.exec(
+                master,
+                "salt",
+                "--async",
+                "*",
+                "state.sleep",
+                "60",
+                check=False,
+            )
+        except Exception:  # noqa: BLE001
+            continue
+        jid = _parse_async_jid(proc)
+        if jid:
+            return jid, master
+    return "", ""
+
+
 def test_saltop_kill_job_mid_flight(topology, workload, request):
     scenario = "saltop_kill_job_mid_flight"
     primary = topology.spec.primary_master
+    # Try the primary first so single/hothot/cluster topologies keep
+    # their existing dispatch path; fall through to peers only when the
+    # primary can't publish (failover topologies with the minion on a
+    # peer).  Preserves ordering determinism on topologies where any
+    # master works.
+    masters = (primary,) + tuple(m for m in topology.spec.masters if m != primary)
 
     before = topology.sample_minions()
     fault_start = time.monotonic()
 
-    # Dispatch state.sleep 60 --async.
-    jid = ""
-    try:
-        proc = topology.exec(
-            primary,
-            "salt",
-            "--out=json",
-            "--async",
-            "*",
-            "state.sleep",
-            "60",
-            check=False,
-        )
-        jid = _parse_async_jid(proc)
-    except Exception:  # noqa: BLE001
-        jid = ""
+    # Dispatch state.sleep 60 --async; iterate masters until one
+    # publishes successfully (jid != "0").
+    jid, dispatch_master = _dispatch_state_sleep_jid(topology, masters)
 
     if not jid:
-        # Fallback: scrape jobs.list_jobs for the most-recent state.sleep.
-        jid = _scrape_recent_state_sleep_jid(topology, primary)
+        # Fallback: scrape jobs.list_jobs on each master in turn.  On
+        # failover topologies only the master the minion is attached
+        # to has a recent state.sleep entry; the primary's job cache
+        # is empty when the attachment landed on a peer.
+        for master in masters:
+            jid = _scrape_recent_state_sleep_jid(topology, master)
+            if jid:
+                dispatch_master = master
+                break
 
     if not jid:
         pytest.fail(
-            f"{scenario}: could not determine state.sleep JID "
-            "(neither --async output nor jobs.list_jobs returned one)"
+            f"{scenario}: could not determine state.sleep JID across "
+            f"masters={list(masters)!r} (neither --async output nor "
+            "jobs.list_jobs returned one)"
         )
 
     time.sleep(KILL_JOB_WAIT_SEC)
 
-    # Kill the job on every minion.
+    # Kill the job on every minion from the master that owns the jid
+    # -- the publish and the kill must go through the same master so
+    # the minion sees the saltutil.kill_job for a jid it's actually
+    # running.
+    kill_master = dispatch_master or primary
     try:
         topology.exec(
-            primary,
+            kill_master,
             "salt",
             "*",
             "saltutil.kill_job",
@@ -646,7 +693,7 @@ def test_saltop_kill_job_mid_flight(topology, workload, request):
     # Spot-check: a follow-up test.ping should still work.
     try:
         topology.exec(
-            primary,
+            kill_master,
             "salt",
             "--timeout=10",
             "*",
@@ -661,7 +708,7 @@ def test_saltop_kill_job_mid_flight(topology, workload, request):
         scenario,
         fault_sec=fault_sec,
         before=before,
-        notes=f"killed_jid={jid}",
+        notes=f"killed_jid={jid} via_master={kill_master}",
         item=request.node,
     )
 
