@@ -656,18 +656,35 @@ def present(
             "6": "sha512",
         }
         try:
-            _, algo, shadow_salt, shadow_hash = __salt__["shadow.info"](name)[
-                "passwd"
-            ].split("$", 4)
+            # The stored hash is either $id$salt$hash or $id$rounds=N$salt$hash
+            fields = __salt__["shadow.info"](name)["passwd"].split("$")
+            if len(fields) == 5 and fields[2].startswith("rounds="):
+                _, algo, rounds, shadow_salt, _ = fields
+                shadow_salt = f"{rounds}${shadow_salt}"
+            else:
+                _, algo, shadow_salt, _ = fields
             if algo == "1":
                 log.warning("Using MD5 for hashing passwords is considered insecure!")
             log.debug(
                 "Re-using existing shadow salt for hashing password using %s",
                 algorithms.get(algo),
             )
-            password = __salt__["shadow.gen_password"](
+            new_password = __salt__["shadow.gen_password"](
                 password, crypt_salt=shadow_salt, algorithm=algorithms.get(algo)
             )
+            if (
+                algo in ("5", "6")
+                and "rounds=" not in shadow_salt
+                and "$rounds=" in (new_password or "")
+            ):
+                # The stored hash uses the implicit default of 5000 rounds,
+                # but passlib applies its own default when only given a salt.
+                new_password = __salt__["shadow.gen_password"](
+                    password,
+                    crypt_salt=f"rounds=5000${shadow_salt}",
+                    algorithm=algorithms.get(algo),
+                )
+            password = new_password
         except ValueError:
             log.info(
                 "No existing shadow salt found, defaulting to a randomly generated"
