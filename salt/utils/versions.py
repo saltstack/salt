@@ -688,6 +688,7 @@ def msgpack_module_getter(name):
 DEPS_MAP = {
     "msgpack": Getters(msgpack_module_getter, None),
     "gnupg": Getters(None, None),
+    "pydantic": Getters(None, None),
 }
 
 

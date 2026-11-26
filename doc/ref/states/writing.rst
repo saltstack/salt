@@ -50,6 +50,15 @@ directly define the user interface.
     .. _here: https://github.com/saltstack/salt/blob/v0.16.2/salt/states/pkgrepo.py#L163-183
 
 
+.. admonition:: Input and Return Validation
+
+    State modules can opt in to annotation-driven input and return
+    validation via the ``loader_validate_overrides`` master/minion
+    option.  See :ref:`loader-validation` for configuration and the
+    :class:`StateReturn <salt.loader.contracts.states.StateReturn>`
+    contract.
+
+
 Best Practices
 ==============
 

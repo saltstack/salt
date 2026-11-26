@@ -21,6 +21,7 @@ import salt.config
 import salt.defaults.events
 import salt.defaults.exitcodes
 import salt.loader.context
+import salt.loader.validation
 import salt.syspaths
 import salt.utils.args
 import salt.utils.context
@@ -110,6 +111,27 @@ def _mod_type(module_path):
     return "ext"
 
 
+def _resolve_validate_mode(opts, loader_name, direction):
+    """Resolve the effective validation mode for a dispatch.
+
+    Resolution order (first hit wins):
+
+    1. ``loader_validate_overrides[<loader_name>][<direction>_mode]`` --
+       per-loader override. Only consulted when the loader has a name.
+    2. ``loader_validate_defaults[<direction>_mode]`` -- fleet-wide
+       default applied to any loader without a matching override entry.
+    3. ``"off"``.
+    """
+    if loader_name:
+        overrides = opts.get("loader_validate_overrides", {})
+        entry = overrides.get(loader_name, {})
+        mode = entry.get(f"{direction}_mode")
+        if mode is not None:
+            return mode
+    defaults = opts.get("loader_validate_defaults", {})
+    return defaults.get(f"{direction}_mode", "off")
+
+
 class FilterDictWrapper(MutableMapping):
     """
     Create a dict which wraps another dict with a specific key suffix on get
@@ -189,7 +211,25 @@ class LoadedFunc:
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        # Resolve validation modes from the per-loader override dict
+        # keyed by LazyLoader.name. Unnamed loaders always resolve to "off".
+        input_mode = _resolve_validate_mode(self.loader.opts, self.loader.name, "input")
+        return_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, "return"
+        )
+        args, kwargs = salt.loader.validation.validate_inputs(
+            self.func, args, kwargs, input_mode
+        )
         ret = self.loader.run(run_func, *args, **kwargs)
+        if return_mode != "off":
+            salt.loader.validation.validate_return(
+                self.func,
+                self.name,
+                ret,
+                self.loader.output_contract,
+                self.loader.return_registry,
+                return_mode,
+            )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
         return ret
@@ -229,7 +269,23 @@ class LoadedCoro(LoadedFunc):
                     set_test = True
         if self.loader.inject_globals:
             run_func = global_injector_decorator(self.loader.inject_globals)(run_func)
+        input_mode = _resolve_validate_mode(self.loader.opts, self.loader.name, "input")
+        return_mode = _resolve_validate_mode(
+            self.loader.opts, self.loader.name, "return"
+        )
+        args, kwargs = salt.loader.validation.validate_inputs(
+            self.func, args, kwargs, input_mode
+        )
         ret = await self.loader.run(run_func, *args, **kwargs)
+        if return_mode != "off":
+            salt.loader.validation.validate_return(
+                self.func,
+                self.name,
+                ret,
+                self.loader.output_contract,
+                self.loader.return_registry,
+                return_mode,
+            )
         if set_test:
             self.loader.opts["test"] = mod.__opts__["test"]
         return ret
@@ -364,6 +420,9 @@ class LazyLoader(salt.utils.lazy.LazyDict):
         virtual_funcs=None,
         extra_module_dirs=None,
         pack_self=None,
+        output_contract=None,
+        return_registry=None,
+        name=None,
         # Once we get rid of __utils__, the keyword argument bellow should be removed
         _only_pack_properly_namespaced_functions=True,
     ):  # pylint: disable=W0231
@@ -392,10 +451,36 @@ class LazyLoader(salt.utils.lazy.LazyDict):
             opts["optimization_order"] = [0, 1, 2]
         threadsafety = not opts.get("multiprocessing")
         self.opts = self.__prep_mod_opts(opts)
+        # Validate the loader_validate_* family of opts at loader
+        # startup. Raises ValueError with an accumulated error listing
+        # when any mode value is unrecognized or the overrides dict is
+        # malformed. Cached on opts so sibling loaders don't re-validate.
+        import salt.config.loader_validation
+
+        salt.config.loader_validation.validate_loader_validation_opts(self.opts)
         self.pack_self = pack_self
 
         self.module_dirs = module_dirs
         self.tag = tag
+        # Optional pydantic model that every function's return value must
+        # satisfy. Factories pin this per loader-kind (e.g. states() passes
+        # salt.loader.contracts.StateReturn). None means no universal
+        # return contract -- per-function contracts can still apply via
+        # return_registry below. Enforced at call time in
+        # LoadedFunc.__call__ when opts["loader_validate_return_mode"]
+        # is not "off".
+        self.output_contract = output_contract
+        # Optional {"module.func": ReturnModel} dict for loader kinds
+        # where return shapes vary per function (runners, wheels, etc.).
+        # Owned by salt.loader.contracts, not by individual modules.
+        self.return_registry = return_registry
+        # Logical loader name for per-loader validation-mode lookup via
+        # loader_validate_overrides. Set by the factory in
+        # salt/loader/__init__.py. Examples: "wire_salt" (filtered
+        # minion_mods), "salt_dunder" (inner minion_mods), "states",
+        # "runners", "wheels". None means the loader is unnamed and
+        # validation is always off for its dispatches.
+        self.name = name
         self._gc_finalizer = None
         self.loaded_base_name = loaded_base_name or LOADED_BASE_NAME
         self.mod_type_check = mod_type_check or _mod_type

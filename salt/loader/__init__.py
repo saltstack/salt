@@ -465,6 +465,8 @@ def minion_mods(
     # LazyLoader reuses an existing per-module ``LoaderContext`` when it
     # encounters one, so both loaders share the same NamedLoaderContext
     # bindings and per-module ``__context__`` state stays consistent.
+    # name= is the key loader_validate_overrides consults to pick a
+    # per-loader validation mode for this loader's dispatches.
     salt_dunder = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
@@ -474,11 +476,14 @@ def minion_mods(
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__salt__",
+        name="salt_dunder",
     )
     pack = dict(pack)
     pack["__salt__"] = salt_dunder
     if pillar is not None:
         pack["__pillar__"] = pillar
+    # name="wire_salt" targets the filtered minion_mods loader for
+    # loader_validate_overrides lookups.
     ret = LazyLoader(
         _module_dirs(opts, "modules", "module"),
         opts,
@@ -488,6 +493,7 @@ def minion_mods(
         loaded_base_name=loaded_base_name,
         static_modules=static_modules,
         extra_module_dirs=utils.module_dirs if utils else None,
+        name="wire_salt",
     )
 
     # Test / callsite compatibility: ``patch.dict(ret, {...})`` was the way
@@ -988,6 +994,7 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
     """
     if context is None:
         context = {}
+    # name="wheels" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "wheel"),
         opts,
@@ -995,6 +1002,7 @@ def wheels(opts, whitelist=None, context=None, loaded_base_name=None):
         whitelist=whitelist,
         pack={"__context__": context},
         loaded_base_name=loaded_base_name,
+        name="wheels",
     )
 
 
@@ -1247,6 +1255,14 @@ def states(
     if minion_mods is not None:
         pack["__minion__"] = minion_mods
 
+    # Pin the StateReturn contract on this loader; LoadedFunc.__call__ will
+    # validate every state function's return against it when
+    # opts["loader_validate_return_mode"] is not "off". Imported lazily so
+    # this module doesn't require pydantic at import time.
+    from salt.loader.contracts.states import StateReturn
+    from salt.utils.versions import reqs
+
+    # name="states" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "states"),
         opts,
@@ -1256,6 +1272,8 @@ def states(
         extra_module_dirs=utils.module_dirs if utils else None,
         pack_self="__states__",
         loaded_base_name=loaded_base_name,
+        output_contract=StateReturn if reqs.pydantic else None,
+        name="states",
     )
 
 
@@ -1763,6 +1781,7 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         utils = {}
     if context is None:
         context = {}
+    # name="runners" targets this loader for loader_validate_overrides lookups.
     return LazyLoader(
         _module_dirs(opts, "runners", "runner", ext_type_dirs="runner_dirs"),
         opts,
@@ -1773,6 +1792,7 @@ def runner(opts, utils=None, context=None, whitelist=None, loaded_base_name=None
         # TODO: change from __salt__ to something else, we overload __salt__ too much
         pack_self="__salt__",
         loaded_base_name=loaded_base_name,
+        name="runners",
     )
 
 

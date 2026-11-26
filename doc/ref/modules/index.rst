@@ -6,6 +6,13 @@ Writing Execution Modules
 
 Salt execution modules are the functions called by the :command:`salt` command.
 
+.. seealso::
+
+    Execution modules can opt in to annotation-driven input validation
+    via the ``loader_validate_overrides`` master/minion option.  See
+    :ref:`loader-validation` for the operator-facing configuration and
+    the module-authoring patterns.
+
 Modules Are Easy to Write!
 ==========================
 
