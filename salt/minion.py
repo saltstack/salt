@@ -1631,7 +1631,8 @@ class SMinion(MinionBase):
                 Wrap eval master in order to close the returned publish channel.
                 """
                 master, pub_channel = await self.eval_master(self.opts, failed=True)
-                pub_channel.close()
+                if pub_channel is not None:
+                    pub_channel.close()
 
             io_loop.run_sync(
                 lambda: eval_master()  # pylint: disable=unnecessary-lambda

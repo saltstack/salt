@@ -197,6 +197,29 @@ def test_sync_grains_failure_does_not_prevent_startup(minion_opts, caplog):
     assert "boom" in caplog.text
 
 
+def test_sminion_with_disabled_master(minion_opts):
+    minion_opts.update(master="", master_type="disable", file_client="remote")
+    with patch("salt.minion._sync_grains"), patch(
+        "salt.loader.grains", return_value={}
+    ), patch.object(salt.minion.SMinion, "gen_modules") as gen_modules:
+        salt.minion.SMinion(minion_opts)
+    gen_modules.assert_called_once()
+
+
+def test_sminion_closes_returned_publish_channel(minion_opts):
+    minion_opts["file_client"] = "remote"
+    pub_channel = MagicMock()
+    with patch("salt.minion._sync_grains"), patch(
+        "salt.loader.grains", return_value={}
+    ), patch.object(salt.minion.SMinion, "gen_modules"), patch.object(
+        salt.minion.SMinion,
+        "eval_master",
+        AsyncMock(return_value=("localhost", pub_channel)),
+    ):
+        salt.minion.SMinion(minion_opts)
+    pub_channel.close.assert_called_once_with()
+
+
 @pytest.mark.parametrize(
     "file_client,expect_sync", [("local", True), ("remote", False)]
 )
