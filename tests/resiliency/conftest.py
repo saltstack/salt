@@ -849,6 +849,12 @@ def workload(topology, request):
     )
     env = os.environ.copy()
     env["MASTER"] = topology.spec.primary_master
+    # Explicit list targeting (``salt -L <ids>``) for every workload
+    # loop.  Bypasses the minion-side resource-registry fan-out that
+    # otherwise turns a single ``salt '*' test.ping`` publish into
+    # ``dummy_resource_count × minion_count`` per-resource jobs on
+    # cluster3.  See workload.sh for the full cascade note.
+    env["MINION_IDS"] = ",".join(topology.spec.minion_ids)
 
     log_fh = log_path.open("w", encoding="utf-8")
     proc = subprocess.Popen(

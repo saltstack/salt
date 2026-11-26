@@ -493,6 +493,13 @@ def test_saltop_pillar_refresh_during_state(topology, workload, request):
     before = topology.sample_minions()
     fault_start = time.monotonic()
 
+    # ``-L <ids>`` targeting bypasses the minion-side resource
+    # registry fan-out on cluster3; a bare ``*`` glob would publish
+    # ``dummy_resource_count × minion_count`` per-resource jobs per
+    # call and saturate every minion's queue.  See workload.sh and
+    # agents/reports/cluster3-glob-fanout-cleanup.md.
+    minion_list = ",".join(topology.spec.minion_ids)
+
     # Kick state.apply --async; capture jid for the drain poll.
     state_jid = ""
     try:
@@ -501,7 +508,8 @@ def test_saltop_pillar_refresh_during_state(topology, workload, request):
             "salt",
             "--out=json",
             "--async",
-            "*",
+            "-L",
+            minion_list,
             "state.apply",
             check=False,
         )
@@ -515,7 +523,8 @@ def test_saltop_pillar_refresh_during_state(topology, workload, request):
             primary,
             "salt",
             "--async",
-            "*",
+            "-L",
+            minion_list,
             "saltutil.refresh_pillar",
             check=False,
         )
@@ -617,13 +626,18 @@ def _dispatch_state_sleep_jid(topology, masters) -> tuple[str, str]:
     the test has to try each peer until it finds the one holding the
     minion before it has anything to kill.
     """
+    # ``-L <ids>`` keeps the fleet-wide dispatch intent while
+    # avoiding the cluster3 resource-registry fan-out (see
+    # topology.issue_async_job docstring + workload.sh).
+    minion_list = ",".join(topology.spec.minion_ids)
     for master in masters:
         try:
             proc = topology.exec(
                 master,
                 "salt",
                 "--async",
-                "*",
+                "-L",
+                minion_list,
                 "state.sleep",
                 "60",
                 check=False,
@@ -678,11 +692,15 @@ def test_saltop_kill_job_mid_flight(topology, workload, request):
     # the minion sees the saltutil.kill_job for a jid it's actually
     # running.
     kill_master = dispatch_master or primary
+    # ``-L`` list targeting again, same rationale as the state.sleep
+    # dispatch above -- avoids the cluster3 resource-registry fan-out.
+    minion_list = ",".join(topology.spec.minion_ids)
     try:
         topology.exec(
             kill_master,
             "salt",
-            "*",
+            "-L",
+            minion_list,
             "saltutil.kill_job",
             jid,
             check=False,
@@ -696,7 +714,8 @@ def test_saltop_kill_job_mid_flight(topology, workload, request):
             kill_master,
             "salt",
             "--timeout=10",
-            "*",
+            "-L",
+            minion_list,
             "test.ping",
             check=False,
         )
@@ -861,6 +880,13 @@ def test_saltop_mine_burst(topology, workload, request):
     before = topology.sample_minions()
     fault_start = time.monotonic()
 
+    # Tight-loop ``salt '*' mine.update`` for MINE_BURST_SEC seconds.
+    # ``-L <ids>`` keeps the fleet-wide burst intent but avoids the
+    # cluster3 resource-registry fan-out (each ``*`` publish would
+    # queue dummy_resource_count × minion_count per-resource jobs
+    # per iteration; over MINE_BURST_SEC this saturates the queue
+    # and takes down the fleet).
+    minion_list = ",".join(topology.spec.minion_ids)
     end = time.monotonic() + MINE_BURST_SEC
     while time.monotonic() < end:
         try:
@@ -868,7 +894,8 @@ def test_saltop_mine_burst(topology, workload, request):
                 primary,
                 "salt",
                 "--async",
-                "*",
+                "-L",
+                minion_list,
                 "mine.update",
                 check=False,
             )

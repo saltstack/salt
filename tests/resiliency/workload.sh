@@ -47,6 +47,34 @@ if [ -z "$PRIMARY_MASTER" ]; then
     exit 2
 fi
 
+# MINION_IDS is a comma-separated list of real minion ids (matching
+# ``topology.spec.minion_ids``).  When set we address the fleet with
+# ``salt -L "$MINION_IDS"`` instead of a bare ``*`` glob.  On the
+# resource-registry topology (cluster3, 2000 dummy resources per
+# minion) each ``salt '*' <fn>`` publish fans out via
+# ``salt/minion.py::_resolve_resource_targets`` to
+# ``dummy_resource_count × minion_count`` per-resource jobs on every
+# minion.  With ``PING_INTERVAL=5`` + ``STATE_INTERVAL=30`` + ~30 min
+# tests per scenario, the sustained flood queues 600k+ files per
+# minion and the real-minion ping response ends up buried behind the
+# dummy returns -- every subsequent test's ``salt_ping_all -L <ids>``
+# comes back empty and the suite cascades to ``missing=5`` on every
+# scenario after the first fanout-heavy workload tick.  ``-L``
+# targeting addresses the real minions directly and skips the
+# resource fan-out while preserving the "hit every real minion"
+# intent of the four workload loops.  See
+# ``agents/reports/cluster3-glob-fanout-cleanup.md`` and
+# ``agents/reports/cluster3-fleet-death-cascade.md`` for the full
+# cascade mechanics.  When MINION_IDS is unset we fall back to ``*``
+# (legacy behaviour; harmless on single/cluster5/multimaster topologies
+# that do not enable the resource registry).
+MINION_IDS="${MINION_IDS:-}"
+if [ -n "$MINION_IDS" ]; then
+    TARGET_ARGS=("-L" "$MINION_IDS")
+else
+    TARGET_ARGS=("*")
+fi
+
 : "${PING_INTERVAL:=5}"
 : "${GRAINS_INTERVAL:=15}"
 : "${STATE_INTERVAL:=30}"
@@ -68,12 +96,13 @@ shutdown() {
 trap shutdown INT TERM
 
 wlog "starting on TOPOLOGY=${TOPOLOGY:-unknown} PRIMARY_MASTER=${PRIMARY_MASTER}"
+wlog "target: ${TARGET_ARGS[*]}"
 wlog "intervals: ping=${PING_INTERVAL}s grains=${GRAINS_INTERVAL}s state=${STATE_INTERVAL}s runner=${RUNNER_INTERVAL}s"
 
 # ---- loop 1: synchronous test.ping with a short timeout ----
 (
     while true; do
-        docker exec "$PRIMARY_MASTER" salt --timeout=10 '*' test.ping >/dev/null 2>&1 || true
+        docker exec "$PRIMARY_MASTER" salt --timeout=10 "${TARGET_ARGS[@]}" test.ping >/dev/null 2>&1 || true
         sleep "$PING_INTERVAL"
     done
 ) &
@@ -83,7 +112,7 @@ wlog "ping loop pid=$!"
 # ---- loop 2: async grains.items (bulk return path) ----
 (
     while true; do
-        docker exec "$PRIMARY_MASTER" salt --async '*' grains.items >/dev/null 2>&1 || true
+        docker exec "$PRIMARY_MASTER" salt --async "${TARGET_ARGS[@]}" grains.items >/dev/null 2>&1 || true
         sleep "$GRAINS_INTERVAL"
     done
 ) &
@@ -93,7 +122,7 @@ wlog "grains loop pid=$!"
 # ---- loop 3: async empty state.apply (compiler + fileserver path) ----
 (
     while true; do
-        docker exec "$PRIMARY_MASTER" salt --async '*' state.apply >/dev/null 2>&1 || true
+        docker exec "$PRIMARY_MASTER" salt --async "${TARGET_ARGS[@]}" state.apply >/dev/null 2>&1 || true
         sleep "$STATE_INTERVAL"
     done
 ) &

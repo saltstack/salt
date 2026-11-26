@@ -816,6 +816,7 @@ class Topology:
         function: str = "test.ping",
         args: list[str] | None = None,
         timeout: int = 30,
+        tgt_type: str | None = None,
     ) -> str:
         """Issue ``salt --async <target> <function> [args]`` on the primary
         master and return the JID.
@@ -826,6 +827,26 @@ class Topology:
         ``--out=json`` would be preferable for stdout stability the
         caller should build a bespoke invocation; the default here
         matches the human-readable ``salt --async`` CLI.
+
+        The default ``salt_target="*"`` is interpreted as "every real
+        minion in ``spec.minion_ids``" and transparently rewritten to
+        ``-L <minion_ids>`` targeting.  On the resource-registry
+        topology (cluster3) a bare ``*`` glob fans out via
+        ``salt/minion.py::_resolve_resource_targets`` to
+        ``dummy_resource_count × minion_count`` per-resource jobs on
+        every minion; callers that issue dozens of these in a tight
+        burst (overload/returns-backpressure scenarios) have saturated
+        each minion's job queue to 1.4M+ files and taken down the
+        fleet for the rest of the suite.  ``-L`` list targeting
+        addresses the real minions directly and is semantically
+        equivalent for the "hit every real minion" intent; it skips
+        the registry fan-out and keeps the per-minion queue bounded.
+
+        Callers that need a different tgt_type (grain-targeting,
+        PCRE, resource-registry glob, etc.) can pass ``tgt_type``
+        explicitly (e.g. ``tgt_type="grain"``) along with a literal
+        ``salt_target`` -- in which case the method honours the
+        caller verbatim and does NOT rewrite to ``-L``.
         """
         primary = self.spec.primary_master
         argv = [
@@ -834,9 +855,17 @@ class Topology:
             primary,
             "salt",
             "--async",
-            salt_target,
-            function,
         ]
+        # Transparent ``*`` -> ``-L <minion_ids>`` rewrite for the
+        # resource-registry fanout hazard (see docstring).  Any caller
+        # that passes an explicit tgt_type opts out of the rewrite.
+        if tgt_type is None and salt_target == "*" and self.spec.minion_ids:
+            argv.extend(["-L", ",".join(self.spec.minion_ids)])
+        else:
+            if tgt_type is not None:
+                argv.extend(["--tgt-type", tgt_type])
+            argv.append(salt_target)
+        argv.append(function)
         if args:
             argv.extend(args)
 

@@ -180,6 +180,13 @@ def test_fs_sls_swap_mid_state(topology, workload, request):
     # subprocess ``docker exec -d``.
     import subprocess
 
+    # ``-L <ids>`` instead of ``*`` to bypass the cluster3
+    # resource-registry fan-out (each ``*`` publish queues
+    # dummy_resource_count × minion_count per-resource jobs per
+    # minion; see workload.sh and
+    # agents/reports/cluster3-glob-fanout-cleanup.md).  Semantically
+    # equivalent for the "hit every real minion" intent.
+    minion_list = ",".join(topology.spec.minion_ids)
     try:
         subprocess.run(
             [
@@ -190,8 +197,8 @@ def test_fs_sls_swap_mid_state(topology, workload, request):
                 "sh",
                 "-c",
                 (
-                    "salt --async '*' state.apply heavy >/dev/null 2>&1 "
-                    "|| salt --async '*' state.apply webserver >/dev/null 2>&1"
+                    f"salt --async -L '{minion_list}' state.apply heavy >/dev/null 2>&1 "
+                    f"|| salt --async -L '{minion_list}' state.apply webserver >/dev/null 2>&1"
                 ),
             ],
             check=False,
@@ -312,10 +319,13 @@ def test_fs_large_file_mid_cache(topology, workload, request):
     fault_start = time.monotonic()
     import subprocess
 
+    minion_list = ",".join(topology.spec.minion_ids)
     try:
         try:
             # Kick cache fetch on every minion from the master CLI (async,
-            # detached so we don't block).
+            # detached so we don't block).  ``-L <ids>`` instead of
+            # ``*`` to avoid the cluster3 resource-registry fan-out
+            # (see workload.sh).
             subprocess.run(
                 [
                     "docker",
@@ -324,7 +334,7 @@ def test_fs_large_file_mid_cache(topology, workload, request):
                     primary,
                     "sh",
                     "-c",
-                    f"salt --async '*' cp.cache_file '{large_file_salt}' "
+                    f"salt --async -L '{minion_list}' cp.cache_file '{large_file_salt}' "
                     ">/dev/null 2>&1",
                 ],
                 check=False,
@@ -427,8 +437,11 @@ def test_fs_pillar_flip_mid_run(topology, workload, request):
     fault_start = time.monotonic()
     import subprocess
 
+    minion_list = ",".join(topology.spec.minion_ids)
     try:
-        # Kick a pillar-refreshing op async.
+        # Kick a pillar-refreshing op async.  ``-L <ids>`` instead of
+        # ``*`` for the cluster3 resource-registry fan-out mitigation
+        # (see workload.sh).
         try:
             subprocess.run(
                 [
@@ -438,7 +451,7 @@ def test_fs_pillar_flip_mid_run(topology, workload, request):
                     primary,
                     "sh",
                     "-c",
-                    "salt --async '*' saltutil.refresh_pillar >/dev/null 2>&1",
+                    f"salt --async -L '{minion_list}' saltutil.refresh_pillar >/dev/null 2>&1",
                 ],
                 check=False,
                 stdout=subprocess.DEVNULL,
