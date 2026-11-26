@@ -560,7 +560,7 @@ def set_max_open_files_limits(min_soft=8192, min_hard=16384):
                 err,
                 soft,
             )
-            exit(1)
+            sys.exit(1)
     return soft, hard
 
 
