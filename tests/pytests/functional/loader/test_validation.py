@@ -55,6 +55,44 @@ def good(name):
 def bad(name):
     # Missing required 'comment' field -- fails StateReturn.
     return {"name": name, "changes": {}, "result": True}
+
+
+# State-system helper functions whose returns aren't StateReturn-shaped.
+# Enforce-mode return validation must skip these.
+def mod_init(low):
+    return True
+
+
+def mod_aggregate(low, chunks, running):
+    return low
+
+
+def mod_run_check(low, running, test_mode):
+    return True
+
+
+def mod_run_check_cmd(cmd):
+    return True
+"""
+
+
+# Exec module exercising the input-passthrough contract: unannotated
+# params, **kwargs catchall, and number-to-str coercion all need to
+# round-trip the full call through LoadedFunc.__call__.
+PASSTHROUGH_MODULE = """
+def mixed(annotated: int, unannotated):
+    '''unannotated must survive validation; annotated must coerce.'''
+    return {"annotated": annotated, "unannotated": unannotated}
+
+
+def install(name: str, **kwargs):
+    '''**kwargs contents must survive validation.'''
+    return {"name": name, "kwargs": dict(kwargs)}
+
+
+def versioned(name: str, version: str = "latest"):
+    '''version=1.2 (float) must coerce to "1.2" (str), not raise.'''
+    return {"name": name, "version": version, "version_type": type(version).__name__}
 """
 
 
@@ -71,6 +109,14 @@ def state_mod_dir(tmp_path):
     """Drop STATE_MODULE into a tmp dir and return the path."""
     with salt.utils.files.fopen(tmp_path / "state_mod.py", "w") as fp:
         fp.write(tests.support.helpers.dedent(STATE_MODULE))
+    return tmp_path
+
+
+@pytest.fixture
+def passthrough_mod_dir(tmp_path):
+    """Drop PASSTHROUGH_MODULE into a tmp dir and return the path."""
+    with salt.utils.files.fopen(tmp_path / "passthrough.py", "w") as fp:
+        fp.write(tests.support.helpers.dedent(PASSTHROUGH_MODULE))
     return tmp_path
 
 
@@ -288,3 +334,168 @@ class TestValidatorAtStartup:
             name="wire_salt",
         )
         assert loader.name == "wire_salt"
+
+
+# ---------------------------------------------------------------------------
+# End-to-end regression tests for charzl's PR #70943 review comments. These
+# dispatch THROUGH LoadedFunc.__call__ (not directly at validate_inputs /
+# validate_return), proving the real wiring -- not just that the mechanism
+# works in isolation.
+# ---------------------------------------------------------------------------
+
+
+class TestStateHelperSkipThroughDispatch:
+    """charzl: ``StateReturn`` was being applied to ``mod_init`` /
+    ``mod_aggregate`` / ``mod_run_check`` / ``mod_run_check_cmd``,
+    breaking under ``loader_validate_overrides.states.return_mode=enforce``
+    AND under ``loader_validate_defaults.return_mode=enforce``. The skip
+    must fire regardless of how the mode was resolved."""
+
+    @pytest.fixture
+    def state_loader(self, state_mod_dir):
+        from salt.loader.contracts.states import StateReturn
+
+        return state_mod_dir, StateReturn
+
+    @pytest.mark.parametrize(
+        "helper,args",
+        [
+            ("mod_init", ({"state": "state_mod"},)),
+            ("mod_aggregate", ({"state": "state_mod"}, [], {})),
+            ("mod_run_check", ({"state": "state_mod"}, {}, False)),
+            ("mod_run_check_cmd", ("/bin/true",)),
+        ],
+    )
+    def test_skip_under_overrides_enforce(self, state_loader, helper, args):
+        state_mod_dir, StateReturn = state_loader
+        loader = salt.loader.lazy.LazyLoader(
+            [state_mod_dir],
+            _base_opts(
+                loader_validate_overrides={"states": {"return_mode": "enforce"}},
+            ),
+            name="states",
+            output_contract=StateReturn,
+        )
+        # Without the skip, this would raise SaltInvocationError because
+        # mod_init returns bool (not a StateReturn-shaped dict).
+        result = loader[f"state_mod.{helper}"](*args)
+        assert result in (True, args[0])
+
+    @pytest.mark.parametrize(
+        "helper,args",
+        [
+            ("mod_init", ({"state": "state_mod"},)),
+            ("mod_aggregate", ({"state": "state_mod"}, [], {})),
+        ],
+    )
+    def test_skip_under_defaults_enforce(self, state_loader, helper, args):
+        """Same skip must work when the mode is resolved from
+        ``loader_validate_defaults`` rather than per-loader overrides.
+        This is the scenario charzl called out specifically."""
+        state_mod_dir, StateReturn = state_loader
+        loader = salt.loader.lazy.LazyLoader(
+            [state_mod_dir],
+            _base_opts(
+                loader_validate_defaults={"return_mode": "enforce"},
+            ),
+            name="states",
+            output_contract=StateReturn,
+        )
+        result = loader[f"state_mod.{helper}"](*args)
+        assert result in (True, args[0])
+
+    def test_regular_state_fn_still_validated_under_enforce(self, state_loader):
+        """Sanity: with the skip in place, non-helper state functions
+        still validate. ``good`` passes, ``bad`` (missing comment) raises."""
+        state_mod_dir, StateReturn = state_loader
+        loader = salt.loader.lazy.LazyLoader(
+            [state_mod_dir],
+            _base_opts(
+                loader_validate_defaults={"return_mode": "enforce"},
+            ),
+            name="states",
+            output_contract=StateReturn,
+        )
+        assert loader["state_mod.good"]("x")["result"] is True
+        with pytest.raises(SaltInvocationError, match="contract violation"):
+            loader["state_mod.bad"]("x")
+
+
+class TestInputPassthroughThroughDispatch:
+    """charzl: ``validate_inputs`` was rebuilding the call from
+    ``validated.model_fields``, which dropped unannotated params and
+    ``**kwargs`` extras. These tests dispatch THROUGH LoadedFunc so the
+    function actually gets invoked with the constructed args/kwargs --
+    proving the wiring, not just the shape of what validate_inputs
+    returns."""
+
+    def test_unannotated_positional_reaches_function(self, passthrough_mod_dir):
+        """``def mixed(annotated: int, unannotated)`` dispatched as
+        ``mixed(1, "preserve-me")`` must actually call the function
+        with both args. Before the fix the unannotated slot was dropped
+        and the function raised ``TypeError`` for a missing arg."""
+        loader = salt.loader.lazy.LazyLoader(
+            [passthrough_mod_dir],
+            _base_opts(
+                loader_validate_overrides={"wire_salt": {"input_mode": "enforce"}},
+            ),
+            name="wire_salt",
+        )
+        result = loader["passthrough.mixed"](1, "preserve-me")
+        assert result == {"annotated": 1, "unannotated": "preserve-me"}
+
+    def test_var_kwargs_catchall_reaches_function(self, passthrough_mod_dir):
+        """``def install(name: str, **kwargs)`` dispatched as
+        ``install("nginx", refresh=True, pkgs=["a", "b"])`` must call
+        the function with the full ``**kwargs``. Before the fix those
+        extras were dropped by the model-fields rebuild."""
+        loader = salt.loader.lazy.LazyLoader(
+            [passthrough_mod_dir],
+            _base_opts(
+                loader_validate_overrides={"wire_salt": {"input_mode": "enforce"}},
+            ),
+            name="wire_salt",
+        )
+        result = loader["passthrough.install"]("nginx", refresh=True, pkgs=["a", "b"])
+        assert result == {
+            "name": "nginx",
+            "kwargs": {"refresh": True, "pkgs": ["a", "b"]},
+        }
+
+
+class TestNumberToStrCoercionThroughDispatch:
+    """charzl: salt-api / SLS / YAML dispatch commonly produces
+    ``version=1.2`` as a Python float. The documented behavior is that
+    it coerces to ``"1.2"`` for a ``version: str`` parameter. Pydantic 2
+    lax mode rejects numbers->str without ``coerce_numbers_to_str=True``;
+    verify the SALT_VALIDATE_CONFIG enables it end-to-end."""
+
+    def test_float_coerces_to_str(self, passthrough_mod_dir):
+        loader = salt.loader.lazy.LazyLoader(
+            [passthrough_mod_dir],
+            _base_opts(
+                loader_validate_overrides={"wire_salt": {"input_mode": "enforce"}},
+            ),
+            name="wire_salt",
+        )
+        result = loader["passthrough.versioned"]("nginx", version=1.2)
+        assert result == {
+            "name": "nginx",
+            "version": "1.2",
+            "version_type": "str",
+        }
+
+    def test_int_coerces_to_str(self, passthrough_mod_dir):
+        loader = salt.loader.lazy.LazyLoader(
+            [passthrough_mod_dir],
+            _base_opts(
+                loader_validate_overrides={"wire_salt": {"input_mode": "enforce"}},
+            ),
+            name="wire_salt",
+        )
+        result = loader["passthrough.versioned"]("nginx", version=42)
+        assert result == {
+            "name": "nginx",
+            "version": "42",
+            "version_type": "str",
+        }
