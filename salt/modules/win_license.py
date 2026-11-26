@@ -17,6 +17,7 @@ Replaces the previous slmgr.vbs-based implementation.
     salt '*' license.install XXXXX-XXXXX-XXXXX-XXXXX-XXXXX
 """
 
+# Throwaway baseline CI run (comment only, do not merge).
 import logging
 
 import salt.exceptions
