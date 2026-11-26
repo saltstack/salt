@@ -421,6 +421,56 @@ async def test_await_lock_raises_when_lock_path_is_directory(tmp_path):
             pass
 
 
+@pytest.mark.parametrize(
+    "error_type", [ValueError, OSError, salt.exceptions.FileLockError]
+)
+def test_wait_lock_preserves_body_exception(tmp_path, error_type):
+    lock_path = tmp_path / "body.lock"
+    error = error_type("operation failed after acquiring lock")
+
+    with pytest.raises(error_type) as exc_info:
+        with salt.utils.files.wait_lock(str(lock_path), lock_fn=str(lock_path)):
+            raise error
+
+    assert exc_info.value is error
+    assert not lock_path.exists()
+
+
+@pytest.mark.parametrize(
+    "error_type", [ValueError, OSError, salt.exceptions.FileLockError]
+)
+async def test_await_lock_preserves_body_exception(tmp_path, error_type):
+    lock_path = tmp_path / "body.lock"
+    error = error_type("operation failed after acquiring lock")
+
+    with pytest.raises(error_type) as exc_info:
+        async with salt.utils.files.await_lock(str(lock_path), lock_fn=str(lock_path)):
+            raise error
+
+    assert exc_info.value is error
+    assert not lock_path.exists()
+
+
+def test_wait_lock_wraps_acquisition_exception(tmp_path):
+    lock_path = tmp_path / "acquisition.lock"
+    with patch("salt.utils.files.os.open", side_effect=RuntimeError("cannot acquire")):
+        with pytest.raises(salt.exceptions.FileLockError, match="cannot acquire"):
+            with salt.utils.files.wait_lock(str(lock_path), lock_fn=str(lock_path)):
+                pytest.fail("Lock was not acquired")
+    assert not lock_path.exists()
+
+
+async def test_await_lock_wraps_acquisition_exception(tmp_path):
+    lock_path = tmp_path / "acquisition.lock"
+    with patch("salt.utils.files.os.open", side_effect=RuntimeError("cannot acquire")):
+        with pytest.raises(salt.exceptions.FileLockError, match="cannot acquire"):
+            async with salt.utils.files.await_lock(
+                str(lock_path), lock_fn=str(lock_path)
+            ):
+                pytest.fail("Lock was not acquired")
+    assert not lock_path.exists()
+
+
 @pytest.mark.skip_on_windows(reason="set_umask is a no-op on Windows")
 def test_set_umask_is_serialized_across_threads():
     """

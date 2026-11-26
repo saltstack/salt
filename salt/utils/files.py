@@ -399,6 +399,8 @@ def wait_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
+        if obtained_lock:
+            raise
         _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
@@ -503,6 +505,8 @@ async def await_lock(path, lock_fn=None, timeout=5, sleep=0.1, time_start=None):
         raise
 
     except Exception as exc:  # pylint: disable=broad-except
+        if obtained_lock:
+            raise
         _raise_error(f"Error encountered obtaining file lock {lock_fn}: {exc}")
 
     finally:
