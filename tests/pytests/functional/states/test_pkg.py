@@ -34,6 +34,11 @@ def refresh_db(grains, modules):
 
     if salt.utils.platform.is_windows():
         modules.winrepo.update_git_repos()
+        # salt-winrepo-ng formulas often index only AMD64/x86. On ARM64 those
+        # Jinja lookups raise; soft-fail so packages that do compile still work.
+        if grains.get("cpuarch") == "ARM64":
+            modules.pkg.refresh_db(failhard=False)
+            return
 
     modules.pkg.refresh_db()
 

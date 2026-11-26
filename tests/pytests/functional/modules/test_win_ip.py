@@ -148,7 +148,14 @@ if (-not ([System.Management.Automation.PSTypeName]"LoopbackUninstaller").Type) 
 
 @pytest.fixture(scope="module")
 def ip(modules):
-    return modules.ip
+    # win_ip requires pythonnet + PowerShell SDK. clr_loader has no Arm64
+    # ClrLoader.dll, so the module does not load on Windows ARM64.
+    try:
+        return modules.ip
+    except AttributeError:
+        pytest.skip(
+            "win_ip requires pythonnet/PowerShell SDK (unavailable on this platform)"
+        )
 
 
 @pytest.fixture(scope="module")

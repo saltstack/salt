@@ -15,6 +15,9 @@ pr-testrun-slugs:
   - windows-2025
   - windows-2025-nsis-pkg
   - windows-2025-msi-pkg
+  - windows-11-arm
+  - windows-11-arm-nsis-pkg
+  - windows-11-arm-msi-pkg
   - macos-15
   - macos-15-pkg
 full-testrun-slugs:
@@ -172,6 +175,11 @@ test-salt-listing:
     - slug: windows-2025
       display_name: "Windows 2025"
       arch: amd64
+      enabled: true
+    - slug: windows-11-arm
+      display_name: "Windows 11 Arm64"
+      arch: arm64
+      runner: windows-11-arm
       enabled: true
 test-salt-pkg-listing:
   linux:
@@ -343,5 +351,17 @@ test-salt-pkg-listing:
       display_name: "Windows 2025"
       arch: amd64
       runner: windows-2025
+      pkg_type: MSI
+      enabled: true
+    - slug: windows-11-arm-nsis-pkg
+      display_name: "Windows 11 Arm64"
+      arch: arm64
+      runner: windows-11-arm
+      pkg_type: NSIS
+      enabled: true
+    - slug: windows-11-arm-msi-pkg
+      display_name: "Windows 11 Arm64"
+      arch: arm64
+      runner: windows-11-arm
       pkg_type: MSI
       enabled: true

@@ -12,7 +12,11 @@ def pkg_name(salt_call_cli, grains):
         attempts = 3
         while attempts:
             attempts -= 1
-            ret = salt_call_cli.run("--local", "pkg.refresh_db")
+            # failhard=False: this fixture only needs a usable repo to install
+            # putty. salt-winrepo-ng CI enforces SLS quality with default
+            # failhard. Soft refresh lets ARM64 finish genrepo despite
+            # AMD64-only stubs in the cloned winrepo.
+            ret = salt_call_cli.run("--local", "pkg.refresh_db", "failhard=False")
             if ret.returncode:
                 time.sleep(5)
                 continue

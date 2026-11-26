@@ -207,15 +207,22 @@ def pillar_tree(salt_master, salt_minion, salt_call_cli):
         "basic.sls", basic_pillar_file
     )
 
+    # Default salt_call_cli timeout is 30s; Windows Arm64 CI runners are slow
+    # enough that pillar refresh can FactoryTimeout under that budget.
+    pillar_timeout = 120 if salt.utils.platform.is_windows() else 30
     try:
         with top_tempfile, basic_tempfile:
-            ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
+            ret = salt_call_cli.run(
+                "saltutil.refresh_pillar", wait=True, _timeout=pillar_timeout
+            )
             assert ret.returncode == 0
             assert ret.data is True
             yield
     finally:
         # Refresh pillar again to cleaup the temp pillar
-        ret = salt_call_cli.run("saltutil.refresh_pillar", wait=True)
+        ret = salt_call_cli.run(
+            "saltutil.refresh_pillar", wait=True, _timeout=pillar_timeout
+        )
         assert ret.returncode == 0
         assert ret.data is True
 

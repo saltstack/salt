@@ -1500,6 +1500,19 @@ def _repo_process_pkg_sls(
                 )
                 errors.append(f"package '{pkgname}' already defined")
                 break
+            # None/null (e.g. incomplete arch-gated Jinja) and other non-dicts
+            # are validation errors so failhard=True still fails refresh_db
+            # (salt-winrepo-ng CI gate). Do not AttributeError on .items().
+            if not isinstance(version_list, dict):
+                log.error(
+                    "package '%s' within '%s', versions are not defined as a dictionary",
+                    pkgname,
+                    short_path_name,
+                )
+                errors.append(
+                    f"package '{pkgname}', versions are not defined as a dictionary"
+                )
+                continue
             for version_str, repodata in version_list.items():
                 # Ensure version is a string/unicode
                 if not isinstance(version_str, str):

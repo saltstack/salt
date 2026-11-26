@@ -24,7 +24,15 @@ FILE_MODULE = "PSDesiredStateConfiguration"
 
 @pytest.fixture(scope="module")
 def dsc_resource(modules):
-    return modules.dsc_resource
+    # dsc_resource requires pythonnet + PowerShell SDK. clr_loader has no
+    # Arm64 ClrLoader.dll, so the module does not load on Windows ARM64.
+    try:
+        return modules.dsc_resource
+    except AttributeError:
+        pytest.skip(
+            "dsc_resource requires pythonnet/PowerShell SDK "
+            "(unavailable on this platform)"
+        )
 
 
 @pytest.fixture

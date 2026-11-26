@@ -302,12 +302,14 @@ def test_get_config_status(dsc, ps1_file, psd1_file):
 
 
 def test_test_config_not_configured(dsc):
-    subprocess.run(
+    winrm = subprocess.run(
         ["cmd", "/c", "winrm", "quickconfig", "-quiet"],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
-        check=True,
+        check=False,
     )
+    if winrm.returncode != 0:
+        pytest.skip("winrm quickconfig failed; DSC WinRM prerequisite unavailable")
     dsc.remove_config(reset=False)
     with pytest.raises(salt.exceptions.CommandExecutionError) as exc:
         dsc.test_config()

@@ -64,9 +64,11 @@ if IS_WINDOWS:
             # pylint: enable=unused-import
             from System.Net import NetworkInformation
             from System.Net.NetworkInformation import NetworkInterfaceComponent
-        except (ImportError, RuntimeError):
+        except (ImportError, OSError, RuntimeError):
             # ImportError: pythonnet may be absent (e.g. Python versions for
             # which upstream has no released wheel yet).
+            # OSError: clr_loader has no ARM64 ClrLoader.dll; loading the
+            # amd64 DLL on Windows ARM fails with Win32 0xc1.
             # RuntimeError: in some environments, using the Relenv OneDir
             # package, we can't load pythonnet. Uninstalling and reinstalling
             # pythonnet fixes the issue, but it is a manual step. Until we
@@ -384,6 +386,13 @@ def _get_ip_wins_info(i_face):
 
 
 def _get_network_interfaces():
+    # When pythonnet / clr_loader is unavailable (e.g. Windows ARM64 has no
+    # Arm64 ClrLoader.dll), USE_WMI is True and NetworkInformation was never
+    # imported. Callers must use get_interface_info_wmi / get_interface_info.
+    if USE_WMI:
+        raise RuntimeError(
+            "pythonnet NetworkInformation is unavailable; use WMI interface helpers"
+        )
     # pylint: disable=used-before-assignment
     return NetworkInformation.NetworkInterface.GetAllNetworkInterfaces()
 

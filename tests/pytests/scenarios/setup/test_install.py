@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import platform
 import re
 import runpy
 import sys
@@ -31,6 +32,10 @@ pytestmark = [
     pytest.mark.skip_if_binaries_missing(*KNOWN_BINARY_NAMES, check_all=False),
     pytest.mark.skipif(
         MISSING_SETUP_PY_FILE, reason="This test only work if setup.py is available"
+    ),
+    pytest.mark.skipif(
+        salt.utils.platform.is_windows() and platform.machine().upper() == "ARM64",
+        reason="cryptography has no usable Windows ARM64 wheel for setup scenarios",
     ),
 ]
 

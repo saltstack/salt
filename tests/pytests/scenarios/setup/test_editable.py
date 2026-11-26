@@ -5,6 +5,7 @@ Tests for editable installation of salt
 import json
 import logging
 import pathlib
+import platform
 
 import pytest
 
@@ -17,6 +18,10 @@ log = logging.getLogger(__name__)
 pytestmark = [
     pytest.mark.core_test,
     pytest.mark.windows_whitelisted,
+    pytest.mark.skipif(
+        salt.utils.platform.is_windows() and platform.machine().upper() == "ARM64",
+        reason="cryptography has no usable Windows ARM64 wheel for setup scenarios",
+    ),
 ]
 
 

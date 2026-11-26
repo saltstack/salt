@@ -13,8 +13,13 @@ try:
     import clr
 
     HAS_CLR = True
-except ImportError:
-    log.debug("could not import clr, pythonnet is not available")
+except (ImportError, OSError, RuntimeError) as exc:
+    # ImportError: pythonnet not installed.
+    # OSError: clr_loader ships only x86/amd64 ClrLoader.dll; on Windows
+    # ARM64 loading amd64\ClrLoader.dll fails with Win32 0xc1
+    # (ERROR_BAD_EXE_FORMAT).
+    # RuntimeError: pythonnet failed to create a default .NET runtime.
+    log.debug("could not import clr, pythonnet is not available: %s", exc)
 
 HAS_PWSH_SDK = False
 try:

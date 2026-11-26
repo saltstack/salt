@@ -705,6 +705,9 @@ def _os_test_filter(osdef, transport, chunk, arm_runner, requested_slugs):
         return False
     if "macos" in osdef.slug and chunk == "scenarios":
         return False
+    # Setup scenarios build cryptography from source; no usable win-arm64 wheel.
+    if osdef.slug == "windows-11-arm" and chunk == "scenarios":
+        return False
     if osdef.platform == "linux" and osdef.arch == "arm64" and not arm_runner:
         return False
     if transport == "tcp" and osdef.slug not in (
@@ -1117,6 +1120,9 @@ def workflow_config(
                     ctx.info("3006.x upgrade/downgrade tests do not work on windows")
                     continue
 
+                # Windows arm64 has no published prior packages to upgrade /
+                # downgrade from yet (download URLs still hardcode AMD64).
+                # Install chunks above still run for those slugs.
                 pkg_test_matrix[platform] += [
                     dict(
                         {
@@ -1127,6 +1133,7 @@ def workflow_config(
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
                     if _.slug in requested_slugs
+                    and not (platform == "windows" and _.arch == "arm64")
                 ]
                 pkg_test_matrix[platform] += [
                     dict(
@@ -1137,7 +1144,9 @@ def workflow_config(
                         **_.as_dict(),
                     )
                     for _ in TEST_SALT_PKG_LISTING[platform]
-                    if _.slug in requested_slugs and "photon" not in _.slug
+                    if _.slug in requested_slugs
+                    and "photon" not in _.slug
+                    and not (platform == "windows" and _.arch == "arm64")
                 ]
     ctx.info(f"{'==== pkg test matrix ====':^80s}")
     ctx.info(escape(pprint.pformat(pkg_test_matrix)))
