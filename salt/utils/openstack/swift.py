@@ -28,6 +28,16 @@ def check_swift():
     return HAS_SWIFT
 
 
+def _error_content(exc):
+    """
+    The content of an error: what its ``read()`` returns if it has one (an HTTP
+    error has), and its text otherwise.
+    """
+    if hasattr(exc, "read"):
+        return exc.read()
+    return str(exc)
+
+
 def mkdirs(path):
     try:
         makedirs(path)
@@ -106,7 +116,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def get_container(self, cont):
@@ -120,7 +130,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def put_container(self, cont):
@@ -134,7 +144,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def delete_container(self, cont):
@@ -148,7 +158,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def post_container(self, cont, metadata=None):
@@ -194,7 +204,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def put_object(self, cont, obj, local_file):
@@ -209,7 +219,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def delete_object(self, cont, obj):
@@ -223,7 +233,7 @@ class SaltSwift:
             log.error("There was an error::")
             if hasattr(exc, "code") and hasattr(exc, "msg"):
                 log.error("    Code: %s: %s", exc.code, exc.msg)
-            log.error("    Content: \n%s", getattr(exc, "read", lambda: str(exc))())
+            log.error("    Content: \n%s", _error_content(exc))
             return False
 
     def head_object(self, cont, obj):
