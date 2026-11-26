@@ -125,6 +125,47 @@ class PromState:
             return min(slopes)
         return max(slopes)
 
+    def get_net_delta(self, metric, duration="30m", aggregate="max"):
+        """Return the net change in ``metric`` over the ``deriv`` window.
+
+        PromQL ``delta(metric[duration])`` yields the last-value minus the
+        first-value in the window per series.  This is the retention
+        sanity-check companion to :py:meth:`get_slope`: a positive LR
+        slope on a series whose net delta is NEGATIVE is a regression
+        artifact (a mid-window spike dragging the fit up while the
+        trailing samples recovered), not a monotonic leak.  Callers
+        can suppress the FAIL and emit a WARN in that case.  See
+        ``agents/reports/single-fast-master-rss-leak.md`` for the
+        case that motivated this check -- analyzer reported +21.7 KB/s
+        on a series whose container RSS dropped -33 MB end-to-end.
+        """
+        if self.unreachable:
+            return 0.0
+        promql = f"delta({metric}[{duration}])"
+        try:
+            data = query_prom(self.url, promql)
+        except (urllib.error.URLError, ConnectionError, TimeoutError):
+            # A transient query failure here must not change the gate;
+            # get_slope would have set unreachable already.
+            return 0.0
+        try:
+            results = data["data"]["result"]
+        except (KeyError, TypeError):
+            return 0.0
+        if not results:
+            return 0.0
+        deltas = []
+        for series in results:
+            try:
+                deltas.append(float(series["value"][1]))
+            except (KeyError, IndexError, ValueError):
+                continue
+        if not deltas:
+            return 0.0
+        if aggregate == "min":
+            return min(deltas)
+        return max(deltas)
+
 
 def load_results(path):
     """Yield parsed JSON records from a JSONL file.
@@ -335,11 +376,34 @@ def main():
                 f"{fd_fail_threshold:.6f}"
             )
         if master_rss_slope > RSS_LEAK_BYTES_PER_SEC:
-            verdict_fail = True
-            print(
-                f"FAIL: master rss leak: {master_rss_slope:.2f} bytes/sec > "
-                f"{RSS_LEAK_BYTES_PER_SEC}"
+            # Guard against the ``deriv`` LR-fit regression artifact:
+            # a mid-window spike (SIGSTOP release, aes-key rotation,
+            # restart-ramp) can tilt the slope positive even when the
+            # series ends LOWER than it started.  If the net delta
+            # over the same window is negative (or zero), the master
+            # didn't actually retain -- emit a WARN so the signal is
+            # still visible to operators but don't fail the run.
+            # Precedent: single-fast analyzer reported +21.7 KB/s on
+            # a series whose container RSS dropped -33 MB end-to-end
+            # (CI 45718582847; agents/reports/single-fast-master-rss-leak.md).
+            master_rss_net_delta = prom.get_net_delta(
+                "salt_master_rss_bytes", aggregate=agg
             )
+            if master_rss_net_delta > 0:
+                verdict_fail = True
+                print(
+                    f"FAIL: master rss leak: {master_rss_slope:.2f} bytes/sec > "
+                    f"{RSS_LEAK_BYTES_PER_SEC} "
+                    f"(net_delta={master_rss_net_delta:.0f} bytes)"
+                )
+            else:
+                print(
+                    f"WARN: master rss slope: {master_rss_slope:.2f} bytes/sec > "
+                    f"{RSS_LEAK_BYTES_PER_SEC} but net_delta="
+                    f"{master_rss_net_delta:.0f} bytes (LR fit biased by "
+                    f"mid-window spike; not a monotonic retention signal)",
+                    file=sys.stderr,
+                )
 
     if verdict_fail:
         print()

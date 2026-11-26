@@ -535,6 +535,19 @@ def test_baseline_ping_200_concurrent(topology, request):
     n = _env_int("BASELINE_CONCURRENT_N", 200)
     par = _env_int("BASELINE_CONCURRENT_PAR", 50)
     master = topology.spec.primary_master
+    # Use explicit ``-L <ids>`` targeting rather than ``*``.  On
+    # registry topologies (cluster3) ``*`` expands against the
+    # minion-side resource registry: 2000 dummy resources per minion
+    # × 5 minions × 200 publishes queues ~1.4-1.9M per-resource jobs
+    # inside each MinionProcessManager, and the real-minion ping
+    # response ends up at position ~10⁶ in the FIFO.  Drain takes
+    # tens of hours and the fleet never answers again for the rest
+    # of the suite.  See agents/reports/cluster3-fleet-death-cascade.md
+    # for the full 5/5-missing cascade observed on CI 45718582847.
+    # ``-L`` targeting hits the real minions directly and skips the
+    # registry fan-out, the same pattern already used in
+    # ``topology.salt_ping_all`` (lib/topology.py:684-699).
+    minion_list = ",".join(topology.spec.minion_ids)
 
     before = topology.sample_minions()
     fault_start = time.monotonic()
@@ -555,7 +568,8 @@ def test_baseline_ping_200_concurrent(topology, request):
                     master,
                     "salt",
                     "--async",
-                    "*",
+                    "-L",
+                    minion_list,
                     "test.ping",
                 ],
                 stdout=subprocess.DEVNULL,
@@ -589,7 +603,8 @@ def test_baseline_ping_200_concurrent(topology, request):
                 "salt",
                 "--out=json",
                 "--timeout=15",
-                "*",
+                "-L",
+                minion_list,
                 "saltutil.running",
             ],
             capture_output=True,

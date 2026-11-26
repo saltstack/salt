@@ -32,15 +32,15 @@ services:
   # list, where it merges with the base service definition.
   salt-master-1:
     volumes:
-      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - ../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
 
   salt-master-2:
     volumes:
-      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - ../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
 
   salt-master-3:
     volumes:
-      - ../../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
+      - ../../monitoring/srv/salt/fd_exporter.py:/usr/local/bin/fd_exporter.py:ro
 
   prometheus:
     image: prom/prometheus:latest
